@@ -183,14 +183,27 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 
 			var migratedEntries = 0L;
 			var keyToSeek = Slice.BeforeAllKeys;
+			// delete Temp_TabelName if exists
+			using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				env.DeleteTree(txw, "Temp_"+ table.TableName);
 
+				txw.Commit();
+			}
+			using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				env.CreateTree(txw, "Temp_" + table.TableName);
+					
+				txw.Commit();
+			}
 			do
 			{
 				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var tree = txw.ReadTree(table.TableName);
+					var destTree = txw.ReadTree("Temp_" + table.TableName);
+					var srcTree = txw.ReadTree(table.TableName);
 
-					var iterator = tree.Iterate();
+					var iterator = srcTree.Iterate();
 
 					if (iterator.Seek(keyToSeek) == false)
 						break;
@@ -204,19 +217,29 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 						if (writtenStructsSize > 8 * 1024 * 1024) // 8 MB
 							break;
 
-						var result = tree.Read(iterator.CurrentKey);
 
-						using (var stream = result.Reader.AsStream())
+						var readerForCurrent = iterator.CreateReaderForCurrent();
+						using (var stream = readerForCurrent.AsStream())
 						{
-							var jsonValue = stream.ToJObject();
-							var structValue = new Structure<T>(table.Schema);
-
-							copyToStructure(jsonValue, structValue);
-
-							tree.WriteStruct(iterator.CurrentKey, structValue);
+							var currentDataSize = iterator.GetCurrentDataSize();
+							try
+							{
+								RavenJObject jsonValue = stream.ToJObject();
+								var structValue = new Structure<T>(table.Schema);
+								copyToStructure(jsonValue, structValue);
+								destTree.WriteStruct(iterator.CurrentKey, structValue);
+								writtenStructsSize += structValue.GetSize();
+							}
+							catch (Exception)
+							{
+								// already converted this, probably, just move as is
+								int used;
+								var readBytes = readerForCurrent.ReadBytes(currentDataSize, out used);
+								destTree.Add(iterator.CurrentKey, readBytes);
+								writtenStructsSize += currentDataSize;
+							}
 
 							migratedEntries++;
-							writtenStructsSize += structValue.GetSize();
 						}
 					} while (iterator.MoveNext());
 
@@ -225,6 +248,14 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 					output(string.Format("{0} of {1} records processed.", migratedEntries, entriesCount));
 				}
 			} while (migratedEntries < entriesCount);
+
+			using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				env.DeleteTree(txw, table.TableName);
+				env.RenameTree(txw, "Temp_" + table.TableName, table.TableName);
+
+				txw.Commit();
+			}
 
 			output(string.Format("All records of '{0}' table have been migrated to structures.", table.TableName));
 		}

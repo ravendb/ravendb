@@ -25,13 +25,13 @@
 	<div class="btn-toolbar" data-bind="visible: resources().length > 1">
 		<div class="btn-group">
 			<button type="button" class="btn btn-link" data-bind="click: toggleSelectAll" title="Select all or none">
-				<img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : isAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }">
+                <img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : isAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }, visible: isCheckboxVisible">
 			</button>
 		</div>
 		<div class="btn-group">
-			<button type="button" class="btn btn-primary" data-bind="click: newResource" accesskey="n" title="Create a new resource. (Alt+N)">
-				<i class="fa fa-plus"></i> New Resource
-			</button>
+            <button type="button" class="btn btn-primary" data-bind="click: newResource, visible: isGlobalAdmin" accesskey="n" title="Create a new resource. (Alt+N)">
+                <i class="fa fa-plus"></i> New Resource
+            </button>
 		</div>
 		<div class="btn-group">
 			<input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: resources().length > 0" title="Search for a database or file system (Alt+/)">
@@ -52,7 +52,7 @@
             </select>
 	    </div>
 	    <div class="btn-group pull-right">
-			<button class="btn btn-warning" data-bind="click: navigateToAdminSettings">Manage Your Server</button>
+            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: isGlobalAdmin">Manage Your Server</button>
 		</div>
 	</div>
 
@@ -60,12 +60,10 @@
         <!--ko if: $data.isDatabase() -->
         <div class="resource" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
             <div class="checkbox" data-bind="click: function(){ checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
-                <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+                <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: $root.isGlobalAdmin()" />
             </div>
-
             <div class="details">
                 <h4>
-                    
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
                     <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i class="fa fa-database"></i> db/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
@@ -75,7 +73,7 @@
                 </h4>
                 <br />                              
                 <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                <span class="stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
+                <span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                 <!-- /ko -->               
                 <!-- ko if: $data.disabled -->
                 <span class="stats-disabled">Disabled</span>
@@ -90,7 +88,7 @@
             <!-- ko if: $data.rejectClientsMode -->
             <span class="clients-rejected"><i class="fa fa-warning text-warning" title="Clients rejected mode" ></i></span>
             <!-- /ko -->
-            <div class="btn-group" data-bind="click: function(){ $root.optionsClicked(true); }">
+            <div class="btn-group" data-bind="click: function(){ $root.optionsClicked(true); }, visible: $root.isGlobalAdmin()">
                 <a class="dropdown-toggle" data-toggle="dropdown">
                     <i class="fa fa-cogs fa-lg"></i>
                 </a>
@@ -120,7 +118,7 @@
                                 </a>
                             </li>
                         </ul>
-                    </li>                   
+                    </li>
                     <li class="divider"></li>
                     <li role="presentation" class="delete-resource">
                         <a title="Delete selected database" data-bind="click: function () { $root.deleteSelectedResources([$data]); return true; }">
@@ -132,12 +130,12 @@
             </div>
         </div>
         <!-- /ko -->
+
         <!-- ko if: $data.isFilesystem() -->
         <div class="resource fs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
             <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
-                <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+                <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: $root.isGlobalAdmin()" />
             </div>
-
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
@@ -149,7 +147,7 @@
                 </h4>
                 <br />
                 <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                <span class="stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
+                <span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                 <!-- /ko -->
                 <!-- ko if: $data.disabled -->
                 <span class="stats-disabled">Disabled</span>
@@ -159,7 +157,7 @@
                 <!-- /ko -->
             </div>
 
-            <div class="btn-group" data-bind="click: function () { $root.optionsClicked(true); }">
+            <div class="btn-group" data-bind="click: function () { $root.optionsClicked(true); }, visible: $root.isGlobalAdmin()">
                 <a class="dropdown-toggle" data-toggle="dropdown">
                     <i class="fa fa-cogs fa-lg"></i>
                 </a>

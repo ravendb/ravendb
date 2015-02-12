@@ -54,6 +54,7 @@ namespace Raven.Abstractions.Data
 		public const string MemoryLimitForProcessing_BackwardCompatibility = "Raven/MemoryLimitForIndexing";
 		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
         public const string RunInMemory = "Raven/RunInMemory";
+	    public const string ExposeConfigOverTheWire = "Raven/ExposeConfigOverTheWire";
 
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
@@ -184,7 +185,6 @@ namespace Raven.Abstractions.Data
 
 
 		// General
-
 		public const string RavenDatabasesPrefix = "Raven/Databases/";
 
         public static partial class FileSystem
@@ -225,5 +225,10 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
         }
+
+	    public static class Smuggler
+	    {
+		    public const string CallContext = "Raven/Smuggler/CallContext";
+	    }
 	}
 }

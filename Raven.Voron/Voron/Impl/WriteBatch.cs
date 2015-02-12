@@ -76,12 +76,12 @@ namespace Voron.Impl
 			set { _disposeAfterWrite = value; }
 		}
 
-		internal bool TryGetValue(string treeName, Slice key, out Stream streamValue, out IStructure structValue, out ushort? version, out BatchOperationType operationType)
+		internal bool TryGetValue(string treeName, Slice key, out InBatchValue result)
 		{
-			streamValue = null;
-			structValue = null;
-			version = null;
-			operationType = BatchOperationType.None;
+			result = new InBatchValue()
+			{
+				OperationType = BatchOperationType.None
+			};
 
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
@@ -105,15 +105,15 @@ namespace Voron.Impl
 			BatchOperation operation;
 			if (operations.TryGetValue(key, out operation))
 			{
-				operationType = operation.Type;
-				version = operation.Version;
+				result.OperationType = operation.Type;
+				result.Version = operation.Version;
 
 				if (operation.Type == BatchOperationType.Delete)
 					return true;
 
-				streamValue = operation.ValueStream;
+				result.Stream = operation.ValueStream;
 				operation.Reset(); // will reset stream position
-				structValue = operation.ValueStruct;
+				result.Struct = operation.ValueStruct;
 
 				if (operation.Type == BatchOperationType.Add || operation.Type == BatchOperationType.AddStruct)
 					return true;
@@ -412,6 +412,9 @@ namespace Voron.Impl
 				if (ValueSlice != null)
 					return ValueSlice;
 
+				if (ValueStruct != null)
+					return ValueStruct;
+
 				return null;
 			}
 		}
@@ -425,6 +428,14 @@ namespace Voron.Impl
 			MultiDelete = 4,
 			Increment = 5,
 			AddStruct = 6,
+		}
+
+		public class InBatchValue
+		{
+			public Stream Stream;
+			public IStructure Struct;
+			public ushort? Version;
+			public BatchOperationType OperationType;
 		}
 
 		public void Dispose()

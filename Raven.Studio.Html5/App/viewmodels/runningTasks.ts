@@ -25,6 +25,7 @@ class runningTasks extends viewModelBase {
     allTasks = ko.observableArray<runningTaskDto>();
     filterType = ko.observable<string>(null);
     selectedTask = ko.observable<runningTaskDto>();
+    noExceptionText = ko.computed(() => !!this.selectedTask() && !!this.selectedTask().ExceptionText);
 
     suggestionQueryCount: KnockoutComputed<number>;
     bulkInsertCount: KnockoutComputed<number>;

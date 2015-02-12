@@ -631,7 +631,7 @@ namespace Raven.Json.Linq
 			if (_value == null)
 				return string.Empty;
 
-			return _value.ToString();
+            return _value.ToInvariantString();
 		}
 
 		/// <summary>
@@ -643,7 +643,7 @@ namespace Raven.Json.Linq
 		/// </returns>
 		public string ToString(string format)
 		{
-			return ToString(format, CultureInfo.CurrentCulture);
+            return ToString(format, CultureInfo.InvariantCulture);
 		}
 
 		/// <summary>
@@ -675,7 +675,7 @@ namespace Raven.Json.Linq
 			if (formattable != null)
 				return formattable.ToString(format, formatProvider);
 
-			return _value.ToString();
+            return _value.ToInvariantString();
 		}
 
 		public override void EnsureCannotBeChangeAndEnableSnapshotting()

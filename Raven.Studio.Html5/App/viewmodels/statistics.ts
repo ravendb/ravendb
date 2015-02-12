@@ -7,9 +7,9 @@ import changeSubscription = require('models/changeSubscription');
 import optional = require("common/optional");
 
 class statistics extends viewModelBase {
-
     stats = ko.observable<databaseStatisticsDto>();
     indexes = ko.observableArray<KnockoutObservable<indexStatisticsDto>>();
+    noStaleIndexes = ko.computed(() => !!this.stats() && this.stats().StaleIndexes.length == 0);
 
     private refreshStatsObservable = ko.observable<number>();
     private statsSubscription: KnockoutSubscription;

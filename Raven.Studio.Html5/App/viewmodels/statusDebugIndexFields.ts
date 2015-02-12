@@ -1,39 +1,22 @@
 import getStatusDebugIndexFieldsCommand = require("commands/getStatusDebugIndexFieldsCommand");
-import appUrl = require("common/appUrl");
-import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import messagePublisher = require("common/messagePublisher");
 
 
 class statusDebugIndexFields extends viewModelBase {
     editor: AceAjax.Editor;
     result = ko.observable<statusDebugIndexFieldsDto>();
-    indexStr = ko.observable("");
+    indexStr = ko.observable<string>("");
 
     constructor() {
         super();
         aceEditorBindingHandler.install();
     }
 
-    compositionComplete() {
-        super.compositionComplete();
-
-        var editorElement = $("#statusDebugIndexFieldsEditor");
-        if (editorElement.length > 0) {
-            this.editor = ko.utils.domData.get(editorElement[0], "aceEditor");
-        }
-
-        $("#statusDebugIndexFieldsEditor").on('DynamicHeightSet', () => this.editor.resize());
-    }
-
     activate(args) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
-    }
-
-    detached() {
-        super.detached();
-        $("#statusDebugIndexFieldsEditor").off('DynamicHeightSet');
     }
 
     attached() {
@@ -45,15 +28,65 @@ class statusDebugIndexFields extends viewModelBase {
         });
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+
+        var editorElement = $("#statusDebugIndexFieldsEditor");
+        if (editorElement.length > 0) {
+            this.editor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
+        $("#statusDebugIndexFieldsEditor").on('DynamicHeightSet', () => this.editor.resize());
+
+        this.focusOnEditor();
+                this.indexStr.subscribe((newValue) => {
+            var message = "";
+            var currentEditor = aceEditorBindingHandler.currentEditor;
+            var textarea: any = $(currentEditor.container).find("textarea")[0];
+
+            if (newValue === "") {
+                message = "Please fill out this field.";
+            }
+            textarea.setCustomValidity(message);
+            /*setTimeout(() => {
+                var annotations = currentEditor.getSession().getAnnotations();
+                var isErrorExists = false;
+                for (var i = 0; i < annotations.length; i++) {
+                    var annotationType = annotations[i].type;
+                    if (annotationType === "error" || annotationType === "warning") {
+                        isErrorExists = true;
+                        break;
+                    }
+                }
+                if (isErrorExists) {
+                    message = "The script isn't a javascript legal expression!";
+                    textarea.setCustomValidity(message);
+                }
+            }, 700);*/
+        });
+        this.indexStr.valueHasMutated();
+    }
+
+    detached() {
+        super.detached();
+        $("#statusDebugIndexFieldsEditor").off('DynamicHeightSet');
+    }
+
+    private focusOnEditor() {
+        this.editor.focus();
+    }
+
     fetchIndexFields(): JQueryPromise<statusDebugIndexFieldsDto> {
         this.result(null);
         var db = this.activeDatabase();
         if (db) {
             return new getStatusDebugIndexFieldsCommand(db, this.indexStr())
                 .execute()
-                .done((results: statusDebugIndexFieldsDto) => this.result(results));
-                
-            //TODO: how do we handle failure? 
+                .done((results: statusDebugIndexFieldsDto) => this.result(results))
+                .fail(response => {
+                    this.focusOnEditor();
+                messagePublisher.reportError("Failed to compute index fields!", response.responseText, response.statusText);
+            });
         }
 
         return null;

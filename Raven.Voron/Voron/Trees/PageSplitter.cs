@@ -227,19 +227,6 @@ namespace Voron.Trees
             }
         }
 
-
-        /// <summary>
-        ///     For leaf pages, check the split point based on what
-        ///     fits where, since otherwise adding the node can fail.
-        ///     This check is only needed when the data items are
-        ///     relatively large, such that being off by one will
-        ///     make the difference between success or failure.
-        ///     It's also relevant if a page happens to be laid out
-        ///     such that one half of its nodes are all "small" and
-        ///     the other half of its nodes are "large." If the new
-        ///     item is also "large" and falls on the half with
-        ///     "large" nodes, it also may not fit.
-        /// </summary>
         private int AdjustSplitPosition(int currentIndex, int splitIndex,
             ref bool newPosition)
         {
@@ -250,13 +237,7 @@ namespace Voron.Trees
 	        else
 		        keyToInsert = _newKey;
 
-			int nodeSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert , _len) + Constants.NodeOffsetSize;
-            if (_page.NumberOfEntries >= 20 && nodeSize <= AbstractPager.PageMaxSpace/16)
-            {
-                return splitIndex;
-            }
-
-	        int pageSize = nodeSize;
+	        var pageSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert , _len) + Constants.NodeOffsetSize;;
 
 			if(_tree.KeysPrefixing)
 				pageSize += (Constants.PrefixNodeHeaderSize + 1); // let's assume that prefix will be created to ensure the destination page will have enough space, + 1 because prefix node might require 2-byte alignment

@@ -19,7 +19,7 @@
                     </ul>
                 </div>
 
-                <div data-bind="visible: canShowDatabaseNavbar(), css: { 'menu-item-disabled': isActiveResourceDisabled }">
+                <div data-bind="visible: canShowDatabaseNavbar(), css: { 'menu-item-disabled': isActiveDatabaseDisabled }">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a data-bind="attr: { href: appUrls.documents }">Documents</a>
@@ -139,7 +139,7 @@
                         <li data-bind="css: { active: appUrls.isActive('Status') }">
                             <a data-bind="attr: { href: appUrls.filesystemStatus }">Status</a>
                         </li>
-                        
+
                         <li data-bind="css: { active: appUrls.isActive('Settings') }">
                             <a data-bind="attr: { href: appUrls.filesystemSettings }">Settings</a>
                         </li>
@@ -150,7 +150,7 @@
                     </ul>
                 </div>
 
-                <div id="countingNavbar" data-bind="visible: canShowCountersNavbar">
+                <div data-bind="visible: canShowCountersNavbar">
                     <ul class=" nav navbar-nav">
                         <li data-bind="css: { active: appUrls.isActive('Counters') }">
                             <a data-bind="attr: { href: appUrls.counterStorageCounters }">Counters</a>
@@ -169,27 +169,32 @@
 
                 <div>
                     <ul class="nav navbar-nav navbar-right hidden-xs hidden-sm databases">
-                        <li class="navbar-right" style="padding-left: 5px;">
+                        <li id="brand" class="navbar-right" style="padding-left: 5px;">
                             <a class="navbar-brand" href="http://ravendb.net" target="_blank">
                                 <img style="height: 24px" src="content/images/raven.png" />
                             </a>
                         </li>
                         <!-- ko if:showLogOutButton -->
-                        <li class="navbar-right" style="padding-left: 5px; padding-top: 5px">
+                        <li id="logOut" class="navbar-right" style="padding-left: 5px; padding-top: 5px">
                             <button data-bind="click: logOut" class="btn btn-danger"><i class="fa fa-sign-out"></i> Log out</button>
                         </li>
                         <!-- /ko -->
                         <!-- ko if:showContinueTestButton() -->
-                        <li class="navbar-right" style="padding-left: 5px; padding-top: 5px">
+                        <li id="continueTest" class="navbar-right" style="padding-left: 5px; padding-top: 5px">
                             <button data-bind="click: continueTest" class="btn btn-danger"><i class="fa fa-play"></i> Continue test</button>
                         </li>
                         <!-- /ko -->
                         <li class="dropdown navbar-right" data-bind="visible: canShowResourcesNavbar()">
-                            <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: lastActivatedResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
-                                <span data-bind="text: name"></span>
-                                <b class="caret" data-bind="visible: $root.listedResources().length > 0"></b>
+                            <a id="tenantNameLink" class="dropdown-toggle" data-toggle="dropdown" href="#" data-bind="with: lastActivatedResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
+                                <span class="resource-link" data-bind="style: { maxWidth: $root.maxResourceNameWidth() }">
+                                    <span data-bind="text: name, attr: { title: name }"></span>
+                                </span>
+
+                                <b class="caret resource-caret" data-bind="visible: $root.listedResources().length > 0"></b>
+
+
                             </a>
-                            <ul class="dropdown-menu" data-bind="foreach: listedResources">
+                            <ul class="dropdown-menu" data-bind="foreach: listedResources, visible: $root.listedResources().length > 0">
                                 <li>
                                     <a href="#" data-bind="click: $root.selectResource.bind($root, $data)">
                                         <span data-bind="attr: { class: $root.iconName($data) }"></span>
@@ -198,7 +203,7 @@
                                 </li>
                             </ul>
                         </li>
-                        <li class="navbar-right">
+                        <li id="featureName" class="navbar-right">
                             <div>
                                 <ul class="nav navbar-nav">
                                     <li class="vertical-navbar-menu-item">
@@ -242,33 +247,41 @@
             <a class="alert alert-link" href="#" data-bind="visible: details, click: $root.showErrorsDialog.bind($root)">Details</a>
         </div>
     </div>
-
+    
     <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
 </div>
 
 <footer style="z-index: 999" id="shellFooter">
     <div class="navbar navbar-fixed-bottom navbar-inverse">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')() && !isActiveDatabaseDisabled()">
+            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: !isActiveDatabaseDisabled() && canShowDatabaseNavbar()">
                 <li class="status-link"><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
+                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
+                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+                </li>
+                
                 <!-- ko with: statistics -->
-                <li><a class="navbar-link" data-bind="text: CountOfDocuments.toLocaleString() + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
-                <li><a class="navbar-link" data-bind="text: CountOfIndexes.toLocaleString() + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
-                <li><a class="navbar-link" data-bind="text: StaleIndexes.length.toLocaleString() + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li><a class="navbar-link" data-bind="text: Errors.length.toLocaleString() + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
+                <li><a class="navbar-link" data-bind="text: countOfDocumentsText, attr: { href: $parents[1].appUrls.documents }"></a></li>
+                <li><a class="navbar-link" data-bind="text: countOfIndexesText, attr: { href: $parents[1].appUrls.indexes }"></a></li>
+                <li><a class="navbar-link" data-bind="text: staleIndexesCountText, attr: { href: $parents[1].appUrls.status }"></a></li>
+                <li><a class="navbar-link" data-bind="text: errorsCountText, attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
                 <!--<li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>-->
-                <li class="raw-url hidden-sm" data-bind="visible:$root.rawUrlIsVisible">
+                <li class="raw-url hidden-sm" data-bind="visible: $root.rawUrlIsVisible">
                     <a class="navbar-link" href="#" target='_blank' data-bind="text: $root.currentRawUrl, attr: { href: $root.currentRawUrl, title: $root.currentRawUrl }" style="max-width: 180px; -ms-text-overflow: ellipsis; -o-text-overflow: ellipsis; text-overflow: ellipsis; overflow-x: hidden; white-space: nowrap;"></a>
                 </li>
                 <!-- /ko -->
             </ul>
 
-            <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: appUrls.isAreaActive('filesystems')() && !isActiveFileSystemDisabled()">
-                <li><a data-bind="text:'Status'" class="navbar-link" href="#/filesystems/status"></a></li>
+            <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: !isActiveFileSystemDisabled() && canShowFileSystemNavbar()">
+                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.filesystemStatus }" class="navbar-link" href="#">Status</a></li>
+                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
+                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+                </li>
+
                 <!-- ko with: statistics -->
-                <li><a data-bind="text: FileCount + ' files', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <li><a data-bind="text: Metrics.RequestsPerSecond + ' requests per second', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <li><a data-bind="text: Metrics.RequestsDuration.Mean.toFixed(1) + 'ms mean duration', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: fileCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: requestsCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: meanDurationText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
                 <!-- /ko -->
             </ul>
 

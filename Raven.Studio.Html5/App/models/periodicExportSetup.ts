@@ -13,6 +13,9 @@ class periodicExportSetup {
 
     mainValueCustomValidity: KnockoutObservable<string>;
 
+    azureRemoteFolderName = ko.observable<string>();
+    s3RemoteFolderName = ko.observable<string>();
+
     awsAccessKey = ko.observable<string>(); 
     awsSecretKey = ko.observable<string>();
     awsRegionEndpoint = ko.observable<string>();
@@ -70,6 +73,8 @@ class periodicExportSetup {
             ) !== -1;
     }, this);
 
+    isGlaceirVault = ko.computed(() => this.remoteUploadEnabled() && this.type() === this.GLACIER_VAULT);
+    isS3Bucket = ko.computed(() => this.remoteUploadEnabled() && this.type() === this.S3_BUCKET);
 
     additionalAzureInfoRequired = ko.computed(() => {
         var type = this.type();
@@ -125,14 +130,25 @@ class periodicExportSetup {
             return 'Bucket name must be at least 3 and no more than 63 characters long';
         }
 
+        if (bucketName[0] == '.') {
+            return 'Bucket name cannot start with a period (.)';
+        }
+
+        if (bucketName[bucketName.length - 1] == '.') {
+            return 'Bucket name cannot end with a period (.)';
+        }
+
+        if (bucketName.indexOf("..") > -1) {
+            return 'There can be only one period between labels';
+        }
+
         var labels = bucketName.split(".");
         var labelRegExp = /^[a-z0-9-]+$/;
-
         var validLabel = label => {
             if (label == null || label.length == 0) {
                 return false;
             }
-            if (!labelRegExp.test(label)) {
+            if (labelRegExp.test(label) == false) {
                 return false;
             }
             if (label[0] == '-' || label[label.length - 1] == '-') {
@@ -182,13 +198,13 @@ class periodicExportSetup {
         return '';
     }
 
-
-
     fromDto(dto: periodicExportSetupDto) {
         this.awsRegionEndpoint(dto.AwsRegionEndpoint);
 
         this.setupTypeAndMainValue(dto);
 
+        this.s3RemoteFolderName(dto.S3RemoteFolderName);
+        this.azureRemoteFolderName(dto.AzureRemoteFolderName);
         var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
         this.incrementalBackupInterval(incr[0]);
         this.incrementalBackupIntervalUnit(incr[1]);
@@ -207,7 +223,9 @@ class periodicExportSetup {
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
             AwsRegionEndpoint: this.awsRegionEndpoint(),
             AzureStorageContainer: this.prepareMainValue(this.AZURE_STORAGE),
-            LocalFolderName: this.onDiskExportEnabled()? this.localFolderName() : null,
+            LocalFolderName: this.onDiskExportEnabled() ? this.localFolderName() : null,
+            S3RemoteFolderName: this.isS3Bucket() ? this.s3RemoteFolderName() : null,
+            AzureRemoteFolderName: this.additionalAzureInfoRequired() ? this.azureRemoteFolderName() : null,
             IntervalMilliseconds: this.convertToMilliseconds(this.incrementalBackupInterval(), this.incrementalBackupIntervalUnit()),
             FullBackupIntervalMilliseconds: this.convertToMilliseconds(this.fullBackupInterval(), this.fullBackupIntervalUnit()),
         };

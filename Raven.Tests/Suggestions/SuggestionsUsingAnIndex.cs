@@ -66,7 +66,7 @@ namespace Raven.Tests.Suggestions
 					var suggestionQueryResult = documentStore.DatabaseCommands.Suggest("DefaultSuggestionIndex", new SuggestionQuery
 					{
 						Field = "Name",
-						Term = "Oren",
+						Term = "Owen",
 						MaxSuggestions = 10,
 					});
 
@@ -95,7 +95,7 @@ namespace Raven.Tests.Suggestions
 				using (var session = documentStore.OpenSession())
 				{
 					var suggestionQueryResult = session.Query<User, DefaultSuggestionIndex>()
-					                                   .Where(x => x.Name == "Oren")
+					                                   .Where(x => x.Name == "Owen")
 					                                   .Suggest();
 
 					Assert.Equal(1, suggestionQueryResult.Suggestions.Length);

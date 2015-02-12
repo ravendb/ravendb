@@ -1,13 +1,22 @@
-﻿import server = require('models/counter/counterServerValue');
-import resource = require("models/resource");
+﻿import resource = require("models/resource");
+import license = require("models/license");
 
 class counterStorage extends resource{
     static type = 'counterstorage';
 
-    constructor(public name: string, private isDisabled: boolean = false) {
-        super(name, counterStorage.type);
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false) {
+        super(name, counterStorage.type, isAdminCurrentTenant);
         this.disabled(isDisabled);
         this.name = name;
+
+        //TODO: change this to match counter storage
+        this.isLicensed = ko.computed(() => {
+            if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
+                var ravenFsValue = license.licenseStatus().Attributes.ravenfs;
+                return /^true$/i.test(ravenFsValue);
+            }
+            return true;
+        });
     }
 
     activate() {

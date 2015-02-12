@@ -24,7 +24,7 @@ namespace Raven.Smuggler
 		public SmugglerDatabaseApi(SmugglerDatabaseOptions options = null)
 			: base(options ?? new SmugglerDatabaseOptions())
 		{
-			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported);
+			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported, () => IsIdentitiesSmugglingSupported);
 		}
 
 		private BulkInsertOperation operation;

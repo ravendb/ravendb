@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Database.Extensions;
@@ -12,7 +13,7 @@ namespace Raven.Tests.FileSystem.Bugs
 		public async Task ShouldWork()
 		{
 			var client = NewAsyncClient();
-			var tasks = new List<Task>(10);
+			var tasks = new ConcurrentBag<Task>();
 
 			// upload 10 files with the same content but different names concurrently
 			Assert.DoesNotThrow(

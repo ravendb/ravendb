@@ -53,7 +53,7 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.All:
 					return AuthenticationSchemes.Anonymous;
 				case AnonymousUserAccessMode.Get:
-					return AbstractRequestAuthorizer.IsGetRequest(request.HttpMethod, request.Url.AbsolutePath) ?
+					return AbstractRequestAuthorizer.IsGetRequest(request) ?
 						AuthenticationSchemes.Anonymous | AuthenticationSchemes.IntegratedWindowsAuthentication :
 						AuthenticationSchemes.IntegratedWindowsAuthentication;
 				case AnonymousUserAccessMode.None:

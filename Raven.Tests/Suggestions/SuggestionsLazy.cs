@@ -44,7 +44,7 @@ namespace Raven.Tests.Suggestions
 					var oldRequests = s.Advanced.NumberOfRequests;
 
 					var suggestionQueryResult = s.Query<User>("test")
-						.Where(x => x.Name == "Oren")
+						.Where(x => x.Name == "Owen")
 						.SuggestLazy();
 
 					Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);

@@ -22,6 +22,7 @@ namespace Raven.Database.Indexing
 	public class RangeQueryParser : QueryParser
 	{
 		public static readonly Regex NumericRangeValue = new Regex(@"^[\w\d]x[-\w\d.]+$", RegexOptions.Compiled);
+        public static readonly Regex DateTimeValue = new Regex(@"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)",RegexOptions.Compiled);
 
 		private readonly Dictionary<string, HashSet<string>> untokenized = new Dictionary<string, HashSet<string>>();
 		private readonly Dictionary<Tuple<string,string>, string> replacedTokens = new Dictionary<Tuple<string, string>, string>();
@@ -40,6 +41,22 @@ namespace Raven.Database.Indexing
 			return tokenReplacement;
 		}
 
+	    public string ReplaceDateTimeTokensInMethod(string fieldName, string collection)
+	    {
+	        var searchMatches = DateTimeValue.Matches(collection);
+            var queryStringBuilder = new StringBuilder(collection);
+	        for (var i = searchMatches.Count - 1; i >= 0; i--) 
+	        {
+	            var searchMatch = searchMatches[i];
+                var replaceToken = Guid.NewGuid().ToString("n");
+	            queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
+	            queryStringBuilder.Insert(searchMatch.Index, replaceToken);
+	        }
+            var tokenReplacement = queryStringBuilder.ToString();
+            var keyOfTokenReplacment = queryStringBuilder.ToString(1, queryStringBuilder.Length - 2);
+            replacedTokens[Tuple.Create(fieldName, keyOfTokenReplacment)] = collection.Substring(1, collection.Length - 2);
+            return tokenReplacement;
+	    }
 		protected override Query GetPrefixQuery(string field, string termStr)
 		{
 			var fieldQuery = GetFieldQuery(field, termStr);

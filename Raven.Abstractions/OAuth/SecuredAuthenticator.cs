@@ -112,8 +112,11 @@ namespace Raven.Abstractions.OAuth
                     using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
                     using (var reader = new StreamReader(stream))
                     {
-                        CurrentOauthToken = "Bearer " + reader.ReadToEnd();
-                        return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthToken));
+                        var currentOauthToken = reader.ReadToEnd();
+                        CurrentOauthToken = currentOauthToken;
+                        CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;
+
+                        return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthTokenWithBearer));
                     }
                 }
                 catch (WebException ex)
@@ -220,7 +223,10 @@ namespace Raven.Abstractions.OAuth
 		            using (var stream = await response.GetResponseStreamWithHttpDecompression())
 		            using (var reader = new StreamReader(stream))
 		            {
-			            CurrentOauthToken = reader.ReadToEnd();
+                        var currentOauthToken = reader.ReadToEnd();
+                        CurrentOauthToken = currentOauthToken;
+                        CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;
+                 
 			            return (Action<HttpClient>)(SetAuthorization);
 		            }
 	            }

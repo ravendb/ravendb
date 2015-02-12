@@ -6,6 +6,7 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Database.Server.WebApi;
 using Raven.Tests.Common;
 using Xunit;
 
@@ -23,7 +24,7 @@ namespace Raven.Tests.Bugs
 					BaseAddress = new Uri(store.Url)
 				};
 
-				var httpResponseMessage = await httpClient.PutAsync("docs/items/1", new StringContent("{'item': NaN}"));
+                var httpResponseMessage = await httpClient.PutAsync("docs/items/1", new MultiGetSafeStringContent("{'item': NaN}"));
 				Assert.True(httpResponseMessage.IsSuccessStatusCode);
 			}
 		}

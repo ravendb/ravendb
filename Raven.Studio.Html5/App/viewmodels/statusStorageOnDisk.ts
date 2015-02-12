@@ -7,6 +7,19 @@ import getStatusStorageOnDiskCommand = require("commands/getStatusStorageOnDiskC
 class statusStorageOnDisk extends viewModelBase {
     onDiskStats = ko.observable<statusStorageOnDiskDto>();
     config = ko.observable<any>();
+    isConfigForbidden: KnockoutComputed<boolean>;
+    journalsStoragePath: KnockoutComputed<string>;
+
+    constructor() {
+        super();
+        this.isConfigForbidden = ko.computed(() => !this.config());
+        this.journalsStoragePath = ko.computed(() => {
+            if (!!this.config() && !!this.config().JournalsStoragePath) {
+                return this.config().JournalsStoragePath;
+            }
+            return "-";
+        });
+    }
 
     activate(args) {
         super.activate(args);
@@ -18,15 +31,15 @@ class statusStorageOnDisk extends viewModelBase {
     fetchData(): JQueryPromise<any> {
         var db = this.activeDatabase();
         if (db) {
-            var configTask = new getStatusDebugConfigCommand(db)
-                .execute();
             var onDiskTask = new getStatusStorageOnDiskCommand(db)
                 .execute();
+            var configTask = new getStatusDebugConfigCommand(db)
+                .execute();
 
-            var combinedTask = $.when(configTask, onDiskTask);
-            combinedTask.done((config, onDisk) => {
-                this.config(config[0]);
+            var combinedTask = $.when(onDiskTask, configTask);
+            combinedTask.done((onDisk, config) => {
                 this.onDiskStats(onDisk[0]);
+                this.config(config[0]);
             });
             return combinedTask;
         }

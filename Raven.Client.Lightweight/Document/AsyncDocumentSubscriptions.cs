@@ -34,7 +34,7 @@ namespace Raven.Client.Document
 
 			var nonGenericCriteria = new SubscriptionCriteria();
 
-			nonGenericCriteria.BelongsToCollection = documentStore.Conventions.GetTypeTagName(typeof (T));
+			nonGenericCriteria.BelongsToAnyCollection = new []{ documentStore.Conventions.GetTypeTagName(typeof (T)) };
 			nonGenericCriteria.KeyStartsWith = criteria.KeyStartsWith;
 			nonGenericCriteria.PropertiesMatch = criteria.GetPropertiesMatchStrings();
 			nonGenericCriteria.PropertiesNotMatch = criteria.GetPropertiesNotMatchStrings();
