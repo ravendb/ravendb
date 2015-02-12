@@ -1,5 +1,7 @@
 class periodicExportSetup {
 
+    static decryptFailedValue = "<data could not be decrypted>";
+
     onDiskExportEnabled = ko.observable<boolean>(false);
     remoteUploadEnabled = ko.observable<boolean>(false);
 
@@ -19,6 +21,9 @@ class periodicExportSetup {
     awsAccessKey = ko.observable<string>(); 
     awsSecretKey = ko.observable<string>();
     awsRegionEndpoint = ko.observable<string>();
+
+    awsSecretKeyDecryptionFailed = ko.observable<boolean>(false);
+    azureStorageKeyDecryptionFailed = ko.observable<boolean>(false);
 
     azureStorageAccount = ko.observable<string>();
     azureStorageKey = ko.observable<string>();
@@ -255,6 +260,15 @@ class periodicExportSetup {
         this.awsSecretKey(dbSettingsDto['SecuredSettings']['Raven/AWSSecretKey']);
         this.azureStorageAccount(dbSettingsDto['Settings']['Raven/AzureStorageAccount']);
         this.azureStorageKey(dbSettingsDto['SecuredSettings']['Raven/AzureStorageKey']);
+
+        if (periodicExportSetup.decryptFailedValue === this.awsSecretKey()) {
+            this.awsSecretKey("");
+            this.awsSecretKeyDecryptionFailed(true);
+        }
+        if (periodicExportSetup.decryptFailedValue === this.azureStorageKey()) {
+            this.azureStorageKey("");
+            this.azureStorageKeyDecryptionFailed(true);
+        }
     }
 
     toDatabaseSettingsDto(): documentDto {
@@ -271,6 +285,11 @@ class periodicExportSetup {
 
     setEtag(newEtag) {
         this.toDatabaseSettingsDto()['@metadata']['@etag'] = newEtag;
+    }
+
+    resetDecryptionFailures() {
+        this.awsSecretKeyDecryptionFailed(false);
+        this.azureStorageKeyDecryptionFailed(false);
     }
 
     private setupTypeAndMainValue(dto: periodicExportSetupDto) {
