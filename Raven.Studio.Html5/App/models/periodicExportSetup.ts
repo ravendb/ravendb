@@ -13,6 +13,9 @@ class periodicExportSetup {
 
     mainValueCustomValidity: KnockoutObservable<string>;
 
+    azureRemoteFolderName = ko.observable<string>();
+    s3RemoteFolderName = ko.observable<string>();
+
     awsAccessKey = ko.observable<string>(); 
     awsSecretKey = ko.observable<string>();
     awsRegionEndpoint = ko.observable<string>();
@@ -70,8 +73,8 @@ class periodicExportSetup {
             ) !== -1;
     }, this);
 
-    isGlaceirVault = ko.computed(() => this.remoteUploadEnabled() && this.type() == this.GLACIER_VAULT)
-    isS3Bucket = ko.computed(() => this.remoteUploadEnabled() && this.type() == this.S3_BUCKET)
+    isGlaceirVault = ko.computed(() => this.remoteUploadEnabled() && this.type() === this.GLACIER_VAULT);
+    isS3Bucket = ko.computed(() => this.remoteUploadEnabled() && this.type() === this.S3_BUCKET);
 
     additionalAzureInfoRequired = ko.computed(() => {
         var type = this.type();
@@ -200,6 +203,8 @@ class periodicExportSetup {
 
         this.setupTypeAndMainValue(dto);
 
+        this.s3RemoteFolderName(dto.S3RemoteFolderName);
+        this.azureRemoteFolderName(dto.AzureRemoteFolderName);
         var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
         this.incrementalBackupInterval(incr[0]);
         this.incrementalBackupIntervalUnit(incr[1]);
@@ -218,7 +223,9 @@ class periodicExportSetup {
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
             AwsRegionEndpoint: this.awsRegionEndpoint(),
             AzureStorageContainer: this.prepareMainValue(this.AZURE_STORAGE),
-            LocalFolderName: this.onDiskExportEnabled()? this.localFolderName() : null,
+            LocalFolderName: this.onDiskExportEnabled() ? this.localFolderName() : null,
+            S3RemoteFolderName: this.isS3Bucket() ? this.s3RemoteFolderName() : null,
+            AzureRemoteFolderName: this.additionalAzureInfoRequired() ? this.azureRemoteFolderName() : null,
             IntervalMilliseconds: this.convertToMilliseconds(this.incrementalBackupInterval(), this.incrementalBackupIntervalUnit()),
             FullBackupIntervalMilliseconds: this.convertToMilliseconds(this.fullBackupInterval(), this.fullBackupIntervalUnit()),
         };
