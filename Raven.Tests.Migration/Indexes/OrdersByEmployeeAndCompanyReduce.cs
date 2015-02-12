@@ -38,7 +38,7 @@ namespace Raven.Tests.Migration.Indexes
 let employee = LoadDocument(order.Employee)
 let company = LoadDocument(order.Company)
 select new {
-    OrderId = order.__document_id,
+    OrderId = order.Id,
     LastName = employee.LastName,
     FirstName = employee.FirstName,
     Company = company.Name,

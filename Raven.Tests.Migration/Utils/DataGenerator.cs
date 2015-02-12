@@ -11,7 +11,6 @@ using System.Linq;
 using FakeData;
 
 using Raven.Abstractions.Indexing;
-using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Tests.Migration.Indexes;
 using Raven.Tests.Migration.Utils.Orders;
@@ -314,15 +313,20 @@ select new
 			client.PutIndex(new OrdersByEmployeeAndCompany());
 			client.PutIndex(new OrdersByEmployeeAndCompanyReduce());
 
+			var nextOrderId = 1;
+			var nextCompanyId = 1;
+			var nextProductId = 1;
+			var nextEmployeeId = 1;
+
 			for (var it = 0; it < numberOfIterations; it++)
 			{
 				var entities = new List<object>();
 
 				for (var i = 0; i < NumberOfOrdersPerIteration; i++)
 				{
-
 					entities.Add(new Order
 					{
+						Id = "orders/" + nextOrderId++,
 						Company = "companies/" + new Random().Next(1, ExpectedNumberOfCompanies - 1),
 						Lines = CollectionData.GetElement(10, new List<OrderLine>
 							{
@@ -350,6 +354,7 @@ select new
 				{
 					entities.Add(new Company
 					{
+						Id = "companies/" + nextCompanyId++,
 						Name = NameData.GetCompanyName(),
 						Fax = PhoneNumberData.GetInternationalPhoneNumber(),
 						Address = new Address
@@ -366,6 +371,7 @@ select new
 				{
 					entities.Add(new Employee
 					{
+						Id = "employees/" + nextEmployeeId++,
 						Birthday = DateTimeData.GetDatetime(),
 						FirstName = NameData.GetFirstName(),
 						LastName = NameData.GetSurname(),
@@ -385,6 +391,7 @@ select new
 				{
 					entities.Add(new Product
 					{
+						Id = "products/" + nextProductId++,
 						Category = TextData.GetAlphabetical(5),
 						Name = NameData.GetSurname(),
 						Discontinued = BooleanData.GetBoolean(),
