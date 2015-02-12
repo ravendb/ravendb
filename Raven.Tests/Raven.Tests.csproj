@@ -888,6 +888,7 @@
     <Compile Include="MailingList\NullableSorting.cs" />
     <Compile Include="MailingList\Oguzhntopcu.cs" />
     <Compile Include="MailingList\OrderByProjectSameField.cs" />
+    <Compile Include="MailingList\PatchingWithDefault.cs" />
     <Compile Include="MailingList\PatchingWithNaNAndIsFinite.cs" />
     <Compile Include="MailingList\Pfeffer.cs" />
     <Compile Include="MailingList\PlusInId.cs" />
