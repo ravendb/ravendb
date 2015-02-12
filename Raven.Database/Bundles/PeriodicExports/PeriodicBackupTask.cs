@@ -184,8 +184,10 @@ namespace Raven.Database.Bundles.PeriodicExports
 								}
 							}
 
-							var backupPath = localBackupConfigs.LocalFolderName ??
-											 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							if (Directory.Exists(backupPath) == false) 
+								Directory.CreateDirectory(backupPath);
+
 							if (fullBackup)
 							{
 								// create filename for full dump
@@ -214,6 +216,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
+
                             var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
 
 							if (fullBackup == false)
@@ -324,7 +327,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			using (var fileStream = File.OpenRead(backupPath))
 			{
 				var key = Path.GetFileName(backupPath);
-				client.PutObject(localExportConfigs.S3BucketName, key, fileStream, new Dictionary<string, string>
+				client.PutObject(localExportConfigs.S3BucketName, CombinePathAndKey(localExportConfigs.S3RemoteFolderName, key), fileStream, new Dictionary<string, string>
 			                                                                       {
 				                                                                       { "Description", GetArchiveDescription(isFullBackup) }
 			                                                                       }, 60 * 60);
@@ -363,7 +366,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 				using (var fileStream = File.OpenRead(backupPath))
 				{
 					var key = Path.GetFileName(backupPath);
-					client.PutBlob(localExportConfigs.AzureStorageContainer, key, fileStream, new Dictionary<string, string>
+					client.PutBlob(localExportConfigs.AzureStorageContainer, CombinePathAndKey(localExportConfigs.AzureRemoteFolderName, key), fileStream, new Dictionary<string, string>
 																							  {
 																								  { "Description", GetArchiveDescription(isFullBackup) }
 																							  });
@@ -375,6 +378,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 						key));
 				}
 			}
+		}
+
+		private string CombinePathAndKey(string path, string fileName)
+		{
+			return string.IsNullOrEmpty(path) == false ? path + "/" + fileName : fileName;
 		}
 
 		private string GetArchiveDescription(bool isFullBackup)
