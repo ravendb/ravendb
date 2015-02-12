@@ -99,6 +99,11 @@
                             <div class="col-sm-3">
                                 <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'"/>
                             </div>
+                            <div class="col-sm-1 control-label" style="text-align: left" data-bind="visible: awsSecretKeyDecryptionFailed">
+                                <span id="awsDecryptFailureSpan" class="help-cursor" data-placement="auto right" data-original-title="Why this input is empty?" data-trigger="hover">
+                                    <i class="fa fa-warning text-info"></i>
+                                </span>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="awsRegionEndpoint" class="col-sm-3 control-label">AWS Region Endpoint:</label>
@@ -125,6 +130,11 @@
                             <label for="azureStorageKey" class="col-sm-3 control-label">Azure Storage Key:</label>
                             <div class="col-sm-3">
                                 <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey, valueUpdate: 'afterkeydown'"/>
+                            </div>
+                            <div class="col-sm-1 control-label" style="text-align: left" data-bind="visible: azureStorageKeyDecryptionFailed">
+                                <span id="azureDecryptFailureSpan" class="help-cursor" data-placement="auto right" data-original-title="Why this input is empty?" data-trigger="hover">
+                                    <i class="fa fa-warning text-info"></i>
+                                </span>
                             </div>
                         </div>
                     </div>
