@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
@@ -156,9 +157,25 @@ namespace Owin
 			public ICollection<Assembly> GetAssemblies()
 			{
 				return AppDomain.CurrentDomain.GetAssemblies()
-					.Where(a => !a.IsDynamic && a.ExportedTypes.Any(t => t.IsSubclassOf(typeof(RavenBaseApiController))))
+                    .Where(IsRavenAssembly)
 					.ToArray();
 			}
+
+		    private static bool IsRavenAssembly(Assembly assembly)
+		    {
+		        if (assembly.IsDynamic)
+		            return false;
+
+		        try
+		        {
+                    return assembly.ExportedTypes.Any(t => t.IsSubclassOf(typeof(RavenBaseApiController)));
+		        }
+		        catch (FileNotFoundException)
+		        {
+                    //ExportedTypes will throw a FileNotFoundException if the assembly references another assembly which cannot be loaded/found
+		            return false;
+		        }
+		    }
 		}
 
 		public class SelectiveBufferPolicySelector : IHostBufferPolicySelector
