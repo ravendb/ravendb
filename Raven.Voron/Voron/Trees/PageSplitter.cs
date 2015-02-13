@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Text;
+using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Paging;
 
@@ -196,9 +199,50 @@ namespace Voron.Trees
             _page.Truncate(_tx, splitIndex);
 
             // actually insert the new key
-            return (currentIndex > splitIndex || newPosition && currentIndex == splitIndex)
-                ? InsertNewKey(rightPage)
-                : InsertNewKey(_page);
+	        try
+	        {
+		        return (currentIndex > splitIndex || newPosition && currentIndex == splitIndex)
+			        ? InsertNewKey(rightPage)
+			        : InsertNewKey(_page);
+	        }
+			catch (InvalidOperationException e)
+	        {
+		        if (e.Message.StartsWith("The page is full and cannot add an entry"))
+		        {
+			        var debugInfo = new StringBuilder();
+
+					debugInfo.AppendFormat("\r\n_tree.Name: {0}\r\n", _tree.Name);
+			        debugInfo.AppendFormat("_newKey: {0}, _len: {1}, needed space: {2}\r\n", _newKey, _len, _page.GetRequiredSpace(_newKey, _len));
+					debugInfo.AppendFormat("currentKey: {0}, seperatorKey: {1}\r\n", currentKey, seperatorKey);
+			        debugInfo.AppendFormat("currentIndex: {0}\r\n", currentIndex);
+					debugInfo.AppendFormat("splitIndex: {0}\r\n", splitIndex);
+					debugInfo.AppendFormat("newPosition: {0}\r\n", newPosition);
+
+			        debugInfo.AppendFormat("_page info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", _page.Flags, _page.NumberOfEntries, _page.SizeLeft, _page.CalcSizeLeft());
+
+					for (int i = 0; i < _page.NumberOfEntries; i++)
+					{
+						var node = _page.GetNode(i);
+						var key = _page.GetNodeKey(node);
+						debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
+							node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+					}
+
+					debugInfo.AppendFormat("rightPage info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", rightPage.Flags, rightPage.NumberOfEntries, rightPage.SizeLeft, rightPage.CalcSizeLeft());
+
+					for (int i = 0; i < rightPage.NumberOfEntries; i++)
+					{
+						var node = rightPage.GetNode(i);
+						var key = rightPage.GetNodeKey(node);
+						debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
+							node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+					}
+
+					throw new InvalidOperationException(debugInfo.ToString(), e);
+		        }
+
+		        throw;
+	        }
         }
 
         private byte* InsertNewKey(Page p)
