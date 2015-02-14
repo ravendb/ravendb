@@ -104,6 +104,7 @@ namespace Raven.Smuggler
 			databaseOptionSet.Add("d2|database2:", OptionCategory.SmugglerDatabase, "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => databaseOptions.Destination.DefaultDatabase = value);
 			databaseOptionSet.Add("wait-for-indexing", OptionCategory.SmugglerDatabase, "Wait until all indexing activity has been completed (import only)", _ => databaseOptions.WaitForIndexing = true);
 			databaseOptionSet.Add("excludeexpired", OptionCategory.SmugglerDatabase, "Excludes expired documents created by the expiration bundle", _ => databaseOptions.ShouldExcludeExpired = true);
+			databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerImportDatabaseFileSystem, "Excludes expired documents created by the expiration bundle", _ => databaseOptions.ShouldDisableVersioningBundle = true);
 			databaseOptionSet.Add("limit:", OptionCategory.SmugglerDatabase, "Reads at most VALUE documents/attachments.", s => databaseOptions.Limit = int.Parse(s));
 			databaseOptionSet.Add("timeout:", OptionCategory.SmugglerDatabase, "The timeout to use for requests", s => databaseOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
 			databaseOptionSet.Add("incremental", OptionCategory.SmugglerDatabase, "States usage of incremental operations", _ => databaseOptions.Incremental = true);
