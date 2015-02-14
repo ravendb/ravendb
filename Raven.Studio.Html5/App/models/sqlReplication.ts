@@ -40,6 +40,17 @@ class sqlReplication extends document {
     
     showReplicationConfiguration = ko.observable<boolean>(false);
 
+    hasAnyInsertOnlyOption = ko.computed(() => {
+        var hasAny = false;
+        this.sqlReplicationTables().forEach(s => {
+            // don't use return here to register all deps in knockout
+            if (s.insertOnly()) {
+                hasAny = true;
+            }
+        });
+        return hasAny;
+    });
+
     constructor(dto: sqlReplicationDto) {
         super(dto);
 
