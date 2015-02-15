@@ -301,6 +301,59 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
+		[Fact]
+		public void RavenDB_3172()
+		{
+			CreateRdbmsSchema();
+			using (var store = NewDocumentStore())
+			{
+				var eventSlim = new ManualResetEventSlim(false);
+				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
+					 .First().AfterReplicationCompleted += successCount =>
+					 {
+						 if (successCount != 0)
+							 eventSlim.Set();
+					 };
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Order
+					{
+						Id = "orders/1",
+						OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+						}
+					});
+					session.SaveChanges();
+				}
+
+				SetupSqlReplication(store, defaultScript, insertOnly: true);
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				AssertCounts(1, 2);
+
+				eventSlim.Reset();
+
+				using (var session = store.OpenSession())
+				{
+					var order = session.Load<Order>("orders/1");
+					order.OrderLines.Add(new OrderLine
+					{
+						Cost = 5, Product = "Sugar", Quantity = 7
+					});
+					session.SaveChanges();
+				}
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				// we end up with duplicates
+				AssertCounts(2, 5);
+			}
+		}
+
 		[Theory]
 		[PropertyData("Storages")]
 		public void WillLog(string requestedStorage)
@@ -451,7 +504,7 @@ var nameArr = this.StepName.split('.');");
 			}
 		}
 
-		private static void SetupSqlReplication(EmbeddableDocumentStore store, string script)
+		private static void SetupSqlReplication(EmbeddableDocumentStore store, string script, bool insertOnly = false)
 		{
 			using (var session = store.OpenSession())
 			{
@@ -464,8 +517,8 @@ var nameArr = this.StepName.split('.');");
 					RavenEntityName = "Orders",
 					SqlReplicationTables =
 					{
-						new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id"},
-						new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId"},
+						new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
+						new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
 					},
 					Script = script
 				});
