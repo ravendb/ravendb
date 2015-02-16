@@ -355,7 +355,10 @@ namespace Raven.Smuggler
 
 	    public RavenJToken DisableVersioning(RavenJObject metadata)
 	    {
-		    metadata.Add(Constants.RavenIgnoreVersioning, true);
+		    if (metadata != null)
+		    {
+			    metadata.Add(Constants.RavenIgnoreVersioning, true);
+		    }
 
 		    return metadata;
 	    }

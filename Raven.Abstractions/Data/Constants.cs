@@ -152,7 +152,7 @@ namespace Raven.Abstractions.Data
 		
 		//Versioning
 		public const string RavenCreateVersion = "Raven-Create-Version";
-	    public const string RavenIgnoreVersioning = "Temp-Raven-Ignore-Versioning";
+	    public const string RavenIgnoreVersioning = "Raven-Ignore-Versioning";
 
 		public const string RavenClientVersion = "Raven-Client-Version";
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";

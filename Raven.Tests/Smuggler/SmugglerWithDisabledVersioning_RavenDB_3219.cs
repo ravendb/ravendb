@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Raven.Tests.Smuggler
 {
-	public class SmugglerWithVersioning_RavenDB_3219 : RavenTest
+	public class SmugglerWithDisabledVersioning_RavenDB_3219 : RavenTest
 	{
 		[Fact]
 		public async Task CanDisableVersioningDuringImport_Remote()

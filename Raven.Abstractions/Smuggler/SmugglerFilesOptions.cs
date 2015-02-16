@@ -14,5 +14,7 @@ namespace Raven.Abstractions.Smuggler
         public Etag StartFilesDeletionEtag { get; set; }
 
 		public bool StripReplicationInformation { get; set; }
+
+		public bool ShouldDisableVersioningBundle { get; set; }
     }
 }
