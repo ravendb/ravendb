@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
@@ -295,6 +296,15 @@ namespace Raven.Database.Counters
 				};
 			}
 
+			public long? GetCounterOverallTotal(string groupName, string counterName)
+			{
+				var counterValues = GetCounterValuesByPrefix(groupName, counterName);
+				if (counterValues == null)
+					return null;
+
+				return CalculateOverallTotal(counterValues);
+			}
+
 			public Counter GetCounterValuesByPrefix(string groupName, string counterName)
 			{
 				return GetCounterValuesByPrefix(MergeGroupAndName(groupName, counterName));
@@ -418,7 +428,9 @@ namespace Raven.Database.Counters
 			private readonly Transaction transaction;
 			private readonly Reader reader;
 			private readonly Tree counters, serversLastEtag, etagsToCounters, countersToEtag, countersGroups, metadata;
-			private readonly byte[] tempThrowawayBuffer;
+			//private readonly byte[] tempThrowawayBuffer = new byte[sizeof(long)];
+			private byte[] fullCounterNameBuffer = new byte[0];
+			private readonly byte[] counterValueBuffer = new byte[sizeof(long)];
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
 			
 			public Writer(CounterStorage parent, Transaction transaction)
@@ -432,8 +444,6 @@ namespace Raven.Database.Counters
 				etagsToCounters = transaction.State.GetTree(transaction, "etags->counters");
 				countersToEtag = transaction.State.GetTree(transaction, "counters->etags");
 				metadata = transaction.State.GetTree(transaction, "$metadata");
-
-				tempThrowawayBuffer = new byte[sizeof(long)];
 			}
 
 			public CounterValue GetCounterValue(string fullCounterName)
@@ -453,11 +463,12 @@ namespace Raven.Database.Counters
 
 			public void Store(string groupName, string counterName, long delta)
 			{
-				var fullCounterName = MergeGroupAndName(groupName, counterName);
+				//var mergedGroupAndName = MergeGroupAndName(groupName, counterName);
 				var sign = delta >= 0 ? ValueSign.Positive : ValueSign.Negative;
-				Store(parent.ServerId, fullCounterName, sign, counterKey =>
+				var fullCounterName = string.Concat(groupName, Separator, counterName, Separator, parent.ServerId, Separator, sign);
+				Store(fullCounterName, counterKey =>
 				{
-					if (delta < 0)
+					if (sign == ValueSign.Negative)
 						delta = -delta;
 					counters.Increment(counterKey, delta);
 				});
@@ -465,36 +476,38 @@ namespace Raven.Database.Counters
 
 			public void Store(string fullCounterName, CounterValue counterValue)
 			{
-				var serverId = counterValue.ServerId.ToString();
-				var sign = counterValue.IsPositive ? ValueSign.Positive : ValueSign.Negative;
-				Store(serverId, fullCounterName, sign, counterKey =>
+				//var sign = counterValue.IsPositive ? ValueSign.Positive : ValueSign.Negative;
+				//TODO: verify counter name stracture
+				Store(fullCounterName, counterKey =>
 				{
-					EndianBitConverter.Big.CopyBytes(counterValue.Value, tempThrowawayBuffer, 0);
-					counters.Add(counterKey, tempThrowawayBuffer);
+					EndianBitConverter.Big.CopyBytes(counterValue.Value, counterValueBuffer, 0);
+					counters.Add(counterKey, counterValueBuffer);
 				});
 			}
 
-			// counter name: foo/bar/
-			private void Store(string serverId, string counterName, char sign, Action<Slice> storeAction)
+			// full counter name: foo/bar/guid/+
+			private void Store(string fullCounterName, Action<Slice> storeAction)
 			{
-				var fullCounterNameSize = Encoding.UTF8.GetByteCount(counterName);
-				var requiredBufferSize = fullCounterNameSize + 36 + 2;
-				Debug.Assert(requiredBufferSize < UInt16.MaxValue);
+				var fullCounterNameSize = Encoding.UTF8.GetByteCount(fullCounterName);
+				//var requiredBufferSize = fullCounterNameSize + 36 + 2;
+				Debug.Assert(fullCounterNameSize < UInt16.MaxValue);
 
-				var sliceWriter = new SliceWriter();
-				sliceWriter.WriteString(counterName);
+				EnsureBufferSize(fullCounterNameSize);
+				var sliceWriter = new SliceWriter(fullCounterNameBuffer);
+				sliceWriter.WriteString(fullCounterName);
+				/*sliceWriter.WriteString(counterName);
 				sliceWriter.WriteString(serverId);
 				sliceWriter.WriteString(Separator);
-				sliceWriter.WriteBigEndian(sign);
+				sliceWriter.WriteBigEndian(sign);*/
 
-				var endOfGroupNameIndex = counterName.IndexOf(Separator, StringComparison.InvariantCultureIgnoreCase);
+				var endOfGroupNameIndex = fullCounterName.IndexOf(Separator, StringComparison.InvariantCultureIgnoreCase);
 				if (endOfGroupNameIndex == -1)
 					throw new InvalidOperationException("Could not find group name in counter, no separator");
 
-				var counterKey = sliceWriter.CreateSlice(requiredBufferSize);
+				var counterKey = sliceWriter.CreateSlice(fullCounterNameSize);
 				if (DoesCounterExist(counterKey) == false) //it's a new counter
 				{
-					Slice groupKey = counterName.Substring(0, endOfGroupNameIndex);
+					Slice groupKey = fullCounterName.Substring(0, endOfGroupNameIndex);
 					countersGroups.Increment(groupKey, 1);
 				}
 
@@ -533,9 +546,10 @@ namespace Raven.Database.Counters
 				return false;
 			}
 
-			private long CalculateOverallTotal(Counter counterValuesByPrefix)
+			private void EnsureBufferSize(int requiredBufferSize)
 			{
-				return counterValuesByPrefix.CounterValues.Sum(x => x.IsPositive ? x.Value : -x.Value);
+				if (fullCounterNameBuffer.Length < requiredBufferSize)
+					fullCounterNameBuffer = new byte[Utils.NearestPowerOfTwo(requiredBufferSize)];
 			}
 
 			public void RecordLastEtagFor(string serverId, long lastEtag)
@@ -585,9 +599,14 @@ namespace Raven.Database.Counters
 			}
 		}
 
+		private static long CalculateOverallTotal(Counter counterValuesByPrefix)
+		{
+			return counterValuesByPrefix.CounterValues.Sum(x => x.IsPositive ? x.Value : -x.Value);
+		}
+
 		private static string MergeGroupAndName(string groupName, string counterName)
 		{
-			return String.Concat(groupName, Separator, counterName, Separator);
+			return string.Concat(groupName, Separator, counterName, Separator);
 		}
 
 		private const string Separator = "/";

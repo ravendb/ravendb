@@ -11,5 +11,6 @@ namespace Raven.Database.Counters
 
         public string SendingServerName { get; set; }
         public List<ReplicationCounter> Counters { get; set; }
+	    public string ServerId { get; set; }
     }
 }

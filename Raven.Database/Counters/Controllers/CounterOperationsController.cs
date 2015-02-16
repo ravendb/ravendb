@@ -279,11 +279,10 @@ namespace Raven.Database.Counters.Controllers
         {
 			using (var reader = Storage.CreateReader())
 			{
-				var countersByPrefix = reader.GetCounterValuesByPrefix(groupName, counterName);
-				if (countersByPrefix == null)
+				var overallTotal = reader.GetCounterOverallTotal(groupName, counterName);
+				if (overallTotal == null)
 					return GetMessageWithObject(new {Message = "Specified counter not found within the specified group"}, HttpStatusCode.NotFound);
 
-				var overallTotal = 0;//CounterStorage.CalculateOverallTotal(countersByPrefix);
 				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
 			}
         }
