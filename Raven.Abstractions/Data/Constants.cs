@@ -72,6 +72,8 @@ namespace Raven.Abstractions.Data
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
 		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
 
+		public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
+
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
 		public const string RavenEsentLogsPath = "Raven/Esent/LogsPath";

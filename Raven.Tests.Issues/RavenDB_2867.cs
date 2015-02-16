@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
@@ -19,8 +20,6 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_2867 : RavenTest
 	{
-		private const string Prefix = "Raven/Indexes/Replace/";
-
 		private class Person
 		{
 			public string Id { get; set; }
@@ -62,9 +61,9 @@ namespace Raven.Tests.Issues
 
                 store
                     .DatabaseCommands
-                    .Put(Prefix + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, MinimumEtagBeforeReplace = null }), new RavenJObject());
+                    .Put(Constants.IndexReplacePrefix + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, MinimumEtagBeforeReplace = null }), new RavenJObject());
 
-                store.DatabaseCommands.Delete(Prefix + new NewIndex().IndexName, null);
+				store.DatabaseCommands.Delete(Constants.IndexReplacePrefix + new NewIndex().IndexName, null);
 
                 Assert.Null(store.DatabaseCommands.GetIndex(new NewIndex().IndexName));
             }
@@ -86,12 +85,12 @@ namespace Raven.Tests.Issues
 
                 store
                     .DatabaseCommands
-                    .Put(Prefix + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, MinimumEtagBeforeReplace = null }), new RavenJObject());
+					.Put(Constants.IndexReplacePrefix + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, MinimumEtagBeforeReplace = null }), new RavenJObject());
 
 
                 store.DatabaseCommands.DeleteIndex(new NewIndex().IndexName);
 
-                Assert.Null(store.DatabaseCommands.Get(Prefix + new NewIndex().IndexName));
+				Assert.Null(store.DatabaseCommands.Get(Constants.IndexReplacePrefix + new NewIndex().IndexName));
             }
         }
 
@@ -116,7 +115,7 @@ namespace Raven.Tests.Issues
 
 				store
 					.DatabaseCommands
-					.Put(Prefix + new NewIndex().IndexName, null, 
+					.Put(Constants.IndexReplacePrefix + new NewIndex().IndexName, null, 
 					RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, MinimumEtagBeforeReplace = null }), new RavenJObject());
 
 				var e = Assert.Throws<InvalidOperationException>(() =>
@@ -166,7 +165,7 @@ namespace Raven.Tests.Issues
 
 				store
 					.DatabaseCommands
-					.Put(Prefix + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, ReplaceTimeUtc = SystemTime.UtcNow.AddMinutes(10) }), new RavenJObject());
+					.Put(Constants.IndexReplacePrefix + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, ReplaceTimeUtc = SystemTime.UtcNow.AddMinutes(10) }), new RavenJObject());
 
 				var e = Assert.Throws<InvalidOperationException>(() =>
 				{

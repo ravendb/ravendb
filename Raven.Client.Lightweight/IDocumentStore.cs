@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Specialized;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -134,6 +135,16 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
+
+		/// <summary>
+		/// Executes the index creation in side-by-side mode.
+		/// </summary>
+		void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
+
+		/// <summary>
+		/// Executes the index creation in side-by-side mode.
+		/// </summary>
+		Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
 
 		/// <summary>
 		/// Executes the index creation.

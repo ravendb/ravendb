@@ -303,7 +303,30 @@ namespace Raven.Database.Client
             return server.DocumentStore.ExecuteIndexAsync(indexCreationTask);
         }
 
-        /// <summary>
+		/// <summary>
+		/// Executes the index creation using side-by-side mode.
+		/// </summary>
+		/// <param name="indexCreationTask"></param>
+		/// <param name="minimumEtagBeforeReplace"></param>
+		/// <param name="replaceTimeUtc"></param>
+	    public void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+	    {
+		    server.DocumentStore.SideBySideExecuteIndex(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
+	    }
+
+		/// <summary>
+		/// Executes the index creation using side-by-side mode.
+		/// </summary>
+		/// <param name="indexCreationTask"></param>
+		/// <param name="minimumEtagBeforeReplace"></param>
+		/// <param name="replaceTimeUtc"></param>
+		/// <returns></returns>
+	    public Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+	    {
+		    return server.DocumentStore.SideBySideExecuteIndexAsync(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
+	    }
+
+	    /// <summary>
         ///     Executes the transformer creation
         /// </summary>
         public void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
