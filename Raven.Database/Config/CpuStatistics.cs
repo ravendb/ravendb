@@ -9,16 +9,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Threading;
-
+using NLog.Internal;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
+using ConfigurationManager = System.Configuration.ConfigurationManager;
 
 namespace Raven.Database.Config
 {
 	public static class CpuStatistics
 	{
 		private const int HighNotificationThreshold = 80;
-        private const int LowNotificationThreshold = 20;
+        private const int LowNotificationThreshold = 60;
 
 		private const int NumberOfItemsInQueue = 5;
 
@@ -31,8 +32,14 @@ namespace Raven.Database.Config
 	    private static bool errorGettingCpuStats;
 		private static int nextWriteIndex;
         private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
-		static CpuStatistics()
+	    private static bool dynamicLoadBalancding;
+
+	    static CpuStatistics()
 		{
+	        if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancding) && 
+                dynamicLoadBalancding == false)
+		        return; // disabled, so we avoid it
+	        dynamicLoadBalancding = true;
 
 		    AppDomain.CurrentDomain.DomainUnload += (sender, args) => _domainUnload.Set();
 
@@ -127,6 +134,8 @@ namespace Raven.Database.Config
 
 		public static void RegisterCpuUsageHandler(ICpuUsageHandler handler)
 		{
+		    if (dynamicLoadBalancding == false)
+		        return;
 			CpuUsageHandlers.Add(new WeakReference<ICpuUsageHandler>(handler));
 		}
 

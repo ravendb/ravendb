@@ -718,6 +718,42 @@ PutDocument(
 			}
 		}
 
+		[Fact]
+		public void PreventRecursion()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var item = new CustomType
+				{
+					Id = "Item/1",
+					Value = 1
+				};
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(item);
+					s.SaveChanges();
+				}
+
+				store
+					.DatabaseCommands
+					.Patch("Item/1", new ScriptedPatchRequest { Script = "this.Test = this" });
+
+				var doc = store.DatabaseCommands.Get("Item/1");
+
+				Assert.NotNull(doc);
+				Assert.Equal("1", doc.DataAsJson["Value"]);
+
+				var patchedField = (RavenJObject)doc.DataAsJson["Test"];
+
+				Assert.Equal("1", patchedField["Value"]);
+
+				patchedField = patchedField["Test"] as RavenJObject;
+
+				Assert.Null(patchedField);
+			}
+		}
+
 		private void ExecuteTest(IDocumentStore store)
 		{
 			using (var s = store.OpenSession())

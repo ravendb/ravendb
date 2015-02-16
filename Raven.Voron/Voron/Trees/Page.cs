@@ -250,8 +250,8 @@ namespace Voron.Trees
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.KeyLength == 0);// branch page's first item must be the implicit ref
-            if (HasSpaceFor(key, len) == false)
-                throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
+	        if (HasSpaceFor(key, len) == false)
+		        throw new InvalidOperationException(string.Format("The page is full and cannot add an entry, this is probably a bug. Key: {0}, data length: {1}, size left: {2}", key, len, SizeLeft));
 
 	        var prefixedKey = key as PrefixedSlice;
 			if (prefixedKey != null && prefixedKey.NewPrefix != null)

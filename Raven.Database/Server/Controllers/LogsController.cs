@@ -15,7 +15,7 @@ namespace Raven.Database.Server.Controllers
 	public class LogsController : RavenDbApiController
 	{
 		[HttpGet]		
-		public HttpResponseMessage RavenFSLogsGet(string type = null)
+		public HttpResponseMessage RavenFsLogsGet(string type = null)
 		{
 			DatabaseMemoryTarget.BoundedMemoryTarget boundedMemoryTarget = null;
 			if (NLog.LogManager.Configuration != null && NLog.LogManager.Configuration.AllTargets != null)

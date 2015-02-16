@@ -250,7 +250,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							}
 
 							latestEtag = Etag.Max(latestEtag, lastBatchEtag);
-							SaveNewReplicationStatus(localReplicationStatus, latestEtag);
+							SaveNewReplicationStatus(localReplicationStatus);
 						}
 						else // no point in waiting if we just saved a new doc
 						{
@@ -288,7 +288,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 								var deletedDocs = deletedDocsByConfig[replicationConfig];
 								var docsToReplicate = itemsToReplicate
-									.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
+									.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0) // haven't replicate the etag yet
 									.Where(document =>
 									{
 										var info = Database.Documents.GetRecentTouchesFor(document.Key);
@@ -368,13 +368,15 @@ namespace Raven.Database.Bundles.SqlReplication
 							}
 							else
 							{
-								destEtag.LastDocEtag = currentLatestEtag = currentLatestEtag ?? destEtag.LastDocEtag;
+								var lastDocEtag = destEtag.LastDocEtag;
+								if (currentLatestEtag != null && EtagUtil.IsGreaterThan(currentLatestEtag, lastDocEtag))
+									lastDocEtag = currentLatestEtag;
+
+								destEtag.LastDocEtag = lastDocEtag;
 							}
-							latestEtag = Etag.Max(latestEtag, currentLatestEtag);
 						}
 
-						latestEtag = Etag.Max(latestEtag, lastBatchEtag);
-						SaveNewReplicationStatus(localReplicationStatus, latestEtag);
+						SaveNewReplicationStatus(localReplicationStatus);
 					}
 					finally
 					{
@@ -410,7 +412,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
+		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus)
 		{
 			int retries = 5;
 			while (retries > 0)
@@ -604,10 +606,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 						return result;
 					}
-					catch (Exception e)
+					catch (Exception diffExceptionName)
 					{
-						replicationStats.RecordScriptError(Database, e);
-						log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, e);
+						replicationStats.RecordScriptError(Database, diffExceptionName);
+						log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
 					}
 				}
 			}
@@ -651,7 +653,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				var scriptResult = ApplyConversionScript(sqlReplication, docs, stats);
 
 				var connectionsDoc = Database.Documents.Get(ConnectionsDocumentName, null);
-				var sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
+				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections();
 
 				if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections, false, false))
 				{

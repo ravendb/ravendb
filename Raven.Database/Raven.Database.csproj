@@ -242,6 +242,7 @@
     <Compile Include="Counters\CounterValue.cs" />
     <Compile Include="Counters\ReplicationCounter.cs" />
     <Compile Include="Counters\ValueSign.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideDeletingFilesTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningPutTrigger.cs" />
@@ -253,6 +254,7 @@
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
+    <Compile Include="Server\WebApi\ MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
     <Compile Include="DiskIO\DiskPerformanceTester.cs" />

@@ -23,7 +23,7 @@
                 <i class="fa fa-plus"></i> New transformer
             </a>
         </div>
-        <div class="btn-group">
+        <div class="btn-group" data-bind="visible: transformersGroups().length > 0">
             <button class="btn btn-default" data-bind="click: toggleExpandAll, attr: { title: expandCollapseTitle }" accesskey="=">
                 <i data-bind="css: { 'fa-plus-square-o': !allTransformersExpanded(), 'fa-minus-square-o': allTransformersExpanded }" class="fa fa-fw"></i>
             </button>
@@ -33,12 +33,12 @@
                 <i class="fa fa-paste"></i>
             </button>
         </div>
-        <div class="btn-group">
+        <div class="btn-group" data-bind="visible: transformersGroups().length > 0">
             <button type="button" class="btn btn-danger" data-bind="click: deleteAllTransformers" title="Delete All Transformers"><i class="fa fa-trash-o"></i></button>
         </div>
     </div>
 
-    <div data-bind="visible: transformersGroups().length == 0">
+    <div data-bind="visible: transformersGroups().length == 0" class="text-center">
         <h4 class="page-header text-info">No transformers have been created for this database. <a href="#" data-bind="attr: { href: newTransformerUrl }">Create one now</a>.</h4>
     </div>
 

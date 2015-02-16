@@ -5,25 +5,55 @@ import savePeriodicExportSetupCommand = require("commands/savePeriodicExportSetu
 import document = require("models/document");
 import periodicExportSetup = require("models/periodicExportSetup");
 import appUrl = require("common/appUrl");
+import database = require("models/database");
 
 class periodicExport extends viewModelBase {
-
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
     backupStatusDirtyFlag = new ko.DirtyFlag([]);
     backupConfigDirtyFlag = new ko.DirtyFlag([]);
+    isForbidden = ko.observable<boolean>(false);
+
+    constructor() {
+        super();
+        this.activeDatabase.subscribe((db: database) => this.isForbidden(db.isAdminCurrentTenant() == false));
+    }
+
+    attached() {
+        var content = "Could not decrypt the access settings, if you are running on IIS, make sure that load user profile is set to true. " +
+            "Alternatively this can happen when the server was started using different account than when the settings were created.<br />" +
+            "Reenter your settings and click save.";
+
+        $("#awsDecryptFailureSpan").popover({
+            html: true,
+            trigger: "hover",
+            container: $("body"),
+            content: content
+        });
+
+        $("#azureDecryptFailureSpan").popover({
+            html: true,
+            trigger: "hover",
+            container: $("body"),
+            content: content
+        });
+    }
 
     canActivate(args: any): any {
         super.canActivate(args);
         this.backupSetup(new periodicExportSetup);
-
         var deferred = $.Deferred();
+
         var db = this.activeDatabase();
-        if (db) {
+        this.isForbidden(!db.isAdminCurrentTenant());
+        if (db.isAdminCurrentTenant()) {
             $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
                 .done(() => deferred.resolve({ can: true }))
                 .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+        } else {
+            deferred.resolve({ can: true });
         }
+
         return deferred;
     }
 
@@ -76,6 +106,7 @@ class periodicExport extends viewModelBase {
             saveTask.done((resultArray) => {
                 var newEtag = resultArray[0].ETag;
                 this.backupSetup().setEtag(newEtag);
+                this.backupSetup().resetDecryptionFailures();
                 this.backupStatusDirtyFlag().reset(); //Resync Changes
                 this.backupConfigDirtyFlag().reset(); //Resync Changes
             });

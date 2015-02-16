@@ -906,7 +906,7 @@ namespace Raven.Abstractions.Smuggler
             };
 
             JsonDocument lastEtagsDocument = null;
-            if ( Options.UseContinuationFile )
+            if (Options.UseContinuationFile)
             {
                 lastEtagsDocument = Operations.GetDocument(continuationDocId);
                 if ( lastEtagsDocument == null )
@@ -959,16 +959,19 @@ namespace Raven.Abstractions.Smuggler
                     continue;
 
                 var metadata = document["@metadata"] as RavenJObject;
-                if ( metadata != null )
+                if (metadata != null)
                 {
                     if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
                         continue;
 
                     if (Options.StripReplicationInformation)
                         document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
+
+					if(Options.ShouldDisableVersioningBundle)
+						document["@metadata"] = Operations.DisableVersioning(metadata);
                 }
 
-                if ( Options.UseContinuationFile )
+                if (Options.UseContinuationFile)
                 {
                     tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
                     if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.
@@ -1100,22 +1103,38 @@ namespace Raven.Abstractions.Smuggler
 			{
 				IsTransformersSupported = false;
 				IsDocsStreamingSupported = false;
+				IsIdentitiesSmugglingSupported = false;
                 Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
 				return;
 			}
 
+			if (intServerVersion == 25)
+			{
+				Operations.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+
+				IsTransformersSupported = true;
+				IsDocsStreamingSupported = true;
+				IsIdentitiesSmugglingSupported = false;
+
+				return;
+			}
+
+
 			IsTransformersSupported = true;
 			IsDocsStreamingSupported = true;
+			IsIdentitiesSmugglingSupported = true;
 		}
 
 		private void SetLegacyMode()
 		{
 			IsTransformersSupported = false;
 			IsDocsStreamingSupported = false;
+			IsIdentitiesSmugglingSupported = false;
 			Operations.ShowProgress("Server version is not available. Running in legacy mode which does not support transformers.");
 		}
 
 		public bool IsTransformersSupported { get; private set; }
 		public bool IsDocsStreamingSupported { get; private set; }
+		public bool IsIdentitiesSmugglingSupported { get; private set; }
 	}
 }

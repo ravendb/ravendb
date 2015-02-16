@@ -1,4 +1,5 @@
 ﻿class resource {
+    isAdminCurrentTenant = ko.observable<boolean>(false);
     isSystem = false;
     isSelected = ko.observable<boolean>(false);
     isChecked = ko.observable<boolean>(false);
@@ -7,8 +8,10 @@
     isVisible = ko.observable(true);
     disabled = ko.observable<boolean>(false);
     isLicensed: KnockoutComputed<boolean>;
+    statistics: KnockoutObservable<any>;
 
-    constructor(public name: string, public type: string) {
+    constructor(public name: string, public type: string, isAdminCurrentTenant: boolean) {
+        this.isAdminCurrentTenant(isAdminCurrentTenant);
     }
 
     activate() {

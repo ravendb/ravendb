@@ -31,14 +31,11 @@ class getIdentitiesCommand extends commandBase {
             done((identities: statusDebugIdentitiesDto) => {
                 var items = $.map(identities.Identities, r => { 
                     return {
-                        getId: function () {
-                            return r.Key;
-                        },
+                        getId: () => r.Key,
+                        getUrl: () => r.Key,
                         'Value': r.Value,
                         'Key': r.Key,
-                        getDocumentPropertyNames: function () {
-                            return ["Key", "Value"];
-                        }
+                        getDocumentPropertyNames: () => ["Key", "Value"]
                     }
                 });
                 console.log(items); //TODO: dlete me

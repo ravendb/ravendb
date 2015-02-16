@@ -32,6 +32,11 @@ namespace Raven.Database.Util
 			}
 		}
 
+	    public long LastDocumentTransactionEtag
+	    {
+	        get { return Interlocked.Read(ref sequentialUuidCounterMappedResults); }
+	    }
+
 	
 		public Etag CreateSequentialUuid(UuidType type)
 		{

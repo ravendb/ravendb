@@ -10,7 +10,12 @@ namespace Raven.Database.Impl
 	public class DummyUuidGenerator : IUuidGenerator
 	{
 		private byte cur;
-		public Etag CreateSequentialUuid(UuidType type)
+	    public long LastDocumentTransactionEtag
+	    {
+	        get { return -1; }
+	    }
+
+	    public Etag CreateSequentialUuid(UuidType type)
 		{
 			var bytes = new byte[16];
 			bytes[15] += ++cur;

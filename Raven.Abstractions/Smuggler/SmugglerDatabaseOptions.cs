@@ -165,6 +165,11 @@ namespace Raven.Abstractions.Smuggler
 		/// </summary>
 		public bool ShouldExcludeExpired { get; set; }
 
+		/// <summary>
+		/// It allows to turn off versioning bundle for the duration of the import
+		/// </summary>
+		public bool ShouldDisableVersioningBundle { get; set; }
+
         /// <summary>
         /// When set ovverides the default document name.
         /// </summary>

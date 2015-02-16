@@ -7,6 +7,7 @@
 		MultiAdd,
 		MultiDelete,
 		CreateTree,
+		RenameTree,
 		Increment,
 		AddStruct,
 

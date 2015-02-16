@@ -92,6 +92,48 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
+
+        [Fact]
+        public async Task CopyToNewFile()
+        {
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", 128, x =>
+                {
+                    for (byte i = 0; i < 128; i++)
+                        x.WriteByte(i);
+                });
+
+                await session.SaveChangesAsync();
+
+                var file = await session.LoadFileAsync("test1.file");
+                var resultingStream = await session.DownloadAsync(file);
+
+                session.RegisterUpload("test2.file", 128, x =>
+                {
+                    resultingStream.CopyTo(x);
+                });
+
+                await session.SaveChangesAsync();
+
+                var newStream = await session.DownloadAsync("test2.file");
+
+                var ms = new MemoryStream();
+                newStream.CopyTo(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                Assert.Equal(128, ms.Length);
+
+                for (byte i = 0; i < 128; i++)
+                {
+                    int value = ms.ReadByte();
+                    Assert.True(value >= 0);
+                    Assert.Equal(i, (byte)value);
+                }
+            }
+        }
+
         [Fact]
 		public async Task UploadActionWritesIncompleteStream()
         {
@@ -195,6 +237,76 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                     var availableFile = await session.LoadFileAsync("b/test2.file");
                     Assert.NotNull(availableFile);
+                }
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task SearchAndDownloadInParallelUsingCommandsInterface(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    // Uploading 10 files
+                    for (int i = 0; i < 10; i++)
+                        session.RegisterUpload(string.Format("/docs/test{0}.file", i), CreateUniformFileStream(128));
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var searchResults = await session.Commands.SearchAsync("__directoryName:/docs");
+
+                    var deleteTasks = new Task[searchResults.FileCount];
+                    for (int index = 0; index < searchResults.Files.Count; index++)
+                    {
+                        var fileHeader = searchResults.Files[index];
+                        deleteTasks[index] = session.Commands.DeleteAsync(fileHeader.FullPath);
+                    }
+
+                    Task.WaitAll(deleteTasks);
+                }
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task SearchAndDownloadInParallel(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    // Uploading 10 files
+                    for (int i = 0; i < 10; i++)
+                        session.RegisterUpload(string.Format("/docs/test{0}.file", i), CreateUniformFileStream(128));
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {                    
+                    var searchResults = await session.Commands.SearchAsync("__directoryName:/docs");
+                    
+                    for (int index = 0; index < searchResults.Files.Count; index++)
+                    {
+                        var fileHeader = searchResults.Files[index];
+                        session.RegisterFileDeletion(fileHeader.FullPath);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var file = await session.LoadFileAsync(string.Format("/docs/test{0}.file", i));
+                        Assert.Null(file);
+                    }                        
                 }
             }
         }

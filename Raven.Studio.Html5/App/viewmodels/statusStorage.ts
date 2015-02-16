@@ -3,6 +3,7 @@ import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import status = require("viewmodels/status");
+import shell = require('viewmodels/shell');
 
 class statusDebug extends viewModelBase {
 
@@ -14,8 +15,8 @@ class statusDebug extends viewModelBase {
 
         this.router = status.statusRouter.createChildRouter()
             .map([
-                { route: 'databases/status/storage',                   moduleId: 'viewmodels/statusStorageOnDisk',         title: 'On disk',           tooltip: "Shows disk usage for active resource", nav: true, hash: appUrl.forCurrentDatabase().statusStorageOnDisk },
-                { route: 'databases/status/storage/storageBreakdown',  moduleId: 'viewmodels/statusStorageBreakdown',      title: 'Internal storage Breakdown',   tooltip: "Shows detailed information about internal storage breakdown", nav: true, hash: appUrl.forCurrentDatabase().statusStorageBreakdown },
+                { route: 'databases/status/storage',                   moduleId: 'viewmodels/statusStorageOnDisk',         title: 'On disk',           tooltip: "Shows disk usage for active resource", nav: shell.isGlobalAdmin(), hash: appUrl.forCurrentDatabase().statusStorageOnDisk },
+                { route: 'databases/status/storage/storageBreakdown',  moduleId: 'viewmodels/statusStorageBreakdown',      title: 'Internal storage Breakdown',   tooltip: "Shows detailed information about internal storage breakdown", nav: shell.isGlobalAdmin(), hash: appUrl.forCurrentDatabase().statusStorageBreakdown },
                 { route: 'databases/status/storage/collections',       moduleId: 'viewmodels/statusStorageCollections',    title: 'Collections storage',   tooltip: "Shows document counts (VERY SLOW)", nav: true, hash: appUrl.forCurrentDatabase().statusStorageCollections },
             ])
             .buildNavigationModel();

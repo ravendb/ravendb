@@ -86,13 +86,14 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     enterKeyPressed() {
         return true;
     }
+
     fetchResourcesAutocompletes(search: string) {
         if (this.resourceName() === search) {
             if (this.resourceAutocompletes.length == 1 && this.resourceName() == this.resourceAutocompletes()[0]) {
                 this.resourceAutocompletes.removeAll();
                 return;
             }
-            this.resourceAutocompletes(this.allResources().filter(x=> x.name.toLowerCase().indexOf(search.toLowerCase()) == 0).map(x=> x.name));
+            this.resourceAutocompletes(this.allResources().filter(x => x.name.toLowerCase().indexOf(search.toLowerCase()) == 0).map(x => x.name));
         }
     }
     

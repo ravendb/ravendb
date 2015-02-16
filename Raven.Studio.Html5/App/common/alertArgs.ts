@@ -5,8 +5,8 @@ class alertArgs {
     private detailsObject: any;
     private parsedErrorInfo: any;
 
-    buttonName: string;
-    onClickAction: () => any;
+    buttonName: string = null;
+    onClickAction: () => any = null;
 
     constructor(public type: alertType, public title: string, public details: string = "", public httpStatusText: string = "", public displayInRecentErrors: boolean = true) {
         var hashString = (title + details)

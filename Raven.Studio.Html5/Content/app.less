@@ -588,18 +588,26 @@ html, body {
     }
 }
 
-.resource-link {
+#tenantNameLink{
     padding-left: 5px;
-    overflow-x: hidden;
-    max-width: 150px;
+}
+
+.resource-link {
+    display: inline-block;
+    padding-right: 2px;
+    overflow: hidden!important;
+    max-width: 250px;
     -ms-text-overflow: ellipsis;
     -o-text-overflow: ellipsis;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.resource-caret{
+    padding-top: 10px;
+}
+
 .resource-link-disabled {
-    pointer-events: none;
     cursor: default;
 }
 

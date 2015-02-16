@@ -62,18 +62,24 @@ namespace Raven.Abstractions.Data
 			Start = query.Start;
 			Cutoff = query.Cutoff;
 	        WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow;
+			CutoffEtag = query.CutoffEtag;
 			PageSize = query.PageSize;
 			FieldsToFetch = query.FieldsToFetch;
+		    DefaultField = query.DefaultField; // keep?
+			DefaultOperator = query.DefaultOperator;
 			SortedFields = query.SortedFields;
-		    HighlighterPreTags = query.HighlighterPreTags;
+			HighlightedFields = query.HighlightedFields;
+			HighlighterPreTags = query.HighlighterPreTags;
 		    HighlighterPostTags = query.HighlighterPostTags;
-		    HighlightedFields = query.HighlightedFields;
 			HighlighterKeyName = query.HighlighterKeyName;
+			ResultsTransformer = query.ResultsTransformer;
 	        TransformerParameters = query.TransformerParameters;
-		    ResultsTransformer = query.ResultsTransformer;
-		    DefaultOperator = query.DefaultOperator;
-		    AllowMultipleIndexEntriesForSameDocumentToResultTransformer =
-			    query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
+		    ExplainScores = query.ExplainScores;
+		    SortHints = query.SortHints;
+		    IsDistinct = query.IsDistinct;
+			AllowMultipleIndexEntriesForSameDocumentToResultTransformer =
+				query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
+		    
 		}
 
 		/// <summary>

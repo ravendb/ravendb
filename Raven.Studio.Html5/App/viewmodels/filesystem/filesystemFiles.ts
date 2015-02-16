@@ -6,6 +6,7 @@ import shell = require("viewmodels/shell");
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
+import getFilesystemRevisionsCommand = require('commands/filesystem/getFilesystemRevisionsCommand');
 import createFolderInFilesystem = require("viewmodels/filesystem/createFolderInFilesystem");
 import treeBindingHandler = require("common/treeBindingHandler");
 import pagedResultSet = require("common/pagedResultSet");
@@ -19,10 +20,14 @@ import uploadQueueHelper = require("common/uploadQueueHelper");
 
 class filesystemFiles extends viewModelBase {
 
+    static revisionsFolderId = "/$$revisions$$";
+
     appUrls: computedAppUrls;
     fileName = ko.observable<file>();
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
+    selectedFilesText: KnockoutComputed<string>;
+    hasFiles: KnockoutComputed<boolean>;
     isSelectAll = ko.observable(false);
     hasAnyFileSelected: KnockoutComputed<boolean>;
     selectedFolder = ko.observable<string>();
@@ -34,6 +39,8 @@ class filesystemFiles extends viewModelBase {
     hasAnyFilesSelected: KnockoutComputed<boolean>;
     hasAllFilesSelected: KnockoutComputed<boolean>;
 
+    inRevisionsFolder = ko.observable<boolean>(false);
+
     private activeFilesystemSubscription: any;
 
     static treeSelector = "#filesTree";
@@ -42,13 +49,32 @@ class filesystemFiles extends viewModelBase {
     static uploadQueueSelector = "#uploadQueue";
     static uploadQueuePanelCollapsedSelector = "#uploadQueuePanelCollapsed";
 
-
     constructor() {
         super();
 
         this.uploadQueue.subscribe(x => this.newUpload(x));
         fileUploadBindingHandler.install();
         treeBindingHandler.install();
+        treeBindingHandler.includeRevisionsFunc = () => this.activeFilesystem().activeBundles.contains('Versioning');
+
+        this.selectedFilesText = ko.computed(() => {
+            if (!!this.selectedFilesIndices()) {
+                var documentsText = "file";
+                if (this.selectedFilesIndices().length != 1) {
+                    documentsText += "s";
+                }
+                return documentsText;
+            }
+            return "";
+        });
+
+        this.hasFiles = ko.computed(() => {
+            if (!!this.allFilesPagedItems()) {
+                var p: pagedList = this.allFilesPagedItems();
+                return p.totalResultCount() > 0;
+            }
+            return false;
+        });
     }
 
     activate(args) {
@@ -78,12 +104,12 @@ class filesystemFiles extends viewModelBase {
 
     loadFiles() {
         this.allFilesPagedItems(this.createPagedList(this.selectedFolder()));
-
-        return this.allFilesPagedItems;
     }
 
     folderChanged(newFolder: string) {
         this.loadFiles();
+
+        this.inRevisionsFolder(newFolder == filesystemFiles.revisionsFolderId);
 
         // treat notifications events
         if (!newFolder) {
@@ -98,7 +124,7 @@ class filesystemFiles extends viewModelBase {
                         return;
                     switch (e.Action) {
 
-                        case fileChangeAction.Add: {
+                        case "Add": {
                             var eventFolder = folder.getFolderFromFilePath(e.File);
 
                             if (!eventFolder || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
@@ -125,7 +151,7 @@ class filesystemFiles extends viewModelBase {
 
                             break;
                         }
-                        case fileChangeAction.Delete: {
+                        case "Delete": {
                             var eventFolder = folder.getFolderFromFilePath(e.File);
 
                             //check if the file is new at the folder level to remove it from the table
@@ -138,17 +164,17 @@ class filesystemFiles extends viewModelBase {
                             }
                             break;
                         }
-                        case fileChangeAction.Renaming: {
+                        case "Renaming": {
                             //nothing to do here
                         }
-                        case fileChangeAction.Renamed: {
+                        case "Renamed": {
                             //reload files to load the new names
                             if (callbackFolder.isFileAtFolderLevel(e.File)) {
                                 this.loadFiles();
                             }
                             break;
                         }
-                        case fileChangeAction.Update: {
+                        case "Update": {
                             //check if the file is new at the folder level to add it
                             if (callbackFolder.isFileAtFolderLevel(e.File)) {
                                 this.loadFiles();
@@ -163,14 +189,24 @@ class filesystemFiles extends viewModelBase {
     }
 
     createPagedList(directory): pagedList {
-        var fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
+        var fetcher;
+        if (directory == filesystemFiles.revisionsFolderId) { 
+            fetcher = (skip: number, take: number) => this.fetchRevisions(skip, take);
+        } else {
+            fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
+        }
+
         var list = new pagedList(fetcher);
         return list;
     }
 
     fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
         var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), directory, skip, take).execute();
+        return task;
+    }
 
+    fetchRevisions(skip: number, take: number): JQueryPromise<pagedResultSet> {
+        var task = new getFilesystemRevisionsCommand(appUrl.getFileSystem(), skip, take).execute();
         return task;
     }
 
@@ -302,7 +338,6 @@ class filesystemFiles extends viewModelBase {
         $(filesystemFiles.uploadQueuePanelCollapsedSelector).removeClass("hidden");
         $(".upload-queue").addClass("upload-queue-min");
     }
-
 }
 
 export = filesystemFiles;

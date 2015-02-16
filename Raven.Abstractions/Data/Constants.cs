@@ -54,6 +54,7 @@ namespace Raven.Abstractions.Data
 		public const string MemoryLimitForProcessing_BackwardCompatibility = "Raven/MemoryLimitForIndexing";
 		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
         public const string RunInMemory = "Raven/RunInMemory";
+	    public const string ExposeConfigOverTheWire = "Raven/ExposeConfigOverTheWire";
 
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
@@ -70,6 +71,8 @@ namespace Raven.Abstractions.Data
 		public const int BulkImportDefaultTimeoutInMs = 60000;
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
 		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
+
+		public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
@@ -151,6 +154,7 @@ namespace Raven.Abstractions.Data
 		
 		//Versioning
 		public const string RavenCreateVersion = "Raven-Create-Version";
+	    public const string RavenIgnoreVersioning = "Raven-Ignore-Versioning";
 
 		public const string RavenClientVersion = "Raven-Client-Version";
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
@@ -184,7 +188,6 @@ namespace Raven.Abstractions.Data
 
 
 		// General
-
 		public const string RavenDatabasePathPrefix = "Raven/Databases/";
 
         public static partial class FileSystem
@@ -225,5 +228,10 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
         }
+
+	    public static class Smuggler
+	    {
+		    public const string CallContext = "Raven/Smuggler/CallContext";
+	    }
 	}
 }

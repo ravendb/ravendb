@@ -8,7 +8,9 @@ class getReplicationsCommand extends getDocumentWithMetadataCommand {
     }
 
     execute(): JQueryPromise<replicationsDto> {
-        return super.execute();
+        var getTask = super.execute();
+        //getTask.fail((response: JQueryXHR) => this.reportError("Failed to get replications!", response.responseText, response.statusText));
+        return getTask;
     }
 }
 

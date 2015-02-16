@@ -18,19 +18,19 @@
                 </div>
                 <div class="panel-collapse collapse" data-bind="attr: { id: 'errorDetailsCollapse' + $index() }">
                     <div class="panel-body">
-                        <pre class="error-details" data-bind="text: $root.getErrorDetails($data)"></pre>
-                        <pre class="http-status" data-bind="visible: httpStatusText, text: httpStatusText"></pre>
-                        <button class="btn btn-default" data-bind="visible: buttonName, text: buttonName, click: onClickAction"></button>    
+                        <pre class="error-details" data-bind="visible: !!$root.getErrorDetails($data), text: $root.getErrorDetails($data)"></pre>
+                        <pre class="http-status" data-bind="visible: !!httpStatusText, text: httpStatusText"></pre>
+                        
+                        <button class="btn btn-default" data-bind="visible: !!buttonName && !!onClickAction, text: buttonName, click: onClickAction"></button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     <div class="modal-footer">
-        <a class="pull-left" href="http://issues.hibernatingrhinos.com/issues/RavenDB?#newissue=yes" target="_blank">Report a defect</a>
         <button type="button" class="btn btn-default" data-bind="click: clear">Clear</button>
         <button type="button" class="btn btn-primary" data-bind="click: close">Close</button>
-
+        <a class="pull-left" href="http://issues.hibernatingrhinos.com/issues/RavenDB?#newissue=yes" target="_blank">Report a defect</a>
         <span class="dialogResizer"></span>
     </div>
 </div>

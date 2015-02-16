@@ -43,6 +43,11 @@ class requestsCount extends viewModelBase {
         this.modelPolling();
     }
 
+    detached() {
+        super.detached();
+        window.onresize = null; // FIX nvd3 event attached globally
+    }
+
     appendData() {
         var metric = this.currentMetrics();
         var now = new Date();

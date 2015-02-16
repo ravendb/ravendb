@@ -24,14 +24,12 @@ using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
-using Raven.Database.Plugins;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
@@ -40,7 +38,26 @@ namespace Raven.Database.Server.Controllers
 {
 	public class StudioTasksController : RavenDbApiController
 	{
-        const int csvImportBatchSize = 512;
+        const int CsvImportBatchSize = 512;
+
+		[HttpGet]
+		[RavenRoute("studio-tasks/server-configs")]
+		public HttpResponseMessage GerServerConfigs()
+		{
+			var serverConfigs = new ServerConfigs
+			{
+				IsGlobalAdmin = GetUserInfo().IsAdminGlobal,
+				CanExposeConfigOverTheWire = CanExposeConfigOverTheWire()
+			};
+
+			return GetMessageWithObject(serverConfigs);
+		}
+
+		private class ServerConfigs
+		{
+			public bool IsGlobalAdmin { get; set; }
+			public bool CanExposeConfigOverTheWire { get; set; }
+		}
 
         [HttpPost]
 		[RavenRoute("studio-tasks/validateCustomFunctions")]
@@ -541,7 +558,7 @@ for(var customFunction in customFunctions) {{
                         batch.Add(document);
                         totalCount++;
 
-                        if (batch.Count >= csvImportBatchSize)
+                        if (batch.Count >= CsvImportBatchSize)
                         {
                             await FlushBatch(batch);
                             batch.Clear();

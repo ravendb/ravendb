@@ -1134,9 +1134,12 @@ namespace Raven.Database.Indexing
 					if (viewGenerator == null)
 						return;
 
-					var collectionNames = viewGenerator.ForEntityNames.ToList();
-					var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
+					var indexStats = actions.Indexing.GetIndexStats(indexId);
+					if (indexStats == null)
+						return;
 
+					var lastIndexedEtag = indexStats.LastIndexedEtag;
+					var collectionNames = viewGenerator.ForEntityNames.ToList();
 					if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
 						isStale = false;
 				}
@@ -1222,7 +1225,9 @@ namespace Raven.Database.Indexing
 							 CreationDate = stats.CreatedTimestamp
 						 }).ToArray();
 
-				var idleChecks = 0;
+				var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle;
+				var timeToWaitForIdleMinutes = timeToWaitBeforeMarkingAutoIndexAsIdle.TotalMinutes * 10;
+				
 				for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
 				{
 					var thisItem = autoIndexesSortedByLastQueryTime[i];
@@ -1237,13 +1242,11 @@ namespace Raven.Database.Indexing
 
 					if (thisItem.Priority.HasFlag(IndexingPriority.Normal))
 					{
-						var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle;
-						var timeToWaitForIdleMinutes = timeToWaitBeforeMarkingAutoIndexAsIdle.TotalMinutes * 10;
 						if (age < timeToWaitForIdleMinutes)
 						{
 							HandleActiveIndex(thisItem, age, lastQuery, accessor, timeToWaitForIdleMinutes);
 						}
-						else if (++idleChecks < 2)
+						else 
 						{
 							// If it's a fairly established query then we need to determine whether there is any activity currently
 							// If there is activity and this has not been queried against 'recently' it needs idling
