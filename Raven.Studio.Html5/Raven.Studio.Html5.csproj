@@ -361,7 +361,6 @@
     <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemRevisionsCommand.ts" />
-    <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\createDefaultSettingsCommand.ts" />
@@ -414,7 +413,7 @@
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\common\helpBindingHandler.ts" />
-    <Content Include="App\models\adminLogsConfigEntry.ts" />
+    <TypeScriptCompile Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
     <TypeScriptCompile Include="App\models\indexMergeSuggestion.ts" />
@@ -458,6 +457,7 @@
     <TypeScriptCompile Include="App\models\configurationSetting.ts" />
     <TypeScriptCompile Include="App\viewmodels\globalConfigCustomFunctions.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
+    <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\commands\monitorCompactCommand.ts" />

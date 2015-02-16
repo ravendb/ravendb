@@ -145,50 +145,76 @@
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
+                            <div class="form-group" data-bind="if: isS3Bucket">
+                                <label for="awsRemoteFolder" class="col-sm-3 control-label">Folder name:</label>
+                                <div class="col-sm-3">
+                                    <input id="awsRemoteFolder" type="text" placeholder="Remote folder name" class="form-control" data-bind="value: s3RemoteFolderName, valueUpdate: 'afterkeydown'" />
+                                </div>
+                            </div>
                             <label for="awsAccessKey" class="col-sm-4 control-label">AWS Access Key:</label>
                             <div class="col-sm-4">
-                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
+                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'"/>
                             </div>
                             <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <input disabled="disabled" type="text" class="form-control" data-bind="value: $root.globalBackupSetup().awsAccessKey" />
+                                <input disabled="disabled" type="text" class="form-control" data-bind="value: $root.globalBackupSetup().awsAccessKey"/>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
                             <label for="awsSecretKey" class="col-sm-4 control-label">AWS Secret Key:</label>
-                            <div class="col-sm-4">
-                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
+                            <div class="col-sm-3">
+                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'"/>
+                            </div>
+                            <div class="col-sm-1 control-label" style="text-align: left" data-bind="visible: awsSecretKeyDecryptionFailed">
+                                <span id="awsDecryptFailureSpan" class="help-cursor" data-placement="auto right" data-original-title="Why this input is empty?" data-trigger="hover">
+                                    <i class="fa fa-warning text-info"></i>
+                                </span>
                             </div>
                             <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <input disabled="disabled" type="password" autocomplete="off" class="form-control" data-bind="value: $root.globalBackupSetup().awsSecretKey" />
+                                <input disabled="disabled" type="password" autocomplete="off" class="form-control" data-bind="value: $root.globalBackupSetup().awsSecretKey"/>
+                            </div>
+
+                        </div>
+                        <div data-bind="if: additionalAzureInfoRequired">
+                            <div class="form-group">
+                                <label for="awsRegionEndpoint" class="col-sm-4 control-label">AWS Region Endpoint:</label>
+                                <div class="col-sm-4">
+                                    <select required id="awsRegionEndpoint" class="form-control" data-bind="enable: $root.usingGlobal() == false, options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
+                                </div>
+                                <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
+                                    <select disabled="disabled" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: $root.globalBackupSetup().awsRegionEndpoint"></select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="remoteFolder" class="col-sm-3 control-label">Folder name:</label>
+                                <div class="col-sm-3">
+                                    <input id="remoteFolder" type="text" placeholder="Remote folder name" class="form-control" data-bind="value: azureRemoteFolderName, valueUpdate: 'afterkeydown'"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="azureStorageAccount" class="col-sm-4 control-label">Azure Storage Account:</label>
+                                <div class="col-sm-4">
+                                    <input required id="azureStorageAccount" type="text" class="form-control" data-bind="enable: $root.usingGlobal() == false, value: azureStorageAccount, valueUpdate: 'afterkeydown'"/>
+                                </div>
+                                <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
+                                    <input disabled="disabled" type="text" class="form-control" data-bind="value: $root.globalBackupSetup().azureStorageAccount"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="azureStorageKey" class="col-sm-4 control-label">Azure Storage Key:</label>
+                                <div class="col-sm-3">
+                                    <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="enable: $root.usingGlobal() == false, value: azureStorageKey, valueUpdate: 'afterkeydown'"/>
+                                </div>
+                                <div class="col-sm-1 control-label" style="text-align: left" data-bind="visible: azureStorageKeyDecryptionFailed">
+                                    <span id="azureDecryptFailureSpan" class="help-cursor" data-placement="auto right" data-original-title="Why this input is empty?" data-trigger="hover">
+                                        <i class="fa fa-warning text-info"></i>
+                                    </span>
+                                </div>
+                                <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
+                                    <input disabled="disabled" type="password" autocomplete="off" class="form-control" data-bind="value: $root.globalBackupSetup().azureStorageKey"/>
+                                </div>
                             </div>
                         </div>
-                        <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
-                            <label for="awsRegionEndpoint" class="col-sm-4 control-label">AWS Region Endpoint:</label>
-                            <div class="col-sm-4">
-                                <select required id="awsRegionEndpoint" class="form-control" data-bind="enable: $root.usingGlobal() == false, options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
-                            </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <select disabled="disabled" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: $root.globalBackupSetup().awsRegionEndpoint"></select>
-                            </div>
-                        </div>
-                        <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
-                            <label for="azureStorageAccount" class="col-sm-4 control-label">Azure Storage Account:</label>
-                            <div class="col-sm-4">
-                                <input required id="azureStorageAccount" type="text" class="form-control" data-bind="enable: $root.usingGlobal() == false, value: azureStorageAccount, valueUpdate: 'afterkeydown'" />
-                            </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <input disabled="disabled" type="text" class="form-control" data-bind="value: $root.globalBackupSetup().azureStorageAccount" />
-                            </div>
-                        </div>
-                        <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
-                            <label for="azureStorageKey" class="col-sm-4 control-label">Azure Storage Key:</label>
-                            <div class="col-sm-4">
-                                <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="enable: $root.usingGlobal() == false, value: azureStorageKey, valueUpdate: 'afterkeydown'" />
-                            </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <input disabled="disabled" type="password" autocomplete="off" class="form-control" data-bind="value: $root.globalBackupSetup().azureStorageKey" />
-                            </div>
-                        </div>
+
                         <div class="form-group">
                             <label for="incrementalBackupInterval" class="col-sm-4 control-label">Incremental Backup Interval:</label>
                             <div class="col-sm-1">

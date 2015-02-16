@@ -107,38 +107,38 @@
         </div>
     </div>
     <div class="log-details panel panel-default" style="height: 30%">
-        <div class="col-md-11">
-            <div class="row">
+        <form class="form-horizontal col-md-11" role="form">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Message</label>
                 <div class="col-md-10" data-bind="with: selectedLog">
                     <p class="form-control-static" data-bind="text: Message"></p>
                 </div>
             </div>
-            <div class="row">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Exception</label>
                 <div class="col-md-10" data-bind="with: selectedLog">
                     <p class="form-control-static exceptionText" data-bind="text: Exception"></p>
                 </div>
             </div>
-            <div class="row">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Logged</label>
                 <div class="col-md-10" data-bind="with: selectedLog">
                     <p class="form-control-static" data-bind="text: TimeStampText"></p>
                 </div>
             </div>
-            <div class="row">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Level</label>
                 <div class="col-md-10" data-bind="with: selectedLog">
                     <p class="form-control-static" data-bind="text: Level, css: { 'text-warning': Level === 'Warn', 'text-danger': Level === 'Error' || Level === 'Fatal' }"></p>
                 </div>
             </div>
-            <div class="row">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Logger</label>
                 <div class="col-md-10" data-bind="with: selectedLog">
                     <p class="form-control-static" data-bind="text: LoggerName"></p>
                 </div>
             </div>
-        </div>
+        </form>
         <div class="col-md-1" data-bind="with: selectedLog">
             <button class="btn btn-default pull-right" data-bind="click: $root.hideLogType.bind($root), attr:{title: 'Filter out all ' + LoggerName.split('.').slice(2).join('.') + ' logs'}">
                 <i class="fa fa-filter"></i>

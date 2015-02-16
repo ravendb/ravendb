@@ -275,6 +275,8 @@ namespace Voron
 			    throw new ArgumentException("Tree " + fromName + " does not exists");
 			
 		    Slice key = toName;
+
+	        tx.State.Root.Delete(fromName);
 			var ptr = tx.State.Root.DirectAdd(key, sizeof(TreeRootHeader));
 		    fromTree.State.CopyTo((TreeRootHeader*) ptr);
 		    fromTree.Name = toName;

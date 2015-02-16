@@ -595,7 +595,7 @@ class replicationStats extends viewModelBase {
             .style("text-anchor", "end")
             .text(d => d);
 
-        this.legendWidth = d3.max(<any>$(".legend text"), (d: any) => d.getBBox().width) + 40;
+        this.legendWidth = d3.max(<any>$(".legend text"), (d: any) => d.getBBox().width) + 40 || 0;
 
         this.perfSvg.select('.legend_bg')
             .attr('y', -6)

@@ -26,6 +26,26 @@ class periodicExport extends viewModelBase {
         this.activeDatabase.subscribe((db: database) => this.isForbidden(!db.isAdminCurrentTenant()));
     }
 
+    attached() {
+        var content = "Could not decrypt the access settings, if you are running on IIS, make sure that load user profile is set to true. " +
+            "Alternatively this can happen when the server was started using different account than when the settings were created.<br />" +
+            "Reenter your settings and click save.";
+
+        $("#awsDecryptFailureSpan").popover({
+            html: true,
+            trigger: "hover",
+            container: $("body"),
+            content: content
+        });
+
+        $("#azureDecryptFailureSpan").popover({
+            html: true,
+            trigger: "hover",
+            container: $("body"),
+            content: content
+        });
+    }
+
     canActivate(args: any): any {
         super.canActivate(args);
         this.backupSetup(new periodicExportSetup);
@@ -119,6 +139,7 @@ class periodicExport extends viewModelBase {
             task.done((resultArray) => {
                 var newEtag = resultArray[0].ETag;
                 this.backupSetup().setEtag(newEtag);
+                this.backupSetup().resetDecryptionFailures();
                 this.dirtyFlag().reset(); // Resync changes
                 this.updateExportDisabledFlag();
             });

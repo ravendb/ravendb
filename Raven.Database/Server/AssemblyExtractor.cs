@@ -5,16 +5,13 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
-
-using Lucene.Net.Documents;
-
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Database.Config;
+using Field = Lucene.Net.Documents.Field;
 
 namespace Raven.Database.Server
 {
@@ -91,23 +88,40 @@ namespace Raven.Database.Server
 				if (!Directory.Exists(location))
 					Directory.CreateDirectory(location);
 
+				var assemblyPath = Path.Combine(location, assemblyToExtract.Value.Name + AssemblySuffix);
+
+	            if (File.Exists(assemblyPath))
+	            {
+		            var existingAssemblyVersion = FileVersionInfo.GetVersionInfo(assemblyPath);
+		            var assemblyInDomain = GetAssemblyByName(assemblyToExtract.Value.Name);
+
+					if(assemblyInDomain == null)
+						throw new InvalidOperationException("Requested assembly " + assemblyToExtract.Value.Name + " isn't present in current app domain.");
+
+		            var extractedAssembly =  assemblyInDomain.GetName().Version;
+
+		            if (existingAssemblyVersion.ProductMajorPart == extractedAssembly.Major &&
+		                existingAssemblyVersion.ProductMinorPart == extractedAssembly.Minor &&
+		                existingAssemblyVersion.ProductBuildPart == extractedAssembly.Build &&
+						existingAssemblyVersion.ProductPrivatePart == extractedAssembly.Revision)
+		            {
+			            continue; // .dll file exists and has proper version - no need to extract
+		            }
+
+					try
+					{
+						File.Delete(assemblyPath);
+					}
+					catch (Exception)
+					{
+						continue; // probably busy for some reason, ignoring
+					}
+				}
+
                 using (var stream = assemblyToExtractFrom.GetManifestResourceStream(assemblyToExtract.Key))
                 {
                     if (stream == null)
                         throw new InvalidOperationException("Could not extract assembly " + assemblyToExtract.Key + " from resources.");
-
-                    var assemblyPath = Path.Combine(location, assemblyToExtract.Value.Name + AssemblySuffix);
-	                if (File.Exists(assemblyPath))
-	                {
-		                try
-		                {
-			                File.Delete(assemblyPath);
-		                }
-		                catch (Exception)
-		                {
-			                continue; // probably busy for some reason, ignoring
-		                }
-	                }
 
                     if (assemblyToExtract.Value.Compressed)
                     {
@@ -123,6 +137,12 @@ namespace Raven.Database.Server
                 }
             }
         }
+
+		private static Assembly GetAssemblyByName(string name)
+		{
+			return AppDomain.CurrentDomain.GetAssemblies().
+				   SingleOrDefault(assembly => assembly.GetName().Name == name);
+		}
 
         private class AssemblyToExtract
         {

@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -204,7 +205,10 @@ namespace Raven.Client.Connection
 
 	    private void AssertServerVersionSupported()
 	    {
-	        var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
+		    if ((CallContext.GetData(Constants.Smuggler.CallContext) as bool?) == true) // allow Raven.Smuggler to work against old servers
+			    return;
+
+		    var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
 	        int serverBuild;
 
             // server doesn't return Raven-Server-Build in case of requests failures, thus we firstly check for header presence 

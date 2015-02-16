@@ -706,7 +706,7 @@ class visualizer extends viewModelBase {
         });
     }
 
-    toggleFullscreen() {
+    toggleFullscreen(e) {
         if ($(document).fullScreen()) {
             $("#visualizerSection").width('').height('');
             $("#keysDialogBtn").removeAttr('disabled');

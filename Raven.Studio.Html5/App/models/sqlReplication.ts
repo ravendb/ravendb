@@ -5,10 +5,10 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class sqlReplication extends document {
 
-    public CONNECTION_STRING = "Connection String";
-    public PREDEFINED_CONNECTION_STRING_NAME = "Predefined Connection String Name";
-    public CONNECTION_STRING_NAME = "Connection String Name";
-    public CONNECTION_STRING_SETTING_NAME = "Connection String Setting Name";
+    CONNECTION_STRING = "Connection String";
+    PREDEFINED_CONNECTION_STRING_NAME = "Predefined Connection String Name";
+    CONNECTION_STRING_NAME = "Connection String Name";
+    CONNECTION_STRING_SETTING_NAME = "Connection String Setting Name";
     
     availableConnectionStringTypes = [
         this.PREDEFINED_CONNECTION_STRING_NAME,
@@ -17,7 +17,7 @@ class sqlReplication extends document {
         this.CONNECTION_STRING_SETTING_NAME 
     ];
 
-    public metadata: documentMetadata;
+    metadata: documentMetadata;
 
     name = ko.observable<string>().extend({ required: true });
     disabled = ko.observable<boolean>().extend({ required: true });
@@ -40,13 +40,24 @@ class sqlReplication extends document {
     
     showReplicationConfiguration = ko.observable<boolean>(false);
 
+    hasAnyInsertOnlyOption = ko.computed(() => {
+        var hasAny = false;
+        this.sqlReplicationTables().forEach(s => {
+            // don't use return here to register all deps in knockout
+            if (s.insertOnly()) {
+                hasAny = true;
+            }
+        });
+        return hasAny;
+    });
+
     constructor(dto: sqlReplicationDto) {
         super(dto);
 
         this.name(dto.Name);
         this.disabled(dto.Disabled);
         this.factoryName(dto.FactoryName);
-        this.ravenEntityName(dto.RavenEntityName != null ? dto.RavenEntityName : '');
+        this.ravenEntityName(dto.RavenEntityName != null ? dto.RavenEntityName : "");
         this.parameterizeDeletesDisabled(dto.ParameterizeDeletesDisabled);
         this.sqlReplicationTables(dto.SqlReplicationTables.map(tab => new sqlReplicationTable(tab)));
         this.script(dto.Script);
@@ -54,7 +65,7 @@ class sqlReplication extends document {
         this.performTableQuatation(!!dto.PerformTableQuatation ? dto.PerformTableQuatation : true);
         this.setupConnectionString(dto);
 
-        this.metadata = new documentMetadata(dto['@metadata']);
+        this.metadata = new documentMetadata(dto["@metadata"]);
 
         this.connectionStringSourceFieldName = ko.computed(() => {
             if (this.connectionStringType() == this.CONNECTION_STRING) {
@@ -76,7 +87,7 @@ class sqlReplication extends document {
         this.script.subscribe((newValue) => {
             var message = "";
             var currentEditor = aceEditorBindingHandler.currentEditor;
-            var textarea: any = $(currentEditor.container).find('textarea')[0];
+            var textarea: any = $(currentEditor.container).find("textarea")[0];
 
             if (newValue === "") {
                 message = "Please fill out this field.";
@@ -142,7 +153,7 @@ class sqlReplication extends document {
 
     toDto(): sqlReplicationDto {
         var meta = this.__metadata.toDto();
-        meta['@id'] = "Raven/SqlReplication/Configuration/" + this.name();
+        meta["@id"] = "Raven/SqlReplication/Configuration/" + this.name();
         return {
             '@metadata': meta,
             Name: this.name(),
@@ -199,7 +210,7 @@ class sqlReplication extends document {
 
 
     isSqlServerKindOfFactory(factoryName:string): boolean {
-        if (factoryName == 'System.Data.SqlClient' || factoryName == 'System.Data.SqlServerCe.4.0' || factoryName == 'System.Data.SqlServerCe.3.5') {
+        if (factoryName == "System.Data.SqlClient" || factoryName == "System.Data.SqlServerCe.4.0" || factoryName == "System.Data.SqlServerCe.3.5") {
             return true;
         }
         return false;

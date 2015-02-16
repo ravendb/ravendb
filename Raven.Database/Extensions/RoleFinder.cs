@@ -21,7 +21,7 @@ namespace Raven.Database.Extensions
 
 		public static bool IsInRole(this IPrincipal principal, AnonymousUserAccessMode mode, WindowsBuiltInRole role)
 		{
-			if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
+			if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
 			{
 				if (mode == AnonymousUserAccessMode.Admin)
 					return true;
@@ -50,21 +50,16 @@ namespace Raven.Database.Extensions
 				return cachingRoleFinder.IsInRole(windowsIdentity, role);
 			}
 
-			return principal.IsInRole(WindowsBuiltInRoleToGroupConverter(role));
+			var oauthPrincipal = principal as OAuthPrincipal;
+			if (oauthPrincipal == null)
+				return false;
+
+			if (role != WindowsBuiltInRole.Administrator)
+				return false;
+
+			return oauthPrincipal.IsGlobalAdmin();
 		}
 
-		private static string WindowsBuiltInRoleToGroupConverter(WindowsBuiltInRole role)
-		{
-			switch (role)
-			{
-				case WindowsBuiltInRole.Administrator:
-					return "Administrators";
-				case WindowsBuiltInRole.BackupOperator:
-					return "BackupOperators";
-				default:
-					throw new NotSupportedException(role.ToString());
-			}
-		}
 
 		public static bool IsAdministrator(this IPrincipal principal, AnonymousUserAccessMode mode)
 		{

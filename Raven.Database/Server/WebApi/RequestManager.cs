@@ -162,7 +162,7 @@ namespace Raven.Database.Server.WebApi
 					{
 						response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 						{
-							Content = new StringContent("This service is not accepting clients calls")
+                            Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
 						};
 					}
 					else

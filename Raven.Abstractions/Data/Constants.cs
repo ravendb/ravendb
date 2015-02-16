@@ -247,18 +247,23 @@ namespace Raven.Abstractions.Data
 
 	    public class Global
 	    {
-	        public const string GlobalSettingsDocumentKey = "Raven/Global/Settings";
+		    public const string GlobalSettingsDocumentKey = "Raven/Global/Settings";
 
-			public const string ReplicationDestinationsDocumentName = "Raven/Global/Replication/Destinations";
+		    public const string ReplicationDestinationsDocumentName = "Raven/Global/Replication/Destinations";
 
-			public const string VersioningDocumentPrefix = "Raven/Global/Versioning/";
-			public const string VersioningDefaultConfigurationDocumentName = "Raven/Global/Versioning/DefaultConfiguration";
+		    public const string VersioningDocumentPrefix = "Raven/Global/Versioning/";
+		    public const string VersioningDefaultConfigurationDocumentName = "Raven/Global/Versioning/DefaultConfiguration";
 
-			public const string PeriodicExportDocumentName = "Raven/Global/Backup/Periodic/Setup";
+		    public const string PeriodicExportDocumentName = "Raven/Global/Backup/Periodic/Setup";
 
-			public const string SqlReplicationConnectionsDocumentName = "Raven/Global/SqlReplication/Connections";
+		    public const string SqlReplicationConnectionsDocumentName = "Raven/Global/SqlReplication/Connections";
 
-			public const string JavascriptFunctions = "Raven/Global/Javascript/Functions";
+		    public const string JavascriptFunctions = "Raven/Global/Javascript/Functions";
+	    }
+
+	    public static class Smuggler
+	    {
+		    public const string CallContext = "Raven/Smuggler/CallContext";
 	    }
 	}
 }
