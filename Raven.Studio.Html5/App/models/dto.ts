@@ -618,6 +618,7 @@ interface compactStatusDto {
 interface sqlReplicationTableDto {
     TableName: string;
     DocumentKeyColumn: string;
+    InsertOnlyMode: boolean;
 }
 
 interface sqlReplicationDto extends documentDto {

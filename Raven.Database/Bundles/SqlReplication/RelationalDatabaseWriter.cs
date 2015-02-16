@@ -147,6 +147,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			var identifiers = scriptResult.Data.SelectMany(x => x.Value).Select(x => x.DocumentId).Distinct().ToList();
 			foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
 			{
+                if(sqlReplicationTable.InsertOnlyMode)
+                    continue;
 				// first, delete all the rows that might already exist there
 				DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
 										identifiers);
@@ -407,7 +409,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private string GetTableNameString(string tableName)
         {
-            if (cfg.PerformTableQuatation)
+            if (cfg.QuoteTables)
             {
                 return string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray());
             }
