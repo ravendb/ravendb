@@ -352,5 +352,12 @@ namespace Raven.Smuggler
 
 			return new CompletedTask();
 		}
+
+	    public RavenJToken DisableVersioning(RavenJObject metadata)
+	    {
+		    metadata.Add(Constants.RavenIgnoreVersioning, true);
+
+		    return metadata;
+	    }
 	}
 }

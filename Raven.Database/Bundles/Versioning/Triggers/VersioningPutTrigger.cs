@@ -45,6 +45,13 @@ namespace Raven.Bundles.Versioning.Triggers
 				metadata.Remove(Constants.RavenCreateVersion);
 			}
 
+			if (metadata.ContainsKey(Constants.RavenIgnoreVersioning))
+			{
+				metadata.__ExternalState[Constants.RavenIgnoreVersioning] = metadata[Constants.RavenIgnoreVersioning];
+				metadata.Remove(Constants.RavenIgnoreVersioning);
+				return;
+			}
+
 			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
 				return;
 
@@ -167,7 +174,8 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			versioningConfiguration = Database.GetDocumentVersioningConfiguration(metadata);
 			if (versioningConfiguration == null || versioningConfiguration.Exclude
-				|| (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion)))
+				|| (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion))
+				|| metadata.__ExternalState.ContainsKey(Constants.RavenIgnoreVersioning))
 				return false;
 			return true;
 		}

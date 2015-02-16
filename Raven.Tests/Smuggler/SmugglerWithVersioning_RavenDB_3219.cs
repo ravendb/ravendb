@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
+using Raven.Client.Bundles.Versioning;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 using Raven.Smuggler;
@@ -86,6 +87,22 @@ namespace Raven.Tests.Smuggler
 					var countOfDocsAfterImport = store.DatabaseCommands.GetStatistics().CountOfDocuments;
 
 					Assert.Equal(countOfDocuments, countOfDocsAfterImport - 1); // one additional doc for versioning bundle configuration
+
+					var metadata = store.DatabaseCommands.Get("users/1").Metadata;
+
+					Assert.True(metadata.ContainsKey(Constants.RavenIgnoreVersioning) == false, "Metadata contains temporary " + Constants.RavenIgnoreVersioning + " marker");
+
+					// after import versioning should be active
+					using (var session = store.OpenSession())
+					{
+						session.Store(new User(), "users/arek");
+
+						session.SaveChanges();
+
+						var revisionsFor = session.Advanced.GetRevisionsFor<User>("users/arek", 0, 10);
+
+						Assert.Equal(1, revisionsFor.Length);
+					}
 				}
 			}
 		}
@@ -156,6 +173,22 @@ namespace Raven.Tests.Smuggler
 					var countOfDocsAfterImport = store.DatabaseCommands.GetStatistics().CountOfDocuments;
 
 					Assert.Equal(countOfDocuments, countOfDocsAfterImport - 1); // one additional doc for versioning bundle configuration
+
+					var metadata = store.DatabaseCommands.Get("users/1").Metadata;
+
+					Assert.True(metadata.ContainsKey(Constants.RavenIgnoreVersioning) == false, "Metadata contains temporary " + Constants.RavenIgnoreVersioning + " marker");
+
+					// after import versioning should be active
+					using (var session = store.OpenSession())
+					{
+						session.Store(new User(), "users/arek");
+
+						session.SaveChanges();
+
+						var revisionsFor = session.Advanced.GetRevisionsFor<User>("users/arek", 0, 10);
+
+						Assert.Equal(1, revisionsFor.Length);
+					}
 				}
 			}
 		}
@@ -222,6 +255,22 @@ namespace Raven.Tests.Smuggler
 					var countOfDocsAfterImport = store.DatabaseCommands.ForDatabase("Import").GetStatistics().CountOfDocuments;
 
 					Assert.Equal(countOfDocuments, countOfDocsAfterImport - 1); // one additional doc for versioning bundle configuration
+
+					var metadata = store.DatabaseCommands.ForDatabase("Import").Get("users/1").Metadata;
+
+					Assert.True(metadata.ContainsKey(Constants.RavenIgnoreVersioning) == false, "Metadata contains temporary " + Constants.RavenIgnoreVersioning + " marker");
+
+					// after import versioning should be active
+					using (var session = store.OpenSession("Import"))
+					{
+						session.Store(new User(), "users/arek");
+
+						session.SaveChanges();
+
+						var revisionsFor = session.Advanced.GetRevisionsFor<User>("users/arek", 0, 10);
+
+						Assert.Equal(1, revisionsFor.Length);
+					}
 				}
 
 			}
