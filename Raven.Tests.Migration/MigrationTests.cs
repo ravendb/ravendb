@@ -6,38 +6,65 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Xml.Linq;
 
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers;
 using Raven.Tests.Migration.Indexes;
 using Raven.Tests.Migration.Utils;
 using Raven.Tests.Migration.Utils.Orders;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Migration
 {
 	public class MigrationTests : RavenTest
 	{
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+		{
+			configuration.MaxPageSize = int.MaxValue;
+		}
+
+		private const string ServersFileName = "servers.txt";
+
 		private const int Port = 8075;
 
 		private const string DatabaseName = "Northwind";
 
 		private const string PackageName = "RavenDB.Server";
 
-		private readonly List<string> packageNames;
+		private readonly List<ServerConfiguration> serversToTest;
 
 		public MigrationTests()
 		{
-			packageNames = ParseServers().ToList();
+			serversToTest = new List<ServerConfiguration>();
+
+			foreach (var version in ParseServers())
+			{
+				var configuration = new ServerConfiguration { Name = PackageName + "." + version };
+
+				if (version.StartsWith("2.0") || version.StartsWith("2.5"))
+				{
+					configuration.WaitForIndexingBeforeBackup = true;
+					configuration.StorageTypes = new[] { "esent" };
+				}
+
+				if (version.StartsWith("3.0"))
+				{
+					configuration.WaitForIndexingBeforeBackup = true;
+					configuration.StorageTypes = new[] { "esent", "voron" };
+				}
+
+				serversToTest.Add(configuration);
+			}
 		}
 
 		private static IEnumerable<string> ParseServers()
@@ -54,49 +81,141 @@ namespace Raven.Tests.Migration
 				if (string.Equals(id, PackageName, StringComparison.OrdinalIgnoreCase) == false)
 					continue;
 
-				yield return PackageName + "." + attributes.First(x => x.Name == "version").Value;
+				yield return attributes.First(x => x.Name == "version").Value;
 			}
 		}
 
-		[Fact]
-		public void LargeMigration()
+		[Theory]
+		[InlineData(10, "voron")]
+		[InlineData(10, "esent")]
+		[InlineData(20, "voron")]
+		[InlineData(20, "esent")]
+		public void LargeMigrationSelf(int numberOfIterations, string requestedStorage)
 		{
-			foreach (var packageName in packageNames)
+			var backupLocation = NewDataPath("Self-Backup", forceCreateDir: true);
+
+			DataGenerator generator;
+
+			using (var store = NewRemoteDocumentStore(runInMemory: false, requestedStorage: requestedStorage))
 			{
-				Console.WriteLine("|> Processing " + packageName);
-
-				var backupLocation = NewDataPath(packageName + "-Backup", forceCreateDir: true);
-				using (var client = new ThinClient(string.Format("http://localhost:{0}", Port), DatabaseName))
+				using (var client = new ThinClient(store.Url, DatabaseName))
 				{
-					var generator = new DataGenerator(client, 10);
+					generator = new DataGenerator(client, numberOfIterations);
 
-					using (DeployServer(packageName))
+					client.PutDatabase(DatabaseName);
+
+					generator.Generate();
+
+					client.StartBackup(DatabaseName, backupLocation, waitForBackupToComplete: true);
+				}
+			}
+
+			using (var store = NewRemoteDocumentStore(runInMemory: false))
+			{
+				store.DefaultDatabase = "Northwind";
+
+				var operation = store
+					.DatabaseCommands
+					.GlobalAdmin
+					.StartRestore(new DatabaseRestoreRequest
 					{
-						client.PutDatabase(DatabaseName);
+						BackupLocation = backupLocation,
+						DatabaseName = "Northwind"
+					});
 
-						generator.Generate();
+				operation.WaitForCompletion();
 
-						client.StartBackup(DatabaseName, backupLocation, waitForBackupToComplete: true);
-					}
+				ValidateBackup(store, generator);
+			}
+		}
 
-					using (var store = NewRemoteDocumentStore(runInMemory: false))
+		[Theory]
+		[InlineData(10)]
+		[InlineData(20)]
+		public void LargeMigration(int numberOfIterations)
+		{
+			var exceptions = new List<Exception>();
+
+			foreach (var configuration in serversToTest)
+				foreach (var storageType in configuration.StorageTypes)
+				{
+					KillPreviousServers();
+
+					Console.WriteLine("|> Processing: {0}. Storage: {1}.", configuration.Name, storageType);
+
+					var backupLocation = NewDataPath(configuration.Name + "-Backup", forceCreateDir: true);
+					using (var client = new ThinClient(string.Format("http://localhost:{0}", Port), DatabaseName))
 					{
-						store.DefaultDatabase = "Northwind";
+						var generator = new DataGenerator(client, numberOfIterations);
 
-						var operation = store
-							.DatabaseCommands
-							.GlobalAdmin
-							.StartRestore(new DatabaseRestoreRequest
+						using (var server = DeployServer(configuration.Name, storageType))
+						{
+							File.AppendAllLines(ServersFileName, new[] { server.ProcessId.ToString(CultureInfo.InvariantCulture) });
+
+							client.PutDatabase(DatabaseName);
+
+							generator.Generate();
+
+							if (configuration.WaitForIndexingBeforeBackup)
+								client.WaitForIndexing();
+
+							client.StartBackup(DatabaseName, backupLocation, waitForBackupToComplete: true);
+						}
+
+						using (var store = NewRemoteDocumentStore(runInMemory: false))
+						{
+							store.DefaultDatabase = "Northwind";
+
+							var operation = store
+								.DatabaseCommands
+								.GlobalAdmin
+								.StartRestore(new DatabaseRestoreRequest
+								{
+									BackupLocation = backupLocation,
+									DatabaseName = "Northwind"
+								});
+
+							operation.WaitForCompletion();
+
+							try
 							{
-								BackupLocation = backupLocation,
-								DatabaseName = "Northwind"
-							});
-
-						operation.WaitForCompletion();
-
-						ValidateBackup(store, generator);
+								ValidateBackup(store, generator);
+							}
+							catch (Exception e)
+							{
+								exceptions.Add(new InvalidOperationException("Migration failed: " + configuration.Name + ". Storage: " + storageType + ". Message: " + e.Message, e));
+							}
+						}
 					}
 				}
+
+			if (exceptions.Count > 0)
+				throw new AggregateException(exceptions);
+		}
+
+		private static void KillPreviousServers()
+		{
+			if (File.Exists(ServersFileName) == false)
+				return;
+
+			try
+			{
+				foreach (var processId in File.ReadAllLines(ServersFileName))
+				{
+					try
+					{
+						var process = Process.GetProcessById(int.Parse(processId));
+						if (string.Equals(process.ProcessName, "Raven.Server", StringComparison.OrdinalIgnoreCase))
+							process.Kill();
+					}
+					catch
+					{
+					}
+				}
+			}
+			finally
+			{
+				File.Delete(ServersFileName);
 			}
 		}
 
@@ -121,7 +240,7 @@ namespace Raven.Tests.Migration
 				}
 				catch (Exception)
 				{
-					if (stopWatch.Elapsed >= databaseOpenTimeout) 
+					if (stopWatch.Elapsed >= databaseOpenTimeout)
 						throw;
 				}
 			}
@@ -144,7 +263,43 @@ namespace Raven.Tests.Migration
 					.Query<Order, OrdersByEmployeeAndCompany>()
 					.Count();
 
-				Assert.Equal(generator.ExpectedNumberOfOrders, count);
+				try
+				{
+					Assert.Equal(generator.ExpectedNumberOfOrders, count);
+				}
+				catch (Exception)
+				{
+					//var allDocuments = new List<KeyValuePair<string, string>>();
+					//var queryResults = new List<Order>();
+
+					//var e1 = store.DatabaseCommands.StreamDocs(Etag.Empty);
+					//while (e1.MoveNext())
+					//{
+					//	var metadata = (RavenJObject)e1.Current["@metadata"];
+					//	var key = metadata["@id"].Value<string>();
+					//	if (key.StartsWith("orders") == false)
+					//		continue;
+
+					//	var etag = metadata["@etag"].Value<string>();
+					//	allDocuments.Add(new KeyValuePair<string, string>(key, etag));
+					//}
+
+					//var q = session.Query<Order, OrdersByEmployeeAndCompany>();
+					//var e2 = session.Advanced.Stream(q);
+					//while (e2.MoveNext())
+					//{
+					//	queryResults.Add(e2.Current.Document);
+					//}
+
+					//foreach (var document in allDocuments)
+					//{
+					//	Console.WriteLine("Document: {0}. Etag: {1}. Match: {2}.", document.Key, document.Value, queryResults.Any(x => string.Equals(x.Id, document.Key, StringComparison.OrdinalIgnoreCase)));
+					//}
+
+					//Console.WriteLine("Count: " + count);
+
+					throw;
+				}
 			}
 		}
 
@@ -201,8 +356,13 @@ namespace Raven.Tests.Migration
 			using (var session = store.OpenSession())
 			{
 				var statistics = store.DatabaseCommands.GetStatistics();
-				Assert.Equal(0, statistics.CountOfAttachments);
+
+				//Console.WriteLine(RavenJObject.FromObject(statistics).ToString(Formatting.Indented));
+
+				Assert.Equal(0, statistics.Errors.Length);
+				Assert.Equal(0, statistics.StaleIndexes.Length);
 				Assert.Equal(generator.ExpectedNumberOfIndexes, statistics.Indexes.Length);
+				Assert.Equal(0, statistics.CountOfAttachments);
 
 				Assert.Equal(generator.ExpectedNumberOfOrders, session.Query<Order>().Count());
 				Assert.Equal(generator.ExpectedNumberOfCompanies, session.Query<Company>().Count());
@@ -212,15 +372,25 @@ namespace Raven.Tests.Migration
 				var total = generator.ExpectedNumberOfCompanies + generator.ExpectedNumberOfEmployees + generator.ExpectedNumberOfOrders + generator.ExpectedNumberOfProducts;
 
 				Assert.Equal(total, session.Query<dynamic, RavenDocumentsByEntityName>().Count());
+				Assert.Equal(total, statistics.CountOfDocuments);
 			}
 		}
 
-		private ServerRunner DeployServer(string packageName)
+		private ServerRunner DeployServer(string packageName, string storageType)
 		{
 			var serverDirectory = NewDataPath(packageName, true);
 			IOExtensions.CopyDirectory("../../../packages/" + packageName + "/tools/", serverDirectory);
 
-			return ServerRunner.Run(Port, Path.Combine(serverDirectory, "Raven.Server.exe"));
+			return ServerRunner.Run(Port, storageType, Path.Combine(serverDirectory, "Raven.Server.exe"));
+		}
+
+		private class ServerConfiguration
+		{
+			public string Name { get; set; }
+
+			public bool WaitForIndexingBeforeBackup { get; set; }
+
+			public string[] StorageTypes { get; set; }
 		}
 	}
 }

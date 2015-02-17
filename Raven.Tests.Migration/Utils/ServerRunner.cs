@@ -1,11 +1,23 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 
 namespace Raven.Tests.Migration.Utils
 {
 	public class ServerRunner : IDisposable
 	{
+		public int ProcessId
+		{
+			get
+			{
+				if (dbServerProcess != null) 
+					return dbServerProcess.Id;
+
+				return -1;
+			}
+		}
+
 		private readonly Process dbServerProcess;
 		private readonly AutoResetEvent outputWaitHandle;
 		private readonly AutoResetEvent errorWaitHandle;
@@ -16,23 +28,24 @@ namespace Raven.Tests.Migration.Utils
 
 		private const int TimeoutInSeconds = 20;
 
-		public static ServerRunner Run(int port, string standaloneServerExePath)
+		public static ServerRunner Run(int port, string storageType, string standaloneServerExePath)
 		{
-			return new ServerRunner(port, standaloneServerExePath);
+			return new ServerRunner(port, storageType, standaloneServerExePath);
 		}
 
-		private ServerRunner(int port, string standaloneServerExePath)
+		private ServerRunner(int port, string storageType, string standaloneServerExePath)
 		{
 			Console.WriteLine("Starting test with database on port " + port);
 			dbServerProcess = new Process();
 			dbServerProcess.StartInfo.FileName = standaloneServerExePath;
-			dbServerProcess.StartInfo.Arguments = "--set=Raven/Port==" + port + " " + "--set=Raven/AnonymousAccess==Admin";
+			dbServerProcess.StartInfo.Arguments = "--set=Raven/Port==" + port + " " + "--set=Raven/StorageTypeName==" + storageType + " " + "--set=Raven/AnonymousAccess==Admin";
 			dbServerProcess.StartInfo.LoadUserProfile = false;
 			dbServerProcess.StartInfo.UseShellExecute = false;
 			dbServerProcess.StartInfo.RedirectStandardError = true;
 			dbServerProcess.StartInfo.RedirectStandardInput = true;
 			dbServerProcess.StartInfo.RedirectStandardOutput = true;
 			dbServerProcess.StartInfo.CreateNoWindow = true;
+			dbServerProcess.StartInfo.WorkingDirectory = Path.GetDirectoryName(standaloneServerExePath);
 
 			outputWaitHandle = new AutoResetEvent(false);
 			errorWaitHandle = new AutoResetEvent(false);

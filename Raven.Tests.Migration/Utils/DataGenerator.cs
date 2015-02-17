@@ -306,6 +306,8 @@ select new
 
 		public void Generate()
 		{
+			var random = new Random();
+
 			client.PutIndex(new RavenDocumentsByEntityName());
 			client.PutIndex(new OrdersByCompany());
 			client.PutIndex(new OrdersTotals());
@@ -327,17 +329,17 @@ select new
 					entities.Add(new Order
 					{
 						Id = "orders/" + nextOrderId++,
-						Company = "companies/" + new Random().Next(1, ExpectedNumberOfCompanies - 1),
+						Company = "companies/" + random.Next(1, ExpectedNumberOfCompanies - 1),
 						Lines = CollectionData.GetElement(10, new List<OrderLine>
 							{
 								new OrderLine
 								{
-									Product = "products/" + new Random().Next(1, ExpectedNumberOfProducts - 1),
-									Quantity = new Random().Next(1, 100),
-									PricePerUnit = new Random().Next(1000)
+									Product = "products/" + random.Next(1, ExpectedNumberOfProducts - 1),
+									Quantity = random.Next(1, 100),
+									PricePerUnit = random.Next(1000)
 								}
 							}).ToList(),
-						Employee = "employees/" + new Random().Next(1, 9),
+						Employee = "employees/" + random.Next(1, ExpectedNumberOfEmployees - 1),
 						OrderedAt = DateTimeData.GetDatetime(),
 						RequireAt = DateTime.UtcNow.AddDays(7),
 						ShipTo = new Address

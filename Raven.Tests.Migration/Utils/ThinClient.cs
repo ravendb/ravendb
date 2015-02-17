@@ -138,6 +138,30 @@ namespace Raven.Tests.Migration.Utils
 			}
 		}
 
+
+		public void WaitForIndexing()
+		{
+			while (true)
+			{
+				var response = httpClient.GetAsync(databaseUrl + "/stats").ResultUnwrap();
+
+				if (response.IsSuccessStatusCode == false)
+					throw new InvalidOperationException(string.Format("STATS failed. Code: {0}.", response.StatusCode));
+
+				using (var stream = response.GetResponseStreamWithHttpDecompression().ResultUnwrap())
+				{
+					var countingStream = new CountingStream(stream);
+					var stats = (RavenJObject)RavenJToken.TryLoad(countingStream);
+
+					var staleIndexes = (RavenJArray)stats["StaleIndexes"];
+					if (staleIndexes.Length == 0)
+						return;
+
+					Thread.Sleep(1000);
+				}
+			}
+		}
+
 		public void Dispose()
 		{
 			if (httpClient != null)
