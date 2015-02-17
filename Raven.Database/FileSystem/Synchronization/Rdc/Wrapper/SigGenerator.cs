@@ -19,7 +19,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 
 		private readonly ReaderWriterLockSlim _disposerLock = new ReaderWriterLockSlim();
 
-		private readonly IRdcLibrary _rdcLibrary;
+		private IRdcLibrary _rdcLibrary;
 		private bool _disposed;
 		private int _recursionDepth;
 
@@ -295,14 +295,14 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 		{
 			try
 			{
-				Trace.WriteLine("~SigGenerator: Disposing esent resources from finalizer! You should call Dispose() instead!");
+				Trace.WriteLine("~SigGenerator: Disposing COM resources from finalizer! You should call Dispose() instead!");
 				DisposeInternal();
 			}
 			catch (Exception exception)
 			{
 				try
 				{
-					Trace.WriteLine("Failed to dispose esent instance from finalizer because: " + exception);
+					Trace.WriteLine("Failed to dispose COM instance from finalizer because: " + exception);
 				}
 				catch
 				{
@@ -315,6 +315,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 			if (_rdcLibrary != null)
 			{
 				Marshal.ReleaseComObject(_rdcLibrary);
+				_rdcLibrary = null;
 			}
 		}
 	}
