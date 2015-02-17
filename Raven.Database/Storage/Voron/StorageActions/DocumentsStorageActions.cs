@@ -597,12 +597,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					if(stream != decodedDocumentStream)
 						streamToUse = new CountingStream(decodedDocumentStream);
 
-					var documentData = decodedDocumentStream.ToJObject();
+					try
+					{
+						var documentData = decodedDocumentStream.ToJObject();
 
-					size = (int)Math.Max(stream.Position, streamToUse.Position);
+						size = (int) Math.Max(stream.Position, streamToUse.Position);
+						documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, size);
 
-					documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, size);
-					return documentData;	
+						return documentData;
+					}
+					catch (InvalidOperationException e)
+					{
+						throw new InvalidOperationException(String.Format("Failed to de-serialize a document. Document Id: {0}. See inner exception for the full exception details.", key),e);
+					}
 				}
 			}
 		}
