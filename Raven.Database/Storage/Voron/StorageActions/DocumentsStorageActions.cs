@@ -513,16 +513,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
 
-				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
-			    var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
-
-				return new JsonDocumentMetadata
+				try
 				{
-					Key = originalKey,
-					Etag = etag,
-					Metadata = metadata,
-					LastModified = lastModified
-				};
+					var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
+					var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
+
+					return new JsonDocumentMetadata
+					{
+						Key = originalKey,
+						Etag = etag,
+						Metadata = metadata,
+						LastModified = lastModified
+					};
+				}
+				catch (InvalidOperationException e)
+				{
+					throw new InvalidOperationException(String.Format("Failed to de-serialize metadata of a document. Document Id: {0}. See inner exception for the full exception details.", key), e);
+				}
 			}
 		}
 
