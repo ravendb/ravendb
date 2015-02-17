@@ -20,7 +20,7 @@ namespace Raven.Database.FileSystem.Util
         internal const string SyncNamePrefix = "Syncing";
 		public static string SyncNameForFile(string fileName, string destination)
 		{
-            return SyncNamePrefix + Uri.EscapeUriString(destination) + FileHeader.Canonize(fileName);
+            return SyncNamePrefix + "/" + Uri.EscapeUriString(destination) + FileHeader.Canonize(fileName);
 		}
 
         internal const string SyncLockNamePrefix = "SyncingLock";
