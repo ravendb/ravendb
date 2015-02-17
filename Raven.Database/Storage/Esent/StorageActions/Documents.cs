@@ -52,6 +52,20 @@ namespace Raven.Storage.Esent.StorageActions
 			});
 		}
 
+		public byte[] RawDocumentByKey(string key)
+		{
+			Api.JetSetCurrentIndex(session, Documents, "by_key");
+			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
+			{
+				logger.Debug("Document with key '{0}' was not found", key);
+				return null;
+			}
+
+			using (var stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+				return stream.ReadData();
+		}
+
 		public JsonDocumentMetadata DocumentMetadataByKey(string key)
 		{
 			return DocumentByKeyInternal(key, (metadata, func) => metadata);

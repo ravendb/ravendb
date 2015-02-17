@@ -221,6 +221,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return tableStorage.GetEntriesCount(tableStorage.Documents);
 		}
 
+		public byte[] RawDocumentByKey(string key)
+		{
+			var loweredKey = CreateKey(key);
+			
+			var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
+			if (documentReadResult == null) //non existing document
+				return null;
+
+			using (var stream = documentReadResult.Reader.AsStream())
+				return stream.ReadData();
+		}
+
 		public JsonDocument DocumentByKey(string key)
 		{
 			if (string.IsNullOrEmpty(key))
@@ -513,16 +525,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
 
-				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
-			    var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
-
-				return new JsonDocumentMetadata
+				try
 				{
-					Key = originalKey,
-					Etag = etag,
-					Metadata = metadata,
-					LastModified = lastModified
-				};
+					var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
+					var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
+
+					return new JsonDocumentMetadata
+					{
+						Key = originalKey,
+						Etag = etag,
+						Metadata = metadata,
+						LastModified = lastModified
+					};
+				}
+				catch (InvalidOperationException e)
+				{
+					throw new InvalidOperationException(String.Format("Failed to de-serialize metadata of a document. Document Id: {0}. See inner exception for the full exception details.", key), e);
+				}
 			}
 		}
 
@@ -597,12 +616,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					if(stream != decodedDocumentStream)
 						streamToUse = new CountingStream(decodedDocumentStream);
 
-					var documentData = decodedDocumentStream.ToJObject();
+					try
+					{
+						var documentData = decodedDocumentStream.ToJObject();
 
-					size = (int)Math.Max(stream.Position, streamToUse.Position);
+						size = (int) Math.Max(stream.Position, streamToUse.Position);
+						documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, size);
 
-					documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, size);
-					return documentData;	
+						return documentData;
+					}
+					catch (InvalidOperationException e)
+					{
+						throw new InvalidOperationException(String.Format("Failed to de-serialize a document. Document Id: {0}. See inner exception for the full exception details.", key),e);
+					}
 				}
 			}
 		}
