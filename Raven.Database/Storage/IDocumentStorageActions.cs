@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using Jint.Runtime.References;
 using Raven.Abstractions.Data;
@@ -28,7 +29,7 @@ namespace Raven.Database.Storage
 
 		JsonDocument DocumentByKey(string key);
 
-		byte[] RawDocumentByKey(string key);
+		Stream RawDocumentByKey(string key);
 
 		JsonDocumentMetadata DocumentMetadataByKey(string key);
 

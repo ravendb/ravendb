@@ -52,7 +52,7 @@ namespace Raven.Storage.Esent.StorageActions
 			});
 		}
 
-		public byte[] RawDocumentByKey(string key)
+		public Stream RawDocumentByKey(string key)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -62,8 +62,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return null;
 			}
 
-			using (var stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				return stream.ReadData();
+			return new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]));
 		}
 
 		public JsonDocumentMetadata DocumentMetadataByKey(string key)
@@ -96,31 +95,45 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private RavenJObject ReadDocumentMetadata(string key, Etag existingEtag)
 		{
-			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
-			if (existingCachedDocument != null)
-				return existingCachedDocument.Metadata;
+			try
+			{
+				var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+				if (existingCachedDocument != null)
+					return existingCachedDocument.Metadata;
 
-			return Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+				return Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+			}
+			catch (Exception e)
+			{
+				throw new InvalidDataException("Failed to de-serialize metadata of document " + key, e);
+			}
 		}
 
 		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata)
 		{
-			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
-			if (existingCachedDocument != null)
-				return existingCachedDocument.Document;
-
-
-			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+			try
 			{
-				var size = stream.Length;
-				using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+				var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+				if (existingCachedDocument != null)
+					return existingCachedDocument.Document;
+
+
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 				{
-					var data = columnStream.ToJObject();
+					var size = stream.Length;
+					using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+					{
+						var data = columnStream.ToJObject();
 
-					cacher.SetCachedDocument(key, existingEtag, data, metadata, (int)size);
+						cacher.SetCachedDocument(key, existingEtag, data, metadata, (int)size);
 
-					return data;
+						return data;
+					}
 				}
+			}
+			catch (Exception e)
+			{
+				throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
 			}
 		}
 

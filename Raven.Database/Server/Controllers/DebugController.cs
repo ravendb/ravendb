@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var time = SystemTime.UtcNow + TimeSpan.FromMinutes(5);
 			Database.WorkContext.ShowTimingByDefaultUntil = time;
-			return GetMessageWithObject(new {Enabled = true, Until = time});
+			return GetMessageWithObject(new { Enabled = true, Until = time });
 		}
 
 		[HttpGet]
@@ -47,7 +47,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage DisableQueryTiming()
 		{
 			Database.WorkContext.ShowTimingByDefaultUntil = null;
-			return GetMessageWithObject(new { Enabled = false});
+			return GetMessageWithObject(new { Enabled = false });
 		}
 
 		[HttpGet]
@@ -82,136 +82,136 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(results);
 		}
 
-        /// <remarks>
-        /// as we sum data we have to guarantee that we don't sum the same record twice on client side.
-        /// to prevent such situation we don't send data from current second
-        /// </remarks>
-        /// <returns></returns>
-        [HttpGet]
-        [RavenRoute("debug/sql-replication-perf-stats")]
-        [RavenRoute("databases/{databaseName}/debug/sql-replication-perf-stats")]
-        public HttpResponseMessage SqlReplicationPerfStats()
-        {
-            var now = SystemTime.UtcNow;
-            var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
+		/// <remarks>
+		/// as we sum data we have to guarantee that we don't sum the same record twice on client side.
+		/// to prevent such situation we don't send data from current second
+		/// </remarks>
+		/// <returns></returns>
+		[HttpGet]
+		[RavenRoute("debug/sql-replication-perf-stats")]
+		[RavenRoute("databases/{databaseName}/debug/sql-replication-perf-stats")]
+		public HttpResponseMessage SqlReplicationPerfStats()
+		{
+			var now = SystemTime.UtcNow;
+			var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
 
-            var sqlReplicationTask = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
-            if (sqlReplicationTask == null)
-            {
-                return GetMessageWithString("Unable to find SQL Replication task. Maybe it is not enabled?", HttpStatusCode.BadRequest);
-            }
+			var sqlReplicationTask = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+			if (sqlReplicationTask == null)
+			{
+				return GetMessageWithString("Unable to find SQL Replication task. Maybe it is not enabled?", HttpStatusCode.BadRequest);
+			}
 
-            var stats = from nameAndStatsManager in sqlReplicationTask.SqlReplicationMetricsCounters
-                        from perf in nameAndStatsManager.Value.ReplicationPerformanceStats
-                        where perf.Started < nowTruncToSeconds
-                        let k = new {Name = nameAndStatsManager.Key, perf}
-                        group k by k.perf.Started.Ticks/TimeSpan.TicksPerSecond
-                        into g
-                        orderby g.Key
-                        select new
-                        {
-                            Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
-                            Stats = from k in g 
-                                    group k by k.Name into gg 
-                                    select new
-                                    {
-                                        ReplicationName = gg.Key,
-                                        DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
-                                        BatchSize = gg.Sum(x => x.perf.BatchSize)
-                                    }
-                        };
-            return GetMessageWithObject(stats);
-        }
+			var stats = from nameAndStatsManager in sqlReplicationTask.SqlReplicationMetricsCounters
+						from perf in nameAndStatsManager.Value.ReplicationPerformanceStats
+						where perf.Started < nowTruncToSeconds
+						let k = new { Name = nameAndStatsManager.Key, perf }
+						group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond
+							into g
+							orderby g.Key
+							select new
+							{
+								Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
+								Stats = from k in g
+										group k by k.Name into gg
+										select new
+										{
+											ReplicationName = gg.Key,
+											DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
+											BatchSize = gg.Sum(x => x.perf.BatchSize)
+										}
+							};
+			return GetMessageWithObject(stats);
+		}
 
-        /// <remarks>
-        /// as we sum data we have to guarantee that we don't sum the same record twice on client side.
-        /// to prevent such situation we don't send data from current second
-        /// </remarks>
-        /// <returns></returns>
-        [HttpGet]
-        [RavenRoute("debug/replication-perf-stats")]
-        [RavenRoute("databases/{databaseName}/debug/replication-perf-stats")]
-        public HttpResponseMessage ReplicationPerfStats()
-        {
-            var now = SystemTime.UtcNow;
-            var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
+		/// <remarks>
+		/// as we sum data we have to guarantee that we don't sum the same record twice on client side.
+		/// to prevent such situation we don't send data from current second
+		/// </remarks>
+		/// <returns></returns>
+		[HttpGet]
+		[RavenRoute("debug/replication-perf-stats")]
+		[RavenRoute("databases/{databaseName}/debug/replication-perf-stats")]
+		public HttpResponseMessage ReplicationPerfStats()
+		{
+			var now = SystemTime.UtcNow;
+			var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
 
-            var stats = from nameAndStatsManager in Database.WorkContext.MetricsCounters.ReplicationPerformanceStats
-                        from perf in nameAndStatsManager.Value
-                        where perf.Started < nowTruncToSeconds
-                        let k = new { Name = nameAndStatsManager.Key, perf }
-                        group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond
-                            into g
-                            orderby g.Key
-                            select new
-                            {
-                                Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
-                                Stats = from k in g
-                                        group k by k.Name into gg
-                                        select new
-                                        {
-                                            Destination = gg.Key,
-                                            DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
-                                            BatchSize = gg.Sum(x => x.perf.BatchSize)
-                                        }
-                            };
-            return GetMessageWithObject(stats);
-        }
+			var stats = from nameAndStatsManager in Database.WorkContext.MetricsCounters.ReplicationPerformanceStats
+						from perf in nameAndStatsManager.Value
+						where perf.Started < nowTruncToSeconds
+						let k = new { Name = nameAndStatsManager.Key, perf }
+						group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond
+							into g
+							orderby g.Key
+							select new
+							{
+								Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
+								Stats = from k in g
+										group k by k.Name into gg
+										select new
+										{
+											Destination = gg.Key,
+											DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
+											BatchSize = gg.Sum(x => x.perf.BatchSize)
+										}
+							};
+			return GetMessageWithObject(stats);
+		}
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <remarks>
-        /// as we sum data we have to guarantee that we don't sum the same record twice on client side.
-        /// to prevent such situation we don't send data from current second
-        /// </remarks>
-        /// <param name="format"></param>
-        /// <returns></returns>
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <remarks>
+		/// as we sum data we have to guarantee that we don't sum the same record twice on client side.
+		/// to prevent such situation we don't send data from current second
+		/// </remarks>
+		/// <param name="format"></param>
+		/// <returns></returns>
 		[HttpGet]
 		[RavenRoute("debug/indexing-perf-stats")]
 		[RavenRoute("databases/{databaseName}/debug/indexing-perf-stats")]
 		public HttpResponseMessage IndexingPerfStats(string format = "json")
-        {
-            var now = SystemTime.UtcNow;
-            var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
+		{
+			var now = SystemTime.UtcNow;
+			var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
 
 			var databaseStatistics = Database.Statistics;
 			var stats = from index in databaseStatistics.Indexes
 						from perf in index.Performance
-                        where (perf.Operation == "Map" || perf.Operation == "Index") && perf.Started < nowTruncToSeconds
-						let k = new { index, perf}
+						where (perf.Operation == "Map" || perf.Operation == "Index") && perf.Started < nowTruncToSeconds
+						let k = new { index, perf }
 						group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond into g
-                        orderby g.Key 
+						orderby g.Key
 						select new
 						{
 							Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
 							Stats = from k in g
-                                    group k by k.index.Name into gg
+									group k by k.index.Name into gg
 									select new
 									{
 										Index = gg.Key,
-                                        DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
-                                        InputCount = gg.Sum(x => x.perf.InputCount),
-                                        OutputCount = gg.Sum(x => x.perf.OutputCount),
-                                        ItemsCount = gg.Sum(x => x.perf.ItemsCount)
+										DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
+										InputCount = gg.Sum(x => x.perf.InputCount),
+										OutputCount = gg.Sum(x => x.perf.OutputCount),
+										ItemsCount = gg.Sum(x => x.perf.ItemsCount)
 									}
 						};
 
-			switch(format)
+			switch (format)
 			{
 				case "csv":
 				case "CSV":
 					var sw = new StringWriter();
 					sw.WriteLine();
-					foreach(var stat in stats)
+					foreach (var stat in stats)
 					{
 						sw.WriteLine(stat.Started.ToString("o"));
 						sw.WriteLine("Index, Duration (ms), Input, Output, Items");
-						foreach(var indexStat in stat.Stats)
+						foreach (var indexStat in stat.Stats)
 						{
 							sw.Write('"');
 							sw.Write(indexStat.Index);
-                            sw.Write("\",{0},{1},{2},{3}", indexStat.DurationMilliseconds, indexStat.InputCount, indexStat.OutputCount, indexStat.ItemsCount);
+							sw.Write("\",{0},{1},{2},{3}", indexStat.DurationMilliseconds, indexStat.InputCount, indexStat.OutputCount, indexStat.ItemsCount);
 							sw.WriteLine();
 						}
 						sw.WriteLine();
@@ -219,7 +219,7 @@ namespace Raven.Database.Server.Controllers
 					var msg = sw.GetStringBuilder().ToString();
 					return new HttpResponseMessage(HttpStatusCode.OK)
 					{
-                        Content = new MultiGetSafeStringContent(msg)
+						Content = new MultiGetSafeStringContent(msg)
 						{
 							Headers =
 							{
@@ -322,20 +322,57 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[RavenRoute("debug/rawdocumentbytes")]
-		[RavenRoute("databases/{databaseName}/debug/rawdocumentbytes")]
+		[RavenRoute("debug/raw-doc")]
+		[RavenRoute("databases/{databaseName}/debug/raw-doc")]
 		public HttpResponseMessage RawDocBytes()
 		{
 			var docId = GetQueryStringValue("id");
-			if(String.IsNullOrWhiteSpace(docId))
-				throw new ArgumentNullException("id");
+			if (String.IsNullOrWhiteSpace(docId))
+				return GetMessageWithObject(new
+				{
+					Error = "Query string 'id' is mandatory"
+				}, HttpStatusCode.BadRequest);
 
-			byte[] docBytes = null;
 
-			Database.TransactionalStorage.Batch(accessor => 
-				docBytes = accessor.Documents.RawDocumentByKey(docId));
+			bool hasDoc = false;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				using (var s = accessor.Documents.RawDocumentByKey(docId))
+				{
+					hasDoc = s != null;
+				}
+			});
 
-			return GetMessageWithObject(docBytes ?? (object)string.Format("Document with id = {0} not found!", docId));
+			if (hasDoc == false)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "No document with id " + docId + " was found"
+				}, HttpStatusCode.NotFound);
+			}
+
+			return new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new PushStreamContent((stream, content, transportContext) => Database.TransactionalStorage.Batch(accessor =>
+				{
+					using(stream)
+					using (var docContent = accessor.Documents.RawDocumentByKey(docId))
+					{
+						docContent.CopyTo(stream);
+						stream.Flush();
+					}
+				}))
+				{
+					Headers =
+					{
+						ContentType = new MediaTypeHeaderValue("application/octet-stream"),
+						ContentDisposition = new ContentDispositionHeaderValue("attachment")
+						{
+							FileName = docId +".raw-doc"
+						}
+					}
+				}
+			};
 		}
 
 		[HttpGet]
@@ -381,7 +418,7 @@ namespace Raven.Database.Server.Controllers
 				TotalReferences = documentReferencesStats.Count,
 				GenerationCost = sp.Elapsed,
 				Results = documentReferencesStats.OrderByDescending(x => x.Value)
-					.Select(x => new {Document = x.Key, Count = x.Value})
+					.Select(x => new { Document = x.Key, Count = x.Value })
 			});
 		}
 
