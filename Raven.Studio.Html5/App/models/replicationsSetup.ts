@@ -12,7 +12,7 @@ class replicationsSetup {
             var result = new replicationDestination(dest);
             if (dto.GlobalDocument) {
                 var foundParent = dto.GlobalDocument.Destinations
-                    .first(x => x.Url.toLowerCase() == dest.Url.toLowerCase() && x.Database.toLowerCase() == dest.Database.toLowerCase());
+                    .first(x => x.Url.toLowerCase() === dest.Url.toLowerCase() && x.Database.toLowerCase() === dest.Database.toLowerCase());
                 if (foundParent) {
                     result.globalConfiguration(new replicationDestination(foundParent));
                 }
@@ -24,9 +24,9 @@ class replicationsSetup {
         }
     }
 
-    toDto(): replicationsDto {
+    toDto(filterLocal = true): replicationsDto {
         var dto: replicationsDto = {
-            Destinations: this.destinations().filter(dest => dest.hasLocal()).map(dest => dest.toDto()),
+            Destinations: this.destinations().filter(dest => !filterLocal || dest.hasLocal()).map(dest => dest.toDto()),
             Source: this.source()
         };
 
@@ -35,6 +35,12 @@ class replicationsSetup {
         }
 
         return dto;
+    }
+
+    copyFromParent(parentClientFailover: string) {
+        this.clientFailoverBehaviour(parentClientFailover);
+        this.destinations(this.destinations().filter(d => d.hasGlobal()));
+        this.destinations().forEach(d => d.copyFromGlobal());
     }
 }
 

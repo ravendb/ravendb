@@ -1,3 +1,4 @@
+import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import replicationsSetup = require("models/replicationsSetup");
 import replicationConfig = require("models/replicationConfig")
@@ -7,11 +8,8 @@ import getGlobalConfigReplicationsCommand = require("commands/getGlobalConfigRep
 import saveReplicationDocumentCommand = require("commands/saveReplicationDocumentCommand");
 import getAutomaticConflictResolutionDocumentCommand = require("commands/getAutomaticConflictResolutionDocumentCommand");
 import saveAutomaticConflictResolutionDocumentCommand = require("commands/saveAutomaticConflictResolutionDocumentCommand");
-import replicateAllIndexesCommand = require("commands/replicateAllIndexesCommand");
-import replicateAllTransformersCommand = require("commands/replicateAllTransformersCommand");
-import replicateIndexesCommand = require("commands/replicateIndexesCommand");
-import replicateTransformersCommand = require("commands/replicateTransformersCommand");
 import appUrl = require("common/appUrl");
+import messagePublisher = require("common/messagePublisher");
 
 class globalConfigReplications extends viewModelBase {
 
@@ -23,7 +21,8 @@ class globalConfigReplications extends viewModelBase {
     
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
-    isReplicateIndexesToAllEnabled : KnockoutComputed<boolean>;
+
+    activated = ko.observable<boolean>(false);
 
     readFromAllAllowWriteToSecondaries = ko.computed(() => {
         var behaviour = this.replicationsSetup().clientFailoverBehaviour();
@@ -31,10 +30,9 @@ class globalConfigReplications extends viewModelBase {
             return false;
         }
         var tokens = behaviour.split(",");
-        return tokens.contains('ReadFromAllServers') && tokens.contains('AllowReadsFromSecondariesAndWritesToSecondaries');
+        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
     });
 
-    //TODO: do we need auto conflict resolution in here?
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
         var db = appUrl.getSystemDatabase();
@@ -46,6 +44,15 @@ class globalConfigReplications extends viewModelBase {
         return deferred;
     }
 
+    attached() {
+        $("#dbNameHint").popover({
+            html: true,
+            container: $("body"),
+            trigger: "hover",
+            content: "Database name will be replaced with database name being replicated in local configuration."
+        });
+    }
+
     activate(args) {
         super.activate(args);
         
@@ -54,9 +61,10 @@ class globalConfigReplications extends viewModelBase {
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour]);
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
-        this.isReplicateIndexesToAllEnabled = ko.computed(() => this.replicationsSetup().destinations().length > 0);
         var combinedFlag = ko.computed(() => {
-            return (this.replicationConfigDirtyFlag().isDirty() || this.replicationsSetupDirtyFlag().isDirty());
+            var f1 = this.replicationConfigDirtyFlag().isDirty();
+            var f2 = this.replicationsSetupDirtyFlag().isDirty();
+            return f1 || f2;
         });
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
     }
@@ -65,7 +73,10 @@ class globalConfigReplications extends viewModelBase {
         var deferred = $.Deferred();
         new getAutomaticConflictResolutionDocumentCommand(db, true)
             .execute()
-            .done(repConfig => this.replicationConfig(new replicationConfig(repConfig)))
+            .done(repConfig => {
+                this.replicationConfig(new replicationConfig(repConfig));
+                this.activated(true);
+            })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
     }
@@ -74,7 +85,14 @@ class globalConfigReplications extends viewModelBase {
         var deferred = $.Deferred();
         new getGlobalConfigReplicationsCommand(db)
             .execute()
-            .done((repSetup: replicationsDto) => this.replicationsSetup(new replicationsSetup({ MergedDocument: repSetup })))
+            .done((repSetup: replicationsDto) => {
+                this.replicationsSetup(new replicationsSetup({ MergedDocument: repSetup }));
+                this.replicationsSetup().destinations().forEach(d => {
+                    d.hasLocal(true);
+                    d.hasGlobal(false);
+                });
+                this.activated(true);
+            })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
     }
@@ -89,19 +107,33 @@ class globalConfigReplications extends viewModelBase {
     }
 
     saveChanges() {
-        if (this.isConfigSaveEnabled())
-            this.saveAutomaticConflictResolutionSettings();
-        if (this.isSetupSaveEnabled()) {
-            if (this.replicationsSetup().source()) {
-                this.saveReplicationSetup();
-            } else {
-                var db = appUrl.getSystemDatabase();
-                if (db) {
-                    new getDatabaseStatsCommand(db)
-                        .execute()
-                        .done(result=> {
-                            this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                        });
+        this.syncChanges(false);
+    }
+
+    syncChanges(deleteConfig: boolean) {
+        if (deleteConfig) {
+            var task1 = new deleteDocumentCommand("Raven/Global/Replication/Config", appUrl.getSystemDatabase())
+                .execute();
+            var task2 = new deleteDocumentCommand("Raven/Global/Replication/Destinations", appUrl.getSystemDatabase())
+                .execute();
+            var combinedTask = $.when(task1, task2);
+            combinedTask.done(() => messagePublisher.reportSuccess("Global Settings were successfully saved!"));
+            combinedTask.fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save global settings!", response.responseText, response.statusText));
+        } else { 
+            if (this.isConfigSaveEnabled())
+                this.saveAutomaticConflictResolutionSettings();
+            if (this.isSetupSaveEnabled()) {
+                if (this.replicationsSetup().source()) {
+                    this.saveReplicationSetup();
+                } else {
+                    var db = appUrl.getSystemDatabase();
+                    if (db) {
+                        new getDatabaseStatsCommand(db)
+                            .execute()
+                            .done(result=> {
+                                this.prepareAndSaveReplicationSetup(result.DatabaseId);
+                            });
+                    }
                 }
             }
         }
@@ -115,7 +147,7 @@ class globalConfigReplications extends viewModelBase {
     private saveReplicationSetup() {
         var db = appUrl.getSystemDatabase();
         if (db) {
-            new saveReplicationDocumentCommand(this.replicationsSetup().toDto(), db, true)
+            new saveReplicationDocumentCommand(this.replicationsSetup().toDto(false), db, true)
                 .execute()
                 .done(() => this.replicationsSetupDirtyFlag().reset() );
         }
@@ -128,6 +160,18 @@ class globalConfigReplications extends viewModelBase {
                 .execute()
                 .done(() => this.replicationConfigDirtyFlag().reset() );
         }
+    }
+
+    activateConfig() {
+        this.activated(true);
+    }
+
+    disactivateConfig() {
+        this.confirmationMessage("Delete global configuration for replication?", "Are you sure?")
+            .done(() => {
+                this.activated(false);
+                this.syncChanges(true);
+            });
     }
 }
 

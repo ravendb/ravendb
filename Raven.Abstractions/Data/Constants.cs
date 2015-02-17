@@ -249,6 +249,7 @@ namespace Raven.Abstractions.Data
 	    {
 		    public const string GlobalSettingsDocumentKey = "Raven/Global/Settings";
 
+			public const string ReplicationConflictResolutionDocumentName = "Raven/Global/Replication/Config";
 		    public const string ReplicationDestinationsDocumentName = "Raven/Global/Replication/Destinations";
 
 		    public const string VersioningDocumentPrefix = "Raven/Global/Versioning/";

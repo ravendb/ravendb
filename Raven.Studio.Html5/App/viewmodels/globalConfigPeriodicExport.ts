@@ -47,12 +47,16 @@ class globalConfigPeriodicExport extends viewModelBase {
     }
 
     attached() {
+        this.bindPopover();
+    }
+
+    bindPopover() {
         $("#onDiskHint").popover({
             html: true,
-            
+            container: $("body"),
             trigger: "hover",
-            content: "Database name will be appended to path in target configuration. <br /><br />" + 
-                "For value: <code>C:\\exports\\</code> target path will be: <code>C:\\exports\\{databaseName}</code>"
+            content: "Database name will be appended to path in target configuration. <br /><br />" +
+            "For value: <code>C:\\exports\\</code> target path will be: <code>C:\\exports\\{databaseName}</code>"
         });
     }
 
@@ -129,6 +133,7 @@ class globalConfigPeriodicExport extends viewModelBase {
 
     activateConfig() {
         this.activated(true);
+        this.bindPopover();
     }
 
     disactivateConfig() {

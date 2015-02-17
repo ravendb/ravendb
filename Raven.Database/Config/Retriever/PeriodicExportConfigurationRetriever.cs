@@ -16,6 +16,16 @@ namespace Raven.Database.Config.Retriever
 			if (string.IsNullOrEmpty(global.LocalFolderName) == false)
 				global.LocalFolderName = Path.Combine(global.LocalFolderName, localDatabase.Name);
 
+			if (string.IsNullOrEmpty(global.AzureStorageContainer) == false)
+			{
+				global.AzureRemoteFolderName = localDatabase.Name;
+			}
+
+			if (string.IsNullOrEmpty(global.S3BucketName) == false)
+			{
+				global.S3RemoteFolderName = localDatabase.Name;
+			}
+
 			return global;
 		}
 

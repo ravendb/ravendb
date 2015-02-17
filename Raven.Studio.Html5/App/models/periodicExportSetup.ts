@@ -361,8 +361,11 @@ class periodicExportSetup {
         this.awsSecretKey(from.awsSecretKey());
         this.awsRegionEndpoint(from.awsRegionEndpoint());
 
+        this.s3RemoteFolderName(from.s3RemoteFolderName());
+
         this.azureStorageAccount(from.azureStorageAccount());
         this.azureStorageKey(from.azureStorageKey());
+        this.azureRemoteFolderName(from.azureRemoteFolderName());
 
         this.incrementalBackupInterval(from.incrementalBackupInterval());
         this.incrementalBackupIntervalUnit(from.incrementalBackupIntervalUnit());

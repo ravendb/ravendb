@@ -25,6 +25,7 @@ class quotas extends viewModelBase {
 
     constructor() {
         super();
+        this.activeDatabase.subscribe((db: database) => this.isForbidden(!db.isAdminCurrentTenant()));
     }
 
     canActivate(args: any): any {

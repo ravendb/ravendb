@@ -34,8 +34,11 @@ namespace Raven.Database.Config.Retriever
                                                                               {Constants.PeriodicExport.AzureStorageAccount, DocumentType.PeriodicExportSettingsConfiguration},
                                                                               {Constants.PeriodicExport.AzureStorageKey, DocumentType.PeriodicExportSettingsConfiguration},
 																			  {Constants.SqlReplication.SqlReplicationConnectionsDocumentName, DocumentType.SqlReplicationConnections},
-																			  {Constants.RavenJavascriptFunctions, DocumentType.JavascriptFunctions}
+																			  {Constants.RavenJavascriptFunctions, DocumentType.JavascriptFunctions},
+																			  {Constants.RavenReplicationConfig, DocumentType.ReplicationConflictResolutionConfiguration}
 		                                                                  };
+
+		private readonly ReplicationConflictResolutionConfigurationRetriever replicationConflictResolutionConfigurationRetriever;
 
 		private readonly ReplicationConfigurationRetriever replicationConfigurationRetriever;
 
@@ -56,6 +59,7 @@ namespace Raven.Database.Config.Retriever
 			this.systemDatabase = systemDatabase;
 			this.database = database;
 
+			replicationConflictResolutionConfigurationRetriever = new ReplicationConflictResolutionConfigurationRetriever();
 			replicationConfigurationRetriever = new ReplicationConfigurationRetriever();
 			versioningConfigurationRetriever = new VersioningConfigurationRetriever();
 			periodicExportConfigurationRetriever = new PeriodicExportConfigurationRetriever();
@@ -123,6 +127,8 @@ namespace Raven.Database.Config.Retriever
 			var documentType = DetectDocumentType(key);
 			switch (documentType)
 			{
+				case DocumentType.ReplicationConflictResolutionConfiguration:
+					return replicationConflictResolutionConfigurationRetriever;
 				case DocumentType.ReplicationDestinations:
 					return replicationConfigurationRetriever;
 				case DocumentType.VersioningConfiguration:
@@ -181,7 +187,8 @@ namespace Raven.Database.Config.Retriever
 			QuotasConfiguration,
 			SqlReplicationConnections,
 			JavascriptFunctions,
-		    PeriodicExportSettingsConfiguration
+		    PeriodicExportSettingsConfiguration,
+			ReplicationConflictResolutionConfiguration
 		}
 	}
 }

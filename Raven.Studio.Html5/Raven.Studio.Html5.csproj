@@ -31,6 +31,7 @@
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteLocalReplicationsSetupCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
@@ -63,6 +64,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getGlobalConflictResolutionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexesDefinitionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexMergeSuggestionsCommand.ts" />
@@ -85,6 +87,7 @@
     <TypeScriptCompile Include="App\commands\replicateTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveAutomaticConflictResolutionDocument.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteLocalPeriodicExportSetupCommand.ts" />
