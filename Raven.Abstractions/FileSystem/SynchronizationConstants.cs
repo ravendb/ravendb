@@ -11,8 +11,6 @@
 		public const string RavenSynchronizationSourcesBasePath = "Raven/Synchronization/Sources";
 		public const string RavenSynchronizationDestinations = "Raven/Synchronization/Destinations";
 		public const string RavenSynchronizationDestinationsBasePath = "Raven/Synchronization/Destinations/";
-		public const string RavenSynchronizationLockTimeout = "Raven-Synchronization-Lock-Timeout";
-		public const string RavenSynchronizationLimit = "Raven-Synchronization-Limit";
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
 		public const string RavenRenameFile = "Raven-Rename-File";
 		public const int ChangeHistoryLength = 50;

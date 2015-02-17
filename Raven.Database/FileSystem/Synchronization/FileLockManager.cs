@@ -2,30 +2,15 @@
 using System.IO;
 using NLog;
 using Raven.Abstractions.Extensions;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
-using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
 	public class FileLockManager
 	{
-		private readonly TimeSpan defaultTimeout = TimeSpan.FromMinutes(10);
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
-
-		private TimeSpan SynchronizationTimeout(IStorageActionsAccessor accessor)
-		{
-            string timeoutConfigKey = string.Empty;
-            accessor.TryGetConfigurationValue<string>(SynchronizationConstants.RavenSynchronizationLockTimeout, out timeoutConfigKey);
-
-            TimeSpan timeoutConfiguration;
-            if (TimeSpan.TryParse(timeoutConfigKey, out timeoutConfiguration))
-                return timeoutConfiguration;
-
-            return defaultTimeout;
-		}
 
 		public void LockByCreatingSyncConfiguration(string fileName, ServerInfo sourceServer, IStorageActionsAccessor accessor)
 		{
@@ -59,7 +44,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				return true;
 			}
 
-			return DateTime.UtcNow - syncLock.FileLockedAt > SynchronizationTimeout(accessor);
+			return DateTime.UtcNow - syncLock.FileLockedAt > SynchronizationConfigAccessor.GetOrDefault(accessor).SynchronizationLockTimeout;
 		}
 
 		public bool TimeoutExceeded(string fileName, ITransactionalStorage storage)
