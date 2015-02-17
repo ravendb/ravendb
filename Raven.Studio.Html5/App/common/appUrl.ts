@@ -183,6 +183,10 @@ class appUrl {
         return '#admin/settings/globalConfigCustomFunctions';
     }
 
+    static forGlobalConfigVersioning(): string {
+        return "#admin/settings/globalConfigVersioning";
+    }
+
     static forBackup(): string {
         return "#admin/settings/backup";
     }

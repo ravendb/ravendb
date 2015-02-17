@@ -3,8 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -76,6 +78,48 @@ namespace Raven.Database.Server.Controllers
         }
 
       
+		[HttpGet]
+		[RavenRoute("configuration/global/settings")]
+		public HttpResponseMessage ConfigurationGlobalSettingsGet()
+		{
+			var json = Database.Documents.Get(Constants.Global.GlobalSettingsDocumentKey, null);
+			var globalSettings = json != null ? json.ToJson().JsonDeserialization<GlobalSettingsDocument>() : new GlobalSettingsDocument();
+			GlobalSettingsDocumentProtector.Unprotect(globalSettings);
+			return GetMessageWithObject(globalSettings, HttpStatusCode.OK, (json != null) ? json.Etag : null);
+		}
+
+		[HttpGet]
+		[RavenRoute("configuration/settings")]
+		[RavenRoute("databases/{databaseName}/configuration/settings")]
+		public HttpResponseMessage ConfigurationSettingsGet()
+		{
+			if (Database == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			var configurationSettings = Database.ConfigurationRetriever.GetConfigurationSettings(GetQueryStringValues("key"));
+			if (configurationSettings == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			return GetMessageWithObject(configurationSettings);
+		}
+
+		[HttpPut]
+		[RavenRoute("configuration/global/settings")]
+		public async Task<HttpResponseMessage> GlobalSettingsPut()
+		{
+			var etag = GetEtag();
+			var globalSettingsDoc = await ReadJsonObjectAsync<GlobalSettingsDocument>();
+
+			GlobalSettingsDocumentProtector.Protect(globalSettingsDoc);
+			var json = RavenJObject.FromObject(globalSettingsDoc);
+
+			var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
+			var putResult = Database.Documents.Put(Constants.Global.GlobalSettingsDocumentKey, etag, json, metadata, null);
+
+			return GetMessageWithObject(putResult);
+		}
+
+
 
 		[HttpGet]
 		[RavenRoute("configuration/replication")]
@@ -90,6 +134,32 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			return GetMessageWithObject(configurationDocument.MergedDocument);
+		}
+
+
+		[HttpGet]
+		[RavenRoute("configuration/versioning")]
+		[RavenRoute("databases/{databaseName}/configuration/versioning")]
+		public HttpResponseMessage VersioningConfigurationGet()
+		{
+			if (Database == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			int nextPageStart = 0;
+			var systemDbPrefixes = DatabasesLandlord.SystemDatabase.Documents.GetDocumentsWithIdStartingWith(Constants.Global.VersioningDocumentPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextPageStart);
+			var localDbPrefixes = Database.Documents.GetDocumentsWithIdStartingWith(Constants.Versioning.RavenVersioningPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextPageStart);
+			var systemDbIds = systemDbPrefixes.Select(x =>
+				x
+					.Value<RavenJObject>("@metadata")
+					.Value<string>("@id")
+					.Replace(Constants.Global.VersioningDocumentPrefix, Constants.Versioning.RavenVersioningPrefix)).ToList();
+			var localIds = localDbPrefixes.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id")).ToList();
+
+			var idsToFetch = systemDbIds.Union(localIds);
+
+			var configurations = idsToFetch.Select(id => Database.ConfigurationRetriever.GetConfigurationDocumentAsJson(id)).ToList();
+
+			return GetMessageWithObject(configurations);
 		}
 	}
 }

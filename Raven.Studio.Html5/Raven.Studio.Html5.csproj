@@ -200,6 +200,7 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigVersioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestions.ts" />
@@ -512,6 +513,7 @@
     <Content Include="App\views\disableResourceToggleConfirm.html" />
     <Content Include="App\views\runningTasks.html" />
     <Content Include="App\views\studioConfig.html" />
+    <Content Include="App\views\globalConfigVersioning.html" />
     <Content Include="App\views\visualizerImport.html" />
     <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />
