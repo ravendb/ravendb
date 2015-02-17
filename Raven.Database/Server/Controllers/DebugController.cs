@@ -322,6 +322,23 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+		[RavenRoute("debug/rawdocumentbytes")]
+		[RavenRoute("databases/{databaseName}/debug/rawdocumentbytes")]
+		public HttpResponseMessage RawDocBytes()
+		{
+			var docId = GetQueryStringValue("id");
+			if(String.IsNullOrWhiteSpace(docId))
+				throw new ArgumentNullException("id");
+
+			byte[] docBytes = null;
+
+			Database.TransactionalStorage.Batch(accessor => 
+				docBytes = accessor.Documents.RawDocumentByKey(docId));
+
+			return GetMessageWithObject(docBytes ?? (object)string.Format("Document with id = {0} not found!", docId));
+		}
+
+		[HttpGet]
 		[RavenRoute("debug/docrefs")]
 		[RavenRoute("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage DocRefs(string id)

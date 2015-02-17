@@ -221,6 +221,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return tableStorage.GetEntriesCount(tableStorage.Documents);
 		}
 
+		public byte[] RawDocumentByKey(string key)
+		{
+			var loweredKey = CreateKey(key);
+			
+			var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
+			if (documentReadResult == null) //non existing document
+				return null;
+
+			using (var stream = documentReadResult.Reader.AsStream())
+				return stream.ReadData();
+		}
+
 		public JsonDocument DocumentByKey(string key)
 		{
 			if (string.IsNullOrEmpty(key))
