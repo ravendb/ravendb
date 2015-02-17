@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Util;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
@@ -427,7 +428,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 			var sourceClient = NewAsyncClient(0);
             var destinationClient = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
 
-            await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLimit, -1);
+            await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig
+            {
+	            MaxNumberOfSynchronizationsPerDestination = -1
+            });
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 

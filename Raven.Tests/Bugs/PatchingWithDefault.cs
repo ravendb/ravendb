@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class RavenTestSample : RavenTestBase
+    public class PatchingWithDefault : RavenTestBase
     {
         [Fact]
         public void PatchRequestShouldCreateDocIfNotExists()

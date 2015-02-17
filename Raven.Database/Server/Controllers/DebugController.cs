@@ -98,7 +98,7 @@ namespace Raven.Database.Server.Controllers
             var sqlReplicationTask = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (sqlReplicationTask == null)
             {
-                return GetMessageWithString("Unable to find sql replication task. Maybe it is not enabled?", HttpStatusCode.BadRequest);
+                return GetMessageWithString("Unable to find SQL Replication task. Maybe it is not enabled?", HttpStatusCode.BadRequest);
             }
 
             var stats = from nameAndStatsManager in sqlReplicationTask.SqlReplicationMetricsCounters

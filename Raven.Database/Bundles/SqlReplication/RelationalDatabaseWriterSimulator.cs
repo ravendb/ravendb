@@ -152,7 +152,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private string GetTableNameString(string tableName)
         {
-            if (cfg.PerformTableQuatation)
+            if (cfg.QuoteTables)
             {
                 return string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray());
             }

@@ -72,6 +72,8 @@ namespace Raven.Abstractions.Data
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
 		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
 
+		public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
+
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
 		public const string RavenEsentLogsPath = "Raven/Esent/LogsPath";
@@ -152,6 +154,7 @@ namespace Raven.Abstractions.Data
 		
 		//Versioning
 		public const string RavenCreateVersion = "Raven-Create-Version";
+	    public const string RavenIgnoreVersioning = "Raven-Ignore-Versioning";
 
 		public const string RavenClientVersion = "Raven-Client-Version";
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
@@ -225,5 +228,10 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
         }
+
+	    public static class Smuggler
+	    {
+		    public const string CallContext = "Raven/Smuggler/CallContext";
+	    }
 	}
 }

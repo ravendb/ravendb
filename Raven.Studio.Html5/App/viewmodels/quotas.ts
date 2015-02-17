@@ -4,6 +4,7 @@ import saveDatabaseSettingsCommand = require("commands/saveDatabaseSettingsComma
 import document = require("models/document");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
+import shell = require('viewmodels/shell');
 
 class quotas extends viewModelBase {
     settingsDocument = ko.observable<document>();
@@ -16,16 +17,15 @@ class quotas extends viewModelBase {
 
     constructor() {
         super();
-        this.activeDatabase.subscribe((db: database) => this.isForbidden(db.isAdminCurrentTenant() == false));
     }
 
     canActivate(args: any): any {
         super.canActivate(args);
         var deferred = $.Deferred();
 
-        var db = this.activeDatabase();
-        this.isForbidden(db.isAdminCurrentTenant() == false);
-        if (db.isAdminCurrentTenant()) {
+        this.isForbidden(shell.isGlobalAdmin() == false);
+        if (this.isForbidden() == false) {
+            var db = this.activeDatabase();
             // fetch current quotas from the database
             this.fetchQuotas(db)
                 .done(() => deferred.resolve({ can: true }))

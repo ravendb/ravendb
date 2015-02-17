@@ -134,6 +134,16 @@ namespace Raven.Smuggler
 
 			return metadata;
 	    }
+
+	    public RavenJObject DisableVersioning(RavenJObject metadata)
+	    {
+		    if (metadata != null)
+		    {
+			    metadata.Add(Constants.RavenIgnoreVersioning, true);
+		    }
+
+		    return metadata;
+	    }
     }
 
 

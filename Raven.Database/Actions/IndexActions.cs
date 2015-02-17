@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Lucene.Net.Analysis.Standard;
-
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -660,7 +660,7 @@ namespace Raven.Database.Actions
 
                 if (instance.IsSideBySideIndex)
                 {
-                    Database.Documents.Delete(IndexReplacer.IndexReplacePrefix + instance.Name, null, null);
+                    Database.Documents.Delete(Constants.IndexReplacePrefix + instance.Name, null, null);
                 }
 
 				// And delete the data in the background

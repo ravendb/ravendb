@@ -8,6 +8,7 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using Raven.SlowTests.Issues;
 using Raven.Tests.Common;
 using Raven.Tests.Core;
@@ -20,14 +21,28 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-		    for (int i = 0; i < 1000; i++)
-		    {
-		        Console.WriteLine(i);
-		        using (var a = new RavenDB_406())
-		        {
-		            a.QueryResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled();
-		        }
-		    }
+            var store = new DocumentStore
+            {
+                Url = "http://live-test.ravendb.net",
+                DefaultDatabase = "Northwind"
+            };
+
+            store.Initialize();
+
+            var patchExisting = new ScriptedPatchRequest
+            {
+                Script = "this.Counter++;",
+            };
+            var patchDefault = new ScriptedPatchRequest
+            {
+                Script = "this.Counter=100;",
+            };
+
+            var docId = "TestDocs/1";
+
+            store.DatabaseCommands.Patch(docId, patchExisting, patchDefault, new RavenJObject());
+            var results = store.DatabaseCommands.Get("TestDocs/1").DataAsJson;
+
 		}
 	}
 

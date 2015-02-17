@@ -71,27 +71,38 @@
                             <select class="form-control" data-bind="options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
                         </div>
                         <div class="col-sm-3">
-                            <input type="text" required class="form-control" data-bind="value: mainValue, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }" />
+                            <input type="text" required class="form-control" data-bind="value: mainValue, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }"/>
                             <div data-bind="visible: isGlaceirVault">
-                                <a href="http://docs.aws.amazon.com/amazonglacier/latest/dev/creating-vaults.html">Vault Name Restrictions and Limitations</a>
+                                <a href="http://docs.aws.amazon.com/amazonglacier/latest/dev/creating-vaults.html" target="_blank">Vault Name Restrictions and Limitations</a>
                             </div>
                             <div data-bind="visible: isS3Bucket">
-                                <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html">Bucket Name Restrictions and Limitations</a>
+                                <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html" target="_blank">Bucket Name Restrictions and Limitations</a>
                             </div>
                         </div>
                     </div>
-                    
-                    <div data-bind="visible: additionalAwsInfoRequired">
+
+                    <div data-bind="if: additionalAwsInfoRequired">
+                        <div class="form-group" data-bind="if: isS3Bucket">
+                            <label for="awsRemoteFolder" class="col-sm-3 control-label">Folder name:</label>
+                            <div class="col-sm-3">
+                                <input id="awsRemoteFolder" type="text" placeholder="Remote folder name" class="form-control" data-bind="value: s3RemoteFolderName, valueUpdate: 'afterkeydown'" />
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label for="awsAccessKey" class="col-sm-3 control-label">AWS Access Key:</label>
                             <div class="col-sm-3">
-                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown'" />
+                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown'"/>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="awsSecretKey" class="col-sm-3 control-label">AWS Secret Key:</label>
                             <div class="col-sm-3">
-                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'" />
+                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'"/>
+                            </div>
+                            <div class="col-sm-1 control-label" style="text-align: left" data-bind="visible: awsSecretKeyDecryptionFailed">
+                                <span id="awsDecryptFailureSpan" class="help-cursor" data-placement="auto right" data-original-title="Why this input is empty?" data-trigger="hover">
+                                    <i class="fa fa-warning text-info"></i>
+                                </span>
                             </div>
                         </div>
                         <div class="form-group">
@@ -102,17 +113,28 @@
                         </div>
                     </div>
 
-                    <div data-bind="visible: additionalAzureInfoRequired">
+                    <div data-bind="if: additionalAzureInfoRequired">
+                        <div class="form-group">
+                            <label for="remoteFolder" class="col-sm-3 control-label">Folder name:</label>
+                            <div class="col-sm-3">
+                                <input id="remoteFolder" type="text" placeholder="Remote folder name" class="form-control" data-bind="value: azureRemoteFolderName, valueUpdate: 'afterkeydown'" />
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label for="azureStorageAccount" class="col-sm-3 control-label">Azure Storage Account:</label>
                             <div class="col-sm-3">
-                                <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown'" />
+                                <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown'"/>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="azureStorageKey" class="col-sm-3 control-label">Azure Storage Key:</label>
                             <div class="col-sm-3">
-                                <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey, valueUpdate: 'afterkeydown'" />
+                                <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey, valueUpdate: 'afterkeydown'"/>
+                            </div>
+                            <div class="col-sm-1 control-label" style="text-align: left" data-bind="visible: azureStorageKeyDecryptionFailed">
+                                <span id="azureDecryptFailureSpan" class="help-cursor" data-placement="auto right" data-original-title="Why this input is empty?" data-trigger="hover">
+                                    <i class="fa fa-warning text-info"></i>
+                                </span>
                             </div>
                         </div>
                     </div>

@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
 		static readonly Regex untokenizedQuery = new Regex( FieldRegexVal + @"[\s\(]*(\[\[.+?\]\])|(?<=,)\s*(\[\[.+?\]\])(?=\s*[,\)])", RegexOptions.Compiled);
 		static readonly Regex searchQuery = new Regex(FieldRegexVal + @"\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
         static readonly Regex dateQuery = new Regex(FieldRegexVal + DateTimeVal, RegexOptions.Compiled);
-        static readonly Regex inDatesQuery = new Regex(MethodRegexVal + @"\s*(\(.*" + DateTimeVal + @".*\))", RegexOptions.Compiled | RegexOptions.Singleline);
+        static readonly Regex inDatesQuery = new Regex(MethodRegexVal + @"\s*(\([^)]*" + DateTimeVal + @"[^)]*\))", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex rightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
 		static readonly Regex leftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
 		static readonly Regex commentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);

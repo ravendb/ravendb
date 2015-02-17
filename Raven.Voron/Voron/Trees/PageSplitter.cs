@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Text;
+using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Paging;
 
@@ -130,9 +133,9 @@ namespace Voron.Trees
             return SplitPageInHalf(rightPage);
         }
 
-        private byte* AddNodeToPage(Page page, int index)
+        private byte* AddNodeToPage(Page page, int index, MemorySlice alreadyPreparedNewKey = null)
         {
-	        var newKeyToInsert = page.PrepareKeyToInsert(_newKey, index);
+	        var newKeyToInsert = alreadyPreparedNewKey ?? page.PrepareKeyToInsert(_newKey, index);
 
             switch (_nodeType)
             {
@@ -196,16 +199,69 @@ namespace Voron.Trees
             _page.Truncate(_tx, splitIndex);
 
             // actually insert the new key
-            return (currentIndex > splitIndex || newPosition && currentIndex == splitIndex)
-                ? InsertNewKey(rightPage)
-                : InsertNewKey(_page);
+			try
+			{
+				return (currentIndex > splitIndex || newPosition && currentIndex == splitIndex)
+					? InsertNewKey(rightPage)
+					: InsertNewKey(_page);
+			}
+			catch (InvalidOperationException e)
+			{
+				if (e.Message.StartsWith("The page is full and cannot add an entry"))
+				{
+					var debugInfo = new StringBuilder();
+
+					debugInfo.AppendFormat("\r\n_tree.Name: {0}\r\n", _tree.Name);
+					debugInfo.AppendFormat("_newKey: {0}, _len: {1}, needed space: {2}\r\n", _newKey, _len, _page.GetRequiredSpace(_newKey, _len));
+					debugInfo.AppendFormat("currentKey: {0}, seperatorKey: {1}\r\n", currentKey, seperatorKey);
+					debugInfo.AppendFormat("currentIndex: {0}\r\n", currentIndex);
+					debugInfo.AppendFormat("splitIndex: {0}\r\n", splitIndex);
+					debugInfo.AppendFormat("newPosition: {0}\r\n", newPosition);
+
+					debugInfo.AppendFormat("_page info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", _page.Flags, _page.NumberOfEntries, _page.SizeLeft, _page.CalcSizeLeft());
+
+					for (int i = 0; i < _page.NumberOfEntries; i++)
+					{
+						var node = _page.GetNode(i);
+						var key = _page.GetNodeKey(node);
+						debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
+							node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+					}
+
+					debugInfo.AppendFormat("rightPage info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", rightPage.Flags, rightPage.NumberOfEntries, rightPage.SizeLeft, rightPage.CalcSizeLeft());
+
+					for (int i = 0; i < rightPage.NumberOfEntries; i++)
+					{
+						var node = rightPage.GetNode(i);
+						var key = rightPage.GetNodeKey(node);
+						debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
+							node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+					}
+
+					throw new InvalidOperationException(debugInfo.ToString(), e);
+				}
+
+				throw;
+			}
+
         }
 
         private byte* InsertNewKey(Page p)
         {
             int pos = p.NodePositionFor(_newKey);
 
-            byte* dataPos = AddNodeToPage(p, pos);
+			var newKeyToInsert = p.PrepareKeyToInsert(_newKey, pos);
+
+			if (p.HasSpaceFor(_tx, p.GetRequiredSpace(newKeyToInsert, _len)) == false)
+			{
+				_cursor.Push(p);
+
+				var pageSplitter = new PageSplitter(_tx, _tree, _newKey, _len, p.PageNumber, _nodeType, _nodeVersion, _cursor, _treeState);
+
+				return pageSplitter.Execute();
+			}
+
+            byte* dataPos = AddNodeToPage(p, pos, newKeyToInsert);
             _cursor.Push(p);
             return dataPos;
         }
@@ -227,19 +283,6 @@ namespace Voron.Trees
             }
         }
 
-
-        /// <summary>
-        ///     For leaf pages, check the split point based on what
-        ///     fits where, since otherwise adding the node can fail.
-        ///     This check is only needed when the data items are
-        ///     relatively large, such that being off by one will
-        ///     make the difference between success or failure.
-        ///     It's also relevant if a page happens to be laid out
-        ///     such that one half of its nodes are all "small" and
-        ///     the other half of its nodes are "large." If the new
-        ///     item is also "large" and falls on the half with
-        ///     "large" nodes, it also may not fit.
-        /// </summary>
         private int AdjustSplitPosition(int currentIndex, int splitIndex,
             ref bool newPosition)
         {
@@ -250,13 +293,7 @@ namespace Voron.Trees
 	        else
 		        keyToInsert = _newKey;
 
-			int nodeSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert , _len) + Constants.NodeOffsetSize;
-            if (_page.NumberOfEntries >= 20 && nodeSize <= AbstractPager.PageMaxSpace/16)
-            {
-                return splitIndex;
-            }
-
-	        int pageSize = nodeSize;
+	        var pageSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert , _len) + Constants.NodeOffsetSize;
 
 			if(_tree.KeysPrefixing)
 				pageSize += (Constants.PrefixNodeHeaderSize + 1); // let's assume that prefix will be created to ensure the destination page will have enough space, + 1 because prefix node might require 2-byte alignment

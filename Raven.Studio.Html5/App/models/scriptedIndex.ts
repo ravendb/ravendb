@@ -68,7 +68,7 @@ class scriptedIndex extends document {
                     message = "Please fill out this field.";
                 }
                 textarea.setCustomValidity(message);
-                setTimeout(()=> {
+                setTimeout(() => {
                     var annotations = currentEditor.getSession().getAnnotations();
                     var isErrorExists = false;
                     for (var i = 0; i < annotations.length; i++) {

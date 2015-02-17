@@ -172,16 +172,6 @@ class query extends viewModelBase {
         } else {
             deferred.resolve({ redirect: "#resources" });
         }
-        /*var db = this.activeDatabase();
-        this.isForbidden(db.isAdminCurrentTenant() == false);
-        if (db.isAdminCurrentTenant()) {
-            // fetch current quotas from the database
-            this.fetchQuotas(db)
-                .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
-        } else {
-            deferred.resolve({ can: true });
-        }*/
 
         return deferred;
     }

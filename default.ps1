@@ -398,8 +398,26 @@ task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task UpdateLiveTest {
+@'
+	<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Maintenance work</title>
+</head>
+<body>
+  <h1>Maintenance work</h1>
+  <h3>We are deploying a new Live-Test insance, using the new latest build.</h3>
+</body>
+</html>
+'@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
+
 	Remove-Item "C:\Sites\RavenDB 3\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
-	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web" -Recurse -ErrorAction SilentlyContinue
+	mkdir "C:\Sites\RavenDB 3\Web\bin" -ErrorAction SilentlyContinue
+	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web\" -Recurse -ErrorAction SilentlyContinue
+
+	Remove-Item "$build_dir\Output\Web\app_offline.htm"
 }
 
 task Upload {
@@ -552,8 +570,6 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Tests.Helpers.nuspec $nuget_dir\RavenDB.Tests.Helpers\RavenDB.Tests.Helpers.nuspec
 	@("Raven.Tests.Helpers.???", "Raven.Server.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Tests.Helpers\bin\$global:configuration\$_" $nuget_dir\RavenDB.Tests.Helpers\lib\net45 }
-	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse

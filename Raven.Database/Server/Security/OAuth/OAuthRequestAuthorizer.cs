@@ -226,4 +226,13 @@ public class OAuthPrincipal : IPrincipal, IIdentity
 	{
 		get { return tokenBody; }
 	}
+
+	public bool IsGlobalAdmin()
+	{
+		var databaseAccess = tokenBody.AuthorizedDatabases
+			.Where(x => string.Equals(x.TenantId, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase));
+
+		return databaseAccess.Any(access => access.Admin);
+		
+	}
 }

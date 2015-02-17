@@ -24,8 +24,7 @@ class apiKeys extends viewModelBase {
 
         var resourceNames = shell.databases()
             .filter(db => db.name != "<system>").map(db => db.name)
-            .concat(
-         shell.fileSystems().map(fs => fs.name));
+            .concat(shell.fileSystems().map(fs => fs.name));
         this.allDatabases(resourceNames);
     }
 

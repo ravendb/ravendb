@@ -649,11 +649,11 @@ class shell extends viewModelBase {
     }
 
     connectToRavenServer() {
-        var serverConfigsTask: JQueryPromise<any> = this.loadServerConfig();
-        var databasesLoadedTask: JQueryPromise<any> = this.loadDatabases();
-        var fileSystemsLoadedTask: JQueryPromise<any> = this.loadFileSystems();
-        var counterStoragesLoadedTask: JQueryPromise<any> = this.loadCounterStorages();
-        $.when(serverConfigsTask, databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
+        var serverConfigsLoadTask: JQueryPromise<any> = this.loadServerConfig();
+        var databasesLoadTask: JQueryPromise<any> = this.loadDatabases();
+        var fileSystemsLoadTask: JQueryPromise<any> = this.loadFileSystems();
+        var counterStoragesLoadTask: JQueryPromise<any> = this.loadCounterStorages();
+        $.when(serverConfigsLoadTask, databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
             .always(() => {
                 var locationHash = window.location.hash;
                 if (appUrl.getFileSystem()) { //filesystems section

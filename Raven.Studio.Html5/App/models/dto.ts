@@ -402,6 +402,8 @@ interface periodicExportSetupDto {
     AwsRegionEndpoint: string;
     AzureStorageContainer: string;
     LocalFolderName: string;
+    S3RemoteFolderName: string;
+    AzureRemoteFolderName: string;
     IntervalMilliseconds: number;
     FullBackupIntervalMilliseconds: number;
 }
@@ -616,6 +618,7 @@ interface compactStatusDto {
 interface sqlReplicationTableDto {
     TableName: string;
     DocumentKeyColumn: string;
+    InsertOnlyMode: boolean;
 }
 
 interface sqlReplicationDto extends documentDto {
