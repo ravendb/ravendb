@@ -61,48 +61,6 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(configurationSettings);
         }
 
-        [HttpPut]
-        [RavenRoute("configuration/global/settings")]
-        public async Task<HttpResponseMessage> GlobalSettingsPut()
-        {
-            var etag = GetEtag();
-            var globalSettingsDoc = await ReadJsonObjectAsync<GlobalSettingsDocument>();
-
-            GlobalSettingsDocumentProtector.Protect(globalSettingsDoc);
-            var json = RavenJObject.FromObject(globalSettingsDoc);
-
-            var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
-            var putResult = Database.Documents.Put(Constants.Global.GlobalSettingsDocumentKey, etag, json, metadata, null);
-
-            return GetMessageWithObject(putResult);
-        }
-
-      
-		[HttpGet]
-		[RavenRoute("configuration/global/settings")]
-		public HttpResponseMessage ConfigurationGlobalSettingsGet()
-		{
-			var json = Database.Documents.Get(Constants.Global.GlobalSettingsDocumentKey, null);
-			var globalSettings = json != null ? json.ToJson().JsonDeserialization<GlobalSettingsDocument>() : new GlobalSettingsDocument();
-			GlobalSettingsDocumentProtector.Unprotect(globalSettings);
-			return GetMessageWithObject(globalSettings, HttpStatusCode.OK, (json != null) ? json.Etag : null);
-		}
-
-		[HttpGet]
-		[RavenRoute("configuration/settings")]
-		[RavenRoute("databases/{databaseName}/configuration/settings")]
-		public HttpResponseMessage ConfigurationSettingsGet()
-		{
-			if (Database == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
-
-			var configurationSettings = Database.ConfigurationRetriever.GetConfigurationSettings(GetQueryStringValues("key"));
-			if (configurationSettings == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
-
-			return GetMessageWithObject(configurationSettings);
-		}
-
 		[HttpPut]
 		[RavenRoute("configuration/global/settings")]
 		public async Task<HttpResponseMessage> GlobalSettingsPut()
@@ -118,8 +76,6 @@ namespace Raven.Database.Server.Controllers
 
 			return GetMessageWithObject(putResult);
 		}
-
-
 
 		[HttpGet]
 		[RavenRoute("configuration/replication")]

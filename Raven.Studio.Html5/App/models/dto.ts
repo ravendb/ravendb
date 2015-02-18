@@ -1236,3 +1236,7 @@ enum ResponseCodes {
     PreconditionFailed = 412,
     InternalServerError = 500
 }
+
+interface copyFromParentDto<T> {
+    copyFromParent(parent: T);
+}
