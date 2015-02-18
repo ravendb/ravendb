@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Lucene.Net.Analysis.Standard;
-
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -118,58 +118,63 @@ namespace Raven.Database.Actions
             return indexEtag;
         }
 
-
-
-        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
+        internal void CheckReferenceBecauseOfDocumentUpdate(string key)
         {
             TouchedDocumentInfo touch;
             RecentTouches.TryRemove(key, out touch);
 	        Stopwatch sp = null;
 	        int count = 0;
-	        foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
-            {
-                Etag preTouchEtag = null;
-                Etag afterTouchEtag = null;
-                try
-                {
-	                count++;
-	                actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
 
-	                var docMetadata = actions.Documents.DocumentMetadataByKey(referencing);
+	        using (Database.TransactionalStorage.DisableBatchNesting())
+	        {
+		        Database.TransactionalStorage.Batch(actions =>
+		        {
+					foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
+					{
+						Etag preTouchEtag = null;
+						Etag afterTouchEtag = null;
+						try
+						{
+							count++;
+							actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
 
-	                if (docMetadata != null)
-	                {
-						var entityName = docMetadata.Metadata.Value<string>(Constants.RavenEntityName);
+							var docMetadata = actions.Documents.DocumentMetadataByKey(referencing);
 
-						if(string.IsNullOrEmpty(entityName) == false)
-							Database.LastCollectionEtags.Update(entityName, afterTouchEtag);
-	                }
-                }
-                catch (ConcurrencyException)
-                {
-                }
+							if (docMetadata != null)
+							{
+								var entityName = docMetadata.Metadata.Value<string>(Constants.RavenEntityName);
 
-                if (preTouchEtag == null || afterTouchEtag == null)
-                    continue;
+								if (string.IsNullOrEmpty(entityName) == false)
+									Database.LastCollectionEtags.Update(entityName, afterTouchEtag);
+							}
+						}
+						catch (ConcurrencyException)
+						{
+						}
 
-	            if (actions.General.MaybePulseTransaction())
-	            {
-		            if (sp == null)
-			            sp = Stopwatch.StartNew();
-		            if (sp.Elapsed >= TimeSpan.FromSeconds(30))
-		            {
-			            throw new TimeoutException("Early failure when checking references for document '"+ key +"', we waited over 30 seconds to touch all of the documents referenced by this document.\r\n" +
-			                                       "The operation (and transaction) has been aborted, since to try longer (we already touched " + count +" documents) risk a thread abort.\r\n" +
-			                                       "Consider restructuring your indexes to avoid LoadDocument on such a popular document.");
-		            }
-	            }
+						if (preTouchEtag == null || afterTouchEtag == null)
+							continue;
 
-                RecentTouches.Set(referencing, new TouchedDocumentInfo
-                {
-                    PreTouchEtag = preTouchEtag,
-                    TouchedEtag = afterTouchEtag
-                });
-            }
+						if (actions.General.MaybePulseTransaction())
+						{
+							if (sp == null)
+								sp = Stopwatch.StartNew();
+							if (sp.Elapsed >= TimeSpan.FromSeconds(30))
+							{
+								throw new TimeoutException("Early failure when checking references for document '" + key + "', we waited over 30 seconds to touch all of the documents referenced by this document.\r\n" +
+														   "The operation (and transaction) has been aborted, since to try longer (we already touched " + count + " documents) risk a thread abort.\r\n" +
+														   "Consider restructuring your indexes to avoid LoadDocument on such a popular document.");
+							}
+						}
+
+						RecentTouches.Set(referencing, new TouchedDocumentInfo
+						{
+							PreTouchEtag = preTouchEtag,
+							TouchedEtag = afterTouchEtag
+						});
+					}
+		        });
+	        }
         }
 
         private static void IsIndexNameValid(string indexName)
@@ -660,7 +665,7 @@ namespace Raven.Database.Actions
 
                 if (instance.IsSideBySideIndex)
                 {
-                    Database.Documents.Delete(IndexReplacer.IndexReplacePrefix + instance.Name, null, null);
+                    Database.Documents.Delete(Constants.IndexReplacePrefix + instance.Name, null, null);
                 }
 
 				// And delete the data in the background

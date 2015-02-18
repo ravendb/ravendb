@@ -283,6 +283,7 @@
     <Compile Include="FileSystem\FileHeader.cs" />
     <Compile Include="FileSystem\FileSystemDocument.cs" />
     <Compile Include="FileSystem\SearchResults.cs" />
+    <Compile Include="FileSystem\SynchronizationConfig.cs" />
     <Compile Include="Indexing\IndexLockMode.cs" />
     <Compile Include="Indexing\IndexMergeResults.cs" />
     <Compile Include="Indexing\IndexReplaceDocument.cs" />

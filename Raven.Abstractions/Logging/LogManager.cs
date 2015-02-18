@@ -63,7 +63,13 @@ namespace Raven.Abstractions.Logging
 			if (targets.OfType<T>().Any())
 				return;
 
-			targets.Add(new T());
+		    lock (targets)
+		    {
+                if (targets.OfType<T>().Any())
+                    return;
+
+                targets.Add(new T());
+		    }
 		}
 
 		public static T GetTarget<T>() where T: Target

@@ -466,7 +466,7 @@ namespace Raven.Abstractions.Util
 				if (trivial == false)
 					return;
 
-				bool usedByOtherClauses = ((QueryExpression)query.Parent).Clauses.SkipWhile(x => x != query).All(q => (q is QueryLetClause || q is QueryFromClause || q is QueryJoinClause) == false);
+				bool usedByOtherClauses = ((QueryExpression)query.Parent).Clauses.Reverse().SkipWhile(x => x != query).All(q => (q is QueryLetClause || q is QueryFromClause || q is QueryJoinClause) == false);
 				if (usedByOtherClauses)
 					return;
 

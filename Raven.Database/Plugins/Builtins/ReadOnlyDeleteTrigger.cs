@@ -11,7 +11,7 @@ namespace Raven.Database.Plugins.Builtins
     {
         public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
         {
-            var old = Database.Documents.Get(key, transactionInformation);
+            var old = Database.Documents.GetDocumentMetadata(key, transactionInformation);
             if (old == null)
                 return VetoResult.Allowed;
 

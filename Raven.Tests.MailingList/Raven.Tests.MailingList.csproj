@@ -234,6 +234,7 @@
     <Compile Include="IisQueryLengthIssues.cs" />
     <Compile Include="IncludeOnDictionary.cs" />
     <Compile Include="IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
+    <Compile Include="IndexCompilation.cs" />
     <Compile Include="IndexesIgnoreNewtonsoftJsonPropertyAttributes.cs" />
     <Compile Include="IndexMerging.cs" />
     <Compile Include="IndexMetadata.cs" />

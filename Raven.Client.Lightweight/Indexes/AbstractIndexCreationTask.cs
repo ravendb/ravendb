@@ -194,11 +194,50 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
+		/// Executes the index creation against the specified document store in side-by-side mode.
+		/// </summary>
+		/// <param name="store"></param>
+		public void SideBySideExecute(IDocumentStore store, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			store.SideBySideExecuteIndex(this, minimumEtagBeforeReplace, replaceTimeUtc);
+		}
+
+		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
 		public void Execute(IDocumentStore store)
 		{
 			store.ExecuteIndex(this);
+		}
+
+		/// <summary>
+		/// Executes the index creation using in side-by-side mode.
+		/// </summary>
+		/// <param name="databaseCommands"></param>
+		/// <param name="documentConvention"></param>
+		public virtual void SideBySideExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			Conventions = documentConvention;
+			var indexDefinition = CreateIndexDefinition();
+			var serverDef = databaseCommands.GetIndex(IndexName);
+			if (serverDef != null)
+			{
+				if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
+
+				var replaceIndexName = "ReplacementOf/" + IndexName;
+				databaseCommands.PutIndex(replaceIndexName, indexDefinition);
+
+				databaseCommands
+					.Put(Constants.IndexReplacePrefix + replaceIndexName, 
+						null, 
+						RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = serverDef.Name, MinimumEtagBeforeReplace = minimumEtagBeforeReplace, ReplaceTimeUtc = replaceTimeUtc}), 
+						new RavenJObject());
+			}
+			else
+			{
+				// since index doesn't exist yet - create it in normal mode
+				databaseCommands.PutIndex(IndexName, indexDefinition);
+			}
 		}
 
 		/// <summary>
@@ -211,16 +250,7 @@ namespace Raven.Client.Indexes
 			if (documentConvention.PrettifyGeneratedLinqExpressions)
 			{
 				var serverDef = databaseCommands.GetIndex(IndexName);
-				if (serverDef != null)
-				{
-					if (serverDef.Equals(indexDefinition))
-						return;
-
-					// now we need to check if this is a legacy index...
-					var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
-					if (serverDef.Equals(legacyIndexDefinition))
-						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
-				}
+				if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
 			}
 
 			// This code take advantage on the fact that RavenDB will turn an index PUT
@@ -230,6 +260,16 @@ namespace Raven.Client.Indexes
 
 			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
 				ReplicateIndexesIfNeeded(databaseCommands);
+		}
+
+		private bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
+		{
+			if (serverDef.Equals(indexDefinition))
+				return true;
+
+			// now we need to check if this is a legacy index...
+			var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
+			return serverDef.Equals(legacyIndexDefinition);
 		}
 
 		private void ReplicateIndexesIfNeeded(IDatabaseCommands databaseCommands)
@@ -289,11 +329,45 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
+		/// Executes the index creation against the specified document store in side-by-side mode.
+		/// </summary>
+		public Task SideBySideExecuteAsync(IDocumentStore store, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			return store.SideBySideExecuteIndexAsync(this, minimumEtagBeforeReplace, replaceTimeUtc);
+		}
+
+		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
 		public Task ExecuteAsync(IDocumentStore store)
 		{
 			return store.ExecuteIndexAsync(this);
+		}
+
+		public virtual async Task SideBySideExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default (CancellationToken))
+		{
+			Conventions = documentConvention;
+			var indexDefinition = CreateIndexDefinition();
+			var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token).ConfigureAwait(false);
+			if (serverDef != null)
+			{
+				if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
+
+				var replaceIndexName = "ReplacementOf/" + IndexName;
+				await asyncDatabaseCommands.PutIndexAsync(replaceIndexName, indexDefinition, token).ConfigureAwait(false);
+
+				await asyncDatabaseCommands
+					.PutAsync(Constants.IndexReplacePrefix + replaceIndexName,
+						null,
+						RavenJObject.FromObject(new IndexReplaceDocument {IndexToReplace = serverDef.Name, MinimumEtagBeforeReplace = minimumEtagBeforeReplace, ReplaceTimeUtc = replaceTimeUtc}),
+						new RavenJObject(),
+						token).ConfigureAwait(false);
+			}
+			else
+			{
+				// since index doesn't exist yet - create it in normal mode
+				await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, token).ConfigureAwait(false);
+			}
 		}
 
 		/// <summary>
@@ -306,16 +380,7 @@ namespace Raven.Client.Indexes
 			if (documentConvention.PrettifyGeneratedLinqExpressions)
 			{
 				var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token);
-				if (serverDef != null)
-				{
-					if (serverDef.Equals(indexDefinition))
-						return;
-
-					// now we need to check if this is a legacy index...
-					var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
-					if (serverDef.Equals(legacyIndexDefinition))
-						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
-				}
+				if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
 			}
 
 			// This code take advantage on the fact that RavenDB will turn an index PUT
