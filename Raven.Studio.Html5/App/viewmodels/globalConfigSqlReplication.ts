@@ -1,4 +1,5 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
+import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import sqlReplicationConnections = require("models/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/predefinedSqlConnection");
 import document = require("models/document");
@@ -6,35 +7,31 @@ import documentMetadata = require("models/documentMetadata");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import appUrl = require("common/appUrl");
 import editSqlReplication = require("viewmodels/editSqlReplication");
-import app = require("durandal/app");
-import getGlobalSqlReplicationConnectionStringsCommand = require("commands/getGlobalSqlReplicationConnectionStringsCommand");
 import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 
-class sqlReplicationConnectionStringsManagement extends viewModelBase{
+class globalConfigSqlReplication extends viewModelBase{
     
     htmlSelector ="#sqlReplicationConnectionsManagement";
     connections = ko.observable<sqlReplicationConnections>();
     isSaveEnabled: KnockoutComputed<boolean>;
     
-    usingGlobal = ko.observable<boolean>(false);
-    hasGlobalValues = ko.observable<boolean>(false);
+    activated = ko.observable<boolean>(false);
 
     constructor() {
         super();
     }
 
     loadConnections():JQueryPromise<any> {
-        return new getGlobalSqlReplicationConnectionStringsCommand(this.activeDatabase())
+        return new getDocumentWithMetadataCommand("Raven/Global/SqlReplication/Connections", appUrl.getSystemDatabase())
             .execute()
-            .done((repSetup: configurationDocumentDto<sqlReplicationConnectionsDto>) => {
-                this.usingGlobal(repSetup.GlobalExists && !repSetup.LocalExists);
-                this.hasGlobalValues(repSetup.GlobalExists);
-
-                this.connections(new sqlReplicationConnections(repSetup));
+            .done((x: document) => {
+                var dto: any = x.toDto(true);
+                this.connections(new sqlReplicationConnections({ MergedDocument: dto }));
                 if (this.connections().predefinedConnections().length > 0) {
                     this.connections().predefinedConnections().forEach(x=> this.subscribeToSqlReplicationConnectionName(x));
                 }
+                this.activated(true);
             })
             .fail(() => {
                 this.connections(sqlReplicationConnections.empty());
@@ -57,37 +54,36 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         super.activate(args);
         this.dirtyFlag = new ko.DirtyFlag([this.connections]);
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
-        
     }
 
-    save() {
-        if (this.usingGlobal()) {
-            new deleteDocumentCommand("Raven/SqlReplication/Connections", this.activeDatabase())
+    saveChanges() {
+        this.syncChanges(false);
+    }
+
+    syncChanges(deleteConfig: boolean) {
+        if (deleteConfig) {
+            new deleteDocumentCommand("Raven/Global/SqlReplication/Connections", appUrl.getSystemDatabase())
                 .execute()
-                .done(() => {
-                    messagePublisher.reportSuccess("Settings were successfully saved!");
-                    this.dirtyFlag().reset();
-                })
-                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save settings!", response.responseText, response.statusText));
+                .done(() => messagePublisher.reportSuccess("Global Settings were successfully saved!"))
+                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save global settings!", response.responseText, response.statusText));
         } else {
             var newDoc = new document(this.connections().toDto());
-            this.attachReservedMetaProperties("Raven/SqlReplication/Connections", newDoc.__metadata);
+            this.attachReservedMetaProperties("Raven/Global/SqlReplication/Connections", newDoc.__metadata);
 
-            var saveCommand = new saveDocumentCommand("Raven/SqlReplication/Connections", newDoc, this.activeDatabase());
+            var saveCommand = new saveDocumentCommand("Raven/Global/SqlReplication/Connections", newDoc, appUrl.getSystemDatabase());
             var saveTask = saveCommand.execute();
             saveTask.done(() => this.dirtyFlag().reset());
         }
-       
     }
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {
-        target.etag = '';
+        target.etag = "";
         target.ravenEntityName = !target.ravenEntityName ? document.getEntityNameFromId(id) : target.ravenEntityName;
         target.id = id;
     }
 
     getSqlReplicationConnectionsUrl() {
-        return appUrl.forSqlReplicationConnections(this.activeDatabase());
+        return appUrl.forSqlReplicationConnections(appUrl.getSystemDatabase());
     }
 
 
@@ -105,7 +101,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     subscribeToSqlReplicationConnectionName(con: predefinedSqlConnection) {
         con.name.subscribe((previousName: string) => {
                 //Get the previous value of 'name' here before it's set to newValue
-            var nameInputArray = $('input[name="name"]')
+            var nameInputArray = $("input[name=\"name\"]")
                     .each((index, inputField: any) => {
                     inputField.setCustomValidity("");
                 });
@@ -118,7 +114,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
             else if (this.isSqlPredefinedConnectionNameExists(newName)) {
                 message = "SQL Replication Connection name already exists.";
             }
-            $('input[name="name"]')
+            $("input[name=\"name\"]")
                 .filter(function () { return this.value === newName; })
                 .each((index, element: any) => {
                     element.setCustomValidity(message);
@@ -127,7 +123,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     }
 
     isSqlPredefinedConnectionNameExists(connectionName: string) :boolean {
-        if (this.connections().predefinedConnections().count(x => x.name() == connectionName) >1) {
+        if (this.connections().predefinedConnections().count(x => x.name() === connectionName) >1) {
             return true;
         }
         return false;
@@ -149,21 +145,17 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         }
     }
 
-    override(value: boolean, config: predefinedSqlConnection) {
-        config.hasLocal(value);
-        if (!config.hasLocal()) {
-            config.copyFromGlobal();
-        }
+    activateConfig() {
+        this.activated(true);
     }
 
-    useLocal() {
-        this.usingGlobal(false);
-    }
-
-    useGlobal() {
-        this.usingGlobal(true);
-        this.connections().copyFromParent();
+    disactivateConfig() {
+        this.confirmationMessage("Delete global configuration for sql replication?", "Are you sure?")
+            .done(() => {
+                this.activated(false);
+                this.syncChanges(true);
+            });
     }
 }
 
-export =sqlReplicationConnectionStringsManagement;
+export =globalConfigSqlReplication;

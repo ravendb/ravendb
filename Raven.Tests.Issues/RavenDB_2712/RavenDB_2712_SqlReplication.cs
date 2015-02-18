@@ -55,8 +55,8 @@ namespace Raven.Tests.Issues.RavenDB_2712
 
                 var connection = document.MergedDocument.PredefinedConnections[0];
 
-				Assert.True(connection.IsGlobal);
-				Assert.False(connection.IsLocal);
+				Assert.True(connection.HasGlobal);
+				Assert.False(connection.HasLocal);
 				Assert.Equal("cs1", connection.ConnectionString);
 				Assert.Equal("f1", connection.FactoryName);
 				Assert.Equal("n1", connection.Name);
@@ -119,24 +119,24 @@ namespace Raven.Tests.Issues.RavenDB_2712
 
                 var connection = document.MergedDocument.PredefinedConnections.First(x => x.Name == "n1");
 
-				Assert.False(connection.IsGlobal);
-				Assert.True(connection.IsLocal);
+				Assert.True(connection.HasGlobal);
+				Assert.True(connection.HasLocal);
 				Assert.Equal("n1", connection.Name);
 				Assert.Equal("f", connection.FactoryName);
 				Assert.Equal("cs", connection.ConnectionString);
 
                 connection = document.MergedDocument.PredefinedConnections.First(x => x.Name == "n2");
 
-				Assert.True(connection.IsGlobal);
-				Assert.False(connection.IsLocal);
+				Assert.True(connection.HasGlobal);
+				Assert.False(connection.HasLocal);
 				Assert.Equal("n2", connection.Name);
 				Assert.Equal("f2", connection.FactoryName);
 				Assert.Equal("cs2", connection.ConnectionString);
 
                 connection = document.MergedDocument.PredefinedConnections.First(x => x.Name == "n3");
 
-				Assert.False(connection.IsGlobal);
-				Assert.True(connection.IsLocal);
+				Assert.False(connection.HasGlobal);
+				Assert.True(connection.HasLocal);
 				Assert.Equal("n3", connection.Name);
 				Assert.Equal("f3", connection.FactoryName);
 				Assert.Equal("cs3", connection.ConnectionString);

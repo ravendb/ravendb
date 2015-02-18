@@ -2,7 +2,15 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-            <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection" title="Add connection string (Alt+N)" accesskey="N">
+            <span data-bind="visible: hasGlobalValues()">
+                <button type="button" class="btn btn-default" data-bind="click: $root.useLocal.bind($root), visible: usingGlobal()">
+                    <i class="fa fa-arrow-down"></i> Override global configuration
+                </button>
+                <button type="button" class="btn btn-default" data-bind="click: $root.useGlobal.bind($root), visible: !usingGlobal()">
+                    <i class="fa fa-arrow-up"></i> Use global configuration
+                </button>
+            </span>
+            <button type="button" class="btn btn-default" data-bind="enable: !$root.usingGlobal(), click: addSqlReplicationConnection" title="Add connection string (Alt+N)" accesskey="N">
                 <i class="fa fa-plus"></i> New connection string
             </button>
         </div>
@@ -19,27 +27,44 @@
                     <div class="sql-replication-connection-card panel panel-default">
                         <div class="panel-heading">
                             <h3 class="panel-title">
+                                <span title="Overridden from global configuration" data-bind="visible: !hasLocal() && hasGlobal()"><i class="fa fa-arrow-down"></i></span>
                                 <span data-bind="text: name() || '[untitled]'"></span>
-                                <button type="button" class="close" aria-hidden="true" data-bind="click: function(){$root.removeSqlReplicationConnection($data)}" title="Remove this connection"><i class="fa fa-times"></i></button>
+                                <button type="button" class="close" aria-hidden="true" data-bind="click: function(){$root.removeSqlReplicationConnection($data)}, visible: !hasGlobal()" title="Remove this connection"><i class="fa fa-times"></i></button>
                             </h3>
                         </div>
                         <div class="panel-body">
+                            <div class="form-group" data-bind="visible: hasGlobal()">
+                                <label class="col-sm-4 control-label">Override:</label>
+                                <div class="col-sm-7">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
+                                            <span data-bind="visible: canEdit()">Yes</span>
+                                            <span data-bind="visible: canEdit()==false">No</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <li><a href="#" data-bind="click: $root.override.bind($root, true)">Yes</a></li>
+                                            <li><a href="#" data-bind="click: $root.override.bind($root, false)">No</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Name</label>
                                 <div class="col-sm-7">
-                                    <input required name="name" class="form-control" type="text" data-bind="value:name, valueUpdate: 'afterkeydown'" />
+                                    <input required name="name" class="form-control" type="text" data-bind="value:name, valueUpdate: 'afterkeydown', enable: canEdit"/>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">SQL Provider</label>
                                 <div class="col-sm-7">
-                                    <select tabindex="5" required class="form-control" data-bind="event:{change:function(val,event){$root.providerChanged($data,event);return true;}},options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
+                                    <select tabindex="5" required class="form-control" data-bind="event:{change:function(val,event){$root.providerChanged($data,event);return true;}},options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName, enable: canEdit"></select>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Connection String</label>
                                 <div class="col-sm-7">
-                                    <textarea tabindex="6" rows="4" required class="form-control" data-bind="value: connectionString, valueUpdate: 'afterkeydown'"></textarea>
+                                    <textarea tabindex="6" rows="4" required class="form-control" data-bind="value: connectionString, valueUpdate: 'afterkeydown', enable: canEdit"></textarea>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -47,7 +72,7 @@
                                     <button type="button" class="btn btn-default" data-bind="enable: connectionTestState() === CONNECTION_STATE_STAND_BY, click: testConnection.bind($data, $root.getActiveDatabase.bind($root))">Test connection</button>
                                     <br/>
                                     <div class="progress progress-striped" data-bind="visible:connectionTestState() !== CONNECTION_STATE_STAND_BY">
-                                        <div class="progress-bar progress-bar-info" data-bind="css: {'active':connectionTestState() === CONNECTION_STATE_CONNECTING}" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; float:left;">
+                                        <div class="progress-bar progress-bar-info" data-bind="css: {'active':connectionTestState() === CONNECTION_STATE_CONNECTING}" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; float: left;">
                                             <span class="sr-only" data-bind="text:connectionTestState() === CONNECTION_STATE_CONNECTING?'Connecting':'Connected'"></span>
                                         </div>
                                     </div>

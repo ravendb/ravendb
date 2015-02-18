@@ -15,20 +15,23 @@ namespace Raven.Database.Config.Retriever
 	{
 		protected override SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> ApplyGlobalDocumentToLocal(SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> global, SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
+			local.PredefinedConnections = local.PredefinedConnections ?? global.PredefinedConnections;
+
 			foreach (var localConnection in local.PredefinedConnections)
 			{
-				localConnection.IsLocal = true;
-				localConnection.IsGlobal = false;
+				localConnection.HasLocal = true;
 			}
 
 			foreach (var globalConnection in global.PredefinedConnections)
 			{
-				globalConnection.IsLocal = false;
-				globalConnection.IsGlobal = true;
+				globalConnection.HasGlobal = true;
 
-				var localConnectionExists = local.PredefinedConnections.Any(x => string.Equals(x.Name, globalConnection.Name, StringComparison.OrdinalIgnoreCase));
-				if (localConnectionExists)
+				var localConnection = local.PredefinedConnections.FirstOrDefault(x => string.Equals(x.Name, globalConnection.Name, StringComparison.OrdinalIgnoreCase));
+				if (localConnection != null)
+				{
+					localConnection.HasGlobal = true;
 					continue;
+				}
 
 				local.PredefinedConnections.Add(globalConnection);
 			}
@@ -40,8 +43,8 @@ namespace Raven.Database.Config.Retriever
 		{
 			foreach (var localConnection in global.PredefinedConnections)
 			{
-				localConnection.IsLocal = false;
-				localConnection.IsGlobal = true;
+				localConnection.HasLocal = false;
+				localConnection.HasGlobal = true;
 			}
 
 			return global;

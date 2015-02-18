@@ -682,6 +682,8 @@ interface predefinedSqlConnectionDto {
     Name:string;
     FactoryName: string;
     ConnectionString: string;
+    HasGlobal?: boolean;
+    HasLocal?: boolean;
 }
 
 interface facetDto {

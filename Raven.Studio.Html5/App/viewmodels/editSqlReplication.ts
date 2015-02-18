@@ -20,6 +20,7 @@ import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand
 import sqlReplicationSimulationDialog = require("viewmodels/sqlReplicationSimulationDialog");
 import sqlReplicationConnections = require("models/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/predefinedSqlConnection");
+import getGlobalSqlReplicationConnectionStringsCommand = require("commands/getGlobalSqlReplicationConnectionStringsCommand");
 
 
 class editSqlReplication extends viewModelBase {
@@ -83,10 +84,9 @@ class editSqlReplication extends viewModelBase {
     }
 
     loadSqlReplicationConnections(): JQueryPromise<any> {
-        return new getDocumentWithMetadataCommand("Raven/SqlReplication/Connections", this.activeDatabase())
+        return new getGlobalSqlReplicationConnectionStringsCommand(this.activeDatabase())
             .execute()
-            .done((x: document) => {
-                var dto: any = x.toDto(true);
+            .done((dto: configurationDocumentDto<sqlReplicationConnectionsDto>) => {
                 var connections = new sqlReplicationConnections(dto);
 
                 if (connections.predefinedConnections().length > 0) {

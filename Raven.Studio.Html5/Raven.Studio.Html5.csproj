@@ -65,6 +65,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getGlobalConflictResolutionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getGlobalSqlReplicationConnectionStringsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getGlobalVersioningsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexesDefinitionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
@@ -275,6 +276,7 @@
     <TypeScriptCompile Include="App\viewmodels\showDataDialog.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
+    <TypeScriptCompile Include="App\viewmodels\globalConfigSqlReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationSimulationDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationConnectionStringsManagement.ts" />
@@ -488,6 +490,7 @@
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
     <Content Include="App\views\filesystem\settings.html" />
     <Content Include="App\views\filesystem\versioning.html" />
+    <Content Include="App\views\globalConfigSqlReplication.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />

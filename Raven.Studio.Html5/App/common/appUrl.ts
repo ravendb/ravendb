@@ -175,6 +175,10 @@ class appUrl {
         return '#admin/settings/globalConfigReplication';
     }
 
+    static forGlobalConfigSqlReplication(): string {
+        return "#admin/settings/globalConfigSqlReplication";
+    }
+
     static forGlobalConfigQuotas(): string {
         return '#admin/settings/globalConfigQuotas';
     }

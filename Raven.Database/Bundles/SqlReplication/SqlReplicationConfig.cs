@@ -88,9 +88,9 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public class PredefinedSqlConnectionWithConfigurationOrigin : PredefinedSqlConnection
 		{
-			public bool IsGlobal { get; set; }
+			public bool HasGlobal { get; set; }
 
-			public bool IsLocal { get; set; }
+			public bool HasLocal { get; set; }
 		}
     }
 }
