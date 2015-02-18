@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Xml.Linq;
 
 using Raven.Abstractions.Data;
@@ -85,11 +86,13 @@ namespace Raven.Tests.Migration
 			}
 		}
 
-		[Theory]
+		[Theory(Skip = "Long running migration test")]
 		[InlineData(10, "voron")]
 		[InlineData(10, "esent")]
 		[InlineData(20, "voron")]
 		[InlineData(20, "esent")]
+		[InlineData(100, "voron")]
+		[InlineData(100, "esent")]
 		public void LargeMigrationSelf(int numberOfIterations, string requestedStorage)
 		{
 			var backupLocation = NewDataPath("Self-Backup", forceCreateDir: true);
@@ -129,9 +132,10 @@ namespace Raven.Tests.Migration
 			}
 		}
 
-		[Theory]
+		[Theory(Skip = "Long running migration test")]
 		[InlineData(10)]
 		[InlineData(20)]
+		[InlineData(100)]
 		public void LargeMigration(int numberOfIterations)
 		{
 			var exceptions = new List<Exception>();
@@ -183,6 +187,8 @@ namespace Raven.Tests.Migration
 							}
 							catch (Exception e)
 							{
+								Console.WriteLine(e);
+
 								exceptions.Add(new InvalidOperationException("Migration failed: " + configuration.Name + ". Storage: " + storageType + ". Message: " + e.Message, e));
 							}
 						}
@@ -221,7 +227,7 @@ namespace Raven.Tests.Migration
 
 		private static void ValidateBackup(IDocumentStore store, DataGenerator generator)
 		{
-			WaitForIndexingOfLargeDatabase(store, timeout: TimeSpan.FromMinutes(10));
+			WaitForIndexingOfLargeDatabase(store, timeout: TimeSpan.FromMinutes(60));
 
 			ValidateCounts(store, generator);
 			ValidateIndexes(store, generator);
@@ -229,7 +235,7 @@ namespace Raven.Tests.Migration
 
 		private static void WaitForIndexingOfLargeDatabase(IDocumentStore store, TimeSpan timeout)
 		{
-			var databaseOpenTimeout = TimeSpan.FromMinutes(1);
+			var databaseOpenTimeout = TimeSpan.FromMinutes(5);
 			var stopWatch = Stopwatch.StartNew();
 			while (true)
 			{
@@ -243,6 +249,8 @@ namespace Raven.Tests.Migration
 					if (stopWatch.Elapsed >= databaseOpenTimeout)
 						throw;
 				}
+
+				Thread.Sleep(1000);
 			}
 		}
 
@@ -263,43 +271,7 @@ namespace Raven.Tests.Migration
 					.Query<Order, OrdersByEmployeeAndCompany>()
 					.Count();
 
-				try
-				{
-					Assert.Equal(generator.ExpectedNumberOfOrders, count);
-				}
-				catch (Exception)
-				{
-					//var allDocuments = new List<KeyValuePair<string, string>>();
-					//var queryResults = new List<Order>();
-
-					//var e1 = store.DatabaseCommands.StreamDocs(Etag.Empty);
-					//while (e1.MoveNext())
-					//{
-					//	var metadata = (RavenJObject)e1.Current["@metadata"];
-					//	var key = metadata["@id"].Value<string>();
-					//	if (key.StartsWith("orders") == false)
-					//		continue;
-
-					//	var etag = metadata["@etag"].Value<string>();
-					//	allDocuments.Add(new KeyValuePair<string, string>(key, etag));
-					//}
-
-					//var q = session.Query<Order, OrdersByEmployeeAndCompany>();
-					//var e2 = session.Advanced.Stream(q);
-					//while (e2.MoveNext())
-					//{
-					//	queryResults.Add(e2.Current.Document);
-					//}
-
-					//foreach (var document in allDocuments)
-					//{
-					//	Console.WriteLine("Document: {0}. Etag: {1}. Match: {2}.", document.Key, document.Value, queryResults.Any(x => string.Equals(x.Id, document.Key, StringComparison.OrdinalIgnoreCase)));
-					//}
-
-					//Console.WriteLine("Count: " + count);
-
-					throw;
-				}
+				Assert.Equal(generator.ExpectedNumberOfOrders, count);
 			}
 		}
 
