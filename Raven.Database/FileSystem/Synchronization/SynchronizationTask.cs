@@ -27,8 +27,6 @@ namespace Raven.Database.FileSystem.Synchronization
 {
 	public class SynchronizationTask : IDisposable
 	{
-		private const int DefaultLimitOfConcurrentSynchronizations = 5;
-
 		private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
 		private readonly NotificationPublisher publisher;
@@ -715,30 +713,18 @@ namespace Raven.Database.FileSystem.Synchronization
             
             foreach ( var token in destinationsStrings )
             {
-                yield return JsonExtensions.JsonDeserialization<SynchronizationDestination>((RavenJObject)token);
+                yield return token.JsonDeserialization<SynchronizationDestination>();
             }
 		}
 
         private bool CanSynchronizeTo(string destinationFileSystemUrl)
 		{
-			return LimitOfConcurrentSynchronizations() > synchronizationQueue.NumberOfActiveSynchronizationTasksFor(destinationFileSystemUrl);
+			return SynchronizationConfigAccessor.GetOrDefault(storage).MaxNumberOfSynchronizationsPerDestination > synchronizationQueue.NumberOfActiveSynchronizationTasksFor(destinationFileSystemUrl);
 		}
 
         private int AvailableSynchronizationRequestsTo(string destinationFileSystemUrl)
 		{
-			return LimitOfConcurrentSynchronizations() - synchronizationQueue.NumberOfActiveSynchronizationTasksFor(destinationFileSystemUrl);
-		}
-
-		private int LimitOfConcurrentSynchronizations()
-		{
-			bool limit = false;
-			int configuredLimit = 0;
-
-			storage.Batch(
-				accessor =>
-				limit = accessor.TryGetConfigurationValue(SynchronizationConstants.RavenSynchronizationLimit, out configuredLimit));
-
-			return limit ? configuredLimit : DefaultLimitOfConcurrentSynchronizations;
+			return SynchronizationConfigAccessor.GetOrDefault(storage).MaxNumberOfSynchronizationsPerDestination - synchronizationQueue.NumberOfActiveSynchronizationTasksFor(destinationFileSystemUrl);
 		}
 
 		public void Cancel(string fileName)

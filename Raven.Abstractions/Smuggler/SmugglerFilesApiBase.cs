@@ -351,6 +351,9 @@ namespace Raven.Abstractions.Smuggler
                         {
 	                        if (Options.StripReplicationInformation) 
 								container.Metadata = Operations.StripReplicationInformationFromMetadata(container.Metadata);
+
+							if(Options.ShouldDisableVersioningBundle)
+								container.Metadata = Operations.DisableVersioning(container.Metadata);
                                                         
                             await Operations.PutFiles(header, dataStream, entry.Length);
                         }
@@ -445,6 +448,9 @@ namespace Raven.Abstractions.Smuggler
 
 						if (Options.StripReplicationInformation)
 							file.Metadata = Operations.StripReplicationInformationFromMetadata(file.Metadata);
+
+						if (Options.ShouldDisableVersioningBundle)
+							file.Metadata = Operations.DisableVersioning(file.Metadata);
 
                         var downloadedFile = await Operations.DownloadFile(file);
                         await Operations.PutFiles( file, downloadedFile, file.TotalSize.Value );

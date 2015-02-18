@@ -7,6 +7,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Util;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -226,7 +227,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 			var sourceContent = new RandomStream(1);
             var sourceClient = NewAsyncClient(0);
 
-            await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLimit, 1);
+            await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig
+            {
+	            MaxNumberOfSynchronizationsPerDestination = 1
+            });
 
             var destinationClient = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
 

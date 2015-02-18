@@ -13,7 +13,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 		private const int ComparatorBufferSize = 0x8000000;
 		private const int InputBufferSize = 0x100000;
 		private readonly ReaderWriterLockSlim _disposerLock = new ReaderWriterLockSlim();
-		private readonly IRdcLibrary _rdcLibrary;
+		private IRdcLibrary _rdcLibrary;
 		private readonly ISignatureRepository _seedSignatureRepository;
 		private readonly ISignatureRepository _sourceSignatureRepository;
 		private bool _disposed;
@@ -162,14 +162,14 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 			try
 			{
 				Trace.WriteLine(
-					"~NeedListGenerator: Disposing esent resources from finalizer! You should call Dispose() instead!");
+					"~NeedListGenerator: Disposing COM resources from finalizer! You should call Dispose() instead!");
 				DisposeInternal();
 			}
 			catch (Exception exception)
 			{
 				try
 				{
-					Trace.WriteLine("Failed to dispose esent instance from finalizer because: " + exception);
+					Trace.WriteLine("Failed to dispose COM instance from finalizer because: " + exception);
 				}
 				catch
 				{
@@ -180,7 +180,10 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 		private void DisposeInternal()
 		{
 			if (_rdcLibrary != null)
+			{
 				Marshal.ReleaseComObject(_rdcLibrary);
+				_rdcLibrary = null;
+			}
 		}
 	}
 }

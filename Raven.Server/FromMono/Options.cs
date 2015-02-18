@@ -1255,6 +1255,9 @@ namespace NDesk.Options
 
 		[Description("Import/Export FileSystem")]
 		SmugglerFileSystem = 1 << 12,
+
+		[Description("Import Database/FileSystem")]
+		SmugglerImportDatabaseFileSystem = 1 << 13,
 	}
 }
 
