@@ -60,10 +60,28 @@ namespace Raven.Database.Bundles.PeriodicExports
 			lock (this)
 			{
 				if (incrementalBackupTimer != null)
-					Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
+				{
+					try
+					{
+						Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
+					}
+					finally
+					{
+						incrementalBackupTimer = null;
+					}
+				}
 
 				if (fullBackupTimer != null)
-					Database.TimerManager.ReleaseTimer(fullBackupTimer);
+				{
+					try
+					{
+						Database.TimerManager.ReleaseTimer(fullBackupTimer);
+					}
+					finally
+					{
+						fullBackupTimer = null;
+					}
+				}
 
 				ReadSetupValuesFromDocument();
 			}
@@ -95,10 +113,10 @@ namespace Raven.Database.Bundles.PeriodicExports
 						return;
 					}
 
-					awsAccessKey = Database.Configuration.Settings[Constants.PeriodicExport.AwsAccessKey];
-					awsSecretKey = Database.Configuration.Settings[Constants.PeriodicExport.AwsSecretKey];
-					azureStorageAccount = Database.Configuration.Settings[Constants.PeriodicExport.AzureStorageAccount];
-					azureStorageKey = Database.Configuration.Settings[Constants.PeriodicExport.AzureStorageKey];
+					awsAccessKey = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AwsAccessKey);
+					awsSecretKey = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AwsSecretKey);
+					azureStorageAccount = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AzureStorageAccount);
+					azureStorageKey = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AzureStorageKey);
 
 					if (exportConfigs.IntervalMilliseconds.GetValueOrDefault() > 0)
 					{
@@ -177,7 +195,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 							if (localBackupConfigs == null)
 								return;
 
-							if (localBackupConfigs.Disabled) 
+							if (localBackupConfigs.Disabled)
 								return;
 
 							if (fullBackup == false)
@@ -194,7 +212,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 							}
 
 							var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
-							if (Directory.Exists(backupPath) == false) 
+							if (Directory.Exists(backupPath) == false)
 								Directory.CreateDirectory(backupPath);
 
 							if (fullBackup)
