@@ -7,6 +7,7 @@ using System;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Commercial;
 
 namespace Raven.Database.Config.Retriever
 {
@@ -41,7 +42,10 @@ namespace Raven.Database.Config.Retriever
 
 		public ConfigurationDocument<TClass> GetConfigurationDocument(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
-			var global = systemDatabase.Documents.Get(GetGlobalConfigurationDocumentKey(key, systemDatabase, localDatabase), null);
+			JsonDocument global = null;
+			if (ConfigurationRetriever.IsGlobalConfigurationEnabled)
+				global = systemDatabase.Documents.Get(GetGlobalConfigurationDocumentKey(key, systemDatabase, localDatabase), null);
+
 			var local = localDatabase.Documents.Get(key, null);
 
 			if (global == null && local == null)
@@ -65,11 +69,11 @@ namespace Raven.Database.Config.Retriever
 				return configurationDocument;
 			}
 
-            configurationDocument.GlobalDocument = ConvertGlobalDocumentToLocal(Deserialize(global), systemDatabase, localDatabase);
+			configurationDocument.GlobalDocument = ConvertGlobalDocumentToLocal(Deserialize(global), systemDatabase, localDatabase);
 
 			if (local == null)
 			{
-			    configurationDocument.MergedDocument = configurationDocument.GlobalDocument;
+				configurationDocument.MergedDocument = configurationDocument.GlobalDocument;
 				return configurationDocument;
 			}
 

@@ -4,13 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Config.Retriever
 {
@@ -22,12 +18,12 @@ namespace Raven.Database.Config.Retriever
 	    public ConfigurationSettingRetriever(DocumentDatabase systemDatabase)
 	    {
 	        this.systemDatabase = systemDatabase;
-	        systemDatabase.Notifications.OnDocumentChange += (database, notification, meta) =>
-	        {
-	            if (notification.Id != Constants.Global.GlobalSettingsDocumentKey)
-	                return;
-	            globalSettings = null;
-	        };
+			systemDatabase.Notifications.OnDocumentChange += (database, notification, meta) =>
+			{
+				if (notification.Id != Constants.Global.GlobalSettingsDocumentKey) 
+					return;
+				globalSettings = null;
+			};
 	    }
 
 	    protected override object ApplyGlobalDocumentToLocal(object global, object local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
@@ -54,20 +50,22 @@ namespace Raven.Database.Config.Retriever
 
 	    public override ConfigurationSetting GetConfigurationSetting(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 	    {
-            if (globalSettings == null)
-            {
-                LoadGlobalSettings();
-            }
+		    string globalValue = null;
 
-	        string globalValue;
-            var globalKey = GetGlobalConfigurationDocumentKey(key, systemDatabase, localDatabase);
-            if (globalSettings.Settings.TryGetValue(globalKey, out globalValue) == false)
-            {
-                // fall back to secured settings
-                globalSettings.SecuredSettings.TryGetValue(globalKey, out globalValue);
-            }
-			
-            var localValue = localDatabase.Configuration.Settings[key];
+		    if (ConfigurationRetriever.IsGlobalConfigurationEnabled)
+		    {
+			    if (globalSettings == null) 
+					LoadGlobalSettings();
+
+			    var globalKey = GetGlobalConfigurationDocumentKey(key, systemDatabase, localDatabase);
+			    if (globalSettings.Settings.TryGetValue(globalKey, out globalValue) == false)
+			    {
+				    // fall back to secured settings
+				    globalSettings.SecuredSettings.TryGetValue(globalKey, out globalValue);
+			    }
+		    }
+
+		    var localValue = localDatabase.Configuration.Settings[key];
 
 		    var effectiveValue = localValue ?? globalValue;
 

@@ -8,7 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Database.Commercial;
 using Raven.Json.Linq;
 using System.Linq;
 
@@ -52,6 +54,8 @@ namespace Raven.Database.Config.Retriever
 
 		private readonly JavascriptFunctionsRetriever javascriptFunctionsRetriever;
 
+		private static DateTime? licenseEnabled;
+
 		public ConfigurationRetriever(DocumentDatabase systemDatabase, DocumentDatabase database)
 		{
 			Debug.Assert(systemDatabase.Name == null || systemDatabase.Name == Constants.SystemDatabase);
@@ -66,6 +70,31 @@ namespace Raven.Database.Config.Retriever
 			configurationSettingRetriever = new ConfigurationSettingRetriever(systemDatabase);
 			sqlReplicationConfigurationRetriever = new SqlReplicationConfigurationRetriever();
 			javascriptFunctionsRetriever = new JavascriptFunctionsRetriever();
+		}
+
+		public static void EnableGlobalConfigurationOnce()
+		{
+			licenseEnabled = SystemTime.UtcNow.AddMinutes(1);
+		}
+
+		public static bool IsGlobalConfigurationEnabled
+		{
+			get
+			{
+				if (licenseEnabled != null)
+				{
+					if (SystemTime.UtcNow < licenseEnabled.Value)
+						return true;
+					licenseEnabled = null;
+				}
+
+				string globalConfigurationAsString;
+				bool globalConfiguration;
+				if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("globalConfiguration", out globalConfigurationAsString) && bool.TryParse(globalConfigurationAsString, out globalConfiguration)) 
+					return globalConfiguration;
+
+				return false;
+			}
 		}
 
 		public ConfigurationDocument<TType> GetConfigurationDocument<TType>(string key)

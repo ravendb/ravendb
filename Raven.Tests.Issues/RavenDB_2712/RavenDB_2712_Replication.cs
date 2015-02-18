@@ -7,6 +7,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Extensions;
+using Raven.Database.Config.Retriever;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -16,6 +17,11 @@ namespace Raven.Tests.Issues.RavenDB_2712
 {
 	public class RavenDB_2712_Replication : ReplicationBase
 	{
+		public RavenDB_2712_Replication()
+		{
+			ConfigurationRetriever.EnableGlobalConfigurationOnce();
+		}
+
 		[Fact]
 		public void IfThereIsNoLocalConfigurationThenGlobalShouldBeUsed()
 		{

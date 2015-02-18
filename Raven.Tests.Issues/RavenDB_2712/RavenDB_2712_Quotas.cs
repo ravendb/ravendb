@@ -7,13 +7,12 @@ using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
 
 using Xunit;
 
 namespace Raven.Tests.Issues.RavenDB_2712
 {
-	public class RavenDB_2712_Quotas : RavenTest
+	public class RavenDB_2712_Quotas : GlobalConfigurationTest
 	{
 		[Fact]
 		public void GlobalDefaultConfigurationShouldBeEffectiveIfThereIsNoLocal()

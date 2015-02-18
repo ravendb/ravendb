@@ -10,13 +10,12 @@ using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
 
 using Xunit;
 
 namespace Raven.Tests.Issues.RavenDB_2712
 {
-	public class RavenDB_2712_SqlReplication : RavenTest
+	public class RavenDB_2712_SqlReplication : GlobalConfigurationTest
 	{
 		[Fact]
 		public void GlobalDefaultConfigurationShouldBeEffectiveIfThereIsNoLocal()
