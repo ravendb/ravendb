@@ -106,7 +106,7 @@ namespace Raven.Database.Tasks
 							{
 								logger.Info("Concurrency exception when touching {0}", doc);
 							}
-							context.Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
+							context.Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(doc);
 						}
 
 						foreach (var collectionEtagPair in collectionsAndEtags)
