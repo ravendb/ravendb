@@ -57,20 +57,27 @@ namespace Raven.Database.Config
 
             new Thread(() =>
             {
-                const UInt32 INFINITE = 0xFFFFFFFF;
                 const UInt32 WAIT_FAILED = 0xFFFFFFFF;
                 const UInt32 WAIT_TIMEOUT = 0x00000102;
                 while (true)
                 {
-                    var waitForResult = WaitForMultipleObjects(3, new[] { lowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent }, false, 5 * 60 * 1000);
+                    var waitForResult = WaitForMultipleObjects(3,
+						new[] { lowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent }, false, 
+						5 * 60 * 1000);
 
+				handleWaitResults:
                     switch (waitForResult)
                     {
                         case 0: // lowMemoryNotificationHandle
                             log.Warn("Low memory detected, will try to reduce memory usage...");
 
                             RunLowMemoryHandlers();
-                            break;
+							// prevent triggering the event too frequent when the low memory notification object 
+							// is in the signaled state
+							waitForResult = WaitForMultipleObjects(2,
+			                    new[] {appDomainUnloadEvent, LowMemorySimulationEvent}, false,
+			                    60*1000);
+		                    goto handleWaitResults;
                         case 1:
                             // app domain unload
                             return;
@@ -86,7 +93,6 @@ namespace Raven.Database.Config
                             log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
                             break;
                     }
-                    Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
                 }
             })
             {
