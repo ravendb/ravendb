@@ -507,7 +507,7 @@
     <Compile Include="FileSystem\RavenFileSystem.cs" />
     <Compile Include="FileSystem\Search\IndexSearcherHolder.cs" />
     <Compile Include="FileSystem\Search\IndexStorage.cs" />
-    <Compile Include="FileSystem\Search\RavenQueryParser.cs" />
+    <Compile Include="FileSystem\Search\SimpleFilesQueryParser.cs" />
     <Compile Include="FileSystem\Storage\DeleteFileOperation.cs" />
     <Compile Include="FileSystem\Storage\Esent\EsentExtension.cs" />
     <Compile Include="FileSystem\Storage\Exceptions\FileExistsException.cs" />

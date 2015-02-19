@@ -345,7 +345,7 @@ namespace Raven.Client.FileSystem
             ContainsAnyAllProcessor(fieldName, values, "AND");
         }
 
-        private void ContainsAnyAllProcessor(string fieldName, IEnumerable<object> values, string seperator)
+        private void ContainsAnyAllProcessor(string fieldName, IEnumerable<object> values, string separator)
         {
             AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
             NegateIfNeeded();
@@ -362,7 +362,7 @@ namespace Raven.Client.FileSystem
             {
                 if (first == false)
                 {
-                    queryText.Append(" " + seperator + " ");
+                    queryText.Append(" " + separator + " ");
                 }
                 first = false;
                 var whereParams = new WhereParams
