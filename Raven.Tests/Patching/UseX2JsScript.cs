@@ -32,12 +32,9 @@ namespace Raven.Tests.Patching
 			var jsonPatcher = new ScriptedJsonPatcher();
 			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
 			{
-				scope.CustomFunctions = new JsonDocument
+				scope.CustomFunctions = new RavenJObject
 				{
-					DataAsJson = new RavenJObject
-					{
-						{"Functions", code}
-					}
+					{"Functions", code}
 				};
 
 				jsonPatcher.Apply(scope, document, new ScriptedPatchRequest
@@ -67,12 +64,10 @@ namespace Raven.Tests.Patching
 			var jsonPatcher = new ScriptedJsonPatcher();
 			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
 			{
-				scope.CustomFunctions = new JsonDocument
+				scope.CustomFunctions =
+				new RavenJObject
 				{
-					DataAsJson = new RavenJObject
-					{
-						{"Functions", code}
-					}
+					{"Functions", code}
 				};
 
 				jsonPatcher.Apply(scope, document, new ScriptedPatchRequest

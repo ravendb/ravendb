@@ -71,7 +71,7 @@ class periodicExport extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        this.updateHelpLink('OU78CB');
+        this.updateHelpLink("OU78CB");
         
         this.dirtyFlag = new ko.DirtyFlag([this.backupSetup, this.usingGlobal]);
 
@@ -102,28 +102,32 @@ class periodicExport extends viewModelBase {
     }
 
     fetchPeriodicExportAccountsSettings(db): JQueryPromise<any> {
-        var deferred = $.Deferred();
+        var task = $.Deferred();
         var dbSettingsTask = new getDatabaseSettingsCommand(db)
             .execute()
-            .done((document: document)=> { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); })
-            .always(() => deferred.resolve());
+            .done((document: document) => { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); });
 
-
-        var configTask = new getConfigurationSettingsCommand(db,
-            ["Raven/AWSAccessKey", "Raven/AWSSecretKey", "Raven/AzureStorageAccount", "Raven/AzureStorageKey"])
-            .execute()
-            .done((result: configurationSettings) => {
-                var awsAccess = result.results["Raven/AWSAccessKey"];
-                var awsSecret = result.results["Raven/AWSSecretKey"];
-                var azureAccess = result.results["Raven/AzureStorageAccount"];
-                var azureSecret = result.results["Raven/AzureStorageKey"];
-                this.globalBackupSetup().awsAccessKey(awsAccess.globalValue());
-                this.globalBackupSetup().awsSecretKey(awsSecret.globalValue());
-                this.globalBackupSetup().azureStorageAccount(azureAccess.globalValue());
-                this.globalBackupSetup().azureStorageKey(azureSecret.globalValue());
+        dbSettingsTask.then(() => {
+            new getConfigurationSettingsCommand(db,
+                ["Raven/AWSAccessKey", "Raven/AWSSecretKey", "Raven/AzureStorageAccount", "Raven/AzureStorageKey"])
+                .execute()
+                .done((result: configurationSettings) => {
+                    var awsAccess = result.results["Raven/AWSAccessKey"];
+                    var awsSecret = result.results["Raven/AWSSecretKey"];
+                    var azureAccess = result.results["Raven/AzureStorageAccount"];
+                    var azureSecret = result.results["Raven/AzureStorageKey"];
+                    this.globalBackupSetup().awsAccessKey(awsAccess.globalValue());
+                    this.globalBackupSetup().awsSecretKey(awsSecret.globalValue());
+                    this.globalBackupSetup().azureStorageAccount(azureAccess.globalValue());
+                    this.globalBackupSetup().azureStorageKey(azureSecret.globalValue());
+                    this.backupSetup().awsAccessKey(awsAccess.effectiveValue());
+                    this.backupSetup().awsSecretKey(awsSecret.effectiveValue());
+                    this.backupSetup().azureStorageAccount(azureAccess.effectiveValue());
+                    this.backupSetup().azureStorageKey(azureSecret.effectiveValue());
+                    task.resolve();
             });
-
-        return $.when(dbSettingsTask, configTask);
+        });
+        return task;
     }
 
     saveChanges() {
