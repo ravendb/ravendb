@@ -6,7 +6,7 @@ import documentMetadata = require("models/documentMetadata");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import appUrl = require("common/appUrl");
 import editSqlReplication = require("viewmodels/editSqlReplication");
-import getGlobalSqlReplicationConnectionStringsCommand = require("commands/getGlobalSqlReplicationConnectionStringsCommand");
+import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/getEffectiveSqlReplicationConnectionStringsCommand");
 import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 
@@ -24,7 +24,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     }
 
     loadConnections():JQueryPromise<any> {
-        return new getGlobalSqlReplicationConnectionStringsCommand(this.activeDatabase())
+        return new getEffectiveSqlReplicationConnectionStringsCommand(this.activeDatabase())
             .execute()
             .done((repSetup: configurationDocumentDto<sqlReplicationConnectionsDto>) => {
                 this.usingGlobal(repSetup.GlobalExists && !repSetup.LocalExists);

@@ -16,7 +16,7 @@ import customColumnParams = require('models/customColumnParams');
 
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
-import getGlobalCustomFunctionsCommand = require("commands/getGlobalCustomFunctionsCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/getEffectiveCustomFunctionsCommand");
 import getOperationStatusCommand = require('commands/getOperationStatusCommand');
 import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/dismissAlertCommand");
@@ -208,7 +208,7 @@ class documents extends viewModelBase {
     }
 
     fetchCustomFunctions() {
-        var customFunctionsCommand = new getGlobalCustomFunctionsCommand(this.activeDatabase()).execute();
+        var customFunctionsCommand = new getEffectiveCustomFunctionsCommand(this.activeDatabase()).execute();
         customFunctionsCommand.done((cf: configurationDocumentDto<customFunctionsDto>) => {
             this.currentCustomFunctions(new customFunctions(cf.MergedDocument));
         });

@@ -2,7 +2,7 @@
 import versioningEntry = require("models/versioningEntry");
 import appUrl = require("common/appUrl");
 import saveVersioningCommand = require("commands/saveVersioningCommand");
-import getGlobalVersioningsCommand = require("commands/getGlobalVersioningsCommand");
+import getEffectiveVersioningsCommand = require("commands/getEffectiveVersioningsCommand");
 import configurationDocument = require("models/configurationDocument");
 
 class versioning extends viewModelBase {
@@ -41,7 +41,7 @@ class versioning extends viewModelBase {
     }
 
     private fetchVersioningEntries(db): JQueryPromise<any>{
-        var task: JQueryPromise<configurationDocument<versioningEntry>[]> = new getGlobalVersioningsCommand(db).execute();
+        var task: JQueryPromise<configurationDocument<versioningEntry>[]> = new getEffectiveVersioningsCommand(db).execute();
         task.done((versionings: configurationDocument<versioningEntry>[]) => this.versioningsLoaded(versionings));
         return task;
     }

@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class getGlobalSqlReplicationConnectionStringsCommand extends commandBase {
+class getEffectiveSqlReplicationConnectionStringsCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -14,4 +14,4 @@ class getGlobalSqlReplicationConnectionStringsCommand extends commandBase {
 
 }
 
-export = getGlobalSqlReplicationConnectionStringsCommand; 
+export = getEffectiveSqlReplicationConnectionStringsCommand; 

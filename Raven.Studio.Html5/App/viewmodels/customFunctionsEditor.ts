@@ -2,7 +2,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 import saveCustomFunctionsCommand = require("commands/saveCustomFunctionsCommand");
-import getGlobalCustomFunctionsCommand = require("commands/getGlobalCustomFunctionsCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/getEffectiveCustomFunctionsCommand");
 import customFunctions = require("models/customFunctions");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
@@ -67,7 +67,7 @@ class customFunctionsEditor extends viewModelBase {
             this.dirtyFlag().reset();
         });
 
-        var globalFetchTask = new getGlobalCustomFunctionsCommand(this.activeDatabase()).execute();
+        var globalFetchTask = new getEffectiveCustomFunctionsCommand(this.activeDatabase()).execute();
         globalFetchTask.done((result: configurationDocumentDto<customFunctionsDto>) => {
             this.hasGlobal(result.GlobalExists);
             if (result.GlobalExists) {

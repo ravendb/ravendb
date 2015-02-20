@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import document = require("models/document");
 
-class getGlobalSettingsCommand extends commandBase {
+class getEffectiveSettingsCommand extends commandBase {Effective
 
     constructor(private db: database) {
         super();
@@ -19,4 +19,4 @@ class getGlobalSettingsCommand extends commandBase {
     }
 }
 
-export = getGlobalSettingsCommand;
+export = getEffectiveSettingsCommand;

@@ -6,7 +6,7 @@ import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import periodicExportSetup = require("models/periodicExportSetup");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
-import getGlobalSettingsCommand = require("commands/getGlobalSettingsCommand");
+import getEffectiveSettingsCommand = require("commands/getEffectiveSettingsCommand");
 import saveGlobalSettingsCommand = require("commands/saveGlobalSettingsCommand");
 
 class globalConfigPeriodicExport extends viewModelBase {
@@ -74,7 +74,7 @@ class globalConfigPeriodicExport extends viewModelBase {
 
     fetchPeriodicExportAccountsSettings(db): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new getGlobalSettingsCommand(db)
+        new getEffectiveSettingsCommand(db)
             .execute()
             .done((doc: document) => {
                 this.settingsDocument(doc);

@@ -3,7 +3,7 @@ import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand
 import savePeriodicExportSetupCommand = require("commands/savePeriodicExportSetupCommand");
 import document = require("models/document");
 import periodicExportSetup = require("models/periodicExportSetup");
-import getGlobalPeriodicExportCommand = require("commands/getGlobalPeriodicExportCommand");
+import getEffectivePeriodicExportCommand = require("commands/getEffectivePeriodicExportCommand");
 import appUrl = require("common/appUrl");
 import configurationSettings = require("models/configurationSettings");
 import getConfigurationSettingsCommand = require("commands/getConfigurationSettingsCommand");
@@ -87,7 +87,7 @@ class periodicExport extends viewModelBase {
 
     fetchPeriodicExportSetup(db): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new getGlobalPeriodicExportCommand(db)
+        new getEffectivePeriodicExportCommand(db)
             .execute()
             .done((result: configurationDocumentDto<periodicExportSetupDto>) => {
                 this.backupSetup().fromDto(result.MergedDocument);

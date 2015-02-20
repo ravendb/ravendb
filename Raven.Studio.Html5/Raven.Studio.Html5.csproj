@@ -64,9 +64,9 @@
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getGlobalConflictResolutionCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getGlobalSqlReplicationConnectionStringsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getGlobalVersioningsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveConflictResolutionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveSqlReplicationConnectionStringsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveVersioningsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexesDefinitionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexMergeSuggestionsCommand.ts" />
@@ -360,11 +360,11 @@
     <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCachedCollectionsCount.ts" />
     <TypeScriptCompile Include="App\commands\getGlobalConfigReplicationsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getGlobalSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveGlobalSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getConfigurationSettingsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getGlobalCustomFunctionsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getGlobalPeriodicExportCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveCustomFunctionsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectivePeriodicExportCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
@@ -1079,7 +1079,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>31052</DevelopmentServerPort>
+          <DevelopmentServerPort>50411</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

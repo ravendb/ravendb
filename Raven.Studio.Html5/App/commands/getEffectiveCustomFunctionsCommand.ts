@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class getGlobalCustomFunctionsCommand extends commandBase {
+class getEffectiveCustomFunctionsCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -14,4 +14,4 @@ class getGlobalCustomFunctionsCommand extends commandBase {
 
 }
 
-export = getGlobalCustomFunctionsCommand; 
+export = getEffectiveCustomFunctionsCommand; 

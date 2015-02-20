@@ -6,7 +6,7 @@ import commandBase = require("commands/commandBase");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import saveDatabaseSettingsCommand = require("commands/saveDatabaseSettingsCommand");
 import saveVersioningCommand = require("commands/saveVersioningCommand");
-import getGlobalVersioningsCommand = require("commands/getGlobalVersioningsCommand");
+import getEffectiveVersioningsCommand = require("commands/getEffectiveVersioningsCommand");
 import configurationDocument = require("models/configurationDocument");
 import getConfigurationSettingsCommand = require("commands/getConfigurationSettingsCommand");
 import configurationSettings = require("models/configurationSettings");
@@ -101,7 +101,7 @@ class createDefaultSettingsCommand extends commandBase {
 
     private hasGlobalVersioningSettings(): JQueryPromise<boolean> {
         var hasGlobal = $.Deferred();
-        new getGlobalVersioningsCommand(this.db)
+        new getEffectiveVersioningsCommand(this.db)
             .execute()
             .done((data: configurationDocument<versioningEntry>[]) => {
                 hasGlobal.resolve(!!data.first(config => config.globalExists()));

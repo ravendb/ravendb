@@ -1,5 +1,5 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import getGlobalSettingsCommand = require("commands/getGlobalSettingsCommand");
+import getEffectiveSettingsCommand = require("commands/getEffectiveSettingsCommand");
 import saveGlobalSettingsCommand = require("commands/saveGlobalSettingsCommand");
 import document = require("models/document");
 import database = require("models/database");
@@ -38,7 +38,7 @@ class globalConfigQuotas extends viewModelBase {
     }
 
     private fetchQuotas(db: database): JQueryPromise<any> {
-        return new getGlobalSettingsCommand(db)
+        return new getEffectiveSettingsCommand(db)
             .execute()
             .done((doc: document) => {
                 this.settingsDocument(doc);

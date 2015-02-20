@@ -3,7 +3,7 @@ import database = require("models/database");
 import versioningEntry = require("models/versioningEntry");
 import configurationDocument = require("models/configurationDocument");
 
-class getGlobalVersioningsCommand extends commandBase {
+class getEffectiveVersioningsCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -20,4 +20,4 @@ class getGlobalVersioningsCommand extends commandBase {
 
 }
 
-export = getGlobalVersioningsCommand; 
+export = getEffectiveVersioningsCommand; 

@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class getGlobalPriodicExportCommand extends commandBase {
+class getEffectivePriodicExportCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -14,4 +14,4 @@ class getGlobalPriodicExportCommand extends commandBase {
 
 }
 
-export = getGlobalPriodicExportCommand; 
+export = getEffectivePriodicExportCommand; 

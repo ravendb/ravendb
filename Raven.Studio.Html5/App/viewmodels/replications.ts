@@ -13,7 +13,7 @@ import replicateAllTransformersCommand = require("commands/replicateAllTransform
 import deleteLocalReplicationsSetupCommand = require("commands/deleteLocalReplicationsSetupCommand");
 import replicateIndexesCommand = require("commands/replicateIndexesCommand");
 import replicateTransformersCommand = require("commands/replicateTransformersCommand");
-import getGlobalConflictResolutionCommand = require("commands/getGlobalConflictResolutionCommand");
+import getEffectiveConflictResolutionCommand = require("commands/getEffectiveConflictResolutionCommand");
 import appUrl = require("common/appUrl");
 
 class replications extends viewModelBase {
@@ -97,7 +97,7 @@ class replications extends viewModelBase {
 
     fetchAutomaticConflictResolution(db): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new getGlobalConflictResolutionCommand(db)
+        new getEffectiveConflictResolutionCommand(db)
             .execute()
             .done((repConfig: configurationDocumentDto<replicationConfigDto>) => {
                 this.replicationConfig(new replicationConfig(repConfig.MergedDocument));

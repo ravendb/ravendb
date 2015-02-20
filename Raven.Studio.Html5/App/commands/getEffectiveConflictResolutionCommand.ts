@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class getGlobalConflictResolutionCommand extends commandBase {
+class getEffectiveConflictResolutionCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -14,4 +14,4 @@ class getGlobalConflictResolutionCommand extends commandBase {
 
 }
 
-export = getGlobalConflictResolutionCommand; 
+export = getEffectiveConflictResolutionCommand; 
