@@ -112,7 +112,7 @@ namespace Raven.Database.Impl.DTC
 							{
 								foreach (var docId in context.DocumentIdsToTouch)
 								{
-									_database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId);
+									_database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
 
 									Etag preTouchEtag;
 									Etag afterTouchEtag;
@@ -134,7 +134,7 @@ namespace Raven.Database.Impl.DTC
 								{
 									foreach (var docId in context.DocumentIdsToTouch)
 									{
-										_database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId);
+										_database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
 										try
 										{
 											Etag preTouchEtag;

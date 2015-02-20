@@ -338,7 +338,7 @@ namespace Raven.Database.Actions
 					        {
 						        foreach (var key in keys)
 						        {
-							        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key);
+							        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, accessor);
 						        }
 					        }
 
@@ -587,7 +587,7 @@ namespace Raven.Database.Actions
                         var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
                         newEtag = addDocumentResult.Etag;
 
-                        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key);
+                        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions);
                         metadata[Constants.LastModified] = addDocumentResult.SavedAt;
                         metadata.EnsureSnapshot(
                             "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
@@ -688,7 +688,7 @@ namespace Raven.Database.Actions
                             actions.Indexing.RemoveAllDocumentReferencesFrom(key);
                             WorkContext.MarkDeleted(key);
 
-                            Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key);
+                            Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions);
 
 							collection = metadataVar.Value<string>(Constants.RavenEntityName);
 							

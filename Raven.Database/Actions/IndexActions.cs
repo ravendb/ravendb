@@ -118,7 +118,7 @@ namespace Raven.Database.Actions
             return indexEtag;
         }
 
-        internal void CheckReferenceBecauseOfDocumentUpdate(string key)
+        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
         {
             TouchedDocumentInfo touch;
             RecentTouches.TryRemove(key, out touch);
@@ -127,9 +127,10 @@ namespace Raven.Database.Actions
 
 	        using (Database.TransactionalStorage.DisableBatchNesting())
 	        {
-		        Database.TransactionalStorage.Batch(actions =>
+				// in external tranasction number of references will be >= from current transaction references
+		        Database.TransactionalStorage.Batch(externalActions =>
 		        {
-					foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
+					foreach (var referencing in externalActions.Indexing.GetDocumentsReferencing(key))
 					{
 						Etag preTouchEtag = null;
 						Etag afterTouchEtag = null;
@@ -138,14 +139,17 @@ namespace Raven.Database.Actions
 							count++;
 							actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
 
-							var docMetadata = actions.Documents.DocumentMetadataByKey(referencing);
-
-							if (docMetadata != null)
+							if (afterTouchEtag != null)
 							{
-								var entityName = docMetadata.Metadata.Value<string>(Constants.RavenEntityName);
+								var docMetadata = actions.Documents.DocumentMetadataByKey(referencing);
 
-								if (string.IsNullOrEmpty(entityName) == false)
-									Database.LastCollectionEtags.Update(entityName, afterTouchEtag);
+								if (docMetadata != null)
+								{
+									var entityName = docMetadata.Metadata.Value<string>(Constants.RavenEntityName);
+
+									if (string.IsNullOrEmpty(entityName) == false) 
+										Database.LastCollectionEtags.Update(entityName, afterTouchEtag);
+								}
 							}
 						}
 						catch (ConcurrencyException)
