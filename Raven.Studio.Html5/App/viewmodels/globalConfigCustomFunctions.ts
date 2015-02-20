@@ -77,7 +77,9 @@ class globalConfigCustomFunctions extends viewModelBase {
     syncChanges(deleteConfig: boolean) {
         if (deleteConfig) {
             new deleteDocumentCommand("Raven/Global/Javascript/Functions", appUrl.getSystemDatabase())
-                .execute();
+                .execute()
+                .done(() => messagePublisher.reportSuccess("Global Settings were successfully saved!"))
+                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save global settings!", response.responseText, response.statusText));
         } else {
             var annotations = this.docEditor.getSession().getAnnotations();
             var hasErrors = false;
@@ -112,7 +114,8 @@ class globalConfigCustomFunctions extends viewModelBase {
                 this.documentText("");
                 this.activated(false);
                 this.syncChanges(true);
-            });
+                this.dirtyFlag().reset();
+        });
     }
 }
 

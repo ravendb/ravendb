@@ -5,8 +5,9 @@ import versioningEntry = require("models/versioningEntry");
 import commandBase = require("commands/commandBase");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import saveDatabaseSettingsCommand = require("commands/saveDatabaseSettingsCommand");
-import getVersioningsCommand = require("commands/getVersioningsCommand");
 import saveVersioningCommand = require("commands/saveVersioningCommand");
+import getGlobalVersioningsCommand = require("commands/getGlobalVersioningsCommand");
+import configurationDocument = require("models/configurationDocument");
 
 class createDefaultSettingsCommand extends commandBase {
     constructor(private db: database, private bundles) {
@@ -67,11 +68,37 @@ class createDefaultSettingsCommand extends commandBase {
         ];
     }
 
-    private saveVersioningConfiguration(): JQueryPromise<any> {
-        var entries: Array<versioningEntryDto> = this.createDefaultVersioningSettings()
-            .map((ve: versioningEntry) => ve.toDto(true));
+    
 
-        return new saveVersioningCommand(this.db, entries).execute();
+    private saveVersioningConfiguration(): JQueryPromise<any> {
+
+        var saveTask = $.Deferred();
+        this.hasGlobalSettings().fail(() => saveTask.fail())
+            .done((has: boolean) => {
+                if (has) {
+                    // use global settings - nothing to do 
+                    saveTask.resolve();
+                } else {
+                    var entries: Array<versioningEntryDto> = this.createDefaultVersioningSettings()
+                        .map((ve: versioningEntry) => ve.toDto(true));
+                    new saveVersioningCommand(this.db, entries).execute()
+                        .done(() => saveTask.resolve())
+                        .fail(() => saveTask.reject());
+                }
+            });
+        return saveTask;
+    }
+
+    hasGlobalSettings(): JQueryPromise<boolean> {
+        var hasGlobal = $.Deferred();
+        new getGlobalVersioningsCommand(this.db)
+            .execute()
+            .done((data: configurationDocument<versioningEntry>[]) => {
+                hasGlobal.resolve(!!data.first(config => config.globalExists()));
+            })
+            .fail(() => hasGlobal.reject());
+
+        return hasGlobal.promise();
     }
 }
 

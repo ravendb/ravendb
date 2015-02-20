@@ -23,7 +23,10 @@ class replicationConfig {
         };
     }
 
-
+    clear() {
+        this.documentConflictResolution("None");
+        this.attachmentConflictResolution("None");
+    }
 }
 
 export = replicationConfig;

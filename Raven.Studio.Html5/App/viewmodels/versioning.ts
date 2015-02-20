@@ -1,7 +1,6 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import versioningEntry = require("models/versioningEntry");
 import appUrl = require("common/appUrl");
-import getVersioningsCommand = require("commands/getVersioningsCommand");
 import saveVersioningCommand = require("commands/saveVersioningCommand");
 import getGlobalVersioningsCommand = require("commands/getGlobalVersioningsCommand");
 import configurationDocument = require("models/configurationDocument");

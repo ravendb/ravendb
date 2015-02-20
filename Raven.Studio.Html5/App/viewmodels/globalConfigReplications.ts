@@ -45,7 +45,11 @@ class globalConfigReplications extends viewModelBase {
     }
 
     attached() {
-        $("#dbNameHint").popover({
+        this.bindPopover();
+    }
+
+    bindPopover() {
+        $(".dbNameHint").popover({
             html: true,
             container: $("body"),
             trigger: "hover",
@@ -98,8 +102,8 @@ class globalConfigReplications extends viewModelBase {
     }
 
     createNewDestination() {
-        var db = appUrl.getSystemDatabase();
-        this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
+        this.replicationsSetup().destinations.unshift(replicationDestination.empty("{databaseName}"));
+        this.bindPopover();
     }
 
     removeDestination(repl: replicationDestination) {
@@ -119,6 +123,9 @@ class globalConfigReplications extends viewModelBase {
             var combinedTask = $.when(task1, task2);
             combinedTask.done(() => messagePublisher.reportSuccess("Global Settings were successfully saved!"));
             combinedTask.fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save global settings!", response.responseText, response.statusText));
+
+            this.resetUIToDefaultState();
+
         } else { 
             if (this.isConfigSaveEnabled())
                 this.saveAutomaticConflictResolutionSettings();
@@ -172,6 +179,17 @@ class globalConfigReplications extends viewModelBase {
                 this.activated(false);
                 this.syncChanges(true);
             });
+    }
+
+    resetUIToDefaultState() {
+        this.replicationConfig().clear();
+
+        var source = this.replicationsSetup().source();
+        this.replicationsSetup().clear();
+        this.replicationsSetup().source(source);
+
+        this.replicationConfigDirtyFlag().reset();
+        this.replicationsSetupDirtyFlag().reset();
     }
 }
 

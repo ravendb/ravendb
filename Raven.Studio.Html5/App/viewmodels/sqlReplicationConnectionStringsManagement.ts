@@ -6,7 +6,6 @@ import documentMetadata = require("models/documentMetadata");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import appUrl = require("common/appUrl");
 import editSqlReplication = require("viewmodels/editSqlReplication");
-import app = require("durandal/app");
 import getGlobalSqlReplicationConnectionStringsCommand = require("commands/getGlobalSqlReplicationConnectionStringsCommand");
 import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/deleteDocumentCommand");
@@ -137,8 +136,8 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         if (event.originalEvent) {
             var curConnectionString = !!obj.connectionString() ? obj.connectionString().trim() : "";
             if (curConnectionString === "" ||
-                editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
-                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
+                sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
+                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
                 if (!!matchingConnectionStringPair) {
                     var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
                     obj.connectionString(

@@ -6,7 +6,6 @@ import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import appUrl = require("common/appUrl");
-import editSqlReplication = require("viewmodels/editSqlReplication");
 import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 
@@ -133,8 +132,8 @@ class globalConfigSqlReplication extends viewModelBase{
         if (event.originalEvent) {
             var curConnectionString = !!obj.connectionString() ? obj.connectionString().trim() : "";
             if (curConnectionString === "" ||
-                editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
-                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
+                sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
+                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
                 if (!!matchingConnectionStringPair) {
                     var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
                     obj.connectionString(
@@ -152,6 +151,7 @@ class globalConfigSqlReplication extends viewModelBase{
     disactivateConfig() {
         this.confirmationMessage("Delete global configuration for sql replication?", "Are you sure?")
             .done(() => {
+                this.connections().predefinedConnections.removeAll();
                 this.activated(false);
                 this.syncChanges(true);
             });

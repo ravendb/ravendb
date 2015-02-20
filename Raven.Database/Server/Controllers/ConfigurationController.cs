@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+﻿// )-----------------------------------------------------------------------
 //  <copyright file="ConfigurationController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,6 +14,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Database.Config;
+using Raven.Database.Config.Retriever;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
@@ -102,7 +103,10 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			int nextPageStart = 0;
-			var systemDbPrefixes = DatabasesLandlord.SystemDatabase.Documents.GetDocumentsWithIdStartingWith(Constants.Global.VersioningDocumentPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextPageStart);
+			var systemDbPrefixes =
+				ConfigurationRetriever.IsGlobalConfigurationEnabled ?
+					DatabasesLandlord.SystemDatabase.Documents.GetDocumentsWithIdStartingWith(Constants.Global.VersioningDocumentPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextPageStart) :
+					new RavenJArray();
 			var localDbPrefixes = Database.Documents.GetDocumentsWithIdStartingWith(Constants.Versioning.RavenVersioningPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextPageStart);
 			var systemDbIds = systemDbPrefixes.Select(x =>
 				x

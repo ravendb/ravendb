@@ -42,6 +42,12 @@ class replicationsSetup {
         this.destinations(this.destinations().filter(d => d.hasGlobal()));
         this.destinations().forEach(d => d.copyFromGlobal());
     }
+
+    clear() {
+        this.destinations.removeAll();
+        this.clientFailoverBehaviour(null);
+        this.source(null);
+    }
 }
 
 export = replicationsSetup;

@@ -8,6 +8,7 @@ using System;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Commercial;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Config.Retriever
 {
@@ -33,7 +34,7 @@ namespace Raven.Database.Config.Retriever
 
 		protected ConfigurationRetrieverBase()
 		{
-			shouldDeserialize = typeof(TClass) != typeof(JsonDocument);
+			shouldDeserialize = typeof(TClass) != typeof(RavenJObject);
 		}
 
 		protected abstract TClass ApplyGlobalDocumentToLocal(TClass global, TClass local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
@@ -98,7 +99,7 @@ namespace Raven.Database.Config.Retriever
 			if (shouldDeserialize)
 				return document.DataAsJson.JsonDeserialization<TClass>();
 
-			return document as TClass;
+			return document.ToJson() as TClass;
 		}
 	}
 }

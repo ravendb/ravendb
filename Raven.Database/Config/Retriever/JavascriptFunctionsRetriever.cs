@@ -4,22 +4,22 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Config.Retriever
 {
-	public class JavascriptFunctionsRetriever : ConfigurationRetrieverBase<JsonDocument>
+	public class JavascriptFunctionsRetriever : ConfigurationRetrieverBase<RavenJObject>
 	{
-		protected override JsonDocument ApplyGlobalDocumentToLocal(JsonDocument global, JsonDocument local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
+		protected override RavenJObject ApplyGlobalDocumentToLocal(RavenJObject global, RavenJObject local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
-			local.DataAsJson["Functions"] = global.DataAsJson["Functions"] + " " + local.DataAsJson["Functions"];
+			local["Functions"] = global.Value<string>("Functions") + ";" + local.Value<string>("Functions");
 
 			return local;
 		}
 
-		protected override JsonDocument ConvertGlobalDocumentToLocal(JsonDocument global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
+		protected override RavenJObject ConvertGlobalDocumentToLocal(RavenJObject global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
-			global.Key = Constants.RavenJavascriptFunctions;
-			global.Metadata["@id"] = Constants.RavenJavascriptFunctions;
+			global.Value<RavenJObject>("@metadata")["@id"] = Constants.RavenJavascriptFunctions;
 
 			return global;
 		}

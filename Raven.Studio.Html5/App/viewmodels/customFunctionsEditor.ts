@@ -68,10 +68,10 @@ class customFunctionsEditor extends viewModelBase {
         });
 
         var globalFetchTask = new getGlobalCustomFunctionsCommand(this.activeDatabase()).execute();
-        globalFetchTask.done((result: configurationDocumentDto<any>) => {
+        globalFetchTask.done((result: configurationDocumentDto<customFunctionsDto>) => {
             this.hasGlobal(result.GlobalExists);
             if (result.GlobalExists) {
-                this.globalDocumentText(result.GlobalDocument.DataAsJson.Functions);
+                this.globalDocumentText(result.GlobalDocument.Functions);
             }
         });
     }
