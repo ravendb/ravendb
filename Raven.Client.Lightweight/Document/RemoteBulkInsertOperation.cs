@@ -411,8 +411,6 @@ namespace Raven.Client.Document
 
 	        var requestBinaryWriter = new BinaryWriter(requestStream);
 	        requestBinaryWriter.Write((int) bufferedStream.Position);
-
-            bufferedStream.Position = 0;
 	        bufferedStream.WriteTo(requestStream);
 	        requestStream.Flush();
 
