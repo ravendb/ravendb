@@ -211,9 +211,9 @@ namespace Raven.Client.FileSystem
                 {
                     try
                     {
-                        AsyncFilesCommands.ForFileSystem(DefaultFileSystem)
-                                          .EnsureFileSystemExistsAsync()
-                                          .Wait();
+	                    AsyncFilesCommands.ForFileSystem(DefaultFileSystem)
+		                    .EnsureFileSystemExistsAsync().ConfigureAwait(false)
+							.GetAwaiter().GetResult();
                     }
                     catch(Exception)
                     {

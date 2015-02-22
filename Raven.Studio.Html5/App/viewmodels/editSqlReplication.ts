@@ -2,17 +2,13 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
-import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import app = require("durandal/app");
 import database = require("models/database");
 import collection = require("models/collection");
 import sqlReplication = require("models/sqlReplication");
-import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
-import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
-import ace = require("ace/ace");
 import sqlReplicationStatsDialog = require("viewmodels/sqlReplicationStatsDialog");
 import document = require("models/document");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
@@ -289,10 +285,9 @@ class editSqlReplication extends viewModelBase {
         saveTask.done((saveResult: bulkDocumentDto[]) => {
             var savedDocumentDto: bulkDocumentDto = saveResult[0];
             var sqlReplicationKey = savedDocumentDto.Key.substring(editSqlReplication.sqlReplicationDocumentPrefix.length);
-            this.loadSqlReplication(sqlReplicationKey);
+            this.loadSqlReplication(sqlReplicationKey)
+                .done(() => this.dirtyFlag().reset());
             this.updateUrl(sqlReplicationKey);
-
-            this.dirtyFlag().reset(); //Resync Changes
 
             this.isEditingNewReplication(false);
             this.initialReplicationId = currentDocumentId;

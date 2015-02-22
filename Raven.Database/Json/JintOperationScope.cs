@@ -189,13 +189,13 @@ namespace Raven.Database.Json
 
         private JsValue ToJsArray(Engine engine, RavenJArray array)
         {
-            var elements = new JsValue[array.Length];
+			var elements = new JsValue[array.Length];
 	        for (var i = 0; i < array.Length; i++)
-	        {
-				elements[i] = ToJsInstance(engine, array[i]);
-	        }
+		        elements[i] = ToJsInstance(engine, array[i]);
 
-	        return engine.Array.Construct(elements);
+			var result = engine.Array.Construct(Arguments.Empty);
+			engine.Array.PrototypeObject.Push(result, elements);
+	        return result;
         }
 
         public virtual RavenJObject ConvertReturnValue(JsValue jsObject)

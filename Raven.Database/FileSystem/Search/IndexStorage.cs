@@ -351,18 +351,20 @@ namespace Raven.Database.FileSystem.Search
 			IndexSearcher searcher;
 			using (GetSearcher(out searcher))
 			{
-				Query q;
+				Query fileQuery;
 				if (string.IsNullOrEmpty(query))
 				{
-					q = new MatchAllDocsQuery();
+                    Log.Debug("Issuing query on index for all files");
+					fileQuery = new MatchAllDocsQuery();
 				}
 				else
 				{
-					var queryParser = new RavenQueryParser(analyzer, NumericIndexFields);
-                    q = queryParser.Parse(query);
+                    Log.Debug("Issuing query on index for: {1}", query);
+					var queryParser = new SimpleFilesQueryParser(analyzer, NumericIndexFields);
+                    fileQuery = queryParser.Parse(query);
 				}
 
-				var topDocs = ExecuteQuery(searcher, sortFields, q, pageSize + start);
+				var topDocs = ExecuteQuery(searcher, sortFields, fileQuery, pageSize + start);
 
 				var results = new List<string>();
 

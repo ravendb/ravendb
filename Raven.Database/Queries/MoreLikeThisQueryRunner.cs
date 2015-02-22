@@ -107,7 +107,19 @@ namespace Raven.Database.Queries
 
 					var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
 					var tsdc = TopScoreDocCollector.Create(pageSize, true);
-					searcher.Search(mltQuery, tsdc);
+
+
+				    if (string.IsNullOrWhiteSpace(query.AdditionalQuery) == false)
+				    {
+				        var additionalQuery = QueryBuilder.BuildQuery(query.AdditionalQuery, perFieldAnalyzerWrapper);
+				        mltQuery = new BooleanQuery
+				        {
+                            {mltQuery, Occur.MUST},
+				            {additionalQuery, Occur.MUST}, 
+				        };
+				    }
+
+				    searcher.Search(mltQuery, tsdc);
 					var hits = tsdc.TopDocs().ScoreDocs;
 					var jsonDocuments = GetJsonDocuments(query, searcher, index, query.IndexName, hits, td.ScoreDocs[0].Doc);
 

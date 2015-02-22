@@ -271,5 +271,35 @@ namespace Voron.Tests.Bugs
 				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber, 1);
 			}
 	    }
+
+	    [Fact]
+	    public void ShouldNotThrowPageFullExceptionDuringPageSplit2()
+	    {
+		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+		    {
+			    Env.CreateTree(tx, "foo");
+			    tx.Commit();
+		    }
+
+		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+		    {
+			    var tree = tx.ReadTree("foo");
+
+				tree.Add("thumbproducts/57337", new byte[1998]);
+				tree.Add("thumbproducts/57338", new byte[1993]);
+
+				tree.Add("thumbproducts/573370", new byte[2016]); // originally here the exception was thrown during a page split
+				tx.Commit();
+		    }
+
+		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+		    {
+			    var tree = tx.ReadTree("foo");
+
+				Assert.Equal(1998, tree.Read("thumbproducts/57337").Reader.Length);
+				Assert.Equal(1993, tree.Read("thumbproducts/57338").Reader.Length);
+				Assert.Equal(2016, tree.Read("thumbproducts/573370").Reader.Length);
+		    }
+	    }
     }
 }

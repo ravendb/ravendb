@@ -254,13 +254,13 @@ namespace Raven.Database.Actions
 		        {
 			        cts.Token.ThrowIfCancellationRequested();
 
+                    var docsToInsert = docs.ToArray();
+                    var batch = 0;
+                    var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
+
 			        using (Database.DocumentLock.Lock())
 			        {
-				        var docsToInsert = docs.ToArray();
-						var batch = 0;
-						var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-						var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
-
 				        TransactionalStorage.Batch(accessor =>
 				        {
 					        var inserts = 0;

@@ -125,6 +125,7 @@
     <Compile Include="Shard\SimpleSharding.cs" />
     <Compile Include="Smuggler\SmugglerBetweenOperationTests.cs" />
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
+    <Compile Include="Smuggler\SmugglerWithDisabledVersioning_RavenDB_3219.cs" />
     <Compile Include="Storage\StorageOperationsTests.cs" />
     <Compile Include="MtaFactAttribute.cs" />
     <Compile Include="Notifications.cs" />

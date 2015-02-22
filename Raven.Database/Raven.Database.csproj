@@ -246,6 +246,7 @@
     <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
@@ -298,7 +299,6 @@
     <Compile Include="FileSystem\Synchronization\Conflictuality\Resolvers\LatestFileSynchronizationConflictResolver.cs" />
     <Compile Include="FileSystem\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
     <Compile Include="FileSystem\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
-    <Compile Include="FileSystem\Synchronization\SynchronizationConfig.cs" />
     <Compile Include="Server\Controllers\SubscriptionsController.cs" />
     <Compile Include="Server\IgnoreSslCertificateErrorsMode.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
@@ -507,7 +507,7 @@
     <Compile Include="FileSystem\RavenFileSystem.cs" />
     <Compile Include="FileSystem\Search\IndexSearcherHolder.cs" />
     <Compile Include="FileSystem\Search\IndexStorage.cs" />
-    <Compile Include="FileSystem\Search\RavenQueryParser.cs" />
+    <Compile Include="FileSystem\Search\SimpleFilesQueryParser.cs" />
     <Compile Include="FileSystem\Storage\DeleteFileOperation.cs" />
     <Compile Include="FileSystem\Storage\Esent\EsentExtension.cs" />
     <Compile Include="FileSystem\Storage\Exceptions\FileExistsException.cs" />
