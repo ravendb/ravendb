@@ -33,7 +33,11 @@ namespace Raven.Database.Json
 			Database = database;
 
 			if (database != null)
-				CustomFunctions = database.ConfigurationRetriever.GetConfigurationDocument<RavenJObject>(Constants.RavenJavascriptFunctions).MergedDocument;
+			{
+				var configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<RavenJObject>(Constants.RavenJavascriptFunctions);
+				if(configurationDocument != null)
+					CustomFunctions = configurationDocument.MergedDocument;
+			}
 		}
 
 		protected virtual void ValidateDocument(JsonDocument newDocument)
