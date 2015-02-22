@@ -29,8 +29,6 @@ namespace Raven.Database.Indexing
 
 		private readonly ConcurrentDictionary<int, IndexReplaceInformation> indexesToReplace = new ConcurrentDictionary<int, IndexReplaceInformation>();
 
-		public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
-
 		public IndexReplacer(DocumentDatabase database)
 		{
 			Database = database;
@@ -40,10 +38,10 @@ namespace Raven.Database.Indexing
 				if (notification.Id == null)
 					return;
 
-				if (notification.Id.StartsWith(IndexReplacePrefix, StringComparison.OrdinalIgnoreCase) == false)
+				if (notification.Id.StartsWith(Constants.IndexReplacePrefix, StringComparison.OrdinalIgnoreCase) == false)
 					return;
 
-				var replaceIndexName = notification.Id.Substring(IndexReplacePrefix.Length);
+				var replaceIndexName = notification.Id.Substring(Constants.IndexReplacePrefix.Length);
 
 				if (notification.Type == DocumentChangeTypes.Delete)
 				{
@@ -61,7 +59,7 @@ namespace Raven.Database.Indexing
 		private void Initialize()
 		{
 			int nextStart = 0;
-			var documents = Database.Documents.GetDocumentsWithIdStartingWith(IndexReplacePrefix, null, null, 0, int.MaxValue, Database.WorkContext.CancellationToken, ref nextStart);
+			var documents = Database.Documents.GetDocumentsWithIdStartingWith(Constants.IndexReplacePrefix, null, null, 0, int.MaxValue, Database.WorkContext.CancellationToken, ref nextStart);
 
 			foreach (RavenJObject document in documents)
 			{
@@ -75,7 +73,7 @@ namespace Raven.Database.Indexing
 				return;
 
 			var id = document.Key;
-			var replaceIndexName = id.Substring(IndexReplacePrefix.Length);
+			var replaceIndexName = id.Substring(Constants.IndexReplacePrefix.Length);
 
 			var replaceIndex = Database.IndexStorage.GetIndexInstance(replaceIndexName);
 			if (replaceIndex == null)
@@ -197,7 +195,7 @@ namespace Raven.Database.Indexing
 						try
 						{
 							if (Database.IndexStorage.ReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace))
-								Database.Documents.Delete(IndexReplacePrefix + indexReplaceInformation.ReplaceIndex, null, null);
+								Database.Documents.Delete(Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex, null, null);
 							else
 							{
 								indexReplaceInformation.ErrorCount++;

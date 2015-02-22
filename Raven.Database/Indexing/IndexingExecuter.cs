@@ -156,64 +156,66 @@ namespace Raven.Database.Indexing
 			BackgroundTaskExecuter.Instance.ExecuteAll(context, groupedIndexes, (indexingGroup, i) =>
 			{
 				context.CancellationToken.ThrowIfCancellationRequested();
-
-				var prefetchingBehavior = indexingGroup.PrefetchingBehavior;
-				var indexesToWorkOn = indexingGroup.Indexes;
-
-				var operationCancelled = false;
-				TimeSpan indexingDuration = TimeSpan.Zero;
-				var lastEtag = Etag.Empty;
-
-				List<JsonDocument> jsonDocs;
-				IndexingBatchInfo batchInfo = null;
-
-				using (MapIndexingInProgress(indexesToWorkOn))
-				using (prefetchingBehavior.DocumentBatchFrom(indexingGroup.LastIndexedEtag, out jsonDocs))
+				using (LogContext.WithDatabase(context.DatabaseName))
 				{
-					try
+					var prefetchingBehavior = indexingGroup.PrefetchingBehavior;
+					var indexesToWorkOn = indexingGroup.Indexes;
+
+					var operationCancelled = false;
+					TimeSpan indexingDuration = TimeSpan.Zero;
+					var lastEtag = Etag.Empty;
+
+					List<JsonDocument> jsonDocs;
+					IndexingBatchInfo batchInfo = null;
+
+					using (MapIndexingInProgress(indexesToWorkOn))
+					using (prefetchingBehavior.DocumentBatchFrom(indexingGroup.LastIndexedEtag, out jsonDocs))
 					{
-						if (Log.IsDebugEnabled)
+						try
 						{
-							Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-								jsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
+							if (Log.IsDebugEnabled)
+							{
+								Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+									jsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
+							}
+
+							batchInfo = context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
+
+							context.CancellationToken.ThrowIfCancellationRequested();
+
+							if (jsonDocs.Count <= 0)
+							{
+								return;
+							}
+
+							var sw = Stopwatch.StartNew();
+
+							lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs, batchInfo);
+
+							indexingDuration = sw.Elapsed;
 						}
-
-						batchInfo = context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
-
-						context.CancellationToken.ThrowIfCancellationRequested();
-
-						if (jsonDocs.Count <= 0)
+						catch (InvalidDataException e)
 						{
-							return;
+							Log.ErrorException("Failed to index because of data corruption. ", e);
+							indexesToWorkOn.ForEach(index =>
+								context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
 						}
-
-						var sw = Stopwatch.StartNew();
-
-						lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs, batchInfo);
-
-						indexingDuration = sw.Elapsed;
-					}
-					catch (InvalidDataException e)
-					{
-						Log.ErrorException("Failed to index because of data corruption. ", e);
-						indexesToWorkOn.ForEach(index =>
-							context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
-					}
-					catch (OperationCanceledException)
-					{
-						operationCancelled = true;
-					}
-					finally
-					{
-						if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
+						catch (OperationCanceledException)
 						{
-							prefetchingBehavior.CleanupDocuments(lastEtag);
-							prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
+							operationCancelled = true;
 						}
+						finally
+						{
+							if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
+							{
+								prefetchingBehavior.CleanupDocuments(lastEtag);
+								prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
+							}
 
-						prefetchingBehavior.BatchProcessingComplete();
-						if (batchInfo != null)
-							context.ReportIndexingBatchCompleted(batchInfo);
+							prefetchingBehavior.BatchProcessingComplete();
+							if (batchInfo != null)
+								context.ReportIndexingBatchCompleted(batchInfo);
+						}
 					}
 				}
 			});
@@ -296,10 +298,13 @@ namespace Raven.Database.Indexing
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, result,
 				index =>
 				{
-					var performance = HandleIndexingFor(index, lastEtag, lastModified, CancellationToken.None);
+					using (LogContext.WithDatabase(context.DatabaseName))
+					{
+						var performance = HandleIndexingFor(index, lastEtag, lastModified, CancellationToken.None);
 
-					if (performance != null)
-						indexingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performance);
+						if (performance != null)
+							indexingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performance);
+					}
 				});
 
 			return lastEtag;
@@ -318,7 +323,8 @@ namespace Raven.Database.Indexing
                 LastIndexedEtag = Etag.Empty
             };
 
-	        using (MapIndexingInProgress(new List<IndexToWorkOn> {indexToWorkOn}))
+			using (LogContext.WithDatabase(context.DatabaseName))
+			using (MapIndexingInProgress(new List<IndexToWorkOn> { indexToWorkOn }))
 	        {
 				var indexingBatchForIndex =
 					FilterIndexes(new List<IndexToWorkOn> { indexToWorkOn }, precomputedBatch.Documents,
@@ -380,6 +386,9 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
+				if (performanceResult != null)
+					performanceResult.OnCompleted = null;
+
 				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",

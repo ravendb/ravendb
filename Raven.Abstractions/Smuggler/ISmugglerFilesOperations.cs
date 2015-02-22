@@ -41,5 +41,6 @@ namespace Raven.Abstractions.Smuggler
 
 	    RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata);
 
+		RavenJObject DisableVersioning(RavenJObject metadata);
     }
 }

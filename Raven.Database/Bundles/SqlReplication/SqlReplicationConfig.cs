@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using RTools_NTS.Util;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -17,8 +19,13 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public bool ParameterizeDeletesDisabled { get; set; }
         public bool ForceSqlServerQueryRecompile { get; set; }
-        public bool PerformTableQuatation { get; set; }
 
+        [Obsolete("Use QuoteTables, instead", true)]
+        public bool PerformTableQuatation {
+	        get { return QuoteTables; }
+            set { QuoteTables = value; }
+	    } 
+        public bool QuoteTables { get; set; }
 		public string RavenEntityName { get; set; }
 		public string Script { get; set; }
 		public string FactoryName { get; set; }
@@ -36,6 +43,7 @@ namespace Raven.Database.Bundles.SqlReplication
 	{
 		public string TableName { get; set; }
 		public string DocumentKeyColumn { get; set; }
+        public bool InsertOnlyMode { get; set; }
 
 		protected bool Equals(SqlReplicationTable other)
 		{

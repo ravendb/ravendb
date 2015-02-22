@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -31,6 +29,9 @@ namespace Raven.Database.Server.Tenancy
         protected static readonly ILog Logger = LogManager.GetCurrentClassLogger();
         
         protected readonly ConcurrentSet<string> Locks = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+		protected readonly ConcurrentDictionary<string, ManualResetEvent> Cleanups = new ConcurrentDictionary<string, ManualResetEvent>(StringComparer.OrdinalIgnoreCase); 
+
         public readonly AtomicDictionary<Task<TResource>> ResourcesStoresCache =
                 new AtomicDictionary<Task<TResource>>(StringComparer.OrdinalIgnoreCase);
 
@@ -40,6 +41,23 @@ namespace Raven.Database.Server.Tenancy
 	    protected readonly ConcurrentDictionary<string, TransportState> ResourseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 
 	    public abstract string ResourcePrefix { get; }
+
+		protected readonly InMemoryRavenConfiguration systemConfiguration;
+		protected readonly DocumentDatabase systemDatabase;
+
+	    protected AbstractLandlord(DocumentDatabase systemDatabase)
+	    {
+			systemConfiguration = systemDatabase.Configuration;
+			this.systemDatabase = systemDatabase;
+	    }
+
+		public int MaxSecondsForTaskToWaitForDatabaseToLoad
+		{
+			get
+			{
+				return systemConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad;
+			}
+		}
 
         public IEnumerable<TransportState> GetUserAllowedTransportStates(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
         {
@@ -120,62 +138,74 @@ namespace Raven.Database.Server.Tenancy
 			Func<TResource,bool> shouldSkip = null,
 			DocumentChangeTypes notificationType = DocumentChangeTypes.None)
         {
-            using (ResourcesStoresCache.WithAllLocks())
-            {
-                DateTime time;
-                Task<TResource> resourceTask;
-				if (ResourcesStoresCache.TryGetValue(resource, out resourceTask) == false)
-                {
-					LastRecentlyUsed.TryRemove(resource, out time);
-                    return;	
-                }
-				if (resourceTask.Status == TaskStatus.Faulted || resourceTask.Status == TaskStatus.Canceled)
-                {
-					LastRecentlyUsed.TryRemove(resource, out time);
-					ResourcesStoresCache.TryRemove(resource, out resourceTask);
-                    return;
-                }
-				if (resourceTask.Status != TaskStatus.RanToCompletion)
-                {
-                    return; // still starting up
-                }
+			if(Cleanups.TryAdd(resource, new ManualResetEvent(false)) == false)
+				return;
 
-				var database = resourceTask.Result;
-                if ((skipIfActiveInDuration != null && (SystemTime.UtcNow - LastWork(database)) < skipIfActiveInDuration) || 
-					(shouldSkip != null && shouldSkip(database)))
-                {
-                    // this document might not be actively working with user, but it is actively doing indexes, we will 
-                    // wait with unloading this database until it hasn't done indexing for a while.
-                    // This prevent us from shutting down big databases that have been left alone to do indexing work.
-                    return;
-                }
-                try
-                {
-                    database.Dispose();
-                }
-                catch (Exception e)
-                {
-					Logger.ErrorException("Could not cleanup tenant database: " + resource, e);
-                    return;
-                }
+	        try
+	        {
+		        using (ResourcesStoresCache.WithAllLocks())
+		        {
+			        DateTime time;
+			        Task<TResource> resourceTask;
+			        if (ResourcesStoresCache.TryGetValue(resource, out resourceTask) == false)
+			        {
+				        LastRecentlyUsed.TryRemove(resource, out time);
+				        return;
+			        }
+			        if (resourceTask.Status == TaskStatus.Faulted || resourceTask.Status == TaskStatus.Canceled)
+			        {
+				        LastRecentlyUsed.TryRemove(resource, out time);
+				        ResourcesStoresCache.TryRemove(resource, out resourceTask);
+				        return;
+			        }
+			        if (resourceTask.Status != TaskStatus.RanToCompletion)
+			        {
+				        return; // still starting up
+			        }
 
-				LastRecentlyUsed.TryRemove(resource, out time);
-				ResourcesStoresCache.TryRemove(resource, out resourceTask);
+			        var database = resourceTask.Result;
+			        if ((skipIfActiveInDuration != null && (SystemTime.UtcNow - LastWork(database)) < skipIfActiveInDuration) ||
+			            (shouldSkip != null && shouldSkip(database)))
+			        {
+				        // this document might not be actively working with user, but it is actively doing indexes, we will 
+				        // wait with unloading this database until it hasn't done indexing for a while.
+				        // This prevent us from shutting down big databases that have been left alone to do indexing work.
+				        return;
+			        }
+			        try
+			        {
+				        database.Dispose();
+			        }
+			        catch (Exception e)
+			        {
+				        Logger.ErrorException("Could not cleanup tenant database: " + resource, e);
+				        return;
+			        }
 
-	            if (notificationType == DocumentChangeTypes.Delete)
-	            {
-		            TransportState transportState;
-		            ResourseTransportStates.TryRemove(resource, out transportState);
-		            if (transportState != null)
-		            {
-			            transportState.Dispose();
-		            }
-	            }
+			        LastRecentlyUsed.TryRemove(resource, out time);
+			        ResourcesStoresCache.TryRemove(resource, out resourceTask);
 
-	            var onResourceCleanupOccured = CleanupOccured;
-				if (onResourceCleanupOccured != null)
-					onResourceCleanupOccured(resource);
-            }
+			        if (notificationType == DocumentChangeTypes.Delete)
+			        {
+				        TransportState transportState;
+				        ResourseTransportStates.TryRemove(resource, out transportState);
+				        if (transportState != null)
+				        {
+					        transportState.Dispose();
+				        }
+			        }
+
+			        var onResourceCleanupOccured = CleanupOccured;
+			        if (onResourceCleanupOccured != null)
+				        onResourceCleanupOccured(resource);
+		        }
+	        }
+	        finally
+	        {
+		        ManualResetEvent cleanupLock;
+		        if (Cleanups.TryRemove(resource, out cleanupLock))
+			        cleanupLock.Set();
+	        }
         }
 
         protected abstract DateTime LastWork(TResource resource);

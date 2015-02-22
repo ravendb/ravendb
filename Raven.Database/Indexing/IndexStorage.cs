@@ -201,8 +201,8 @@ namespace Raven.Database.Indexing
 
 	    private void CheckIndexState(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, Index index, bool resetTried)
 	    {
-            if (configuration.ResetIndexOnUncleanShutdown == false)
-                return;
+			//if (configuration.ResetIndexOnUncleanShutdown == false)
+			//	return;
 
 			// 1. If commitData is null it means that there were no commits, so just in case we are resetting to Etag.Empty
 			// 2. If no 'LastEtag' in commitData then we consider it an invalid index
@@ -228,6 +228,8 @@ namespace Raven.Database.Indexing
 
 			if (EtagUtil.IsGreaterThanOrEqual(lastEtag, lastStoredEtag))
 				return;
+
+			log.Info(string.Format("Resetting index '{0} ({1})'. Last stored etag: {2}. Last commit etag: {3}.", indexDefinition.Name, index.indexId, lastStoredEtag, lastEtag));
 
 			var now = SystemTime.UtcNow;
 			ResetLastIndexedEtag(indexDefinition, lastEtag, now);
