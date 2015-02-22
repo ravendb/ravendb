@@ -466,8 +466,6 @@ namespace Raven.Database.Server.Controllers
 			string entityName;
 			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
 
-			if (index.Contains("UserIndex"))
-				Debugger.Launch();
 			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
 				indexEtag = Database.Indexes.GetIndexEtag(dynamicIndexName, null, indexQuery.ResultsTransformer);
