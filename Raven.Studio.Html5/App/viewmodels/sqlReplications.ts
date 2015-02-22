@@ -2,13 +2,11 @@
 import sqlReplication = require("models/sqlReplication");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
-import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
 import appUrl = require("common/appUrl");
 import sqlReplicationStatsDialog = require("viewmodels/sqlReplicationStatsDialog");
 import app = require("durandal/app");
 import document = require("models/document");
 import deleteDocuments = require("viewmodels/deleteDocuments");
-import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand");
 

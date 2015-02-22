@@ -11,6 +11,8 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
+using Raven.Database.Config;
+using Raven.Database.Config.Retriever;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
@@ -1334,15 +1336,10 @@ namespace Raven.Bundles.Replication.Tasks
 
 		internal ReplicationStrategy[] GetReplicationDestinations(Predicate<ReplicationDestination> predicate = null)
 		{
-			var document = docDb.Documents.Get(Constants.RavenReplicationDestinations, null);
-			if (document == null)
-			{
-				return new ReplicationStrategy[0];
-			}
-			ReplicationDocument jsonDeserialization;
+			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument;
 			try
 			{
-				jsonDeserialization = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+				configurationDocument = docDb.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			}
 			catch (Exception e)
 			{
@@ -1350,14 +1347,21 @@ namespace Raven.Bundles.Replication.Tasks
 				return new ReplicationStrategy[0];
 			}
 
-			if (string.IsNullOrWhiteSpace(jsonDeserialization.Source))
+			if (configurationDocument == null)
 			{
-				jsonDeserialization.Source = docDb.TransactionalStorage.Id.ToString();
+				return new ReplicationStrategy[0];
+			}
+
+			var replicationDocument = configurationDocument.MergedDocument;
+
+			if (configurationDocument.LocalExists && string.IsNullOrWhiteSpace(replicationDocument.Source))
+			{
+				replicationDocument.Source = docDb.TransactionalStorage.Id.ToString();
 				try
 				{
-					var ravenJObject = RavenJObject.FromObject(jsonDeserialization);
+					var ravenJObject = RavenJObject.FromObject(replicationDocument);
 					ravenJObject.Remove("Id");
-					docDb.Documents.Put(Constants.RavenReplicationDestinations, document.Etag, ravenJObject, document.Metadata, null);
+					docDb.Documents.Put(Constants.RavenReplicationDestinations, configurationDocument.Etag, ravenJObject, configurationDocument.Metadata, null);
 				}
 				catch (ConcurrencyException)
 				{
@@ -1365,7 +1369,7 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 			}
 
-			if (jsonDeserialization.Source != docDb.TransactionalStorage.Id.ToString())
+			if (replicationDocument.Source != docDb.TransactionalStorage.Id.ToString())
 			{
 				if (!wrongReplicationSourceAlertSent)
 				{
@@ -1376,8 +1380,8 @@ namespace Raven.Bundles.Replication.Tasks
 							AlertLevel = AlertLevel.Error,
 							CreatedAt = SystemTime.UtcNow,
 							Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
-							Title = "Wrong replication source: " + jsonDeserialization.Source + " instead of " + docDb.TransactionalStorage.Id + " in database " + dbName,
-							UniqueKey = "Wrong source: " + jsonDeserialization.Source + ", " + docDb.TransactionalStorage.Id
+							Title = "Wrong replication source: " + replicationDocument.Source + " instead of " + docDb.TransactionalStorage.Id + " in database " + dbName,
+							UniqueKey = "Wrong source: " + replicationDocument.Source + ", " + docDb.TransactionalStorage.Id
 						});
 
 					wrongReplicationSourceAlertSent = true;
@@ -1388,7 +1392,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 			wrongReplicationSourceAlertSent = false;
 
-			return jsonDeserialization
+			return replicationDocument
 				.Destinations
 				.Where(x => !x.Disabled)
 				.Where(x => predicate == null || predicate(x))

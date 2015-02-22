@@ -19,7 +19,7 @@ namespace Raven.Tests.Storage
 			db = new DocumentDatabase(new RavenConfiguration
 			{
 				RunInMemory= true
-			});
+			}, null);
 		}
 
 

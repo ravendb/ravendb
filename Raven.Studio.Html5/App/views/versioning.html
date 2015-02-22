@@ -3,7 +3,15 @@
         <div class="panel panel-default">
             <div class="panel-heading">
                 <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: isSaveEnabled" accesskey="S"><i class="fa fa-save"></i></button>
-                <button type="button" class="btn btn-default" data-bind="click: createNewVersioning" title="Add a replication destination (Alt+N)" accesskey="N">
+                <span data-bind="visible: hasGlobalValues()">
+                    <button type="button" class="btn btn-default" data-bind="click: $root.useLocal.bind($root), visible: usingGlobal()">
+                        <i class="fa fa-arrow-down"></i> Override global configuration
+                    </button>
+                    <button type="button" class="btn btn-default" data-bind="click: $root.useGlobal.bind($root), visible: !usingGlobal()">
+                        <i class="fa fa-arrow-up"></i> Use global configuration
+                    </button>
+                </span>
+                <button type="button" class="btn btn-default" data-bind="click: createNewVersioning, visible: !usingGlobal()" title="Add a replication destination (Alt+N)" accesskey="N">
                     <i class="fa fa-plus"></i> Add versioning
                 </button>
             </div>
@@ -11,37 +19,53 @@
                 <div class="alert alert-warning" data-bind="visible: versionings().length == 0">
                     You've got no versioning set up.
                 </div>
-                <div data-bind="foreach: versionings ">
-                    <div class="panel versioning-card" data-bind="css: { 'panel-warning': disabled, 'panel-default': !disabled() }">
+                <div data-bind="foreach: versionings">
+                    <div class="panel versioning-card" data-bind="css: { 'panel-warning': mergedDocument().disabled, 'panel-default': !mergedDocument().disabled() }">
                         <div class="panel-heading">
                             <h3 class="panel-title">
-                                <span> Versioning setup <span data-bind="visible: collection().length>0">for</span> <span data-bind="text: collection"></span></span>
-                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true" data-bind="click: $root.removeVersioning.bind($root), visible: removable" title="remove this versioning"><i class="fa fa-times"></i></button>
+                                <span> Versioning setup <span data-bind="visible: mergedDocument().collection().length>0">for</span> <span data-bind="text: mergedDocument().collection"></span></span>
+                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true" data-bind="click: $root.removeVersioning.bind($root), visible: mergedDocument().removable() && !$root.usingGlobal() && !globalExists()" title="remove this versioning"><i class="fa fa-times"></i></button>
                             </h3>
                         </div>
                         <div class="panel-body">
+                            <div class="form-group" data-bind="visible: globalExists() && !$root.usingGlobal()">
+                                <label class="col-sm-4 control-label">Override:</label>
+                                <div class="col-sm-7">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
+                                            <span data-bind="visible: localExists()">Yes</span>
+                                            <span data-bind="visible: !localExists()">No</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <li><a href="#" data-bind="click: $root.override.bind($root, true)">Yes</a></li>
+                                            <li><a href="#" data-bind="click: $root.override.bind($root, false)">No</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="form-group">
                                 <div class="col-sm-4 control-label">Collection</div>
                                 <div class="col-sm-8">
-                                    <input required type="text" class="form-control" data-bind="value: collection, enable: removable && !fromDatabase(), valueUpdate: 'afterkeyup'" />
+                                    <input required type="text" class="form-control" data-bind="value: mergedDocument().collection, enable: mergedDocument().removable && !mergedDocument().fromDatabase() && localExists(), valueUpdate: 'afterkeyup'" />
                                 </div>
                             </div>
                             <div class="form-group">
                                 <div class="col-sm-4 control-label">Max Revisions</div>
                                 <div class="col-sm-8">
-                                    <input required type="number" class="form-control" data-bind="numericValue: maxRevisions, valueUpdate: 'afterkeyup'" />
+                                    <input required type="number" class="form-control" data-bind="numericValue: mergedDocument().maxRevisions, valueUpdate: 'afterkeyup', enable: !$root.usingGlobal() && localExists()" />
                                 </div>
                             </div>
                             <div class="form-group">
                                 <div class="col-sm-4 control-label">Excluded</div>
                                 <div class="col-sm-7">
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                            <span data-bind="visible: !exclude()">Include</span>
-                                            <span data-bind="visible: exclude">Exclude</span>
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: !$root.usingGlobal() && localExists()">
+                                            <span data-bind="visible: !mergedDocument().exclude()">Include</span>
+                                            <span data-bind="visible: mergedDocument().exclude">Exclude</span>
                                             <span class="caret"></span>
                                         </button>
-                                        <ul class="dropdown-menu" role="menu">
+                                        <ul class="dropdown-menu" role="menu" data-bind="with: mergedDocument">
                                             <li><a href="#" data-bind="click: makeIncluded">Include</a></li>
                                             <li><a href="#" data-bind="click: makeExcluded">Exclude</a></li>
                                         </ul>

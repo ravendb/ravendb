@@ -1,15 +1,23 @@
 ﻿<form class="custom-functions-form" id="customFunctionsContainer">
-    <div class="btn-toolbar">
-        <button type="submit" class="btn btn-primary" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-        <span style="margin-left: 10px">
-            You can create custom JavaScript functions here by writing simple <a href="http://wiki.commonjs.org/wiki/Modules/1.1" target="about:blank">commonjs module</a>.
-        </span>
-        <span id="customFunctionsExample" class="help-cursor" data-placement="auto right" data-original-title="Delete Script" data-trigger="hover">
+    
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <button type="submit" class="btn btn-primary" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <span style="margin-left: 10px">
+                You can create custom JavaScript functions here by writing simple <a href="http://wiki.commonjs.org/wiki/Modules/1.1" target="about:blank">commonjs module</a>.
+            </span>
+            <span id="customFunctionsExample" class="help-cursor" data-placement="auto right" data-original-title="Delete Script" data-trigger="hover">
             See the example. <i class="fa fa-info-circle text-info"></i>
-        </span>
+            </span>
+        </div>
+        <div class="panel-body">
+            <div data-bind="visible: hasGlobal">
+                <div><strong>Global configuration: </strong></div>
+                <pre class="editor" id="globalCustomFunctionsEditor" data-bind="aceEditor: { code: globalDocumentText, readOnly: true, fontSize: '18px', lang: 'ace/mode/javascript' }"></pre>
+                <div><strong>Local configuration: </strong></div>
+            </div>
+            
+            <pre class="editor" id="customFunctionsEditor" data-bind="aceEditor: { code: documentText, fontSize: '18px', lang: 'ace/mode/javascript' }"></pre>
+        </div>
     </div>
-    
-    <br />
-    <pre class="editor" id="customFunctionsEditor" data-bind="aceEditor: { code: documentText, fontSize: '18px', lang: 'ace/mode/javascript' }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 40 }"></pre>
-    
 </form>                                                                                                           

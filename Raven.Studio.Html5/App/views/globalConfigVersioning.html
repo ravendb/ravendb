@@ -1,0 +1,63 @@
+﻿<section>
+    <form class="versioning-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root)">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: isSaveEnabled, visible: activated()" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: activated() == false">
+                    <i class="fa fa-plus"></i> Create global configuration for Versioning
+                </button>
+                <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated()">
+                    <i class="fa fa-trash"></i> Remove global configuration for Versioning
+                </button>
+                <button type="button" class="btn btn-default" data-bind="click: createNewVersioning, visible:  activated()" title="Add a replication destination (Alt+N)" accesskey="N">
+                    <i class="fa fa-plus"></i> Add versioning
+                </button>
+            </div>
+            <div class="panel-body">
+                <p data-bind="visible: activated() == false">
+                    <i class="fa fa-info-circle text-info"></i> Global configuration for Versioning is not currently defined.
+                </p>
+                <div data-bind="foreach: versionings ">
+                    <div class="panel versioning-card" data-bind="css: { 'panel-warning': disabled, 'panel-default': !disabled() }">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <span> Versioning setup <span data-bind="visible: collection().length>0">for</span> <span data-bind="text: collection"></span></span>
+                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true" data-bind="click: $root.removeVersioning.bind($root), visible: removable" title="remove this versioning"><i class="fa fa-times"></i></button>
+                            </h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="form-group">
+                                <div class="col-sm-4 control-label">Collection</div>
+                                <div class="col-sm-8">
+                                    <input required type="text" class="form-control" data-bind="value: collection, enable: removable && !fromDatabase(), valueUpdate: 'afterkeyup'" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-sm-4 control-label">Max Revisions</div>
+                                <div class="col-sm-8">
+                                    <input required type="number" class="form-control" data-bind="numericValue: maxRevisions, valueUpdate: 'afterkeyup'" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-sm-4 control-label">Excluded</div>
+                                <div class="col-sm-7">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                            <span data-bind="visible: !exclude()">Include</span>
+                                            <span data-bind="visible: exclude">Exclude</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <li><a href="#" data-bind="click: makeIncluded">Include</a></li>
+                                            <li><a href="#" data-bind="click: makeExcluded">Exclude</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>

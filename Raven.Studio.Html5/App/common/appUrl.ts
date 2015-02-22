@@ -163,6 +163,34 @@ class appUrl {
         return "#admin/settings/windowsAuth";
     }
 
+    static forGlobalConfig(): string {
+        return '#admin/settings/globalConfig';
+    }
+
+    static forGlobalConfigPeriodicExport(): string {
+        return '#admin/settings/globalConfig';
+    }
+
+    static forGlobalConfigReplication(): string {
+        return '#admin/settings/globalConfigReplication';
+    }
+
+    static forGlobalConfigSqlReplication(): string {
+        return "#admin/settings/globalConfigSqlReplication";
+    }
+
+    static forGlobalConfigQuotas(): string {
+        return '#admin/settings/globalConfigQuotas';
+    }
+
+    static forGlobalConfigCustomFunctions(): string {
+        return '#admin/settings/globalConfigCustomFunctions';
+    }
+
+    static forGlobalConfigVersioning(): string {
+        return "#admin/settings/globalConfigVersioning";
+    }
+
     static forBackup(): string {
         return "#admin/settings/backup";
     }

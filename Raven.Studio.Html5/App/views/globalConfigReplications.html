@@ -1,0 +1,227 @@
+﻿<form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled() || isConfigSaveEnabled(), visible: activated()" title="Save changes (Alt+S)" accesskey="S">
+                <i class="fa fa-save"></i>
+            </button>
+            <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated()">
+                <i class="fa fa-plus"></i> Create global configuration for Replication
+            </button>
+            <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated()">
+                <i class="fa fa-trash"></i> Remove global configuration for Replication
+            </button>
+        </div>
+        <div class="panel-body">
+            <p data-bind="visible: activated()==false">
+                <i class="fa fa-info-circle text-info"></i> Global configuration for Replication is not currently defined.
+            </p>
+            <div data-bind="if: activated()">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Client failover behaviour</label>
+                    <div class="col-sm-10">
+                        <div class="btn-group" data-bind="with: replicationsSetup">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: clientFailoverBehaviour() == null">Let client decide</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
+                                <span data-bind="visible: $root.readFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, null)">Let client decide</a></li>
+                                <li class="divider"></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries')">Allow reads from secondaries and writes to secondaries</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'FailImmediately')">Fail immediately</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllServers')">Read from all servers</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries,ReadFromAllServers')">Read from all servers and allow write to secondaries</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="conflictResolutionSelector" class="col-sm-2 control-label">Conflict resolution</label>
+                    <div class="col-sm-10">
+                        <div class="btn-group" data-bind="with: replicationConfig">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: documentConflictResolution() === 'None'">None</span>
+                                <span data-bind="visible: documentConflictResolution() === 'ResolveToLocal'">Resolve to <strong>local</strong></span>
+                                <span data-bind="visible: documentConflictResolution() === 'ResolveToRemote'">Resolve to <strong>remote</strong></span>
+                                <span data-bind="visible: documentConflictResolution() === 'ResolveToLatest'">Resolve to <strong>latest</strong></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: documentConflictResolution.bind(documentConflictResolution, 'None')">None</a></li>
+                                <li class="divider"></li>
+                                <li><a href="#" data-bind="click: documentConflictResolution.bind(documentConflictResolution, 'ResolveToLocal')">Resolve to <strong>local</strong></a></li>
+                                <li><a href="#" data-bind="click: documentConflictResolution.bind(documentConflictResolution, 'ResolveToRemote')">Resolve to <strong>remote</strong></a></li>
+                                <li><a href="#" data-bind="click: documentConflictResolution.bind(documentConflictResolution, 'ResolveToLatest')">Resolve to <strong>latest</strong></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Replication destinations</label>
+                    <div class="col-sm-10">
+                        <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N">
+                            <i class="fa fa-plus"></i> Add destination
+                        </button>
+                        <br />
+                        <br />
+                        <div data-bind="with: replicationsSetup">
+                            <p data-bind="visible: destinations().length === 0">
+                                <i class="fa fa-warning text-warning"></i> <span class="text-muted">You haven't created any replication destinations.</span>
+                            </p>
+                            <div data-bind="foreach: destinations">
+                                <div class="panel replication-destination-card" data-bind="css: { 'panel-warning': disabled(), 'panel-default': !disabled() }">
+                                    <div class="panel-heading">
+                                        <h3 class="panel-title">
+                                            <span data-bind="text: name"></span>
+                                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times" data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication destination"></i></button>
+                                        </h3>
+                                    </div>
+                                    <div class="panel-body">
+                                        <div class="form-group">
+                                            <div class="col-sm-offset-4 col-sm-7">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                        <span data-bind="visible: !disabled()">Enabled</span>
+                                                        <span data-bind="visible: disabled">Disabled</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu" role="menu">
+                                                        <li><a href="#" data-bind="click: enable">Enabled</a></li>
+                                                        <li><a href="#" data-bind="click: disable">Disabled</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-4 control-label">Url</label>
+                                            <div class="col-sm-7">
+                                                <input required type="url" class="form-control" title="The address of the server to replicate to" data-bind="value: url, valueUpdate: 'afterkeydown'" />
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-4 control-label">Database</label>
+                                            <div class="col-sm-6">
+                                                <input required type="text" class="form-control" title="The name of the database on the destination server to replicate to" disabled="disabled" value="{databaseName}"/>
+                                            </div>
+                                            <div class="col-sm-1">
+                                                <span class="dbNameHint help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
+                                                    <i class="fa fa-info-circle text-info"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-4 control-label">Credentials</label>
+                                            <div class="col-sm-7">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                        <span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
+                                                        <span data-bind="visible: isUserCredentials">User</span>
+                                                        <span data-bind="visible: isApiKeyCredentials">API key</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu" role="menu">
+                                                        <li><a href="#" data-bind="click: useNoCredentials">None</a></li>
+                                                        <li class="divider"></li>
+                                                        <li><a href="#" data-bind="click: useUserCredentials">User</a></li>
+                                                        <li><a href="#" data-bind="click: useApiKeyCredentials">API key</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div data-bind="if: isUserCredentials, visible: isUserCredentials">
+                                            <div class="form-group">
+                                                <label class="col-sm-4 control-label">User Name</label>
+                                                <div class="col-sm-7">
+                                                    <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown'" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-4 control-label">Password</label>
+                                                <div class="col-sm-7">
+                                                    <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown'" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-4 control-label">Domain</label>
+                                                <div class="col-sm-7">
+                                                    <input required type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown'" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div data-bind="if: isApiKeyCredentials, visible: isApiKeyCredentials">
+                                            <div class="form-group">
+                                                <label class="col-sm-4 control-label">API Key</label>
+                                                <div class="col-sm-7">
+                                                    <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown'" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <a data-bind="click: toggleIsAdvancedShows" class="advanced-replication-settings">
+                                            Advanced Options
+                                        </a>
+                                        <div data-bind="visible: false">
+                                            <div class="form-group">
+                                                <label class="col-sm-4 control-label">Client Visible Url</label>
+                                                <div class="col-sm-7">
+                                                    <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'afterkeydown'" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-4 control-label">Skip Index Replication</label>
+                                                <div class="col-sm-7">
+                                                    <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplication" />
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class="col-sm-4 control-label">Failover</label>
+                                                <div class="col-sm-7">
+                                                    <div class="btn-group">
+                                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                            <span data-bind="visible: !ignoredClient()">Include</span>
+                                                            <span data-bind="visible: ignoredClient">Skip</span>
+                                                            <span class="caret"></span>
+                                                        </button>
+                                                        <ul class="dropdown-menu" role="menu">
+                                                            <li><a href="#" data-bind="click: includeFailover">Include</a></li>
+                                                            <li><a href="#" data-bind="click: skipFailover">Skip</a></li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-4 control-label">Transitive Replication</label>
+                                                <div class="col-sm-7">
+                                                    <div class="btn-group">
+                                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                            <span data-bind="visible: transitiveReplicationBehavior() === 'None'">Changed only</span>
+                                                            <span data-bind="visible: transitiveReplicationBehavior() === 'Replicate'">Changed and replicated</span>
+                                                            <span class="caret"></span>
+                                                        </button>
+                                                        <ul class="dropdown-menu" role="menu">
+                                                            <li><a href="#" data-bind="click: transitiveReplicationBehavior.bind(transitiveReplicationBehavior, 'None')">Changed only</a></li>
+                                                            <li><a href="#" data-bind="click: transitiveReplicationBehavior.bind(transitiveReplicationBehavior, 'Replicate')">Changed and replicated</a></li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="clearfix"></div>
+        </div>
+    </div>
+</form>

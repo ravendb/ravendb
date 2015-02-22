@@ -140,7 +140,7 @@ namespace Raven.Tests.Issues
 			ravenConfiguration.Storage.Esent.JournalsStoragePath = jouranlDir;
 			ravenConfiguration.Storage.Voron.JournalsStoragePath = jouranlDir;
 
-            using (var db = new DocumentDatabase(ravenConfiguration))
+            using (var db = new DocumentDatabase(ravenConfiguration, null))
             {
                 //db.SpinBackgroundWorkers(); -- indexing disabled here
 

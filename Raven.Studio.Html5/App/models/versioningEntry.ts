@@ -1,6 +1,6 @@
 ﻿import documentMetadata = require("models/documentMetadata");
 
-class versioningEntry {
+class versioningEntry implements copyFromParentDto<versioningEntry> {
     collection = ko.observable<string>().extend({ required: true });
     maxRevisions = ko.observable<number>().extend({ required: true });
     exclude = ko.observable<boolean>().extend({ required: true });
@@ -57,10 +57,18 @@ class versioningEntry {
         };
 
         if (includeMetadata && this.__metadata) {
-            dto['@metadata'] = this.__metadata.toDto();
+            dto["@metadata"] = <any>(this.__metadata.toDto());
         }
 
         return dto;
+    }
+
+    copyFromParent(parent: versioningEntry) {
+        this.collection(parent.collection());
+        this.maxRevisions(parent.maxRevisions());
+        this.exclude(parent.exclude());
+        this.fromDatabase(true);
+        this.__metadata = parent.__metadata;
     }
 }
 

@@ -229,6 +229,42 @@ namespace Raven.Abstractions.Data
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
         }
 
+	    public class Versioning
+	    {
+			public const string RavenVersioningPrefix = "Raven/Versioning/";
+			public const string RavenVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
+	    }
+
+	    public class SqlReplication
+	    {
+			public const string SqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
+	    }
+
+        public class PeriodicExport
+        {
+            public const string AwsAccessKey = "Raven/AWSAccessKey";
+            public const string AwsSecretKey = "Raven/AWSSecretKey";
+            public const string AzureStorageAccount = "Raven/AzureStorageAccount";
+            public const string AzureStorageKey = "Raven/AzureStorageKey";
+        }
+
+	    public class Global
+	    {
+		    public const string GlobalSettingsDocumentKey = "Raven/Global/Settings";
+
+			public const string ReplicationConflictResolutionDocumentName = "Raven/Global/Replication/Config";
+		    public const string ReplicationDestinationsDocumentName = "Raven/Global/Replication/Destinations";
+
+		    public const string VersioningDocumentPrefix = "Raven/Global/Versioning/";
+		    public const string VersioningDefaultConfigurationDocumentName = "Raven/Global/Versioning/DefaultConfiguration";
+
+		    public const string PeriodicExportDocumentName = "Raven/Global/Backup/Periodic/Setup";
+
+		    public const string SqlReplicationConnectionsDocumentName = "Raven/Global/SqlReplication/Connections";
+
+		    public const string JavascriptFunctions = "Raven/Global/Javascript/Functions";
+	    }
+
 	    public static class Smuggler
 	    {
 		    public const string CallContext = "Raven/Smuggler/CallContext";

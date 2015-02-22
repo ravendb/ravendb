@@ -157,9 +157,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[RavenRoute("databases/{databaseName}/replication/topology")]
 		public HttpResponseMessage TopologyGet()
 		{
-			var documentsController = new DocumentsController();
+			var documentsController = new ConfigurationController();
 			documentsController.InitializeFrom(this);
-			return documentsController.DocGet(Constants.RavenReplicationDestinations);
+			return documentsController.ReplicationConfigurationGet();
 		}
 
 		[Obsolete("Use RavenFS instead.")]
@@ -689,6 +689,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			var enabledReplicationDestinations = replicationDocument.Destinations
 				.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
+				.Select(x => (ReplicationDestination)x)
 				.ToList();
 
 			if (destinationPredicate != null)
@@ -746,6 +747,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
 			var enabledReplicationDestinations = replicationDocument.Destinations
 				.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
+				.Select(x => (ReplicationDestination)x)
 				.ToList();
 
 			if (additionalDestinationPredicate != null)

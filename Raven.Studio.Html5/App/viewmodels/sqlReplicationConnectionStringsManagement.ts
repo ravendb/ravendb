@@ -1,14 +1,14 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/database");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import sqlReplicationConnections = require("models/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/predefinedSqlConnection");
 import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
-import appUrl = require('common/appUrl');
+import appUrl = require("common/appUrl");
 import editSqlReplication = require("viewmodels/editSqlReplication");
-import app = require("durandal/app");
+import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/getEffectiveSqlReplicationConnectionStringsCommand");
+import messagePublisher = require("common/messagePublisher");
+import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{
     
@@ -16,16 +16,21 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     connections = ko.observable<sqlReplicationConnections>();
     isSaveEnabled: KnockoutComputed<boolean>;
     
+    usingGlobal = ko.observable<boolean>(false);
+    hasGlobalValues = ko.observable<boolean>(false);
+
     constructor() {
         super();
     }
 
     loadConnections():JQueryPromise<any> {
-        return new getDocumentWithMetadataCommand("Raven/SqlReplication/Connections", this.activeDatabase())
+        return new getEffectiveSqlReplicationConnectionStringsCommand(this.activeDatabase())
             .execute()
-            .done((x: document) => {
-                var dto: any = x.toDto(true);
-                this.connections(new sqlReplicationConnections(dto));
+            .done((repSetup: configurationDocumentDto<sqlReplicationConnectionsDto>) => {
+                this.usingGlobal(repSetup.GlobalExists && !repSetup.LocalExists);
+                this.hasGlobalValues(repSetup.GlobalExists);
+
+                this.connections(new sqlReplicationConnections(repSetup));
                 if (this.connections().predefinedConnections().length > 0) {
                     this.connections().predefinedConnections().forEach(x=> this.subscribeToSqlReplicationConnectionName(x));
                 }
@@ -55,12 +60,23 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     }
 
     save() {
-        var newDoc = new document(this.connections().toDto());
-        this.attachReservedMetaProperties("Raven/SqlReplication/Connections", newDoc.__metadata);
+        if (this.usingGlobal()) {
+            new deleteDocumentCommand("Raven/SqlReplication/Connections", this.activeDatabase())
+                .execute()
+                .done(() => {
+                    messagePublisher.reportSuccess("Settings were successfully saved!");
+                    this.dirtyFlag().reset();
+                })
+                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save settings!", response.responseText, response.statusText));
+        } else {
+            var newDoc = new document(this.connections().toDto());
+            this.attachReservedMetaProperties("Raven/SqlReplication/Connections", newDoc.__metadata);
 
-        var saveCommand = new saveDocumentCommand("Raven/SqlReplication/Connections", newDoc, this.activeDatabase());
-        var saveTask = saveCommand.execute();
-        saveTask.done(() => this.dirtyFlag().reset());
+            var saveCommand = new saveDocumentCommand("Raven/SqlReplication/Connections", newDoc, this.activeDatabase());
+            var saveTask = saveCommand.execute();
+            saveTask.done(() => this.dirtyFlag().reset());
+        }
+       
     }
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {
@@ -75,8 +91,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
 
 
     addSqlReplicationConnection() {
-        var newPredefinedConnection: predefinedSqlConnection;
-        newPredefinedConnection = predefinedSqlConnection.empty();
+        var newPredefinedConnection = predefinedSqlConnection.empty();
         this.connections().predefinedConnections.splice(0, 0, newPredefinedConnection);
         this.subscribeToSqlReplicationConnectionName(newPredefinedConnection);
         newPredefinedConnection.name("New");
@@ -121,8 +136,8 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         if (event.originalEvent) {
             var curConnectionString = !!obj.connectionString() ? obj.connectionString().trim() : "";
             if (curConnectionString === "" ||
-                editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
-                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = editSqlReplication.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
+                sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
+                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
                 if (!!matchingConnectionStringPair) {
                     var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
                     obj.connectionString(
@@ -131,6 +146,22 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
                 }
             }
         }
+    }
+
+    override(value: boolean, config: predefinedSqlConnection) {
+        config.hasLocal(value);
+        if (!config.hasLocal()) {
+            config.copyFromGlobal();
+        }
+    }
+
+    useLocal() {
+        this.usingGlobal(false);
+    }
+
+    useGlobal() {
+        this.usingGlobal(true);
+        this.connections().copyFromParent();
     }
 }
 

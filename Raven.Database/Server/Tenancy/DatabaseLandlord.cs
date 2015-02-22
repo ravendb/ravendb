@@ -129,7 +129,7 @@ namespace Raven.Database.Server.Tenancy
 				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
                 AssertLicenseParameters(config);
-                var documentDatabase = new DocumentDatabase(config, transportState);
+                var documentDatabase = new DocumentDatabase(config, systemDatabase, transportState);
 
 				documentDatabase.SpinBackgroundWorkers();
 				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;

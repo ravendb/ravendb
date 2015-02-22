@@ -40,24 +40,51 @@ namespace Raven.Database.Bundles.PeriodicExports
 		{
 			Database = database;
 
+			Database.ConfigurationRetriever.SubscribeToConfigurationDocumentChanges(PeriodicExportSetup.RavenDocumentKey, ResetSetupValuesFromDocument);
+
 			Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
 			{
 				if (notification.Id == null)
 					return;
-				if (PeriodicExportSetup.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false &&
-					PeriodicExportStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (PeriodicExportStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
 					return;
 
-				if (incrementalBackupTimer != null)
-					Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
-
-				if (fullBackupTimer != null)
-					Database.TimerManager.ReleaseTimer(fullBackupTimer);
-
-				ReadSetupValuesFromDocument();
+				ResetSetupValuesFromDocument();
 			};
 
 			ReadSetupValuesFromDocument();
+		}
+
+		private void ResetSetupValuesFromDocument()
+		{
+			lock (this)
+			{
+				if (incrementalBackupTimer != null)
+				{
+					try
+					{
+						Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
+					}
+					finally
+					{
+						incrementalBackupTimer = null;
+					}
+				}
+
+				if (fullBackupTimer != null)
+				{
+					try
+					{
+						Database.TimerManager.ReleaseTimer(fullBackupTimer);
+					}
+					finally
+					{
+						fullBackupTimer = null;
+					}
+				}
+
+				ReadSetupValuesFromDocument();
+			}
 		}
 
 		private void ReadSetupValuesFromDocument()
@@ -67,8 +94,8 @@ namespace Raven.Database.Bundles.PeriodicExports
 				try
 				{
 					// Not having a setup doc means this DB isn't enabled for periodic exports
-					var document = Database.Documents.Get(PeriodicExportSetup.RavenDocumentKey, null);
-					if (document == null)
+					var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<PeriodicExportSetup>(PeriodicExportSetup.RavenDocumentKey);
+					if (configurationDocument == null)
 					{
 						exportConfigs = null;
 						exportStatus = null;
@@ -78,7 +105,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 					var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey, null);
 
 					exportStatus = status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
-					exportConfigs = document.DataAsJson.JsonDeserialization<PeriodicExportSetup>();
+					exportConfigs = configurationDocument.MergedDocument;
 
 					if (exportConfigs.Disabled)
 					{
@@ -86,10 +113,10 @@ namespace Raven.Database.Bundles.PeriodicExports
 						return;
 					}
 
-					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
-					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
-					azureStorageAccount = Database.Configuration.Settings["Raven/AzureStorageAccount"];
-					azureStorageKey = Database.Configuration.Settings["Raven/AzureStorageKey"];
+					awsAccessKey = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AwsAccessKey);
+					awsSecretKey = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AwsSecretKey);
+					azureStorageAccount = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AzureStorageAccount);
+					azureStorageKey = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AzureStorageKey);
 
 					if (exportConfigs.IntervalMilliseconds.GetValueOrDefault() > 0)
 					{
@@ -139,14 +166,14 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 		private void TimerCallback(bool fullBackup)
 		{
-		    if (currentTask != null)
+			if (currentTask != null)
 				return;
 
-            if (Database.Disposed)
-            {
-                Dispose();
-                return;
-            }
+			if (Database.Disposed)
+			{
+				Dispose();
+				return;
+			}
 
 			// we have shared lock for both incremental and full backup.
 			lock (this)
@@ -168,7 +195,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 							if (localBackupConfigs == null)
 								return;
 
-							if (localBackupConfigs.Disabled) 
+							if (localBackupConfigs.Disabled)
 								return;
 
 							if (fullBackup == false)
@@ -185,7 +212,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 							}
 
 							var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
-							if (Directory.Exists(backupPath) == false) 
+							if (Directory.Exists(backupPath) == false)
 								Directory.CreateDirectory(backupPath);
 
 							if (fullBackup)
@@ -206,7 +233,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								}
 							}
 
-                            var smugglerOptions = dataDumper.Options;
+							var smugglerOptions = dataDumper.Options;
 							if (fullBackup == false)
 							{
 								smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
@@ -216,8 +243,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
-
-                            var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+							var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
 
 							if (fullBackup == false)
 							{
@@ -340,7 +366,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 		private void UploadToGlacier(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
 		{
 			if (awsAccessKey == Constants.DataCouldNotBeDecrypted ||
-			    awsSecretKey == Constants.DataCouldNotBeDecrypted)
+				awsSecretKey == Constants.DataCouldNotBeDecrypted)
 			{
 				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
 			}
