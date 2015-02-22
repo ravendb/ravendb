@@ -386,6 +386,9 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
+				if (performanceResult != null)
+					performanceResult.OnCompleted = null;
+
 				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
