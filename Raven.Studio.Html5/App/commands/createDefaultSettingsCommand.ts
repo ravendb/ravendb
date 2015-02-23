@@ -62,7 +62,9 @@ class createDefaultSettingsCommand extends commandBase {
             new versioningEntry({
                 Id: "DefaultConfiguration",
                 MaxRevisions: 5,
-                Exclude: false
+                Exclude: false,
+                ExcludeUnlessExplicit: false,
+                PurgeOnDelete: false
             })
         ];
     }
