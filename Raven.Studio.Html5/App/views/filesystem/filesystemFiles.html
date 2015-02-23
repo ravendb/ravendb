@@ -44,7 +44,7 @@
                     </button>
                 </div>
                 <div class="btn-group" data-bind="visible: hasAnyFileSelected">
-                    <button type="button" class="btn btn-default" data-bind="click: editSelectedFile" title="Edit selected document (F2)">
+                    <button type="button" class="btn btn-default" data-bind="enable: selectedFilesIndices().length == 1, click: editSelectedFile" title="Edit selected document (F2)">
                         <i class="fa fa-pencil"></i>
                     </button>
                     <button type="button" class="btn btn-default" data-bind="click: deleteSelectedFiles" title="Delete selected documents (DEL)">
