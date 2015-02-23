@@ -343,7 +343,7 @@ class ctor {
     getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {
         var customColumns = this.settings.customColumns();
         var customConfig = customColumns.findConfigFor(binding);
-        if (customConfig && customColumns.customMode() === true) {
+        if (customConfig && customColumns.customMode()) {
             return customConfig.width();
         }
 
@@ -377,19 +377,19 @@ class ctor {
 
         var columnsNeeded = {};
 
-        if (this.settings.customColumns().hasOverrides()) {
+        var hasOverrides = this.settings.customColumns().hasOverrides();
+
+        if (hasOverrides) {
             var colParams = this.settings.customColumns().columns();
-            for (var i = 0; i < colParams.length; i++) {
-                var colParam = colParams[i];
-                columnsNeeded[colParam.binding()] = null;
+            for (var i = 0, x = colParams.length; i < x; i++) {
+                columnsNeeded[colParams[i].binding()] = null;
             }
         } else {
-            for (var i = 0; i < rows.length; i++) {
+            for (var i = 0, x = rows.length; i < x; i++) {
                 var currentRow = rows[i];
                 var rowProperties = currentRow.getDocumentPropertyNames();
-                for (var j = 0; j < rowProperties.length; j++) {
-                    var property = rowProperties[j];
-                    columnsNeeded[property] = null;
+                for (var j = 0, y = rowProperties.length; j < y; j++) {
+                    columnsNeeded[rowProperties[j]] = null;
                 }
             }
         }
@@ -402,12 +402,12 @@ class ctor {
             delete columnsNeeded[colName];
         }
 
-        var idColumn = this.columns.first(x=> x.binding == "Id");
+        var idColumn = this.columns.first(x => x.binding === "Id");
         var idColumnExists = idColumn ? 1 : 0;
 
         var unneededColumns: string[] = [];
         ko.utils.arrayForEach(existingColumns, col => {
-            if (col.binding !== "Id" && col.binding !== "__IsChecked" && rows.every(row => !row.getDocumentPropertyNames().contains(col.binding))) {
+            if (col.binding !== "Id" && col.binding !== "__IsChecked" && !hasOverrides && rows.every(row => !row.getDocumentPropertyNames().contains(col.binding))) {
                 unneededColumns.push(col.binding);
             }
         });

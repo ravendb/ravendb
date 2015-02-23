@@ -224,12 +224,17 @@ class selectColumns extends dialogViewModelBase {
     }
     searchForCompletions() {
         this.activeInput = $("[id ^= 'binding-']:focus");
-        this.autoCompleterSupport.searchForCompletions(this.activeInput);
+        if (this.activeInput.length > 0) {
+            this.autoCompleterSupport.searchForCompletions(this.activeInput);
+        }
     }
 
     completeTheWord(selectedCompletion: string) {
         if (this.activeInput.length > 0) {
-            this.autoCompleterSupport.completeTheWord(this.activeInput, selectedCompletion);
+            this.autoCompleterSupport.completeTheWord(this.activeInput, selectedCompletion, newValue => {
+                var columnParams = <customColumnParams> ko.dataFor(this.activeInput[0]);
+                columnParams.binding(newValue);
+            });
         }
     }
 }
