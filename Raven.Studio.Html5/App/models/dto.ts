@@ -432,6 +432,8 @@ interface versioningEntryDto extends documentDto {
   Id: string;
   MaxRevisions: number;
   Exclude: boolean;
+  ExcludeUnlessExplicit: boolean;
+  PurgeOnDelete: boolean;
 }
 
 interface versioningDto {
