@@ -41,6 +41,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\renameFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFoldersCommand.ts" />
@@ -196,6 +197,7 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\fileRenameDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestions.ts" />
@@ -460,6 +462,7 @@
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
+    <Content Include="App\views\filesystem\fileRenameDialog.html" />
     <Content Include="App\views\filesystem\settings.html" />
     <Content Include="App\views\filesystem\versioning.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
