@@ -1,38 +1,38 @@
-﻿<div class="messageBox" tabindex="-1" style="width: 715px;">
-    <div class=" modal-header">
-        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-            <i class="fa fa-times"></i>
-        </button>
-        <h4 class="modal-title">Choose columns</h4>
-    </div>
-    <div class="modal-body">
-        <div class="row">
-            <form class="form-horizontal" role="form">
-                <div class="form-group">
-                    <label for="inputEmail3" class="col-sm-2 control-label">
-                        Columns
-                    </label>
-                    <div class="col-sm-10">
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="visible: !customColumns.customMode()">Automatic</span>
-                                <span data-bind="visible: customColumns.customMode">Custom</span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" role="menu">
-                                <li><a href="#" data-bind="click: customScheme.bind($data, false)">Automatic</a></li>
-                                <li><a href="#" data-bind="click: customScheme.bind($data, true)">Custom</a></li>
-                            </ul>
+﻿
+<form id="selectColumnsForm" data-bind="submit: changeCurrentColumns">
+    <div class="messageBox" tabindex="-1" style="width: 715px;">
+        <div class=" modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title">Choose columns</h4>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="form-horizontal" role="form">
+                    <div class="form-group">
+                        <label for="inputEmail3" class="col-sm-2 control-label">
+                            Columns
+                        </label>
+                        <div class="col-sm-10">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="visible: !customColumns.customMode()">Automatic</span>
+                                    <span data-bind="visible: customColumns.customMode">Custom</span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li><a href="#" data-bind="click: customScheme.bind($data, false)">Automatic</a></li>
+                                    <li><a href="#" data-bind="click: customScheme.bind($data, true)">Custom</a></li>
+                                </ul>
+                            </div>
+                            <p class="help-block" data-bind="visible: !customColumns.customMode()">
+                                <i class="fa fa-info-circle text-info"></i> RavenDB will choose columns based on visible documents
+                            </p>
                         </div>
-                        <p class="help-block" data-bind="visible: !customColumns.customMode()">
-                            <i class="fa fa-info-circle text-info"></i> RavenDB will choose columns based on visible documents
-                        </p>
                     </div>
                 </div>
-            </form>
-        </div>
-        <form id="selectColumnsForm">
-
+            </div>
 
             <table class="table table-hover" data-bind="visible: customColumns.customMode(), css: { 'custom-table': isScrollNeeded }">
                 <thead>
@@ -47,7 +47,7 @@
                     <tr>
                         <td class="col-md-3">
                             <div style="position: relative">
-                                <input class="form-control" required type="text" data-bind="attr: { 'id': $root.generateBindingInputId($index()) }, value: binding, valueUpdate: 'afterkeydown', event: { keydown: $root.consumeUpDownArrowKeys.bind($root), click: $root.consumeClick.bind($root) }" autocomplete="off" />
+                                <input class="form-control" required type="text" data-bind="customValidity: bindingCustomValidity, attr: { 'id': $root.generateBindingInputId($index()) }, value: binding, valueUpdate: 'afterkeydown', event: { keydown: $root.consumeUpDownArrowKeys.bind($root), click: $root.consumeClick.bind($root) }" autocomplete="off" />
                                 <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + $root.generateBindingInputId($index()), foreach: $root.autoCompleteResults">
                                     <li role="presentation" data-bind="click: $root.completeTheWord.bind($root)">
                                         <a href="#" data-bind="click: $root.completeTheWord.bind($root)">
@@ -69,17 +69,16 @@
                     </tr>
                 </tbody>
             </table>
-        </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Ok</button>
+            <button type="button" class="btn pull-left btn-default" data-bind="click: insertNewRow, visible: customColumns.customMode()">
+                <i class="fa fa-plus"></i> New column
+            </button>
+            <button type="button" class="btn pull-left btn-default" data-bind="click: saveAsDefault">
+                <i class="fa fa-save"></i> Save as default
+            </button>
+        </div>
     </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-        <button class="btn btn-primary" data-bind="click: changeCurrentColumns">Ok</button>
-        <button type="button" class="btn pull-left btn-default" data-bind="click: insertNewRow, visible: customColumns.customMode()">
-            <i class="fa fa-plus"></i> New column
-        </button>
-        <button type="button" class="btn pull-left btn-default" data-bind="click: saveAsDefault">
-            <i class="fa fa-save"></i> Save as default
-        </button>
-    </div>
-</div>
-
+</form>
