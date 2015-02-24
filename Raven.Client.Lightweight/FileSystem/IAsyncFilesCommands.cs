@@ -71,7 +71,7 @@ namespace Raven.Client.FileSystem
 
         Task UpdateMetadataAsync(string filename, RavenJObject metadata);
 
-        Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? size = null, Action<string, long> progress = null);
+        Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? size = null);
         Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size);
 
         Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
