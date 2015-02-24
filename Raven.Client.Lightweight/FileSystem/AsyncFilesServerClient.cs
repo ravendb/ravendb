@@ -250,7 +250,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task DeleteAsync(string filename, Etag etag = null)
+        public Task DeleteAsync(string filename)
         {
             return ExecuteWithReplication("DELETE", async operation =>
             {
