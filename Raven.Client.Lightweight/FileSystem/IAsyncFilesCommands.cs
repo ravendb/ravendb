@@ -64,7 +64,7 @@ namespace Raven.Client.FileSystem
         Task<FileSystemStats> GetStatisticsAsync();
 
 
-        Task DeleteAsync(string filename, Etag etag = null);
+        Task DeleteAsync(string filename);
         Task RenameAsync(string currentName, string newName);
 
         Task<RavenJObject> GetMetadataForAsync(string filename);
