@@ -750,12 +750,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null)
-        {
-            return UploadAsync(filename, source, null, size, progress);
-        }
-
-        public Task UploadAsync(string filename, Stream source, RavenJObject metadata, long? size = null, Action<string, long> progress = null)
+        public Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? size = null)
         {
             if (metadata == null)
                 metadata = new RavenJObject();
