@@ -12,6 +12,7 @@ using System.Linq;
 using System.Management;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
@@ -39,11 +40,8 @@ namespace Raven.Database.Util
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
 
-            var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
-			foreach (var jsonConverter in Default.Converters)
-			{
-				jsonSerializer.Converters.Add(jsonConverter);
-			}
+			var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+			jsonSerializer.Formatting=Formatting.Indented;
 
             if (database.StartupTasks.OfType<ReplicationTask>().Any())
             {
