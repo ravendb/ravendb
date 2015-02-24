@@ -73,7 +73,7 @@ namespace Raven.Smuggler
         public virtual async Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take)
         {
             ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
-            return await PrimaryStore.AsyncFilesCommands.StreamFilesAsync(lastEtag, pageSize: take);
+            return await PrimaryStore.AsyncFilesCommands.StreamFileHeadersAsync(lastEtag, pageSize: take);
         }
 
         public virtual Task<Stream> DownloadFile(FileHeader file)

@@ -380,7 +380,7 @@ namespace Raven.Client.FileSystem
 			return ExecuteWithReplication("GET", operation => StartsWithAsyncImpl(prefix, matches, start, pageSize, operation));
 	    }
 
-	    public async Task<IAsyncEnumerator<FileHeader>> StreamFilesAsync(Etag fromEtag, int pageSize = int.MaxValue)
+	    public async Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue)
         {
             if (fromEtag == null)
                 throw new ArgumentException("fromEtag");
