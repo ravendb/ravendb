@@ -64,7 +64,7 @@ namespace Raven.Client.FileSystem
         Task<FileSystemStats> GetStatisticsAsync();
 
 
-        Task DeleteAsync(string filename, Etag etag = null);
+        Task DeleteAsync(string filename);
         Task RenameAsync(string currentName, string newName);
 
         Task<RavenJObject> GetMetadataForAsync(string filename);
@@ -87,7 +87,7 @@ namespace Raven.Client.FileSystem
         Task<FileHeader[]> GetAsync(string[] filename);
 		Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize);
 
-        Task<IAsyncEnumerator<FileHeader>> StreamFilesAsync(Etag fromEtag, int pageSize = int.MaxValue);
+        Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue);
 
         
     }
