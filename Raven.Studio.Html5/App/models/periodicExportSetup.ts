@@ -63,11 +63,11 @@ class periodicExportSetup {
 	mainPlaceholder = ko.computed(() => {
 		switch(this.type()) {
 			case this.GLACIER_VAULT:
-				return 'vault name only e.g. myvault';
+				return "vault name only e.g. myvault";
 			case this.S3_BUCKET:
-				return 'bucket name only e.g. mybucket';
+				return "bucket name only e.g. mybucket";
 			case this.AZURE_STORAGE:
-				return 'container name only e.g. mycontainer';
+				return "container name only e.g. mycontainer";
 		}
 	}, this);
 
@@ -98,7 +98,7 @@ class periodicExportSetup {
                     return this.validateAzureContainerNAme(mainValue);
             }
 
-            return '';
+            return "";
         });
     }
 
@@ -109,15 +109,15 @@ class periodicExportSetup {
     */
     validateGlacierVaultName(vaultName: string): string {
         if (vaultName == null || vaultName.length < 1 || vaultName.length > 255) {
-            return 'Vault name must be at least 1 and no more than 255 characters long.';
+            return "Vault name must be at least 1 and no more than 255 characters long.";
         }
         var regEx = /^[A-Za-z0-9_\.-]+$/; 
 
         if (!regEx.test(vaultName)) {
-            return 'Allowed characters are a-z, A-Z, 0-9, \'_\' (underscore), \'-\' (hyphen), and \'.\' (period).';
+            return "Allowed characters are a-z, A-Z, 0-9, '_' (underscore), '-' (hyphen), and '.' (period).";
         }
 
-        return '';
+        return "";
     }
 
     /*
@@ -132,7 +132,7 @@ class periodicExportSetup {
     validateS3Bucket(bucketName: string): string {
 
         if (bucketName == null || bucketName.length < 3 || bucketName.length > 63) {
-            return 'Bucket name must be at least 3 and no more than 63 characters long';
+            return "Bucket name must be at least 3 and no more than 63 characters long";
         }
 
         if (bucketName[0] == '.') {
@@ -156,22 +156,22 @@ class periodicExportSetup {
             if (labelRegExp.test(label) == false) {
                 return false;
             }
-            if (label[0] == '-' || label[label.length - 1] == '-') {
+            if (label[0] == "-" || label[label.length - 1] == "-") {
                 return false;
             }
             
             return true;
         };
         if (labels.some(l => !validLabel(l))) {
-            return 'Bucket name is invalid';
+            return "Bucket name is invalid";
         }
         
         var ipRegExp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
         if (ipRegExp.test(bucketName)) {
-            return 'Bucket name must not be formatted as an IP address (e.g., 192.168.5.4).';
+            return "Bucket name must not be formatted as an IP address (e.g., 192.168.5.4).";
         }
 
-        return '';
+        return "";
     }
 
     /*
@@ -184,23 +184,23 @@ class periodicExportSetup {
     */
     validateAzureContainerNAme(containerName: string): string {
         if (containerName == null || containerName.length < 3 || containerName.length > 63) {
-            return 'Container name must be at least 3 and no more than 63 characters long';
+            return "Container name must be at least 3 and no more than 63 characters long";
         }
 
         var regExp = /^[a-z0-9-]+$/;
         if (!regExp.test(containerName)) {
-            return 'Allowed characters are a-z,0-9 and \'-\' (hyphen).';
+            return "Allowed characters are a-z,0-9 and '-' (hyphen).";
         }
-        if (containerName[0] == '-' || containerName[containerName.length - 1] == '-') {
-            return 'Container name must start and end with a letter or number';
+        if (containerName[0] == "-" || containerName[containerName.length - 1] == "-") {
+            return "Container name must start and end with a letter or number";
         }
 
         var twoDashes = /--/;
         if (twoDashes.test(containerName)) {
-            return 'Consecutive dashes are not permitted in container names';
+            return "Consecutive dashes are not permitted in container names";
         }
 
-        return '';
+        return "";
     }
 
     fromDto(dto: periodicExportSetupDto) {
@@ -256,10 +256,10 @@ class periodicExportSetup {
 
     fromDatabaseSettingsDto(dbSettingsDto: documentDto) {
         this.dbSettingsDto = dbSettingsDto;
-        this.awsAccessKey(dbSettingsDto['Settings']['Raven/AWSAccessKey']);
-        this.awsSecretKey(dbSettingsDto['SecuredSettings']['Raven/AWSSecretKey']);
-        this.azureStorageAccount(dbSettingsDto['Settings']['Raven/AzureStorageAccount']);
-        this.azureStorageKey(dbSettingsDto['SecuredSettings']['Raven/AzureStorageKey']);
+        this.awsAccessKey(dbSettingsDto["Settings"]["Raven/AWSAccessKey"]);
+        this.awsSecretKey(dbSettingsDto["SecuredSettings"]["Raven/AWSSecretKey"]);
+        this.azureStorageAccount(dbSettingsDto["Settings"]["Raven/AzureStorageAccount"]);
+        this.azureStorageKey(dbSettingsDto["SecuredSettings"]["Raven/AzureStorageKey"]);
 
         if (periodicExportSetup.decryptFailedValue === this.awsSecretKey()) {
             this.awsSecretKey("");
@@ -272,19 +272,38 @@ class periodicExportSetup {
     }
 
     toDatabaseSettingsDto(): documentDto {
-        this.dbSettingsDto['Settings']['Raven/AWSAccessKey'] = this.awsAccessKey();
-        this.dbSettingsDto['SecuredSettings']['Raven/AWSSecretKey'] = this.awsSecretKey();
-        this.dbSettingsDto['Settings']['Raven/AzureStorageAccount'] = this.azureStorageAccount();
-        this.dbSettingsDto['SecuredSettings']['Raven/AzureStorageKey'] = this.azureStorageKey();
+        if (this.additionalAwsInfoRequired()) {
+            this.dbSettingsDto["Settings"]["Raven/AWSAccessKey"] = this.awsAccessKey();
+            this.dbSettingsDto["SecuredSettings"]["Raven/AWSSecretKey"] = this.awsSecretKey();
+        } else {
+            delete this.dbSettingsDto["Settings"]["Raven/AWSAccessKey"];
+            delete this.dbSettingsDto["SecuredSettings"]["Raven/AWSSecretKey"];
+        }
+        if (this.additionalAzureInfoRequired()) {
+            this.dbSettingsDto["Settings"]["Raven/AzureStorageAccount"] = this.azureStorageAccount();
+            this.dbSettingsDto["SecuredSettings"]["Raven/AzureStorageKey"] = this.azureStorageKey();
+        } else {
+            delete this.dbSettingsDto["Settings"]["Raven/AzureStorageAccount"];
+            delete this.dbSettingsDto["SecuredSettings"]["Raven/AzureStorageKey"];
+        }
+        
+        return this.dbSettingsDto;
+    }
+
+    removeDatabaseSettings() {
+        delete this.dbSettingsDto["Settings"]["Raven/AWSAccessKey"];
+        delete this.dbSettingsDto["SecuredSettings"]["Raven/AWSSecretKey"];
+        delete this.dbSettingsDto["Settings"]["Raven/AzureStorageAccount"];
+        delete this.dbSettingsDto["SecuredSettings"]["Raven/AzureStorageKey"];
         return this.dbSettingsDto;
     }
 
     getEtag() {
-        return this.toDatabaseSettingsDto()['@metadata']['@etag'];
+        return this.toDatabaseSettingsDto()["@metadata"]["@etag"];
     }
 
     setEtag(newEtag) {
-        this.toDatabaseSettingsDto()['@metadata']['@etag'] = newEtag;
+        this.toDatabaseSettingsDto()["@metadata"]["@etag"] = newEtag;
     }
 
     resetDecryptionFailures() {
@@ -338,6 +357,32 @@ class periodicExportSetup {
 
     private isValidTimeValue(value: number): boolean {
         return value >= 1 && value % 1 === 0;
+    }
+
+    copyFrom(from: periodicExportSetup) {
+        this.onDiskExportEnabled(from.onDiskExportEnabled());
+        this.remoteUploadEnabled(from.remoteUploadEnabled());
+        this.localFolderName(from.localFolderName());
+        this.unsupported(from.unsupported());
+        this.disabled(from.disabled());
+        this.type(from.type());
+        this.mainValue(from.mainValue());
+
+        this.awsAccessKey(from.awsAccessKey());
+        this.awsSecretKey(from.awsSecretKey());
+        this.awsRegionEndpoint(from.awsRegionEndpoint());
+
+        this.s3RemoteFolderName(from.s3RemoteFolderName());
+
+        this.azureStorageAccount(from.azureStorageAccount());
+        this.azureStorageKey(from.azureStorageKey());
+        this.azureRemoteFolderName(from.azureRemoteFolderName());
+
+        this.incrementalBackupInterval(from.incrementalBackupInterval());
+        this.incrementalBackupIntervalUnit(from.incrementalBackupIntervalUnit());
+
+        this.fullBackupInterval(from.fullBackupInterval());
+        this.fullBackupIntervalUnit(from.fullBackupIntervalUnit());
     }
 }
 

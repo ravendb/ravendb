@@ -31,6 +31,7 @@
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteLocalReplicationsSetupCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
@@ -63,6 +64,9 @@
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveConflictResolutionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveSqlReplicationConnectionStringsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveVersioningsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexesDefinitionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexMergeSuggestionsCommand.ts" />
@@ -85,8 +89,10 @@
     <TypeScriptCompile Include="App\commands\replicateTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveAutomaticConflictResolutionDocument.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteLocalPeriodicExportSetupCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
@@ -139,6 +145,7 @@
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
+    <TypeScriptCompile Include="App\models\configurationDocument.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\license.ts" />
@@ -196,6 +203,7 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigVersioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestions.ts" />
@@ -268,6 +276,7 @@
     <TypeScriptCompile Include="App\viewmodels\showDataDialog.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
+    <TypeScriptCompile Include="App\viewmodels\globalConfigSqlReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationSimulationDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationConnectionStringsManagement.ts" />
@@ -350,6 +359,12 @@
     <TypeScriptCompile Include="App\commands\explainReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCachedCollectionsCount.ts" />
+    <TypeScriptCompile Include="App\commands\getGlobalConfigReplicationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveGlobalSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getConfigurationSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveCustomFunctionsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectivePeriodicExportCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
@@ -442,6 +457,14 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugExplainReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\cancelSideBySizeConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfig.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigPeriodicExport.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigReplications.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigQuotas.ts" />
+    <TypeScriptCompile Include="App\models\configurationSettings.ts" />
+    <TypeScriptCompile Include="App\models\configurationSetting.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigCustomFunctions.ts" />
+    <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
@@ -459,9 +482,15 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\globalConfigCustomFunctions.html" />
+    <Content Include="App\views\globalConfigQuotas.html" />
+    <Content Include="App\views\globalConfigReplications.html" />
+    <Content Include="App\views\globalConfigPeriodicExport.html" />
+    <Content Include="App\views\globalConfig.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
     <Content Include="App\views\filesystem\settings.html" />
     <Content Include="App\views\filesystem\versioning.html" />
+    <Content Include="App\views\globalConfigSqlReplication.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />
@@ -489,6 +518,7 @@
     <Content Include="App\views\disableResourceToggleConfirm.html" />
     <Content Include="App\views\runningTasks.html" />
     <Content Include="App\views\studioConfig.html" />
+    <Content Include="App\views\globalConfigVersioning.html" />
     <Content Include="App\views\visualizerImport.html" />
     <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />
@@ -1049,7 +1079,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>31052</DevelopmentServerPort>
+          <DevelopmentServerPort>50411</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

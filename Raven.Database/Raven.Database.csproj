@@ -236,6 +236,19 @@
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
+    <Compile Include="Config\GlobalSettingsDocument.cs" />
+    <Compile Include="Config\GlobalSettingsDocumentProtector.cs" />
+    <Compile Include="Config\Retriever\ConfigurationDocument.cs" />
+    <Compile Include="Config\Retriever\ConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\ConfigurationRetrieverBase.cs" />
+    <Compile Include="Config\Retriever\ConfigurationSettingRetriever.cs" />
+    <Compile Include="Config\Retriever\ConfigurationSettingsDocument.cs" />
+    <Compile Include="Config\Retriever\JavascriptFunctionsRetriever.cs" />
+    <Compile Include="Config\Retriever\ReplicationConflictResolutionConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\PeriodicExportConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\ReplicationConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\SqlReplicationConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\VersioningConfigurationRetriever.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideDeletingFilesTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
@@ -250,6 +263,7 @@
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
+    <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Server\WebApi\ MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
@@ -507,7 +521,7 @@
     <Compile Include="FileSystem\RavenFileSystem.cs" />
     <Compile Include="FileSystem\Search\IndexSearcherHolder.cs" />
     <Compile Include="FileSystem\Search\IndexStorage.cs" />
-    <Compile Include="FileSystem\Search\RavenQueryParser.cs" />
+    <Compile Include="FileSystem\Search\SimpleFilesQueryParser.cs" />
     <Compile Include="FileSystem\Storage\DeleteFileOperation.cs" />
     <Compile Include="FileSystem\Storage\Esent\EsentExtension.cs" />
     <Compile Include="FileSystem\Storage\Exceptions\FileExistsException.cs" />

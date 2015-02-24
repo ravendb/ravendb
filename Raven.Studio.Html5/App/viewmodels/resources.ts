@@ -200,13 +200,13 @@ class resources extends viewModelBase {
     }
 
     private onResourceDeleted(rs: resource) {
-        if (rs.type == database.type) {
+        if (rs.type === database.type) {
             var databaseInArray = this.databases.first((db: database) => db.name == rs.name);
 
             if (!!databaseInArray) {
                 this.databases.remove(databaseInArray);
             }
-        } else if (rs.type == filesystem.type) {
+        } else if (rs.type === filesystem.type) {
             var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == rs.name);
 
             if (!!fileSystemInArray) {

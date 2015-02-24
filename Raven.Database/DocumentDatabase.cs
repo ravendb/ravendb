@@ -29,6 +29,7 @@ using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Actions;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
+using Raven.Database.Config.Retriever;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -88,7 +89,7 @@ namespace Raven.Database
 
 		private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
 
-		public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
+		public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
 		{
 			TimerManager = new ResourceTimerManager();
 			DocumentLock = new PutSerialLock();
@@ -159,6 +160,8 @@ namespace Raven.Database
 					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
 					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
 					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
+
+                    ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
 
 					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
 
@@ -255,6 +258,8 @@ namespace Raven.Database
 		}
 
 		public InMemoryRavenConfiguration Configuration { get; private set; }
+
+		public ConfigurationRetriever ConfigurationRetriever { get; private set; }
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractDeleteTrigger> DeleteTriggers { get; set; }

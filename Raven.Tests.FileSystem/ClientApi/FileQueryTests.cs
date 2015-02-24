@@ -128,6 +128,30 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
+        public async Task CanQueryWhereIn()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .WhereIn(x => x.Name, new [] { "test.fil", "test.file"})
+                                         .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(2, query.Count());
+                Assert.Contains("test.fil", query.Select(x => x.Name));
+                Assert.Contains("test.file", query.Select(x => x.Name));
+            }
+        }
+
+        [Fact]
 		public async Task CanQueryInsideDirectory()
         {
             var store = this.NewStore();

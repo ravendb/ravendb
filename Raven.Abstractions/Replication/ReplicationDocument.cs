@@ -12,12 +12,13 @@ namespace Raven.Abstractions.Replication
 	/// <summary>
 	/// This class represent the list of replication destinations for the server
 	/// </summary>
-	public class ReplicationDocument
+	public class ReplicationDocument<TClass>
+		where TClass : ReplicationDestination
 	{
 		/// <summary>
 		/// Gets or sets the list of replication destinations.
 		/// </summary>
-		public List<ReplicationDestination> Destinations { get; set; }
+		public List<TClass> Destinations { get; set; }
 
 		/// <summary>
 		/// Gets or sets the id.
@@ -42,7 +43,14 @@ namespace Raven.Abstractions.Replication
 		public ReplicationDocument()
 		{
 			Id = Constants.RavenReplicationDestinations;
-			Destinations = new List<ReplicationDestination>();
+			Destinations = new List<TClass>();
 		}
+	}
+
+	/// <summary>
+	/// This class represent the list of replication destinations for the server
+	/// </summary>
+	public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
+	{
 	}
 }

@@ -35,7 +35,7 @@ namespace Raven.Tests.Triggers
 					typeof(HiddenDocumentsTrigger),
 					typeof(HideVirtuallyDeletedDocument),
 					typeof(UpperCaseNamesTrigger)))
-			});
+			}, null);
 			db.Indexes.PutIndex("ByName",
 						new IndexDefinition
 						{

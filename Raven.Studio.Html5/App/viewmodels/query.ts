@@ -10,21 +10,17 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import queryIndexCommand = require("commands/queryIndexCommand");
-import moment = require("moment");
-import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
-import indexesShell = require("viewmodels/indexesShell");
 import database = require("models/database");
 import querySort = require("models/querySort");
 import collection = require("models/collection");
 import getTransformersCommand = require("commands/getTransformersCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/getEffectiveCustomFunctionsCommand");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocumentsMatchingQueryConfirm");
-import saveDocumentCommand = require("commands/saveDocumentCommand");
 import document = require("models/document");
 import customColumnParams = require("models/customColumnParams");
 import customColumns = require("models/customColumns");
 import selectColumns = require("viewmodels/selectColumns");
 import getCustomColumnsCommand = require("commands/getCustomColumnsCommand");
-import ace = require("ace/ace");
 import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getIndexTermsCommand = require("commands/getIndexTermsCommand");
@@ -218,8 +214,10 @@ class query extends viewModelBase {
     private fetchCustomFunctions(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var task = new getCustomFunctionsCommand(db).execute();
-        task.done((cf: customFunctions) => this.currentCustomFunctions(cf))
+        var customFunctionsCommand = new getEffectiveCustomFunctionsCommand(db).execute();
+        customFunctionsCommand.done((cf: configurationDocumentDto<customFunctionsDto>) => {
+            this.currentCustomFunctions(new customFunctions(cf.MergedDocument));
+        })
             .always(() => deferred.resolve());
 
         return deferred;

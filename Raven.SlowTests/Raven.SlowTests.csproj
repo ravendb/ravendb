@@ -76,6 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bugs\AsyncSetBasedOps.cs" />
+    <Compile Include="Bugs\LandlordBug.cs" />
     <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
     <Compile Include="Bugs\TimeoutTester.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />

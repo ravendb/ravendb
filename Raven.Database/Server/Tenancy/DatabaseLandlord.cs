@@ -21,8 +21,6 @@ namespace Raven.Database.Server.Tenancy
 {
     public class DatabasesLandlord : AbstractLandlord<DocumentDatabase>
     {
-        private readonly InMemoryRavenConfiguration systemConfiguration;
-        private readonly DocumentDatabase systemDatabase;
 
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
@@ -30,11 +28,8 @@ namespace Raven.Database.Server.Tenancy
         private const string DATABASES_PREFIX = "Raven/Databases/";
         public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
-        public DatabasesLandlord(DocumentDatabase systemDatabase)
+        public DatabasesLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
-            systemConfiguration = systemDatabase.Configuration;
-            this.systemDatabase = systemDatabase;
-
 			string tempPath = Path.GetTempPath();
 			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
 			if (File.Exists(fullTempPath))
@@ -98,47 +93,34 @@ namespace Raven.Database.Server.Tenancy
             return null;
         }
 
-        public bool TryGetDatabase(string tenantId, out Task<DocumentDatabase> database)
-        {
-            if (Locks.Contains(DisposingLock))
-                throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
-
-            if (!ResourcesStoresCache.TryGetValue(tenantId, out database)) 
-                return false;
-
-            if (!database.IsFaulted && !database.IsCanceled) 
-                return true;
-
-            ResourcesStoresCache.TryRemove(tenantId, out database);
-            DateTime time;
-            LastRecentlyUsed.TryRemove(tenantId, out time);
-            return false;
-        }
-
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
 			if (Locks.Contains(DisposingLock))
 				throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");
 
-            if (ResourcesStoresCache.TryGetValue(tenantId, out database))
-            {
-                if (database.IsFaulted || database.IsCanceled)
-                {
-                    ResourcesStoresCache.TryRemove(tenantId, out database);
-                    DateTime time;
-                    LastRecentlyUsed.TryRemove(tenantId, out time);
-                    // and now we will try creating it again
-                }
-                else
-                {
-                    return true;
-                }
-            }
+			if (Locks.Contains(tenantId))
+				throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
 
-            if (Locks.Contains(tenantId))
-                throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
+	        ManualResetEvent cleanupLock;
+			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad) == false)
+				throw new InvalidOperationException(string.Format("Database '{0}' is currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxSecondsForTaskToWaitForDatabaseToLoad));
 
-            var config = CreateTenantConfiguration(tenantId);
+	        if (ResourcesStoresCache.TryGetValue(tenantId, out database))
+	        {
+		        if (database.IsFaulted || database.IsCanceled)
+		        {
+			        ResourcesStoresCache.TryRemove(tenantId, out database);
+			        DateTime time;
+			        LastRecentlyUsed.TryRemove(tenantId, out time);
+			        // and now we will try creating it again
+		        }
+		        else
+		        {
+			        return true;
+		        }
+	        }
+
+	        var config = CreateTenantConfiguration(tenantId);
             if (config == null)
                 return false;
 
@@ -147,7 +129,7 @@ namespace Raven.Database.Server.Tenancy
 				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
                 AssertLicenseParameters(config);
-                var documentDatabase = new DocumentDatabase(config, transportState);
+                var documentDatabase = new DocumentDatabase(config, systemDatabase, transportState);
 
 				documentDatabase.SpinBackgroundWorkers();
 				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;

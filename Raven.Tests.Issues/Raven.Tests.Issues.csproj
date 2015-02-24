@@ -120,6 +120,14 @@
     <Compile Include="RavenDB-3150.cs" />
     <Compile Include="RavenDB3075.cs" />
     <Compile Include="RavenDB_2627.cs" />
+    <Compile Include="RavenDB_2712\GlobalConfigurationTest.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_JavascriptFunctions.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_PeriodicExport.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_Quotas.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_Replication.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_SqlReplication.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_Versioning.cs" />
     <Compile Include="RavenDB_2867.cs" />
     <Compile Include="RavenDB_2879.cs" />
     <Compile Include="RavenDB-2716.cs" />
@@ -354,6 +362,7 @@
     <Compile Include="RavenDB_3207.cs" />
     <Compile Include="RavenDB_3232.cs" />
     <Compile Include="RavenDB_3237.cs" />
+    <Compile Include="RavenDB_3248.cs" />
     <Compile Include="Ravendb_334.cs" />
     <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_367.cs" />
