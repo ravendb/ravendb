@@ -23,7 +23,16 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Document was properly tested
 		/// </summary>
-		Tested
+		Tested,
+		/// <summary>
+		/// The document was not patched, because skipPatchIfEtagMismatch was set
+		/// and the etag did not match
+		/// </summary>
+		Skipped,
+		/// <summary>
+		/// Neither document body not metadata was changed during patch operation
+		/// </summary>
+		NotModified
 	}
 
 	public class PatchResultData
