@@ -312,8 +312,13 @@ namespace Raven.Database.Server.Controllers
 			var key = GetQueryStringValue("key");
 			if (string.IsNullOrEmpty(key))
 			{
-                var startsWith = GetQueryStringValue("startsWith");
 				var sourceId = GetQueryStringValue("sourceId");
+				var startsWith = GetQueryStringValue("startsWith");
+				var keyToSearch = GetQueryStringValue("contains");
+				if (string.IsNullOrEmpty(startsWith) && string.IsNullOrEmpty(keyToSearch) == false)
+				{
+					startsWith = keyToSearch;
+				}
 
 				List<string> keys = null;
 				Database.TransactionalStorage.Batch(accessor =>
@@ -321,8 +326,8 @@ namespace Raven.Database.Server.Controllers
                     keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
 						.ToList();
 				});
-			    var keyToSearch = GetQueryStringValue("contains");
-                if (!String.IsNullOrEmpty(keyToSearch))
+			    
+                if (string.IsNullOrEmpty(keyToSearch) == false)
                     return GetMessageWithObject(new
                     {
                         Results = keys.Contains(keyToSearch)
