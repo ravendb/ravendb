@@ -242,10 +242,12 @@
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningPutTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="FileSystem\Controllers\FsStudioTasksController.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileDeleteTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
+    <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
@@ -304,6 +306,7 @@
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
     <Compile Include="Server\WebApi\RouteCacher.cs" />
     <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
+    <Compile Include="FileSystem\Smuggler\FilesystemDataDumper.cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />

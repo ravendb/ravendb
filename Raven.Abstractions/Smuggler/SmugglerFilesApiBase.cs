@@ -69,7 +69,10 @@ namespace Raven.Abstractions.Smuggler
                 LastDeletedFileEtag = Options.StartFilesDeletionEtag,
             };
 
-            result.FilePath = Path.GetFullPath(result.FilePath);
+	        if (result.FilePath != null)
+	        {
+				result.FilePath = Path.GetFullPath(result.FilePath);    
+	        }
 
             if (Options.Incremental)
             {
@@ -104,6 +107,9 @@ namespace Raven.Abstractions.Smuggler
 
             SmugglerExportException lastException = null;
 
+	        bool ownedStream = exportOptions.ToStream == null;
+	        var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
+
             try
             {
                 await DetectServerSupportedFeatures(exportOptions.From);
@@ -117,10 +123,6 @@ namespace Raven.Abstractions.Smuggler
                 };
             }
 
-            if (string.IsNullOrWhiteSpace(result.FilePath))
-                throw new SmugglerException("Output directory cannot be null, empty or whitespace.");
-
-            var stream = File.Create(result.FilePath);
             try
             {
                 // used to synchronize max returned values for put/delete operations
@@ -136,10 +138,6 @@ namespace Raven.Abstractions.Smuggler
                     ex.File = result.FilePath;
                     lastException = ex;
                 }
-                catch (Exception)
-                {
-                    throw;
-                }
 
                 if (Options.Incremental)
                 {
@@ -153,7 +151,8 @@ namespace Raven.Abstractions.Smuggler
             }
             finally
             {
-                stream.Dispose();
+				if (ownedStream && stream != null)
+					stream.Dispose();
             }
         }
 
@@ -164,7 +163,10 @@ namespace Raven.Abstractions.Smuggler
             var reportInterval = TimeSpan.FromSeconds(2);
             Operations.ShowProgress("Exporting Files");
 
-            using (var archive = new ZipArchive(stream, ZipArchiveMode.Create))           
+			// We use PositionWrapperStream due to:
+			// http://connect.microsoft.com/VisualStudio/feedbackdetail/view/816411/ziparchive-shouldnt-read-the-position-of-non-seekable-streams
+			using (var positionStream = new PositionWrapperStream(stream))
+			using (var archive = new ZipArchive(positionStream, ZipArchiveMode.Create, true))           
             {
                 var metadataList = new List<FileContainer>();
 
@@ -172,46 +174,57 @@ namespace Raven.Abstractions.Smuggler
 
                 try
                 {
-                    using (var files = await Operations.GetFiles(options.From, lastEtag, Math.Min(Options.BatchSize, int.MaxValue)))
-                    {
-                        while (await files.MoveNextAsync())
-                        {
-                            var file = files.Current;
-                            if (file.IsTombstone)
-                                continue;
+	                while (true)
+	                {
+		                bool hasDocs = false;
+		                using (var files = await Operations.GetFiles(options.From, lastEtag, Math.Min(Options.BatchSize, int.MaxValue)))
+		                {
+			                while (await files.MoveNextAsync())
+			                {
+				                hasDocs = true;
+				                var file = files.Current;
+				                if (file.IsTombstone)
+				                {
+					                lastEtag = file.Etag;
+									continue;
+				                }
 
-                            var tempLastEtag = file.Etag;
-                            if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
-                                break;
+				                var tempLastEtag = file.Etag;
+				                if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+					                break;
 
-                            // Write the metadata (which includes the stream size and file container name)
-                            var fileContainer = new FileContainer
-                            {
-                                Key = Path.Combine(file.Directory.TrimStart('/'), file.Name),
-                                Metadata = file.Metadata,
-                            };
+				                // Write the metadata (which includes the stream size and file container name)
+				                var fileContainer = new FileContainer
+				                {
+					                Key = Path.Combine(file.Directory.TrimStart('/'), file.Name),
+					                Metadata = file.Metadata,
+				                };
 
-                            ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
+				                ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
 
-                            using (var fileStream = await Operations.DownloadFile(file))
-                            using (var zipStream = fileToStore.Open())
-                            {
-                                await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
-                            }
+				                using (var fileStream = await Operations.DownloadFile(file))
+				                using (var zipStream = fileToStore.Open())
+				                {
+					                await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
+				                }
 
-                            metadataList.Add(fileContainer);
+				                metadataList.Add(fileContainer);
 
-                            lastEtag = tempLastEtag;
+				                lastEtag = tempLastEtag;
 
-                            totalCount++;
-                            if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-                            {
-                                //TODO: Show also the MB/sec and total GB exported.
-                                Operations.ShowProgress("Exported {0} files. ", totalCount);
-                                lastReport = SystemTime.UtcNow;
-                            }
-                        }
-                    }
+				                totalCount++;
+				                if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+				                {
+					                //TODO: Show also the MB/sec and total GB exported.
+					                Operations.ShowProgress("Exported {0} files. ", totalCount);
+					                lastReport = SystemTime.UtcNow;
+				                }
+			                }
+		                }
+						if (!hasDocs)
+			                break;
+
+	                }
                 }
                 catch (Exception e)
                 {
