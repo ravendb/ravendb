@@ -23,8 +23,8 @@ namespace Raven.Tests.Issues
 								output(2.5);
 								output('string');
 								output(null);
-								dump([2, 'c']);
-								dump({'a': 'c', 'f': { 'x' : 2}});"
+								output([2, 'c']);
+								output({'a': 'c', 'f': { 'x' : 2}});"
 								;
 
 			var patch = new ScriptedPatchRequest()
@@ -45,20 +45,6 @@ namespace Raven.Tests.Issues
 				Assert.Equal("[2,\"c\"]", patcher.Debug[6]);
 				Assert.Equal("{\"a\":\"c\",\"f\":{\"x\":2}}", patcher.Debug[7]);
 			}
-
-			var patchInvalid = new ScriptedPatchRequest()
-			{
-				Script = "output({ a: 5})"
-			};
-			var ex = Assert.Throws<Exception>(() =>
-			{
-				using (var scope = new DefaultScriptedJsonPatcherOperationScope())
-				{
-					var patcher = new ScriptedJsonPatcher();
-					patcher.Apply(scope, doc, patchInvalid);
-				}
-			});
-			Assert.Contains("Use dump()", ex.Message);
 		}
 	}
 }
