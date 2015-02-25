@@ -94,7 +94,12 @@
                         <div class="form-group" data-bind="if: isS3Bucket, visible: isS3Bucket">
                             <label for="awsRemoteFolder" class="col-sm-3 control-label">Folder name:</label>
                             <div class="col-sm-3">
-                                <input id="awsRemoteFolder" type="text" disabled="disabled" value="{databaseName}" class="form-control" />
+                                <input id="awsRemoteFolder" type="text" disabled="disabled" value="{databaseName}" class="form-control"/>
+                            </div>
+                            <div class="col-sm-1">
+                                <span class="folderHint help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
+                                    <i class="fa fa-info-circle text-info"></i>
+                                </span>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
@@ -118,7 +123,12 @@
                         <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
                             <label for="remoteFolder" class="col-sm-3 control-label">Folder name:</label>
                             <div class="col-sm-3">
-                                <input id="remoteFolder" type="text" value="{databaseName}" class="form-control" disabled="disabled" />
+                                <input id="remoteFolder" type="text" value="{databaseName}" class="form-control" disabled="disabled"/>
+                            </div>
+                            <div class="col-sm-1">
+                                <span class="folderHint help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
+                                    <i class="fa fa-info-circle text-info"></i>
+                                </span>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
