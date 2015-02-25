@@ -1,13 +1,8 @@
-﻿import app = require("durandal/app");
-import system = require("durandal/system");
-import router = require("plugins/router");
-import appUrl = require("common/appUrl");
+﻿import appUrl = require("common/appUrl");
 import shell = require("viewmodels/shell");
 
 import synchronizationReplicationSetup = require("models/filesystem/synchronizationReplicationSetup");
 import synchronizationDestination = require("models/filesystem/synchronizationDestination");
-import filesystem = require("models/filesystem/filesystem");
-
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
