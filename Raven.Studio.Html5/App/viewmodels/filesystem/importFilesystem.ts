@@ -56,13 +56,14 @@ class importDatabase extends viewModelBase {
             .execute()
             .done((result: operationIdDto) => {
                 var operationId = result.OperationId;
-                this.waitForOperationToComplete(db, operationId);
-                db.importStatus("Processing uploaded file");
+                // TODO: uncomment this.waitForOperationToComplete(db, operationId);
+                fs.importStatus("Processing uploaded file");
             })
-            .fail(() => db.importStatus(""))
+            .fail(() => fs.importStatus(""))
             .always(() => this.isUploading = false);
     }
 
+    /*
     private waitForOperationToComplete(db: database, operationId: number) {        
         new getOperationStatusCommand(db, operationId)
             .execute()
@@ -88,7 +89,7 @@ class importDatabase extends viewModelBase {
             }
             setTimeout(() => this.waitForOperationToComplete(db, operationId), 1000);
         }
-    }
+    }*/
 }
 
 export = importDatabase; 

@@ -105,6 +105,24 @@ namespace Raven.Database.FileSystem.Controllers
 					File.Delete(uploadedFilePath);
 				}
 			}, cts.Token);
+
+			long id = 0; //TODO: don't initialize here!
+			/*
+			FileSystem.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+			{
+				StartTime = SystemTime.UtcNow,
+				TaskType = TaskActions.PendingTaskType.ImportDatabase,
+				Payload = fileName,
+
+			}, out id, cts);*/
+
+			return GetMessageWithObject(new
+			{
+				OperationId = id
+			});
+		}
+
+		[HttpPost]
 		[RavenRoute("fs/{fileSystemName}/studio-tasks/exportFilesystem")]
 		public Task<HttpResponseMessage> ExportFilesystem(StudioTasksController.ExportData smugglerOptionsJson)
 		{
