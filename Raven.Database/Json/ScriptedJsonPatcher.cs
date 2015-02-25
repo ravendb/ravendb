@@ -276,7 +276,7 @@ if(customFunctions) {
 					continue;
 
 				var value = jsInstance.Value;
-				string output;
+				string output = null;
 				switch (value.Type)
 				{
 					case Types.Boolean:
@@ -292,11 +292,10 @@ if(customFunctions) {
 					case Types.String:
 						output = value.AsString();
 						break;
-					default: 
-						throw new Exception("Unable to call output() on object. Use dump() instead.");
-
 				}
-				Debug.Add(output);
+
+				if (output != null)
+					Debug.Add(output);
 			}
 
 			engine.Invoke("clear_debug_outputs");
