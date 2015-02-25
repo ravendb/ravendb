@@ -134,8 +134,8 @@
             <button id="keysDialogBtn" class="btn btn-default" title="Displays information about inserted document ids and reduce keys" data-bind="visible: hasIndexSelected, click: displayKeyInfo">
                 <i class="fa fa-key"></i>
             </button>
-            <button class="btn btn-danger" title="Clear" data-bind="visible: hasIndexSelected, click: clearChart">
-                <i class="fa fa-trash-o"></i>
+            <button class="btn btn-default" title="Clear" data-bind="visible: hasIndexSelected, click: clearChart">
+                <i class="fa fa-refresh"></i>
             </button>
         </div>
 
@@ -163,11 +163,8 @@
 
     </div>
 
-    <svg id="visHeader" style="height: 25px" height="25">
-
-    </svg>
-    <div id="visualizerContainer" style="height: 600px" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" class="with-3d-shadow with-transitions">
-
+    <svg data-bind="visible: hasIndexSelected" id="visHeader" style="height: 25px" height="25"></svg>
+    <div id="visualizerContainer" style="height: 600px; width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" class="with-3d-shadow with-transitions">
         <div>
             <svg id="visualizer" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
         </div>

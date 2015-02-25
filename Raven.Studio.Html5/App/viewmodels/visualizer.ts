@@ -239,7 +239,7 @@ class visualizer extends viewModelBase {
         if (key && this.reduceKeys().contains(key)) return;
         this.showLoadingIndicator(true);
         var self = this;
-        new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: "",contains : key}, 0, 10)
+        new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: "", contains: key}, 0, 10)
             .execute()
             .done((x) => {
                 if (x) {
