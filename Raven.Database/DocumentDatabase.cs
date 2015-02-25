@@ -16,6 +16,11 @@ using System.Threading.Tasks;
 using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
+
+using Rachis;
+using Rachis.Storage;
+using Rachis.Transport;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -26,7 +31,10 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Client.Connection;
 using Raven.Database.Actions;
+using Raven.Database.Bundles.Raft.Storage;
+using Raven.Database.Bundles.Raft.Util;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Config.Retriever;
@@ -37,13 +45,13 @@ using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
-using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 
-using metrics.Core;
+
+using Voron;
 
 namespace Raven.Database
 {
@@ -113,7 +121,6 @@ namespace Raven.Database
 
 				backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
 
-
 				recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
 
 				configuration.Container.SatisfyImportsOnce(this);
@@ -161,7 +168,7 @@ namespace Raven.Database
 					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
 					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
 
-                    ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
+					ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
 
 					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
 
@@ -170,6 +177,8 @@ namespace Raven.Database
 					prefetcher = new Prefetcher(workContext);
 					IndexReplacer = new IndexReplacer(this);
 					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
+
+					RaftEngine = initializer.InitializeRaftEngine();
 
 					RaiseIndexingWiringComplete();
 
@@ -195,6 +204,8 @@ namespace Raven.Database
 				}
 			}
 		}
+
+		public RaftEngine RaftEngine { get; private set; }
 
 		public event EventHandler Disposing;
 
@@ -760,6 +771,9 @@ namespace Raven.Database
 			if (TimerManager != null)
 				exceptionAggregator.Execute(TimerManager.Dispose);
 
+			if (RaftEngine != null)
+				exceptionAggregator.Execute(RaftEngine.Dispose);
+
 			try
 			{
 				exceptionAggregator.ThrowIfNeeded();
@@ -1177,7 +1191,60 @@ namespace Raven.Database
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 
+			public RaftEngine InitializeRaftEngine()
+			{
+				var nodeName = database.TransactionalStorage.Id.ToString();
 
+				var url = configuration.ServerUrl;
+				if (string.IsNullOrEmpty(configuration.DatabaseName) == false)
+					url = url.ForDatabase(configuration.DatabaseName);
+
+				url = RaftHelper.NormalizeNodeUrl(url);
+
+				var nodeConnectionInfo = new NodeConnectionInfo
+										 {
+											 Name = nodeName,
+											 Uri = new Uri(url)
+										 };
+
+				var directoryPath = Path.Combine(configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft");
+				if (Directory.Exists(directoryPath) == false)
+					Directory.CreateDirectory(directoryPath);
+
+				var stateMachine = new InMemoryStateMachine();
+
+				InitializeRaftTopology(directoryPath, nodeName, nodeConnectionInfo, stateMachine);
+
+				var options = StorageEnvironmentOptions.ForPath(directoryPath);
+				var transport = new HttpTransport(nodeName);
+
+				var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine) { HeartbeatTimeout = 1000 };
+
+				return new RaftEngine(raftEngineOptions);
+			}
+
+			private static void InitializeRaftTopology(string directoryPath, string nodeName, NodeConnectionInfo nodeConnectionInfo, InMemoryStateMachine stateMachine)
+			{
+				using (var options = StorageEnvironmentOptions.ForPath(directoryPath))
+				{
+					var transport = new HttpTransport(nodeName);
+					var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine);
+
+					try
+					{
+						PersistentState.SetTopologyExplicitly(
+							raftEngineOptions,
+							new Topology(Guid.Parse("76d1d1bfdb4c4a2daeaaf71fc77534eb"), new[] { raftEngineOptions.SelfConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>()), 
+							throwIfTopologyExists: false);
+
+						//PersistentState.ClusterBootstrap(raftEngineOptions);
+					}
+					catch (InvalidOperationException)
+					{
+						// topology exists
+					}
+				}
+			}
 		}
 
 		public void RaiseBackupComplete()
