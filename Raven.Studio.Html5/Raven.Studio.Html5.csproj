@@ -213,6 +213,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\tasks.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\globalConfigVersioning.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestions.ts" />

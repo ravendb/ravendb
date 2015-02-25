@@ -1239,6 +1239,13 @@ enum ResponseCodes {
     InternalServerError = 500
 }
 
+interface synchronizationConfigDto {
+    FileConflictResolution: string;
+    MaxNumberOfSynchronizationsPerDestination: number;
+    SynchronizationLockTimeoutMiliseconds: number;
+}
+}
+
 interface copyFromParentDto<T> {
     copyFromParent(parent: T);
 }
