@@ -98,7 +98,16 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			catch (Exception ex)
 			{
-			    logger.WarnException("Error when trying to open a new DocumentStorageActions", ex);
+			    string location;
+			    try
+			    {
+			        location = new StackTrace(true).ToString();
+			    }
+			    catch (Exception)
+			    {
+			        location = "cannot get stack trace";
+			    }
+			    logger.WarnException("Error when trying to open a new DocumentStorageActions from \r\n" + location, ex);
 			    try
 			    {
 			        Dispose();
