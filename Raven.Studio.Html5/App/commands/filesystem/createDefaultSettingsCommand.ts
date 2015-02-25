@@ -29,7 +29,9 @@ class createDefaultSettingsCommand extends commandBase {
         return new versioningEntry({
             Id: "Raven/Versioning/DefaultConfiguration",
             MaxRevisions: 5,
-            Exclude: false
+            Exclude: false,
+            ExcludeUnlessExplicit: false,
+            PurgeOnDelete: false
         });
     }
 

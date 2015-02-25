@@ -417,10 +417,9 @@ namespace Raven.Database.Linq
 		private static string GetIndexCacheDir(InMemoryRavenConfiguration configuration)
 		{
 			var indexCacheDir = configuration.CompiledIndexCacheDirectory;
-			if (String.IsNullOrWhiteSpace(indexCacheDir))
-			{
-				indexCacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Raven", "CompiledIndexCache");
-			}
+			if (string.IsNullOrWhiteSpace(indexCacheDir))
+				indexCacheDir = Path.Combine(Path.GetTempPath(), "Raven", "CompiledIndexCache");
+
 			if (configuration.RunInMemory == false)
 			{
 				// if we aren't running in memory, we might be running in a mode where we can't write to our base directory

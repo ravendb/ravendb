@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
@@ -72,7 +73,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 					await request.WriteAsync(PrepareMultipartContent(token));
 
 					var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
+					return JsonExtensions.CreateDefaultJsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
 				}
 				catch (Exception exception)
 				{

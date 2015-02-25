@@ -49,6 +49,13 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 				headers.Remove(Constants.RavenCreateVersion);
 			}
 
+			if (headers.ContainsKey(Constants.RavenIgnoreVersioning))
+			{
+				headers.__ExternalState[Constants.RavenIgnoreVersioning] = headers[Constants.RavenIgnoreVersioning];
+				headers.Remove(Constants.RavenIgnoreVersioning);
+				return;
+			}
+
 			FileSystem.Storage.Batch(accessor =>
 			{
 				VersioningConfiguration versioningConfiguration;
@@ -190,7 +197,8 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 
 			versioningConfiguration = accessor.GetVersioningConfiguration();
 			if (versioningConfiguration == null || versioningConfiguration.Exclude
-				|| (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion)))
+				|| (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion))
+				|| metadata.__ExternalState.ContainsKey(Constants.RavenIgnoreVersioning))
 				return false;
 			return true;
 		}

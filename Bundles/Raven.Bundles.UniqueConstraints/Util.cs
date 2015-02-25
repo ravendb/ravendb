@@ -36,14 +36,14 @@ namespace Raven.Bundles.UniqueConstraints
 
         public static bool TryGetUniqueValues(RavenJToken prop, out string[] uniqueValues)
         {
-            if (prop == null || prop.Type == JTokenType.Null)
+            if (prop == null || prop.Type == JTokenType.Null || (prop.Type == JTokenType.String && string.IsNullOrEmpty(prop.Value<string>())))
             {
                 uniqueValues = null;
                 return false;
             }
 
             var array = prop as RavenJArray;
-            uniqueValues = array != null ? array.Select(p => p.Value<string>()).ToArray() : new[] { prop.Value<string>() };
+            uniqueValues = array != null ? array.Select(p => p.Value<string>()).Where(x => !string.IsNullOrEmpty(x)).ToArray() : new[] { prop.Value<string>() };
             return true;
         }
 	}

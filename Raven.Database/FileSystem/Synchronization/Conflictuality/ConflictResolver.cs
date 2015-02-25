@@ -32,7 +32,7 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
 			{
 				var exported = container.GetExportedValues<AbstractFileSynchronizationConflictResolver>();
 
-				var config = GetSynchronizationConfig();
+				var config = SynchronizationConfigAccessor.GetOrDefault(storage);
 
 				if (config == null || config.FileConflictResolution == StraightforwardConflictResolution.None)
 					return exported;
@@ -58,29 +58,6 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
 			}
 		}
 
-		private SynchronizationConfig GetSynchronizationConfig()
-		{
-			try
-			{
-				SynchronizationConfig configDoc = null;
-
-				storage.Batch(
-					accessor =>
-					{
-						if (accessor.ConfigExists(SynchronizationConstants.RavenSynchronizationConfig) == false)
-							return;
-
-						configDoc = accessor.GetConfig(SynchronizationConstants.RavenSynchronizationConfig).JsonDeserialization<SynchronizationConfig>();
-					});
-
-				return configDoc;
-			}
-			catch (Exception e)
-			{
-				Log.Warn("Could not deserialize a synchronization config", e);
-				return null;
-			}
-		}
 
 		public bool TryResolveConflict(string fileName, ConflictItem conflict, RavenJObject localMetadata, RavenJObject remoteMetadata, out ConflictResolutionStrategy strategy)
 		{

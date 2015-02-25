@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import document = require("models/document");
 import dialog = require("plugins/dialog");
 import database = require("models/database");
@@ -7,7 +6,6 @@ import customColumns = require('models/customColumns');
 import customColumnParams = require('models/customColumnParams');
 import saveDocumentCommand = require('commands/saveDocumentCommand');
 import deleteDocumentCommand = require('commands/deleteDocumentCommand');
-import inputCursor = require('common/inputCursor');
 import customFunctions = require('models/customFunctions');
 import autoCompleterSupport = require('common/autoCompleterSupport');
 import messagePublisher = require("common/messagePublisher");
@@ -224,12 +222,17 @@ class selectColumns extends dialogViewModelBase {
     }
     searchForCompletions() {
         this.activeInput = $("[id ^= 'binding-']:focus");
-        this.autoCompleterSupport.searchForCompletions(this.activeInput);
+        if (this.activeInput.length > 0) {
+            this.autoCompleterSupport.searchForCompletions(this.activeInput);
+        }
     }
 
     completeTheWord(selectedCompletion: string) {
         if (this.activeInput.length > 0) {
-            this.autoCompleterSupport.completeTheWord(this.activeInput, selectedCompletion);
+            this.autoCompleterSupport.completeTheWord(this.activeInput, selectedCompletion, newValue => {
+                var columnParams = <customColumnParams> ko.dataFor(this.activeInput[0]);
+                columnParams.binding(newValue);
+            });
         }
     }
 }

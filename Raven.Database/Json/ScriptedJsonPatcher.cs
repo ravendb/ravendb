@@ -273,15 +273,29 @@ if(customFunctions) {
 
 				var jsInstance = property.Value.Value;
 				if (!jsInstance.HasValue)
-					continue;				
-				
-				var output = jsInstance.Value.IsNumber() ? 
-					jsInstance.Value.AsNumber().ToString(CultureInfo.InvariantCulture) : 
-								(jsInstance.Value.IsBoolean() ? //if the parameter is boolean, we need to take it into account, 
-																//since jsInstance.Value.AsString() will not work for boolean values
-										jsInstance.Value.AsBoolean().ToString() : 
-										jsInstance.Value.AsString());
+					continue;
 
+				var value = jsInstance.Value;
+				string output;
+				switch (value.Type)
+				{
+					case Types.Boolean:
+						output = value.AsBoolean().ToString();
+						break;
+					case Types.Null:
+					case Types.Undefined:
+						output = value.ToString();
+						break;
+					case Types.Number:
+						output = value.AsNumber().ToString(CultureInfo.InvariantCulture);
+						break;
+					case Types.String:
+						output = value.AsString();
+						break;
+					default: 
+						throw new Exception("Unable to call output() on object. Use dump() instead.");
+
+				}
 				Debug.Add(output);
 			}
 

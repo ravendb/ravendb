@@ -626,7 +626,7 @@ namespace Raven.Abstractions.Smuggler
 				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
 				var streamReader = new StreamReader(sizeStream);
 
-				jsonReader = new JsonTextReader(streamReader);
+				jsonReader = new RavenJsonTextReader(streamReader);
 
 				if (jsonReader.Read() == false)
 					return;
@@ -906,7 +906,7 @@ namespace Raven.Abstractions.Smuggler
             };
 
             JsonDocument lastEtagsDocument = null;
-            if ( Options.UseContinuationFile )
+            if (Options.UseContinuationFile)
             {
                 lastEtagsDocument = Operations.GetDocument(continuationDocId);
                 if ( lastEtagsDocument == null )
@@ -959,16 +959,19 @@ namespace Raven.Abstractions.Smuggler
                     continue;
 
                 var metadata = document["@metadata"] as RavenJObject;
-                if ( metadata != null )
+                if (metadata != null)
                 {
                     if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
                         continue;
 
                     if (Options.StripReplicationInformation)
                         document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
+
+					if(Options.ShouldDisableVersioningBundle)
+						document["@metadata"] = Operations.DisableVersioning(metadata);
                 }
 
-                if ( Options.UseContinuationFile )
+                if (Options.UseContinuationFile)
                 {
                     tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
                     if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.

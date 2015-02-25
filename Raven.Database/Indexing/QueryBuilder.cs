@@ -53,7 +53,7 @@ namespace Raven.Database.Indexing
 			var originalQuery = query;
 			try
 			{
-				var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
+                var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
 				{
 					DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or
 										? QueryParser.Operator.OR
@@ -78,7 +78,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static string PreProcessComments(string query)
+        internal static string PreProcessComments(string query)
 		{
 			var matches = commentsRegex.Matches(query);
 			if (matches.Count < 1)
@@ -92,7 +92,7 @@ namespace Raven.Database.Indexing
 			return q.ToString();
 		}
 
-		private static Query HandleMethods(Query query, RavenPerFieldAnalyzerWrapper analyzer)
+        internal static Query HandleMethods(Query query, RavenPerFieldAnalyzerWrapper analyzer)
 		{
 			var termQuery = query as TermQuery;
 			if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
@@ -152,7 +152,7 @@ namespace Raven.Database.Indexing
 
 		private static Regex unescapedSplitter = new Regex("(?<!`),(?!`)", RegexOptions.Compiled);
 
-		private static Query HandleMethodsForQueryAndTerm(Query query, Term term)
+		internal static Query HandleMethodsForQueryAndTerm(Query query, Term term)
 		{
 			Func<string, List<string>, Query> value;
 			var field = term.Field;
@@ -168,7 +168,7 @@ namespace Raven.Database.Indexing
 			return value(field, list);
 		}
 
-		private static Query HandleMethodsForQueryAndTerm(Query query, Term[] terms)
+		internal static Query HandleMethodsForQueryAndTerm(Query query, Term[] terms)
 		{
 			Func<string, List<string>, Query> value;
 			var field = terms[0].Field;
@@ -198,7 +198,7 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
-		private static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
+        internal static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
 		{
 			var searchMatches = dateQuery.Matches(query);
 		    if (searchMatches.Count > 0)
@@ -230,7 +230,7 @@ namespace Raven.Database.Indexing
 	        return queryStringBuilder.ToString();
 	    }
 
-	    private static string PreProcessSearchTerms(string query)
+	    internal static string PreProcessSearchTerms(string query)
 		{
 			var searchMatches = searchQuery.Matches(query);
 			if (searchMatches.Count < 1)

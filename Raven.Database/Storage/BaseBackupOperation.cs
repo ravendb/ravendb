@@ -87,6 +87,7 @@ namespace Raven.Database.Storage
 	                if (CanPerformIncrementalBackup())
                     {
                         backupDestinationDirectory = DirectoryForIncrementalBackup();
+						EnsureBackupDestinationExists();
                     }
                     else
                     {
@@ -98,7 +99,11 @@ namespace Raven.Database.Storage
                     throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
                 }
 
-                UpdateBackupStatus(string.Format("Backing up indexes.."), null, BackupStatus.BackupMessageSeverity.Informational);
+				UpdateBackupStatus(string.Format("Backing up data.."), null, BackupStatus.BackupMessageSeverity.Informational);
+
+				ExecuteBackup(backupDestinationDirectory, incrementalBackup);
+
+				UpdateBackupStatus(string.Format("Finished data backup. Executing indexes backup.."), null, BackupStatus.BackupMessageSeverity.Informational);
 
                 // Make sure we have an Indexes folder in the backup location
                 if (!Directory.Exists(Path.Combine(backupDestinationDirectory, "Indexes")))
@@ -126,15 +131,10 @@ namespace Raven.Database.Storage
                     directoryBackup.Execute(progressNotifier);
                 }
 
-                UpdateBackupStatus(string.Format("Finished indexes backup. Executing data backup.."), null, BackupStatus.BackupMessageSeverity.Informational);
-
-                ExecuteBackup(backupDestinationDirectory, incrementalBackup);
-
                 if (databaseDocument != null)
                     File.WriteAllText(Path.Combine(backupDestinationDirectory, Constants.DatabaseDocumentFilename), RavenJObject.FromObject(databaseDocument).ToString());
 
                 OperationFinished();
-
             }
             catch (AggregateException e)
             {

@@ -258,7 +258,7 @@ namespace Raven.Database.Config
 
 		    EmbeddedFilesDirectory = ravenSettings.EmbeddedFilesDirectory.Value.ToFullPath();
 
-			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullPath();
+			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullTempPath();
 
 			var taskSchedulerType = ravenSettings.TaskScheduler.Value;
 			if (taskSchedulerType != null)
@@ -836,7 +836,7 @@ namespace Raven.Database.Config
 		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
 
 		/// <summary>
-		/// Where to cache the compiled indexes
+		/// Where to cache the compiled indexes. Absolute path or relative to TEMP directory.
 		/// Default: ~\Raven\CompiledIndexCache
 		/// </summary>
 		public string CompiledIndexCacheDirectory { get; set; }

@@ -19,21 +19,21 @@ namespace Raven.Database.Extensions
 	{
 		const int retries = 10;
 
-        public static void DeleteFile(string file)
-        {
-            try
-            {
-                File.Delete(file);
-            }
-            catch (IOException)
-            {
+		public static void DeleteFile(string file)
+		{
+			try
+			{
+				File.Delete(file);
+			}
+			catch (IOException)
+			{
 
-            }
-            catch (UnauthorizedAccessException)
-            {
-                
-            }
-        }
+			}
+			catch (UnauthorizedAccessException)
+			{
+
+			}
+		}
 
 		public static void DeleteDirectory(string directory)
 		{
@@ -106,7 +106,7 @@ namespace Raven.Database.Extensions
 					{
 						throw new IOException(WhoIsLocking.ThisFile(path));
 					}
-					catch(IOException)
+					catch (IOException)
 					{
 						var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
 						var stringBuilder = new StringBuilder();
@@ -137,9 +137,20 @@ namespace Raven.Database.Extensions
 					basePath = Path.GetDirectoryName(basePath.EndsWith("\\") ? basePath.Substring(0, basePath.Length - 2) : basePath);
 
 				path = Path.Combine(basePath ?? AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
-		}
+			}
 
 			return Path.IsPathRooted(path) ? path : Path.Combine(basePath ?? AppDomain.CurrentDomain.BaseDirectory, path);
+		}
+
+		public static string ToFullTempPath(this string path)
+		{
+			if (string.IsNullOrWhiteSpace(path))
+				return string.Empty;
+			path = Environment.ExpandEnvironmentVariables(path);
+			if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
+				path = Path.Combine(Path.GetTempPath(), path.Substring(2));
+
+			return Path.IsPathRooted(path) ? path : Path.Combine(Path.GetTempPath(), path);
 		}
 
 		public static void CopyDirectory(string from, string to)
@@ -154,13 +165,13 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-	    static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
-	    {
-	        CopyDirectory(source, target, new string[0]);
-	    }
+		static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
+		{
+			CopyDirectory(source, target, new string[0]);
+		}
 
-        static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, string[] skip)
-        {
+		static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, string[] skip)
+		{
 			if (!target.Exists)
 				Directory.CreateDirectory(target.FullName);
 
@@ -173,11 +184,11 @@ namespace Raven.Database.Extensions
 			// and recurse
 			foreach (DirectoryInfo diSourceDir in source.GetDirectories())
 			{
-                if (skip.Contains(diSourceDir.Name))
-                    continue;
+				if (skip.Contains(diSourceDir.Name))
+					continue;
 
-                DirectoryInfo nextTargetDir = target.CreateSubdirectory(diSourceDir.Name);
-                CopyDirectory(diSourceDir, nextTargetDir, skip);
+				DirectoryInfo nextTargetDir = target.CreateSubdirectory(diSourceDir.Name);
+				CopyDirectory(diSourceDir, nextTargetDir, skip);
 			}
 		}
 
@@ -185,17 +196,17 @@ namespace Raven.Database.Extensions
 		{
 			var sb = new StringBuilder();
 			foreach (byte t in input)
-			    sb.Append(t.ToString("x2"));
+				sb.Append(t.ToString("x2"));
 
-		    return sb.ToString();
-        }
+			return sb.ToString();
+		}
 
-        public static string GetMD5Hash(this Stream stream)
-        {
-            using (var md5 = Encryptor.Current.CreateHash())
-            {
-                return GetMD5Hex(md5.Compute16(stream));
-            }
-        }
+		public static string GetMD5Hash(this Stream stream)
+		{
+			using (var md5 = Encryptor.Current.CreateHash())
+			{
+				return GetMD5Hex(md5.Compute16(stream));
+			}
+		}
 	}
 }

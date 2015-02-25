@@ -432,6 +432,8 @@ interface versioningEntryDto extends documentDto {
   Id: string;
   MaxRevisions: number;
   Exclude: boolean;
+  ExcludeUnlessExplicit: boolean;
+  PurgeOnDelete: boolean;
 }
 
 interface versioningDto {
@@ -618,6 +620,7 @@ interface compactStatusDto {
 interface sqlReplicationTableDto {
     TableName: string;
     DocumentKeyColumn: string;
+    InsertOnlyMode: boolean;
 }
 
 interface sqlReplicationDto extends documentDto {

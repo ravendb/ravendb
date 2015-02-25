@@ -82,8 +82,14 @@ class shell extends viewModelBase {
     isActiveFileSystemDisabled: KnockoutComputed<boolean>;
     canShowFileSystemNavbar = ko.computed(() =>
         !!this.lastActivatedResource()
-        && this.lastActivatedResource().type == filesystem.type
+        && this.lastActivatedResource().type === filesystem.type
         && (this.appUrls.isAreaActive('filesystems')() || this.appUrls.isAreaActive('resources')()));
+
+    canShowFileSystemSettings = ko.computed(() => {
+        if (!this.canShowFileSystemNavbar()) return false;
+        var fs = <filesystem> this.lastActivatedResource();
+        return fs.activeBundles.contains("Versioning");
+    });
 
     static counterStorages = ko.observableArray<counterStorage>();
     isCounterStorageDisabled: KnockoutComputed<boolean>;

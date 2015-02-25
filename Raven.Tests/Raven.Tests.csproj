@@ -630,6 +630,7 @@
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
     <Compile Include="Smuggler\SmugglerIdentitiesTests.cs" />
     <Compile Include="Smuggler\SmugglerTransformScriptsTests.cs" />
+    <Compile Include="Smuggler\SmugglerWithDisabledVersioning_RavenDB_3219.cs" />
     <Compile Include="Sorting\SortByDynamicFields.cs" />
     <Compile Include="Sorting\CustomSorting.cs" />
     <Compile Include="Sorting\SortByNumberOfCharactersFromEnd.cs" />

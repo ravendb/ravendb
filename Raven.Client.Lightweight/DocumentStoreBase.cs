@@ -4,7 +4,7 @@ using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Linq;
-
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -97,12 +97,31 @@ namespace Raven.Client
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
+		/// <summary>
+		/// Executes the index creation.
+		/// </summary>
 	    public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
 	    {
 	        return indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
 	    }
 
-	    /// <summary>
+		/// <summary>
+		/// Executes the index creation in side-by-side mode.
+		/// </summary>
+		public virtual void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			indexCreationTask.SideBySideExecute(DatabaseCommands, Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
+		}
+
+		/// <summary>
+		/// Executes the index creation in side-by-side mode.
+		/// </summary>
+		public virtual Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			return indexCreationTask.SideBySideExecuteAsync(AsyncDatabaseCommands, Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
+		}
+
+		/// <summary>
 		/// Executes the transformer creation
 		/// </summary>
 		public virtual void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)

@@ -251,6 +251,9 @@ namespace Raven.Smuggler
 								if (databaseOptions.StripReplicationInformation) 
 									document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
 
+								if(databaseOptions.ShouldDisableVersioningBundle)
+									document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
+
 								var metadata = document.Value<RavenJObject>("@metadata");
 								var id = metadata.Value<string>("@id");
 								var etag = Etag.Parse(metadata.Value<string>("@etag"));
@@ -301,6 +304,9 @@ namespace Raven.Smuggler
 
 										if (databaseOptions.StripReplicationInformation)
 											document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
+
+										if (databaseOptions.ShouldDisableVersioningBundle)
+											document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
 
 										bulkInsertOperation.Store(document, metadata, id);
 										totalCount++;
@@ -496,6 +502,13 @@ namespace Raven.Smuggler
 				metadata.Remove(Constants.RavenReplicationSource);
 				metadata.Remove(Constants.RavenReplicationVersion);
 			}
+
+			return metadata;
+		}
+
+		public static RavenJToken DisableVersioning(RavenJObject metadata)
+		{
+			metadata.Add(Constants.RavenIgnoreVersioning, true);
 
 			return metadata;
 		}

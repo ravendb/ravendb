@@ -25,7 +25,7 @@ class getInfoPackage extends commandBase {
                 var url = appUrl.forResourceQuery(this.db)  + (this.db.isSystem ? '/admin/debug/info-package' : '/debug/info-package');
                 url += '?singleUseAuthToken=' + token;
                 if (this.withStackTrace && this.db.isSystem) {
-                    url += "?stacktrace";
+                    url += "&stacktrace";
                 }
 
                 var now = d3.time.format("%Y-%m-%d_%H:%M:%S")(new Date());
