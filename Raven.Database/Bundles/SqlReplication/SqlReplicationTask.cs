@@ -157,6 +157,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				var config = GetConfiguredReplicationDestinations();
 				if (config.Count == 0)
 				{
+					log.Debug("No SQL Replications were found, waiting for work");
 					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					continue;
 				}
@@ -175,6 +176,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 				if (relevantConfigs.Count == 0)
 				{
+					log.Debug("No Relevant (Enabled, non errorous SQL Replications were found, waiting for work");
 					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					continue;
 				}
@@ -183,20 +185,36 @@ namespace Raven.Database.Bundles.SqlReplication
 
 				if (leastReplicatedEtag == null)
 				{
+					log.Debug("No least replicated etags were found, waiting for work");
+					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
+					continue;
+				}
+				
+				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
+				
+				Etag latestEtag = null, lastBatchEtag = null;
+
+				if (documents.Count == 1 && documents[0].Etag == _lastStoredSqlReplicationStatusDocumentEtag)
+				{
+					log.Debug("No documents which Etag is greater then the Raven/SqlReplication/Status were found, waiting for work");
 					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					continue;
 				}
 
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
-
-				Etag latestEtag = null, lastBatchEtag = null;
-				if (documents.Count != 0)
+				if (documents.Count == 0)
+					log.Debug("No documents returned from prefetcher");
+				else
 					lastBatchEtag = documents[documents.Count - 1].Etag;
 				
 				var replicationDuration = Stopwatch.StartNew();
 				documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
-				
-				if (documents.Count != 0)
+
+				if (documents.Count == 0)
+				{
+					latestEtag = lastBatchEtag;
+					log.Debug("No documents left after cleaning system document from list, just updating the sql replication status");
+				}
+				else
 					latestEtag = documents[documents.Count - 1].Etag;
 
 				documents.RemoveAll(x => prefetchingBehavior.FilterDocuments(x) == false);
@@ -230,9 +248,11 @@ namespace Raven.Database.Bundles.SqlReplication
 
 						latestEtag = Etag.Max(latestEtag, lastBatchEtag);
 						SaveNewReplicationStatus(localReplicationStatus);
+						log.Debug("There were no non-system documents found, updating Raven/SqlReplication/Status");
 					}
 					else // no point in waiting if we just saved a new doc
 					{
+						log.Debug("There are no non-system documents and no deletes to replicate, waiting for work");
 						Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					}
 					continue;
@@ -354,6 +374,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
+		private Etag _lastStoredSqlReplicationStatusDocumentEtag;
+
 		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus)
 		{
 			int retries = 5;
@@ -363,7 +385,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				try
 				{
 					var obj = RavenJObject.FromObject(localReplicationStatus);
-					Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
+					var putResult = Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
+					_lastStoredSqlReplicationStatusDocumentEtag = putResult.ETag;
 					break;
 				}
 				catch (ConcurrencyException)

@@ -49,7 +49,13 @@ namespace Raven.Database.Server
 	public class HttpServer : IDisposable
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
-		private readonly ConcurrentDictionary<string, DateTime> lastWriteRequest = new ConcurrentDictionary<string, DateTime>();
+		private readonly ConcurrentDictionary<string, DatabaseIdleTracking> lastWriteRequest = new ConcurrentDictionary<string, DatabaseIdleTracking>();
+
+		private class DatabaseIdleTracking
+		{
+			public DateTime LastWrite;
+			public DateTime LastIdle;
+		}
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly MixedModeRequestAuthorizer requestAuthorizer;
@@ -453,55 +459,71 @@ namespace Raven.Database.Server
 			serverTimer = new Timer(IdleOperations, null, frequencyToCheckForIdleDatabases, frequencyToCheckForIdleDatabases);
 		}
 
+		private readonly object runIdleOperationsLocker = new object();
 		private void IdleOperations(object state)
 		{
+			if (Monitor.TryEnter(runIdleOperationsLocker, TimeSpan.FromSeconds(1)) == false)
+				return;
 			try
-			{
-				if (DatabaseHadRecentWritesRequests(SystemDatabase) == false)
-					SystemDatabase.RunIdleOperations();
-			}
-			catch (Exception e)
-			{
-				logger.ErrorException("Error during idle operation run for system database", e);
-			}
-
-			var databasesToCleanup = new List<DocumentDatabase>();
-			foreach (var documentDatabase in ResourcesStoresCache)
 			{
 				try
 				{
-					if (documentDatabase.Value.Status != TaskStatus.RanToCompletion)
-						continue;
-					var database = documentDatabase.Value.Result;
-					if (DatabaseHadRecentWritesRequests(database) == false)
-						database.RunIdleOperations();
-					if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime) > maxTimeDatabaseCanBeIdle)
-						databasesToCleanup.Add(database);
+					if (DatabaseHadRecentWritesRequests(SystemDatabase) == false)
+						SystemDatabase.RunIdleOperations();
 				}
 				catch (Exception e)
 				{
-					logger.WarnException("Error during idle operation run for " + documentDatabase.Key, e);
+					logger.ErrorException("Error during idle operation run for system database", e);
+				}
+
+				var databasesToCleanup = new List<DocumentDatabase>();
+				foreach (var documentDatabase in ResourcesStoresCache)
+				{
+					try
+					{
+						if (documentDatabase.Value.Status != TaskStatus.RanToCompletion)
+							continue;
+						var database = documentDatabase.Value.Result;
+						if (DatabaseHadRecentWritesRequests(database) == false)
+							database.RunIdleOperations();
+						if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime) > maxTimeDatabaseCanBeIdle)
+							databasesToCleanup.Add(database);
+					}
+					catch (Exception e)
+					{
+						logger.WarnException("Error during idle operation run for " + documentDatabase.Key, e);
+					}
+				}
+
+				foreach (var db in databasesToCleanup)
+				{
+					logger.Info("Database {0}, had no incoming requests idle for {1}, trying to shut it down",
+						db.Name, (SystemTime.UtcNow - db.WorkContext.LastWorkTime));
+
+					// intentionally inside the loop, so we get better concurrency overall
+					// since shutting down a database can take a while
+					CleanupDatabase(db.Name, skipIfActive: true);
+
 				}
 			}
-
-			foreach (var db in databasesToCleanup)
+			finally
 			{
-				logger.Info("Database {0}, had no incoming requests idle for {1}, trying to shut it down",
-					db.Name, (SystemTime.UtcNow - db.WorkContext.LastWorkTime));
-
-				// intentionally inside the loop, so we get better concurrency overall
-				// since shutting down a database can take a while
-				CleanupDatabase(db.Name, skipIfActive: true);
-
+				Monitor.Exit(runIdleOperationsLocker);
 			}
 		}
 
 		private bool DatabaseHadRecentWritesRequests(DocumentDatabase db)
 		{
-			DateTime lastWrite;
+			DatabaseIdleTracking lastWrite;
 			if (lastWriteRequest.TryGetValue(db.Name ?? Constants.SystemDatabase, out lastWrite) == false)
 				return false;
-			return (SystemTime.UtcNow - lastWrite).TotalMinutes < 1;
+			var now = SystemTime.UtcNow;
+			var recentWriteRequest = (now - lastWrite.LastWrite).TotalMinutes < 1;
+			var lastIdleLessThanOneHourAgo = (now - lastWrite.LastIdle).TotalHours < 1;
+			if (recentWriteRequest &&  lastIdleLessThanOneHourAgo)
+					return true;
+			lastWrite.LastIdle = now;
+			return false;
 
 		}
 
@@ -853,7 +875,8 @@ namespace Raven.Database.Server
 			var dbName = CurrentDatabase.Name ?? Constants.SystemDatabase;
 			if (IsWriteRequest(ctx))
 			{
-				lastWriteRequest[dbName] = SystemTime.UtcNow;
+				var databaseIdleTracking = lastWriteRequest.GetOrAdd(dbName, s => new DatabaseIdleTracking());
+				databaseIdleTracking.LastWrite = SystemTime.UtcNow;
 			}
 			var disposable = LogManager.OpenMappedContext("database", dbName);
 			CurrentOperationContext.RequestDisposables.Value.Add(disposable);
