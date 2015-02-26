@@ -19,7 +19,7 @@ namespace Raven.Smuggler
 
         protected SmugglerOperationDispatcher(T options)
         {
-            this.Options = options;
+            Options = options;
         }
         
         public async Task Execute(SmugglerAction action)
@@ -29,13 +29,13 @@ namespace Raven.Smuggler
                 switch (action)
                 {
                     case SmugglerAction.Import:
-                        await PerformImportAsync(this.Options);
+                        await PerformImportAsync(Options);
                         break;
                     case SmugglerAction.Export:
-                        await PerformExportAsync(this.Options);
+                        await PerformExportAsync(Options);
                         break;
                     case SmugglerAction.Between:
-                        await PerformBetweenAsync(this.Options);
+                        await PerformBetweenAsync(Options);
                         break;
                 }
             }
