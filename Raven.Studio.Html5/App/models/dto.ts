@@ -1216,3 +1216,9 @@ enum ResponseCodes {
     PreconditionFailed = 412,
     InternalServerError = 500
 }
+
+interface synchronizationConfigDto {
+    FileConflictResolution: string;
+    MaxNumberOfSynchronizationsPerDestination: number;
+    SynchronizationLockTimeoutMiliseconds: number;
+}

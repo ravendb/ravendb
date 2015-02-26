@@ -1,7 +1,12 @@
 ﻿var debug_outputs = [];
 
 function output(msg) {
-    debug_outputs.push(msg);
+    if (msg instanceof Object) {
+        dump(msg);
+    } else {
+        debug_outputs.push(msg);
+    }
+    
 }
 
 function dump(obj) {

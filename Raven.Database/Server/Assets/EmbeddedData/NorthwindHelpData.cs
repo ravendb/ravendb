@@ -64,7 +64,7 @@ namespace Orders
         public string Supplier { get; set; }
         public string Category { get; set; }
         public string QuantityPerUnit { get; set; }
-        public decimal PricePerUser { get; set; }
+        public decimal PricePerUnit { get; set; }
         public int UnitsInStock { get; set; }
         public int UnitsOnOrder { get; set; }
         public bool Discontinued { get; set; }

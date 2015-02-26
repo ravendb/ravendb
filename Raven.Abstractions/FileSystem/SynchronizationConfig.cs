@@ -14,13 +14,13 @@ namespace Raven.Abstractions.FileSystem
 		{
 			FileConflictResolution = StraightforwardConflictResolution.None;
 			MaxNumberOfSynchronizationsPerDestination = 5;
-			SynchronizationLockTimeout = TimeSpan.FromMinutes(10);
+			SynchronizationLockTimeoutMiliseconds = 10*60*1000;
 		}
 
 		public StraightforwardConflictResolution FileConflictResolution { get; set; } 
 
 		public int MaxNumberOfSynchronizationsPerDestination { get; set; }
 
-		public TimeSpan SynchronizationLockTimeout { get; set; }
+		public int SynchronizationLockTimeoutMiliseconds { get; set; }
 	}
 }
