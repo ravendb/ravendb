@@ -34,6 +34,17 @@ namespace Raven.Smuggler
             var filesOptions = smugglerFilesApi.Options;
 
 	        selectionDispatching = new OptionSet();
+
+		    selectionDispatching.Add("nc|no-compression-on-import:", OptionCategory.None, "A flag that if set disables compression usage during import of documents.", value =>
+																		 {
+																			 bool disableCompression;
+																			 if (String.IsNullOrWhiteSpace(value) == false &&
+																			     Boolean.TryParse(value, out disableCompression))
+																				 databaseOptions.DisableCompressionOnImport = disableCompression;
+																			 else
+																				 PrintUsageAndExit(new ArgumentException("Invalid value for no-compression-on-import flag. Only 'true' and 'false' values should be used."));
+																		 });
+
 		    selectionDispatching.Add("d|d2|database|database2:", OptionCategory.None, string.Empty, value =>
 		    {
 			    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Database)

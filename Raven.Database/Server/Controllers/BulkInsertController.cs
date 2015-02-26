@@ -131,9 +131,6 @@ namespace Raven.Database.Server.Controllers
             });
         }
 
-
-
-
         private Guid ExtractOperationId()
         {
             Guid result;

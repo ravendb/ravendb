@@ -117,7 +117,7 @@ namespace Raven.Smuggler
 		}
 
 		public JsonDocument GetDocument(string key)
-		{
+		{			
 			return Store.DatabaseCommands.Get(key);
 		}
 

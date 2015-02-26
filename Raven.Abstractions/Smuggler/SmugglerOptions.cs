@@ -50,7 +50,6 @@ namespace Raven.Abstractions.Smuggler
 
         public int Limit { get; set; }
 
-	    public bool UseCompression { get; set; }
 
         /// <summary>
         /// The number of entities to load in each call to the server.
@@ -68,7 +67,6 @@ namespace Raven.Abstractions.Smuggler
 
         public SmugglerOptions()
         {
-	        UseCompression = true;
             CancelToken = new CancellationTokenSource();
             Limit = int.MaxValue;
             BatchSize = 16 * 1024;
