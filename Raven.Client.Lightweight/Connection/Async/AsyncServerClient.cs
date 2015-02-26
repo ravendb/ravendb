@@ -1041,7 +1041,7 @@ namespace Raven.Client.Connection.Async
 
 		public async Task<LicensingStatus> GetLicenseStatusAsync(CancellationToken token = default(CancellationToken))
 		{
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/license/status"), "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (MultiDatabase.GetRootDatabaseUrl(url) + "/license/status"), "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)))
 			{
 				request.AddOperationHeaders(OperationsHeaders);
 
