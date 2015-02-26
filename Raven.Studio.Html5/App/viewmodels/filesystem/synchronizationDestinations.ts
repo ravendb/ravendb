@@ -25,7 +25,7 @@ class synchronizationDestinations extends viewModelBase {
         if (fs) {
             this.fetchDestinations()
                 .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forFilesystem(this.activeFilesystem()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forFilesystemFiles(this.activeFilesystem()) }));
         }
         return deferred;
     }
