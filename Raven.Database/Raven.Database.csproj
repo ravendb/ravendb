@@ -237,12 +237,15 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
+    <Compile Include="FileSystem\Actions\ActionsBase.cs" />
+    <Compile Include="FileSystem\Actions\TaskActions.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideDeletingFilesTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningPutTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\VersioningUtil.cs" />
     <Compile Include="FileSystem\Controllers\FsStudioTasksController.cs" />
+    <Compile Include="FileSystem\Controllers\OperationsController.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileDeleteTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />

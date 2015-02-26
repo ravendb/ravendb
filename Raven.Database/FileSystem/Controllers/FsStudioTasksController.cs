@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -20,11 +19,10 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
-using Raven.Database.Actions;
+using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Smuggler;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
-using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
@@ -106,15 +104,14 @@ namespace Raven.Database.FileSystem.Controllers
 				}
 			}, cts.Token);
 
-			long id = 0; //TODO: don't initialize here!
-			/*
+			long id;
 			FileSystem.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
 			{
 				StartTime = SystemTime.UtcNow,
-				TaskType = TaskActions.PendingTaskType.ImportDatabase,
+				TaskType = TaskActions.PendingTaskType.ImportFileSystem,
 				Payload = fileName,
 
-			}, out id, cts);*/
+			}, out id, cts);
 
 			return GetMessageWithObject(new
 			{
