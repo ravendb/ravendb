@@ -25,8 +25,8 @@
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  public class DoubleClass
-  {
-    public double? Height { get; set; }
-  }
+    public class DoubleClass
+    {
+        public double? Height { get; set; }
+    }
 }

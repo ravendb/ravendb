@@ -108,6 +108,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
+      <Link>Imports\Newtonsoft.Json\%(FileName)</Link>
+    </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\*.cs">
       <Link>Imports\Newtonsoft.Json\Bson\%(FileName)</Link>
     </Compile>
@@ -116,6 +119,9 @@
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\*.cs">
       <Link>Imports\Newtonsoft.Json\Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\JsonPath\*.cs">
+      <Link>Imports\Newtonsoft.Json\Linq\JsonPath\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Schema\*.cs">
       <Link>Imports\Newtonsoft.Json\Schema\%(FileName)</Link>
@@ -126,9 +132,7 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
       <Link>Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
-      <Link>Imports\Newtonsoft.Json\%(FileName)</Link>
-    </Compile>
+    
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />

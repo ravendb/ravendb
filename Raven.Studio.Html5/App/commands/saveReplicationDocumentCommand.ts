@@ -4,7 +4,7 @@ import database = require("models/database");
 
 class saveReplicationDocumentCommand extends commandBase {
 
-    constructor(private dto: replicationsDto, private db: database) {
+    constructor(private dto: replicationsDto, private db: database, private globalConfig = false) {
         super();
     }
 
@@ -16,7 +16,7 @@ class saveReplicationDocumentCommand extends commandBase {
     }
 
     private saveSetup(): JQueryPromise<any> {
-        var id = "Raven/Replication/Destinations";
+        var id = this.globalConfig ? "Raven/Global/Replication/Destinations" : "Raven/Replication/Destinations";
         var url = "/docs/" + id;
         var putArgs = JSON.stringify(this.dto);
         return this.put(url, putArgs, this.db);

@@ -1,0 +1,9 @@
+﻿<div id="global-config">
+    <ul class="nav nav-tabs" data-bind="foreach: router.navigationModel">
+        <li data-bind="css: { active: isActive }">
+             <a   data-bind="attr: { href: hash, title: tooltip }, text: title"></a>
+        </li>
+    </ul>
+    <div class="tab-content" data-bind="router: { cacheViews: false }">
+    </div>
+</div>

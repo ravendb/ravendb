@@ -4,7 +4,7 @@ import commandBase = require("commands/commandBase");
 
 class getCustomFunctionsCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database, private global = false) {
         super();
 
         if (!db) {
@@ -14,7 +14,7 @@ class getCustomFunctionsCommand extends commandBase {
 
     execute(): JQueryPromise<customFunctions> {
         var resultsSelector = (queryResult: customFunctionsDto) => new customFunctions(queryResult);
-        var url = "/docs/Raven/Javascript/Functions";
+        var url = this.global ?  "/docs/Raven/Global/Javascript/Functions" : "/docs/Raven/Javascript/Functions";
         return this.query(url, null, this.db, resultsSelector);
     }
 }

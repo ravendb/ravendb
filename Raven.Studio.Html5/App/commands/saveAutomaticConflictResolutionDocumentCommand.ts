@@ -4,7 +4,7 @@ import database = require("models/database");
 
 class saveAutomaticConflictResolutionDocumentCommand extends commandBase {
 
-    constructor(private dto: replicationConfigDto, private db: database) {
+    constructor(private dto: replicationConfigDto, private db: database, private globalConfig = false) {
         super();
     }
 
@@ -16,7 +16,7 @@ class saveAutomaticConflictResolutionDocumentCommand extends commandBase {
     }
 
     private saveConfig(): JQueryPromise<any> {
-        var id = "Raven/Replication/Config";
+        var id = this.globalConfig ?  "Raven/Global/Replication/Config" : "Raven/Replication/Config";
         var url = "/docs/" + id;
         var putArgs = JSON.stringify(this.dto);
         return this.put(url, putArgs, this.db);

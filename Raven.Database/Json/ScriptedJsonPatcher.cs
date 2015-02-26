@@ -234,7 +234,7 @@ namespace Raven.Database.Json
 		protected virtual void CustomizeEngine(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
 			RavenJToken functions;
-			if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
+			if (scope.CustomFunctions == null || scope.CustomFunctions.TryGetValue("Functions", out functions) == false)
 				return;
 
 			engine.Execute(string.Format(@"var customFunctions = function() {{  var exports = {{ }}; {0};
@@ -248,7 +248,7 @@ for(var customFunction in customFunctions) {{
 		protected virtual void RemoveEngineCustomizations(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
 			RavenJToken functions;
-			if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
+			if (scope.CustomFunctions == null || scope.CustomFunctions.TryGetValue("Functions", out functions) == false)
 				return;
 
 			engine.Execute(@"

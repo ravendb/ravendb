@@ -1,11 +1,9 @@
 ﻿import documentMetadata = require("models/documentMetadata");
 
-class versioningEntry {
-    collection = ko.observable<string>();
-    maxRevisions = ko.observable<number>();
-    exclude = ko.observable<boolean>();
-    excludeUnlessExplicit = ko.observable<boolean>();
-    purgeOnDelete = ko.observable<boolean>();
+class versioningEntry implements copyFromParentDto<versioningEntry> {
+    collection = ko.observable<string>().extend({ required: true });
+    maxRevisions = ko.observable<number>().extend({ required: true });
+    exclude = ko.observable<boolean>().extend({ required: true });
 
     fromDatabase = ko.observable<boolean>();
 
@@ -20,9 +18,7 @@ class versioningEntry {
             dto = {
                 Id: "",
                 MaxRevisions: 214748368,
-                Exclude: false,
-                ExcludeUnlessExplicit: false,
-                PurgeOnDelete: false
+                Exclude: false
             };
             this.__metadata = new documentMetadata();
         } else {
@@ -33,8 +29,6 @@ class versioningEntry {
         this.collection(dto.Id);
         this.maxRevisions(dto.MaxRevisions);
         this.exclude(dto.Exclude);
-        this.excludeUnlessExplicit(dto.ExcludeUnlessExplicit);
-        this.purgeOnDelete(dto.PurgeOnDelete);
         this.removable = ko.computed<boolean>(() => {
             return (this.collection() !== "DefaultConfiguration");
         });
@@ -46,21 +40,35 @@ class versioningEntry {
         this.disabled = ko.computed(() => this.exclude());
     }
 
+    makeExcluded() {
+        this.exclude(true);
+    }
+
+    makeIncluded() {
+        this.exclude(false);
+    }
+
     toDto(includeMetadata:boolean): versioningEntryDto {
-        var dto: versioningEntryDto = {
+        var dto = {
             '@metadata': undefined,
             Id: this.collection(),
             MaxRevisions: this.maxRevisions(),
-            Exclude: this.exclude(),
-            ExcludeUnlessExplicit: this.excludeUnlessExplicit(),
-            PurgeOnDelete: this.purgeOnDelete()
+            Exclude: this.exclude()
         };
 
         if (includeMetadata && this.__metadata) {
-            dto['@metadata'] = this.__metadata.toDto();
+            dto["@metadata"] = <any>(this.__metadata.toDto());
         }
 
         return dto;
+    }
+
+    copyFromParent(parent: versioningEntry) {
+        this.collection(parent.collection());
+        this.maxRevisions(parent.maxRevisions());
+        this.exclude(parent.exclude());
+        this.fromDatabase(true);
+        this.__metadata = parent.__metadata;
     }
 }
 

@@ -310,10 +310,10 @@ namespace Raven.Database.Server.Controllers.Admin
 				return;
 
 			var database = databaseTask.Result;
-			var replicationDocumentAsJson = database.Documents.Get(Constants.RavenReplicationDestinations, null);
-			if (replicationDocumentAsJson != null)
+			var configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
+			if (configurationDocument != null)
 			{
-				var replicationDocument = replicationDocumentAsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
+				var replicationDocument = configurationDocument.MergedDocument;
 				foreach (var destination in replicationDocument.Destinations)
 				{
 					destination.Disabled = true;

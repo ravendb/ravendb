@@ -123,6 +123,9 @@ class viewModelBase {
             var discardStayResult = $.Deferred();
             var confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", [discard, stay], true);
             confirmation.done((result: { can: boolean; }) => {
+                if (!result.can) {
+                    this.dirtyFlag().reset();    
+                }
                 result.can = !result.can;
                 discardStayResult.resolve(result);
             });

@@ -37,6 +37,7 @@ namespace Raven.Database.Commercial
 			{"periodicBackup", "false"},
 			{"encryption", "false"},
 			{"fips", "false"},
+			{"globalConfiguration", "false"},
 			{"compression", "false"},
 			{"quotas","false"},
 			{"ravenfs", "false"},

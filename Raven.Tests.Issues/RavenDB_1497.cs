@@ -130,7 +130,7 @@ namespace Raven.Tests.Issues
 					{
 						{Constants.Esent.CircularLog, "false"}
 					}
-				}))
+				}, null))
 				{
 					var indexStats = db.Statistics.Indexes;
 

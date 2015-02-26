@@ -27,11 +27,11 @@ using System.Collections;
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-#if !SILVERLIGHT && !NETFX_CORE
-  public class TypedSubHashtable
-  {
-    public string Name;
-    public Hashtable Hash;
-  }
+#if !(NETFX_CORE || ASPNETCORE50)
+    public class TypedSubHashtable
+    {
+        public string Name;
+        public Hashtable Hash;
+    }
 #endif
 }

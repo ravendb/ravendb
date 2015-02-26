@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs.Queries
 		[Fact]
 		public void WillGenerateProperQueryForMetadata()
 		{
-			using (var documentDatabase = new DocumentDatabase(new RavenConfiguration { RunInMemory = true }))
+			using (var documentDatabase = new DocumentDatabase(new RavenConfiguration { RunInMemory = true }, null))
 			{
 				var mapping = DynamicQueryMapping.Create(documentDatabase, "@metadata.Raven-Graph-Type:Edge", null);
 

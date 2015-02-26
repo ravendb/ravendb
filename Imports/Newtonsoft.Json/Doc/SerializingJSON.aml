@@ -42,34 +42,14 @@ LINQ to JSON objects or
 <code lang="cs" source="..\Src\Newtonsoft.Json.Tests\Documentation\SerializationTests.cs" region="JsonSerializerToStream" title="Serializing JSON to a Stream with JsonSerializer" />
 
 <para>JsonSerializer has a number of properties on it to customize how it serializes JSON. These can also be used with the methods on JsonConvert via the JsonSerializerSettings overloads.</para>
-<para>Read more about the available JsonSerializer settings here: <externalLink>
-<linkText>Serialization Settings</linkText>
-<linkUri>SerializationSettings.htm</linkUri>
-<linkTarget>_self</linkTarget>
-</externalLink></para>
+<para>Read more about the available JsonSerializer settings here: <link xlink:href="SerializationSettings" /></para>
 </content>
 </section>
     <relatedTopics>
-      <externalLink>
-        <linkText>Serialization Guide</linkText>
-        <linkUri>SerializationGuide.htm</linkUri>
-        <linkTarget>_self</linkTarget>
-      </externalLink>
-      <externalLink>
-        <linkText>Serialization Settings</linkText>
-        <linkUri>SerializationSettings.htm</linkUri>
-        <linkTarget>_self</linkTarget>
-      </externalLink>
-      <externalLink>
-        <linkText>Serialization Attributes</linkText>
-        <linkUri>SerializationAttributes.htm</linkUri>
-        <linkTarget>_self</linkTarget>
-      </externalLink>
-      <externalLink>
-        <linkText>Serializing Partial JSON Fragments</linkText>
-        <linkUri>SerializingJSONFragments.htm</linkUri>
-        <linkTarget>_self</linkTarget>
-      </externalLink>
+      <link xlink:href="SerializationGuide" />
+      <link xlink:href="SerializationSettings" />
+      <link xlink:href="SerializationAttributes" />
+      <link xlink:href="SerializingJSONFragments" />
 
       <codeEntityReference>T:Newtonsoft.Json.JsonConvert</codeEntityReference>
       <codeEntityReference>T:Newtonsoft.Json.JsonSerializer</codeEntityReference>

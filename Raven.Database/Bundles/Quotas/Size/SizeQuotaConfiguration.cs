@@ -31,8 +31,8 @@ namespace Raven.Bundles.Quotas.Size
 		public SizeQuotaConfiguration(DocumentDatabase database)
 		{
 			this.database = database;
-			var hardLimitQuotaAsString = database.Configuration.Settings[Constants.SizeHardLimitInKB];
-			var marginAsString = database.Configuration.Settings[Constants.SizeSoftLimitInKB];
+			var hardLimitQuotaAsString = database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.SizeHardLimitInKB);
+			var marginAsString = database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.SizeSoftLimitInKB);
 
 			if (int.TryParse(marginAsString, out margin) == false)
 				margin = 1024 * 1024;// 1 MB by default

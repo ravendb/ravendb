@@ -8,7 +8,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{fd19f68e-72c8-4576-9775-b4480b0db686}</ProjectGuid>
-    <SHFBSchemaVersion>1.9.5.0</SHFBSchemaVersion>
+    <SHFBSchemaVersion>1.9.9.0</SHFBSchemaVersion>
     <!-- AssemblyName, Name, and RootNamespace are not used by SHFB but Visual
          Studio adds them anyway -->
     <AssemblyName>Documentation</AssemblyName>
@@ -20,7 +20,7 @@
     <ProjectSummary>
     </ProjectSummary>
     <MissingTags>Summary, Parameter, Returns, AutoDocumentCtors, Namespace, TypeParameter, AutoDocumentDispose</MissingTags>
-    <VisibleItems>InheritedMembers, InheritedFrameworkMembers, Protected, SealedProtected</VisibleItems>
+    <VisibleItems>InheritedMembers, InheritedFrameworkMembers, Protected, SealedProtected, ProtectedInternalAsProtected</VisibleItems>
     <HtmlHelp1xCompilerPath>
     </HtmlHelp1xCompilerPath>
     <HtmlHelp2xCompilerPath>
@@ -32,11 +32,11 @@
     <BuildLogFile>
     </BuildLogFile>
     <HelpFileFormat>Website</HelpFileFormat>
-    <FrameworkVersion>.NET Framework 4.0</FrameworkVersion>
-    <HelpTitle>Json.NET - Documentation</HelpTitle>
-    <PresentationStyle>vs2005</PresentationStyle>
+    <FrameworkVersion>.NET Framework 4.5</FrameworkVersion>
+    <HelpTitle>Json.NET Documentation</HelpTitle>
+    <PresentationStyle>VS2013</PresentationStyle>
     <NamingMethod>MemberName</NamingMethod>
-    <DocumentationSourcePath>..\Src\Newtonsoft.Json\bin\Release</DocumentationSourcePath>
+    <DocumentationSourcePath>..\Src\Newtonsoft.Json\bin\Release\Net45</DocumentationSourcePath>
     <DocumentationSources>
       <DocumentationSource sourceFile="$(DocumentationSourcePath)\Newtonsoft.Json.dll" />
       <DocumentationSource sourceFile="$(DocumentationSourcePath)\Newtonsoft.Json.xml" />
@@ -47,7 +47,8 @@
       <NamespaceSummaryItem name="Newtonsoft.Json.Converters" isDocumented="True">The &lt;b&gt;Newtonsoft.Json.Converters&lt;/b&gt; namespace provides classes that inherit from &lt;a href="T_Newtonsoft_Json_JsonConverter.htm"&gt;JsonConverter&lt;/a&gt;.</NamespaceSummaryItem>
       <NamespaceSummaryItem name="Newtonsoft.Json.Linq" isDocumented="True">The &lt;b&gt;Newtonsoft.Json.Linq&lt;/b&gt; namespace provides classes that are used to implement LINQ to JSON.</NamespaceSummaryItem>
       <NamespaceSummaryItem name="Newtonsoft.Json.Linq.ComponentModel" isDocumented="True">The &lt;b&gt;Newtonsoft.Json.Linq.ComponentModel&lt;/b&gt; namespace provides classes for LINQ to JSON databinding.</NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Newtonsoft.Json.Schema" isDocumented="True">The &lt;b&gt;Newtonsoft.Json.Schema&lt;/b&gt; namespace provides classes that are used to implement JSON schema.</NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Newtonsoft.Json.Schema" isDocumented="True">&lt;para&gt;The &lt;b&gt;Newtonsoft.Json.Schema&lt;/b&gt; namespace provides classes that are used to implement JSON schema.&lt;/para&gt;
+        &lt;para&gt;&lt;b&gt;Obsolete.&lt;/b&gt; JSON Schema validation has been moved to its own package. See &lt;a href="http://www.newtonsoft.com/jsonschema"&gt;http://www.newtonsoft.com/jsonschema&lt;/a&gt; for more details.&lt;/para&gt;</NamespaceSummaryItem>
       <NamespaceSummaryItem name="Newtonsoft.Json.Serialization" isDocumented="True">The &lt;b&gt;Newtonsoft.Json.Linq&lt;/b&gt; namespace provides classes that are used when serializing and deserializing JSON.</NamespaceSummaryItem>
       <NamespaceSummaryItem name="Newtonsoft.Json.Utilities" isDocumented="False" />
       <NamespaceSummaryItem name="Newtonsoft.Json.Bson" isDocumented="True">The &lt;b&gt;Newtonsoft.Json.Linq&lt;/b&gt; namespace provides classes that are used to implement BSON.</NamespaceSummaryItem>
@@ -55,77 +56,38 @@
     <RootNamespaceContainer>True</RootNamespaceContainer>
     <RootNamespaceTitle>API Reference</RootNamespaceTitle>
     <ComponentConfigurations>
-      <ComponentConfig id="Post-transform Component" enabled="True">
-        <component id="Post-transform Component" type="SandcastleBuilder.Components.PostTransformComponent" assembly="{@SHFBFolder}SandcastleBuilder.Components.dll">
-          <!-- Code colorizer files (required).
-					 Attributes:
-							Stylesheet file (required)
-							Script file (required)
-							"Copy" image file (required) -->
-          <colorizer stylesheet="{@SHFBFolder}Colorizer\highlight.css" scriptFile="{@SHFBFolder}Colorizer\highlight.js" copyImage="{@SHFBFolder}Colorizer\CopyCode.gif" />
-          <!-- Base output paths for the files (required).  These should match the parent folder of the output path
-					 of the HTML files (see each of the SaveComponent instances in the configuration files). -->
-          <outputPaths>
-				{@HelpFormatOutputPaths}
-			</outputPaths>
-          <!-- Logo image file (optional).  Filename is required. The height, width, altText, placement, and
-					 alignment attributes are optional. -->
-          <logoFile filename="{@ProjectFolder}logo.jpg" height="0" width="0" altText="Json.NET" placement="left" alignment="left" />
-        </component>
-      </ComponentConfig>
       <ComponentConfig id="Code Block Component" enabled="True">
         <component id="Code Block Component" type="SandcastleBuilder.Components.CodeBlockComponent" assembly="{@SHFBFolder}SandcastleBuilder.Components.dll">
           <basePath value="{@HtmlEncProjectFolder}" />
-          <languageFilter value="true" />
+          <outputPaths>{@HelpFormatOutputPaths}</outputPaths>
           <allowMissingSource value="false" />
           <removeRegionMarkers value="false" />
-          <colorizer syntaxFile="{@SHFBFolder}Colorizer\highlight.xml" styleFile="{@SHFBFolder}Colorizer\highlight.xsl" copyImageUrl="../icons/CopyCode.gif" language="cs" tabSize="0" numberLines="true" outlining="false" keepSeeTags="false" defaultTitle="true" />
-        </component>
-      </ComponentConfig>
-      <ComponentConfig id="Cached Reflection Index Data" enabled="True">
-        <component id="Cached Reflection Index Data" type="SandcastleBuilder.Components.CachedCopyFromIndexComponent" assembly="{@SHFBFolder}SandcastleBuilder.Components.dll">
-          <index name="reflection" value="/reflection/apis/api" key="@id" cache="10">
-            <cache base="{@SandcastlePath}Data\Reflection" recurse="true" files="*.xml" cacheFile="{@LocalDataFolder}Cache\Reflection.cache" />
-            <data files="reflection.xml" />
-          </index>
-          <copy name="reflection" source="*" target="/document/reference" />
-        </component>
-      </ComponentConfig>
-      <ComponentConfig id="Cached MSDN URL References" enabled="True">
-        <component id="Cached MSDN URL References" type="SandcastleBuilder.Components.CachedResolveReferenceLinksComponent" assembly="{@SHFBFolder}SandcastleBuilder.Components.dll" locale="{@Locale}" linkTarget="{@SdkLinkTarget}">
-          <helpOutput format="HtmlHelp1">
-            <cache filename="{@LocalDataFolder}Cache\MsdnUrl.cache" />
-            <targets base="{@SandcastlePath}Data\Reflection" recurse="true" files="*.xml" type="{@HtmlSdkLinkType}" />
-            <targets files="reflection.xml" type="Local" />
-          </helpOutput>
-          <helpOutput format="MSHelp2">
-            <cache filename="{@LocalDataFolder}Cache\MsdnUrl.cache" />
-            <targets base="{@SandcastlePath}Data\Reflection" recurse="true" files="*.xml" type="{@MSHelp2SdkLinkType}" />
-            <targets files="reflection.xml" type="Index" />
-          </helpOutput>
-          <helpOutput format="MSHelpViewer">
-            <cache filename="{@LocalDataFolder}Cache\MsdnUrl.cache" />
-            <targets base="{@SandcastlePath}Data\Reflection" recurse="true" files="*.xml" type="{@MSHelpViewerSdkLinkType}" />
-            <targets files="reflection.xml" type="Id" />
-          </helpOutput>
-          <helpOutput format="Website">
-            <cache filename="{@LocalDataFolder}Cache\MsdnUrl.cache" />
-            <targets base="{@SandcastlePath}Data\Reflection" recurse="true" files="*.xml" type="{@WebsiteSdkLinkType}" />
-            <targets files="reflection.xml" type="Local" />
-          </helpOutput>
-        </component>
-      </ComponentConfig>
-      <ComponentConfig id="Cached Framework Comments Index Data" enabled="True">
-        <component id="Cached Framework Comments Index Data" type="SandcastleBuilder.Components.CachedCopyFromIndexComponent" assembly="{@SHFBFolder}SandcastleBuilder.Components.dll">
-          <index name="comments" value="/doc/members/member" key="@name" cache="100">
-				{@CachedFrameworkCommentList}
-				{@CommentFileList}
-			</index>
-          <copy name="comments" source="*" target="/document/comments" />
+          <colorizer syntaxFile="{@SHFBFolder}PresentationStyles\Colorizer\highlight.xml" styleFile="{@SHFBFolder}PresentationStyles\Colorizer\highlight.xsl" stylesheet="{@SHFBFolder}PresentationStyles\Colorizer\highlight.css" scriptFile="{@SHFBFolder}PresentationStyles\Colorizer\highlight.js" disabled="{@DisableCodeBlockComponent}" language="cs" tabSize="0" numberLines="true" outlining="false" keepSeeTags="false" defaultTitle="true" />
         </component>
       </ComponentConfig>
     </ComponentConfigurations>
     <IndentHtml>False</IndentHtml>
+    <BuildAssemblerVerbosity>OnlyWarningsAndErrors</BuildAssemblerVerbosity>
+    <KeepLogFile>True</KeepLogFile>
+    <DisableCodeBlockComponent>False</DisableCodeBlockComponent>
+    <CppCommentsFixup>False</CppCommentsFixup>
+    <CleanIntermediates>True</CleanIntermediates>
+    <SyntaxFilters>C#</SyntaxFilters>
+    <SdkLinkTarget>Blank</SdkLinkTarget>
+    <Preliminary>False</Preliminary>
+    <Language>en-US</Language>
+    <ContentPlacement>AboveNamespaces</ContentPlacement>
+    <TransformComponentArguments>
+      <Argument Key="logoFile" Value="logo.jpg" />
+      <Argument Key="logoHeight" Value="" />
+      <Argument Key="logoWidth" Value="" />
+      <Argument Key="logoAltText" Value="Json.NET" />
+      <Argument Key="logoPlacement" Value="left" />
+      <Argument Key="logoAlignment" Value="left" />
+    </TransformComponentArguments>
+    <MaximumGroupParts>2</MaximumGroupParts>
+    <NamespaceGrouping>False</NamespaceGrouping>
+    <FooterText>&amp;lt%3ba href=&amp;quot%3b../../&amp;quot%3b&amp;gt%3bJson.NET Home&amp;lt%3b/a&amp;gt%3b</FooterText>
   </PropertyGroup>
   <!-- There are no properties for these two groups but they need to appear in
        order for Visual Studio to perform the build. -->
@@ -137,6 +99,9 @@
     <Content Include="donate.gif" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="icons\favicon.ico" />
+    <None Include="Samples\Json\CustomJsonWriter.aml" />
+    <None Include="Samples\Json\CustomJsonReader.aml" />
     <None Include="Samples\Xml\ConvertXmlToJsonForceArray.aml" />
     <None Include="Samples\Xml\ConvertXmlToJson.aml" />
     <None Include="Samples\Xml\ConvertJsonToXml.aml" />
@@ -287,12 +252,13 @@
       <ImageId>performance</ImageId>
       <AlternateText>performance</AlternateText>
     </Image>
-    <Image Include="logo.jpg">
+    <Content Include="icons\logo.jpg">
       <ImageId>logo</ImageId>
       <AlternateText>logo</AlternateText>
-    </Image>
+    </Content>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="icons\" />
     <Folder Include="Samples\Xml\" />
     <Folder Include="Samples\Schema\" />
     <Folder Include="Samples\Linq\" />

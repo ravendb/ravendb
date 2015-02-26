@@ -544,7 +544,7 @@ namespace Raven.Client.Document
 				TypeNameHandling = TypeNameHandling.Auto,
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                FloatParseHandling = FloatParseHandling.PreferDecimalFallbackToDouble,
+                FloatParseHandling = FloatParseHandling.Double,
 				Converters =
 					{
 						new JsonLuceneDateTimeConverter(),

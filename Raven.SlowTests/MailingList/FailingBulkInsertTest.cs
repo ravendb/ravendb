@@ -11,19 +11,21 @@ using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.SlowTests.MailingList
 {
 	public class FailingBulkInsertTest : RavenTestBase
 	{
-		[Fact]
-		public void CanBulkInsert()
+        [Theory]
+        [PropertyData("InsertOptions")]
+        public void CanBulkInsert(BulkInsertOptions options)
 		{
 			var bulkInsertSize = 20000;
 			using (var store = NewDocumentStore(requestedStorage:"esent"))
 			{
 				new SampleData_Index().Execute(store);
-				using (var bulkInsert = store.BulkInsert())
+                using (var bulkInsert = store.BulkInsert(options: options))
 				{
 					for (int i = 0; i < bulkInsertSize; i++)
 					{
@@ -44,8 +46,9 @@ namespace Raven.SlowTests.MailingList
 			}
 		}
 
-		[Fact]
-		public void CanBulkInsertConcurrently()
+        [Theory]
+        [PropertyData("InsertOptions")]
+        public void CanBulkInsertConcurrently(BulkInsertOptions options)
 		{
 			var bulkInsertSize = 5000;
 			using (var store = NewDocumentStore(requestedStorage: "esent"))
@@ -54,7 +57,7 @@ namespace Raven.SlowTests.MailingList
 
 				var t1 = Task.Factory.StartNew(() =>
 				{
-					using (var bulkInsert = store.BulkInsert())
+                    using (var bulkInsert = store.BulkInsert(options: options))
 					{
 						for (int i = 0; i < bulkInsertSize/2; i++)
 						{
@@ -68,7 +71,7 @@ namespace Raven.SlowTests.MailingList
 
 				var t2 = Task.Factory.StartNew(() =>
 				{
-					using (var bulkInsert = store.BulkInsert())
+                    using (var bulkInsert = store.BulkInsert(options: options))
 					{
 						for (int i = bulkInsertSize / 2; i < bulkInsertSize; i++)
 						{
@@ -118,12 +121,13 @@ namespace Raven.SlowTests.MailingList
 			}
 		}
 
-		[Fact]
-		public void CanBulkInsert_LowLevel()
+        [Theory]
+        [PropertyData("InsertOptions")]
+        public void CanBulkInsert_LowLevel(BulkInsertOptions options)
 		{
 			using (var store = NewDocumentStore(requestedStorage:"esent"))
 			{
-				store.SystemDatabase.Documents.BulkInsert(new BulkInsertOptions(), YieldDocumentBatch(store), Guid.NewGuid(), CancellationToken.None);
+                store.SystemDatabase.Documents.BulkInsert(options, YieldDocumentBatch(store), Guid.NewGuid(), CancellationToken.None);
 
 				WaitForIndexing(store);
 

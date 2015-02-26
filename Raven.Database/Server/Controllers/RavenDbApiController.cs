@@ -9,6 +9,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
+using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -109,13 +110,13 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		protected ReplicationDocument GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
+		protected ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
 		{
-			JsonDocument replicationDestinationsDocument;
+			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument;
 			erroResponseMessage = null;
 			try
 			{
-				replicationDestinationsDocument = Database.Documents.Get(Constants.RavenReplicationDestinations, null);
+				configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			}
 			catch (Exception e)
 			{
@@ -125,16 +126,14 @@ namespace Raven.Database.Server.Controllers
 				return null;
 			}
 
-			if (replicationDestinationsDocument == null)
+			if (configurationDocument == null)
 			{
 				erroResponseMessage = GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." }, HttpStatusCode.NotFound);
 				return null;
 			}
 
-			var replicationDocument = replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
-
-			if (replicationDocument.Destinations.Count != 0) 
-				return replicationDocument;
+			if (configurationDocument.MergedDocument.Destinations.Count != 0) 
+				return configurationDocument.MergedDocument;
 
 			erroResponseMessage = GetMessageWithObject(new
 			{
@@ -478,12 +477,41 @@ namespace Raven.Database.Server.Controllers
 			return stale;
 		}
 
-		protected bool GetSkipOverwriteIfUnchanged()
+        protected bool GetSkipOverwriteIfUnchanged()
 		{
 			bool result;
 			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
 			return result;
 		}
+
+        protected BulkInsertCompression GetCompression()
+        {
+            var compression = GetQueryStringValue("compression");
+            if (string.IsNullOrWhiteSpace(compression))
+                return BulkInsertCompression.GZip;
+
+            switch (compression.ToLowerInvariant())
+            {
+                case "none": return BulkInsertCompression.None;
+                case "gzip": return BulkInsertCompression.GZip;
+                default: throw new NotSupportedException(string.Format("The compression algorithm '{0}' is not supported.", compression));
+            }
+        }
+
+        protected BulkInsertFormat GetFormat()
+        {
+            var format = GetQueryStringValue("format");
+            if (string.IsNullOrWhiteSpace(format))
+                return BulkInsertFormat.Bson;
+
+            switch (format.ToLowerInvariant())
+            {
+                case "bson": return BulkInsertFormat.Bson;
+                case "json": return BulkInsertFormat.Json;
+                default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", format.ToString()));
+            }
+        }
+
 
         protected int? GetMaxOpsPerSec()
         {
