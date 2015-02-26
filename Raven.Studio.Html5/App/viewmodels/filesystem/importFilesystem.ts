@@ -1,7 +1,8 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
+import messagePublisher = require("common/messagePublisher");
 import importFilesystemCommand = require("commands/filesystem/importFilesystemCommand");
+import getOperationStatusCommand = require("commands/getOperationStatusCommand");
 
 class importDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
@@ -27,9 +28,9 @@ class importDatabase extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
             ko.postbox.subscribe("UploadProgress", (percentComplete: number) => this.activeDatabase().importStatus("Uploading " + percentComplete.toFixed(2).replace(/\.0*$/, '') + "%")),
-            ko.postbox.subscribe("ChangesApiReconnected", (db: database) => {
-                db.importStatus("");
-                db.isImporting(false);
+            ko.postbox.subscribe("ChangesApiReconnected", (fs: filesystem) => {
+                fs.importStatus("");
+                fs.isImporting(false);
                 this.isUploading = false;
             })
         ];
@@ -56,40 +57,40 @@ class importDatabase extends viewModelBase {
             .execute()
             .done((result: operationIdDto) => {
                 var operationId = result.OperationId;
-                // TODO: uncomment this.waitForOperationToComplete(db, operationId);
+                this.waitForOperationToComplete(fs, operationId);
                 fs.importStatus("Processing uploaded file");
             })
             .fail(() => fs.importStatus(""))
             .always(() => this.isUploading = false);
     }
 
-    /*
-    private waitForOperationToComplete(db: database, operationId: number) {        
-        new getOperationStatusCommand(db, operationId)
+    
+    private waitForOperationToComplete(fs: filesystem, operationId: number) {        
+        new getOperationStatusCommand(fs, operationId)
             .execute()
-            .done((result: importOperationStatusDto) => this.importStatusRetrieved(db, operationId, result));
+            .done((result: importOperationStatusDto) => this.importStatusRetrieved(fs, operationId, result));
     }
 
-    private importStatusRetrieved(db: database, operationId: number, result: importOperationStatusDto) {
+    private importStatusRetrieved(fs: filesystem, operationId: number, result: importOperationStatusDto) {
         if (result.Completed) {
             if (result.ExceptionDetails == null) {
                 this.hasFileSelected(false);
                 $(this.filePickerTag).val('');
-                db.importStatus("Last import was from '" + this.importedFileName + "', " + result.LastProgress.toLocaleLowerCase());
-                messagePublisher.reportSuccess("Successfully imported data to " + db.name);
+                fs.importStatus("Last import was from '" + this.importedFileName + "', " + result.LastProgress.toLocaleLowerCase());
+                messagePublisher.reportSuccess("Successfully imported data to " + fs.name);
             } else {
-                db.importStatus("");
+                fs.importStatus("");
                 messagePublisher.reportError("Failed to import data!", result.ExceptionDetails);
             }
-            db.isImporting(false);
+            fs.isImporting(false);
         }
         else {
             if (!!result.LastProgress) {
-                db.importStatus("Processing uploaded file, " + result.LastProgress.toLocaleLowerCase());
+                fs.importStatus("Processing uploaded file, " + result.LastProgress.toLocaleLowerCase());
             }
-            setTimeout(() => this.waitForOperationToComplete(db, operationId), 1000);
+            setTimeout(() => this.waitForOperationToComplete(fs, operationId), 1000);
         }
-    }*/
+    }
 }
 
 export = importDatabase; 

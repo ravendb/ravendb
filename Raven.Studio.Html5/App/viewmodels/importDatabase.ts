@@ -1,7 +1,6 @@
 ﻿import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/database");
-import collection = require("models/collection");
 import getOperationStatusCommand = require('commands/getOperationStatusCommand');
 import messagePublisher = require("common/messagePublisher");
 import importDatabaseCommand = require("commands/importDatabaseCommand");
