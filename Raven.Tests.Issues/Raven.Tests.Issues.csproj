@@ -43,6 +43,10 @@
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
     </Reference>
+    <Reference Include="Jint, Version=2.4.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Jint.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net">
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
@@ -363,6 +367,7 @@
     <Compile Include="RavenDB_3232.cs" />
     <Compile Include="RavenDB_3237.cs" />
     <Compile Include="RavenDB_3248.cs" />
+    <Compile Include="RavenDB_3264.cs" />
     <Compile Include="Ravendb_334.cs" />
     <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_367.cs" />

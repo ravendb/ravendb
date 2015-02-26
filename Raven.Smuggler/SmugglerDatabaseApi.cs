@@ -59,7 +59,6 @@ namespace Raven.Smuggler
 				try
 				{
 					await CreateBulkInsertOperation();
-
 					await base.ImportData(importOptions, stream);
 				}
 				finally
@@ -90,7 +89,9 @@ namespace Raven.Smuggler
 			operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
 			{
                 BatchSize = Options.BatchSize,
-				OverwriteExisting = true
+				OverwriteExisting = true,
+				Compression = Options.DisableCompressionOnImport ? BulkInsertCompression.None : BulkInsertCompression.GZip
+				
             }, store.Changes(), Options.ChunkSize, Options.TotalDocumentSizeInChunkLimitInBytes);
 
 			operation.Report += text => Operations.ShowProgress(text);

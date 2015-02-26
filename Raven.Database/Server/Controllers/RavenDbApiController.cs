@@ -477,12 +477,41 @@ namespace Raven.Database.Server.Controllers
 			return stale;
 		}
 
-		protected bool GetSkipOverwriteIfUnchanged()
+        protected bool GetSkipOverwriteIfUnchanged()
 		{
 			bool result;
 			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
 			return result;
 		}
+
+        protected BulkInsertCompression GetCompression()
+        {
+            var compression = GetQueryStringValue("compression");
+            if (string.IsNullOrWhiteSpace(compression))
+                return BulkInsertCompression.GZip;
+
+            switch (compression.ToLowerInvariant())
+            {
+                case "none": return BulkInsertCompression.None;
+                case "gzip": return BulkInsertCompression.GZip;
+                default: throw new NotSupportedException(string.Format("The compression algorithm '{0}' is not supported.", compression));
+            }
+        }
+
+        protected BulkInsertFormat GetFormat()
+        {
+            var format = GetQueryStringValue("format");
+            if (string.IsNullOrWhiteSpace(format))
+                return BulkInsertFormat.Bson;
+
+            switch (format.ToLowerInvariant())
+            {
+                case "bson": return BulkInsertFormat.Bson;
+                case "json": return BulkInsertFormat.Json;
+                default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", format.ToString()));
+            }
+        }
+
 
         protected int? GetMaxOpsPerSec()
         {

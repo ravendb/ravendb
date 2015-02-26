@@ -865,5 +865,16 @@ namespace Raven.Tests.Helpers
 			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", "POST", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
 			request.ExecuteRequest();
 		}
+
+
+        public static IEnumerable<object[]> InsertOptions
+        {
+            get
+            {
+                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
+                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
+                yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
+            }
+        }
 	}
 }

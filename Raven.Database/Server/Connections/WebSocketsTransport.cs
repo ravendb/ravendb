@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Owin;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -108,10 +109,7 @@ namespace Raven.Database.Server.Connections
 
 			using (var memoryStream = new MemoryStream())
 			{
-				var serializer = new JsonSerializer
-				                 {
-					                 Converters = { new EtagJsonConverter(), new JsonEnumConverter() }
-				                 };
+				var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 
 				await SendMessage(memoryStream, serializer, new { StatusCode = statusCode, StatusMessage = statusMessage, Time = SystemTime.UtcNow }, sendAsync, callCancelled);
 			}
@@ -220,10 +218,7 @@ namespace Raven.Database.Server.Connections
                 var callCancelled = (CancellationToken) websocketContext["websocket.CallCancelled"];
 
                 var memoryStream = new MemoryStream();
-                var serializer = new JsonSerializer
-                {
-                    Converters = {new EtagJsonConverter(),new JsonEnumConverter()}
-                };
+	            var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 
 				CreateWaitForClientCloseTask(websocketContext, callCancelled);
 

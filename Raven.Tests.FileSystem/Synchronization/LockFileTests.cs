@@ -161,7 +161,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig
 			{
-				SynchronizationLockTimeout = TimeSpan.FromSeconds(0)
+				SynchronizationLockTimeoutMiliseconds = 0
 			});
 
 			Assert.DoesNotThrow(() => SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin"));
@@ -191,7 +191,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig
 			{
-				SynchronizationLockTimeout = TimeSpan.FromSeconds(0)
+				SynchronizationLockTimeoutMiliseconds = 0
 			}).Wait();
 
 			Assert.DoesNotThrow(() => action());

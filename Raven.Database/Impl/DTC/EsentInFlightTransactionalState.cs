@@ -14,6 +14,7 @@ using Mono.Cecil;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server;
@@ -193,7 +194,15 @@ namespace Raven.Database.Impl.DTC
 				// independent storage transaction, will actually commit here
 				storage.Batch(accessor =>
 				{
-					var data = new RavenJObject { { "Changes", RavenJToken.FromObject(changes, new JsonSerializer { Converters = { new JsonToJsonConverter(), new EtagJsonConverter() } }) }, { "ResourceManagerId", resourceManagerId.ToString() }, { "RecoveryInformation", recoveryInformation } };
+					var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+					var data = new RavenJObject
+					{
+						{
+							"Changes",
+							RavenJToken.FromObject(changes, jsonSerializer)
+						},
+						{"ResourceManagerId", resourceManagerId.ToString()}, {"RecoveryInformation", recoveryInformation}
+					};
 					accessor.Lists.Set("Raven/Transactions/Pending", id, data, UuidType.DocumentTransactions);
 				});
 			}

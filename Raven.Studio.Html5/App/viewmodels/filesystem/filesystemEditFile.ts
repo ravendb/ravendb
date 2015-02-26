@@ -4,15 +4,13 @@ import appUrl = require("common/appUrl");
 import ace = require("ace/ace");
 
 import filesystem = require("models/filesystem/filesystem");
-import pagedList = require("common/pagedList");
 import getFileCommand = require("commands/filesystem/getFileCommand");
 import updateFileMetadataCommand = require("commands/filesystem/updateFileMetadataCommand");
-import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import file = require("models/filesystem/file");
 import fileMetadata = require("models/filesystem/fileMetadata");
 import deleteItems = require("viewmodels/deleteItems");
+import fileRenameDialog = require("viewmodels/filesystem/fileRenameDialog");
 
 class filesystemEditFile extends viewModelBase {
 
@@ -140,6 +138,14 @@ class filesystemEditFile extends viewModelBase {
         }
 
         this.dirtyFlag().reset(); // Resync Changes
+    }
+
+    renameFile() {
+        var dialog = new fileRenameDialog(this.fileName(), this.activeFilesystem());
+        dialog.onExit().done((newName: string) => {
+            router.navigate(appUrl.forEditFile(newName, this.activeFilesystem()));
+        });
+        app.showDialog(dialog);
     }
 
     getTopRecentFiles() {

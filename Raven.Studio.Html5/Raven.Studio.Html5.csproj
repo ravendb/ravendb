@@ -39,9 +39,11 @@
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getSynchronizationConfigCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\renameFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFoldersCommand.ts" />
@@ -148,6 +150,7 @@
     <TypeScriptCompile Include="App\models\configurationDocument.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
     <TypeScriptCompile Include="App\models\license.ts" />
     <TypeScriptCompile Include="App\models\databaseCollectionStyleMap.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
@@ -203,6 +206,8 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\fileRenameDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\globalConfigVersioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
@@ -488,7 +493,9 @@
     <Content Include="App\views\globalConfigPeriodicExport.html" />
     <Content Include="App\views\globalConfig.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
+    <Content Include="App\views\filesystem\fileRenameDialog.html" />
     <Content Include="App\views\filesystem\settings.html" />
+    <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
     <Content Include="App\views\filesystem\versioning.html" />
     <Content Include="App\views\globalConfigSqlReplication.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />

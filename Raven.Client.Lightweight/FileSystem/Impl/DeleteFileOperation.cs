@@ -44,7 +44,7 @@ namespace Raven.Client.FileSystem.Impl
 
             if (delete)
             {
-                await commands.DeleteAsync(Filename, Etag)
+                await commands.DeleteAsync(Filename)
                               .ConfigureAwait(false);
 
                 sessionOperations.RegisterMissing(Filename);

@@ -35,7 +35,7 @@ namespace Raven.Smuggler
 
 		private readonly Func<bool> isTransformersSupported;
 
-		private Func<bool> isIdentitiesSmugglingSupported;
+		private readonly Func<bool> isIdentitiesSmugglingSupported;
 
 		const int RetriesCount = 5;
 
@@ -58,6 +58,7 @@ namespace Raven.Smuggler
 		public SmugglerRemoteDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported, Func<bool> isIdentitiesSmugglingSupported)
 		{
 			this.store = store;
+			
 			this.operation = operation;
 			this.isDocsStreamingSupported = isDocsStreamingSupported;
 			this.isTransformersSupported = isTransformersSupported;
@@ -116,7 +117,7 @@ namespace Raven.Smuggler
 		}
 
 		public JsonDocument GetDocument(string key)
-		{
+		{			
 			return Store.DatabaseCommands.Get(key);
 		}
 

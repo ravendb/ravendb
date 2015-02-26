@@ -45,7 +45,9 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-		    await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName);
+			var i = await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName);
+
+			Assert.Equal(2, i);
 
 			Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
@@ -63,12 +65,16 @@ namespace Raven.Tests.Issues
 			var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
 			var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
 
-		    await ((DocumentStore)store1).Replication.WaitAsync(putResult.ETag);
+			var i = await ((DocumentStore)store1).Replication.WaitAsync(putResult.ETag);
+
+			Assert.Equal(2,i);
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
 
-			((DocumentStore)store1).Replication.WaitAsync(putResult2.ETag).Wait();
+			i = await ((DocumentStore)store1).Replication.WaitAsync(putResult2.ETag);
+
+			Assert.Equal(2, i);
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/2"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/2"));

@@ -153,7 +153,7 @@ namespace Raven.Database.Json
 
 			CustomizeEngine(jintEngine, scope);
 
-			jintEngine.SetValue("PutDocument", (Action<string, object, object>)((key, document, metadata) => scope.PutDocument(key, document, metadata, jintEngine)));
+			jintEngine.SetValue("PutDocument", (Func<string, object, object,string>)((key, document, metadata) => scope.PutDocument(key, document, metadata, jintEngine)));
 			jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine)));
 			jintEngine.SetValue("DeleteDocument", (Action<string>)(scope.DeleteDocument));
 			jintEngine.SetValue("__document_id", docId);
@@ -273,16 +273,29 @@ if(customFunctions) {
 
 				var jsInstance = property.Value.Value;
 				if (!jsInstance.HasValue)
-					continue;				
-				
-				var output = jsInstance.Value.IsNumber() ? 
-					jsInstance.Value.AsNumber().ToString(CultureInfo.InvariantCulture) : 
-								(jsInstance.Value.IsBoolean() ? //if the parameter is boolean, we need to take it into account, 
-																//since jsInstance.Value.AsString() will not work for boolean values
-										jsInstance.Value.AsBoolean().ToString() : 
-										jsInstance.Value.AsString());
+					continue;
 
-				Debug.Add(output);
+				var value = jsInstance.Value;
+				string output = null;
+				switch (value.Type)
+				{
+					case Types.Boolean:
+						output = value.AsBoolean().ToString();
+						break;
+					case Types.Null:
+					case Types.Undefined:
+						output = value.ToString();
+						break;
+					case Types.Number:
+						output = value.AsNumber().ToString(CultureInfo.InvariantCulture);
+						break;
+					case Types.String:
+						output = value.AsString();
+						break;
+				}
+
+				if (output != null)
+					Debug.Add(output);
 			}
 
 			engine.Invoke("clear_debug_outputs");

@@ -78,6 +78,7 @@ interface computedAppUrls {
     filesystemSettings: KnockoutComputed<string>;
     filesystemSynchronizationDestinations: KnockoutComputed<string>;
     filesystemConfiguration: KnockoutComputed<string>;
+    filesystemSynchronizationConfiguration: KnockoutComputed<string>;
 
     filesystemVersioning: KnockoutComputed<string>;
 
