@@ -47,7 +47,8 @@ namespace Raven.Database.Indexing
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
             MetricsCounters = new MetricsCountersManager();
 	        InstallGauges();
-        }
+		    LastIdleTime = SystemTime.UtcNow;
+	    }
 
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
@@ -55,7 +56,7 @@ namespace Raven.Database.Indexing
 		public string DatabaseName { get; set; }
 
 		public DateTime LastWorkTime { get; private set; }
-
+		public DateTime LastIdleTime { get; set; }
 		public bool DoWork
 		{
 			get { return doWork; }
