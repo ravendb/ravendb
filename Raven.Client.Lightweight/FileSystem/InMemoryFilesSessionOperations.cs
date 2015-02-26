@@ -393,8 +393,8 @@ namespace Raven.Client.FileSystem
                 throw new InvalidOperationException(
                     string.Format(
                         @"The maximum number of requests ({0}) allowed for this session has been reached.
-Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
-Raven provides facilities like Load(string[] path) to load multiple files at once and batch saves (call SaveChanges() only once).
+RavenFS limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
+RavenFS provides facilities like LoadFile(string[] path) to load multiple files at once.
 You can increase the limit by setting FilesConvention.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
 advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
 more responsive application.",
