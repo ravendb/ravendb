@@ -601,16 +601,6 @@ class appUrl {
         return "#databases/tasks/csvImport?" + databasePart;
     }
 
-    static forDatabase(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases?" + databasePart;
-    }
-
-    static forFilesystem(fs: filesystem): string {
-        var filesystemPart = appUrl.getEncodedFsPart(fs);
-        return "#filesystems?" + filesystemPart;
-    }
-
     static forCounterStorage(cs: counterStorage): string {
         var counterStoragePart = appUrl.getEncodedCounterPart(cs);
         return "#counterstorages?" + counterStoragePart;

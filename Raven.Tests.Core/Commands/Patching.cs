@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -307,6 +308,63 @@ namespace Raven.Tests.Core.Commands
                 var post = store.DatabaseCommands.Get("posts/4");
                 Assert.NotNull(post);
                 Assert.Equal("new title", post.DataAsJson.Value<string>("Title"));
+            }
+        }
+
+        [Fact]
+        public void CanGenerteDynamicIdsOnPutDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    "posts/1",
+                    null,
+                    RavenJObject.FromObject(new Post
+                    {
+                        Title = "Post 1",
+                        Comments = new Post[] { }
+                    }),
+                    new RavenJObject());
+                var output = store.DatabaseCommands.Patch(
+                    "posts/1",
+                    new ScriptedPatchRequest()
+                    {
+                        Script = @"
+                            var postId = PutDocument('posts/',
+                                { 'Title' : 'unknown post id' }
+                            );
+                            this.Title = postId;
+                            output(postId);"
+
+
+                    });                
+                using (var session = store.OpenSession())
+                {
+                    var debugInfo = output.Value<RavenJArray>("Debug");
+                    var postId = debugInfo[0].ToString();
+                    var post = session.Load<Post>("posts/1");
+                    Assert.Equal(postId, post.Title);
+                }
+                output = store.DatabaseCommands.Patch(
+                    "posts/1",
+                    new ScriptedPatchRequest()
+                    {
+                        Script = @"
+                            var postId = PutDocument(null,
+                                { 'Title' : 'unknown post id' }
+                            );
+                            this.Title = postId;
+                            output(postId);"
+                    });
+                using (var session = store.OpenSession())
+                {
+                    var debugInfo = output.Value<RavenJArray>("Debug");
+                    var postId = debugInfo[0].ToString();
+                    var post = session.Load<Post>("posts/1");
+                    Assert.Equal(postId, post.Title);
+                    Guid id;
+                    Assert.True(Guid.TryParse(postId, out id));
+                }
             }
         }
     }

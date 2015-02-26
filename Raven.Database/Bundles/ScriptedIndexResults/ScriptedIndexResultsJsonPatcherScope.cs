@@ -38,12 +38,12 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 			return document;
 		}
 
-		public override void PutDocument(string documentKey, object data, object meta, Engine engine)
+		public override string PutDocument(string documentKey, object data, object meta, Engine engine)
 		{
 			if (forbiddenDocuments.Contains(documentKey))
 				throw new InvalidOperationException(string.Format("Cannot PUT document '{0}' to prevent infinite indexing loop. Avoid modifying documents that could be indirectly referenced by index.", documentKey));
 
-			base.PutDocument(documentKey, data, meta, engine);
+			return base.PutDocument(documentKey, data, meta, engine);
 		}
 
 		public override void DeleteDocument(string documentKey)
