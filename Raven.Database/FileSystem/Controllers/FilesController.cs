@@ -4,10 +4,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util.Encryptors;
-using Raven.Abstractions.Util.Streams;
-using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
@@ -16,14 +13,13 @@ using Raven.Database.Plugins;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -188,7 +184,7 @@ namespace Raven.Database.FileSystem.Controllers
 			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
 			log.Debug("File '{0}' was deleted", name);
 
-			StartSynchronizeDestinationsInBackground();
+			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -235,12 +231,12 @@ namespace Raven.Database.FileSystem.Controllers
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
             }
 
-            var ravenPaths = fileNames.Where(x => x != null).Select(x => FileHeader.Canonize(x));
+            var ravenPaths = fileNames.Where(x => x != null).Select(FileHeader.Canonize);
 
             var list = new List<FileHeader>();
             Storage.Batch(accessor => list.AddRange(ravenPaths.Select(accessor.ReadFile).Where(x => x != null)));
 
-            return this.GetMessageWithObject(list, HttpStatusCode.OK)
+            return GetMessageWithObject(list)
                        .WithNoCache();
         }
 
@@ -250,7 +246,7 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             name = FileHeader.Canonize(name);
 
-            var headers = this.GetFilteredMetadataFromHeaders(ReadInnerHeaders);
+            var headers = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
             Historian.UpdateLastModified(headers);
             Historian.Update(name, headers);
@@ -274,7 +270,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
-            StartSynchronizeDestinationsInBackground();
+			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
 
             log.Debug("Metadata of a file '{0}' was updated", name);
 
@@ -334,7 +330,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			log.Debug("File '{0}' was renamed to '{1}'", name, rename);
 
-			StartSynchronizeDestinationsInBackground();
+			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
 
             return GetMessageWithString("", HttpStatusCode.NoContent);
 		}
@@ -342,228 +338,47 @@ namespace Raven.Database.FileSystem.Controllers
 		[HttpPut]
         [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public async Task<HttpResponseMessage> Put(string name, string uploadId = null, bool preserveTimestamps = false)
-		{                     
+		{
 			try
 			{
-                FileSystem.MetricsCounters.FilesPerSecond.Mark();
+				var headers = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
-                name = FileHeader.Canonize(name);
+				var options = new FileActions.PutOperationOptions();
 
-                var headers = this.GetFilteredMetadataFromHeaders(ReadInnerHeaders);
-                if (preserveTimestamps)
-                {
-                    if (!headers.ContainsKey(Constants.RavenCreationDate))
-                    {
-                        if (headers.ContainsKey(Constants.CreationDate))
-                            headers[Constants.RavenCreationDate] = headers[Constants.CreationDate];                            
-                        else
-                            throw new InvalidOperationException("Preserve Timestamps requires that the client includes the Raven-Creation-Date header.");
-                    }
+				Guid uploadIdentifier;
+				if (uploadId != null && Guid.TryParse(uploadId, out uploadIdentifier))
+					options.UploadId = uploadIdentifier;
 
-                    var lastModified = GetHeader(Constants.RavenLastModified);
-                    if ( lastModified != null)
-                    {
-                        DateTimeOffset when;
-                        if (!DateTimeOffset.TryParse(lastModified, out when))
-                            when = DateTimeOffset.UtcNow;
+				var sizeHeader = GetHeader("RavenFS-size");
+				long contentSize;
+				if (long.TryParse(sizeHeader, out contentSize))
+					options.ContentSize = contentSize;
 
-                        Historian.UpdateLastModified(headers, when);
-                    }
-                    else Historian.UpdateLastModified(headers);
-                }
-                else
-                {
-                    headers[Constants.RavenCreationDate] = DateTimeOffset.UtcNow;
+				var lastModifiedHeader = GetHeader(Constants.RavenLastModified);
+				DateTimeOffset lastModified;
+				if (lastModifiedHeader != null && DateTimeOffset.TryParse(lastModifiedHeader, out lastModified))
+					options.LastModified = lastModified;
 
-                    Historian.UpdateLastModified(headers);
-                }
+				options.PreserveTimestamps = preserveTimestamps;
+				options.ContentLength = Request.Content.Headers.ContentLength;
+				options.TransferEncodingChunked = Request.Headers.TransferEncodingChunked ?? false;
 
-                // TODO: To keep current filesystems working. We should remove when adding a new migration. 
-                headers[Constants.CreationDate] = headers[Constants.RavenCreationDate].Value<DateTimeOffset>().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture);
-
-                Historian.Update(name, headers);
-
-                SynchronizationTask.Cancel(name);
-
-                long? size = -1;
-                ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
-                {
-					AssertPutOperationNotVetoed(name, headers);
-                    AssertFileIsNotBeingSynced(name, accessor, true);
-
-                    var contentLength = Request.Content.Headers.ContentLength;
-                    var sizeHeader = GetHeader("RavenFS-size");
-
-                    long sizeForParse;
-                    if (contentLength == 0 || long.TryParse(sizeHeader, out sizeForParse) == false)
-                    {
-                        size = contentLength;
-                        if (Request.Headers.TransferEncodingChunked ?? false)
-                        {
-                            size = null;
-                        }
-                    }
-                    else
-                    {
-                        size = sizeForParse;
-                    }
-
-					FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, headers));
-
-	                using (FileSystem.DisableAllTriggersForCurrentThread())
-	                {
-						StorageOperationsTask.IndicateFileToDelete(name);
-	                }
-
-                    accessor.PutFile(name, size, headers);
-
-					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, headers));
-
-                    Search.Index(name, headers);                  
-                }));
-
-                log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
-
-                using (var contentStream = await Request.Content.ReadAsStreamAsync())
-                using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, FileSystem.PutTriggers, contentStream, name, headers))
-                {
-                    await readFileToDatabase.Execute();                
-   
-                    if (readFileToDatabase.TotalSizeRead != size)
-                    {
-                        StorageOperationsTask.IndicateFileToDelete(name);
-                        throw new HttpResponseException(HttpStatusCode.BadRequest);
-                    }                        
-
-                    if ( !preserveTimestamps )
-                        Historian.UpdateLastModified(headers); // update with the final file size.
-
-                    log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
-
-                    headers["Content-MD5"] = readFileToDatabase.FileHash;                    
-
-                    Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers));
-
-                    int totalSizeRead = readFileToDatabase.TotalSizeRead;
-                    headers["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
-                    
-                    Search.Index(name, headers);
-                    Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
-
-                    log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
-
-                    StartSynchronizeDestinationsInBackground();
-                }
+				await FileSystem.Files.PutAsync(name, headers, () => Request.Content.ReadAsStreamAsync(), options);
 			}
 			catch (Exception ex)
 			{
-				if (uploadId != null)
-				{
-					Guid uploadIdentifier;
-					if (Guid.TryParse(uploadId, out uploadIdentifier))
-					{
-						Publisher.Publish(new CancellationNotification { UploadId = uploadIdentifier, File = name });
-					}
-				}
-
-				log.WarnException(string.Format("Failed to upload a file '{0}'", name), ex);
-
 				var concurrencyException = ex as ConcurrencyException;
 				if (concurrencyException != null)
-				{
 					throw ConcurrencyResponseException(concurrencyException);
-				}
+
+				var synchronizationException = ex as SynchronizationException;
+				if (synchronizationException != null)
+					throw new HttpResponseException(Request.CreateResponse((HttpStatusCode)420, synchronizationException));
 
 				throw;
 			}
 
 			return GetEmptyMessage(HttpStatusCode.Created);
-		}
-
-	    private void AssertPutOperationNotVetoed(string name, RavenJObject headers)
-	    {
-			var vetoResult = FileSystem.PutTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, headers) })
-				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
-		    if (vetoResult != null)
-		    {
-			    throw new OperationVetoedException("PUT vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
-		    }
-	    }
-
-	    private void StartSynchronizeDestinationsInBackground()
-		{
-			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
-		}
-
-		private class ReadFileToDatabase : IDisposable
-		{
-			private readonly byte[] buffer;
-			private readonly BufferPool bufferPool;
-			private readonly string filename;
-
-			private readonly RavenJObject headers;
-
-			private readonly Stream inputStream;
-			private readonly ITransactionalStorage storage;
-
-			private readonly OrderedPartCollection<AbstractFilePutTrigger> putTriggers;
-
-			private readonly IHashEncryptor md5Hasher;
-			public int TotalSizeRead;
-			private int pos;
-
-			public ReadFileToDatabase(BufferPool bufferPool, ITransactionalStorage storage, OrderedPartCollection<AbstractFilePutTrigger> putTriggers, Stream inputStream, string filename, RavenJObject headers)
-			{
-				this.bufferPool = bufferPool;
-				this.inputStream = inputStream;
-				this.storage = storage;
-				this.putTriggers = putTriggers;
-				this.filename = filename;
-				this.headers = headers;
-				buffer = bufferPool.TakeBuffer(StorageConstants.MaxPageSize);
-			    md5Hasher = Encryptor.Current.CreateHash();
-			}
-
-			public string FileHash { get; private set; }
-
-			public void Dispose()
-			{
-				bufferPool.ReturnBuffer(buffer);
-			}
-
-			public async Task Execute()
-			{
-				while (true)
-				{
-					var read = await inputStream.ReadAsync(buffer);
-
-					TotalSizeRead += read;
-
-					if (read == 0) // nothing left to read
-					{
-						FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
-						headers["Content-MD5"] = FileHash;
-						storage.Batch(accessor =>
-						{
-							accessor.CompleteFileUpload(filename);
-							putTriggers.Apply(trigger => trigger.AfterUpload(filename, headers));
-						});
-						return; // task is done
-					}
-
-					ConcurrencyAwareExecutor.Execute(() => storage.Batch(accessor =>
-					{
-						var hashKey = accessor.InsertPage(buffer, read);
-						accessor.AssociatePage(filename, hashKey, pos, read);
-						putTriggers.Apply(trigger => trigger.OnUpload(filename, headers, hashKey, pos, read));
-					}));
-
-					md5Hasher.TransformBlock(buffer, 0, read);
-
-					pos++;
-				}
-			}
 		}
 	}
 }

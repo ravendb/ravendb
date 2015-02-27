@@ -45,7 +45,7 @@ class filesystemFiles extends viewModelBase {
 
     static treeSelector = "#filesTree";
     static gridSelector = "#filesGrid";
-    static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle"
+    static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle";
     static uploadQueueSelector = "#uploadQueue";
     static uploadQueuePanelCollapsedSelector = "#uploadQueuePanelCollapsed";
 
