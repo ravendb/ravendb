@@ -39,25 +39,40 @@ namespace Raven.Database.Raft
 				Uri = RaftHelper.GetNodeUrl(url)
 			};
 
-			var directoryPath = Path.Combine(configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft");
-			if (Directory.Exists(directoryPath) == false)
-				Directory.CreateDirectory(directoryPath);
+			StorageEnvironmentOptions options;
+			if (configuration.RunInMemory == false)
+			{
+				var directoryPath = Path.Combine(configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft");
+				if (Directory.Exists(directoryPath) == false) 
+					Directory.CreateDirectory(directoryPath);
 
-			var stateMachine = new InMemoryStateMachine();
+				options = StorageEnvironmentOptions.ForPath(directoryPath);
+			}
+			else
+			{
+				options = StorageEnvironmentOptions.CreateMemoryOnly();
+			}
 
-			var options = StorageEnvironmentOptions.ForPath(directoryPath);
 			var transport = new HttpTransport(nodeName);
-
+			var stateMachine = new InMemoryStateMachine();
 			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine) { HeartbeatTimeout = 1000 };
 
 			return new RaftEngine(raftEngineOptions);
 		}
 
-		public static void InitializeTopology(DocumentDatabase systemDatabase, RaftEngine raftEngine)
+		public static void InitializeTopology(DocumentDatabase systemDatabase, RaftEngine engine)
 		{
-			var topology = new Topology(systemDatabase.TransactionalStorage.Id, new List<NodeConnectionInfo> { raftEngine.Options.SelfConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
+			var topology = new Topology(systemDatabase.TransactionalStorage.Id, new List<NodeConnectionInfo> { engine.Options.SelfConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
 
-			raftEngine.StartTopologyChange(new TopologyChangeCommand { Requested = topology });
+			var tcc = new TopologyChangeCommand
+			          {
+				          Requested = topology
+			          };
+
+			engine.PersistentState.SetCurrentTopology(tcc.Requested, 1);
+			engine.StartTopologyChange(tcc);
+			engine.CommitTopologyChange(tcc);
+			engine.CurrentLeader = null;
 		}
 	}
 }
