@@ -238,6 +238,8 @@
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
     <Compile Include="FileSystem\Actions\ActionsBase.cs" />
+    <Compile Include="FileSystem\Actions\FileActions.cs" />
+    <Compile Include="FileSystem\Actions\SynchronizationActions.cs" />
     <Compile Include="FileSystem\Actions\TaskActions.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideDeletingFilesTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />

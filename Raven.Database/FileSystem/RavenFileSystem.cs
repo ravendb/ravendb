@@ -12,6 +12,7 @@ using Raven.Abstractions.Util.Streams;
 using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.Impl;
 using Raven.Database.Server.Abstractions;
@@ -89,12 +90,18 @@ namespace Raven.Database.FileSystem
             storageOperationsTask = new StorageOperationsTask(storage, DeleteTriggers, search, notificationPublisher);
 
 			Tasks = new TaskActions(this, Log);
+			Files = new FileActions(this, Log);
+			Synchronization = new SynchronizationActions(this, Log);
 
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
 		}
 
 	    public TaskActions Tasks { get; private set; }
+
+		public FileActions Files { get; private set; }
+
+		public SynchronizationActions Synchronization { get; private set; }
 
 	    public void Initialize()
         {
