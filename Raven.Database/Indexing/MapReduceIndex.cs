@@ -64,11 +64,7 @@ namespace Raven.Database.Indexing
 							  AbstractViewGenerator viewGenerator, WorkContext context)
 			: base(directory, id, indexDefinition, viewGenerator, context)
 		{
-			jsonSerializer = new JsonSerializer();
-			foreach (var jsonConverter in Default.Converters)
-			{
-				jsonSerializer.Converters.Add(jsonConverter);
-			}
+			jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
 			jsonSerializer.Converters.Add(new IgnoreFieldable());
 		}
 

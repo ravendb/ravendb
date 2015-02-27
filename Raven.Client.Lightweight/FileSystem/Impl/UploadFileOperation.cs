@@ -55,7 +55,7 @@ namespace Raven.Client.FileSystem.Impl
                 }
             }
 
-            await commands.UploadAsync(Filename, pipe, Metadata, Size, null)
+            await commands.UploadAsync(Filename, pipe, Metadata, Size)
                           .ConfigureAwait(false);
 
             var metadata = await commands.GetMetadataForAsync(Filename);

@@ -36,6 +36,7 @@ class patch extends viewModelBase {
 
     loadedDocuments = ko.observableArray<string>();
     putDocuments = ko.observableArray<any>();
+    outputLog = ko.observableArray<string>();
 
     isExecuteAllowed: KnockoutComputed<boolean>;
     documentKey = ko.observable<string>();
@@ -248,13 +249,14 @@ class patch extends viewModelBase {
                 var testResult = new document(result[0].AdditionalData['Document']);
                 this.afterPatch(JSON.stringify(testResult.toDto(), null, 4));
                 this.updateActions(result[0].AdditionalData['Actions']);
+                this.outputLog(result[0].AdditionalData["Debug"]);
             })
             .fail((result: JQueryXHR) => console.log(result.responseText));
     }
 
     private updateActions(actions: { PutDocument: any[]; LoadDocument: any }) {
-        this.loadedDocuments(actions.LoadDocument); 
-        this.putDocuments(actions.PutDocument.map(doc => jsonUtil.syntaxHighlight(doc)));
+        this.loadedDocuments(actions.LoadDocument || []); 
+        this.putDocuments((actions.PutDocument || []).map(doc => jsonUtil.syntaxHighlight(doc)));
     }
 
     executePatchOnSingle() {

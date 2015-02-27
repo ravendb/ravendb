@@ -518,17 +518,14 @@ namespace Raven.Database.Server.WebApi
 			};
 		}
 
+
 		private void IdleOperations(object state)
 		{
 			try
 			{
-				var idleTime = TimeSpan.FromMinutes(1);
-				if (idleTime > maxTimeDatabaseCanBeIdle)
-					idleTime = maxTimeDatabaseCanBeIdle;
-
 				try
 				{
-					if ((SystemTime.UtcNow - landlord.SystemDatabase.WorkContext.LastWorkTime) > idleTime)
+					if (DatabaseNeedToRunIdleOperations(landlord.SystemDatabase))
 						landlord.SystemDatabase.RunIdleOperations();
 				}
 				catch (Exception e)
@@ -545,7 +542,7 @@ namespace Raven.Database.Server.WebApi
 							continue;
 
 						var database = documentDatabase.Value.Result;
-						if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime) > idleTime)
+						if (DatabaseNeedToRunIdleOperations(database))
 							database.RunIdleOperations();
 					}
 
@@ -584,6 +581,16 @@ namespace Raven.Database.Server.WebApi
 				{
 				}
 			}
+		}
+
+		private bool DatabaseNeedToRunIdleOperations(DocumentDatabase documentDatabase)
+		{
+			var dateTime = SystemTime.UtcNow;
+			if ((dateTime - documentDatabase.WorkContext.LastWorkTime).TotalMinutes > 1)
+				return true;
+			if ((dateTime - documentDatabase.WorkContext.LastIdleTime).TotalHours > 1)
+				return true;
+			return false;
 		}
 	}
 }

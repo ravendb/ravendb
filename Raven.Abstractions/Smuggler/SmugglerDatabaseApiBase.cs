@@ -104,8 +104,7 @@ namespace Raven.Abstractions.Smuggler
 
 			try
 			{
-				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
- leaveOpen: true))
+				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,leaveOpen: true))
 				using (var streamWriter = new StreamWriter(gZipStream))
 				{
 					var jsonWriter = new JsonTextWriter(streamWriter)
@@ -626,7 +625,7 @@ namespace Raven.Abstractions.Smuggler
 				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
 				var streamReader = new StreamReader(sizeStream);
 
-				jsonReader = new JsonTextReader(streamReader);
+				jsonReader = new RavenJsonTextReader(streamReader);
 
 				if (jsonReader.Read() == false)
 					return;

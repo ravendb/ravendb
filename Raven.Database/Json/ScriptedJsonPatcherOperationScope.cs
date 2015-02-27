@@ -42,7 +42,7 @@ namespace Raven.Database.Json
 
 		public abstract JsValue LoadDocument(string documentKey, Engine engine);
 
-		public abstract void PutDocument(string documentKey, object data, object meta, Engine jintEngine);
+		public abstract string PutDocument(string documentKey, object data, object meta, Engine jintEngine);
 
 		public abstract void DeleteDocument(string documentKey);
 
@@ -116,7 +116,7 @@ namespace Raven.Database.Json
 			return ToJsObject(engine, loadedDoc);
 		}
 
-		public override void PutDocument(string key, object documentAsObject, object metadataAsObject, Engine engine)
+		public override string PutDocument(string key, object documentAsObject, object metadataAsObject, Engine engine)
 		{
 			if (documentAsObject == null)
 			{
@@ -164,15 +164,30 @@ namespace Raven.Database.Json
 				}
 
 				newDocument.Metadata = metadata;
-			}
-
-			RecordActionForDebug("PutDocument", newDocument.Key, newDocument.DataAsJson, newDocument.Metadata);
-
+			}		
 			ValidateDocument(newDocument);
-			AddToContext(key, newDocument);
+            GenerateKeyForPutDocument(key, newDocument);
+            RecordActionForDebug("PutDocument", newDocument.Key, newDocument.DataAsJson, newDocument.Metadata);
+            AddToContext(newDocument.Key, newDocument);
+            return newDocument.Key;
 		}
 
-		public override void DeleteDocument(string documentKey)
+	    private void GenerateKeyForPutDocument(string key, JsonDocument newDocument)
+	    {
+            key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
+	        if (key.EndsWith("/"))
+	        {
+	            using (Database.DocumentLock.Lock())
+	            {
+	                Database.TransactionalStorage.Batch(actions => {
+	                    key += Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions);
+	                });
+	            }
+	        }
+	        newDocument.Key = key;
+	    }
+
+	    public override void DeleteDocument(string documentKey)
 		{
 			throw new NotSupportedException("Deleting documents is not supported.");
 		}
