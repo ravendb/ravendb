@@ -195,18 +195,18 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation); 
         }
 
-        public void RegisterRename(string sourceFile, string destinationFile)
+        public void RegisterRename(string sourceFile, string destinationFile, Etag etag = null)
         {
-            var operation = new RenameFileOperation(this, sourceFile, destinationFile);
+            var operation = new RenameFileOperation(this, sourceFile, destinationFile, etag);
 
             IncrementRequestCount();
 
             registeredOperations.Enqueue(operation);
         }
 
-        public void RegisterRename(FileHeader sourceFile, string destinationFile)
+        public void RegisterRename(FileHeader sourceFile, string destinationFile, Etag etag = null)
         {
-            RegisterRename(sourceFile.Directory, destinationFile);
+            RegisterRename(sourceFile.Directory, destinationFile, etag);
         }
 
         public void AddToCache(string filename, FileHeader fileHeader)

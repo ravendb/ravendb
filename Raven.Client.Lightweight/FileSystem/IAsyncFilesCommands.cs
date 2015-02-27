@@ -64,15 +64,15 @@ namespace Raven.Client.FileSystem
         Task<FileSystemStats> GetStatisticsAsync();
 
 
-        Task DeleteAsync(string filename);
-        Task RenameAsync(string currentName, string newName);
+        Task DeleteAsync(string filename, Etag etag = null);
+        Task RenameAsync(string currentName, string newName, Etag etag = null);
 
         Task<RavenJObject> GetMetadataForAsync(string filename);
 
-        Task UpdateMetadataAsync(string filename, RavenJObject metadata);
+        Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null);
 
-        Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? size = null);
-        Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size);
+        Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? size = null, Etag etag = null);
+        Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, Etag etag = null);
 
         Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
 

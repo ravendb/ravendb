@@ -250,7 +250,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task DeleteAsync(string filename)
+        public Task DeleteAsync(string filename, Etag etag = null)
         {
             return ExecuteWithReplication("DELETE", async operation =>
             {
@@ -258,6 +258,7 @@ namespace Raven.Client.FileSystem
 
 	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "DELETE", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
+		            AddEtagHeader(request, etag);
 					try
 					{
 						await request.ExecuteRequestAsync().ConfigureAwait(false);
@@ -270,7 +271,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task RenameAsync(string filename, string rename)
+        public Task RenameAsync(string filename, string rename, Etag etag = null)
         {
             return ExecuteWithReplication("PATCH", async operation =>
             {
@@ -278,6 +279,7 @@ namespace Raven.Client.FileSystem
 
 	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PATCH", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
+					AddEtagHeader(request, etag);
 					try
 					{
 						await request.ExecuteRequestAsync().ConfigureAwait(false);
@@ -730,14 +732,14 @@ namespace Raven.Client.FileSystem
 			}
         }
 
-        public Task UpdateMetadataAsync(string filename, RavenJObject metadata)
+        public Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null)
         {
             return ExecuteWithReplication("POST", async operation =>
             {
 	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + "/files/" + filename, "POST", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
 					AddHeaders(metadata, request);
-
+					AddEtagHeader(request, etag);
 					try
 					{
 						await request.ExecuteRequestAsync().ConfigureAwait(false);
@@ -750,24 +752,24 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? size = null)
+        public Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? size = null, Etag etag = null)
         {
             if (metadata == null)
                 metadata = new RavenJObject();
 
             return ExecuteWithReplication("PUT", async operation =>
             {
-                await UploadAsyncImpl(operation, filename, source, metadata, false, size).ConfigureAwait(false);
+                await UploadAsyncImpl(operation, filename, source, metadata, false, size, etag).ConfigureAwait(false);
             });
         }
 
-        public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size)
+        public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, Etag etag = null)
         {
             var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
-            return UploadAsyncImpl(operationMetadata, filename, source, metadata, true, size);
+            return UploadAsyncImpl(operationMetadata, filename, source, metadata, true, size, etag);
         }
 
-        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Stream source, RavenJObject metadata, bool preserveTimestamps, long? size)
+        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Stream source, RavenJObject metadata, bool preserveTimestamps, long? size, Etag etag)
         {
             if (source.CanRead == false)
                 throw new Exception("Stream does not support reading");
@@ -783,6 +785,7 @@ namespace Raven.Client.FileSystem
 		        metadata["RavenFS-Size"] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
 
 		        AddHeaders(metadata, request);
+				AddEtagHeader(request, etag);
 
 		        var cts = new CancellationTokenSource();
 
@@ -920,12 +923,20 @@ namespace Raven.Client.FileSystem
             }
         }
 
+	    private static void AddEtagHeader(HttpJsonRequest request, Etag etag)
+	    {
+		    if (etag != null)
+		    {
+				request.AddHeader("If-None-Match", "\"" + etag + "\"");
+		    }
+	    }
+
         private static void AddHeaders(RavenJObject metadata, HttpJsonRequest request)
         {
             foreach( var item in metadata )
             {
-	            var value = item.Value is RavenJValue ? item.Value.ToString() : item.Value.ToString(Formatting.None);
-				request.AddHeader(item.Key, value); 
+				var value = item.Value is RavenJValue ? item.Value.ToString() : item.Value.ToString(Formatting.None);
+				request.AddHeader(item.Key, value);     
             }
         }
 
