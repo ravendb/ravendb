@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 using Rachis;
 using Rachis.Transport;
 
-using Raven.Database.Bundles.Raft.Util;
+using Raven.Database.Raft.Util;
 
-namespace Raven.Database.Bundles.Raft
+namespace Raven.Database.Raft
 {
 	public class RaftHttpClient
 	{
@@ -36,53 +36,26 @@ namespace Raven.Database.Bundles.Raft
 			httpClient = new HttpClient();
 		}
 
-		public async Task JoinAsync(string destinationNodeUrl, int numberOfTries = 3)
+		public async Task<CanJoinResult> CanJoinAsync(string destinationNodeUrl, int numberOfTries = 3)
 		{
-			var url = destinationNodeUrl + "/raft/join?url=" + SelfConnection.Uri + "&name=" + SelfConnection.Name;
+			var url = destinationNodeUrl + "admin/raft/canJoin?name=" + SelfConnection.Name;
 
 			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
 			if (response.IsSuccessStatusCode)
-				return;
+				return CanJoinResult.CanJoin;
 
 			numberOfTries--;
 
 			switch (response.StatusCode)
 			{
 				case HttpStatusCode.NotModified:
-					return; // already in topology
+					return CanJoinResult.AlreadyJoined;
 				case HttpStatusCode.NotAcceptable:
-					return; // not in destination document => no master/master
-				case HttpStatusCode.Redirect:
-					throw new NotImplementedException(); // not a leader, redirect		// TODO [ppekrol]
+					return CanJoinResult.InAnotherCluster;
 				case HttpStatusCode.ServiceUnavailable:
 					if (numberOfTries > 0)
-						await JoinAsync(destinationNodeUrl, numberOfTries);
-					return;
-				default:
-					throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
-			}
-		}
-
-		public async Task JoinMeAsync(string destinationNodeUrl, int numberOfTries = 2)
-		{
-			var url = destinationNodeUrl + "/raft/join/me?url=" + SelfConnection.Uri + "&name=" + SelfConnection.Name;
-
-			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
-			if (response.IsSuccessStatusCode)
-				return;
-
-			numberOfTries--;
-
-			switch (response.StatusCode)
-			{
-				case HttpStatusCode.NotModified:
-					return; // already in topology
-				case HttpStatusCode.NotAcceptable:
-					return; // not in destination document => no master/master
-				case HttpStatusCode.ServiceUnavailable:
-					if (numberOfTries > 0)
-						await JoinAsync(destinationNodeUrl, numberOfTries);
-					return;
+						return await CanJoinAsync(destinationNodeUrl, numberOfTries);
+					throw new InvalidOperationException(string.Format("Could not connect to '{0}'.", destinationNodeUrl));
 				default:
 					throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
 			}
@@ -91,10 +64,13 @@ namespace Raven.Database.Bundles.Raft
 		public async Task LeaveAsync()
 		{
 			if (raftEngine.IsLeader())
+			{
 				await raftEngine.StepDownAsync().ConfigureAwait(false);
+				raftEngine.WaitForLeader();
+			}
 
 			var node = raftEngine.GetLeaderNode() ?? raftEngine.GetFirstNonSelfNode();
-			var url = node.Uri + "/raft/leave?name=" + SelfConnection.Name;
+			var url = node.Uri + "admin//raft/leave?name=" + SelfConnection.Name;
 
 			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
 			if (response.IsSuccessStatusCode)
@@ -110,5 +86,14 @@ namespace Raven.Database.Bundles.Raft
 					throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
 			}
 		}
+	}
+
+	public enum CanJoinResult
+	{
+		CanJoin,
+
+		AlreadyJoined,
+
+		InAnotherCluster
 	}
 }

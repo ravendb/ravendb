@@ -3,13 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
 
 using Rachis;
 using Rachis.Transport;
 
-namespace Raven.Database.Bundles.Raft.Util
+namespace Raven.Database.Raft.Util
 {
 	public static class RaftHelper
 	{

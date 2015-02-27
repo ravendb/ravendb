@@ -769,7 +769,7 @@ namespace Rachis
 			return string.Format("Name: {0} = {1}", Name, State);
 		}
 
-		internal void StartTopologyChange(TopologyChangeCommand tcc)
+		public void StartTopologyChange(TopologyChangeCommand tcc)
 		{			
 			Interlocked.Exchange(ref _currentTopology, tcc.Requested);
 			Interlocked.Exchange(ref _changingTopology, new TaskCompletionSource<object>().Task);

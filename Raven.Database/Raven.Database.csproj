@@ -235,7 +235,6 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
-    <Compile Include="Bundles\Raft\RaftTask.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\GlobalSettingsDocument.cs" />
     <Compile Include="Config\GlobalSettingsDocumentProtector.cs" />
@@ -264,10 +263,11 @@
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
-    <Compile Include="Bundles\Raft\Controllers\RaftController.cs" />
-    <Compile Include="Bundles\Raft\RaftHttpClient.cs" />
-    <Compile Include="Bundles\Raft\Storage\InMemoryStateMachine.cs" />
-    <Compile Include="Bundles\Raft\Util\RaftHelper.cs" />
+    <Compile Include="Raft\Controllers\RaftController.cs" />
+    <Compile Include="Raft\RaftHttpClient.cs" />
+    <Compile Include="Raft\Storage\InMemoryStateMachine.cs" />
+    <Compile Include="Raft\Util\RaftHelper.cs" />
+    <Compile Include="Raft\RaftEngineFactory.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Server\WebApi\ MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />

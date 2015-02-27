@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+
+using Rachis;
+
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Raft;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -18,8 +22,9 @@ namespace Raven.Database.Server
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
+		private readonly RaftEngine raftEngine;
 
-		private bool preventDisposing = false;
+		private bool preventDisposing;
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
 		{
@@ -44,6 +49,7 @@ namespace Raven.Database.Server
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
+				raftEngine = RaftEngineFactory.Create(systemDatabase);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}
@@ -84,6 +90,11 @@ namespace Raven.Database.Server
 			get { return requestManager; }
 		}
 
+		public RaftEngine RaftEngine
+		{
+			get { return raftEngine; }
+		}
+
 		public void Dispose()
 		{
 			if(preventDisposing)
@@ -97,7 +108,8 @@ namespace Raven.Database.Server
                                 systemDatabase, 
                                 LogManager.GetTarget<AdminLogsTarget>(),
                                 requestManager,
-                                countersLandlord
+                                countersLandlord,
+								raftEngine
 		                    };
 
             var errors = new List<Exception>();

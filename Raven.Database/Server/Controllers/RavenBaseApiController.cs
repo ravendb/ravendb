@@ -16,7 +16,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
-using Mono.CSharp;
+
+using Rachis;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -120,6 +122,7 @@ namespace Raven.Database.Server.Controllers
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
+			raftEngine = (RaftEngine)controllerContext.Configuration.Properties[typeof(RaftEngine)];
 			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
             maxSecondsForTaskToWaitForDatabaseToLoad = (int)controllerContext.Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
             //MaxSecondsForTaskToWaitForDatabaseToLoad
@@ -782,6 +785,17 @@ namespace Raven.Database.Server.Controllers
                 return (RequestManager)Configuration.Properties[typeof(RequestManager)];
             }
         }
+
+		private RaftEngine raftEngine;
+		public RaftEngine RaftEngine
+		{
+			get
+			{
+				if (Configuration == null)
+					return raftEngine;
+				return (RaftEngine)Configuration.Properties[typeof(RaftEngine)];
+			}
+		}
 
 		private SemaphoreSlim maxNumberOfThreadsForDatabaseToLoad;
         private int maxSecondsForTaskToWaitForDatabaseToLoad;

@@ -12,7 +12,7 @@ using Rachis.Commands;
 using Rachis.Interfaces;
 using Rachis.Messages;
 
-namespace Raven.Database.Bundles.Raft.Storage
+namespace Raven.Database.Raft.Storage
 {
 	public class InMemoryStateMachine : IRaftStateMachine
 	{
