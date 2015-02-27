@@ -13,6 +13,8 @@ using System.Web.Http.Hosting;
 using System.Web.Http.Routing;
 using Microsoft.Owin;
 
+using Rachis;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
@@ -113,6 +115,7 @@ namespace Owin
 			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
+			cfg.Properties[typeof(RaftEngine)] = options.RaftEngine;
 			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
             cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
