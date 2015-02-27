@@ -13,6 +13,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 
@@ -86,10 +87,12 @@ namespace Raven.Database.FileSystem.Smuggler
 			return new CompletedTask<Stream>(readingStream);
 		}
 
-		public Task PutFiles(FileHeader file, Stream data, long dataSize)
+		public async Task PutFiles(FileHeader file, Stream data, long dataSize)
 		{
-			//TODO: finish me - we need support for FilesActions in RavenFS?
-			throw new NotImplementedException();
+			await filesystem.Files.PutAsync(file.FullPath, file.Metadata, () => new CompletedTask<Stream>(data), new FileActions.PutOperationOptions
+			{
+				ContentLength = dataSize
+			});
 		}
 
 		public void Initialize(SmugglerFilesOptions options)

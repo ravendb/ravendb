@@ -309,6 +309,8 @@ namespace Raven.Abstractions.Smuggler
 
         public virtual async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions)
         {
+			Operations.ShowProgress("Importing filesystem");
+
             Operations.Configure(Options);
             Operations.Initialize(Options);
 
@@ -338,6 +340,7 @@ namespace Raven.Abstractions.Smuggler
 
         private async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions, string filename)
         {
+	        var count = 0;
             var sw = Stopwatch.StartNew();
             var directory = Path.GetDirectoryName(filename);
 
@@ -372,6 +375,12 @@ namespace Raven.Abstractions.Smuggler
                         }
 
                         Options.CancelToken.Token.ThrowIfCancellationRequested();
+	                    count++;
+
+	                    if (count%100 == 0)
+	                    {
+							Operations.ShowProgress("Read {0:#,#;;0} files", count);
+	                    }
                     }
 
                     Options.CancelToken.Token.ThrowIfCancellationRequested();

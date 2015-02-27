@@ -63,16 +63,13 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				try
 				{
-					using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
-					{
-						var dataDumper = new FilesystemDataDumper(FileSystem);
-						dataDumper.Progress += s => status.LastProgress = s;
-						var smugglerOptions = dataDumper.Options;
-						smugglerOptions.BatchSize = batchSize;
-						smugglerOptions.CancelToken = cts;
+					var dataDumper = new FilesystemDataDumper(FileSystem);
+					dataDumper.Progress += s => status.LastProgress = s;
+					var smugglerOptions = dataDumper.Options;
+					smugglerOptions.BatchSize = batchSize;
+					smugglerOptions.CancelToken = cts;
 
-						await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromStream = fileStream });
-					}
+					await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath });
 				}
 				catch (Exception e)
 				{

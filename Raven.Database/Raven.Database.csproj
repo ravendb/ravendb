@@ -247,7 +247,7 @@
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningPutTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\VersioningUtil.cs" />
     <Compile Include="FileSystem\Controllers\FsStudioTasksController.cs" />
-    <Compile Include="FileSystem\Controllers\OperationsController.cs" />
+    <Compile Include="FileSystem\Controllers\FsOperationsController.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileDeleteTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />

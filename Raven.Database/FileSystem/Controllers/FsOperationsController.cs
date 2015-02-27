@@ -7,7 +7,7 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.FileSystem.Controllers
 {
 	[RoutePrefix("")]
-	public class OperationsController : RavenFsApiController
+	public class FsOperationsController : RavenFsApiController
 	{
 		[HttpGet]
 		[RavenRoute("fs/{fileSystemName}/operation/status")]

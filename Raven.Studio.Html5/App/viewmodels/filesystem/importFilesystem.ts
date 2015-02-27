@@ -17,7 +17,7 @@ class importDatabase extends viewModelBase {
 
     canDeactivate(isClose) {
         super.canDeactivate(isClose);
-
+        
         if (this.isUploading) {
             this.confirmationMessage("Upload is in progress", "Please wait until uplodaing is complete.", ['OK']);
             return false;
@@ -27,7 +27,7 @@ class importDatabase extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            ko.postbox.subscribe("UploadProgress", (percentComplete: number) => this.activeDatabase().importStatus("Uploading " + percentComplete.toFixed(2).replace(/\.0*$/, '') + "%")),
+            ko.postbox.subscribe("UploadProgress", (percentComplete: number) => this.activeFilesystem().importStatus("Uploading " + percentComplete.toFixed(2).replace(/\.0*$/, '') + "%")),
             ko.postbox.subscribe("ChangesApiReconnected", (fs: filesystem) => {
                 fs.importStatus("");
                 fs.isImporting(false);
