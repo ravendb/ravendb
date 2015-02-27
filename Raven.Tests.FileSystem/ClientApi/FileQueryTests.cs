@@ -3,10 +3,8 @@ using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.FileSystem.ClientApi
@@ -814,5 +812,35 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
+	    [Fact]
+	    public async Task CanUseTakeAndSkip()
+	    {
+		    var store = this.NewStore();
+
+		    for (int i = 0; i < 20; i++)
+		    {
+			    using (var session = store.OpenAsyncSession())
+			    {
+				    session.RegisterUpload(i + ".file", CreateRandomFileStream(i));
+				    session.RegisterUpload(i + ".txt", CreateRandomFileStream(i));
+				    await session.SaveChangesAsync();
+			    }
+		    }
+
+		    int pageSize = 5;
+		    var files = new List<FileHeader>();
+
+		    using (var session = store.OpenAsyncSession())
+		    {
+			    for (int i = 0; i < 4; i++)
+			    {
+				    var results = await session.Query().WhereEndsWith(x => x.Name, ".file").Skip(i*pageSize).Take(pageSize).ToListAsync();
+				    files.AddRange(results);
+			    }
+
+			    Assert.Equal(20, files.Count);
+			    Assert.Equal(20, files.Select(x => x.Name).Distinct().Count());
+		    }
+	    }
     }
 }

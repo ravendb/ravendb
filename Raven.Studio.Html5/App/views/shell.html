@@ -140,6 +140,10 @@
                             <a data-bind="attr: { href: appUrls.filesystemStatus }">Status</a>
                         </li>
 
+                        <li data-bind="css: { active: appUrls.isActive('Tasks') }">
+                            <a data-bind="attr: { href: appUrls.filesystemTasks }">Tasks</a>
+                        </li>
+
                         <li data-bind="css: { active: appUrls.isActive('Settings') }, visible: canShowFileSystemSettings">
                             <a data-bind="attr: { href: appUrls.filesystemSettings }">Settings</a>
                         </li>
