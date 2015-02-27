@@ -153,7 +153,7 @@ namespace Raven.Database.Json
 
 			CustomizeEngine(jintEngine, scope);
 
-			jintEngine.SetValue("PutDocument", (Action<string, object, object>)((key, document, metadata) => scope.PutDocument(key, document, metadata, jintEngine)));
+			jintEngine.SetValue("PutDocument", (Func<string, object, object,string>)((key, document, metadata) => scope.PutDocument(key, document, metadata, jintEngine)));
 			jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine)));
 			jintEngine.SetValue("DeleteDocument", (Action<string>)(scope.DeleteDocument));
 			jintEngine.SetValue("__document_id", docId);

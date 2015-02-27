@@ -104,8 +104,7 @@ namespace Raven.Abstractions.Smuggler
 
 			try
 			{
-				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
- leaveOpen: true))
+				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,leaveOpen: true))
 				using (var streamWriter = new StreamWriter(gZipStream))
 				{
 					var jsonWriter = new JsonTextWriter(streamWriter)
