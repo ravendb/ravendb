@@ -33,12 +33,10 @@ namespace Raven.Database.Raft
 			if (string.IsNullOrEmpty(configuration.DatabaseName) == false)
 				url = url.ForDatabase(configuration.DatabaseName);
 
-			url = RaftHelper.NormalizeNodeUrl(url);
-
 			var nodeConnectionInfo = new NodeConnectionInfo
 			{
 				Name = nodeName,
-				Uri = new Uri(url)
+				Uri = RaftHelper.GetNodeUrl(url)
 			};
 
 			var directoryPath = Path.Combine(configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft");

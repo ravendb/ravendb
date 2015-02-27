@@ -35,7 +35,7 @@ namespace Raven.Database.Raft.Util
 			return engine.CurrentTopology.AllNodes.First(x => x.Name != selfNode.Name);
 		}
 
-		public static string NormalizeNodeUrl(string url)
+		public static Uri GetNodeUrl(string url)
 		{
 			if (string.IsNullOrEmpty(url))
 				throw new ArgumentNullException("url");
@@ -43,7 +43,12 @@ namespace Raven.Database.Raft.Util
 			if (url.EndsWith("/") == false && url.EndsWith("\\") == false)
 				url += "/";
 
-			return url;
+			return new Uri(url, UriKind.Absolute);
+		}
+
+		public static string GetNodeName(Guid name)
+		{
+			return name.ToString();
 		}
 	}
 }

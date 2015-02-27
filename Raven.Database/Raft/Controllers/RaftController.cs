@@ -35,7 +35,7 @@ namespace Raven.Database.Raft.Controllers
 			}
 		}
 
-		private HttpTransportBus Bus 
+		private HttpTransportBus Bus
 		{
 			get
 			{
@@ -93,20 +93,20 @@ namespace Raven.Database.Raft.Controllers
 
 		[HttpGet]
 		[RavenRoute("admin/raft/join")]
-		public async Task<HttpResponseMessage> Join([FromUri] string url, [FromUri] string name)
+		public async Task<HttpResponseMessage> Join([FromUri] string url, [FromUri] Guid name)
 		{
-			var nodeUri = new Uri(RaftHelper.NormalizeNodeUrl(url));
-			var nodeName = Guid.Parse(name);
+			var nodeUri = RaftHelper.GetNodeUrl(url);
+			var nodeName = RaftHelper.GetNodeName(name);
 
 			if (RaftEngine.State != RaftEngineState.Leader)
 				return HandleNonLeader();
 
-			if (RaftEngine.CurrentTopology.Contains(name))
+			if (RaftEngine.CurrentTopology.Contains(nodeName))
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			await RaftEngine.AddToClusterAsync(new NodeConnectionInfo
 			{
-				Name = name,
+				Name = nodeName,
 				Uri = nodeUri
 			});
 
@@ -115,17 +115,19 @@ namespace Raven.Database.Raft.Controllers
 
 		[HttpGet]
 		[RavenRoute("admin/raft/leave")]
-		public async Task<HttpResponseMessage> Leave([FromUri] string name)
+		public async Task<HttpResponseMessage> Leave([FromUri] Guid name)
 		{
+			var nodeName = RaftHelper.GetNodeName(name);
+
 			if (RaftEngine.State != RaftEngineState.Leader)
 				return HandleNonLeader();
 
-			if (RaftEngine.CurrentTopology.Contains(name) == false)
+			if (RaftEngine.CurrentTopology.Contains(nodeName) == false)
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			await RaftEngine.RemoveFromClusterAsync(new NodeConnectionInfo
 			{
-				Name = name
+				Name = nodeName
 			});
 
 			return new HttpResponseMessage(HttpStatusCode.Accepted);
@@ -236,8 +238,22 @@ namespace Raven.Database.Raft.Controllers
 		{
 			var leaderNode = RaftEngine.GetLeaderNode();
 
-			var message = new HttpResponseMessage(HttpStatusCode.Redirect);
-			message.Headers.Location = leaderNode.Uri;
+			if (leaderNode == null)
+			{
+				return Request.CreateResponse(HttpStatusCode.BadRequest, new
+				{
+					Error = "There is no current leader, try again later"
+				});
+			}
+
+			var message = Request.CreateResponse(HttpStatusCode.Redirect);
+			message.Headers.Location = new UriBuilder(leaderNode.Uri)
+			{
+				Path = Request.RequestUri.LocalPath,
+				Query = Request.RequestUri.Query,
+				Fragment = Request.RequestUri.Fragment
+			}.Uri;
+
 			return message;
 		}
 	}
