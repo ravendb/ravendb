@@ -109,9 +109,12 @@ namespace Raven.Database.Json
 			JsonDocument document;
 			if (documentKeyContext.TryGetValue(documentKey, out document) == false)
 				document = Database.Documents.Get(documentKey, null);
-
-			totalStatements += (MaxSteps/2 + (document.SerializedSizeOnDisk*AdditionalStepsPerSize));
-			engine.Options.MaxStatements(totalStatements);
+			
+			if (document != null)
+			{
+				totalStatements += (MaxSteps/2 + (document.SerializedSizeOnDisk*AdditionalStepsPerSize));
+				engine.Options.MaxStatements(totalStatements);
+			}
 
 			var loadedDoc = document == null ? null : document.ToJson();
 
