@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using Jint;
 using Jint.Native;
-
 using Raven.Abstractions.Data;
 using Raven.Database.Json;
 
@@ -22,9 +20,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 			this.entityNames = entityNames;
 		}
 
-		public override JsValue LoadDocument(string documentKey, Engine engine)
+		public override JsValue LoadDocument(string documentKey, Engine engine, ref int totalStatements)
 		{
-			var document =  base.LoadDocument(documentKey, engine);
+			var document =  base.LoadDocument(documentKey, engine, ref totalStatements);
 			if (document != JsValue.Null && !forbiddenDocuments.Contains(documentKey))
 			{
 				Database.TransactionalStorage.Batch(accessor =>
