@@ -20,6 +20,8 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Bundles.Compression.Plugin;
+using Raven.Bundles.Compression.Streams;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -111,29 +113,53 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata)
 		{
-			try
-			{
-				var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
-				if (existingCachedDocument != null)
-					return existingCachedDocument.Document;
+		    try
+		    {
+		        var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+		        if (existingCachedDocument != null)
+		            return existingCachedDocument.Document;
 
 
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				{
-					var size = stream.Length;
-					using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
-					{
-						var data = columnStream.ToJObject();
+		        using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+		        {
 
-						cacher.SetCachedDocument(key, existingEtag, data, metadata, (int)size);
+		            var size = stream.Length;
 
-						return data;
-					}
-				}
-			}
+		            using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+		            {
+		                var data = columnStream.ToJObject();
+
+
+		                cacher.SetCachedDocument(key, existingEtag, data, metadata, (int) size);
+
+		                return data;
+		            }
+		        }
+		    }
 			catch (Exception e)
 			{
-				throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
+
+			    InvalidDataException invalidDataException = null;
+                try
+			    {
+			        using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+			        using(var reader = new BinaryReader(stream))
+			        {
+			            if (reader.ReadUInt32() == DocumentCompression.CompressFileMagic)
+			            {
+			                invalidDataException = new InvalidDataException(string.Format("Document '{0}' is compressed, but the compression bundle is not enabled.\r\n" +
+			                                                                              "You have to enable the compression bundle when dealing with compressed documents.", key), e);
+			            }
+			        }
+			    }
+			    catch (Exception )
+			    {
+			        // we are already in error handling mode, just ignore this
+			    }
+                if(invalidDataException != null)
+                    throw invalidDataException;
+
+			    throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
 			}
 		}
 
