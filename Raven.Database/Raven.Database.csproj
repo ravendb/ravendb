@@ -235,6 +235,7 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\Triggers\ReplicationDestinationPutTrigger.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
     <Compile Include="FileSystem\Actions\ActionsBase.cs" />

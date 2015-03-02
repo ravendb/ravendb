@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Security.Cryptography;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -55,15 +56,15 @@ namespace Raven.Bundles.Replication.Tasks
 		private DocumentDatabase docDb;
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
-		private bool wrongReplicationSourceAlertSent = false;
+		private bool wrongReplicationSourceAlertSent;
 		private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
 		private TimeSpan _replicationFrequency;
 		private TimeSpan _lastQueriedFrequency;
 		private Timer _indexReplicationTaskTimer;
 		private Timer _lastQueriedTaskTimer;
-		private object _indexReplicationTaskLock = new object();
-		private object _lastQueriedTaskLock = new object();
+		private readonly object _indexReplicationTaskLock = new object();
+		private readonly object _lastQueriedTaskLock = new object();
 
 		private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>(); 
 
@@ -108,7 +109,6 @@ namespace Raven.Bundles.Replication.Tasks
 
 			_indexReplicationTaskTimer = database.TimerManager.NewTimer(ReplicateIndexesAndTransformersTask, TimeSpan.Zero, _replicationFrequency);
 			_lastQueriedTaskTimer = database.TimerManager.NewTimer(SendLastQueriedTask, TimeSpan.Zero, _lastQueriedFrequency);
-
 
 			task.Start();
 		}
@@ -167,7 +167,7 @@ namespace Raven.Bundles.Replication.Tasks
 									var startedTasks = new List<Task>();
 
 									foreach (var dest in destinationForReplication)
-									{
+									{										
 										var destination = dest;
 										var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
 										if (holder.Wait(0) == false)
@@ -214,7 +214,6 @@ namespace Raven.Bundles.Replication.Tasks
 											foreach (var stats in destinationStats.Where(stats => stats.Value.LastReplicatedEtag != null))
 											{
 												PrefetchingBehavior prefetchingBehavior;
-
 												if (prefetchingBehaviors.TryGetValue(stats.Key, out prefetchingBehavior))
 												{
 													prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
@@ -423,7 +422,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 
-							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.InvalidEtag && destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.InvalidEtag)
+							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.InvalidEtag && 
+								destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.InvalidEtag)
 							{
 								DateTime lastSent;
 								if (destinationAlertSent.TryGetValue(destination.ConnectionStringOptions.Url, out lastSent) && (SystemTime.UtcNow - lastSent).TotalMinutes < 1)
@@ -568,15 +568,14 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			replicatedDocuments = 0;
 			JsonDocumentsToReplicate documentsToReplicate = null;
-			Stopwatch sp = Stopwatch.StartNew();
+			var sp = Stopwatch.StartNew();
 			IDisposable removeBatch = null;
 
 			var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
 				x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner));
 
-
 			prefetchingBehavior.AdditionalInfo = string.Format("For destination: {0}. Last replicated etag: {1}", destination.ConnectionStringOptions.Url, destinationsReplicationInformationForSource.LastDocumentEtag);
-
+			
 			try
 			{
 				using (var scope = recorder.StartRecording("Get"))
@@ -990,7 +989,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
 				var maxNumberOfItemsToReceiveInSingleBatch = destinationsReplicationInformationForSource.MaxNumberOfItemsToReceiveInSingleBatch;
-
+				
 				docDb.TransactionalStorage.Batch(actions =>
 				{
 					var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
@@ -1339,10 +1338,10 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				return new ReplicationStrategy[0];
 			}
-			ReplicationDocument jsonDeserialization;
+			ReplicationDocument replicationDocument;
 			try
 			{
-				jsonDeserialization = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+				replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
 			}
 			catch (Exception e)
 			{
@@ -1350,12 +1349,18 @@ namespace Raven.Bundles.Replication.Tasks
 				return new ReplicationStrategy[0];
 			}
 
-			if (string.IsNullOrWhiteSpace(jsonDeserialization.Source))
+			if (string.IsNullOrWhiteSpace(replicationDocument.Source))
 			{
-				jsonDeserialization.Source = docDb.TransactionalStorage.Id.ToString();
+				replicationDocument.Source = docDb.TransactionalStorage.Id.ToString();
+				replicationDocument.Destinations.ForEach(destination =>
+				{
+					if(destination.SourceCollections == null)
+						destination.SourceCollections = new string[0];
+				});
+
 				try
 				{
-					var ravenJObject = RavenJObject.FromObject(jsonDeserialization);
+					var ravenJObject = RavenJObject.FromObject(replicationDocument);
 					ravenJObject.Remove("Id");
 					docDb.Documents.Put(Constants.RavenReplicationDestinations, document.Etag, ravenJObject, document.Metadata, null);
 				}
@@ -1365,7 +1370,7 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 			}
 
-			if (jsonDeserialization.Source != docDb.TransactionalStorage.Id.ToString())
+			if (replicationDocument.Source != docDb.TransactionalStorage.Id.ToString())
 			{
 				if (!wrongReplicationSourceAlertSent)
 				{
@@ -1376,8 +1381,8 @@ namespace Raven.Bundles.Replication.Tasks
 							AlertLevel = AlertLevel.Error,
 							CreatedAt = SystemTime.UtcNow,
 							Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
-							Title = "Wrong replication source: " + jsonDeserialization.Source + " instead of " + docDb.TransactionalStorage.Id + " in database " + dbName,
-							UniqueKey = "Wrong source: " + jsonDeserialization.Source + ", " + docDb.TransactionalStorage.Id
+							Title = "Wrong replication source: " + replicationDocument.Source + " instead of " + docDb.TransactionalStorage.Id + " in database " + dbName,
+							UniqueKey = "Wrong source: " + replicationDocument.Source + ", " + docDb.TransactionalStorage.Id
 						});
 
 					wrongReplicationSourceAlertSent = true;
@@ -1388,7 +1393,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 			wrongReplicationSourceAlertSent = false;
 
-			return jsonDeserialization
+			return replicationDocument
 				.Destinations
 				.Where(x => !x.Disabled)
 				.Where(x => predicate == null || predicate(x))
@@ -1414,33 +1419,37 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		public static ReplicationStrategy GetConnectionOptions(ReplicationDestination x, DocumentDatabase database)
+		public static ReplicationStrategy GetConnectionOptions(ReplicationDestination destination, DocumentDatabase database)
 		{
 			var replicationStrategy = new ReplicationStrategy
 			{
-				ReplicationOptionsBehavior = x.TransitiveReplicationBehavior,
+				ReplicationOptionsBehavior = destination.TransitiveReplicationBehavior,
 				CurrentDatabaseId = database.TransactionalStorage.Id.ToString()
 			};
-			return CreateReplicationStrategyFromDocument(x, replicationStrategy);
+			return CreateReplicationStrategyFromDocument(destination, replicationStrategy);
 		}
 
-		private static ReplicationStrategy CreateReplicationStrategyFromDocument(ReplicationDestination x, ReplicationStrategy replicationStrategy)
+		private static ReplicationStrategy CreateReplicationStrategyFromDocument(ReplicationDestination destination, ReplicationStrategy replicationStrategy)
 		{
-			var url = x.Url;
-			if (string.IsNullOrEmpty(x.Database) == false)
+			var url = destination.Url;
+			if (string.IsNullOrEmpty(destination.Database) == false)
 			{
-				url = url + "/databases/" + x.Database;
+				url = url + "/databases/" + destination.Database;
 			}
 			replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
 			{
 				Url = url,
-				ApiKey = x.ApiKey,
+				ApiKey = destination.ApiKey,
 			};
-			if (string.IsNullOrEmpty(x.Username) == false)
+
+			replicationStrategy.CollectionsToReplicate = (destination.ShouldReplicateFromSpecificCollections) ?
+				new HashSet<string>(destination.SourceCollections) : null;
+
+			if (string.IsNullOrEmpty(destination.Username) == false)
 			{
-				replicationStrategy.ConnectionStringOptions.Credentials = string.IsNullOrEmpty(x.Domain)
-					? new NetworkCredential(x.Username, x.Password)
-					: new NetworkCredential(x.Username, x.Password, x.Domain);
+				replicationStrategy.ConnectionStringOptions.Credentials = string.IsNullOrEmpty(destination.Domain)
+					? new NetworkCredential(destination.Username, destination.Password)
+					: new NetworkCredential(destination.Username, destination.Password, destination.Domain);
 			}
 			return replicationStrategy;
 		}

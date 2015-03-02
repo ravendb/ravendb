@@ -11,6 +11,7 @@ class replicationDestination {
     disabled = ko.observable<boolean>().extend({ required: true });
     clientVisibleUrl = ko.observable<string>().extend({ required: true });
     skipIndexReplication = ko.observable<boolean>().extend({ required: true });
+    sourceCollections = ko.observable<string[]>().extend({required: false});
 
     name = ko.computed(() => {
         var prefix = this.disabled() ? "[disabled]" : null;
@@ -24,7 +25,6 @@ class replicationDestination {
             || "[empty]";
     });
     isValid = ko.computed(() => this.url() != null && this.url().length > 0);
-
 
     // data members for the ui
     isUserCredentials = ko.observable<boolean>(false);
@@ -70,6 +70,7 @@ class replicationDestination {
         this.disabled(dto.Disabled);
         this.clientVisibleUrl(dto.ClientVisibleUrl);
         this.skipIndexReplication(dto.SkipIndexReplication);
+        this.sourceCollections(dto.SourceCollections);
 
         if (this.username()) {
             this.isUserCredentials(true);
@@ -90,7 +91,8 @@ class replicationDestination {
             IgnoredClient: false,
             Disabled: false,
             ClientVisibleUrl: null,
-            SkipIndexReplication: false
+            SkipIndexReplication: false,
+            SourceCollections: []
         });
     }
 
@@ -122,7 +124,8 @@ class replicationDestination {
             IgnoredClient: this.ignoredClient(),
             Disabled: this.disabled(),
             ClientVisibleUrl: this.clientVisibleUrl(),
-            SkipIndexReplication: this.skipIndexReplication()
+            SkipIndexReplication: this.skipIndexReplication(),
+            SourceCollections: this.sourceCollections()
         };
     }
 

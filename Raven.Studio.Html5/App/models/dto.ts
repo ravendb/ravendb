@@ -452,6 +452,7 @@ interface replicationDestinationDto {
     Disabled: boolean;
     ClientVisibleUrl: string;
     SkipIndexReplication: boolean;
+    SourceCollections: string[];
 }
 
 interface replicationsDto {
