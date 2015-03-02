@@ -522,7 +522,18 @@ namespace Raven.Imports.Newtonsoft.Json
     /// <returns>A JSON string representation of the object.</returns>
     public static string SerializeObject(object value, params JsonConverter[] converters)
     {
-      return SerializeObject(value, Formatting.None, converters);
+        return SerializeObject(value, Formatting.None, converters);
+    }
+
+    /// <summary>
+    /// Serializes the specified object to a JSON string using a collection of <see cref="JsonConverter"/>.
+    /// </summary>
+    /// <param name="value">The object to serialize.</param>
+    /// <param name="converters">A collection converters used while serializing.</param>
+    /// <returns>A JSON string representation of the object.</returns>
+    public static string SerializeObject(object value, JsonConverterCollection converters)
+    {
+        return SerializeObject(value, Formatting.None, converters);
     }
 
     /// <summary>
@@ -534,11 +545,16 @@ namespace Raven.Imports.Newtonsoft.Json
     /// <returns>A JSON string representation of the object.</returns>
     public static string SerializeObject(object value, Formatting formatting, params JsonConverter[] converters)
     {
-      JsonSerializerSettings settings = (converters != null && converters.Length > 0)
-                                          ? new JsonSerializerSettings {Converters = converters}
+        return SerializeObject(value, formatting, new JsonConverterCollection(converters));
+    }
+
+    public static string SerializeObject(object value, Formatting formatting, JsonConverterCollection converters)
+    {
+        JsonSerializerSettings settings = (converters != null && converters.Count > 0)
+                                          ? new JsonSerializerSettings { Converters = converters }
                                           : null;
 
-      return SerializeObject(value, formatting, settings);
+        return SerializeObject(value, formatting, settings);
     }
 
     /// <summary>
@@ -739,7 +755,12 @@ namespace Raven.Imports.Newtonsoft.Json
     /// <returns>The deserialized object from the JSON string.</returns>
     public static T DeserializeObject<T>(string value, params JsonConverter[] converters)
     {
-      return (T) DeserializeObject(value, typeof (T), converters);
+        return (T)DeserializeObject(value, typeof(T), new JsonConverterCollection( converters ));
+    }
+
+    public static T DeserializeObject<T>(string value, JsonConverterCollection converters)
+    {
+        return (T)DeserializeObject(value, typeof(T), converters);
     }
 
     /// <summary>
@@ -766,11 +787,23 @@ namespace Raven.Imports.Newtonsoft.Json
     /// <returns>The deserialized object from the JSON string.</returns>
     public static object DeserializeObject(string value, Type type, params JsonConverter[] converters)
     {
-      JsonSerializerSettings settings = (converters != null && converters.Length > 0)
-                                          ? new JsonSerializerSettings {Converters = converters}
-                                          : null;
+        return DeserializeObject(value, type, new JsonConverterCollection(converters));
+    }
 
-      return DeserializeObject(value, type, settings);
+    /// <summary>
+    /// Deserializes the JSON to the specified .NET type using a collection of <see cref="JsonConverter"/>.
+    /// </summary>
+    /// <param name="value">The JSON to deserialize.</param>
+    /// <param name="type">The type of the object to deserialize.</param>
+    /// <param name="converters">Converters to use while deserializing.</param>
+    /// <returns>The deserialized object from the JSON string.</returns>
+    public static object DeserializeObject(string value, Type type, JsonConverterCollection converters)
+    {
+        JsonSerializerSettings settings = (converters != null && converters.Count > 0)
+                                            ? new JsonSerializerSettings { Converters = converters }
+                                            : null;
+
+        return DeserializeObject(value, type, settings);
     }
 
     /// <summary>

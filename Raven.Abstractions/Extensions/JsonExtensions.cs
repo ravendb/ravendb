@@ -210,12 +210,10 @@ namespace Raven.Abstractions.Extensions
 			var jsonSerializer = new JsonSerializer
 			{
 				DateParseHandling = DateParseHandling.None,
-				ContractResolver = contractResolver
+				ContractResolver = contractResolver,
+                Converters = Default.Converters
 			};
-			foreach (var defaultJsonConverter in Default.Converters)
-			{
-				jsonSerializer.Converters.Add(defaultJsonConverter);
-			}
+
 			return jsonSerializer;
 		}
 
