@@ -1,0 +1,35 @@
+﻿<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Import Filesystem</h3>
+    </div>
+    <div class="panel-body">
+        <h4>Import data from a .ravendump file into the current filesystem.</h4>
+        <p class="help-block">
+            <i class="fa fa-warning text-warning"></i>
+            Importing will overwrite any existing data.
+        </p>
+        <div data-bind="with: activeFilesystem">
+            <span class="btn btn-primary btn-file" data-bind="visible: !isImporting()">
+                Choose file <input id="importFilesystemFilePicker" type="file" data-bind="visible: isImporting() == false, event: { change: $root.fileSelected.bind($root, $element.value) }" />
+            </span>
+            <br />
+            <br />
+            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting()"></p>
+            <br />
+            <div class="progress progress-striped active" data-bind="visible: isImporting">
+                <div class="progress-bar" role="progressbar" style="width: 100%"></div>
+            </div>
+        </div>
+        <br />
+        <div>
+            <form class="form-horizontal" role="form">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Batch size</label>
+                    <div class="col-sm-2">
+                        <input class="form-control" type="number" min="0" data-bind="value: batchSize" />
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

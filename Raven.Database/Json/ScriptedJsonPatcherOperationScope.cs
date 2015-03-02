@@ -23,7 +23,10 @@ namespace Raven.Database.Json
 
 		public JsonDocument CustomFunctions { get; set; }
 
-		public RavenJObject DebugActions { get; private set; }
+		public RavenJObject DebugActions { get; private set; }		
+
+		public int AdditionalStepsPerSize { get; set; }
+		public int MaxSteps { get; set; }
 
 		protected ScriptedJsonPatcherOperationScope(DocumentDatabase database, bool debugMode)
 		{
@@ -40,7 +43,7 @@ namespace Raven.Database.Json
 		{
 		}
 
-		public abstract JsValue LoadDocument(string documentKey, Engine engine);
+		public abstract JsValue LoadDocument(string documentKey, Engine engine, ref int totalStatements);
 
 		public abstract string PutDocument(string documentKey, object data, object meta, Engine jintEngine);
 
@@ -96,7 +99,7 @@ namespace Raven.Database.Json
 		{
 		}
 
-		public override JsValue LoadDocument(string documentKey, Engine engine)
+		public override JsValue LoadDocument(string documentKey, Engine engine, ref int totalStatements)
 		{
 			if (Database == null)
 				throw new InvalidOperationException("Cannot load by id without database context");
@@ -106,6 +109,12 @@ namespace Raven.Database.Json
 			JsonDocument document;
 			if (documentKeyContext.TryGetValue(documentKey, out document) == false)
 				document = Database.Documents.Get(documentKey, null);
+			
+			if (document != null)
+			{
+				totalStatements += (MaxSteps/2 + (document.SerializedSizeOnDisk*AdditionalStepsPerSize));
+				engine.Options.MaxStatements(totalStatements);
+			}
 
 			var loadedDoc = document == null ? null : document.ToJson();
 

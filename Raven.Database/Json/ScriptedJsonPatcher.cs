@@ -44,6 +44,8 @@ namespace Raven.Database.Json
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
+		private int totalScriptSteps;
+
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
 			if (database == null)
@@ -56,6 +58,8 @@ namespace Raven.Database.Json
 				maxSteps = database.Configuration.MaxStepsForScript;
 				additionalStepsPerSize = database.Configuration.AdditionalStepsForScriptBasedOnDocumentSize;
 			}
+
+			totalScriptSteps = maxSteps;
 		}
 
 		public virtual RavenJObject Apply(ScriptedJsonPatcherOperationScope scope, RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
@@ -147,6 +151,9 @@ namespace Raven.Database.Json
 
 		private void PrepareEngine(ScriptedPatchRequest patch, string docId, int size, ScriptedJsonPatcherOperationScope scope, Engine jintEngine)
 		{
+			scope.AdditionalStepsPerSize = additionalStepsPerSize;
+			scope.MaxSteps = maxSteps;
+
 			jintEngine.Global.Delete("PutDocument", false);
 			jintEngine.Global.Delete("LoadDocument", false);
 			jintEngine.Global.Delete("DeleteDocument", false);
@@ -154,7 +161,7 @@ namespace Raven.Database.Json
 			CustomizeEngine(jintEngine, scope);
 
 			jintEngine.SetValue("PutDocument", (Func<string, object, object,string>)((key, document, metadata) => scope.PutDocument(key, document, metadata, jintEngine)));
-			jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine)));
+			jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref totalScriptSteps)));
 			jintEngine.SetValue("DeleteDocument", (Action<string>)(scope.DeleteDocument));
 			jintEngine.SetValue("__document_id", docId);
 
@@ -172,10 +179,13 @@ namespace Raven.Database.Json
 					jintEngine.SetValue(kvp.Key, jsInstance);
 				}
 			}
-
+			
 			jintEngine.ResetStatementsCount();
 			if (size != 0)
-				jintEngine.Options.MaxStatements(maxSteps + (size * additionalStepsPerSize));
+			{
+				totalScriptSteps = maxSteps + (size * additionalStepsPerSize);
+				jintEngine.Options.MaxStatements(totalScriptSteps);
+			}
 		}
 
 		private Engine CreateEngine(ScriptedPatchRequest patch)

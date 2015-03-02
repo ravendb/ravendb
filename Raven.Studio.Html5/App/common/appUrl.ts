@@ -105,6 +105,7 @@ class appUrl {
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
         filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
+        filesystemTasks: ko.computed(() => appUrl.forFilesystemTasks(appUrl.currentFilesystem())),
         filesystemSettings: ko.computed(() => appUrl.forFilesystemSettings(appUrl.currentFilesystem())),
         filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemSynchronizationConfiguration: ko.computed(() => appUrl.forFilesystemSynchronizationConfiguration(appUrl.currentFilesystem())),
@@ -551,6 +552,16 @@ class appUrl {
         return "#databases/tasks/exportDatabase?" + databasePart;
     }
 
+    static forImportFilesystem(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/tasks/importFilesystem?" + filesystemPart;
+    }
+
+    static forExportFilesystem(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/tasks/exportFilesystem?" + filesystemPart;
+    }
+
     static forExportCollectionCsv(collection: collection, db: database): string {
         if (collection.isAllDocuments || collection.isSystemDocuments) {
             return null;
@@ -626,6 +637,11 @@ class appUrl {
     static forFilesystemStatus(fs: filesystem): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/status?" + filesystemPart;
+    }
+
+    static forFilesystemTasks(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/tasks?" + filesystemPart;
     }
 
     static forFilesystemSettings(fs: filesystem): string {
