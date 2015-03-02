@@ -11,9 +11,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+
 using NLog;
 using Rachis.Messages;
+
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis.Transport
 {

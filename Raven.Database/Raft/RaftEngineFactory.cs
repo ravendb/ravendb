@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -27,7 +28,7 @@ namespace Raven.Database.Raft
 		{
 			var configuration = systemDatabase.Configuration;
 
-			var nodeName = systemDatabase.TransactionalStorage.Id.ToString();
+			var nodeName = RaftHelper.GetNodeName(systemDatabase.TransactionalStorage.Id);
 
 			var url = configuration.ServerUrl;
 			if (string.IsNullOrEmpty(configuration.DatabaseName) == false)
@@ -43,7 +44,7 @@ namespace Raven.Database.Raft
 			if (configuration.RunInMemory == false)
 			{
 				var directoryPath = Path.Combine(configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft");
-				if (Directory.Exists(directoryPath) == false) 
+				if (Directory.Exists(directoryPath) == false)
 					Directory.CreateDirectory(directoryPath);
 
 				options = StorageEnvironmentOptions.ForPath(directoryPath);
@@ -54,8 +55,18 @@ namespace Raven.Database.Raft
 			}
 
 			var transport = new HttpTransport(nodeName);
-			var stateMachine = new InMemoryStateMachine();
-			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine) { HeartbeatTimeout = 1000 };
+			var stateMachine = new ClusterStateMachine(systemDatabase);
+			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine)
+									{
+										ElectionTimeout = 2000,
+										HeartbeatTimeout = 750
+									};
+
+			if (Debugger.IsAttached)
+			{
+				raftEngineOptions.ElectionTimeout *= 5;
+				raftEngineOptions.HeartbeatTimeout *= 5;
+			}
 
 			return new RaftEngine(raftEngineOptions);
 		}
@@ -65,11 +76,11 @@ namespace Raven.Database.Raft
 			var topology = new Topology(systemDatabase.TransactionalStorage.Id, new List<NodeConnectionInfo> { engine.Options.SelfConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
 
 			var tcc = new TopologyChangeCommand
-			          {
-				          Requested = topology
-			          };
+					  {
+						  Requested = topology
+					  };
 
-			engine.PersistentState.SetCurrentTopology(tcc.Requested, 1);
+			engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
 			engine.StartTopologyChange(tcc);
 			engine.CommitTopologyChange(tcc);
 			engine.CurrentLeader = null;

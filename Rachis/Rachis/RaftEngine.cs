@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+
 using NLog;
 using Rachis.Behaviors;
 using Rachis.Commands;
@@ -18,6 +18,8 @@ using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
 using Rachis.Utils;
+
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis
 {

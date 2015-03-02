@@ -19,6 +19,8 @@ using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
 
+using Raven.Database.Raft.Commands;
+using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.WebApi.Attributes;
@@ -60,6 +62,19 @@ namespace Raven.Database.Raft.Controllers
 			});
 		}
 
+		[HttpPut]
+		[RavenRoute("admin/raft/commands/cluster/configuration")]
+		public async Task<HttpResponseMessage> ClusterConfiguration()
+		{
+			var configuration = await ReadJsonObjectAsync<ClusterConfiguration>();
+			if (configuration == null) 
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			var client = new RaftHttpClient(RaftEngine);
+			await client.SendClusterConfigurationAsync(configuration).ConfigureAwait(false);
+			return GetEmptyMessage();
+		}
+
 		[HttpGet]
 		[RavenRoute("admin/raft/create")]
 		public Task<HttpResponseMessage> Create()
@@ -99,7 +114,7 @@ namespace Raven.Database.Raft.Controllers
 			var nodeName = RaftHelper.GetNodeName(name);
 
 			if (RaftEngine.State != RaftEngineState.Leader)
-				return HandleNonLeader();
+				return RedirectToLeader();
 
 			if (RaftEngine.CurrentTopology.Contains(nodeName))
 				return GetEmptyMessage(HttpStatusCode.NotModified);
@@ -120,7 +135,7 @@ namespace Raven.Database.Raft.Controllers
 			var nodeName = RaftHelper.GetNodeName(name);
 
 			if (RaftEngine.State != RaftEngineState.Leader)
-				return HandleNonLeader();
+				return RedirectToLeader();
 
 			if (RaftEngine.CurrentTopology.Contains(nodeName) == false)
 				return GetEmptyMessage(HttpStatusCode.NotModified);
@@ -234,7 +249,7 @@ namespace Raven.Database.Raft.Controllers
 			return count;
 		}
 
-		private HttpResponseMessage HandleNonLeader()
+		private HttpResponseMessage RedirectToLeader()
 		{
 			var leaderNode = RaftEngine.GetLeaderNode();
 

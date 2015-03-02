@@ -4,12 +4,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Newtonsoft.Json;
 using NLog;
 using Rachis.Commands;
 using Rachis.Interfaces;
 using Rachis.Messages;
 using Rachis.Transport;
+
+using Raven.Imports.Newtonsoft.Json;
+
 using Voron;
 using Voron.Impl;
 using Voron.Trees;

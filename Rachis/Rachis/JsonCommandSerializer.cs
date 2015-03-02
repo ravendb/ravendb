@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
-using Newtonsoft.Json;
 using Rachis.Commands;
 using Rachis.Interfaces;
+
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis
 {

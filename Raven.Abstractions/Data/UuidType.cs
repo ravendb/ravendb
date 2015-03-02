@@ -17,5 +17,6 @@ namespace Raven.Abstractions.Data
         Indexing = 9,
 		DocumentReferences = 11,
 		Subscriptions = 12,
+		Cluster = 11,
     }
 }

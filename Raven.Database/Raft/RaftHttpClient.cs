@@ -7,12 +7,18 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 using Rachis;
 using Rachis.Transport;
+using Rachis.Utils;
 
+using Raven.Abstractions.Connection;
+using Raven.Database.Raft.Commands;
+using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Raft
 {
@@ -36,12 +42,45 @@ namespace Raven.Database.Raft
 			httpClient = new HttpClient();
 		}
 
+		public Task SendClusterConfigurationAsync(ClusterConfiguration configuration)
+		{
+			try
+			{
+				var command = ClusterConfigurationUpdateCommand.Create(configuration);
+				raftEngine.AppendCommand(command);
+				return command.Completion.Task;
+			}
+			catch (NotLeadingException)
+			{
+			}
+
+			var node = raftEngine.GetLeaderNode();
+			var url = node.Uri.AbsoluteUri + "admin/raft/commands/cluster/configuration";
+			return SendClusterConfigurationInternalAsync(url, configuration);
+		}
+
+		public async Task SendClusterConfigurationInternalAsync(string url, ClusterConfiguration configuration)
+		{
+			var response = await httpClient.PutAsync(url, new JsonContent(RavenJObject.FromObject(configuration))).ConfigureAwait(false);
+			if (response.IsSuccessStatusCode) 
+				return;
+
+			switch (response.StatusCode)
+			{
+				case HttpStatusCode.Redirect:
+					await SendClusterConfigurationInternalAsync(response.Headers.Location.AbsoluteUri, configuration).ConfigureAwait(false);
+					return;
+				default:
+					throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
+			}
+		}
+
 		public async Task<CanJoinResult> CanJoinAsync(string destinationNodeUrl)
 		{
 			var url = destinationNodeUrl + "admin/raft/canJoin?name=" + SelfConnection.Name;
 
-			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url));
-			
+			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url).ConfigureAwait(false));
+
 			if (response.IsSuccessStatusCode)
 				return CanJoinResult.CanJoin;
 
@@ -60,7 +99,7 @@ namespace Raven.Database.Raft
 		{
 			var url = leaderNodeUrl + "admin/raft/join?name=" + nodeName;
 
-			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url));
+			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url).ConfigureAwait(false));
 
 			if (response.IsSuccessStatusCode)
 				return CanJoinResult.CanJoin;
@@ -102,7 +141,7 @@ namespace Raven.Database.Raft
 			}
 		}
 
-		private static async Task<HttpResponseMessage> ExecuteWithRetriesAsync(Func<Task<HttpResponseMessage>> action, int numberOfRetries = 3)
+		private static async Task<HttpResponseMessage> ExecuteWithRetriesAsync(Func<ConfiguredTaskAwaitable<HttpResponseMessage>> action, int numberOfRetries = 3)
 		{
 			if (numberOfRetries <= 0)
 				throw new InvalidOperationException("Number of tries must be greater than 0.");
@@ -114,7 +153,7 @@ namespace Raven.Database.Raft
 				if (response.IsSuccessStatusCode)
 					return response;
 
-				if (response.StatusCode != HttpStatusCode.ServiceUnavailable) 
+				if (response.StatusCode != HttpStatusCode.ServiceUnavailable)
 					return response;
 
 				numberOfErrors++;

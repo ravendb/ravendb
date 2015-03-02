@@ -446,7 +446,7 @@ namespace Rachis.Behaviors
 					select time
 				).ToList();
 
-			return (long)results[currentTopology.QuorumSize - 1];
+			return (long)results[Math.Min(currentTopology.QuorumSize - 1, results.Count - 1)];
 		}
 
 		/// <summary>

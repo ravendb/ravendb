@@ -269,5 +269,10 @@ namespace Raven.Abstractions.Data
 	    {
 		    public const string CallContext = "Raven/Smuggler/CallContext";
 	    }
+
+	    public static class Cluster
+	    {
+			public const string ClusterConfigurationDocumentKey = "Raven/Cluster/Configuration";
+	    }
 	}
 }

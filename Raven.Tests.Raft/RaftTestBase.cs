@@ -3,16 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-using Rachis.Commands;
 using Rachis.Transport;
 
+using Raven.Client.Document;
 using Raven.Database.Raft;
 using Raven.Database.Raft.Util;
-using Raven.Server;
 using Raven.Tests.Helpers;
 
 using Xunit;
@@ -21,7 +21,7 @@ namespace Raven.Tests.Raft
 {
 	public class RaftTestBase : RavenTestBase
 	{
-		public List<RavenDbServer> CreateRaftCluster(int numberOfNodes)
+		public List<DocumentStore> CreateRaftCluster(int numberOfNodes)
 		{
 			var port = 8079;
 
@@ -31,7 +31,10 @@ namespace Raven.Tests.Raft
 
 			var allNodesFinishedJoining = new ManualResetEventSlim();
 
-			var leader = nodes[0];
+			var random = new Random();
+			var leader = nodes[random.Next(0, numberOfNodes - 1)];
+
+			Console.WriteLine("Leader: " + leader.Options.RaftEngine.Options.SelfConnection.Uri);
 
 			RaftEngineFactory.InitializeTopology(leader.SystemDatabase, leader.Options.RaftEngine);
 
@@ -46,9 +49,12 @@ namespace Raven.Tests.Raft
 				}
 			};
 
-			for (var i = 1; i < numberOfNodes; i++)
+			for (var i = 0; i < numberOfNodes; i++)
 			{
 				var n = nodes[i];
+
+				if (n == leader)
+					continue;
 
 				Assert.True(leader.Options.RaftEngine.AddToClusterAsync(new NodeConnectionInfo
 																		{
@@ -63,7 +69,9 @@ namespace Raven.Tests.Raft
 			Assert.True(allNodesFinishedJoining.Wait(5000 * numberOfNodes));
 			Assert.True(leader.Options.RaftEngine.WaitForLeader());
 
-			return nodes;
+			return nodes
+				.Select(node => NewRemoteDocumentStore(ravenDbServer: node))
+				.ToList();
 		}
 	}
 }

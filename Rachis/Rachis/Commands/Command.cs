@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
-using Newtonsoft.Json;
+
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis.Commands
 {
