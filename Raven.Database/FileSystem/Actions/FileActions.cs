@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -70,7 +71,7 @@ namespace Raven.Database.FileSystem.Actions
 				SynchronizationTask.Cancel(name);
 
 				long? size = -1;
-				ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
+				Storage.Batch(accessor =>
 				{
 					AssertPutOperationNotVetoed(name, headers);
 					AssertFileIsNotBeingSynced(name, accessor);
@@ -101,7 +102,7 @@ namespace Raven.Database.FileSystem.Actions
 					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, headers));
 
 					Search.Index(name, headers);
-				}));
+				});
 
 				Log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
 
@@ -228,12 +229,34 @@ namespace Raven.Database.FileSystem.Actions
 						return; // task is done
 					}
 
-					ConcurrencyAwareExecutor.Execute(() => storage.Batch(accessor =>
+					int retries = 50;
+					bool shouldRetry;
+
+					do
 					{
-						var hashKey = accessor.InsertPage(buffer, read);
-						accessor.AssociatePage(filename, hashKey, pos, read);
-						putTriggers.Apply(trigger => trigger.OnUpload(filename, headers, hashKey, pos, read));
-					}));
+						try
+						{
+							storage.Batch(accessor =>
+							{
+								var hashKey = accessor.InsertPage(buffer, read);
+								accessor.AssociatePage(filename, hashKey, pos, read);
+								putTriggers.Apply(trigger => trigger.OnUpload(filename, headers, hashKey, pos, read));
+							});
+
+							shouldRetry = false;
+						}
+						catch (ConcurrencyException)
+						{
+							if (retries-- > 0)
+							{
+								shouldRetry = true;
+								Thread.Sleep(50);
+								continue;
+							}
+
+							throw;
+						}
+					} while (shouldRetry);
 
 					md5Hasher.TransformBlock(buffer, 0, read);
 

@@ -604,7 +604,6 @@
     <Compile Include="FileSystem\Synchronization\SynchronizationWorkItem.cs" />
     <Compile Include="FileSystem\Util\AwaitableQueue.cs" />
     <Compile Include="FileSystem\Util\CombinedStream.cs" />
-    <Compile Include="FileSystem\Util\ConcurrencyAwareExecutor.cs" />
     <Compile Include="FileSystem\Util\FilePathTools.cs" />
     <Compile Include="FileSystem\Util\HashKey.cs" />
     <Compile Include="FileSystem\Util\NarrowedStream.cs" />

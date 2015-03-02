@@ -222,7 +222,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 				{
 					try
 					{
-						ConcurrencyAwareExecutor.Execute(() => storage.Batch(accessor => accessor.Delete(deletingFileName)), retries: 1);
+						storage.Batch(accessor => accessor.Delete(deletingFileName));
 					}
 					catch (Exception e)
 					{
@@ -280,7 +280,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 				{
 					try
 					{
-						ConcurrencyAwareExecutor.Execute(() => RenameFile(renameOperation), retries: 1);
+						RenameFile(renameOperation);
 						Log.Debug("File '{0}' was renamed to '{1}'", renameOperation.Name, renameOperation.Rename);
 
 					}
