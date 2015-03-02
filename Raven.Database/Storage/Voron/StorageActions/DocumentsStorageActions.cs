@@ -18,6 +18,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Raven.Bundles.Compression.Plugin;
 using Voron;
 using Voron.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -541,6 +542,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 			catch (Exception e)
 			{
+
 				throw new InvalidDataException("Failed to de-serialize metadata of document " + key, e);
 			}
 		}
@@ -628,8 +630,38 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				}
 			}
 			catch (Exception e)
-			{
-				throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
+			{ 
+             InvalidDataException invalidDataException = null;
+			    try
+			    {
+                    var loweredKey = CreateKey(key);
+                    size = -1;
+                    var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
+                    if (documentReadResult == null) //non existing document
+                        return null;
+
+                    using (var stream = documentReadResult.Reader.AsStream())
+                    {
+			            using (var reader = new BinaryReader(stream))
+			            {
+			                if (reader.ReadUInt32() == DocumentCompression.CompressFileMagic)
+			                {
+			                    invalidDataException = new InvalidDataException(string.Format("Document '{0}' is compressed, but the compression bundle is not enabled.\r\n" +
+			                                                                                  "You have to enable the compression bundle when dealing with compressed documents.", key), e);
+			                }
+			            }
+			        }
+
+			
+			    }
+			    catch (Exception)
+			    {
+			        // we are already in error handling mode, just ignore this
+			    }
+			    if(invalidDataException != null)
+                    throw invalidDataException;
+
+			    throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
 			}
 		}
 
