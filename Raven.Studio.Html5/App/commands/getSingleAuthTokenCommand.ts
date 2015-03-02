@@ -1,8 +1,5 @@
 import commandBase = require("commands/commandBase");
 import resource = require("models/resource");
-import database = require("models/database");
-import filesystem = require("models/filesystem/filesystem");
-import counterStorage = require("models/counter/counterStorage");
 
 class getSingleAuthTokenCommand extends commandBase {
 

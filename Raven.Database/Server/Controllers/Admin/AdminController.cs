@@ -696,8 +696,8 @@ namespace Raven.Database.Server.Controllers.Admin
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 			try
 			{
-				var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
-				jsonSerializer.Converters.Add(new EtagJsonConverter());
+				var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+				jsonSerializer.Formatting = Formatting.Indented;
 
 				using (var file = new FileStream(tempFileName, FileMode.Create))
 				using (var package = new ZipArchive(file, ZipArchiveMode.Create))
@@ -754,8 +754,8 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				var stacktrace = package.CreateEntry("stacktraces.txt", CompressionLevel.Optimal);
 
-				var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
-				jsonSerializer.Converters.Add(new EtagJsonConverter());
+				var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+				jsonSerializer.Formatting = Formatting.Indented;
 
 				using (var stacktraceStream = stacktrace.Open())
 				{

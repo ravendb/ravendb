@@ -44,7 +44,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				return true;
 			}
 
-			return DateTime.UtcNow - syncLock.FileLockedAt > SynchronizationConfigAccessor.GetOrDefault(accessor).SynchronizationLockTimeout;
+			return (DateTime.UtcNow - syncLock.FileLockedAt).TotalMilliseconds > SynchronizationConfigAccessor.GetOrDefault(accessor).SynchronizationLockTimeoutMiliseconds;
 		}
 
 		public bool TimeoutExceeded(string fileName, ITransactionalStorage storage)

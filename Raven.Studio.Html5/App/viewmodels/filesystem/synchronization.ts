@@ -18,8 +18,9 @@ class synchronization extends viewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'filesystems/synchronization', moduleId: 'viewmodels/filesystem/synchronizationConflicts', title: 'Conflicts', nav: true, hash: appUrl.forCurrentFilesystem().filesystemSynchronization },
-                { route: 'filesystems/synchronization/destinations', moduleId: 'viewmodels/filesystem/synchronizationDestinations', title: 'Destinations', nav: true, hash: appUrl.forCurrentFilesystem().filesystemSynchronizationDestinations }
+                { route: "filesystems/synchronization", moduleId: "viewmodels/filesystem/synchronizationConflicts", title: "Conflicts", nav: true, hash: appUrl.forCurrentFilesystem().filesystemSynchronization },
+                { route: "filesystems/synchronization/destinations", moduleId: "viewmodels/filesystem/synchronizationDestinations", title: "Destinations", nav: true, hash: appUrl.forCurrentFilesystem().filesystemSynchronizationDestinations },
+                { route: "filesystems/synchronization/configuration", moduleId: "viewmodels/filesystem/synchronizationConfiguration", title: "Configuration", nav: true, hash: appUrl.forCurrentFilesystem().filesystemSynchronizationConfiguration}
             ])
             .buildNavigationModel();
 

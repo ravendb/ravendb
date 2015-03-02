@@ -1,9 +1,16 @@
+import execJs = require("common/execJs");
+
 class customColumnParams {
 
     header = ko.observable<string>();
     binding = ko.observable<string>();
     template = ko.observable<string>();
     width = ko.observable<number>();
+
+    bindingCustomValidity = ko.computed(() => {
+        var binding = this.binding();
+        return execJs.validateSyntax(binding) || "";
+    });
 
     constructor(dto: customColumnParamsDto) {
         this.header(dto.Header);

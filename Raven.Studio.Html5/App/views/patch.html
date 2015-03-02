@@ -205,7 +205,8 @@
                 <div class="tabs-container">
                     <ul class="nav nav-tabs" role="tablist">
                       <li class="active"><a href="#patchPut" role="tab" data-toggle="tab">Document Puts <span data-bind="text: putDocuments().length" class="badge"></span></a></li>
-                      <li><a href="#patchLoad" role="tab" data-toggle="tab">Document Loads <span data-bind="text: loadedDocuments().length" class="badge"></span></a></li>
+                        <li><a href="#patchLoad" role="tab" data-toggle="tab">Document Loads <span data-bind="text: loadedDocuments().length" class="badge"></span></a></li>
+                        <li><a href="#patchDebug" role="tab" data-toggle="tab">Output <span data-bind="text: outputLog().length" class="badge"></span></a></li>
                     </ul>
 
                     <!-- Tab panes -->
@@ -215,6 +216,11 @@
                         </div>
                         <div class="tab-pane" id="patchLoad">
                             <ul class="list-group" data-bind="foreach: loadedDocuments">
+                                <li class="list-group-item" data-bind="text: $data"></li>
+                            </ul>
+                        </div>
+                        <div class="tab-pane" id="patchDebug">
+                            <ul class="list-group" data-bind="foreach: outputLog">
                                 <li class="list-group-item" data-bind="text: $data"></li>
                             </ul>
                         </div>

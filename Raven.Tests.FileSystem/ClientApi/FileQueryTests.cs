@@ -3,10 +3,8 @@ using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.FileSystem.ClientApi
@@ -102,7 +100,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanQueryByMultipleWithOrStatement()
+        public async Task CanQueryByMultipleWithOrStatement()
         {
             var store = this.NewStore();
 
@@ -115,9 +113,9 @@ namespace Raven.Tests.FileSystem.ClientApi
                 await session.SaveChangesAsync();
 
                 var query = await session.Query()
-                                           .WhereEquals (x => x.Name, "test.fil")
+                                           .WhereEquals(x => x.Name, "test.fil")
                                            .OrElse()
-                                           .WhereEquals (x => x.Name, "test.file")
+                                           .WhereEquals(x => x.Name, "test.file")
                                            .ToListAsync();
 
                 Assert.True(query.Any());
@@ -141,13 +139,166 @@ namespace Raven.Tests.FileSystem.ClientApi
                 await session.SaveChangesAsync();
 
                 var query = await session.Query()
-                                         .WhereIn(x => x.Name, new [] { "test.fil", "test.file"})
+                                         .WhereIn(x => x.Name, new[] { "test.fil", "test.file" })
                                          .ToListAsync();
 
                 Assert.True(query.Any());
                 Assert.Equal(2, query.Count());
                 Assert.Contains("test.fil", query.Select(x => x.Name));
                 Assert.Contains("test.file", query.Select(x => x.Name));
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryWhereInWithComplexOrClause()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .WhereIn(x => x.Name, new[] { "test.fil", "test.file" })
+                                         .OrElse()
+                                         .WhereEquals(x => x.Name, "test.fi")
+                                         .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(3, query.Count());
+                Assert.Contains("test.fi", query.Select(x => x.Name));
+                Assert.Contains("test.fil", query.Select(x => x.Name));
+                Assert.Contains("test.file", query.Select(x => x.Name));
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryWhereInWithComplexOrClauseInverted()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .WhereEquals(x => x.Name, "test.fi")                                         
+                                         .OrElse()
+                                         .WhereIn(x => x.Name, new[] { "test.fil", "test.file" })
+                                         .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(3, query.Count());
+                Assert.Contains("test.fi", query.Select(x => x.Name));
+                Assert.Contains("test.fil", query.Select(x => x.Name));
+                Assert.Contains("test.file", query.Select(x => x.Name));
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryWhereInWithComplexAndClause()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .WhereIn(x => x.Name, new[] { "test.fil", "test.file" })
+                                         .AndAlso()
+                                         .WhereEquals(x => x.Name, "test.fil")
+                                         .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Contains("test.fil", query.Select(x => x.Name));
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryWhereInWithComplexAndClauseInverted()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .WhereEquals(x => x.Name, "test.fil")                                         
+                                         .AndAlso()
+                                         .WhereIn(x => x.Name, new[] { "test.fil", "test.file" })
+                                         .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Contains("test.fil", query.Select(x => x.Name));
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryWhereInWithComplexStartWithClause()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("file.test", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .WhereIn(x => x.Name, new[] { "test.fil", "file.test" })
+                                         .AndAlso()
+                                         .WhereStartsWith(x => x.Name, "test")
+                                         .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Contains("test.fil", query.Select(x => x.Name));
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryWhereInWithComplexStartWithClauseInverted()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("file.test", CreateUniformFileStream(10));
+                session.RegisterUpload("file.test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .WhereStartsWith(x => x.Name, "test")
+                                         .OrElse()
+                                         .WhereIn(x => x.Name, new[] { "file.test.fil", "file.test" })                                         
+                                         .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(4, query.Count());
             }
         }
 
@@ -661,5 +812,35 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
+	    [Fact]
+	    public async Task CanUseTakeAndSkip()
+	    {
+		    var store = this.NewStore();
+
+		    for (int i = 0; i < 20; i++)
+		    {
+			    using (var session = store.OpenAsyncSession())
+			    {
+				    session.RegisterUpload(i + ".file", CreateRandomFileStream(i));
+				    session.RegisterUpload(i + ".txt", CreateRandomFileStream(i));
+				    await session.SaveChangesAsync();
+			    }
+		    }
+
+		    int pageSize = 5;
+		    var files = new List<FileHeader>();
+
+		    using (var session = store.OpenAsyncSession())
+		    {
+			    for (int i = 0; i < 4; i++)
+			    {
+				    var results = await session.Query().WhereEndsWith(x => x.Name, ".file").Skip(i*pageSize).Take(pageSize).ToListAsync();
+				    files.AddRange(results);
+			    }
+
+			    Assert.Equal(20, files.Count);
+			    Assert.Equal(20, files.Select(x => x.Name).Distinct().Count());
+		    }
+	    }
     }
 }

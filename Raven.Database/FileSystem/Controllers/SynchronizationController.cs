@@ -564,7 +564,8 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			var contentStream = await Request.Content.ReadAsStreamAsync();
 
-			var confirmingFiles = new JsonSerializer().Deserialize<IEnumerable<Tuple<string, Guid>>>(new JsonTextReader(new StreamReader(contentStream)));
+			var confirmingFiles = JsonExtensions.CreateDefaultJsonSerializer()
+				.Deserialize<IEnumerable<Tuple<string, Guid>>>(new JsonTextReader(new StreamReader(contentStream)));
 
 
             var result = confirmingFiles.Select(x =>

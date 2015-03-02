@@ -188,7 +188,7 @@ select new
 			public string Supplier { get; set; }
 			public string Category { get; set; }
 			public string QuantityPerUnit { get; set; }
-			public decimal PricePerUser { get; set; }
+			public decimal PricePerUnit { get; set; }
 			public int UnitsInStock { get; set; }
 			public int UnitsOnOrder { get; set; }
 			public bool Discontinued { get; set; }
@@ -397,7 +397,7 @@ select new
 						Category = TextData.GetAlphabetical(5),
 						Name = NameData.GetSurname(),
 						Discontinued = BooleanData.GetBoolean(),
-						PricePerUser = NumberData.GetNumber()
+						PricePerUnit = NumberData.GetNumber()
 					});
 				}
 

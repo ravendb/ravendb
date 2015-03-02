@@ -432,6 +432,8 @@ interface versioningEntryDto extends documentDto {
   Id: string;
   MaxRevisions: number;
   Exclude: boolean;
+  ExcludeUnlessExplicit: boolean;
+  PurgeOnDelete: boolean;
 }
 
 interface versioningDto {
@@ -1213,4 +1215,10 @@ enum ResponseCodes {
     NotFound = 404,
     PreconditionFailed = 412,
     InternalServerError = 500
+}
+
+interface synchronizationConfigDto {
+    FileConflictResolution: string;
+    MaxNumberOfSynchronizationsPerDestination: number;
+    SynchronizationLockTimeoutMiliseconds: number;
 }

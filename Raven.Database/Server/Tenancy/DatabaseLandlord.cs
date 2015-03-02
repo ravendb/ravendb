@@ -32,10 +32,31 @@ namespace Raven.Database.Server.Tenancy
         {
 			string tempPath = Path.GetTempPath();
 			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
-			if (File.Exists(fullTempPath))
-				File.Delete(fullTempPath);
-			if (Directory.Exists(fullTempPath))
-				Directory.Delete(fullTempPath, true);
+	        if (File.Exists(fullTempPath))
+	        {
+		        try
+		        {
+			        File.Delete(fullTempPath);
+		        }
+		        catch (Exception)
+		        {
+			        // we ignore this issue, nothing to do now, and we'll only see
+					// this as an error if there are actually uploads
+		        }
+	        }
+	        if (Directory.Exists(fullTempPath))
+	        {
+		        try
+		        {
+			        Directory.Delete(fullTempPath, true);
+		        }
+		        catch (Exception)
+		        {
+			        // there is nothing that we can do here, and it is possible that we have
+					// another database doing uploads for the same user, so we'll just 
+					// not any cleanup. Worst case, we'll waste some memory.
+		        }
+	        }
 
             Init();
         }

@@ -250,7 +250,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task DeleteAsync(string filename, Etag etag = null)
+        public Task DeleteAsync(string filename)
         {
             return ExecuteWithReplication("DELETE", async operation =>
             {
@@ -380,7 +380,7 @@ namespace Raven.Client.FileSystem
 			return ExecuteWithReplication("GET", operation => StartsWithAsyncImpl(prefix, matches, start, pageSize, operation));
 	    }
 
-	    public async Task<IAsyncEnumerator<FileHeader>> StreamFilesAsync(Etag fromEtag, int pageSize = int.MaxValue)
+	    public async Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue)
         {
             if (fromEtag == null)
                 throw new ArgumentException("fromEtag");
@@ -750,12 +750,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null)
-        {
-            return UploadAsync(filename, source, null, size, progress);
-        }
-
-        public Task UploadAsync(string filename, Stream source, RavenJObject metadata, long? size = null, Action<string, long> progress = null)
+        public Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? size = null)
         {
             if (metadata == null)
                 metadata = new RavenJObject();

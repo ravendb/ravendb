@@ -858,7 +858,7 @@ namespace Raven.Database
 			{
 				if (tryEnter == false)
 					return;
-
+				WorkContext.LastIdleTime = SystemTime.UtcNow;
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
 				IndexReplacer.ReplaceIndexes(IndexDefinitionStorage.Indexes);
