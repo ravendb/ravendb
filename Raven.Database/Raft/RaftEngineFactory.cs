@@ -71,9 +71,9 @@ namespace Raven.Database.Raft
 			return new RaftEngine(raftEngineOptions);
 		}
 
-		public static void InitializeTopology(DocumentDatabase systemDatabase, RaftEngine engine)
+		public static void InitializeTopology(NodeConnectionInfo nodeConnection, RaftEngine engine)
 		{
-			var topology = new Topology(systemDatabase.TransactionalStorage.Id, new List<NodeConnectionInfo> { engine.Options.SelfConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
+			var topology = new Topology(Guid.Parse(nodeConnection.Name), new List<NodeConnectionInfo> { nodeConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
 
 			var tcc = new TopologyChangeCommand
 					  {
@@ -84,6 +84,11 @@ namespace Raven.Database.Raft
 			engine.StartTopologyChange(tcc);
 			engine.CommitTopologyChange(tcc);
 			engine.CurrentLeader = null;
+		}
+
+		public static void InitializeTopology(DocumentDatabase systemDatabase, RaftEngine engine)
+		{
+			InitializeTopology(engine.Options.SelfConnection, engine);
 		}
 	}
 }

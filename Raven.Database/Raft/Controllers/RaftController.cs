@@ -19,7 +19,6 @@ using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
 
-using Raven.Database.Raft.Commands;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers.Admin;
@@ -75,23 +74,50 @@ namespace Raven.Database.Raft.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpGet]
+		[HttpPost]
 		[RavenRoute("admin/raft/create")]
-		public Task<HttpResponseMessage> Create()
+		public async Task<HttpResponseMessage> Create()
 		{
 			var topology = RaftEngine.CurrentTopology;
 
 			if (RaftEngine.IsLeader())
-				return GetEmptyMessageAsTask(HttpStatusCode.NotModified);
+				return await GetEmptyMessageAsTask(HttpStatusCode.NotModified);
 
 			if (topology.AllNodes.Any())
-				return GetEmptyMessageAsTask(HttpStatusCode.NotAcceptable);
+				return await GetEmptyMessageAsTask(HttpStatusCode.NotAcceptable);
 
-			RaftEngineFactory.InitializeTopology(Database, RaftEngine);
+			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>();
 
-			return GetEmptyMessageAsTask(HttpStatusCode.Created);
+			RaftEngineFactory.InitializeTopology(nodeConnectionInfo, RaftEngine);
+
+			return await GetEmptyMessageAsTask(HttpStatusCode.Created);
 		}
 
+		/// <summary>
+		/// This method passes request to current cluster leader automatically thus can be executed by any node of cluster.
+		/// </summary>
+		[HttpPost]
+		[RavenRoute("admin/raft/join")]
+		public async Task<HttpResponseMessage> JoinToCluster()
+		{
+			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>();
+			if (nodeConnectionInfo == null)
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			var client = new RaftHttpClient(RaftEngine);
+
+			if (nodeConnectionInfo.Name == null)
+				nodeConnectionInfo.Name = RaftHelper.GetNodeName(await client.GetDatabaseId(nodeConnectionInfo));
+
+			var topology = RaftEngine.CurrentTopology;
+			if (topology.Contains(nodeConnectionInfo.Name))
+				return await GetEmptyMessageAsTask(HttpStatusCode.NotModified);
+
+			await client.SendJoinServerAsync(nodeConnectionInfo).ConfigureAwait(false);
+			return GetEmptyMessage();
+		}
+
+		/*
 		[HttpGet]
 		[RavenRoute("admin/raft/canJoin")]
 		public Task<HttpResponseMessage> CanJoin([FromUri] string name)
@@ -106,27 +132,7 @@ namespace Raven.Database.Raft.Controllers
 			return GetEmptyMessageAsTask(HttpStatusCode.Accepted);
 		}
 
-		[HttpGet]
-		[RavenRoute("admin/raft/join")]
-		public async Task<HttpResponseMessage> Join([FromUri] string url, [FromUri] Guid name)
-		{
-			var nodeUri = RaftHelper.GetNodeUrl(url);
-			var nodeName = RaftHelper.GetNodeName(name);
-
-			if (RaftEngine.State != RaftEngineState.Leader)
-				return RedirectToLeader();
-
-			if (RaftEngine.CurrentTopology.Contains(nodeName))
-				return GetEmptyMessage(HttpStatusCode.NotModified);
-
-			await RaftEngine.AddToClusterAsync(new NodeConnectionInfo
-			{
-				Name = nodeName,
-				Uri = nodeUri
-			});
-
-			return GetEmptyMessage(HttpStatusCode.Accepted);
-		}
+		*/
 
 		[HttpGet]
 		[RavenRoute("admin/raft/leave")]

@@ -15,6 +15,8 @@ using Rachis.Transport;
 using Rachis.Utils;
 
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Raft.Commands;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
@@ -42,6 +44,19 @@ namespace Raven.Database.Raft
 			httpClient = new HttpClient();
 		}
 
+		public async Task SendJoinServerAsync(NodeConnectionInfo nodeConnectionInfo)
+		{
+			try
+			{
+				await raftEngine.AddToClusterAsync(nodeConnectionInfo);
+				return;
+			}
+			catch (NotLeadingException)
+			{
+			}
+			await JoinAsync(raftEngine.GetLeaderNode(), nodeConnectionInfo);
+		}
+
 		public Task SendClusterConfigurationAsync(ClusterConfiguration configuration)
 		{
 			try
@@ -52,11 +67,10 @@ namespace Raven.Database.Raft
 			}
 			catch (NotLeadingException)
 			{
+				var node = raftEngine.GetLeaderNode();
+				var url = node.Uri.AbsoluteUri + "admin/raft/commands/cluster/configuration";
+				return SendClusterConfigurationInternalAsync(url, configuration);
 			}
-
-			var node = raftEngine.GetLeaderNode();
-			var url = node.Uri.AbsoluteUri + "admin/raft/commands/cluster/configuration";
-			return SendClusterConfigurationInternalAsync(url, configuration);
 		}
 
 		public async Task SendClusterConfigurationInternalAsync(string url, ClusterConfiguration configuration)
@@ -95,11 +109,12 @@ namespace Raven.Database.Raft
 			}
 		}
 
-		public async Task<CanJoinResult> JoinAsync(string leaderNodeUrl, string nodeName)
+		public async Task<CanJoinResult> JoinAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
 		{
-			var url = leaderNodeUrl + "admin/raft/join?name=" + nodeName;
+			var url = leaderNode.Uri + "admin/raft/join";
+			var content = new JsonContent(RavenJToken.FromObject(newNode));
 
-			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url).ConfigureAwait(false));
+			var response = await ExecuteWithRetriesAsync(() => httpClient.PostAsync(url, content).ConfigureAwait(false));
 
 			if (response.IsSuccessStatusCode)
 				return CanJoinResult.CanJoin;
@@ -124,7 +139,7 @@ namespace Raven.Database.Raft
 			}
 
 			var node = raftEngine.GetLeaderNode() ?? raftEngine.GetFirstNonSelfNode();
-			var url = node.Uri + "admin//raft/leave?name=" + SelfConnection.Name;
+			var url = node.Uri + "admin/raft/leave?name=" + SelfConnection.Name;
 
 			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
 			if (response.IsSuccessStatusCode)
@@ -160,6 +175,20 @@ namespace Raven.Database.Raft
 
 				if (numberOfErrors >= numberOfRetries)
 					throw new InvalidOperationException("Could not connect to node.");
+			}
+		}
+
+		public async Task<Guid> GetDatabaseId(NodeConnectionInfo nodeConnectionInfo)
+		{
+			var response = await httpClient.GetAsync(nodeConnectionInfo.Uri + "/stats").ConfigureAwait(false);
+			if (!response.IsSuccessStatusCode)
+				throw new InvalidOperationException("Unable to fetch database statictics for: " + nodeConnectionInfo.Uri);
+
+			using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+			{
+				var json = RavenJToken.TryLoad(responseStream);
+				var stats = json.JsonDeserialization<DatabaseStatistics>();
+				return stats.DatabaseId;
 			}
 		}
 	}

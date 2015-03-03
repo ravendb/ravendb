@@ -2,7 +2,6 @@ import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import resource = require("models/resource");
-import pagedList = require("common/pagedList");
 import router = require("plugins/router");
 import collection = require("models/collection");
 import messagePublisher = require("common/messagePublisher");
@@ -157,6 +156,10 @@ class appUrl {
     }
     static forApiKeys(): string {
         return "#admin/settings/apiKeys";
+    }
+
+    static forCluster(): string {
+        return "#admin/settings/cluster";
     }
 
     static forWindowsAuth(): string {

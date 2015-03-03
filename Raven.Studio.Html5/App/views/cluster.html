@@ -1,0 +1,29 @@
+﻿<section>
+    <div class="text-center" data-bind="if: !topology().clusterMode()">
+        <h3 class="text-info">
+            This server is not part of cluster. <small>Go ahead and <a href="#" data-bind="click: createCluster">create cluster</a>.</small>
+        </h3>
+    </div>
+    <div data-bind="if: topology().clusterMode()">
+        <table class="table table-condensed table-striped">
+            <thead>
+            <tr>
+                <th>State</th>
+                <th>Server Url</th>
+                <th>Edit</th>
+                <th>Delete</th>
+            </tr>
+            </thead>
+            <tbody data-bind="foreach: topology().allNodes">
+            <tr>
+                <td data-bind="text: status"></td>
+                <td data-bind="text: uri"></td>
+                <td><button class="btn btn-default"><i class="fa fa-edit"></i> Edit</button></td>
+                <td><button class="btn btn-danger"><i class="fa fa-trash"></i> Delete</button></td>
+            </tr>
+            </tbody>
+        </table>
+
+        <button data-bind="click: addAnotherServerToCluster" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
+    </div>
+</section>

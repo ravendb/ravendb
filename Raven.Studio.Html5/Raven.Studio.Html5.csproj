@@ -59,6 +59,8 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getClientBuildVersionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\extendRaftClusterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getClusterTopologyCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCSharpIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
@@ -145,6 +147,8 @@
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
+    <TypeScriptCompile Include="App\models\nodeConnectionInfo.ts" />
+    <TypeScriptCompile Include="App\models\topology.ts" />
     <TypeScriptCompile Include="App\models\configurationDocument.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
@@ -203,6 +207,8 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\cluster.ts" />
+    <TypeScriptCompile Include="App\viewmodels\editNodeConnectionInfoDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\globalConfigVersioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
@@ -476,6 +482,8 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings.ts" />
     <Content Include="App\views\adminSettings.html" />
+    <Content Include="App\views\editNodeConnectionInfoDialog.html" />
+    <Content Include="App\views\cluster.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />

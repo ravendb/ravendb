@@ -316,7 +316,7 @@ namespace Rachis
 		internal Task ModifyTopology(Topology requested)
 		{
 			if (State != RaftEngineState.Leader)
-				throw new InvalidOperationException("Cannot modify topology from a non leader node, current leader is: " +
+				throw new NotLeadingException("Cannot modify topology from a non leader node, current leader is: " +
 													(CurrentLeader ?? "no leader"));
 
 			var tcc = new TopologyChangeCommand
