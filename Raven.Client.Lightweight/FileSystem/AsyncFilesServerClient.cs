@@ -1486,7 +1486,7 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Guid>> sentFiles)
+            public async Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles)
             {
                 var requestUriString = String.Format("{0}/synchronization/Confirm", client.BaseUrl);
 
@@ -1498,7 +1498,7 @@ namespace Raven.Client.FileSystem
 						{
 							var sb = new StringBuilder();
 							var jw = new JsonTextWriter(new StringWriter(sb));
-							new JsonSerializer().Serialize(jw, sentFiles);
+							JsonExtensions.CreateDefaultJsonSerializer().Serialize(jw, sentFiles);
 							var bytes = Encoding.UTF8.GetBytes(sb.ToString());
 
 							await stream.WriteAsync(bytes, 0, bytes.Length);
@@ -1536,7 +1536,7 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Guid sourceFileETag)
+            public async Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag)
             {
                 var requestUriString =
                     String.Format("{0}/synchronization/IncrementLastETag?sourceServerId={1}&sourceFileSystemUrl={2}&sourceFileETag={3}",

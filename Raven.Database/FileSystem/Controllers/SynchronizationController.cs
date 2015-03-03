@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Storage;
@@ -206,7 +207,7 @@ namespace Raven.Database.FileSystem.Controllers
             return GetMessageWithObject(report);
 		}
 
-		private void FinishSynchronization(string fileName, SynchronizationReport report, ServerInfo sourceServer, Guid sourceFileETag)
+		private void FinishSynchronization(string fileName, SynchronizationReport report, ServerInfo sourceServer, Etag sourceFileETag)
 		{
 			try
 			{
@@ -565,7 +566,7 @@ namespace Raven.Database.FileSystem.Controllers
 			var contentStream = await Request.Content.ReadAsStreamAsync();
 
 			var confirmingFiles = JsonExtensions.CreateDefaultJsonSerializer()
-				.Deserialize<IEnumerable<Tuple<string, Guid>>>(new JsonTextReader(new StreamReader(contentStream)));
+				.Deserialize<IEnumerable<Tuple<string, Etag>>>(new JsonTextReader(new StreamReader(contentStream)));
 
 
             var result = confirmingFiles.Select(x =>
@@ -824,7 +825,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 		[HttpPost]
         [RavenRoute("fs/{fileSystemName}/synchronization/IncrementLastETag")]
-		public HttpResponseMessage IncrementLastETag(Guid sourceServerId, string sourceFileSystemUrl, Guid sourceFileETag)
+		public HttpResponseMessage IncrementLastETag(Guid sourceServerId, string sourceFileSystemUrl, string sourceFileETag)
 		{
 			try
 			{
@@ -872,7 +873,7 @@ namespace Raven.Database.FileSystem.Controllers
 			});
 		}
 
-        private FileStatus CheckSynchronizedFileStatus(string filename, Guid etag)
+        private FileStatus CheckSynchronizedFileStatus(string filename, Etag etag)
 		{
             var report = GetSynchronizationReport(filename);
             if (report == null || report.FileETag != etag)
@@ -947,7 +948,7 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				info = new SourceSynchronizationInformation
 				{
-					LastSourceFileEtag = Guid.Empty,
+					LastSourceFileEtag = Etag.Empty,
 					DestinationServerId = Storage.Id
 				};
 			}
@@ -955,10 +956,10 @@ namespace Raven.Database.FileSystem.Controllers
 			return info;
 		}
 
-		private void SaveSynchronizationSourceInformation(ServerInfo sourceServer, Guid lastSourceEtag, IStorageActionsAccessor accessor)
+		private void SaveSynchronizationSourceInformation(ServerInfo sourceServer, Etag lastSourceEtag, IStorageActionsAccessor accessor)
 		{
 			var lastSynchronizationInformation = GetLastSynchronization(sourceServer.Id, accessor);
-			if (Buffers.Compare(lastSynchronizationInformation.LastSourceFileEtag.ToByteArray(), lastSourceEtag.ToByteArray()) > 0)
+			if (EtagUtil.IsGreaterThan(lastSynchronizationInformation.LastSourceFileEtag, lastSourceEtag))
 			{
 				return;
 			}

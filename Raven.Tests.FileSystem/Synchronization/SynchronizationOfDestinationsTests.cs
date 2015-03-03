@@ -194,7 +194,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationDetails.FileName);
             Assert.Equal(fullDstUrl, synchronizationDetails.DestinationUrl);
-			Assert.NotEqual(Guid.Empty, synchronizationDetails.FileETag);
+			Assert.NotEqual(Etag.Empty, synchronizationDetails.FileETag);
 			Assert.Equal(SynchronizationType.ContentUpdate, synchronizationDetails.Type);
 		}
 
@@ -384,9 +384,9 @@ namespace Raven.Tests.FileSystem.Synchronization
             var metadata = await sourceClient.GetMetadataForAsync("test.bin");
 
 			var confirmations = await destinationClient.Synchronization.GetConfirmationForFilesAsync(
-                                    new List<Tuple<string, Guid>>
+                                    new List<Tuple<string, Etag>>
 				                    {
-					                    new Tuple<string, Guid>("test.bin", metadata.Value<Guid>(Constants.MetadataEtagField))
+					                    new Tuple<string, Etag>("test.bin", metadata.Value<string>(Constants.MetadataEtagField))
 				                    });
 
 			var synchronizationConfirmations = confirmations as SynchronizationConfirmation[] ?? confirmations.ToArray();
@@ -413,9 +413,9 @@ namespace Raven.Tests.FileSystem.Synchronization
 			var differentETag = Guid.NewGuid();
 
 			var confirmations = destinationClient.Synchronization.GetConfirmationForFilesAsync(
-                                                        new List<Tuple<string, Guid>> 
+                                                        new List<Tuple<string, Etag>> 
                                                         {
-                                                            new Tuple<string, Guid>("test.bin", differentETag)
+                                                            new Tuple<string, Etag>("test.bin", differentETag)
                                                         }).Result.ToList();
 
 			Assert.Equal(1, confirmations.Count());
@@ -428,10 +428,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 		{
 			var destinationClient = NewAsyncClient(0);
 
-			var confirmations = destinationClient.Synchronization.GetConfirmationForFilesAsync(new List<Tuple<string, Guid>>
+			var confirmations = destinationClient.Synchronization.GetConfirmationForFilesAsync(new List<Tuple<string, Etag>>
 					                                                    {
-						                                                    new Tuple<string, Guid>(
-							                                                    "test.bin", Guid.Empty)
+						                                                    new Tuple<string, Etag>(
+							                                                    "test.bin", Etag.Empty)
 					                                                    }).Result.ToList();
 
 			Assert.Equal(1, confirmations.Count());
@@ -454,9 +454,9 @@ namespace Raven.Tests.FileSystem.Synchronization
 			await destinationClient.Configuration.SetKeyAsync(RavenFileNameHelper.SyncResultNameForFile("test.bin"), failureSynchronization);
 
             var confirmations = await destinationClient.Synchronization
-                                                       .GetConfirmationForFilesAsync(new List<Tuple<string, Guid>>
+                                                       .GetConfirmationForFilesAsync(new List<Tuple<string, Etag>>
 					                                                    {
-						                                                    new Tuple<string, Guid>(
+						                                                    new Tuple<string, Etag>(
 							                                                    "test.bin", sampleGuid)
 					                                                    });
 			Assert.Equal(1, confirmations.Count());

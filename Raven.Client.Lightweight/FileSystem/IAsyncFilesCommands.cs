@@ -138,7 +138,7 @@ namespace Raven.Client.FileSystem
         Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
 		Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
 
-        Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Guid>> sentFiles);
+        Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);
 
         Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25);
         Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int page = 0, int pageSize = 25);
@@ -148,7 +148,7 @@ namespace Raven.Client.FileSystem
         Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null);
 
         
-        Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Guid sourceFileETag);
+        Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag);
 
         Task<SignatureManifest> GetRdcManifestAsync(string path);
         Task<RdcStats> GetRdcStatsAsync();

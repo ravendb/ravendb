@@ -377,7 +377,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             var serverId = await sourceClient.GetServerIdAsync();
             var lastEtag = await destinationClient.Synchronization.GetLastSynchronizationFromAsync( serverId );
 
-            Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<Guid>(Constants.MetadataEtagField), lastEtag.LastSourceFileEtag);
+            Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<string>(Constants.MetadataEtagField), lastEtag.LastSourceFileEtag.ToString());
 		}
 
 		[Fact]

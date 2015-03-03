@@ -584,7 +584,7 @@ namespace Raven.Database.FileSystem.Synchronization
 			if (!filesNeedConfirmation.Any())
 				return new SynchronizationConfirmation[0];
 
-            return await commands.GetConfirmationForFilesAsync(filesNeedConfirmation.Select(x => new Tuple<string, Guid>(x.FileName, x.FileETag)));
+            return await commands.GetConfirmationForFilesAsync(filesNeedConfirmation.Select(x => new Tuple<string, Etag>(x.FileName, x.FileETag)));
 		}
 
         private IEnumerable<SynchronizationDetails> GetSyncingConfigurations(SynchronizationDestination destination)
