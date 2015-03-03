@@ -13,38 +13,76 @@ namespace Raven.Abstractions.Json
 {
     public static class JsonConverterCache
     {
-        private sealed class CompoundKey
+        private class CompoundKey
         {
-            public readonly Type Type;
-            public readonly JsonConverterCollection Collection;
             private readonly int hashKey;
 
-            public CompoundKey(Type type, JsonConverterCollection collection)
+            public CompoundKey( int hashKey )
             {
-                Debug.Assert( collection.IsFrozen );
-
-                this.Type = type;
-                this.Collection = collection;
-
-                this.hashKey = type.GetHashCode() * 17 + collection.GetHashCode();
+                this.hashKey = hashKey;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public sealed override int GetHashCode()
             {
- 	             return hashKey;
+                return hashKey;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public sealed override bool Equals(Object obj)
             {
-                CompoundKey k = obj as CompoundKey;
-
-                // Check for null values and compare run-time types.
-                if (k == null)
+                if (obj == null)
                     return false;
-                
-                return (Type == k.Type) && (Collection == k.Collection);
+
+                SlowCompoundKey k;
+                FastCompoundKey @this;
+                if (obj.GetType() == typeof(FastCompoundKey))
+                {
+                    @this = obj as FastCompoundKey;
+                    k = this as SlowCompoundKey;
+                }
+                else
+                {
+                    @this = this as FastCompoundKey;
+                    k = obj as SlowCompoundKey;
+                }
+
+
+                JsonConverterCollection kCollection;
+                if (!k.Collection.TryGetTarget(out kCollection))
+                    return false;
+
+                return @this.Collection == kCollection;
+            }
+        }
+
+        private sealed class FastCompoundKey : CompoundKey
+        {
+            public readonly Type Type;
+            public readonly JsonConverterCollection Collection;
+
+            public FastCompoundKey(Type type, JsonConverterCollection collection)
+                : base(type.GetHashCode() * 17 + collection.GetHashCode())
+            {
+                Debug.Assert(collection.IsFrozen);
+
+                this.Type = type;
+                this.Collection = collection;
+            }
+        }
+
+        private sealed class SlowCompoundKey : CompoundKey
+        {
+            public readonly Type Type;
+            public readonly WeakReference<JsonConverterCollection> Collection;
+
+            public SlowCompoundKey(Type type, JsonConverterCollection collection)
+                : base(type.GetHashCode() * 17 + collection.GetHashCode())
+            {
+                Debug.Assert(collection.IsFrozen);
+
+                this.Type = type;
+                this.Collection = new WeakReference<JsonConverterCollection>(collection);
             }
         }
 
@@ -75,7 +113,7 @@ namespace Raven.Abstractions.Json
             }
             else
             {
-                CompoundKey key = new CompoundKey(type, converters);
+                var key = new FastCompoundKey(type, converters);
 
                 JsonConverter converter;
                 if (!Cache.TryGetValue(key, out converter))
@@ -91,7 +129,8 @@ namespace Raven.Abstractions.Json
                         }
                     }
 
-                    Cache[key] = converter;
+                    var newKey = new SlowCompoundKey(type, converters);
+                    Cache[newKey] = converter;
                 }
 
                 return converter;
