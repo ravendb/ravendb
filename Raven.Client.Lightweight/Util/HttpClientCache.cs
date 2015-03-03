@@ -10,38 +10,49 @@ namespace Raven.Client.Util
 {
 	public class HttpClientCache : IDisposable
 	{
-		private readonly ConcurrentDictionary<HttpClientCacheKey, ConcurrentQueue<HttpClient>> cache = new ConcurrentDictionary<HttpClientCacheKey, ConcurrentQueue<HttpClient>>();
+		private readonly ConcurrentDictionary<HttpClientCacheKey, ConcurrentQueue<Tuple<long, HttpClient>>> cache = new ConcurrentDictionary<HttpClientCacheKey, ConcurrentQueue<Tuple<long, HttpClient>>>();
+		public readonly long _maxIdleTime;
+
+		public HttpClientCache()
+		{
+			_maxIdleTime = ServicePointManager.MaxServicePointIdleTime;
+		}
 
 		public HttpClient GetClient(TimeSpan timeout, OperationCredentials credentials, Func<HttpMessageHandler> handlerFactory)
 		{
 			var key = new HttpClientCacheKey(timeout, credentials);
-			var queue = cache.GetOrAdd(key, i => new ConcurrentQueue<HttpClient>());
+			var queue = cache.GetOrAdd(key, i => new ConcurrentQueue<Tuple<long, HttpClient>>());
 
-			HttpClient client;
-			if (queue.TryDequeue(out client))
+			Tuple<long, HttpClient> client;
+			while (queue.TryDequeue(out client))
 			{
-				client.CancelPendingRequests();
-				client.DefaultRequestHeaders.Clear();
-				return client;
+				if (DateTime.UtcNow.Ticks - client.Item1 > _maxIdleTime)
+				{
+					client.Item2.Dispose();
+					continue;
+				}
+				client.Item2.CancelPendingRequests();
+				client.Item2.DefaultRequestHeaders.Clear();
+				return client.Item2;
 			}
 
 			return new HttpClient(handlerFactory())
-				   {
-					   Timeout = timeout
-				   };
+			{
+				Timeout = timeout
+			};
 		}
 
 		public void ReleaseClient(HttpClient client, OperationCredentials credentials)
 		{
 			var key = new HttpClientCacheKey(client.Timeout, credentials);
-			var queue = cache.GetOrAdd(key, i => new ConcurrentQueue<HttpClient>());
-			queue.Enqueue(client);
+			var queue = cache.GetOrAdd(key, i => new ConcurrentQueue<Tuple<long, HttpClient>>());
+			queue.Enqueue(Tuple.Create(DateTime.UtcNow.Ticks, client));
 		}
 
 		public void Dispose()
 		{
 			foreach (var client in cache.Values.SelectMany(queue => queue))
-				client.Dispose();
+				client.Item2.Dispose();
 		}
 
 		private class HttpClientCacheKey
