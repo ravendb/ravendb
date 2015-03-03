@@ -285,10 +285,19 @@ namespace Raven.Imports.Newtonsoft.Json
             get
             {
                 if (_converters == null)
+                { 
+                    // This is a bit unorthodox but in debug mode (ours code) we don't want to use unfrozen converters
+                    // because of the performance implications. Therefore, any mistaken attempt to use the wrong way to
+                    // create the serializer will throw; but our users wont have to care about that until we hit
+                    // v4.0 where the failure mode should be the default.
+#if DEBUG 
+                    _converters = JsonConverterCollection.Empty;
+#else
                     _converters = new JsonConverterCollection();
-                _converters = JsonConverterCollection.Empty;
-
+#endif
+                }
                 return _converters;
+
             }
             set
             {
