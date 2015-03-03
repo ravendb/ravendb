@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="Basic.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ClusterBasic.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
+using Raven.Database.Raft;
 using Raven.Database.Raft.Dto;
 using Raven.Json.Linq;
 
@@ -15,7 +16,7 @@ using Xunit;
 
 namespace Raven.Tests.Raft
 {
-	public class Basic : RaftTestBase
+	public class ClusterBasic : RaftTestBase
 	{
 		[Fact]
 		public async Task CanCreateClusterAndSendConfiguration()
@@ -26,8 +27,8 @@ namespace Raven.Tests.Raft
 			using (var store2 = clusterStores[1])
 			using (var store3 = clusterStores[2])
 			{
-				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store1.Url + "/admin/raft/commands/cluster/configuration", "PUT", new RavenJObject(), store1.DatabaseCommands.PrimaryCredentials, store1.Conventions));
-				await request.WriteAsync(RavenJObject.FromObject(new ClusterConfiguration { EnableReplication = true }));
+				var client = new RaftHttpClient(servers[0].Options.RaftEngine);
+				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
 				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
 				var configurationJson = store1.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
@@ -55,8 +56,8 @@ namespace Raven.Tests.Raft
 			using (var store2 = clusterStores[1])
 			using (var store3 = clusterStores[2])
 			{
-				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store1.Url + "/admin/raft/commands/cluster/configuration", "PUT", new RavenJObject(), store1.DatabaseCommands.PrimaryCredentials, store1.Conventions));
-				await request.WriteAsync(RavenJObject.FromObject(new ClusterConfiguration { EnableReplication = true }));
+				var client = new RaftHttpClient(servers[0].Options.RaftEngine);
+				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
 				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
 				WaitForDocument(store2.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
@@ -66,8 +67,7 @@ namespace Raven.Tests.Raft
 				store2.DatabaseCommands.ForSystemDatabase().Delete(Constants.Cluster.ClusterConfigurationDocumentKey, null);
 				store3.DatabaseCommands.ForSystemDatabase().Delete(Constants.Cluster.ClusterConfigurationDocumentKey, null);
 
-				request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store1.Url + "/admin/raft/commands/cluster/configuration", "PUT", new RavenJObject(), store1.DatabaseCommands.PrimaryCredentials, store1.Conventions));
-				await request.WriteAsync(RavenJObject.FromObject(new ClusterConfiguration { EnableReplication = false }));
+				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
 				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
 				var configurationJson = store1.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);

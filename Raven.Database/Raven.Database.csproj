@@ -263,6 +263,7 @@
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
+    <Compile Include="Raft\ClusterKeeper.cs" />
     <Compile Include="Raft\Commands\ClusterConfigurationUpdateCommand.cs" />
     <Compile Include="Raft\Controllers\RaftController.cs" />
     <Compile Include="Raft\Dto\ClusterConfiguration.cs" />
