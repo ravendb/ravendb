@@ -19,7 +19,7 @@ namespace Raven.Tests.Queries
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Conventions.CustomizeJsonSerializer += serializer => serializer.Converters.Add(new MoneyConverter());
+				store.Conventions.CustomizeJsonSerializer += x => x.Converters = new JsonConverterCollection(x.Converters) { new MoneyConverter() };
 
 				using (var session = store.OpenSession())
 				{
