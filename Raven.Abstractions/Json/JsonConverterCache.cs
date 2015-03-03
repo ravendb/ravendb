@@ -13,46 +13,15 @@ namespace Raven.Abstractions.Json
 {
     public static class JsonConverterCache
     {
+        private static CompoundKeyEqualityComparer Comparer = new CompoundKeyEqualityComparer();
+
         private class CompoundKey
         {
-            private readonly int hashKey;
+            internal readonly int HashKey;
 
             public CompoundKey( int hashKey )
             {
-                this.hashKey = hashKey;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public sealed override int GetHashCode()
-            {
-                return hashKey;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public sealed override bool Equals(Object obj)
-            {
-                if (obj == null)
-                    return false;
-
-                SlowCompoundKey k;
-                FastCompoundKey @this;
-                if (obj.GetType() == typeof(FastCompoundKey))
-                {
-                    @this = obj as FastCompoundKey;
-                    k = this as SlowCompoundKey;
-                }
-                else
-                {
-                    @this = this as FastCompoundKey;
-                    k = obj as SlowCompoundKey;
-                }
-
-
-                JsonConverterCollection kCollection;
-                if (!k.Collection.TryGetTarget(out kCollection))
-                    return false;
-
-                return @this.Collection == kCollection;
+                this.HashKey = hashKey;
             }
         }
 
@@ -86,12 +55,20 @@ namespace Raven.Abstractions.Json
             }
         }
 
-        private static ThreadLocal<Dictionary<CompoundKey, JsonConverter>> _Cache = new ThreadLocal<Dictionary<CompoundKey, JsonConverter>>(() => new Dictionary<CompoundKey, JsonConverter>());
+
+        [ThreadStatic]
+        private static Dictionary<CompoundKey, JsonConverter> _cache; 
 
         private static Dictionary<CompoundKey, JsonConverter> Cache
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _Cache.Value; }
+            get 
+            { 
+                if ( _cache == null )
+                    _cache = new Dictionary<CompoundKey, JsonConverter>(Comparer);
+
+                return _cache; 
+            }
         }
 
         public static JsonConverter GetMatchingConverter(JsonConverterCollection converters, Type type)
@@ -115,7 +92,7 @@ namespace Raven.Abstractions.Json
             {
                 var key = new FastCompoundKey(type, converters);
 
-                JsonConverter converter;
+                JsonConverter converter;            
                 if (!Cache.TryGetValue(key, out converter))
                 {
                     int count = converters.Count;
@@ -134,9 +111,43 @@ namespace Raven.Abstractions.Json
                 }
 
                 return converter;
+            }            
+        }
+
+
+        private class CompoundKeyEqualityComparer : IEqualityComparer<CompoundKey>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(CompoundKey x, CompoundKey y)
+            {
+                if (x == null || y == null)
+                    return false;
+
+                SlowCompoundKey k;
+                FastCompoundKey @this;
+                if (x is FastCompoundKey)
+                {
+                    @this = x as FastCompoundKey;
+                    k = y as SlowCompoundKey;
+                }
+                else
+                {
+                    @this = y as FastCompoundKey;
+                    k = x as SlowCompoundKey;
+                }
+
+                JsonConverterCollection kCollection;
+                if (!k.Collection.TryGetTarget(out kCollection))
+                    return false;
+
+                return @this.Collection == kCollection;
             }
 
-            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetHashCode(CompoundKey obj)
+            {
+                return obj.HashKey;
+            }
         }
     }
 }
