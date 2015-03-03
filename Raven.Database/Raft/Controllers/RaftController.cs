@@ -18,7 +18,7 @@ using Rachis;
 using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
-
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers.Admin;
@@ -84,7 +84,7 @@ namespace Raven.Database.Raft.Controllers
 				return await GetEmptyMessageAsTask(HttpStatusCode.NotModified);
 
 			if (topology.AllNodes.Any())
-				return await GetEmptyMessageAsTask(HttpStatusCode.NotAcceptable);
+				return GetMessageWithString("Server is already in cluster.", HttpStatusCode.NotAcceptable);
 
 			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>();
 
@@ -106,12 +106,18 @@ namespace Raven.Database.Raft.Controllers
 			if (nodeConnectionInfo.Name == null)
 				nodeConnectionInfo.Name = RaftHelper.GetNodeName(await client.GetDatabaseId(nodeConnectionInfo));
 
-			if (await client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false) != CanJoinResult.CanJoin)
-				return await GetEmptyMessageAsTask(HttpStatusCode.BadRequest);
+			var canJoinResult = await client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
+			switch (canJoinResult)
+			{
+				case CanJoinResult.InAnotherCluster:
+					return GetMessageWithString("Can't join node to cluster. Node is in different cluster", HttpStatusCode.BadRequest);
+				case CanJoinResult.AlreadyJoined:
+					return GetEmptyMessage(HttpStatusCode.NotModified);
+			}
 
 			var topology = RaftEngine.CurrentTopology;
 			if (topology.Contains(nodeConnectionInfo.Name))
-				return await GetEmptyMessageAsTask(HttpStatusCode.NotModified);
+				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			await client.SendJoinServerAsync(nodeConnectionInfo).ConfigureAwait(false);
 			return GetEmptyMessage();
@@ -127,7 +133,7 @@ namespace Raven.Database.Raft.Controllers
 				return GetEmptyMessageAsTask(HttpStatusCode.NotModified);
 
 			if (topology.AllNodes.Any())
-				return GetEmptyMessageAsTask(HttpStatusCode.NotAcceptable);
+				return GetMessageWithStringAsTask("Can't join node to cluster. Node is in different cluster", HttpStatusCode.NotAcceptable);
 
 			return GetEmptyMessageAsTask(HttpStatusCode.Accepted);
 		}
