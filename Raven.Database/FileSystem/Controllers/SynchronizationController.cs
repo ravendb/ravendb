@@ -137,7 +137,7 @@ namespace Raven.Database.FileSystem.Controllers
                 synchronizingFile.Dispose();
                 sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
 
-                Storage.Batch(accessor => accessor.UpdateFileMetadata(tempFileName, sourceMetadata));
+                Storage.Batch(accessor => accessor.UpdateFileMetadata(tempFileName, sourceMetadata, null));
 
                 Storage.Batch(accessor =>
                 {
@@ -263,7 +263,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 						Storage.Batch(accessor =>
 						{
-							accessor.UpdateFileMetadata(fileName, localMetadata);
+							accessor.UpdateFileMetadata(fileName, localMetadata, null);
 
 							ConflictArtifactManager.Delete(fileName, accessor);
 						});
@@ -338,7 +338,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                 Historian.UpdateLastModified(sourceMetadata);
 
-                Storage.Batch(accessor => accessor.UpdateFileMetadata(canonicalFilename, sourceMetadata));
+                Storage.Batch(accessor => accessor.UpdateFileMetadata(canonicalFilename, sourceMetadata, null));
 
                 Search.Index(canonicalFilename, sourceMetadata);
 
@@ -696,7 +696,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                         ConflictResolver.ApplyCurrentStrategy(canonicalFilename, conflict, localMetadata);
 
-                        accessor.UpdateFileMetadata(canonicalFilename, localMetadata);
+                        accessor.UpdateFileMetadata(canonicalFilename, localMetadata, null);
 
                         ConflictArtifactManager.Delete(canonicalFilename, accessor);
 					});
@@ -717,7 +717,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                         ConflictResolver.ApplyRemoteStrategy(canonicalFilename, conflict, localMetadata);
 
-                        accessor.UpdateFileMetadata(canonicalFilename, localMetadata);
+                        accessor.UpdateFileMetadata(canonicalFilename, localMetadata, null);
 
                         // ConflictArtifactManager.Delete(canonicalFilename, accessor); - intentionally not deleting, conflict item will be removed when a remote file is put
 					});

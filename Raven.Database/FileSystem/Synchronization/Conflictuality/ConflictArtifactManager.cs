@@ -31,7 +31,7 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
 					metadata = accessor.GetFile(fileName, 0, 0).Metadata;
 					accessor.SetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName), JsonExtensions.ToJObject(conflict) );
 					metadata[SynchronizationConstants.RavenSynchronizationConflict] = true;
-					accessor.UpdateFileMetadata(fileName, metadata);
+					accessor.UpdateFileMetadata(fileName, metadata, null);
 				});
 
 			if (metadata != null)
@@ -48,7 +48,7 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
 				metadata = accessor.GetFile(fileName, 0, 0).Metadata;
 				metadata.Remove(SynchronizationConstants.RavenSynchronizationConflict);
 				metadata.Remove(SynchronizationConstants.RavenSynchronizationConflictResolution);
-				accessor.UpdateFileMetadata(fileName, metadata);
+				accessor.UpdateFileMetadata(fileName, metadata, null);
 			};
 
 			if (actionsAccessor != null)

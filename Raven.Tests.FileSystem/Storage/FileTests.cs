@@ -439,13 +439,13 @@ namespace Raven.Tests.FileSystem.Storage
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.UpdateFileMetadata("file1", new RavenJObject())));
+                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.UpdateFileMetadata("file1", new RavenJObject(), null)));
 
                 storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
 
-                storage.Batch(accessor => Assert.Throws<InvalidOperationException>(() => accessor.UpdateFileMetadata("file1", new RavenJObject())));
+                storage.Batch(accessor => Assert.Throws<InvalidOperationException>(() => accessor.UpdateFileMetadata("file1", new RavenJObject(), null)));
 
-                storage.Batch(accessor => accessor.UpdateFileMetadata("file1", new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.UpdateFileMetadata("file1", new RavenJObject().WithETag(etag2), null));
 
                 storage.Batch(accessor =>
                 {

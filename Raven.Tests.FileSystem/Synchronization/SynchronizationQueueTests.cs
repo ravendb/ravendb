@@ -56,7 +56,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			queue.TryDequePendingSynchronization(Destination, out work);
 			queue.SynchronizationStarted(work, Destination);
 
-            transactionalStorage.Batch(accessor => accessor.UpdateFileMetadata(FileName, new RavenJObject().WithETag(Guid.NewGuid())));			
+            transactionalStorage.Batch(accessor => accessor.UpdateFileMetadata(FileName, new RavenJObject().WithETag(Guid.NewGuid()), null));			
 
 			var metadataUpdateWorkItem = new MetadataUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage);
 
@@ -81,7 +81,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 				var greaterGuid = Guid.NewGuid();
 
-				transactionalStorage.Batch(accessor => accessor.UpdateFileMetadata(FileName, new RavenJObject().WithETag(greaterGuid)));
+				transactionalStorage.Batch(accessor => accessor.UpdateFileMetadata(FileName, new RavenJObject().WithETag(greaterGuid), null));
 
 				queue.EnqueueSynchronization(Destination, new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, new SigGenerator()));
 

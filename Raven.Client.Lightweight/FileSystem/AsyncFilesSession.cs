@@ -163,5 +163,7 @@ namespace Raven.Client.FileSystem
             if (this.conflictCacheRemoval != null)
                 this.conflictCacheRemoval.Dispose();
         }
+
+	    public bool UseOptimisticConcurrency { get; set; }
     }
 }

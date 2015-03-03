@@ -317,7 +317,7 @@ namespace Raven.Client.FileSystem
 
                 if (EntityChanged(fileHeader) && !UploadRegisteredForFile(fileHeader.FullPath, operations))
                 {
-                    changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata));
+                    changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata, fileHeader.Etag));
                     changes.Entities.Add(fileHeader.FullPath);
                 }
             }

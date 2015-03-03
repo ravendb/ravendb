@@ -80,7 +80,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 				}
 
                 accessor.RenameFile(operation.Name, operation.Rename, true);
-                accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation);
+                accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation, null);
 
                 // copy renaming file metadata and set special markers
                 var tombstoneMetadata = new RavenJObject(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
@@ -158,7 +158,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 
                 if (renameSucceeded)
                 {
-                    accessor.UpdateFileMetadata(deletingFileName, metadata);
+                    accessor.UpdateFileMetadata(deletingFileName, metadata, null);
                     accessor.DecrementFileCount(deletingFileName);
 
                     Log.Debug("File '{0}' was renamed to '{1}' and marked as deleted", fileName, deletingFileName);

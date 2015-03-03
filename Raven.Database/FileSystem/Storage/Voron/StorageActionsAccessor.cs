@@ -375,7 +375,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             DeleteFile(filename);
         }
 
-        public void UpdateFileMetadata(string filename, RavenJObject metadata)
+        public void UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag)
         {           
             var key = CreateKey(filename);
 
@@ -388,7 +388,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
             var innerMetadata = new RavenJObject(metadata);
-            var etag = innerMetadata.Value<Guid>(RavenConstants.MetadataEtagField);
+            var newEtag = innerMetadata.Value<Guid>(RavenConstants.MetadataEtagField);
             innerMetadata.Remove(RavenConstants.MetadataEtagField);
 
             var existingMetadata = (RavenJObject) file["metadata"];
@@ -400,7 +400,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             var oldEtag = file.Value<Guid>("etag");
 
-            file["etag"] = new RavenJValue(etag);
+            file["etag"] = new RavenJValue(newEtag);
             file["metadata"] = innerMetadata;
 
             storage.Files.Add(writeBatch.Value, key, file, version);
@@ -408,7 +408,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
             filesByEtag.Delete(writeBatch.Value, CreateKey(oldEtag));
-            filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
+            filesByEtag.Add(writeBatch.Value, CreateKey(newEtag), key);
         }
 
         public void CompleteFileUpload(string filename)

@@ -62,7 +62,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 						else
 						{
 							file.Metadata.Remove(Constants.RavenReadOnly);
-							accessor.UpdateFileMetadata(file.FullPath, file.Metadata);
+							accessor.UpdateFileMetadata(file.FullPath, file.Metadata, null);
 						}
 					}
 				});

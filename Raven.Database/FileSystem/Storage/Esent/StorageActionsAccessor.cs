@@ -525,7 +525,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			Api.JetDelete(session, Files);
 		}
 
-        public void UpdateFileMetadata(string filename, RavenJObject metadata)
+        public void UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag)
         {
             Api.JetSetCurrentIndex(session, Files, "by_name");
             Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -534,13 +534,15 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
             using (var update = new Update(session, Files, JET_prep.Replace))
             {
+				Etag existingEtag = EnsureFileEtagMatch(filename, etag, "PUT");
+
                 if (!metadata.ContainsKey(Constants.MetadataEtagField))
                 {
                     throw new InvalidOperationException("Metadata of file {0} does not contain 'ETag' key " + filename);
                 }
 
                 var innerEsentMetadata = new RavenJObject(metadata);
-                var etag = innerEsentMetadata.Value<Guid>(Constants.MetadataEtagField);
+                var newEtag = innerEsentMetadata.Value<Guid>(Constants.MetadataEtagField);
                 innerEsentMetadata.Remove(Constants.MetadataEtagField);
 
                 var existingMetadata = RetrieveMetadata();
@@ -555,7 +557,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                     innerEsentMetadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
                 }
 
-                Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], etag.TransformToValueForEsentSorting());
+                Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newEtag.TransformToValueForEsentSorting());
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], ToQueryString(innerEsentMetadata), Encoding.Unicode);
 
                 update.Save();
@@ -910,6 +912,35 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			total = skippedCount + configs.Count + extraRecords;
 
 			return configs;
+		}
+
+		private Etag EnsureFileEtagMatch(string key, Etag etag, string method)
+		{
+			var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
+			if (etag != null)
+			{
+				if (existingEtag != etag)
+				{
+					if (etag == Etag.Empty)
+					{
+						var metadata = RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode));
+
+						if (metadata.ContainsKey(Constants.RavenDeleteMarker) &&
+							metadata.Value<bool>(Constants.RavenDeleteMarker))
+						{
+							return existingEtag;
+						}
+					}
+
+					throw new ConcurrencyException(method + " attempted on file '" + key +
+												   "' using a non current etag")
+					{
+						ActualETag = existingEtag,
+						ExpectedETag = etag
+					};
+				}
+			}
+			return existingEtag;
 		}
     }
 }

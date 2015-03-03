@@ -38,7 +38,7 @@ namespace Raven.Database.FileSystem.Storage
 
         void Delete(string filename);
        
-        void UpdateFileMetadata(string filename, RavenJObject metadata);
+        void UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag);
 
         void CompleteFileUpload(string filename);
 

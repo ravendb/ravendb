@@ -249,17 +249,17 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             name = FileHeader.Canonize(name);
 
-            var headers = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
+            var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
-            Historian.UpdateLastModified(headers);
-            Historian.Update(name, headers);
+            Historian.UpdateLastModified(metadata);
+            Historian.Update(name, metadata);
 
             try
             {
 		        Storage.Batch(accessor =>
 		        {
 			        AssertFileIsNotBeingSynced(name, accessor, true);
-			        accessor.UpdateFileMetadata(name, headers);
+			        accessor.UpdateFileMetadata(name, metadata, GetEtag());
 		        });
             }
             catch (FileNotFoundException)
@@ -272,7 +272,7 @@ namespace Raven.Database.FileSystem.Controllers
 				throw ConcurrencyResponseException(ex);
 			}
 
-            Search.Index(name, headers);
+            Search.Index(name, metadata);
 
             Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 

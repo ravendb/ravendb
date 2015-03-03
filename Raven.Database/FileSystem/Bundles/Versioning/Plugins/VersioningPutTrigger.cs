@@ -136,7 +136,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 				var currentMetadata = accessor.ReadFile(fileName).Metadata;
 				currentMetadata["Content-MD5"] = headers["Content-MD5"];
 
-				accessor.UpdateFileMetadata(fileName, currentMetadata);
+				accessor.UpdateFileMetadata(fileName, currentMetadata, null);
 			});
 		}
 

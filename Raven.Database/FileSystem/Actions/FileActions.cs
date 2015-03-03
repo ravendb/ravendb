@@ -124,7 +124,7 @@ namespace Raven.Database.FileSystem.Actions
 
 					headers["Content-MD5"] = readFileToDatabase.FileHash;
 
-					Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers));
+					Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers, null)); //TODO arek
 
 					int totalSizeRead = readFileToDatabase.TotalSizeRead;
 					headers["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
