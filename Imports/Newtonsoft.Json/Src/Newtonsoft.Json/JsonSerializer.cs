@@ -35,6 +35,7 @@ using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Runtime.Serialization;
 using ErrorEventArgs = Raven.Imports.Newtonsoft.Json.Serialization.ErrorEventArgs;
 using Raven.Abstractions.Json;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -974,6 +975,7 @@ namespace Raven.Imports.Newtonsoft.Json
             return _referenceResolver;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal JsonConverter GetMatchingConverter(Type type)
         {
             return JsonConverterCache.GetMatchingConverter(_converters, type);
