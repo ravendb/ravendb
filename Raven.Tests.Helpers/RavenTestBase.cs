@@ -577,6 +577,22 @@ namespace Raven.Tests.Helpers
             if (!done) throw new Exception("WaitForRestore failed");
 		}
 
+		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id, CancellationToken? token = null)
+		{
+			var done = SpinWait.SpinUntil(() =>
+			{
+				if(token.HasValue)
+					token.Value.ThrowIfCancellationRequested();
+
+				// We expect to get the doc from the <system> database
+				var doc = databaseCommands.Get(id);
+				return doc != null;
+			}, TimeSpan.FromMinutes(5));
+
+			if (!done) throw new Exception("WaitForDocument failed");
+		}
+
+
 		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id)
 		{
 			var done = SpinWait.SpinUntil(() =>
