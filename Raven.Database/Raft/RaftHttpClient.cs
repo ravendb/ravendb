@@ -54,64 +54,12 @@ namespace Raven.Database.Raft
 			catch (NotLeadingException)
 			{
 			}
-			await JoinAsync(raftEngine.GetLeaderNode(), nodeConnectionInfo);
+			await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(), nodeConnectionInfo);
 		}
 
-		public Task SendClusterConfigurationAsync(ClusterConfiguration configuration)
+		public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
 		{
-			try
-			{
-				var command = ClusterConfigurationUpdateCommand.Create(configuration);
-				raftEngine.AppendCommand(command);
-				return command.Completion.Task;
-			}
-			catch (NotLeadingException)
-			{
-				var node = raftEngine.GetLeaderNode();
-				var url = node.Uri.AbsoluteUri + "admin/raft/commands/cluster/configuration";
-				return SendClusterConfigurationInternalAsync(url, configuration);
-			}
-		}
-
-		public async Task SendClusterConfigurationInternalAsync(string url, ClusterConfiguration configuration)
-		{
-			var response = await httpClient.PutAsync(url, new JsonContent(RavenJObject.FromObject(configuration))).ConfigureAwait(false);
-			if (response.IsSuccessStatusCode) 
-				return;
-
-			switch (response.StatusCode)
-			{
-				case HttpStatusCode.Redirect:
-					await SendClusterConfigurationInternalAsync(response.Headers.Location.AbsoluteUri, configuration).ConfigureAwait(false);
-					return;
-				default:
-					throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
-			}
-		}
-
-		public async Task<CanJoinResult> CanJoinAsync(string destinationNodeUrl)
-		{
-			var url = destinationNodeUrl + "admin/raft/canJoin?name=" + SelfConnection.Name;
-
-			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url).ConfigureAwait(false));
-
-			if (response.IsSuccessStatusCode)
-				return CanJoinResult.CanJoin;
-
-			switch (response.StatusCode)
-			{
-				case HttpStatusCode.NotModified:
-					return CanJoinResult.AlreadyJoined;
-				case HttpStatusCode.NotAcceptable:
-					return CanJoinResult.InAnotherCluster;
-				default:
-					throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
-			}
-		}
-
-		public async Task<CanJoinResult> JoinAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
-		{
-			var url = leaderNode.Uri + "admin/raft/join";
+			var url = leaderNode.Uri.AbsoluteUri + "admin/raft/join";
 			var content = new JsonContent(RavenJToken.FromObject(newNode));
 
 			var response = await ExecuteWithRetriesAsync(() => httpClient.PostAsync(url, content).ConfigureAwait(false));
@@ -130,30 +78,78 @@ namespace Raven.Database.Raft
 			}
 		}
 
-		public async Task LeaveAsync()
+		public Task SendClusterConfigurationAsync(ClusterConfiguration configuration)
 		{
-			if (raftEngine.IsLeader())
+			try
 			{
-				await raftEngine.StepDownAsync().ConfigureAwait(false);
-				raftEngine.WaitForLeader();
+				var command = ClusterConfigurationUpdateCommand.Create(configuration);
+				raftEngine.AppendCommand(command);
+				return command.Completion.Task;
 			}
+			catch (NotLeadingException)
+			{
+				return SendClusterConfigurationInternalAsync(raftEngine.GetLeaderNode(), configuration);
+			}
+		}
 
-			var node = raftEngine.GetLeaderNode() ?? raftEngine.GetFirstNonSelfNode();
-			var url = node.Uri + "admin/raft/leave?name=" + SelfConnection.Name;
-
-			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
-			if (response.IsSuccessStatusCode)
+		public async Task SendClusterConfigurationInternalAsync(NodeConnectionInfo leaderNode, ClusterConfiguration configuration)
+		{
+			var url = leaderNode.Uri.AbsoluteUri + "admin/raft/commands/cluster/configuration";
+			var response = await httpClient.PutAsync(url, new JsonContent(RavenJObject.FromObject(configuration))).ConfigureAwait(false);
+			if (response.IsSuccessStatusCode) 
 				return;
+
+			throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
+		}
+
+		public async Task<CanJoinResult> SendCanJoinAsync(NodeConnectionInfo nodeConnectionInfo)
+		{
+			var url = nodeConnectionInfo.Uri.AbsoluteUri + "admin/raft/canJoin?name=" + SelfConnection.Name;
+
+			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url).ConfigureAwait(false));
+
+			if (response.IsSuccessStatusCode)
+				return CanJoinResult.CanJoin;
 
 			switch (response.StatusCode)
 			{
 				case HttpStatusCode.NotModified:
-					return; // not in topology
-				case HttpStatusCode.Redirect:
-					throw new NotImplementedException(); // not a leader, redirect		// TODO [ppekrol]
+					return CanJoinResult.AlreadyJoined;
+				case HttpStatusCode.NotAcceptable:
+					return CanJoinResult.InAnotherCluster;
 				default:
 					throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
 			}
+		}
+
+		public async Task SendLeaveAsync(NodeConnectionInfo node)
+		{
+			try
+			{
+				if (raftEngine.GetLeaderNode() == node)
+				{
+					await raftEngine.StepDownAsync().ConfigureAwait(false);
+					raftEngine.WaitForLeader();
+				}
+				else
+				{
+					await raftEngine.RemoveFromClusterAsync(node);
+				}
+			}
+			catch (NotLeadingException e)
+			{
+			}
+			await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(), node);
+		}
+
+		public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
+		{
+			var url = leavingNode.Uri.AbsoluteUri + "admin/raft/leave?name=" + leavingNode.Name;
+			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
+			if (response.IsSuccessStatusCode)
+				return;
+
+			throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
 		}
 
 		private static async Task<HttpResponseMessage> ExecuteWithRetriesAsync(Func<ConfiguredTaskAwaitable<HttpResponseMessage>> action, int numberOfRetries = 3)

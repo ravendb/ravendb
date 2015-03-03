@@ -19,7 +19,7 @@
                 <td data-bind="text: status"></td>
                 <td data-bind="text: uri"></td>
                 <td><button class="btn btn-default"><i class="fa fa-edit"></i> Edit</button></td>
-                <td><button class="btn btn-danger"><i class="fa fa-trash"></i> Delete</button></td>
+                <td><button data-bind="click: $root.leaveCluster.bind($root)" class="btn btn-danger"><i class="fa fa-trash"></i> Leave cluster</button></td>
             </tr>
             </tbody>
         </table>

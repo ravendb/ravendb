@@ -93,9 +93,6 @@ namespace Raven.Database.Raft.Controllers
 			return await GetEmptyMessageAsTask(HttpStatusCode.Created);
 		}
 
-		/// <summary>
-		/// This method passes request to current cluster leader automatically thus can be executed by any node of cluster.
-		/// </summary>
 		[HttpPost]
 		[RavenRoute("admin/raft/join")]
 		public async Task<HttpResponseMessage> JoinToCluster()
@@ -109,6 +106,9 @@ namespace Raven.Database.Raft.Controllers
 			if (nodeConnectionInfo.Name == null)
 				nodeConnectionInfo.Name = RaftHelper.GetNodeName(await client.GetDatabaseId(nodeConnectionInfo));
 
+			if (await client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false) != CanJoinResult.CanJoin)
+				return await GetEmptyMessageAsTask(HttpStatusCode.BadRequest);
+
 			var topology = RaftEngine.CurrentTopology;
 			if (topology.Contains(nodeConnectionInfo.Name))
 				return await GetEmptyMessageAsTask(HttpStatusCode.NotModified);
@@ -117,7 +117,7 @@ namespace Raven.Database.Raft.Controllers
 			return GetEmptyMessage();
 		}
 
-		/*
+		
 		[HttpGet]
 		[RavenRoute("admin/raft/canJoin")]
 		public Task<HttpResponseMessage> CanJoin([FromUri] string name)
@@ -132,26 +132,23 @@ namespace Raven.Database.Raft.Controllers
 			return GetEmptyMessageAsTask(HttpStatusCode.Accepted);
 		}
 
-		*/
-
 		[HttpGet]
 		[RavenRoute("admin/raft/leave")]
 		public async Task<HttpResponseMessage> Leave([FromUri] Guid name)
 		{
 			var nodeName = RaftHelper.GetNodeName(name);
 
-			if (RaftEngine.State != RaftEngineState.Leader)
-				return RedirectToLeader();
-
 			if (RaftEngine.CurrentTopology.Contains(nodeName) == false)
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			await RaftEngine.RemoveFromClusterAsync(new NodeConnectionInfo
-			{
-				Name = nodeName
-			});
+			var node = RaftEngine.CurrentTopology.GetNodeByName(nodeName);
+			var client = new RaftHttpClient(RaftEngine);
+			await client.SendLeaveAsync(node);
 
-			return new HttpResponseMessage(HttpStatusCode.Accepted);
+			return GetMessageWithObject(new
+			{
+				Removed = name
+			});
 		}
 
 		[HttpPost]
@@ -271,7 +268,7 @@ namespace Raven.Database.Raft.Controllers
 			message.Headers.Location = new UriBuilder(leaderNode.Uri)
 			{
 				Path = Request.RequestUri.LocalPath,
-				Query = Request.RequestUri.Query,
+				Query =  Request.RequestUri.Query.TrimStart('?'),
 				Fragment = Request.RequestUri.Fragment
 			}.Uri;
 

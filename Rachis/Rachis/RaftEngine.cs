@@ -254,7 +254,7 @@ namespace Rachis
 		public Task StepDownAsync()
 		{
 			if (State != RaftEngineState.Leader)
-				throw new InvalidOperationException("Not a leader, and only leaders can step down");
+				throw new NotLeadingException("Not a leader, and only leaders can step down");
 
 			if (CurrentTopology.QuorumSize == 1)
 			{

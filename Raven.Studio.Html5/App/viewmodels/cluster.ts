@@ -10,6 +10,7 @@ import app = require("durandal/app");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 import extendRaftClusterCommand = require("commands/extendRaftClusterCommand");
+import leaveRaftClusterCommand = require("commands/leaveRaftClusterCommand");
 
 class cluster extends viewModelBase {
 
@@ -75,7 +76,15 @@ class cluster extends viewModelBase {
 
         });
         app.showDialog(dialog);
+    }
 
+    leaveCluster(node: nodeConnectionInfo) {
+        this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
+            .done(() => {
+                new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
+                    .execute()
+                    .done(() => setTimeout(() => this.fetchClusterTopology(appUrl.getSystemDatabase()), 500));
+        });
     }
 }
 

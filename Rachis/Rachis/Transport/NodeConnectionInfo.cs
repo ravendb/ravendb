@@ -26,5 +26,42 @@ namespace Rachis.Transport
 		{
 			return Name;
 		}
+
+		protected bool Equals(NodeConnectionInfo other)
+		{
+			return Equals(Uri, other.Uri) && string.Equals(Name, other.Name) && string.Equals(Username, other.Username) && string.Equals(Password, other.Password) && string.Equals(Domain, other.Domain) && string.Equals(ApiKey, other.ApiKey);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((NodeConnectionInfo) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hashCode = (Uri != null ? Uri.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (Name != null ? Name.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (Username != null ? Username.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (Password != null ? Password.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (Domain != null ? Domain.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (ApiKey != null ? ApiKey.GetHashCode() : 0);
+				return hashCode;
+			}
+		}
+
+		public static bool operator ==(NodeConnectionInfo left, NodeConnectionInfo right)
+		{
+			return Equals(left, right);
+		}
+
+		public static bool operator !=(NodeConnectionInfo left, NodeConnectionInfo right)
+		{
+			return !Equals(left, right);
+		}
 	}
 }
