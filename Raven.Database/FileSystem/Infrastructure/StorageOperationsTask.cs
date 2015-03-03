@@ -85,12 +85,12 @@ namespace Raven.Database.FileSystem.Infrastructure
                 // copy renaming file metadata and set special markers
                 var tombstoneMetadata = new RavenJObject(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
 
-                accessor.PutFile(operation.Name, 0, tombstoneMetadata, true); // put rename tombstone
+                var putResult = accessor.PutFile(operation.Name, 0, tombstoneMetadata, true); // put rename tombstone
 
                 accessor.DeleteConfig(configName);
 
                 search.Delete(operation.Name);
-                search.Index(operation.Rename, operation.MetadataAfterOperation);
+                search.Index(operation.Rename, operation.MetadataAfterOperation, putResult.Etag);
 			});
 
 			notificationPublisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });

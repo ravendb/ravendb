@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.MEF;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Notifications;
 using Raven.Database.FileSystem.Plugins;
@@ -18,8 +18,6 @@ namespace Raven.Tests.FileSystem
 {
 	public class StorageStreamTest : StorageTest
 	{
-        private static readonly RavenJObject EmptyETagMetadata = new RavenJObject().WithETag(Guid.Empty);
-
         private InMemoryRavenConfiguration CreateIndexConfiguration ()
         {
             var configuration = new InMemoryRavenConfiguration();
@@ -34,7 +32,7 @@ namespace Raven.Tests.FileSystem
 			using (var stream = StorageStream.CreatingNewAndWritting(
                                                     transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()),
                                                     new StorageOperationsTask(transactionalStorage, new OrderedPartCollection<AbstractFileDeleteTrigger>(), new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
-				                                    "file", EmptyETagMetadata))
+				                                    "file", new RavenJObject()))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
 
@@ -60,7 +58,7 @@ namespace Raven.Tests.FileSystem
             using (var stream = SynchronizingFileStream.CreatingOrOpeningAndWriting(
                                                             transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()),
                                                             new StorageOperationsTask(transactionalStorage, new OrderedPartCollection<AbstractFileDeleteTrigger>(), new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
-                                                            "file", EmptyETagMetadata))
+                                                            "file", new RavenJObject()))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
 
@@ -92,7 +90,7 @@ namespace Raven.Tests.FileSystem
 			using (var stream = StorageStream.CreatingNewAndWritting(
                                                     transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()),
                                                     new StorageOperationsTask(transactionalStorage, new OrderedPartCollection<AbstractFileDeleteTrigger>(), new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
-				                                    "file", EmptyETagMetadata))
+				                                    "file", new RavenJObject()))
 			{
 				stream.Write(buffer, 0, StorageConstants.MaxPageSize);
 			}
@@ -139,7 +137,7 @@ namespace Raven.Tests.FileSystem
 			{
 			}
 
-			public override void Index(string key, RavenJObject metadata)
+			public override void Index(string key, RavenJObject metadata, Etag etag)
 			{
 			}
 		}

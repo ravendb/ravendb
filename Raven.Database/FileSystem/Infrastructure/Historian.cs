@@ -15,12 +15,10 @@ namespace Raven.Database.FileSystem.Infrastructure
 	{
 		private readonly ITransactionalStorage storage;
 		private readonly SynchronizationHiLo synchronizationHiLo;
-		private readonly UuidGenerator uuidGenerator;
 
-		public Historian(ITransactionalStorage storage, SynchronizationHiLo synchronizationHiLo, UuidGenerator uuidGenerator)
+		public Historian(ITransactionalStorage storage, SynchronizationHiLo synchronizationHiLo)
 		{
 			this.storage = storage;
-			this.uuidGenerator = uuidGenerator;
 			this.synchronizationHiLo = synchronizationHiLo;
 		}
 
@@ -50,12 +48,11 @@ namespace Raven.Database.FileSystem.Infrastructure
             UpdateLastModified(metadata, DateTimeOffset.UtcNow);
         }
 
-        public void UpdateLastModified(RavenJObject metadata, DateTimeOffset when)
+        public void UpdateLastModified(RavenJObject metadata, DateTimeOffset when) //TODO arek
         {
             // internally keep last modified date with millisecond precision
             metadata[Constants.LastModified] = when;
             metadata[Constants.RavenLastModified] = when;
-            metadata[Constants.MetadataEtagField] = new RavenJValue(uuidGenerator.CreateSequentialUuid());
         }
 
         private RavenJObject GetMetadata(string fileName)

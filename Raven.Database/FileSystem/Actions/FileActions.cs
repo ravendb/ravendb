@@ -97,11 +97,11 @@ namespace Raven.Database.FileSystem.Actions
 						StorageOperationsTask.IndicateFileToDelete(name);
 					}
 
-					accessor.PutFile(name, size, headers);
+					var putResult = accessor.PutFile(name, size, headers);
 
 					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, headers));
 
-					Search.Index(name, headers);
+					Search.Index(name, headers, putResult.Etag);
 				});
 
 				Log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
@@ -124,12 +124,13 @@ namespace Raven.Database.FileSystem.Actions
 
 					headers["Content-MD5"] = readFileToDatabase.FileHash;
 
-					Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers, null)); //TODO arek
+					FileOperationResult updateMetadata = null;
+					Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, headers, null)); //TODO arek
 
 					int totalSizeRead = readFileToDatabase.TotalSizeRead;
 					headers["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
 
-					Search.Index(name, headers);
+					Search.Index(name, headers, updateMetadata.Etag);
 					Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
 
 					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));

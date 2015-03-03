@@ -23,6 +23,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Esent.Backup;
 using Raven.Database.FileSystem.Storage.Esent.Schema;
@@ -45,6 +46,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		private bool disposed;
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 		private JET_INSTANCE instance;
+		private UuidGenerator uuidGenerator;
 
 		private static readonly object UpdateLocker = new object();
 
@@ -129,11 +131,12 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			}
 		}
 
-		public void Initialize(OrderedPartCollection<AbstractFileCodec> codecs)
+		public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs)
 		{
 			if(codecs == null)
 				throw new ArgumentException("codecs");
 
+			uuidGenerator = generator;
 			fileCodecs = codecs;
 
 			try
@@ -386,7 +389,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		{
 			try
 			{
-				using (var storageActionsAccessor = new StorageActionsAccessor(tableColumnsCache, instance, database, fileCodecs))
+				using (var storageActionsAccessor = new StorageActionsAccessor(tableColumnsCache, instance, database, uuidGenerator, fileCodecs))
 				{
 					if (disableBatchNesting.Value == null)
 						current.Value = storageActionsAccessor;

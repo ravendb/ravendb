@@ -300,17 +300,17 @@ namespace Raven.Tests.FileSystem
 			var content = new RandomStream(10);
 			var client = NewAsyncClient();
 
-			// note that file upload modifies ETag twice
+			// note that file upload modifies ETag twice and indicates file to delete what creates another etag for tombstone
             await client.UploadAsync("test.bin", content, new RavenJObject());
             var resultFileMetadata = await client.GetMetadataForAsync("test.bin");
-            var etag0 = resultFileMetadata.Value<Guid>(Constants.MetadataEtagField);
+            var etag0 = Etag.Parse(resultFileMetadata.Value<string>(Constants.MetadataEtagField));
             await client.UploadAsync("test.bin", content, new RavenJObject());
             resultFileMetadata = await client.GetMetadataForAsync("test.bin");
-            var etag1 = resultFileMetadata.Value<Guid>(Constants.MetadataEtagField);
+            var etag1 = Etag.Parse(resultFileMetadata.Value<string>(Constants.MetadataEtagField));
 			
-			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000002").ToByteArray(), etag0.ToByteArray()), 0);
-			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000004").ToByteArray(), etag1.ToByteArray()), 0);
-            Assert.True(Buffers.Compare(etag1.ToByteArray(), etag0.ToByteArray()) > 0, "ETag after second update should be greater");
+			Assert.Equal(Etag.Parse("00000000-0000-0001-0000-000000000002"), etag0);
+			Assert.Equal(Etag.Parse("00000000-0000-0001-0000-000000000005"), etag1);
+            Assert.True(etag1.CompareTo(etag0) > 0, "ETag after second update should be greater");
 		}
 
 		[Fact]

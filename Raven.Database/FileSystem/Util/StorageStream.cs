@@ -50,8 +50,8 @@ namespace Raven.Database.FileSystem.Util
 					TransactionalStorage.Batch(accessor =>
 					{
 						operations.IndicateFileToDelete(fileName);
-						accessor.PutFile(fileName, null, metadata);
-						indexStorage.Index(fileName, metadata);
+						var putResult = accessor.PutFile(fileName, null, metadata);
+						indexStorage.Index(fileName, metadata, putResult.Etag);
 					});
 					Metadata = metadata;
 					break;

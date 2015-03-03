@@ -221,7 +221,7 @@ namespace Raven.Tests.FileSystem
 				                        {
 					                        Name = fileName,
 					                        Rename = rename,
-                                            MetadataAfterOperation = new RavenJObject().WithETag(Guid.Empty)
+                                            MetadataAfterOperation = new RavenJObject()
 				                        };
 
             rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation));
@@ -260,7 +260,7 @@ namespace Raven.Tests.FileSystem
 				                    {
 					                    Name = fileName,
 					                    Rename = rename,
-                                        MetadataAfterOperation = new RavenJObject().WithETag(Guid.Empty)
+                                        MetadataAfterOperation = new RavenJObject()
 				                    };
 
             rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation ));

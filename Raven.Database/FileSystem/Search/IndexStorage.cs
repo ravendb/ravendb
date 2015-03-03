@@ -224,7 +224,7 @@ namespace Raven.Database.FileSystem.Search
                             foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
                             {
                                 if (!file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
-                                    Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata);
+                                    Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata, file.Etag);
                             }
                         });
 
@@ -399,7 +399,7 @@ namespace Raven.Database.FileSystem.Search
 			return topDocs;
 		}
 
-        private void Index(IndexWriter writer, string key, RavenJObject metadata)
+        private void Index(IndexWriter writer, string key, RavenJObject metadata, Etag etag)
         {
 	        if (filesystem.ReadTriggers.CanReadFile(key, metadata, ReadOperation.Index) == false)
 				return;
@@ -433,17 +433,15 @@ namespace Raven.Database.FileSystem.Search
                 writer.DeleteDocuments(new Term("__key", lowerKey));
                 writer.AddDocument(doc);
 
-                // yes, this is slow, but we aren't expecting high writes count
-                var etag = lookup["ETag"].First();
-                var customCommitData = new Dictionary<string, string>() { { "LastETag", etag.Value.ToString() } };
+                var customCommitData = new Dictionary<string, string>() { { "LastETag", etag.ToString() } };
                 writer.Commit(customCommitData);
                 ReplaceSearcher(writer);
             }
         }
 
-	    public virtual void Index(string key, RavenJObject metadata)
+	    public virtual void Index(string key, RavenJObject metadata, Etag etag)
         {
-            Index(writer, key, metadata);
+            Index(writer, key, metadata, etag);
         }
 
         private static Document CreateDocument(string lowerKey, RavenJObject metadata)

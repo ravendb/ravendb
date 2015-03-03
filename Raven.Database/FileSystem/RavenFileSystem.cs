@@ -105,12 +105,11 @@ namespace Raven.Database.FileSystem
 
 	    public void Initialize()
         {
-            storage.Initialize(FileCodecs);
+		    var generator = new UuidGenerator();
+		    storage.Initialize(generator, FileCodecs);
+			generator.EtagBase = new SequenceActions(storage).GetNextValue("Raven/Etag");
 
-            var replicationHiLo = new SynchronizationHiLo(storage);
-            var sequenceActions = new SequenceActions(storage);
-            var uuidGenerator = new UuidGenerator(sequenceActions);
-            historian = new Historian(storage, replicationHiLo, uuidGenerator);
+            historian = new Historian(storage, new SynchronizationHiLo(storage));
 
             search.Initialize(this);
 

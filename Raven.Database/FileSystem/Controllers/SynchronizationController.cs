@@ -137,7 +137,8 @@ namespace Raven.Database.FileSystem.Controllers
                 synchronizingFile.Dispose();
                 sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
 
-                Storage.Batch(accessor => accessor.UpdateFileMetadata(tempFileName, sourceMetadata, null));
+				FileOperationResult updateResult = null;
+                Storage.Batch(accessor => updateResult = accessor.UpdateFileMetadata(tempFileName, sourceMetadata, null));
 
                 Storage.Batch(accessor =>
                 {
@@ -145,7 +146,7 @@ namespace Raven.Database.FileSystem.Controllers
                     accessor.RenameFile(tempFileName, canonicalFilename);
 
                     Search.Delete(tempFileName);
-                    Search.Index(canonicalFilename, sourceMetadata);
+                    Search.Index(canonicalFilename, sourceMetadata, updateResult.Etag);
                 });                
 
                 if (isNewFile)
@@ -338,9 +339,10 @@ namespace Raven.Database.FileSystem.Controllers
 
                 Historian.UpdateLastModified(sourceMetadata);
 
-                Storage.Batch(accessor => accessor.UpdateFileMetadata(canonicalFilename, sourceMetadata, null));
+				FileOperationResult updateMetadata = null;
+                Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(canonicalFilename, sourceMetadata, null));
 
-                Search.Index(canonicalFilename, sourceMetadata);
+                Search.Index(canonicalFilename, sourceMetadata, updateMetadata.Etag);
 
                 if (isConflictResolved)
                 {
@@ -520,7 +522,7 @@ namespace Raven.Database.FileSystem.Controllers
                     FileSystem = FileSystem.Name,
                     Name = canonicalFilename,
                     Rename = canonicalRename,
-                    MetadataAfterOperation = sourceMetadata.WithETag(sourceFileETag).DropRenameMarkers()
+                    MetadataAfterOperation = sourceMetadata.DropRenameMarkers()
                 });
 			}
 			catch (Exception ex)

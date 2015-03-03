@@ -233,9 +233,9 @@ namespace Raven.Tests.FileSystem.Synchronization
 				                         {
 					                         {SynchronizationConstants.RavenSynchronizationVersion, new RavenJValue(1)},
 					                         {SynchronizationConstants.RavenSynchronizationSource, new RavenJValue(Guid.Empty)},
-					                         {SynchronizationConstants.RavenSynchronizationHistory, "[]"}
-				                         }
-                                         .WithETag(Guid.Empty);
+					                         {SynchronizationConstants.RavenSynchronizationHistory, "[]"},
+											 {Constants.MetadataEtagField, Etag.Empty.ToString()}
+				                         };
 
 			request.AddHeaders(conflictedMetadata);
 
@@ -246,8 +246,6 @@ namespace Raven.Tests.FileSystem.Synchronization
 			using (var stream = response.GetResponseStream())
 			{
 				Assert.NotNull(stream);
-				if (stream == null) 
-					return;
 
 				var report = new JsonSerializer().Deserialize<SynchronizationReport>(new JsonTextReader(new StreamReader(stream)));
 				Assert.Equal(string.Format( "File {0} is conflicted", FileHeader.Canonize("test.txt")), report.Exception.Message);
