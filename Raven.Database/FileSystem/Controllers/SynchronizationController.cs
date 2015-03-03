@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -79,7 +78,7 @@ namespace Raven.Database.FileSystem.Controllers
             var tempFileName = RavenFileNameHelper.DownloadingFileName(canonicalFilename);
 
             var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
+			var sourceFileETag = GetEtag();
 
             var report = new SynchronizationReport(canonicalFilename, sourceFileETag, SynchronizationType.ContentUpdate);
 
@@ -310,8 +309,7 @@ namespace Raven.Database.FileSystem.Controllers
             var canonicalFilename = FileHeader.Canonize(fileName);
 
             var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            // REVIEW: (Oren) It works, but it seems to me it is not an scalable solution. 
-            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
+			var sourceFileETag = GetEtag();
 
             Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceServerInfo);
@@ -393,7 +391,7 @@ namespace Raven.Database.FileSystem.Controllers
             var canonicalFilename = FileHeader.Canonize(fileName);
 
             var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
+			var sourceFileETag = GetEtag();
 
             Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceServerInfo);
 
@@ -486,7 +484,7 @@ namespace Raven.Database.FileSystem.Controllers
             var canonicalRename = FileHeader.Canonize(rename);
 
             var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
+			var sourceFileETag = GetEtag();
             var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,

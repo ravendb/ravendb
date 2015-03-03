@@ -234,11 +234,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 					                         {SynchronizationConstants.RavenSynchronizationVersion, new RavenJValue(1)},
 					                         {SynchronizationConstants.RavenSynchronizationSource, new RavenJValue(Guid.Empty)},
 					                         {SynchronizationConstants.RavenSynchronizationHistory, "[]"},
-											 {Constants.MetadataEtagField, Etag.Empty.ToString()}
+											 {"If-None-Match", "\"" + Etag.Empty + "\""}
 				                         };
 
 			request.AddHeaders(conflictedMetadata);
-
 			request.Headers[SyncingMultipartConstants.SourceServerInfo] = new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson();
 
 			var response = await request.GetResponseAsync();
@@ -326,6 +325,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo, new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
             webRequest.Headers.Add(Constants.MetadataEtagField, new Guid().ToString());
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
+			webRequest.Headers.Add("If-None-Match", "\"" + Etag.Empty + "\"");
 
 			var sb = new StringBuilder();
 			new JsonSerializer().Serialize(new JsonTextWriter(new StringWriter(sb)),

@@ -36,7 +36,7 @@ namespace Raven.Database.FileSystem.Actions
 		{
 		}
 
-		public async Task PutAsync(string name, RavenJObject headers, Func<Task<Stream>> streamAsync, PutOperationOptions options)
+		public async Task PutAsync(string name, RavenJObject metadata, Func<Task<Stream>> streamAsync, PutOperationOptions options)
 		{
 			try
 			{
@@ -46,34 +46,34 @@ namespace Raven.Database.FileSystem.Actions
 
 				if (options.PreserveTimestamps)
 				{
-					if (!headers.ContainsKey(Constants.RavenCreationDate))
+					if (!metadata.ContainsKey(Constants.RavenCreationDate))
 					{
-						if (headers.ContainsKey(Constants.CreationDate))
-							headers[Constants.RavenCreationDate] = headers[Constants.CreationDate];
+						if (metadata.ContainsKey(Constants.CreationDate))
+							metadata[Constants.RavenCreationDate] = metadata[Constants.CreationDate];
 						else
 							throw new InvalidOperationException("Preserve Timestamps requires that the client includes the Raven-Creation-Date header.");
 					}
 
-					Historian.UpdateLastModified(headers, options.LastModified.HasValue ? options.LastModified.Value : DateTimeOffset.UtcNow);
+					Historian.UpdateLastModified(metadata, options.LastModified.HasValue ? options.LastModified.Value : DateTimeOffset.UtcNow);
 				}
 				else
 				{
-					headers[Constants.RavenCreationDate] = DateTimeOffset.UtcNow;
+					metadata[Constants.RavenCreationDate] = DateTimeOffset.UtcNow;
 
-					Historian.UpdateLastModified(headers);
+					Historian.UpdateLastModified(metadata);
 				}
 
 				// TODO: To keep current filesystems working. We should remove when adding a new migration. 
-				headers[Constants.CreationDate] = headers[Constants.RavenCreationDate].Value<DateTimeOffset>().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture);
+				metadata[Constants.CreationDate] = metadata[Constants.RavenCreationDate].Value<DateTimeOffset>().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture);
 
-				Historian.Update(name, headers);
+				Historian.Update(name, metadata);
 
 				SynchronizationTask.Cancel(name);
 
 				long? size = -1;
 				Storage.Batch(accessor =>
 				{
-					AssertPutOperationNotVetoed(name, headers);
+					AssertPutOperationNotVetoed(name, metadata);
 					AssertFileIsNotBeingSynced(name, accessor);
 
 					var contentLength = options.ContentLength;
@@ -90,24 +90,24 @@ namespace Raven.Database.FileSystem.Actions
 						size = contentSize;
 					}
 
-					FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, headers));
+					FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, metadata));
 
 					using (FileSystem.DisableAllTriggersForCurrentThread())
 					{
 						StorageOperationsTask.IndicateFileToDelete(name);
 					}
 
-					var putResult = accessor.PutFile(name, size, headers);
+					var putResult = accessor.PutFile(name, size, metadata);
 
-					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, headers));
+					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, metadata));
 
-					Search.Index(name, headers, putResult.Etag);
+					Search.Index(name, metadata, putResult.Etag);
 				});
 
-				Log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
+				Log.Debug("Inserted a new file '{0}' with ETag {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
 
 				using (var contentStream = await streamAsync())
-				using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, FileSystem.PutTriggers, contentStream, name, headers))
+				using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, FileSystem.PutTriggers, contentStream, name, metadata))
 				{
 					await readFileToDatabase.Execute();
 
@@ -118,22 +118,22 @@ namespace Raven.Database.FileSystem.Actions
 					}
 
 					if (options.PreserveTimestamps == false)
-						Historian.UpdateLastModified(headers); // update with the final file size.
+						Historian.UpdateLastModified(metadata); // update with the final file size.
 
 					Log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
 
-					headers["Content-MD5"] = readFileToDatabase.FileHash;
+					metadata["Content-MD5"] = readFileToDatabase.FileHash;
 
 					FileOperationResult updateMetadata = null;
-					Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, headers, null)); //TODO arek
+					Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null)); //TODO arek
 
 					int totalSizeRead = readFileToDatabase.TotalSizeRead;
-					headers["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
+					metadata["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
 
-					Search.Index(name, headers, updateMetadata.Etag);
+					Search.Index(name, metadata, updateMetadata.Etag);
 					Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
 
-					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
+					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
 
 					FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
 				}

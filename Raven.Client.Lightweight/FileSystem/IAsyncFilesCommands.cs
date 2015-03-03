@@ -159,7 +159,7 @@ namespace Raven.Client.FileSystem
         Task<SynchronizationReport> StartAsync(string filename, SynchronizationDestination destination);
 
         Task<SynchronizationReport> DeleteAsync(string filename, RavenJObject metadata, ServerInfo sourceServer);
-        Task<SynchronizationReport> RenameAsync(string filename, string newName, RavenJObject currentMetadata, ServerInfo sourceServer);
+        Task<SynchronizationReport> RenameAsync(string filename, string newName, RavenJObject metadata, ServerInfo sourceServer);
         Task<SynchronizationReport> UpdateMetadataAsync(string filename, RavenJObject metadata, ServerInfo sourceServer);
     }
 

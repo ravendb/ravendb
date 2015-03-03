@@ -1573,12 +1573,13 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject currentMetadata, ServerInfo sourceServer)
+            public async Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, ServerInfo sourceServer)
             {
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/rename?filename=" + Uri.EscapeDataString(currentName) + "&rename=" + Uri.EscapeDataString(newName), "PATCH", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
-					request.AddHeaders(currentMetadata);
+					request.AddHeaders(metadata);
 					request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
+					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
 					try
 					{
@@ -1598,6 +1599,7 @@ namespace Raven.Client.FileSystem
 	            {
 					request.AddHeaders(metadata);
 					request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
+					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
 					try
 					{
@@ -1613,13 +1615,11 @@ namespace Raven.Client.FileSystem
 
             public async Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, ServerInfo sourceServer)
             {
-                // REVIEW: (Oren) The ETag is always rewritten by this method as If-None-Match. Maybe a convention from the Database, but found it quite difficult to debug.  
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName), "POST", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					request.AddHeaders(metadata);
 					request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
-					// REVIEW: (Oren) and also causes this.
-					request.AddHeader(Constants.MetadataEtagField, "\"" + metadata.Value<string>(Constants.MetadataEtagField) + "\"");
+					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
 					try
 					{
