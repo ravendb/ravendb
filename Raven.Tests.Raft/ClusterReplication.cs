@@ -19,7 +19,7 @@ namespace Raven.Tests.Raft
 	public class ClusterReplication : RaftTestBase
 	{
 		[Fact]
-		public async Task EnablingReplicationInClusterWillCreateReplicationDestinationsOnEachNode()
+		public async Task EnablingReplicationInClusterWillCreateGlobalReplicationDestinationsOnEachNode()
 		{
 			var clusterStores = CreateRaftCluster(3);
 
@@ -30,90 +30,90 @@ namespace Raven.Tests.Raft
 				var client = new RaftHttpClient(servers[0].Options.RaftEngine);
 				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
-				WaitForDocument(store1.DatabaseCommands, Constants.RavenReplicationDestinations);
-				WaitForDocument(store2.DatabaseCommands, Constants.RavenReplicationDestinations);
-				WaitForDocument(store3.DatabaseCommands, Constants.RavenReplicationDestinations);
+				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName);
+				WaitForDocument(store2.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName);
+				WaitForDocument(store3.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName);
 
-				var destinationsJson = store1.DatabaseCommands.Get(Constants.RavenReplicationDestinations);
+				var destinationsJson = store1.DatabaseCommands.ForSystemDatabase().Get(Constants.Global.ReplicationDestinationsDocumentName);
 				var destinations = destinationsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
 				Assert.Equal(2, destinations.Destinations.Count);
 				var destination = destinations.Destinations.First(x => string.Equals(x.Url, store2.Url));
 				Assert.False(destination.Disabled);
-				Assert.Equal(store1.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store3.Url));
 				Assert.False(destination.Disabled);
-				Assert.Equal(store1.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 
-				destinationsJson = store2.DatabaseCommands.Get(Constants.RavenReplicationDestinations);
+				destinationsJson = store2.DatabaseCommands.ForSystemDatabase().Get(Constants.Global.ReplicationDestinationsDocumentName);
 				destinations = destinationsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
 				Assert.Equal(2, destinations.Destinations.Count);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store1.Url));
 				Assert.False(destination.Disabled);
-				Assert.Equal(store2.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store3.Url));
 				Assert.False(destination.Disabled);
-				Assert.Equal(store2.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 
-				destinationsJson = store3.DatabaseCommands.Get(Constants.RavenReplicationDestinations);
+				destinationsJson = store3.DatabaseCommands.ForSystemDatabase().Get(Constants.Global.ReplicationDestinationsDocumentName);
 				destinations = destinationsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
 				Assert.Equal(2, destinations.Destinations.Count);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store1.Url));
 				Assert.False(destination.Disabled);
-				Assert.Equal(store3.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store2.Url));
 				Assert.False(destination.Disabled);
-				Assert.Equal(store3.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 
-				store1.DatabaseCommands.Delete(Constants.RavenReplicationDestinations, null);
-				store2.DatabaseCommands.Delete(Constants.RavenReplicationDestinations, null);
-				store3.DatabaseCommands.Delete(Constants.RavenReplicationDestinations, null);
+				store1.DatabaseCommands.ForSystemDatabase().Delete(Constants.Global.ReplicationDestinationsDocumentName, null);
+				store2.DatabaseCommands.ForSystemDatabase().Delete(Constants.Global.ReplicationDestinationsDocumentName, null);
+				store3.DatabaseCommands.ForSystemDatabase().Delete(Constants.Global.ReplicationDestinationsDocumentName, null);
 
 				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = false });
 
-				WaitForDocument(store1.DatabaseCommands, Constants.RavenReplicationDestinations);
-				WaitForDocument(store2.DatabaseCommands, Constants.RavenReplicationDestinations);
-				WaitForDocument(store3.DatabaseCommands, Constants.RavenReplicationDestinations);
+				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName);
+				WaitForDocument(store2.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName);
+				WaitForDocument(store3.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName);
 
-				destinationsJson = store1.DatabaseCommands.Get(Constants.RavenReplicationDestinations);
+				destinationsJson = store1.DatabaseCommands.ForSystemDatabase().Get(Constants.Global.ReplicationDestinationsDocumentName);
 				destinations = destinationsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
 				Assert.Equal(2, destinations.Destinations.Count);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store2.Url));
 				Assert.True(destination.Disabled);
-				Assert.Equal(store1.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store3.Url));
 				Assert.True(destination.Disabled);
-				Assert.Equal(store1.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 
-				destinationsJson = store2.DatabaseCommands.Get(Constants.RavenReplicationDestinations);
+				destinationsJson = store2.DatabaseCommands.ForSystemDatabase().Get(Constants.Global.ReplicationDestinationsDocumentName);
 				destinations = destinationsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
 				Assert.Equal(2, destinations.Destinations.Count);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store1.Url));
 				Assert.True(destination.Disabled);
-				Assert.Equal(store2.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store3.Url));
 				Assert.True(destination.Disabled);
-				Assert.Equal(store2.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 
-				destinationsJson = store3.DatabaseCommands.Get(Constants.RavenReplicationDestinations);
+				destinationsJson = store3.DatabaseCommands.ForSystemDatabase().Get(Constants.Global.ReplicationDestinationsDocumentName);
 				destinations = destinationsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
 				Assert.Equal(2, destinations.Destinations.Count);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store1.Url));
 				Assert.True(destination.Disabled);
-				Assert.Equal(store3.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 				destination = destinations.Destinations.First(x => string.Equals(x.Url, store2.Url));
 				Assert.True(destination.Disabled);
-				Assert.Equal(store3.DefaultDatabase, destination.Database);
+				Assert.Null(destination.Database);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
 			}
 		} 

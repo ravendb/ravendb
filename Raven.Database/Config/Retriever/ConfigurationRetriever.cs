@@ -81,6 +81,11 @@ namespace Raven.Database.Config.Retriever
 		{
 			get
 			{
+				if (SystemTime.UtcNow > new DateTime(2015, 6, 1))
+					throw new NotImplementedException("Time bomb. Enabled global configuration for development.");
+
+				return true;
+
 				if (licenseEnabled != null)
 				{
 					if (SystemTime.UtcNow < licenseEnabled.Value)

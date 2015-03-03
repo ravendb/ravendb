@@ -67,7 +67,7 @@ namespace Raven.Tests.Raft
 				store2.DatabaseCommands.ForSystemDatabase().Delete(Constants.Cluster.ClusterConfigurationDocumentKey, null);
 				store3.DatabaseCommands.ForSystemDatabase().Delete(Constants.Cluster.ClusterConfigurationDocumentKey, null);
 
-				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
+				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = false });
 
 				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
 				var configurationJson = store1.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
