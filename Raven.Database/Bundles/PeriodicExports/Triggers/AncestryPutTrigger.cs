@@ -15,7 +15,7 @@ namespace Raven.Database.Bundles.PeriodicExports.Triggers
     [InheritedExport(typeof(AbstractPutTrigger))]
     public class AncestryPutTrigger : AbstractPutTrigger
     {
-        public override void OnPut(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
+        public override void OnPut(string key, Raven.Json.Linq.RavenJObject jsonReplicationDocument, Raven.Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
         {
             using (Database.DisableAllTriggersForCurrentThread())
             {
