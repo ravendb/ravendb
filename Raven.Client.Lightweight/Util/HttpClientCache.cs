@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -11,9 +12,19 @@ namespace Raven.Client.Util
 	public class HttpClientCache : IDisposable
 	{
 		private readonly ConcurrentDictionary<HttpClientCacheKey, ConcurrentQueue<Tuple<long, HttpClient>>> cache = new ConcurrentDictionary<HttpClientCacheKey, ConcurrentQueue<Tuple<long, HttpClient>>>();
-		public readonly long _maxIdleTime;
+		public long _maxIdleTime;
+	   
+        /// <summary>
+        /// The maximum idle time to keep a connection in the cache
+        /// </summary>
+	    public long MaxIdleTime
+	    {
+	        get { return _maxIdleTime; }
+	        set { _maxIdleTime = value; }
+	    }
 
-		public HttpClientCache()
+
+	    public HttpClientCache()
 		{
 			_maxIdleTime = ServicePointManager.MaxServicePointIdleTime;
 		}
@@ -26,7 +37,7 @@ namespace Raven.Client.Util
 			Tuple<long, HttpClient> client;
 			while (queue.TryDequeue(out client))
 			{
-				if (DateTime.UtcNow.Ticks - client.Item1 > _maxIdleTime)
+				if (Stopwatch.GetTimestamp() - client.Item1 > _maxIdleTime)
 				{
 					client.Item2.Dispose();
 					continue;
@@ -46,7 +57,7 @@ namespace Raven.Client.Util
 		{
 			var key = new HttpClientCacheKey(client.Timeout, credentials);
 			var queue = cache.GetOrAdd(key, i => new ConcurrentQueue<Tuple<long, HttpClient>>());
-			queue.Enqueue(Tuple.Create(DateTime.UtcNow.Ticks, client));
+			queue.Enqueue(Tuple.Create(Stopwatch.GetTimestamp(), client));
 		}
 
 		public void Dispose()
