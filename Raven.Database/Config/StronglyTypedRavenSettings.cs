@@ -234,7 +234,9 @@ namespace Raven.Database.Config
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 
 			TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
-			ServicePointManager.MaxServicePointIdleTime = settings["Raven/MaxServicePointIdleTime"] != null ? Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]) : 100000;
+		    
+            if (settings["Raven/MaxServicePointIdleTime"] != null) 
+                ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
 		}
 
 		private string GetDefaultWebDir()
