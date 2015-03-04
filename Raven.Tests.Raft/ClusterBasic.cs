@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -27,7 +28,7 @@ namespace Raven.Tests.Raft
 			using (var store2 = clusterStores[1])
 			using (var store3 = clusterStores[2])
 			{
-				var client = new RaftHttpClient(servers[0].Options.RaftEngine);
+				var client = servers[0].Options.RaftEngine.Client;
 				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
 				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
@@ -56,12 +57,12 @@ namespace Raven.Tests.Raft
 			using (var store2 = clusterStores[1])
 			using (var store3 = clusterStores[2])
 			{
-				var client = new RaftHttpClient(servers[0].Options.RaftEngine);
+				var client = servers[0].Options.RaftEngine.Client;
 				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
-				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
-				WaitForDocument(store2.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
-				WaitForDocument(store3.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
+				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromSeconds(15));
+				WaitForDocument(store2.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromSeconds(15));
+				WaitForDocument(store3.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromSeconds(15));
 
 				store1.DatabaseCommands.ForSystemDatabase().Delete(Constants.Cluster.ClusterConfigurationDocumentKey, null);
 				store2.DatabaseCommands.ForSystemDatabase().Delete(Constants.Cluster.ClusterConfigurationDocumentKey, null);
@@ -69,17 +70,17 @@ namespace Raven.Tests.Raft
 
 				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = false });
 
-				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
+				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromSeconds(15));
 				var configurationJson = store1.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
 				var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
 				Assert.False(configuration.EnableReplication);
 
-				WaitForDocument(store2.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
+				WaitForDocument(store2.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromSeconds(15));
 				configurationJson = store2.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
 				configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
 				Assert.False(configuration.EnableReplication);
 
-				WaitForDocument(store3.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
+				WaitForDocument(store3.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromSeconds(15));
 				configurationJson = store3.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
 				configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
 				Assert.False(configuration.EnableReplication);

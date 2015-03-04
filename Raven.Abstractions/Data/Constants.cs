@@ -273,6 +273,8 @@ namespace Raven.Abstractions.Data
 	    public static class Cluster
 	    {
 			public const string ClusterConfigurationDocumentKey = "Raven/Cluster/Configuration";
+
+		    public const string ClusterDatabaseMarker = "Raven-Cluster-Database";
 	    }
 	}
 }

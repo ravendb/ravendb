@@ -32,10 +32,10 @@ namespace Raven.Tests.Raft
 				using (clusterStores[1])
 				using (clusterStores[2])
 				{
-					var client = new RaftHttpClient(servers[0].Options.RaftEngine);
+					var client = servers[0].Options.RaftEngine.Client;
 					await client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = true});
 
-					clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationConflictResolutionDocumentName));
+					clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
 
 					AssertReplicationDestinations(clusterStores, (i, j, destination) =>
 					{
@@ -48,7 +48,7 @@ namespace Raven.Tests.Raft
 
 					await client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false});
 
-					clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationConflictResolutionDocumentName));
+					clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
 
 					AssertReplicationDestinations(clusterStores, (i, j, destination) =>
 					{

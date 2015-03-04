@@ -28,6 +28,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Database.Config;
+using Raven.Database.Raft;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.WebApi;
 using Raven.Imports.Newtonsoft.Json;
@@ -122,7 +123,7 @@ namespace Raven.Database.Server.Controllers
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
-			raftEngine = (RaftEngine)controllerContext.Configuration.Properties[typeof(RaftEngine)];
+			raftEngine = (RavenRaftEngine)controllerContext.Configuration.Properties[typeof(RavenRaftEngine)];
 			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
             maxSecondsForTaskToWaitForDatabaseToLoad = (int)controllerContext.Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
             //MaxSecondsForTaskToWaitForDatabaseToLoad
@@ -786,14 +787,14 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-		private RaftEngine raftEngine;
-		public RaftEngine RaftEngine
+		private RavenRaftEngine raftEngine;
+		public RavenRaftEngine RaftEngine
 		{
 			get
 			{
 				if (Configuration == null)
 					return raftEngine;
-				return (RaftEngine)Configuration.Properties[typeof(RaftEngine)];
+				return (RavenRaftEngine)Configuration.Properties[typeof(RavenRaftEngine)];
 			}
 		}
 

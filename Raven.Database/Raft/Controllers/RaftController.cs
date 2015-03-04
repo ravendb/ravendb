@@ -14,11 +14,12 @@ using System.Web.Http;
 
 using Newtonsoft.Json;
 
-using Rachis;
 using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
-using Raven.Database.Bundles.SqlReplication;
+
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers.Admin;
@@ -32,7 +33,7 @@ namespace Raven.Database.Raft.Controllers
 		{
 			get
 			{
-				return (HttpTransport)RaftEngine.Transport;
+				return (HttpTransport)RaftEngine.Engine.Transport;
 			}
 		}
 
@@ -50,14 +51,14 @@ namespace Raven.Database.Raft.Controllers
 		{
 			return Request.CreateResponse(HttpStatusCode.OK, new
 			{
-				RaftEngine.CurrentLeader,
-				RaftEngine.PersistentState.CurrentTerm,
-				State = RaftEngine.State.ToString(),
-				RaftEngine.CommitIndex,
-				RaftEngine.CurrentTopology.AllVotingNodes,
-				RaftEngine.CurrentTopology.PromotableNodes,
-				RaftEngine.CurrentTopology.NonVotingNodes,
-				RaftEngine.CurrentTopology.TopologyId
+				RaftEngine.Engine.CurrentLeader,
+				RaftEngine.Engine.PersistentState.CurrentTerm,
+				State = RaftEngine.Engine.State.ToString(),
+				RaftEngine.Engine.CommitIndex,
+				RaftEngine.Engine.CurrentTopology.AllVotingNodes,
+				RaftEngine.Engine.CurrentTopology.PromotableNodes,
+				RaftEngine.Engine.CurrentTopology.NonVotingNodes,
+				RaftEngine.Engine.CurrentTopology.TopologyId
 			});
 		}
 
@@ -66,11 +67,47 @@ namespace Raven.Database.Raft.Controllers
 		public async Task<HttpResponseMessage> ClusterConfiguration()
 		{
 			var configuration = await ReadJsonObjectAsync<ClusterConfiguration>();
-			if (configuration == null) 
+			if (configuration == null)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var client = new RaftHttpClient(RaftEngine);
-			await client.SendClusterConfigurationAsync(configuration).ConfigureAwait(false);
+			await RaftEngine.Client.SendClusterConfigurationAsync(configuration).ConfigureAwait(false);
+			return GetEmptyMessage();
+		}
+
+		[HttpPut]
+		[RavenRoute("admin/raft/commands/cluster/database/{*id}")]
+		public async Task<HttpResponseMessage> CreateDatabase(string id)
+		{
+			var document = await ReadJsonObjectAsync<DatabaseDocument>();
+			if (document == null)
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			if (document.IsClusterDatabase() == false)
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			await RaftEngine.Client.SendDatabaseUpdateAsync(id, document).ConfigureAwait(false);
+			return GetEmptyMessage();
+		}
+
+		[HttpDelete]
+		[RavenRoute("admin/raft/commands/cluster/database/{*id}")]
+		public async Task<HttpResponseMessage> DeleteDatabase(string id)
+		{
+			bool result;
+			var hardDelete = bool.TryParse(GetQueryStringValue("hard-delete"), out result) && result;
+
+			if (string.IsNullOrEmpty(id))
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			var documentJson = Database.Documents.Get(RaftHelper.GetDatabaseKey(id), null);
+			if (documentJson == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
+			if (document.IsClusterDatabase() == false)
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			await RaftEngine.Client.SendDatabaseDeleteAsync(id, hardDelete).ConfigureAwait(false);
 			return GetEmptyMessage();
 		}
 
@@ -78,7 +115,7 @@ namespace Raven.Database.Raft.Controllers
 		[RavenRoute("admin/raft/create")]
 		public async Task<HttpResponseMessage> Create()
 		{
-			var topology = RaftEngine.CurrentTopology;
+			var topology = RaftEngine.Engine.CurrentTopology;
 
 			if (RaftEngine.IsLeader())
 				return await GetEmptyMessageAsTask(HttpStatusCode.NotModified);
@@ -101,12 +138,10 @@ namespace Raven.Database.Raft.Controllers
 			if (nodeConnectionInfo == null)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var client = new RaftHttpClient(RaftEngine);
-
 			if (nodeConnectionInfo.Name == null)
-				nodeConnectionInfo.Name = RaftHelper.GetNodeName(await client.GetDatabaseId(nodeConnectionInfo));
+				nodeConnectionInfo.Name = RaftHelper.GetNodeName(await RaftEngine.Client.GetDatabaseId(nodeConnectionInfo));
 
-			var canJoinResult = await client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
+			var canJoinResult = await RaftEngine.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
 			switch (canJoinResult)
 			{
 				case CanJoinResult.InAnotherCluster:
@@ -115,20 +150,20 @@ namespace Raven.Database.Raft.Controllers
 					return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
-			var topology = RaftEngine.CurrentTopology;
+			var topology = RaftEngine.Engine.CurrentTopology;
 			if (topology.Contains(nodeConnectionInfo.Name))
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			await client.SendJoinServerAsync(nodeConnectionInfo).ConfigureAwait(false);
+			await RaftEngine.Client.SendJoinServerAsync(nodeConnectionInfo).ConfigureAwait(false);
 			return GetEmptyMessage();
 		}
 
-		
+
 		[HttpGet]
 		[RavenRoute("admin/raft/canJoin")]
 		public Task<HttpResponseMessage> CanJoin([FromUri] string name)
 		{
-			var topology = RaftEngine.CurrentTopology;
+			var topology = RaftEngine.Engine.CurrentTopology;
 			if (topology.Contains(name))
 				return GetEmptyMessageAsTask(HttpStatusCode.NotModified);
 
@@ -144,12 +179,11 @@ namespace Raven.Database.Raft.Controllers
 		{
 			var nodeName = RaftHelper.GetNodeName(name);
 
-			if (RaftEngine.CurrentTopology.Contains(nodeName) == false)
+			if (RaftEngine.Engine.CurrentTopology.Contains(nodeName) == false)
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			var node = RaftEngine.CurrentTopology.GetNodeByName(nodeName);
-			var client = new RaftHttpClient(RaftEngine);
-			await client.SendLeaveAsync(node);
+			var node = RaftEngine.Engine.CurrentTopology.GetNodeByName(nodeName);
+			await RaftEngine.Client.SendLeaveAsync(node);
 
 			return GetMessageWithObject(new
 			{
@@ -260,7 +294,7 @@ namespace Raven.Database.Raft.Controllers
 
 		private HttpResponseMessage RedirectToLeader()
 		{
-			var leaderNode = RaftEngine.GetLeaderNode();
+			var leaderNode = RaftEngine.Engine.GetLeaderNode();
 
 			if (leaderNode == null)
 			{
@@ -274,7 +308,7 @@ namespace Raven.Database.Raft.Controllers
 			message.Headers.Location = new UriBuilder(leaderNode.Uri)
 			{
 				Path = Request.RequestUri.LocalPath,
-				Query =  Request.RequestUri.Query.TrimStart('?'),
+				Query = Request.RequestUri.Query.TrimStart('?'),
 				Fragment = Request.RequestUri.Fragment
 			}.Uri;
 

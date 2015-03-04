@@ -579,12 +579,17 @@ namespace Raven.Tests.Helpers
 
 		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id)
 		{
+			WaitForDocument(databaseCommands, id, TimeSpan.FromMinutes(5));
+		}
+
+		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id, TimeSpan timeout)
+		{
 			var done = SpinWait.SpinUntil(() =>
 			{
 				// We expect to get the doc from the <system> database
 				var doc = databaseCommands.Get(id);
 				return doc != null;
-			}, TimeSpan.FromMinutes(5));
+			}, timeout);
 
             if (!done) throw new Exception("WaitForDocument failed");
 		}

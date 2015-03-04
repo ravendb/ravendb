@@ -22,7 +22,7 @@ namespace Raven.Database.Server
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
-		private readonly RaftEngine raftEngine;
+		private readonly RavenRaftEngine raftEngine;
 
 		private bool preventDisposing;
 
@@ -90,7 +90,7 @@ namespace Raven.Database.Server
 			get { return requestManager; }
 		}
 
-		public RaftEngine RaftEngine
+		public RavenRaftEngine RaftEngine
 		{
 			get { return raftEngine; }
 		}

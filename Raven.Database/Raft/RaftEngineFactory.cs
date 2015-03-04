@@ -24,7 +24,7 @@ namespace Raven.Database.Raft
 {
 	public static class RaftEngineFactory
 	{
-		public static RaftEngine Create(DocumentDatabase systemDatabase)
+		public static RavenRaftEngine Create(DocumentDatabase systemDatabase)
 		{
 			var configuration = systemDatabase.Configuration;
 
@@ -68,10 +68,10 @@ namespace Raven.Database.Raft
 				raftEngineOptions.HeartbeatTimeout *= 5;
 			}
 
-			return new RaftEngine(raftEngineOptions);
+			return new RavenRaftEngine(new RaftEngine(raftEngineOptions));
 		}
 
-		public static void InitializeTopology(NodeConnectionInfo nodeConnection, RaftEngine engine)
+		public static void InitializeTopology(NodeConnectionInfo nodeConnection, RavenRaftEngine engine)
 		{
 			var topology = new Topology(Guid.Parse(nodeConnection.Name), new List<NodeConnectionInfo> { nodeConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
 
@@ -80,15 +80,15 @@ namespace Raven.Database.Raft
 						  Requested = topology
 					  };
 
-			engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
-			engine.StartTopologyChange(tcc);
-			engine.CommitTopologyChange(tcc);
-			engine.CurrentLeader = null;
+			engine.Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
+			engine.Engine.StartTopologyChange(tcc);
+			engine.Engine.CommitTopologyChange(tcc);
+			engine.Engine.CurrentLeader = null;
 		}
 
-		public static void InitializeTopology(DocumentDatabase systemDatabase, RaftEngine engine)
+		public static void InitializeTopology(DocumentDatabase systemDatabase, RavenRaftEngine engine)
 		{
-			InitializeTopology(engine.Options.SelfConnection, engine);
+			InitializeTopology(engine.Engine.Options.SelfConnection, engine);
 		}
 	}
 }

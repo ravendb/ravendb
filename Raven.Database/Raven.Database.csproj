@@ -264,7 +264,10 @@
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
     <Compile Include="Raft\ClusterKeeper.cs" />
+    <Compile Include="Raft\RavenRaftEngine.cs" />
     <Compile Include="Raft\Commands\ClusterConfigurationUpdateCommand.cs" />
+    <Compile Include="Raft\Commands\DatabaseDeletedCommand.cs" />
+    <Compile Include="Raft\Commands\DatabaseUpdateCommand.cs" />
     <Compile Include="Raft\Controllers\RaftController.cs" />
     <Compile Include="Raft\Dto\ClusterConfiguration.cs" />
     <Compile Include="Raft\RaftHttpClient.cs" />

@@ -6,6 +6,7 @@ using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
+using Raven.Database.Raft.Util;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -77,6 +78,12 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			//TODO: check if paths in document are legal
 
+			if (dbDoc.IsClusterDatabase() && RaftEngine.IsActive())
+			{
+				await RaftEngine.Client.SendDatabaseUpdateAsync(id, dbDoc).ConfigureAwait(false);
+				return GetEmptyMessage();
+			}
+
 			DatabasesLandlord.Protect(dbDoc);
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
@@ -91,12 +98,26 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpDelete]
 		[RavenRoute("admin/databases/{*id}")]
-		public HttpResponseMessage DatabasesDelete(string id)
+		public async Task<HttpResponseMessage> DatabasesDelete(string id)
 		{
 			bool result;
-			var isHardDeleteNeeded = bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result;
+			var hardDelete = bool.TryParse(GetQueryStringValue("hard-delete"), out result) && result;
 
-			var message = DeleteDatabase(id, isHardDeleteNeeded);
+			if (RaftEngine.IsActive() && IsSystemDatabase(id) == false)
+			{
+				var documentJson = Database.Documents.Get(RaftHelper.GetDatabaseKey(id), null);
+				if (documentJson == null) 
+					return GetEmptyMessage(HttpStatusCode.NotFound);
+
+				var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
+				if (document.IsClusterDatabase())
+				{
+					await RaftEngine.Client.SendDatabaseDeleteAsync(id, hardDelete).ConfigureAwait(false);
+					return GetEmptyMessage();
+				}
+			}
+
+			var message = DeleteDatabase(id, hardDelete);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);

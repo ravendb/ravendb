@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Rachis;
 using Rachis.Commands;
 
 using Raven.Abstractions.Data;
@@ -24,7 +23,7 @@ namespace Raven.Database.Raft
 	{
 		private DocumentDatabase systemDatabase;
 
-		private RaftEngine raftEngine;
+		private RavenRaftEngine raftEngine;
 
 		public void Execute(RavenDbServer server)
 		{
@@ -33,16 +32,17 @@ namespace Raven.Database.Raft
 
 			systemDatabase.Notifications.OnDocumentChange += (db, notification, metadata) =>
 			{
-				if (notification.Id != Constants.Cluster.ClusterConfigurationDocumentKey)
-					return;
+				if (string.Equals(notification.Id, Constants.Cluster.ClusterConfigurationDocumentKey, StringComparison.OrdinalIgnoreCase))
+				{
+					if (notification.Type != DocumentChangeTypes.Put)
+						return;
 
-				if (notification.Type != DocumentChangeTypes.Put)
+					HandleClusterConfigurationChanges();
 					return;
-
-				HandleClusterConfigurationChanges();
+				}
 			};
 
-			raftEngine.TopologyChanged += HandleTopologyChanges;
+			raftEngine.Engine.TopologyChanged += HandleTopologyChanges;
 
 			HandleClusterConfigurationChanges();
 		}
@@ -81,7 +81,7 @@ namespace Raven.Database.Raft
 
 		private void HandleClusterReplicationChanges(List<string> removedNodes, bool enableReplication)
 		{
-			var currentTopology = raftEngine.CurrentTopology;
+			var currentTopology = raftEngine.Engine.CurrentTopology;
 			var replicationDocumentJson = systemDatabase.Documents.Get(Constants.Global.ReplicationDestinationsDocumentName, null);
 			var replicationDocument = replicationDocumentJson != null
 				? replicationDocumentJson.DataAsJson.JsonDeserialization<ReplicationDocument>()
@@ -110,7 +110,7 @@ namespace Raven.Database.Raft
 					continue;
 				}
 
-				if (string.Equals(node.Name, raftEngine.Options.SelfConnection.Name, StringComparison.OrdinalIgnoreCase))
+				if (string.Equals(node.Name, raftEngine.Engine.Options.SelfConnection.Name, StringComparison.OrdinalIgnoreCase))
 					continue; // skipping self
 
 				if (destination == null)

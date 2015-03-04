@@ -10,6 +10,8 @@ using System.Threading;
 
 using Rachis.Transport;
 
+using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Raft;
 using Raven.Database.Raft.Util;
@@ -21,6 +23,19 @@ namespace Raven.Tests.Raft
 {
 	public class RaftTestBase : RavenTestBase
 	{
+		public void WaitForDelete(IDatabaseCommands commands, string key, TimeSpan? timeout = null)
+		{
+			var done = SpinWait.SpinUntil(() =>
+			{
+				// We expect to get the doc from the <system> database
+				var doc = commands.Get(key);
+				return doc == null;
+			}, timeout ?? TimeSpan.FromMinutes(5));
+
+			if (!done)
+				throw new Exception("WaitForDelete failed");
+		}
+
 		public List<DocumentStore> CreateRaftCluster(int numberOfNodes)
 		{
 			var port = 8079;
@@ -34,14 +49,14 @@ namespace Raven.Tests.Raft
 			var random = new Random();
 			var leader = nodes[random.Next(0, numberOfNodes - 1)];
 
-			Console.WriteLine("Leader: " + leader.Options.RaftEngine.Options.SelfConnection.Uri);
+			Console.WriteLine("Leader: " + leader.Options.RaftEngine.Engine.Options.SelfConnection.Uri);
 
 			RaftEngineFactory.InitializeTopology(leader.SystemDatabase, leader.Options.RaftEngine);
 
 			Thread.Sleep(5000); // TODO [ppekrol] trial election?
-			Assert.True(leader.Options.RaftEngine.WaitForLeader());
+			Assert.True(leader.Options.RaftEngine.Engine.WaitForLeader());
 
-			leader.Options.RaftEngine.TopologyChanged += command =>
+			leader.Options.RaftEngine.Engine.TopologyChanged += command =>
 			{
 				if (command.Requested.AllNodeNames.All(command.Requested.IsVoter))
 				{
@@ -56,7 +71,7 @@ namespace Raven.Tests.Raft
 				if (n == leader)
 					continue;
 
-				Assert.True(leader.Options.RaftEngine.AddToClusterAsync(new NodeConnectionInfo
+				Assert.True(leader.Options.RaftEngine.Engine.AddToClusterAsync(new NodeConnectionInfo
 																		{
 																			Name = RaftHelper.GetNodeName(n.SystemDatabase.TransactionalStorage.Id),
 																			Uri = RaftHelper.GetNodeUrl(n.SystemDatabase.Configuration.ServerUrl)
@@ -67,7 +82,7 @@ namespace Raven.Tests.Raft
 				allNodesFinishedJoining.Set();
 
 			Assert.True(allNodesFinishedJoining.Wait(5000 * numberOfNodes));
-			Assert.True(leader.Options.RaftEngine.WaitForLeader());
+			Assert.True(leader.Options.RaftEngine.Engine.WaitForLeader());
 
 			return nodes
 				.Select(node => NewRemoteDocumentStore(ravenDbServer: node))

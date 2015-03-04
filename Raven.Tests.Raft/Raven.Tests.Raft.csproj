@@ -78,6 +78,7 @@
       <Link>Properties\TestAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="ClusterBasic.cs" />
+    <Compile Include="ClusterDatabases.cs" />
     <Compile Include="RaftTestBase.cs" />
     <Compile Include="ClusterReplication.cs" />
   </ItemGroup>

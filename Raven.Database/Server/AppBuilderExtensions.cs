@@ -18,6 +18,7 @@ using Rachis;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
+using Raven.Database.Raft;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
@@ -115,7 +116,7 @@ namespace Owin
 			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
-			cfg.Properties[typeof(RaftEngine)] = options.RaftEngine;
+			cfg.Properties[typeof(RavenRaftEngine)] = options.RaftEngine;
 			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
             cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);

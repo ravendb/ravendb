@@ -92,11 +92,59 @@ namespace Raven.Database.Raft
 			}
 		}
 
-		public async Task SendClusterConfigurationInternalAsync(NodeConnectionInfo leaderNode, ClusterConfiguration configuration)
+		public Task SendDatabaseUpdateAsync(string databaseName, DatabaseDocument document)
 		{
-			var url = leaderNode.Uri.AbsoluteUri + "admin/raft/commands/cluster/configuration";
-			var response = await httpClient.PutAsync(url, new JsonContent(RavenJObject.FromObject(configuration))).ConfigureAwait(false);
-			if (response.IsSuccessStatusCode) 
+			try
+			{
+				var command = DatabaseUpdateCommand.Create(databaseName, document);
+				raftEngine.AppendCommand(command);
+				return command.Completion.Task;
+			}
+			catch (NotLeadingException)
+			{
+				return SendDatabaseUpdateInternalAsync(raftEngine.GetLeaderNode(), databaseName, document);
+			}
+		}
+
+		public Task SendDatabaseDeleteAsync(string databaseName, bool hardDelete)
+		{
+			try
+			{
+				var command = DatabaseDeletedCommand.Create(databaseName, hardDelete);
+				raftEngine.AppendCommand(command);
+				return command.Completion.Task;
+			}
+			catch (NotLeadingException)
+			{
+				return SendDatabaseDeleteInternalAsync(raftEngine.GetLeaderNode(), databaseName, hardDelete);
+			}
+		}
+
+		private async Task SendDatabaseDeleteInternalAsync(NodeConnectionInfo node, string databaseName, bool hardDelete)
+		{
+			var url = node.Uri.AbsoluteUri + "admin/raft/commands/cluster/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
+			var response = await httpClient.DeleteAsync(url).ConfigureAwait(false);
+			if (response.IsSuccessStatusCode)
+				return;
+
+			throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
+		}
+
+		private Task SendClusterConfigurationInternalAsync(NodeConnectionInfo leaderNode, ClusterConfiguration configuration)
+		{
+			return PutAsync(leaderNode, "admin/raft/commands/cluster/configuration", configuration);
+		}
+
+		private Task SendDatabaseUpdateInternalAsync(NodeConnectionInfo leaderNode, string databaseName, DatabaseDocument document)
+		{
+			return PutAsync(leaderNode, "admin/raft/commands/cluster/database/" + Uri.EscapeDataString(databaseName), document);
+		}
+
+		private async Task PutAsync(NodeConnectionInfo node, string action, object content)
+		{
+			var url = node.Uri.AbsoluteUri + action;
+			var response = await httpClient.PutAsync(url, new JsonContent(RavenJObject.FromObject(content))).ConfigureAwait(false);
+			if (response.IsSuccessStatusCode)
 				return;
 
 			throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]

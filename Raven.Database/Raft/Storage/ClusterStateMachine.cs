@@ -12,8 +12,10 @@ using Rachis.Interfaces;
 using Rachis.Messages;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Raft.Commands;
+using Raven.Database.Raft.Util;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -83,7 +85,21 @@ namespace Raven.Database.Raft.Storage
 						var clusterConfigurationUpdateCommand = cmd as ClusterConfigurationUpdateCommand;
 						if (clusterConfigurationUpdateCommand != null)
 						{
-							HandleClusterConfigurationUpdate(clusterConfigurationUpdateCommand);
+							Handle(clusterConfigurationUpdateCommand);
+							return;
+						}
+
+						var databaseUpdateCommand = cmd as DatabaseUpdateCommand;
+						if (databaseUpdateCommand != null)
+						{
+							Handle(databaseUpdateCommand);
+							return;
+						}
+
+						var databaseDeleteCommand = cmd as DatabaseDeletedCommand;
+						if (databaseDeleteCommand != null)
+						{
+							Handle(databaseDeleteCommand);
 							return;
 						}
 					}
@@ -95,16 +111,43 @@ namespace Raven.Database.Raft.Storage
 			}
 		}
 
-		private void UpdateLastAppliedIndex(long index, IStorageActionsAccessor accessor)
+		private void Handle(DatabaseDeletedCommand command)
 		{
-			accessor.Lists.Set("Raven/Cluster", "Status", new RavenJObject
-			                                              {
-				                                              { "LastAppliedIndex", index }
-			                                              }, UuidType.DocumentReferences);
-			accessor.AfterStorageCommit += () => LastAppliedIndex = index;
+			var key = command.Name;
+			if (key.StartsWith(Constants.RavenDatabasesPrefix) == false)
+				key = Constants.RavenDatabasesPrefix + key;
+
+			var documentJson = database.Documents.Get(key, null);
+			if (documentJson == null)
+				return;
+
+			var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
+			if (document.IsClusterDatabase() == false)
+				return; // ignore non-cluster databases
+
+			database.Documents.Delete(key, null, null);
+
+			// TODO [ppekrol] hard delete?
 		}
 
-		private void HandleClusterConfigurationUpdate(ClusterConfigurationUpdateCommand command)
+		private void Handle(DatabaseUpdateCommand command)
+		{
+			command.Document.AssertClusterDatabase();
+
+			var key = RaftHelper.GetDatabaseKey(command.Document.Id);
+
+			var documentJson = database.Documents.Get(key, null);
+			if (documentJson != null)
+			{
+				var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
+				if (document.IsClusterDatabase() == false)
+					return; // TODO [ppekrol] behavior here?
+			}
+
+			database.Documents.Put(key, null, RavenJObject.FromObject(command.Document), new RavenJObject(), null);
+		}
+
+		private void Handle(ClusterConfigurationUpdateCommand command)
 		{
 			database.Documents.Put(Constants.Cluster.ClusterConfigurationDocumentKey, null, RavenJObject.FromObject(command.Configuration), new RavenJObject(), null);
 		}
@@ -130,6 +173,15 @@ namespace Raven.Database.Raft.Storage
 		public void ApplySnapshot(long term, long index, Stream stream)
 		{
 			throw new NotImplementedException();
+		}
+
+		private void UpdateLastAppliedIndex(long index, IStorageActionsAccessor accessor)
+		{
+			accessor.Lists.Set("Raven/Cluster", "Status", new RavenJObject
+			                                              {
+				                                              { "LastAppliedIndex", index }
+			                                              }, UuidType.DocumentReferences);
+			accessor.AfterStorageCommit += () => LastAppliedIndex = index;
 		}
 	}
 }
