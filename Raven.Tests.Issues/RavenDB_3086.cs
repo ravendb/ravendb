@@ -15,39 +15,45 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_3086 :RavenTestBase
+    public class RavenDB_3086 : RavenTestBase
     {
-         public class User
+        public class User
         {
             public String Name { get; set; }
             public String Email { get; set; }
             public int Age { get; set; }
         }
-         public class UsersByName : AbstractIndexCreationTask<User>
+        public class UsersByName : AbstractIndexCreationTask<User>
         {
             public UsersByName()
             {
                 Map = users => from user in users
-                    select new {user.Name};
+                               select new { user.Name };
                 Index(x => x.Name, FieldIndexing.Analyzed);
-                
+
             }
         }
-          public class UsersByEmail : AbstractIndexCreationTask<User>
+
+        public class UsersByAge : AbstractIndexCreationTask<User>
+        {
+            public UsersByAge()
+            {
+                Map = users => from user in users
+                               select new { user.Age };
+                Sort(x => x.Age, SortOptions.Int);
+
+            }
+        }
+        public class UsersByEmail : AbstractIndexCreationTask<User>
         {
             public UsersByEmail()
             {
                 Map = users => from user in users
-                    select new {user.Email};
-                
+                               select new { user.Email };
+
             }
         }
-       /* public class Result 
-        {
-            public Dictionary<int, IndexDefinition> Indexs { get; set; }
-            public IndexMergeResults Results { get; set; }
-        }*/
-
+      
         [Fact]
         public void IndexMergeWithField()
         {
@@ -56,33 +62,37 @@ namespace Raven.Tests.Issues
             {
                 new UsersByName().Execute(store);
                 new UsersByEmail().Execute(store);
+                new UsersByAge().Execute(store);
 
-               var index1 = store.DatabaseCommands.GetIndex("UsersByName");
-              
-               var index2 = store.DatabaseCommands.GetIndex("UsersByEmail");
-                
-                
+                var index1 = store.DatabaseCommands.GetIndex("UsersByName");
+
+                var index2 = store.DatabaseCommands.GetIndex("UsersByEmail");
+
+                var index3 = store.DatabaseCommands.GetIndex("UsersByAge");
+
                 var dictionary = new Dictionary<int, IndexDefinition>()
                 {
                     {index1.IndexId,index1},
-                    {index2.IndexId,index2}
+                    {index2.IndexId,index2},
+                    {index3.IndexId, index3}
                 };
                 IndexMerger merger = new IndexMerger(dictionary);
                 IndexMergeResults results = merger.ProposeIndexMergeSuggestions();
-                //Assert.Equal();
+                
                 if (results.Suggestions.Count != 0)
                 {
                     foreach (var suggestion in results.Suggestions)
                     {
                         var ind = suggestion.MergedIndex;
-                        Assert.Equal(ind.Fields.Count, index1.Fields.Union(index2.Fields).Distinct().Count());
+                        Assert.Equal(FieldIndexing.Analyzed, ind.Indexes["Name"]);
+                        Assert.Equal(SortOptions.Int, ind.SortOptions["Age"]);
 
 
                     }
                 }
 
             }
-            
+
         }
 
 
