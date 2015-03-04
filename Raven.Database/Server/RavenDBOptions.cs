@@ -49,7 +49,7 @@ namespace Raven.Database.Server
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
-				raftEngine = RaftEngineFactory.Create(systemDatabase);
+				raftEngine = RaftEngineFactory.Create(systemDatabase, databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}

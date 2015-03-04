@@ -105,7 +105,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			if (RaftEngine.IsActive() && IsSystemDatabase(id) == false)
 			{
-				var documentJson = Database.Documents.Get(RaftHelper.GetDatabaseKey(id), null);
+				var documentJson = Database.Documents.Get(DatabaseHelper.GetDatabaseKey(id), null);
 				if (documentJson == null) 
 					return GetEmptyMessage(HttpStatusCode.NotFound);
 
@@ -232,17 +232,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.Documents.Delete(docKey, null, null);
 
 			if (isHardDeleteNeeded)
-			{
-				IOExtensions.DeleteDirectory(configuration.DataDirectory);
-				if (configuration.IndexStoragePath != null)
-					IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
-
-				if (configuration.Storage.Esent.JournalsStoragePath != null)
-					IOExtensions.DeleteDirectory(configuration.Storage.Esent.JournalsStoragePath);
-
-				if (configuration.Storage.Voron.JournalsStoragePath != null)
-					IOExtensions.DeleteDirectory(configuration.Storage.Voron.JournalsStoragePath);
-			}
+				DatabaseHelper.DeleteDatabaseFiles(configuration);
 
 			return new MessageWithStatusCode();
 		}

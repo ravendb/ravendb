@@ -24,6 +24,7 @@ using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Database.Util;
 
 namespace Raven.Database.Raft.Controllers
 {
@@ -99,7 +100,7 @@ namespace Raven.Database.Raft.Controllers
 			if (string.IsNullOrEmpty(id))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var documentJson = Database.Documents.Get(RaftHelper.GetDatabaseKey(id), null);
+			var documentJson = Database.Documents.Get(DatabaseHelper.GetDatabaseKey(id), null);
 			if (documentJson == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 

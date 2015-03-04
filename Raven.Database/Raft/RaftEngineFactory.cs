@@ -14,9 +14,10 @@ using Rachis.Commands;
 using Rachis.Storage;
 using Rachis.Transport;
 
-using Raven.Client.Connection;
 using Raven.Database.Raft.Storage;
 using Raven.Database.Raft.Util;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Util;
 
 using Voron;
 
@@ -24,15 +25,21 @@ namespace Raven.Database.Raft
 {
 	public static class RaftEngineFactory
 	{
-		public static RavenRaftEngine Create(DocumentDatabase systemDatabase)
+		public static RavenRaftEngine Create(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord)
 		{
+			if (systemDatabase == null)
+				throw new ArgumentNullException("systemDatabase");
+
+			if (databasesLandlord == null)
+				throw new ArgumentNullException("databasesLandlord");
+
+			DatabaseHelper.AssertSystemDatabase(systemDatabase);
+
 			var configuration = systemDatabase.Configuration;
 
 			var nodeName = RaftHelper.GetNodeName(systemDatabase.TransactionalStorage.Id);
 
 			var url = configuration.ServerUrl;
-			if (string.IsNullOrEmpty(configuration.DatabaseName) == false)
-				url = url.ForDatabase(configuration.DatabaseName);
 
 			var nodeConnectionInfo = new NodeConnectionInfo
 			{
@@ -55,7 +62,7 @@ namespace Raven.Database.Raft
 			}
 
 			var transport = new HttpTransport(nodeName);
-			var stateMachine = new ClusterStateMachine(systemDatabase);
+			var stateMachine = new ClusterStateMachine(systemDatabase, databasesLandlord);
 			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine)
 									{
 										ElectionTimeout = 2000,

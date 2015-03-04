@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Rachis.Commands;
 
 using Raven.Abstractions.Data;
-using Raven.Database.Raft.Util;
+using Raven.Database.Util;
 
 namespace Raven.Database.Raft.Commands
 {
@@ -18,7 +18,7 @@ namespace Raven.Database.Raft.Commands
 
 		public static DatabaseUpdateCommand Create(string databaseName, DatabaseDocument document)
 		{
-			document.Id = RaftHelper.GetDatabaseName(databaseName);
+			document.Id = DatabaseHelper.GetDatabaseName(databaseName);
 
 			return new DatabaseUpdateCommand
 				   {

@@ -60,17 +60,16 @@ namespace Raven.Database.Raft
 				return;
 			}
 
-			var removedNodes = command
+			var removedNodeUrls = command
 				.Previous
-				.AllNodeNames
-				.Select(RaftHelper.GetNormalizedNodeUrl)
-				.Except(command.Requested.AllNodeNames.Select(RaftHelper.GetNormalizedNodeUrl).ToList())
+				.AllNodes.Select(x => x.Uri.AbsoluteUri)
+				.Except(command.Requested.AllNodes.Select(x => x.Uri.AbsoluteUri))
 				.ToList();
 
-			HandleClusterConfigurationChanges(removedNodes);
+			HandleClusterConfigurationChanges(removedNodeUrls);
 		}
 
-		private void HandleClusterConfigurationChanges(List<string> removedNodes = null)
+		private void HandleClusterConfigurationChanges(List<string> removedNodeUrls = null)
 		{
 			var configurationJson = systemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
 			if (configurationJson == null)
@@ -78,7 +77,7 @@ namespace Raven.Database.Raft
 
 			var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
 
-			HandleClusterReplicationChanges(removedNodes, configuration.EnableReplication);
+			HandleClusterReplicationChanges(removedNodeUrls, configuration.EnableReplication);
 		}
 
 		private void HandleClusterReplicationChanges(List<string> removedNodes, bool enableReplication)
@@ -97,7 +96,10 @@ namespace Raven.Database.Raft
 				.AllNodes
 				.ToDictionary(x => x.Uri.AbsoluteUri.ToLowerInvariant(), x => x);
 
-			var urls = replicationDocumentNormalizedDestinations.Keys.Union(currentTopologyNormalizedDestionations.Keys).ToList();
+			var urls = replicationDocumentNormalizedDestinations
+				.Keys
+				.Union(currentTopologyNormalizedDestionations.Keys)
+				.ToList();
 
 			foreach (var url in urls)
 			{
@@ -111,7 +113,7 @@ namespace Raven.Database.Raft
 
 				if (destination != null && node == null)
 				{
-					if (removedNodes.Contains(destination.Url) == false)
+					if (removedNodes.Contains(url, StringComparer.OrdinalIgnoreCase) == false)
 						continue; // external destination
 
 					replicationDocument.Destinations.Remove(destination);

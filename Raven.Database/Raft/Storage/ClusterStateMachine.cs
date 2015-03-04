@@ -16,7 +16,9 @@ using Raven.Abstractions.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Raft.Commands;
 using Raven.Database.Raft.Util;
+using Raven.Database.Server.Tenancy;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Raft.Storage
@@ -27,17 +29,19 @@ namespace Raven.Database.Raft.Storage
 
 		private readonly DocumentDatabase database;
 
+		private readonly DatabasesLandlord landlord;
+
 		private long lastAppliedIndex;
 
-		public ClusterStateMachine(DocumentDatabase systemDatabase)
+		public ClusterStateMachine(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord)
 		{
 			if (systemDatabase == null)
 				throw new ArgumentNullException("systemDatabase");
 
-			if (systemDatabase.Name != null && systemDatabase.Name != Constants.SystemDatabase)
-				throw new InvalidOperationException("Must be system database.");
+			DatabaseHelper.AssertSystemDatabase(systemDatabase);
 
 			database = systemDatabase;
+			landlord = databasesLandlord;
 
 			LastAppliedIndex = ReadLastAppliedIndex();
 		}
@@ -113,9 +117,7 @@ namespace Raven.Database.Raft.Storage
 
 		private void Handle(DatabaseDeletedCommand command)
 		{
-			var key = command.Name;
-			if (key.StartsWith(Constants.RavenDatabasesPrefix) == false)
-				key = Constants.RavenDatabasesPrefix + key;
+			var key = DatabaseHelper.GetDatabaseKey(command.Name);
 
 			var documentJson = database.Documents.Get(key, null);
 			if (documentJson == null)
@@ -125,16 +127,21 @@ namespace Raven.Database.Raft.Storage
 			if (document.IsClusterDatabase() == false)
 				return; // ignore non-cluster databases
 
+			var configuration = landlord.CreateTenantConfiguration(DatabaseHelper.GetDatabaseName(command.Name), true);
+			if (configuration == null)
+				return;
+
 			database.Documents.Delete(key, null, null);
 
-			// TODO [ppekrol] hard delete?
+			if (command.HardDelete)
+				DatabaseHelper.DeleteDatabaseFiles(configuration);
 		}
 
 		private void Handle(DatabaseUpdateCommand command)
 		{
 			command.Document.AssertClusterDatabase();
 
-			var key = RaftHelper.GetDatabaseKey(command.Document.Id);
+			var key = DatabaseHelper.GetDatabaseKey(command.Document.Id);
 
 			var documentJson = database.Documents.Get(key, null);
 			if (documentJson != null)

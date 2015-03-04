@@ -74,28 +74,6 @@ namespace Raven.Database.Raft.Util
 			return new Uri(url, UriKind.Absolute);
 		}
 
-		public static string GetDatabaseKey(string key)
-		{
-			if (string.IsNullOrEmpty(key))
-				throw new ArgumentNullException("url");
-
-			if (key.StartsWith(Constants.RavenDatabasesPrefix, StringComparison.OrdinalIgnoreCase))
-				return key;
-
-			return Constants.RavenDatabasesPrefix + key;
-		}
-
-		public static string GetDatabaseName(string key)
-		{
-			if (string.IsNullOrEmpty(key))
-				throw new ArgumentNullException("url");
-
-			if (key.StartsWith(Constants.RavenDatabasesPrefix, StringComparison.OrdinalIgnoreCase))
-				return key.Substring(Constants.RavenDatabasesPrefix.Length);
-
-			return key;
-		}
-
 		public static string GetNodeName(Guid name)
 		{
 			return name.ToString();
