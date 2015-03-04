@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -24,43 +25,36 @@ namespace Raven.Tests.Raft
 		[Fact]
 		public async Task EnablingReplicationInClusterWillCreateGlobalReplicationDestinationsOnEachNode()
 		{
-			try
-			{
-				var clusterStores = CreateRaftCluster(3);
+			var clusterStores = CreateRaftCluster(3);
 
-				using (clusterStores[0])
-				using (clusterStores[1])
-				using (clusterStores[2])
+			using (clusterStores[0])
+			using (clusterStores[1])
+			using (clusterStores[2])
+			{
+				var client = servers[0].Options.RaftEngine.Client;
+				await client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = true});
+
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+
+				AssertReplicationDestinations(clusterStores, (i, j, destination) =>
 				{
-					var client = servers[0].Options.RaftEngine.Client;
-					await client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = true});
+					Assert.False(destination.Disabled);
+					Assert.Null(destination.Database);
+					Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
+				});
 
-					clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+				clusterStores.ForEach(store => store.DatabaseCommands.ForSystemDatabase().Delete(Constants.Global.ReplicationDestinationsDocumentName, null));
 
-					AssertReplicationDestinations(clusterStores, (i, j, destination) =>
-					{
-						Assert.False(destination.Disabled);
-						Assert.Null(destination.Database);
-						Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
-					});
+				await client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false});
 
-					clusterStores.ForEach(store => store.DatabaseCommands.ForSystemDatabase().Delete(Constants.Global.ReplicationDestinationsDocumentName, null));
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
 
-					await client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false});
-
-					clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
-
-					AssertReplicationDestinations(clusterStores, (i, j, destination) =>
-					{
-						Assert.True(destination.Disabled);
-						Assert.Null(destination.Database);
-						Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
-					});
-				}
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e);
+				AssertReplicationDestinations(clusterStores, (i, j, destination) =>
+				{
+					Assert.True(destination.Disabled);
+					Assert.Null(destination.Database);
+					Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
+				});
 			}
 		}
 
@@ -70,7 +64,7 @@ namespace Raven.Tests.Raft
 			{
 				var destinationsJson = stores[i].DatabaseCommands.ForSystemDatabase().Get(Constants.Global.ReplicationDestinationsDocumentName);
 				var destinations = destinationsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
-				Assert.Equal(2, destinations.Destinations.Count);
+				Assert.Equal(stores.Count - 1, destinations.Destinations.Count);
 				for (var j = 0; j < stores.Count; j++)
 				{
 					if (j == i)
@@ -89,11 +83,54 @@ namespace Raven.Tests.Raft
 		{
 			var clusterStores = CreateRaftCluster(3);
 
-			using (var store1 = clusterStores[0])
-			using (var store2 = clusterStores[1])
-			using (var store3 = clusterStores[2])
+			using (clusterStores[0])
+			using (clusterStores[1])
+			using (clusterStores[2])
 			{
+				var client = servers[0].Options.RaftEngine.Client;
+				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+
+				AssertReplicationDestinations(clusterStores, (i, j, destination) =>
+				{
+					Assert.False(destination.Disabled);
+					Assert.Null(destination.Database);
+					Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
+				});
+
+				var extraStores = ExtendRaftCluster(2);
+				using (extraStores[0])
+				using (extraStores[1])
+				{
+					extraStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+					AssertReplicationDestinations(clusterStores.Concat(extraStores).ToList(), (i, j, destination) =>
+					{
+						Assert.False(destination.Disabled);
+						Assert.Null(destination.Database);
+						Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
+					});
+
+					var allStores = clusterStores.Concat(extraStores).ToList();
+					allStores.RemoveAt(4);
+
+					// fetch etags of each replication destination document
+					var etags = allStores.Select(store => store.DatabaseCommands.ForSystemDatabase().Head(Constants.Global.ReplicationDestinationsDocumentName).Etag).ToList();
+
+					RemoveFromCluster(servers[4]);
+
+					for (var i = 0; i < allStores.Count; i++)
+					{
+						WaitForDocument(allStores[i].DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName, etags[i]);
+					}
+
+					AssertReplicationDestinations(allStores, (i, j, destination) =>
+					{
+						Assert.False(destination.Disabled);
+						Assert.Null(destination.Database);
+						Assert.Equal(TransitiveReplicationOptions.Replicate, destination.TransitiveReplicationBehavior);
+					});
+				}
 			}
 		}
 	}
