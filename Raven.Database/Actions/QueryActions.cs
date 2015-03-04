@@ -227,7 +227,7 @@ namespace Raven.Database.Actions
 				{
 					throw new IndexDisabledException(indexFailureInformation);
 				}
-				docRetriever = new DocumentRetriever(actions, database.ReadTriggers, database.InFlightTransactionalState, query.TransformerParameters, idsToLoad);
+				docRetriever = new DocumentRetriever(database.Configuration, actions, database.ReadTriggers, database.InFlightTransactionalState, query.TransformerParameters, idsToLoad);
 				var fieldsToFetch = new FieldsToFetch(query,
 					viewGenerator.ReduceDefinition == null
 						? Constants.DocumentIdFieldName

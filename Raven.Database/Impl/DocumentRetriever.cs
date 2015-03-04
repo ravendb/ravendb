@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Raven.Abstractions.Logging;
+using Raven.Database.Config;
 using Raven.Database.Impl.DTC;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -31,6 +32,7 @@ namespace Raven.Database.Impl
 		private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+	    private readonly InMemoryRavenConfiguration configuration;
 		private readonly IStorageActionsAccessor actions;
 		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
 		private readonly InFlightTransactionalState inFlightTransactionalState;
@@ -40,11 +42,12 @@ namespace Raven.Database.Impl
 
 	    public Etag Etag = Etag.Empty;
 
-		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
+	    public DocumentRetriever(InMemoryRavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
 			InFlightTransactionalState inFlightTransactionalState,
             Dictionary<string, RavenJToken> transformerParameters = null,
             HashSet<string> itemsToInclude = null)
 		{
+		    this.configuration = configuration;
 			this.actions = actions;
 			this.triggers = triggers;
 			this.inFlightTransactionalState = inFlightTransactionalState;

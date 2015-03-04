@@ -234,6 +234,8 @@ namespace Raven.Database.Config
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 
 			TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
+
+            ImplicitFieldsToFetchFromDocumentMode = new StringSetting(settings["Raven/ImplicitFieldsToFetchFromDocumentMode"], "Enabled");
 		    
             if (settings["Raven/MaxServicePointIdleTime"] != null) 
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
@@ -394,6 +396,8 @@ namespace Raven.Database.Config
 		public IntegerSetting FlushIndexToDiskSizeInMb { get; set; }
 
 		public TimeSpanSetting TombstoneRetentionTime { get; private set; }
+
+        public StringSetting ImplicitFieldsToFetchFromDocumentMode { get; private set; }
 
 		public class VoronConfiguration
 		{
