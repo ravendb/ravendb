@@ -97,7 +97,7 @@ namespace Raven.Tests.FileSystem.Migration
 					});
 
 					SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("source"),
-							Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1));
+							Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(5));
 
 					await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
 					{
@@ -107,7 +107,7 @@ namespace Raven.Tests.FileSystem.Migration
 					});
 
 					SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("source"),
-							Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1));
+							Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(5));
 
 					var source = store.AsyncFilesCommands.ForFileSystem("source");
 					var destination = store.AsyncFilesCommands.ForFileSystem("destination");

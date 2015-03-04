@@ -253,6 +253,8 @@
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
     <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
+    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From04To05.cs" />
+    <Compile Include="FileSystem\Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
