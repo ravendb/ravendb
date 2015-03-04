@@ -119,6 +119,7 @@
     <Compile Include="Folders.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />
     <Compile Include="Issues\RavenDB_3268_ConcurrencyChecks.cs" />
+    <Compile Include="Migration\BackupCreator.cs" />
     <Compile Include="Search\SearchIndexes.cs" />
     <Compile Include="RavenFilesTestWithLogs.cs" />
     <Compile Include="RavenFilesWebApiTest.cs" />
