@@ -19,7 +19,8 @@ namespace Raven.Client.Linq
 		{
 			facets = new List<AggregationQuery<T>>();
 			this.queryable = queryable;
-			AndAggregateOn(path, displayName);
+            AndAggregateOn(path, displayName);
+           
 		}
 
 
@@ -88,7 +89,7 @@ namespace Raven.Client.Linq
 		{
 			var last = facets.Last();
 			last.AggregationField = path.ToPropertyPath('_');
-			last.Aggregation |= facetAggregation;
+            last.Aggregation |= facetAggregation;   
 		}
 
 		public DynamicAggregationQuery<T> MaxOn(Expression<Func<T, object>> path)
@@ -151,7 +152,11 @@ namespace Raven.Client.Linq
 	            FacetResult value;
 	            if (facetResults.Results.TryGetValue(rename.Value, out value) &&
 	                facetResults.Results.ContainsKey(rename.Key) == false)
+                { 
 	                facetResults.Results[rename.Key] = value;
+	                facetResults.Results.Remove(rename.Value);
+                }
+
 	        }
 	        return facetResults;
 	    }
