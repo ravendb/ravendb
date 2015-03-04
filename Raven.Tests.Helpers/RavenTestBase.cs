@@ -21,6 +21,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client;
 using Raven.Client.Connection;
@@ -34,6 +35,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Impl;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -577,18 +579,20 @@ namespace Raven.Tests.Helpers
             if (!done) throw new Exception("WaitForRestore failed");
 		}
 
-		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id)
+		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id, Etag afterEtag = null)
 		{
-			WaitForDocument(databaseCommands, id, TimeSpan.FromMinutes(5));
+			WaitForDocument(databaseCommands, id, TimeSpan.FromMinutes(5), afterEtag);
 		}
 
-		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id, TimeSpan timeout)
+		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id, TimeSpan timeout, Etag afterEtag = null)
 		{
 			var done = SpinWait.SpinUntil(() =>
 			{
 				// We expect to get the doc from the <system> database
 				var doc = databaseCommands.Get(id);
-				return doc != null;
+				if (afterEtag == null)
+					return doc != null;
+				return EtagUtil.IsGreaterThan(doc.Etag, afterEtag);
 			}, timeout);
 
             if (!done) throw new Exception("WaitForDocument failed");

@@ -7,22 +7,21 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-
 using Rachis.Transport;
-
-using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Raft;
 using Raven.Database.Raft.Util;
+using Raven.Server;
 using Raven.Tests.Helpers;
-
 using Xunit;
 
 namespace Raven.Tests.Raft
 {
 	public class RaftTestBase : RavenTestBase
 	{
+		protected int port = 8079;
+
 		public void WaitForDelete(IDatabaseCommands commands, string key, TimeSpan? timeout = null)
 		{
 			var done = SpinWait.SpinUntil(() =>
@@ -35,11 +34,10 @@ namespace Raven.Tests.Raft
 			if (!done)
 				throw new Exception("WaitForDelete failed");
 		}
+		
 
 		public List<DocumentStore> CreateRaftCluster(int numberOfNodes)
 		{
-			var port = 8079;
-
 			var nodes = Enumerable.Range(0, numberOfNodes)
 				.Select(x => GetNewServer(port--))
 				.ToList();
@@ -53,7 +51,6 @@ namespace Raven.Tests.Raft
 
 			RaftEngineFactory.InitializeTopology(leader.SystemDatabase, leader.Options.RaftEngine);
 
-			Thread.Sleep(5000); // TODO [ppekrol] trial election?
 			Assert.True(leader.Options.RaftEngine.Engine.WaitForLeader());
 
 			leader.Options.RaftEngine.Engine.TopologyChanged += command =>
@@ -81,12 +78,66 @@ namespace Raven.Tests.Raft
 			if (numberOfNodes == 1)
 				allNodesFinishedJoining.Set();
 
-			Assert.True(allNodesFinishedJoining.Wait(5000 * numberOfNodes));
+			Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfNodes));
 			Assert.True(leader.Options.RaftEngine.Engine.WaitForLeader());
 
 			return nodes
 				.Select(node => NewRemoteDocumentStore(ravenDbServer: node))
 				.ToList();
+		}
+
+		public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes)
+		{
+			var leader = servers.FirstOrDefault(server => server.Options.RaftEngine.IsLeader());
+			Assert.NotNull(leader);
+
+			var nodes = Enumerable.Range(0, numberOfExtraNodes)
+				.Select(x => GetNewServer(port--))
+				.ToList();
+
+			var allNodesFinishedJoining = new ManualResetEventSlim();
+			leader.Options.RaftEngine.Engine.TopologyChanged += command =>
+			{
+				if (command.Requested.AllNodeNames.All(command.Requested.IsVoter))
+				{
+					allNodesFinishedJoining.Set();
+				}
+			};
+
+			for (var i = 0; i < numberOfExtraNodes; i++)
+			{
+				var n = nodes[i];
+
+				if (n == leader)
+					continue;
+
+				Assert.True(leader.Options.RaftEngine.Engine.AddToClusterAsync(new NodeConnectionInfo
+				{
+					Name = RaftHelper.GetNodeName(n.SystemDatabase.TransactionalStorage.Id),
+					Uri = RaftHelper.GetNodeUrl(n.SystemDatabase.Configuration.ServerUrl)
+				}).Wait(10000));
+			}
+
+			Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfExtraNodes));
+
+			return nodes
+				.Select(node => NewRemoteDocumentStore(ravenDbServer: node))
+				.ToList();
+		}
+
+		public void RemoveFromCluster(RavenDbServer serverToRemove)
+		{
+			var leader = servers.FirstOrDefault(server => server.Options.RaftEngine.IsLeader());
+			if (leader == null)
+				throw new InvalidOperationException("Leader is currently not present, thus can't remove node from cluster");
+			if (leader == serverToRemove)
+			{
+				leader.Options.RaftEngine.Engine.StepDownAsync().Wait();
+			}
+			else
+			{
+				leader.Options.RaftEngine.Engine.RemoveFromClusterAsync(serverToRemove.Options.RaftEngine.Engine.Options.SelfConnection).Wait(10000);
+			}
 		}
 	}
 }

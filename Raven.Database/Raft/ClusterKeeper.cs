@@ -8,12 +8,13 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Rachis.Commands;
-
+using Rachis.Transport;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Database.Plugins;
 using Raven.Database.Raft.Dto;
+using Raven.Database.Raft.Util;
 using Raven.Json.Linq;
 using Raven.Server;
 
@@ -62,7 +63,8 @@ namespace Raven.Database.Raft
 			var removedNodes = command
 				.Previous
 				.AllNodeNames
-				.Except(command.Requested.AllNodeNames, StringComparer.OrdinalIgnoreCase)
+				.Select(RaftHelper.GetNormalizedNodeUrl)
+				.Except(command.Requested.AllNodeNames.Select(RaftHelper.GetNormalizedNodeUrl).ToList())
 				.ToList();
 
 			HandleClusterConfigurationChanges(removedNodes);
@@ -87,16 +89,22 @@ namespace Raven.Database.Raft
 				? replicationDocumentJson.DataAsJson.JsonDeserialization<ReplicationDocument>()
 				: new ReplicationDocument();
 
-			var urls = replicationDocument
+			var replicationDocumentNormalizedDestinations = replicationDocument
 				.Destinations
-				.Select(x => x.Url.ToLowerInvariant())
-				.Concat(currentTopology.AllNodes.Select(x => x.Uri.AbsoluteUri.ToLowerInvariant()))
-				.Distinct();
+				.ToDictionary(x => RaftHelper.GetNormalizedNodeUrl(x.Url), x => x);
+
+			var currentTopologyNormalizedDestionations = currentTopology
+				.AllNodes
+				.ToDictionary(x => x.Uri.AbsoluteUri.ToLowerInvariant(), x => x);
+
+			var urls = replicationDocumentNormalizedDestinations.Keys.Union(currentTopologyNormalizedDestionations.Keys).ToList();
 
 			foreach (var url in urls)
 			{
-				var destination = replicationDocument.Destinations.FirstOrDefault(x => string.Equals(x.Url, url, StringComparison.OrdinalIgnoreCase));
-				var node = currentTopology.AllNodes.FirstOrDefault(x => string.Equals(x.Uri.AbsoluteUri, url, StringComparison.OrdinalIgnoreCase));
+				ReplicationDestination destination;
+				replicationDocumentNormalizedDestinations.TryGetValue(url, out destination);
+				NodeConnectionInfo node;
+				currentTopologyNormalizedDestionations.TryGetValue(url, out node);
 
 				if (destination == null && node == null)
 					continue; // not possible, but...

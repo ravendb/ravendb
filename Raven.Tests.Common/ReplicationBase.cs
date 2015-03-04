@@ -339,8 +339,11 @@ namespace Raven.Tests.Common
             return attachment;
         }
 
-        protected override void WaitForDocument(IDatabaseCommands commands, string expectedId)
+        protected override void WaitForDocument(IDatabaseCommands commands, string expectedId, Etag afterEtag = null)
         {
+			if (afterEtag != null)
+				throw new NotImplementedException();
+
             for (int i = 0; i < RetriesCount; i++)
             {
                 if (commands.Head(expectedId) != null)

@@ -24,27 +24,20 @@ namespace Raven.Tests.Raft
 		{
 			var clusterStores = CreateRaftCluster(3);
 
-			using (var store1 = clusterStores[0])
-			using (var store2 = clusterStores[1])
-			using (var store3 = clusterStores[2])
+			using (clusterStores[0])
+			using (clusterStores[1])
+			using (clusterStores[2])
 			{
 				var client = servers[0].Options.RaftEngine.Client;
 				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
-				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
-				var configurationJson = store1.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
-				var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
-				Assert.True(configuration.EnableReplication);
-
-				WaitForDocument(store2.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
-				configurationJson = store2.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
-				configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
-				Assert.True(configuration.EnableReplication);
-
-				WaitForDocument(store3.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
-				configurationJson = store3.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
-				configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
-				Assert.True(configuration.EnableReplication);
+				clusterStores.ForEach(store =>
+				{
+					WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
+					var configurationJson = store.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
+					var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+					Assert.True(configuration.EnableReplication);
+				});
 			}
 		}
 

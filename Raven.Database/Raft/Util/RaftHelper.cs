@@ -58,6 +58,11 @@ namespace Raven.Database.Raft.Util
 				throw new InvalidOperationException("Not a cluster database. Database: " + document.Id);
 		}
 
+		public static string GetNormalizedNodeUrl(String url)
+		{
+			return GetNodeUrl(url).AbsoluteUri.ToLowerInvariant();
+		}
+
 		public static Uri GetNodeUrl(string url)
 		{
 			if (string.IsNullOrEmpty(url))
