@@ -540,6 +540,13 @@ namespace Raven.Database.Server.Controllers
 
 		protected void HandleReplication(HttpResponseMessage msg)
 		{
+
+            if (msg.StatusCode == HttpStatusCode.BadRequest ||
+                msg.StatusCode == HttpStatusCode.ServiceUnavailable ||
+                msg.StatusCode == HttpStatusCode.InternalServerError
+                )
+                return;
+
 			var clientPrimaryServerUrl = GetHeader(Constants.RavenClientPrimaryServerUrl);
 			var clientPrimaryServerLastCheck = GetHeader(Constants.RavenClientPrimaryServerLastCheck);
 			if (string.IsNullOrEmpty(clientPrimaryServerUrl) || string.IsNullOrEmpty(clientPrimaryServerLastCheck))

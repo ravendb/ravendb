@@ -430,6 +430,7 @@
     <Compile Include="Util\IndexPrettyPrinter.cs" />
     <Compile Include="Util\MD5.cs" />
     <Compile Include="Util\NetworkUtil.cs" />
+    <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />

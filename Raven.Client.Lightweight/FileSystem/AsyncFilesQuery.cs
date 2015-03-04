@@ -429,6 +429,26 @@ If you really want to do in memory filtering on the data returned from the query
 
         #endregion 
 
+		/// <summary>
+		///   Takes the specified count.
+		/// </summary>
+		/// <param name = "count">The count.</param>
+		IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.Take(int count)
+		{
+			Take(count);
+			return this;
+		}
+
+		/// <summary>
+		///   Skips the specified count.
+		/// </summary>
+		/// <param name = "count">The count.</param>
+		IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.Skip(int count)
+		{
+			Skip(count);
+			return this;
+		}
+
         public IAsyncFilesQuery<T> OnDirectory(string path = null, bool recursive = false)
         {
             if (string.IsNullOrWhiteSpace(path))

@@ -130,6 +130,7 @@
     <Compile Include="Replication\IndexReplication.cs" />
     <Compile Include="Replication\ManualConflictResolution.cs" />
     <Compile Include="Replication\TransformerReplication.cs" />
+    <Compile Include="ScriptedPatching\ScriptedPatchTests.cs" />
     <Compile Include="Session\Advanced.cs" />
     <Compile Include="Shard\Sharding.cs" />
     <Compile Include="Smuggler\SmugglerApiTests.cs" />

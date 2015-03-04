@@ -5,12 +5,16 @@ using System.Linq;
 using System.Threading;
 
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Plugins;
+using Raven.Database.Impl;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem.Infrastructure;
@@ -25,10 +29,14 @@ using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
 using System.Runtime.InteropServices;
 
+using TaskActions = Raven.Database.FileSystem.Actions.TaskActions;
+
 namespace Raven.Database.FileSystem
 {
     public class RavenFileSystem : IResourceStore, IDisposable
 	{
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
 		private readonly ConflictArtifactManager conflictArtifactManager;
 		private readonly ConflictDetector conflictDetector;
 		private readonly ConflictResolver conflictResolver;
@@ -79,13 +87,23 @@ namespace Raven.Database.FileSystem
             search = new IndexStorage(name, systemConfiguration);
 
             conflictArtifactManager = new ConflictArtifactManager(storage, search);
-            storageOperationsTask = new StorageOperationsTask(storage, DeleteTriggers, search, notificationPublisher); 
+            storageOperationsTask = new StorageOperationsTask(storage, DeleteTriggers, search, notificationPublisher);
+
+			Tasks = new TaskActions(this, Log);
+			Files = new FileActions(this, Log);
+			Synchronization = new SynchronizationActions(this, Log);
 
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
-		}        
+		}
 
-        public void Initialize()
+	    public TaskActions Tasks { get; private set; }
+
+		public FileActions Files { get; private set; }
+
+		public SynchronizationActions Synchronization { get; private set; }
+
+	    public void Initialize()
         {
             storage.Initialize(FileCodecs);
 
@@ -286,12 +304,30 @@ namespace Raven.Database.FileSystem
 
 			disposed = true;
 
-			synchronizationTask.Dispose();
-			storage.Dispose();
-			search.Dispose();
-			sigGenerator.Dispose();
-			BufferPool.Dispose();
-            metricsCounters.Dispose();
+			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose RavenFileSystem");
+
+			if (synchronizationTask != null)
+				exceptionAggregator.Execute(synchronizationTask.Dispose);
+
+			if (storage != null)
+				exceptionAggregator.Execute(storage.Dispose);
+
+			if (search != null)
+				exceptionAggregator.Execute(search.Dispose);
+
+			if (sigGenerator != null)
+				exceptionAggregator.Execute(sigGenerator.Dispose);
+
+			if (BufferPool != null)
+				exceptionAggregator.Execute(BufferPool.Dispose);
+
+			if (metricsCounters != null)
+				exceptionAggregator.Execute(metricsCounters.Dispose);
+
+			if (Tasks != null)
+				Tasks.Dispose(exceptionAggregator);
+
+			exceptionAggregator.ThrowIfNeeded();
 		}
 
         public FileSystemMetrics CreateMetrics()
