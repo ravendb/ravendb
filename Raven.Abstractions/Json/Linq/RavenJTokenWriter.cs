@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
@@ -42,6 +43,9 @@ namespace Raven.Json.Linq
 
 		public override void WritePropertyName(string name)
 		{
+			if (String.IsNullOrWhiteSpace(name))
+				throw new InvalidDataException("Tried to serialize Json document with empty string/null/whitespace as property name. For example KeyValuePair in Dictionary with empty string as key can cause this exception. RavenDB Json serializer does not support this use-case");
+
 			base.WritePropertyName(name);
 
 			if (_tempPropName != null)
