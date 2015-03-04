@@ -44,8 +44,12 @@ namespace Raven.Client.Connection
 		private readonly int maxNumberOfCachedRequests;
 
 		internal readonly HttpClientCache httpClientCache;
+	    public HttpClientCache HttpClientCache
+	    {
+	        get { return httpClientCache; }
+	    }
 
-		internal readonly HttpMessageHandler httpMessageHandler;
+	    internal readonly HttpMessageHandler httpMessageHandler;
 
 		internal readonly bool acceptGzipContent;
 
