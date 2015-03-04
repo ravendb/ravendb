@@ -32,9 +32,7 @@ using System.Threading.Tasks;
 namespace Raven.Client.FileSystem
 {
 
-    public class AsyncFilesServerClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>,
-                                          IAsyncFilesCommands, IAsyncFilesCommandsImpl,
-                                          IDisposable, IHoldProfilingInformation
+    public class AsyncFilesServerClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, IAsyncFilesCommandsImpl
     {
         private readonly Lazy<FilesChangesClient> notifications;
         private readonly IFilesConflictListener[] conflictListeners;
