@@ -37,7 +37,7 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/synchronization/ToDestinations")]
         public async Task<HttpResponseMessage> ToDestinations(bool forceSyncingAll)
         {
-            var result = await SynchronizationTask.SynchronizeDestinationsAsync(forceSyncingAll);
+            var result = await SynchronizationTask.Execute(forceSyncingAll);
 
             return this.GetMessageWithObject(result, HttpStatusCode.OK);
         }
@@ -723,7 +723,7 @@ namespace Raven.Database.FileSystem.Controllers
                         // ConflictArtifactManager.Delete(canonicalFilename, accessor); - intentionally not deleting, conflict item will be removed when a remote file is put
 					});
 
-					Task.Run(() => SynchronizationTask.SynchronizeDestinationsAsync(true));
+					Task.Run(() => SynchronizationTask.Execute(true));
 					break;
 				default:
 					throw new NotSupportedException(string.Format("{0} is not the valid strategy to resolve a conflict", strategy));
