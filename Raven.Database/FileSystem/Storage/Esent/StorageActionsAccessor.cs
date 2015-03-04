@@ -40,7 +40,6 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		private readonly TableColumnsCache tableColumnsCache;
 	    private readonly UuidGenerator uuidGenerator;
 		private readonly OrderedPartCollection<AbstractFileCodec> fileCodecs;
-		private readonly byte[] lastEtag;
 	    private Table config;
 		private Table details;
 
@@ -52,10 +51,6 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
 		public StorageActionsAccessor(TableColumnsCache tableColumnsCache, JET_INSTANCE instance, string databaseName, UuidGenerator uuidGenerator, OrderedPartCollection<AbstractFileCodec> fileCodecs)
 		{
-			var a = new Etag(0, long.MaxValue, long.MaxValue);
-		
-
-            lastEtag = Etag.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff").TransformToValueForEsentSorting();
 			this.tableColumnsCache = tableColumnsCache;
 			this.uuidGenerator = uuidGenerator;
 			this.fileCodecs = fileCodecs;
@@ -479,9 +474,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
         public Etag GetLastEtag()
         {
-            Api.JetSetCurrentIndex(session, Files, "by_etag");
-            Api.MakeKey(session, Files, lastEtag, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, Files, SeekGrbit.SeekLE) == false)
+			Api.JetSetCurrentIndex(session, Files, "by_etag");
+            if (Api.TryMoveLast(session, Files) == false)
                 return Etag.Empty;
 
             var val = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"], RetrieveColumnGrbit.RetrieveFromIndex, null);
