@@ -586,9 +586,9 @@ namespace Raven.Database.Server.WebApi
 		private bool DatabaseNeedToRunIdleOperations(DocumentDatabase documentDatabase)
 		{
 			var dateTime = SystemTime.UtcNow;
-			if ((dateTime - documentDatabase.WorkContext.LastWorkTime).TotalMinutes > 1)
+			if ((dateTime - documentDatabase.WorkContext.LastWorkTime).TotalMinutes > 5)
 				return true;
-			if ((dateTime - documentDatabase.WorkContext.LastIdleTime).TotalHours > 1)
+			if ((dateTime - documentDatabase.WorkContext.LastIdleTime).TotalHours > 2)
 				return true;
 			return false;
 		}

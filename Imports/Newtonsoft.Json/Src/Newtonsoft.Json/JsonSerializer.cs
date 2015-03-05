@@ -34,6 +34,8 @@ using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Runtime.Serialization;
 using ErrorEventArgs = Raven.Imports.Newtonsoft.Json.Serialization.ErrorEventArgs;
+using Raven.Abstractions.Json;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -284,9 +286,23 @@ namespace Raven.Imports.Newtonsoft.Json
             get
             {
                 if (_converters == null)
+                { 
+                    // This is a bit unorthodox but in debug mode (ours code) we don't want to use unfrozen converters
+                    // because of the performance implications. Therefore, any mistaken attempt to use the wrong way to
+                    // create the serializer will throw; but our users wont have to care about that until we hit
+                    // v4.0 where the failure mode should be the default.
+#if DEBUG 
+                    _converters = JsonConverterCollection.Empty;
+#else
                     _converters = new JsonConverterCollection();
-
+#endif
+                }
                 return _converters;
+
+            }
+            set
+            {
+                _converters = value;
             }
         }
 
@@ -524,10 +540,15 @@ namespace Raven.Imports.Newtonsoft.Json
             {
                 // insert settings converters at the beginning so they take precedence
                 // if user wants to remove one of the default converters they will have to do it manually
+                var converters = new JsonConverterCollection(serializer.Converters);
                 for (int i = 0; i < settings.Converters.Count; i++)
                 {
                     serializer.Converters.Insert(i, settings.Converters[i]);
+                    converters.Insert(i, settings.Converters[i]);
                 }
+
+                serializer.Converters = converters;
+
             }
 
             // serializer specific
@@ -954,29 +975,10 @@ namespace Raven.Imports.Newtonsoft.Json
             return _referenceResolver;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal JsonConverter GetMatchingConverter(Type type)
         {
-            return GetMatchingConverter(_converters, type);
-        }
-
-        internal static JsonConverter GetMatchingConverter(IList<JsonConverter> converters, Type objectType)
-        {
-#if DEBUG
-            ValidationUtils.ArgumentNotNull(objectType, "objectType");
-#endif
-
-            if (converters != null)
-            {
-                for (int i = 0; i < converters.Count; i++)
-                {
-                    JsonConverter converter = converters[i];
-
-                    if (converter.CanConvert(objectType))
-                        return converter;
-                }
-            }
-
-            return null;
+            return JsonConverterCache.GetMatchingConverter(_converters, type);
         }
 
         internal void OnError(ErrorEventArgs e)

@@ -302,12 +302,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
                 : CreateFromContent(content);
         }
 
-        /// <summary>
-        /// Writes this token to a <see cref="JsonWriter"/>.
-        /// </summary>
-        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
-        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-        public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+        public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
         {
             writer.WritePropertyName(_name);
 
@@ -316,6 +311,16 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
                 value.WriteTo(writer, converters);
             else
                 writer.WriteNull();
+        }
+
+        /// <summary>
+        /// Writes this token to a <see cref="JsonWriter"/>.
+        /// </summary>
+        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+        public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+        {
+            WriteTo(writer, new JsonConverterCollection(converters));
         }
 
         internal override int GetDeepHashCode()

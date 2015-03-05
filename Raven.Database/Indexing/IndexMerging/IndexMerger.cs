@@ -374,6 +374,10 @@ namespace Raven.Database.Indexing.IndexMerging
 					DataDictionaryMerge(mergeSuggestion.MergedIndex.Suggestions, curProposedData.Suggestions);
 					DataDictionaryMerge(mergeSuggestion.MergedIndex.TermVectors, curProposedData.TermVectors);
 					DataDictionaryMerge(mergeSuggestion.MergedIndex.SpatialIndexes, curProposedData.SpatialIndexes);
+				    var fields1 = mergeSuggestion.MergedIndex.Fields;
+				    var fields2 = curProposedData.Index.Fields;
+                     mergeSuggestion.MergedIndex.Fields = fields1.Union(fields2).ToList();
+
 				}
 
 				mergeSuggestion.Collection = mergeProposal.ProposedForMerge[0].Collection ?? mergeProposal.ProposedForMerge[0].FromExpression.ToString();

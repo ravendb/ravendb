@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/database");
-import collection = require("models/collection");
+import resource = require("models/resource");
 
 class getOperationStatusCommand extends commandBase {
 
@@ -8,11 +7,11 @@ class getOperationStatusCommand extends commandBase {
 	* @param db - The database the collection belongs to.
 	* @param operationId - The id of the operation.
 	*/
-    constructor(private db: database, private operationId: number) {
+    constructor(private rs: resource, private operationId: number) {
         super();
 
-        if (!this.db) {
-            throw new Error("Must specify a database.");
+        if (!this.rs) {
+            throw new Error("Must specify a resource.");
         }
     }
 
@@ -23,7 +22,7 @@ class getOperationStatusCommand extends commandBase {
             id: this.operationId
         }
 
-        return this.query(url, args, this.db);
+        return this.query(url, args, this.rs);
     }
 }
 

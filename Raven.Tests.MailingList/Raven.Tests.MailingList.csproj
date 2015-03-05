@@ -203,6 +203,7 @@
     <Compile Include="FacetCountTest.cs" />
     <Compile Include="FacetHits.cs" />
     <Compile Include="FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
+    <Compile Include="FacetsMultipleAggregation.cs" />
     <Compile Include="FailingBulkInsertTest.cs" />
     <Compile Include="FailingChangesApiTests.cs" />
     <Compile Include="FailingIndex.cs" />

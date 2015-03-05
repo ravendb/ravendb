@@ -16,5 +16,10 @@ namespace Raven.Abstractions.Smuggler
 		public bool StripReplicationInformation { get; set; }
 
 		public bool ShouldDisableVersioningBundle { get; set; }
+
+		/// <summary>
+		/// When set ovverides the default document name.
+		/// </summary>
+		public string NoneDefualtFileName { get; set; }
     }
 }

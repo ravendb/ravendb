@@ -403,6 +403,13 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         public abstract void WriteTo(JsonWriter writer, params JsonConverter[] converters);
 
         /// <summary>
+        /// Writes this token to a <see cref="JsonWriter"/>.
+        /// </summary>
+        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+        public abstract void WriteTo(JsonWriter writer, JsonConverterCollection converters);
+
+        /// <summary>
         /// Returns the indented JSON for this token.
         /// </summary>
         /// <returns>

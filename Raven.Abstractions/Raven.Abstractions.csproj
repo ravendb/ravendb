@@ -288,6 +288,7 @@
     <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
+    <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
     <Compile Include="Json\JsonLinqEnumerableConverter.cs" />
     <Compile Include="Json\JsonTextReaderAsync.cs" />
@@ -430,6 +431,7 @@
     <Compile Include="Util\IndexPrettyPrinter.cs" />
     <Compile Include="Util\MD5.cs" />
     <Compile Include="Util\NetworkUtil.cs" />
+    <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />

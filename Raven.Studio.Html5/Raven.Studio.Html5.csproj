@@ -43,6 +43,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\importFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\renameFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsStatusCommand.ts" />
@@ -206,7 +207,10 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\exportFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\fileRenameDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\importFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\tasks.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\globalConfigVersioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
@@ -492,9 +496,12 @@
     <Content Include="App\views\globalConfigReplications.html" />
     <Content Include="App\views\globalConfigPeriodicExport.html" />
     <Content Include="App\views\globalConfig.html" />
+    <Content Include="App\views\filesystem\exportFilesystem.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
     <Content Include="App\views\filesystem\fileRenameDialog.html" />
+    <Content Include="App\views\filesystem\importFilesystem.html" />
     <Content Include="App\views\filesystem\settings.html" />
+    <Content Include="App\views\filesystem\tasks.html" />
     <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
     <Content Include="App\views\filesystem\versioning.html" />
     <Content Include="App\views\globalConfigSqlReplication.html" />
