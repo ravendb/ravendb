@@ -5,9 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 
 using Rachis;
@@ -16,10 +18,12 @@ using Rachis.Utils;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Raft.Commands;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Raft
@@ -74,7 +78,7 @@ namespace Raven.Database.Raft
 				case HttpStatusCode.NotAcceptable:
 					return CanJoinResult.InAnotherCluster;
 				default:
-					throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
+					throw await CreateErrorResponseExceptionAsync(response);
 			}
 		}
 
@@ -127,7 +131,7 @@ namespace Raven.Database.Raft
 			if (response.IsSuccessStatusCode)
 				return;
 
-			throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
+			throw await CreateErrorResponseExceptionAsync(response);
 		}
 
 		private Task SendClusterConfigurationInternalAsync(NodeConnectionInfo leaderNode, ClusterConfiguration configuration)
@@ -147,7 +151,7 @@ namespace Raven.Database.Raft
 			if (response.IsSuccessStatusCode)
 				return;
 
-			throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
+			throw await CreateErrorResponseExceptionAsync(response);
 		}
 
 		public async Task<CanJoinResult> SendCanJoinAsync(NodeConnectionInfo nodeConnectionInfo)
@@ -166,7 +170,7 @@ namespace Raven.Database.Raft
 				case HttpStatusCode.NotAcceptable:
 					return CanJoinResult.InAnotherCluster;
 				default:
-					throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
+					throw await CreateErrorResponseExceptionAsync(response);
 			}
 		}
 
@@ -184,9 +188,10 @@ namespace Raven.Database.Raft
 					await raftEngine.RemoveFromClusterAsync(node);
 				}
 			}
-			catch (NotLeadingException e)
+			catch (NotLeadingException)
 			{
 			}
+
 			await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(), node);
 		}
 
@@ -219,6 +224,52 @@ namespace Raven.Database.Raft
 
 				if (numberOfErrors >= numberOfRetries)
 					throw new InvalidOperationException("Could not connect to node.");
+			}
+		}
+
+		private static async Task<ErrorResponseException> CreateErrorResponseExceptionAsync(HttpResponseMessage response)
+		{
+			using (var sr = new StreamReader(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))
+			{
+				var readToEnd = sr.ReadToEnd();
+
+				if (string.IsNullOrWhiteSpace(readToEnd))
+					throw ErrorResponseException.FromResponseMessage(response);
+
+				RavenJObject ravenJObject;
+				try
+				{
+					ravenJObject = RavenJObject.Parse(readToEnd);
+				}
+				catch (Exception e)
+				{
+					throw new ErrorResponseException(response, readToEnd, e);
+				}
+
+				if (response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
+				{
+					throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(response));
+				}
+
+				if (ravenJObject.ContainsKey("Error"))
+				{
+					var sb = new StringBuilder();
+					foreach (var prop in ravenJObject)
+					{
+						if (prop.Key == "Error")
+							continue;
+
+						sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
+					}
+
+					if (sb.Length > 0)
+						sb.AppendLine();
+					sb.Append(ravenJObject.Value<string>("Error"));
+
+					throw new ErrorResponseException(response, sb.ToString(), readToEnd);
+				}
+
+				throw new ErrorResponseException(response, readToEnd);
 			}
 		}
 
