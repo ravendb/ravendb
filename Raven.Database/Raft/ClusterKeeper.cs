@@ -24,12 +24,12 @@ namespace Raven.Database.Raft
 	{
 		private DocumentDatabase systemDatabase;
 
-		private RavenRaftEngine raftEngine;
+		private ClusterManager clusterManager;
 
 		public void Execute(RavenDbServer server)
 		{
 			systemDatabase = server.SystemDatabase;
-			raftEngine = server.Options.RaftEngine;
+			clusterManager = server.Options.ClusterManager;
 
 			systemDatabase.Notifications.OnDocumentChange += (db, notification, metadata) =>
 			{
@@ -43,7 +43,7 @@ namespace Raven.Database.Raft
 				}
 			};
 
-			raftEngine.Engine.TopologyChanged += HandleTopologyChanges;
+			clusterManager.Engine.TopologyChanged += HandleTopologyChanges;
 
 			HandleClusterConfigurationChanges();
 		}
@@ -85,7 +85,7 @@ namespace Raven.Database.Raft
 
 		private void HandleClusterReplicationChanges(List<string> removedNodes, bool enableReplication)
 		{
-			var currentTopology = raftEngine.Engine.CurrentTopology;
+			var currentTopology = clusterManager.Engine.CurrentTopology;
 			var replicationDocumentJson = systemDatabase.Documents.Get(Constants.Global.ReplicationDestinationsDocumentName, null);
 			var replicationDocument = replicationDocumentJson != null
 				? replicationDocumentJson.DataAsJson.JsonDeserialization<ReplicationDocument>()
@@ -123,7 +123,7 @@ namespace Raven.Database.Raft
 					continue;
 				}
 
-				if (string.Equals(node.Name, raftEngine.Engine.Options.SelfConnection.Name, StringComparison.OrdinalIgnoreCase))
+				if (string.Equals(node.Name, clusterManager.Engine.Options.SelfConnection.Name, StringComparison.OrdinalIgnoreCase))
 					continue; // skipping self
 
 				if (destination == null)

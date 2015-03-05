@@ -18,7 +18,7 @@ namespace Raven.Database.Raft.Util
 {
 	public static class RaftHelper
 	{
-		public static bool IsActive(this RavenRaftEngine engine)
+		public static bool IsActive(this ClusterManager engine)
 		{
 			return engine.Engine.CurrentTopology.AllNodes.Any();
 		}
@@ -32,7 +32,7 @@ namespace Raven.Database.Raft.Util
 			return engine.CurrentTopology.AllNodes.Single(x => x.Name == leader);
 		}
 
-		public static bool IsLeader(this RavenRaftEngine engine)
+		public static bool IsLeader(this ClusterManager engine)
 		{
 			return engine.Engine.State == RaftEngineState.Leader;
 		}

@@ -78,9 +78,9 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			//TODO: check if paths in document are legal
 
-			if (dbDoc.IsClusterDatabase() && RaftEngine.IsActive())
+			if (dbDoc.IsClusterDatabase() && ClusterManager.IsActive())
 			{
-				await RaftEngine.Client.SendDatabaseUpdateAsync(id, dbDoc).ConfigureAwait(false);
+				await ClusterManager.Client.SendDatabaseUpdateAsync(id, dbDoc).ConfigureAwait(false);
 				return GetEmptyMessage();
 			}
 
@@ -103,7 +103,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			bool result;
 			var hardDelete = bool.TryParse(GetQueryStringValue("hard-delete"), out result) && result;
 
-			if (RaftEngine.IsActive() && IsSystemDatabase(id) == false)
+			if (ClusterManager.IsActive() && IsSystemDatabase(id) == false)
 			{
 				var documentJson = Database.Documents.Get(DatabaseHelper.GetDatabaseKey(id), null);
 				if (documentJson == null) 
@@ -112,7 +112,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
 				if (document.IsClusterDatabase())
 				{
-					await RaftEngine.Client.SendDatabaseDeleteAsync(id, hardDelete).ConfigureAwait(false);
+					await ClusterManager.Client.SendDatabaseDeleteAsync(id, hardDelete).ConfigureAwait(false);
 					return GetEmptyMessage();
 				}
 			}

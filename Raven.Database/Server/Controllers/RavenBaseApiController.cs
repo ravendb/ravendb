@@ -123,7 +123,7 @@ namespace Raven.Database.Server.Controllers
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
-			raftEngine = (RavenRaftEngine)controllerContext.Configuration.Properties[typeof(RavenRaftEngine)];
+			clusterManager = (ClusterManager)controllerContext.Configuration.Properties[typeof(ClusterManager)];
 			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
             maxSecondsForTaskToWaitForDatabaseToLoad = (int)controllerContext.Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
             //MaxSecondsForTaskToWaitForDatabaseToLoad
@@ -787,14 +787,14 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-		private RavenRaftEngine raftEngine;
-		public RavenRaftEngine RaftEngine
+		private ClusterManager clusterManager;
+		public ClusterManager ClusterManager
 		{
 			get
 			{
 				if (Configuration == null)
-					return raftEngine;
-				return (RavenRaftEngine)Configuration.Properties[typeof(RavenRaftEngine)];
+					return clusterManager;
+				return (ClusterManager)Configuration.Properties[typeof(ClusterManager)];
 			}
 		}
 

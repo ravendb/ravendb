@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 
-using Rachis;
-
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -22,7 +20,7 @@ namespace Raven.Database.Server
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
-		private readonly RavenRaftEngine raftEngine;
+		private readonly ClusterManager clusterManager;
 
 		private bool preventDisposing;
 
@@ -49,7 +47,7 @@ namespace Raven.Database.Server
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
-				raftEngine = RaftEngineFactory.Create(systemDatabase, databasesLandlord);
+				clusterManager = ClusterManagerFactory.Create(systemDatabase, databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}
@@ -90,9 +88,9 @@ namespace Raven.Database.Server
 			get { return requestManager; }
 		}
 
-		public RavenRaftEngine RaftEngine
+		public ClusterManager ClusterManager
 		{
-			get { return raftEngine; }
+			get { return clusterManager; }
 		}
 
 		public void Dispose()
@@ -109,7 +107,7 @@ namespace Raven.Database.Server
                                 LogManager.GetTarget<AdminLogsTarget>(),
                                 requestManager,
                                 countersLandlord,
-								raftEngine
+								clusterManager
 		                    };
 
             var errors = new List<Exception>();

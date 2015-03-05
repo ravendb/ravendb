@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenRaftEngine.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ClusterManager.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -9,16 +9,16 @@ using Rachis;
 
 namespace Raven.Database.Raft
 {
-	public class RavenRaftEngine : IDisposable
+	public class ClusterManager : IDisposable
 	{
 		public RaftEngine Engine { get; private set; }
 
-		public RaftHttpClient Client { get; private set; }
+		public ClusterManagementHttpClient Client { get; private set; }
 
-		public RavenRaftEngine(RaftEngine engine)
+		public ClusterManager(RaftEngine engine)
 		{
 			Engine = engine;
-			Client = new RaftHttpClient(engine);
+			Client = new ClusterManagementHttpClient(engine);
 		}
 
 		public void Dispose()

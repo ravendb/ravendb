@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RaftHttpClient.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ClusterManagementHttpClient.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -28,7 +28,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Raft
 {
-	public class RaftHttpClient
+	public class ClusterManagementHttpClient
 	{
 		private readonly RaftEngine raftEngine;
 
@@ -42,7 +42,7 @@ namespace Raven.Database.Raft
 
 		private readonly HttpClient httpClient;
 
-		public RaftHttpClient(RaftEngine raftEngine)
+		public ClusterManagementHttpClient(RaftEngine raftEngine)
 		{
 			this.raftEngine = raftEngine;
 			httpClient = new HttpClient();
@@ -63,7 +63,7 @@ namespace Raven.Database.Raft
 
 		public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
 		{
-			var url = leaderNode.Uri.AbsoluteUri + "admin/raft/join";
+			var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/join";
 			var content = new JsonContent(RavenJToken.FromObject(newNode));
 
 			var response = await ExecuteWithRetriesAsync(() => httpClient.PostAsync(url, content).ConfigureAwait(false));
@@ -126,7 +126,7 @@ namespace Raven.Database.Raft
 
 		private async Task SendDatabaseDeleteInternalAsync(NodeConnectionInfo node, string databaseName, bool hardDelete)
 		{
-			var url = node.Uri.AbsoluteUri + "admin/raft/commands/cluster/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
+			var url = node.Uri.AbsoluteUri + "admin/cluster/commands/cluster/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
 			var response = await httpClient.DeleteAsync(url).ConfigureAwait(false);
 			if (response.IsSuccessStatusCode)
 				return;
@@ -136,7 +136,7 @@ namespace Raven.Database.Raft
 
 		private Task SendClusterConfigurationInternalAsync(NodeConnectionInfo leaderNode, ClusterConfiguration configuration)
 		{
-			return PutAsync(leaderNode, "admin/raft/commands/cluster/configuration", configuration);
+			return PutAsync(leaderNode, "admin/cluster/commands/cluster/configuration", configuration);
 		}
 
 		private Task SendDatabaseUpdateInternalAsync(NodeConnectionInfo leaderNode, string databaseName, DatabaseDocument document)
@@ -156,7 +156,7 @@ namespace Raven.Database.Raft
 
 		public async Task<CanJoinResult> SendCanJoinAsync(NodeConnectionInfo nodeConnectionInfo)
 		{
-			var url = nodeConnectionInfo.Uri.AbsoluteUri + "admin/raft/canJoin?topologyId=" + raftEngine.CurrentTopology.TopologyId;
+			var url = nodeConnectionInfo.Uri.AbsoluteUri + "admin/cluster/canJoin?topologyId=" + raftEngine.CurrentTopology.TopologyId;
 
 			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url).ConfigureAwait(false));
 
@@ -197,7 +197,7 @@ namespace Raven.Database.Raft
 
 		public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
 		{
-			var url = leavingNode.Uri.AbsoluteUri + "admin/raft/leave?name=" + leavingNode.Name;
+			var url = leavingNode.Uri.AbsoluteUri + "admin/cluster/leave?name=" + leavingNode.Name;
 			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
 			if (response.IsSuccessStatusCode)
 				return;

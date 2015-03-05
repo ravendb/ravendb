@@ -28,7 +28,7 @@ namespace Raven.Tests.Raft
 			using (clusterStores[1])
 			using (clusterStores[2])
 			{
-				var client = servers[0].Options.RaftEngine.Client;
+				var client = servers[0].Options.ClusterManager.Client;
 				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
 				clusterStores.ForEach(store =>
@@ -50,7 +50,7 @@ namespace Raven.Tests.Raft
 			using (var store2 = clusterStores[1])
 			using (var store3 = clusterStores[2])
 			{
-				var client = servers[0].Options.RaftEngine.Client;
+				var client = servers[0].Options.ClusterManager.Client;
 				await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
 				WaitForDocument(store1.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromSeconds(15));

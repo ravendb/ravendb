@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RaftEngineFactory.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ClusterManagerFactory.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -23,9 +23,9 @@ using Voron;
 
 namespace Raven.Database.Raft
 {
-	public static class RaftEngineFactory
+	public static class ClusterManagerFactory
 	{
-		public static RavenRaftEngine Create(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord)
+		public static ClusterManager Create(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord)
 		{
 			if (systemDatabase == null)
 				throw new ArgumentNullException("systemDatabase");
@@ -75,10 +75,10 @@ namespace Raven.Database.Raft
 				raftEngineOptions.HeartbeatTimeout *= 5;
 			}
 
-			return new RavenRaftEngine(new RaftEngine(raftEngineOptions));
+			return new ClusterManager(new RaftEngine(raftEngineOptions));
 		}
 
-		public static void InitializeTopology(NodeConnectionInfo nodeConnection, RavenRaftEngine engine)
+		public static void InitializeTopology(NodeConnectionInfo nodeConnection, ClusterManager engine)
 		{
 			var topology = new Topology(Guid.Parse(nodeConnection.Name), new List<NodeConnectionInfo> { nodeConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
 
@@ -93,7 +93,7 @@ namespace Raven.Database.Raft
 			engine.Engine.CurrentLeader = null;
 		}
 
-		public static void InitializeTopology(DocumentDatabase systemDatabase, RavenRaftEngine engine)
+		public static void InitializeTopology(DocumentDatabase systemDatabase, ClusterManager engine)
 		{
 			InitializeTopology(engine.Engine.Options.SelfConnection, engine);
 		}
