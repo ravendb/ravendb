@@ -102,7 +102,7 @@ namespace Raven.Database.Raft.Storage
 			}
 			catch (Exception e)
 			{
-				log.ErrorException("Could not apply command.", e);
+				log.ErrorException(string.Format("Could not apply command. Type: {0}. Index: {1}.", cmd.GetType(), cmd.AssignedIndex), e);
 				throw;
 			}
 		}

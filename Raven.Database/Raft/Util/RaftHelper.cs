@@ -66,7 +66,7 @@ namespace Raven.Database.Raft.Util
 
 		public static string GetNormalizedNodeUrl(String url)
 		{
-			return GetNodeUrl(url).AbsoluteUri.ToLowerInvariant();
+			return GetNodeUrl(url).AbsoluteUri.ToLower();
 		}
 
 		public static Uri GetNodeUrl(string url)
