@@ -191,7 +191,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                     break;
 #endif
                 case JsonContractType.Linq:
-                    ((JToken)value).WriteTo(writer, Serializer.Converters.ToArray());
+                    ((JToken)value).WriteTo(writer, Serializer.Converters);
                     break;
             }
         }

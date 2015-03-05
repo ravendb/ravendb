@@ -34,6 +34,7 @@ using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Runtime.Serialization;
 using ErrorEventArgs = Raven.Imports.Newtonsoft.Json.Serialization.ErrorEventArgs;
+using Raven.Abstractions.Json;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -285,8 +286,13 @@ namespace Raven.Imports.Newtonsoft.Json
             {
                 if (_converters == null)
                     _converters = new JsonConverterCollection();
+                _converters = JsonConverterCollection.Empty;
 
                 return _converters;
+            }
+            set
+            {
+                _converters = value;
             }
         }
 
@@ -524,10 +530,15 @@ namespace Raven.Imports.Newtonsoft.Json
             {
                 // insert settings converters at the beginning so they take precedence
                 // if user wants to remove one of the default converters they will have to do it manually
+                var converters = new JsonConverterCollection(serializer.Converters);
                 for (int i = 0; i < settings.Converters.Count; i++)
                 {
                     serializer.Converters.Insert(i, settings.Converters[i]);
+                    converters.Insert(i, settings.Converters[i]);
                 }
+
+                serializer.Converters = converters;
+
             }
 
             // serializer specific
@@ -956,27 +967,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
         internal JsonConverter GetMatchingConverter(Type type)
         {
-            return GetMatchingConverter(_converters, type);
-        }
-
-        internal static JsonConverter GetMatchingConverter(IList<JsonConverter> converters, Type objectType)
-        {
-#if DEBUG
-            ValidationUtils.ArgumentNotNull(objectType, "objectType");
-#endif
-
-            if (converters != null)
-            {
-                for (int i = 0; i < converters.Count; i++)
-                {
-                    JsonConverter converter = converters[i];
-
-                    if (converter.CanConvert(objectType))
-                        return converter;
-                }
-            }
-
-            return null;
+            return JsonConverterCache.GetMatchingConverter(_converters, type);
         }
 
         internal void OnError(ErrorEventArgs e)

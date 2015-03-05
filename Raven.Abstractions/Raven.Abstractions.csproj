@@ -288,6 +288,7 @@
     <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
+    <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
     <Compile Include="Json\JsonLinqEnumerableConverter.cs" />
     <Compile Include="Json\JsonTextReaderAsync.cs" />
