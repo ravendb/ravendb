@@ -152,7 +152,7 @@ namespace Raven.Database.Raft
 
 		public async Task<CanJoinResult> SendCanJoinAsync(NodeConnectionInfo nodeConnectionInfo)
 		{
-			var url = nodeConnectionInfo.Uri.AbsoluteUri + "admin/raft/canJoin?name=" + SelfConnection.Name;
+			var url = nodeConnectionInfo.Uri.AbsoluteUri + "admin/raft/canJoin?topologyId=" + raftEngine.CurrentTopology.TopologyId;
 
 			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url).ConfigureAwait(false));
 

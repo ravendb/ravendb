@@ -162,10 +162,10 @@ namespace Raven.Database.Raft.Controllers
 
 		[HttpGet]
 		[RavenRoute("admin/raft/canJoin")]
-		public Task<HttpResponseMessage> CanJoin([FromUri] string name)
+		public Task<HttpResponseMessage> CanJoin([FromUri] Guid topologyId)
 		{
 			var topology = RaftEngine.Engine.CurrentTopology;
-			if (topology.Contains(name))
+			if (topology.TopologyId == topologyId)
 				return GetEmptyMessageAsTask(HttpStatusCode.NotModified);
 
 			if (topology.AllNodes.Any())
