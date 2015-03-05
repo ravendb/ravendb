@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Raft.Commands;
@@ -31,7 +33,7 @@ namespace Raven.Database.Raft.Storage.Handlers
 			{
 				var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
 				if (document.IsClusterDatabase() == false)
-					return; // TODO [ppekrol] behavior here?
+					throw new InvalidOperationException(string.Format("Local database '{0}' is not cluster-wide.", DatabaseHelper.GetDatabaseName(command.Document.Id)));
 			}
 
 			Landlord.Protect(command.Document);
