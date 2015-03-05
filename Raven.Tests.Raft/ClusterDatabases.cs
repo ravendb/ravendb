@@ -3,8 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+
 using Raven.Abstractions.Data;
 
+using Xunit;
 using Xunit.Extensions;
 
 namespace Raven.Tests.Raft
@@ -27,8 +30,7 @@ namespace Raven.Tests.Raft
 																	   Id = "Northwind",
 																	   Settings =
 					                                                   {
-						                                                   {"Raven/DataDir", "~/Databases/Northwind"},
-						                                                   {Constants.Cluster.ClusterDatabaseMarker, "true"}
+						                                                   {"Raven/DataDir", "~/Databases/Northwind"}
 					                                                   }
 																   });
 
@@ -55,7 +57,7 @@ namespace Raven.Tests.Raft
 					Settings =
 					{
 						{"Raven/DataDir", "~/Databases/Northwind"},
-						{Constants.Cluster.ClusterDatabaseMarker, "true"}
+						{Constants.Cluster.NonClusterDatabaseMarker, "false"}
 					}
 				});
 
@@ -66,6 +68,37 @@ namespace Raven.Tests.Raft
 				store1.DatabaseCommands.GlobalAdmin.DeleteDatabase(key);
 
 				clusterStores.ForEach(store => WaitForDelete(store.DatabaseCommands.ForSystemDatabase(), key));
+			}
+		}
+
+		[Fact]
+		public void NonClusterDatabasesShouldNotBeCreatedOnAllNodes()
+		{
+			var clusterStores = CreateRaftCluster(3);
+
+			using (var store1 = clusterStores[0])
+			using (var store2 = clusterStores[1])
+			using (var store3 = clusterStores[2])
+			{
+				store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+				{
+					Id = "Northwind",
+					Settings =
+					{
+						{"Raven/DataDir", "~/Databases/Northwind"},
+						{Constants.Cluster.NonClusterDatabaseMarker, "true"}
+					}
+				});
+
+				var key = Constants.RavenDatabasesPrefix + "Northwind";
+
+				Assert.NotNull(store1.DatabaseCommands.ForSystemDatabase().Get(key));
+
+				var e = Assert.Throws<Exception>(() => WaitForDocument(store2.DatabaseCommands.ForSystemDatabase(), key, TimeSpan.FromSeconds(10)));
+				Assert.Equal("WaitForDocument failed", e.Message);
+
+				e = Assert.Throws<Exception>(() => WaitForDocument(store3.DatabaseCommands.ForSystemDatabase(), key, TimeSpan.FromSeconds(10)));
+				Assert.Equal("WaitForDocument failed", e.Message);
 			}
 		}
 	}

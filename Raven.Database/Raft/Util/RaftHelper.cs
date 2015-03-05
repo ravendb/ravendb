@@ -46,10 +46,16 @@ namespace Raven.Database.Raft.Util
 		{
 			string value;
 			bool result;
-			if (document.Settings.TryGetValue(Constants.Cluster.ClusterDatabaseMarker, out value) && bool.TryParse(value, out result))
-				return result;
+			if (document.Settings.TryGetValue(Constants.Cluster.NonClusterDatabaseMarker, out value) == false)
+				return true;
 
-			return false;
+			if (bool.TryParse(value, out result) == false) 
+				return true;
+
+			if (result) 
+				return false;
+
+			return true;
 		}
 
 		public static void AssertClusterDatabase(this DatabaseDocument document)

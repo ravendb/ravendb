@@ -274,7 +274,7 @@ namespace Raven.Abstractions.Data
 	    {
 			public const string ClusterConfigurationDocumentKey = "Raven/Cluster/Configuration";
 
-		    public const string ClusterDatabaseMarker = "Raven-Cluster-Database";
+		    public const string NonClusterDatabaseMarker = "Raven-Non-Cluster-Database";
 	    }
 	}
 }
