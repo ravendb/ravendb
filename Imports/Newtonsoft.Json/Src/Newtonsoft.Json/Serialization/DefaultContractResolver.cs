@@ -48,6 +48,7 @@ using System.Runtime.CompilerServices;
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
+using Raven.Abstractions.Json;
 #endif
 
 namespace Raven.Imports.Newtonsoft.Json.Serialization
@@ -92,7 +93,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     {
         get { return _instance; }
     }
-    private static readonly IList<JsonConverter> BuiltInConverters = new List<JsonConverter>
+    private static readonly JsonConverterCollection BuiltInConverters = new JsonConverterCollection
       {
 #if !(SILVERLIGHT || NET20 || NETFX_CORE || PORTABLE40 || PORTABLE)
         new EntityKeyMemberConverter(),
@@ -115,6 +116,11 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         new BsonObjectIdConverter(),
         new RegexConverter()
       };
+
+    static DefaultContractResolver()
+    {
+        BuiltInConverters.Freeze();
+    }
 
     private static Dictionary<ResolverContractKey, JsonContract> _sharedContractCache;
     private static readonly object _typeContractCacheLock = new object();
@@ -595,8 +601,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
       contract.Converter = ResolveContractConverter(contract.NonNullableUnderlyingType);
 
-      // then see whether object is compadible with any of the built in converters
-      contract.InternalConverter = JsonSerializer.GetMatchingConverter(BuiltInConverters, contract.NonNullableUnderlyingType);
+      // then see whether object is compatible with any of the built in converters
+      contract.InternalConverter = JsonConverterCache.GetMatchingConverter(BuiltInConverters, contract.NonNullableUnderlyingType);
 
       if (ReflectionUtils.HasDefaultConstructor(contract.CreatedType, true)
         || contract.CreatedType.IsValueType())

@@ -8,6 +8,7 @@ using Raven.Client.Indexes;
 using Raven.Tests.Common;
 using Raven.Tests.Spatial.JsonConverters.Wkt;
 using Xunit;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Tests.Spatial
 {
@@ -16,7 +17,7 @@ namespace Raven.Tests.Spatial
 		public IDocumentStore NewDocumentStore()
 		{
 			var store = new EmbeddableDocumentStore {RunInMemory = true};
-			store.Conventions.CustomizeJsonSerializer = x => x.Converters.Add(new WktConverter());
+			store.Conventions.CustomizeJsonSerializer = x => x.Converters = new JsonConverterCollection(x.Converters) { new WktConverter() };
 			store.Initialize();
 			store.ExecuteIndex(new CartesianIndex());
 			return store;
