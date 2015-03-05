@@ -54,6 +54,9 @@ namespace Raven.Database.Raft
 
 		private void HandleTopologyChanges(TopologyChangeCommand command)
 		{
+			if (RaftHelper.HasDifferentNodes(command) == false)
+				return;
+
 			if (command.Previous == null)
 			{
 				HandleClusterConfigurationChanges();

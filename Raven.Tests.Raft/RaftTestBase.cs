@@ -120,9 +120,9 @@ namespace Raven.Tests.Raft
 					Name = RaftHelper.GetNodeName(n.SystemDatabase.TransactionalStorage.Id),
 					Uri = RaftHelper.GetNodeUrl(n.SystemDatabase.Configuration.ServerUrl)
 				}).Wait(10000));
+				Assert.True(allNodesFinishedJoining.Wait(10000));
+				allNodesFinishedJoining.Reset();
 			}
-
-			Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfExtraNodes));
 
 			return nodes
 				.Select(node => NewRemoteDocumentStore(ravenDbServer: node))

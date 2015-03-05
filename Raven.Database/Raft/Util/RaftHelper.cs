@@ -8,9 +8,11 @@ using System;
 using System.Linq;
 
 using Rachis;
+using Rachis.Commands;
 using Rachis.Transport;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Raft.Util
 {
@@ -83,6 +85,25 @@ namespace Raven.Database.Raft.Util
 		public static string GetNodeName(Guid name)
 		{
 			return name.ToString();
+		}
+
+		/// <summary>
+		/// Purpose of this methos is to detect if previous topo has difference with new topo, but node type(voting, promotable) is ignored.
+		/// </summary>
+		/// <param name="command"></param>
+		/// <returns></returns>
+		public static bool HasDifferentNodes(TopologyChangeCommand command)
+		{
+			if (command.Previous == null && command.Requested == null)
+				return false;
+			if (command.Previous == null || command.Requested == null)
+				return true;
+			var prevAllNodes = command.Previous.AllNodes.ToHashSet();
+			var requestedAllNodes = command.Requested.AllNodes.ToHashSet();
+			if (prevAllNodes.Count != requestedAllNodes.Count)
+				return true;
+			prevAllNodes.SymmetricExceptWith(requestedAllNodes);
+			return prevAllNodes.Any();
 		}
 	}
 }
