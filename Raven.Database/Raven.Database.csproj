@@ -272,6 +272,10 @@
     <Compile Include="Raft\Dto\ClusterConfiguration.cs" />
     <Compile Include="Raft\RaftHttpClient.cs" />
     <Compile Include="Raft\Storage\ClusterStateMachine.cs" />
+    <Compile Include="Raft\Storage\Handlers\ClusterConfigurationUpdateCommandHandler.cs" />
+    <Compile Include="Raft\Storage\Handlers\CommandHandler.cs" />
+    <Compile Include="Raft\Storage\Handlers\DatabaseDeletedCommandHandler.cs" />
+    <Compile Include="Raft\Storage\Handlers\DatabaseUpdateCommandHandler.cs" />
     <Compile Include="Raft\Util\RaftHelper.cs" />
     <Compile Include="Raft\RaftEngineFactory.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />

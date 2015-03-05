@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 
@@ -12,10 +13,10 @@ using Rachis.Interfaces;
 using Rachis.Messages;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
 using Raven.Database.Raft.Commands;
-using Raven.Database.Raft.Util;
+using Raven.Database.Raft.Storage.Handlers;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -25,11 +26,13 @@ namespace Raven.Database.Raft.Storage
 {
 	public class ClusterStateMachine : IRaftStateMachine
 	{
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		private readonly PutSerialLock locker = new PutSerialLock();
 
 		private readonly DocumentDatabase database;
 
-		private readonly DatabasesLandlord landlord;
+		private readonly Dictionary<Type, CommandHandler> handlers = new Dictionary<Type, CommandHandler>();
 
 		private long lastAppliedIndex;
 
@@ -41,9 +44,12 @@ namespace Raven.Database.Raft.Storage
 			DatabaseHelper.AssertSystemDatabase(systemDatabase);
 
 			database = systemDatabase;
-			landlord = databasesLandlord;
 
 			LastAppliedIndex = ReadLastAppliedIndex();
+
+			handlers.Add(typeof(ClusterConfigurationUpdateCommand), new ClusterConfigurationUpdateCommandHandler(systemDatabase, databasesLandlord));
+			handlers.Add(typeof(DatabaseDeletedCommand), new DatabaseDeletedCommandHandler(systemDatabase, databasesLandlord));
+			handlers.Add(typeof(DatabaseUpdateCommand), new DatabaseUpdateCommandHandler(systemDatabase, databasesLandlord));
 		}
 
 		private long ReadLastAppliedIndex()
@@ -80,83 +86,25 @@ namespace Raven.Database.Raft.Storage
 
 		public void Apply(LogEntry entry, Command cmd)
 		{
-			using (locker.Lock())
+			try
 			{
-				database.TransactionalStorage.Batch(accessor =>
+				using (locker.Lock())
 				{
-					try
+					database.TransactionalStorage.Batch(accessor =>
 					{
-						var clusterConfigurationUpdateCommand = cmd as ClusterConfigurationUpdateCommand;
-						if (clusterConfigurationUpdateCommand != null)
-						{
-							Handle(clusterConfigurationUpdateCommand);
-							return;
-						}
+						CommandHandler handler;
+						if (handlers.TryGetValue(cmd.GetType(), out handler))
+							handler.Handle(cmd);
 
-						var databaseUpdateCommand = cmd as DatabaseUpdateCommand;
-						if (databaseUpdateCommand != null)
-						{
-							Handle(databaseUpdateCommand);
-							return;
-						}
-
-						var databaseDeleteCommand = cmd as DatabaseDeletedCommand;
-						if (databaseDeleteCommand != null)
-						{
-							Handle(databaseDeleteCommand);
-							return;
-						}
-					}
-					finally
-					{
 						UpdateLastAppliedIndex(cmd.AssignedIndex, accessor);
-					}
-				});
+					});
+				}
 			}
-		}
-
-		private void Handle(DatabaseDeletedCommand command)
-		{
-			var key = DatabaseHelper.GetDatabaseKey(command.Name);
-
-			var documentJson = database.Documents.Get(key, null);
-			if (documentJson == null)
-				return;
-
-			var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
-			if (document.IsClusterDatabase() == false)
-				return; // ignore non-cluster databases
-
-			var configuration = landlord.CreateTenantConfiguration(DatabaseHelper.GetDatabaseName(command.Name), true);
-			if (configuration == null)
-				return;
-
-			database.Documents.Delete(key, null, null);
-
-			if (command.HardDelete)
-				DatabaseHelper.DeleteDatabaseFiles(configuration);
-		}
-
-		private void Handle(DatabaseUpdateCommand command)
-		{
-			command.Document.AssertClusterDatabase();
-
-			var key = DatabaseHelper.GetDatabaseKey(command.Document.Id);
-
-			var documentJson = database.Documents.Get(key, null);
-			if (documentJson != null)
+			catch (Exception e)
 			{
-				var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
-				if (document.IsClusterDatabase() == false)
-					return; // TODO [ppekrol] behavior here?
+				log.ErrorException("Could not apply command.", e);
+				throw;
 			}
-
-			database.Documents.Put(key, null, RavenJObject.FromObject(command.Document), new RavenJObject(), null);
-		}
-
-		private void Handle(ClusterConfigurationUpdateCommand command)
-		{
-			database.Documents.Put(Constants.Cluster.ClusterConfigurationDocumentKey, null, RavenJObject.FromObject(command.Configuration), new RavenJObject(), null);
 		}
 
 		public bool SupportSnapshots
