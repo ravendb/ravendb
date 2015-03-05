@@ -83,6 +83,8 @@ namespace Raven.Client.FileSystem
         /// <value></value>
         public int NumberOfRequests { get; private set; }
 
+		public bool UseOptimisticConcurrency { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryFilesSessionOperations"/> class.
 		/// </summary>
@@ -317,7 +319,7 @@ namespace Raven.Client.FileSystem
 
                 if (EntityChanged(fileHeader) && !UploadRegisteredForFile(fileHeader.FullPath, operations))
                 {
-                    changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata, fileHeader.Etag));
+                    changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata, UseOptimisticConcurrency ? fileHeader.Etag : null));
                     changes.Entities.Add(fileHeader.FullPath);
                 }
             }

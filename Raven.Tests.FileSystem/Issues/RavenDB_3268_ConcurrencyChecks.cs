@@ -17,23 +17,18 @@ namespace Raven.Tests.FileSystem.Issues
 		[Theory]
 		[InlineData("voron")]
 		[InlineData("esent")]
-		public async Task CanUseOptimisticConcurrency_ShouldThrowOnMetadataUpdate(string storage)
+		public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnMetadataUpdate(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
 			{
 				using (var session = store.OpenAsyncSession())
 				{
+					Assert.False(session.Advanced.UseOptimisticConcurrency);
+					session.Advanced.UseOptimisticConcurrency = true;
+
 					session.RegisterUpload("test.file", new MemoryStream());
 
 					await session.SaveChangesAsync();
-				}
-
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
-					session.Advanced.UseOptimisticConcurrency = true; // TODO arek
-
-					var file = await session.LoadFileAsync("test.file");
 
 					using (var otherSession = store.OpenAsyncSession())
 					{
@@ -43,6 +38,8 @@ namespace Raven.Tests.FileSystem.Issues
 
 						await otherSession.SaveChangesAsync();
 					}
+
+					var file = await session.LoadFileAsync("test.file");
 
 					file.Metadata.Add("New2", "Record2");
 
@@ -63,54 +60,7 @@ namespace Raven.Tests.FileSystem.Issues
 		[Theory]
 		[InlineData("voron")]
 		[InlineData("esent")]
-		public async Task CanUseOptimisticConcurrency_ShouldThrow_MetadataUpdate_2(string storage)
-		{
-			using (var store = NewStore(requestedStorage: storage))
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-
-				}
-
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
-					session.Advanced.UseOptimisticConcurrency = true; // TODO arek
-
-					session.RegisterUpload("test.file", new MemoryStream());
-
-					await session.SaveChangesAsync();
-
-					using (var otherSession = store.OpenAsyncSession())
-					{
-						var file2 = await otherSession.LoadFileAsync("test.file");
-
-						file2.Metadata.Add("New", "Record");
-
-						await otherSession.SaveChangesAsync();
-					}
-
-					var file = await session.LoadFileAsync("test.file");
-					file.Metadata.Add("New2", "Record2");
-
-					try
-					{
-						await session.SaveChangesAsync();
-
-						Assert.False(true, "Expected to throw ConcurrencyException while it didn't throw it");
-					}
-					catch (ConcurrencyException ex)
-					{
-						Assert.Equal("POST attempted on file '/test.file' using a non current etag", ex.Message);
-					}
-				}
-			}
-		}
-
-		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
-		public async Task ShouldNotThrowIfOptimisticConcurrencyDisabledMetadataUpdate(string storage)
+		public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnMetadataUpdate(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
 			{
