@@ -13,7 +13,7 @@ class getClusterTopologyCommand extends commandBase {
     }
 
     execute(): JQueryPromise<topology> {
-        return this.query("/raft/topology", null, this.ownerDb, x => new topology(x));
+        return this.query("/cluster/topology", null, this.ownerDb, x => new topology(x));
 
     }
 }

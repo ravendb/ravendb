@@ -81,7 +81,7 @@ namespace Raven.Tests.Raft
 		}
 
 		[Fact]
-		public async Task CanCreateExtendAndRemoveFromCluster()
+		public void CanCreateExtendAndRemoveFromCluster()
 		{
 			var clusterStores = CreateRaftCluster(3); // 3 nodes
 

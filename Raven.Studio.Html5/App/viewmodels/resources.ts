@@ -325,18 +325,21 @@ class resources extends viewModelBase {
             createResourceViewModel.createDatabasePart
                 .creationTask
                 .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, databaseTemp: string, storageEngine: string, incrementalBackup: boolean
-                    , alertTimeout: string, alertRecurringTimeout: string) => {
+                    , alertTimeout: string, alertRecurringTimeout: string, clusterWide: boolean) => {
                     var settings = {
                         "Raven/ActiveBundles": bundles.join(";")
                     };
                     if (storageEngine) {
                         settings["Raven/StorageTypeName"] = storageEngine;
                     }
+                    if (!clusterWide) {
+                        settings["Raven-Non-Cluster-Database"] = "true";
+                    }
                     if (incrementalBackup) {
                         if (storageEngine === "esent") {
-                            settings["Raven/Esent/CircularLog"] = "false"
+                            settings["Raven/Esent/CircularLog"] = "false";
                         } else {
-                            settings["Raven/Voron/AllowIncrementalBackups"] = "true"
+                            settings["Raven/Voron/AllowIncrementalBackups"] = "true";
                         }
                     }
                     if (!this.isEmptyStringOrWhitespace(databaseTemp)) {
