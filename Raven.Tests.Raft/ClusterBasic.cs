@@ -79,5 +79,25 @@ namespace Raven.Tests.Raft
 				Assert.False(configuration.EnableReplication);
 			}
 		}
+
+		[Fact]
+		public async Task CanCreateExtendAndRemoveFromCluster()
+		{
+			var clusterStores = CreateRaftCluster(3); // 3 nodes
+
+			RemoveFromCluster(servers[1]); // 2 nodes
+
+			ExtendRaftCluster(3); // 5 nodes
+
+			ExtendRaftCluster(2); // 7 nodes
+
+			for (var i = 0; i < servers.Count; i++)
+			{
+				if (i==1) // already deleted
+					continue;
+
+				RemoveFromCluster(servers[i]);	
+			}
+		}
 	}
 }
