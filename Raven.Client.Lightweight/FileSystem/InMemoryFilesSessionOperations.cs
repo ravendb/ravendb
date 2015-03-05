@@ -336,8 +336,17 @@ namespace Raven.Client.FileSystem
                 var savedEntity = data.Entities[i];
 
 				object existingEntity;
-                if (entitiesByKey.TryGetValue(savedEntity, out existingEntity) == false)
+				if (entitiesByKey.TryGetValue(savedEntity, out existingEntity) == false)
+				{
+					var operation = data.Operations[i];
+
+					if (operation is UploadFileOperation || operation is RenameFileOperation)
+					{
+						AddToCache(result.Name, result);
+					}
+
 					continue;
+				}
 
                 var existingFileHeader = (FileHeader)existingEntity;
                 existingFileHeader.Metadata = result.Metadata;

@@ -17,7 +17,7 @@ namespace Raven.Tests.FileSystem.Issues
 		[Theory]
 		[InlineData("voron")]
 		[InlineData("esent")]
-		public async Task CanUseOptimisticConcurrency_ShouldThrow_MetadataUpdate(string storage)
+		public async Task CanUseOptimisticConcurrency_ShouldThrowOnMetadataUpdate(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
 			{
