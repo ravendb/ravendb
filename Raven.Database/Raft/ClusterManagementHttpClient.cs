@@ -8,7 +8,6 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -66,7 +65,7 @@ namespace Raven.Database.Raft
 			var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/join";
 			var content = new JsonContent(RavenJToken.FromObject(newNode));
 
-			var response = await ExecuteWithRetriesAsync(() => httpClient.PostAsync(url, content).ConfigureAwait(false));
+			var response = await httpClient.PostAsync(url, content).ConfigureAwait(false);
 
 			if (response.IsSuccessStatusCode)
 				return CanJoinResult.CanJoin;
@@ -141,7 +140,7 @@ namespace Raven.Database.Raft
 
 		private Task SendDatabaseUpdateInternalAsync(NodeConnectionInfo leaderNode, string databaseName, DatabaseDocument document)
 		{
-			return PutAsync(leaderNode, "admin/raft/commands/cluster/database/" + Uri.EscapeDataString(databaseName), document);
+			return PutAsync(leaderNode, "admin/cluster/commands/cluster/database/" + Uri.EscapeDataString(databaseName), document);
 		}
 
 		private async Task PutAsync(NodeConnectionInfo node, string action, object content)
@@ -158,7 +157,7 @@ namespace Raven.Database.Raft
 		{
 			var url = nodeConnectionInfo.Uri.AbsoluteUri + "admin/cluster/canJoin?topologyId=" + raftEngine.CurrentTopology.TopologyId;
 
-			var response = await ExecuteWithRetriesAsync(() => httpClient.GetAsync(url).ConfigureAwait(false));
+			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
 
 			if (response.IsSuccessStatusCode)
 				return CanJoinResult.CanJoin;
@@ -202,29 +201,7 @@ namespace Raven.Database.Raft
 			if (response.IsSuccessStatusCode)
 				return;
 
-			throw new NotImplementedException(response.StatusCode.ToString());	// TODO [ppekrol]
-		}
-
-		private static async Task<HttpResponseMessage> ExecuteWithRetriesAsync(Func<ConfiguredTaskAwaitable<HttpResponseMessage>> action, int numberOfRetries = 3)
-		{
-			if (numberOfRetries <= 0)
-				throw new InvalidOperationException("Number of tries must be greater than 0.");
-
-			var numberOfErrors = 0;
-			while (true)
-			{
-				var response = await action();
-				if (response.IsSuccessStatusCode)
-					return response;
-
-				if (response.StatusCode != HttpStatusCode.ServiceUnavailable)
-					return response;
-
-				numberOfErrors++;
-
-				if (numberOfErrors >= numberOfRetries)
-					throw new InvalidOperationException("Could not connect to node.");
-			}
+			throw await CreateErrorResponseExceptionAsync(response);
 		}
 
 		private static async Task<ErrorResponseException> CreateErrorResponseExceptionAsync(HttpResponseMessage response)
