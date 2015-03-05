@@ -4,11 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -26,7 +24,7 @@ namespace Raven.Tests.FileSystem.Migration
 {
 	public class MigrationTests : RavenFilesTestBase
 	{
-		[Theory(Skip = "Use this test only to create backups")]
+		[Theory(Skip = "Use this test only to create backups for migration tests")]
 		[PropertyData("Storages")]
 		public async Task CreateDataToMigrate(string storage)
 		{
@@ -89,25 +87,24 @@ namespace Raven.Tests.FileSystem.Migration
 
 				using (var store = NewStore(runInMemory: false))
 				{
-					await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
+					var opId = await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
 					{
 						BackupLocation = sourcePath,
 						FilesystemName = "source",
 						FilesystemLocation = NewDataPath("source-data")
 					});
 
-					SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("source"),
-							Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(5));
+					await WaitForRestoreAsync(store.Url, opId);
 
-					await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
+
+					opId= await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
 					{
 						BackupLocation = destinationPath,
 						FilesystemName = "destination",
 						FilesystemLocation = NewDataPath("destination-data")
 					});
 
-					SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("source"),
-							Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(5));
+					await WaitForRestoreAsync(store.Url, opId);
 
 					var source = store.AsyncFilesCommands.ForFileSystem("source");
 					var destination = store.AsyncFilesCommands.ForFileSystem("destination");
@@ -210,6 +207,11 @@ namespace Raven.Tests.FileSystem.Migration
 				stream = await destination.DownloadAsync(FileName(i), metadata);
 
 				Assert.Equal(stream.GetMD5Hash(), CreateUniformFileStream(i, (char) i).GetMD5Hash());
+
+				var searchResult = await destination.SearchAsync("ETag:" + metadata.Value[Constants.MetadataEtagField]);
+
+				Assert.Equal(1, searchResult.Files.Count);
+				Assert.Equal(1, searchResult.FileCount);
 
 				var config = await destination.Configuration.GetKeyAsync<RavenJObject>(ConfigurationName(i));
 
