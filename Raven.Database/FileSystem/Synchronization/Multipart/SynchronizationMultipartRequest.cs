@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection;
@@ -7,7 +8,6 @@ using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.FileSystem.Util;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -59,11 +59,9 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 
 			using (var request = commands.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", "POST", credentials, conventions)))
 			{
-				// REVIEW: (Oren) There is a mismatch of expectations in the AddHeaders. ETag must always have to be surrounded by quotes. 
-				//         If AddHeader/s ever put an etag it should check for that.
-				//         I was hesitant to do the change though, because I do not understand the complete scope of such a change.
 				request.AddHeaders(sourceMetadata);
 				request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
+				request.AddHeader("If-None-Match", "\"" + sourceMetadata.Value<string>(Constants.MetadataEtagField) + "\"");
 
 				request.AddHeader(SyncingMultipartConstants.FileName, fileName);
 				request.AddHeader(SyncingMultipartConstants.SourceServerInfo, serverInfo.AsJson());

@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.Conventions.CustomizeJsonSerializer = serializer => serializer.Converters.Add(new DurationConverter());
+				documentStore.Conventions.CustomizeJsonSerializer = x => x.Converters = new JsonConverterCollection(x.Converters) { new DurationConverter() };
 				documentStore.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter, SortOptions.Long, usesRangeField: true);
 
 				using (var session = documentStore.OpenSession())

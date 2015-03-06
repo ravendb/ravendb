@@ -36,6 +36,9 @@ namespace Raven.Imports.Newtonsoft.Json
   /// </summary>
   public abstract class JsonConverter
   {
+      public static readonly JsonConverter[] Empty = new JsonConverter[0];
+
+
     /// <summary>
     /// Writes the JSON representation of the object.
     /// </summary>

@@ -43,11 +43,6 @@ namespace Raven.Database.FileSystem.Actions
 			get { return FileSystem.SynchronizationTask; }
 		}
 
-		protected StorageOperationsTask StorageOperationsTask
-		{
-			get { return FileSystem.StorageOperationsTask; }
-		}
-
 		protected FileLockManager FileLockManager
 		{
 			get { return FileSystem.FileLockManager; }

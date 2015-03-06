@@ -89,7 +89,7 @@ namespace Raven.Database.FileSystem.Smuggler
 
 		public async Task PutFiles(FileHeader file, Stream data, long dataSize)
 		{
-			await filesystem.Files.PutAsync(file.FullPath, file.Metadata, () => new CompletedTask<Stream>(data), new FileActions.PutOperationOptions
+			await filesystem.Files.PutAsync(file.FullPath, null, file.Metadata, () => new CompletedTask<Stream>(data), new FileActions.PutOperationOptions
 			{
 				ContentLength = dataSize
 			});

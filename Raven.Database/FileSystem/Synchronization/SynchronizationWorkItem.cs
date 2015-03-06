@@ -43,9 +43,9 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		public string FileName { get; private set; }
 
-		public Guid FileETag
+		public Etag FileETag
 		{
-            get { return FileMetadata.Value<Guid>(Constants.MetadataEtagField); }
+            get { return Etag.Parse(FileMetadata.Value<string>(Constants.MetadataEtagField)); }
 		}
 
 		public bool IsCancelled

@@ -233,12 +233,11 @@ namespace Raven.Tests.FileSystem.Synchronization
 				                         {
 					                         {SynchronizationConstants.RavenSynchronizationVersion, new RavenJValue(1)},
 					                         {SynchronizationConstants.RavenSynchronizationSource, new RavenJValue(Guid.Empty)},
-					                         {SynchronizationConstants.RavenSynchronizationHistory, "[]"}
-				                         }
-                                         .WithETag(Guid.Empty);
+					                         {SynchronizationConstants.RavenSynchronizationHistory, "[]"},
+											 {"If-None-Match", "\"" + Etag.Empty + "\""}
+				                         };
 
 			request.AddHeaders(conflictedMetadata);
-
 			request.Headers[SyncingMultipartConstants.SourceServerInfo] = new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson();
 
 			var response = await request.GetResponseAsync();
@@ -246,8 +245,6 @@ namespace Raven.Tests.FileSystem.Synchronization
 			using (var stream = response.GetResponseStream())
 			{
 				Assert.NotNull(stream);
-				if (stream == null) 
-					return;
 
 				var report = new JsonSerializer().Deserialize<SynchronizationReport>(new JsonTextReader(new StreamReader(stream)));
 				Assert.Equal(string.Format( "File {0} is conflicted", FileHeader.Canonize("test.txt")), report.Exception.Message);
@@ -328,6 +325,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo, new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
             webRequest.Headers.Add(Constants.MetadataEtagField, new Guid().ToString());
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
+			webRequest.Headers.Add("If-None-Match", "\"" + Etag.Empty + "\"");
 
 			var sb = new StringBuilder();
 			new JsonSerializer().Serialize(new JsonTextWriter(new StringWriter(sb)),
@@ -379,7 +377,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             var serverId = await sourceClient.GetServerIdAsync();
             var lastEtag = await destinationClient.Synchronization.GetLastSynchronizationFromAsync( serverId );
 
-            Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<Guid>(Constants.MetadataEtagField), lastEtag.LastSourceFileEtag);
+            Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<string>(Constants.MetadataEtagField), lastEtag.LastSourceFileEtag.ToString());
 		}
 
 		[Fact]
