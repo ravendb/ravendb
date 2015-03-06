@@ -2,6 +2,9 @@
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using Raven.Abstractions.Exceptions;
+using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Search;
 using Raven.Database.FileSystem.Storage;
@@ -27,7 +30,7 @@ namespace Raven.Database.FileSystem.Util
 
 		protected StorageStream(ITransactionalStorage transactionalStorage, string fileName,
 								StorageStreamAccess storageStreamAccess,
-								RavenJObject metadata, IndexStorage indexStorage, StorageOperationsTask operations)
+								RavenJObject metadata, IndexStorage indexStorage, FileActions operations)
 		{
 			TransactionalStorage = transactionalStorage;
 			StorageStreamAccess = storageStreamAccess;
@@ -47,9 +50,9 @@ namespace Raven.Database.FileSystem.Util
 				case StorageStreamAccess.CreateAndWrite:
 					TransactionalStorage.Batch(accessor =>
 					{
-						operations.IndicateFileToDelete(fileName);
-						accessor.PutFile(fileName, null, metadata);
-						indexStorage.Index(fileName, metadata);
+						operations.IndicateFileToDelete(fileName, null);
+						var putResult = accessor.PutFile(fileName, null, metadata);
+						indexStorage.Index(fileName, metadata, putResult.Etag);
 					});
 					Metadata = metadata;
 					break;
@@ -101,7 +104,7 @@ namespace Raven.Database.FileSystem.Util
 		}
 
 		public static StorageStream CreatingNewAndWritting(ITransactionalStorage transactionalStorage,
-														   IndexStorage indexStorage, StorageOperationsTask operations,
+														   IndexStorage indexStorage, FileActions operations,
 														   string fileName, RavenJObject metadata)
 		{
 			if (indexStorage == null)
@@ -190,13 +193,35 @@ namespace Raven.Database.FileSystem.Util
 		{
 			if (InnerBuffer != null && InnerBufferOffset > 0)
 			{
-				ConcurrencyAwareExecutor.Execute(() => TransactionalStorage.Batch(
-					accessor =>
+				int retries = 50;
+				bool shouldRetry;
+
+				do
+				{
+					try
 					{
-						var hashKey = accessor.InsertPage(InnerBuffer, InnerBufferOffset);
-						accessor.AssociatePage(Name, hashKey, writtingPagePosition, InnerBufferOffset);
+						TransactionalStorage.Batch(accessor =>
+						{
+							var hashKey = accessor.InsertPage(InnerBuffer, InnerBufferOffset);
+							accessor.AssociatePage(Name, hashKey, writtingPagePosition, InnerBufferOffset);
+						});
+
 						writtingPagePosition++;
-					}));
+
+						shouldRetry = false;
+					}
+					catch (ConcurrencyException)
+					{
+						if (retries-- > 0)
+						{
+							shouldRetry = true;
+							Thread.Sleep(50);
+							continue;
+						}
+
+						throw;
+					}
+				} while (shouldRetry);
 
 				InnerBuffer = null;
 				InnerBufferOffset = 0;

@@ -656,5 +656,82 @@ namespace Raven.Tests.FileSystem.ClientApi
                 Assert.Equal(metadataCreationDate, originalFile.Metadata[Constants.RavenCreationDate]);
             }
         }
+
+		[Fact]
+		public async Task UploadedFileShouldBeIncludedInSessionContextAfterSaveChanges()
+		{
+			using (var store = NewStore())
+			using (var session = store.OpenAsyncSession())
+			{
+				session.RegisterUpload("test.file", CreateUniformFileStream(128));
+				await session.SaveChangesAsync();
+
+				var asyncFilesSession = (AsyncFilesSession) session;
+
+				var numberOfRequests = asyncFilesSession.NumberOfRequests;
+
+				var fileHeader = await session.LoadFileAsync("test.file");
+
+				Assert.NotNull(fileHeader);
+				Assert.Equal(numberOfRequests, asyncFilesSession.NumberOfRequests);
+			}
+		}
+
+	    [Fact]
+	    public async Task RenamedFileShouldBeIncludedInSessionContextAfterSaveChanges()
+	    {
+		    using (var store = NewStore())
+		    {
+			    using (var session = store.OpenAsyncSession())
+			    {
+				    session.RegisterUpload("test.file", CreateUniformFileStream(128));
+				    await session.SaveChangesAsync();
+			    }
+
+			    using (var session = store.OpenAsyncSession())
+			    {
+				    session.RegisterRename("test.file", "new.file");
+
+				    await session.SaveChangesAsync();
+
+				    var asyncFilesSession = (AsyncFilesSession) session;
+
+				    var numberOfRequests = asyncFilesSession.NumberOfRequests;
+
+				    var fileHeader = await session.LoadFileAsync("new.file");
+
+				    Assert.NotNull(fileHeader);
+				    Assert.Equal(numberOfRequests, asyncFilesSession.NumberOfRequests);
+			    }
+		    }
+	    }
+
+		[Fact]
+		public async Task ShouldNotAttemptToLoadAlreadyDeletedFile()
+		{
+			using (var store = NewStore())
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					session.RegisterUpload("test.file", CreateUniformFileStream(128));
+					await session.SaveChangesAsync();
+				}
+
+				using (var session = store.OpenAsyncSession())
+				{
+					session.RegisterFileDeletion("test.file");
+					await session.SaveChangesAsync();
+
+					var asyncFilesSession = (AsyncFilesSession) session;
+
+					var numberOfRequests = asyncFilesSession.NumberOfRequests;
+
+					var fileHeader = await session.LoadFileAsync("test.file");
+
+					Assert.Null(fileHeader);
+					Assert.Equal(numberOfRequests, asyncFilesSession.NumberOfRequests);
+				}
+			}
+		}
     }
 }

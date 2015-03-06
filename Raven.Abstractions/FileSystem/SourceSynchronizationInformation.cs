@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.FileSystem
 {
     public class SourceSynchronizationInformation
     {
-        public Guid LastSourceFileEtag { get; set; }
+        public Etag LastSourceFileEtag { get; set; }
         public string SourceServerUrl { get; set; }
         public Guid DestinationServerId { get; set; }
 

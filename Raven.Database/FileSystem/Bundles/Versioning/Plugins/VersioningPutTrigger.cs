@@ -136,7 +136,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 				var currentMetadata = accessor.ReadFile(fileName).Metadata;
 				currentMetadata["Content-MD5"] = headers["Content-MD5"];
 
-				accessor.UpdateFileMetadata(fileName, currentMetadata);
+				accessor.UpdateFileMetadata(fileName, currentMetadata, null);
 			});
 		}
 
@@ -183,7 +183,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			if (latestValidRevision <= 0)
 				return;
 
-			FileSystem.StorageOperationsTask.IndicateFileToDelete(string.Format("{0}/revisions/{1}", name, latestValidRevision));
+			FileSystem.Files.IndicateFileToDelete(string.Format("{0}/revisions/{1}", name, latestValidRevision), null);
 		}
 
 		private static bool TryGetVersioningConfiguration(string name, RavenJObject metadata, IStorageActionsAccessor accessor, out VersioningConfiguration versioningConfiguration)
