@@ -179,10 +179,6 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
-			catch (ConcurrencyException ex)
-			{
-				throw ConcurrencyResponseException(ex);
-			}
 
 			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
 			log.Debug("File '{0}' was deleted", name);
@@ -269,10 +265,6 @@ namespace Raven.Database.FileSystem.Controllers
                 log.Debug("Cannot update metadata because file '{0}' was not found", name);
                 return GetEmptyMessage(HttpStatusCode.NotFound);
             }
-			catch (ConcurrencyException ex)
-			{
-				throw ConcurrencyResponseException(ex);
-			}
 
             Search.Index(name, metadata, updateMetadata.Etag);
 
@@ -301,10 +293,6 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				log.Debug("Cannot rename a file '{0}' to '{1}' because a file was not found", name, rename);
 				return GetEmptyMessage(HttpStatusCode.NotFound);
-			}
-			catch (ConcurrencyException ex)
-			{
-				throw ConcurrencyResponseException(ex);
 			}
 			catch (SynchronizationException ex)
 			{
@@ -342,10 +330,6 @@ namespace Raven.Database.FileSystem.Controllers
 				options.TransferEncodingChunked = Request.Headers.TransferEncodingChunked ?? false;
 
 				await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
-			}
-			catch (ConcurrencyException ex)
-			{
-				throw ConcurrencyResponseException(ex);
 			}
 			catch (SynchronizationException ex)
 			{

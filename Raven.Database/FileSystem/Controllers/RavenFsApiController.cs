@@ -317,11 +317,6 @@ namespace Raven.Database.FileSystem.Controllers
                 new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new MultiGetSafeStringContent(message) });
 		}
 
-		protected HttpResponseException ConcurrencyResponseException(ConcurrencyException concurrencyException)
-		{
-			return new HttpResponseException(Request.CreateResponse(HttpStatusCode.MethodNotAllowed, concurrencyException));
-		}
-
 		protected class PagingInfo
 		{
 			public int PageSize;

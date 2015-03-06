@@ -9,6 +9,7 @@ using Jint.Runtime;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Database.FileSystem.Controllers;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.WebApi.Filters
@@ -92,10 +93,20 @@ namespace Raven.Database.Server.WebApi.Filters
 
 		private static void HandleConcurrencyException(HttpActionExecutedContext ctx, ConcurrencyException e)
 		{
-			ctx.Response = new HttpResponseMessage
+			if (ctx.ActionContext.ControllerContext.Controller is RavenFsApiController)
 			{
-				StatusCode = HttpStatusCode.Conflict,
-			};
+				ctx.Response = new HttpResponseMessage
+				{
+					StatusCode = HttpStatusCode.MethodNotAllowed,
+				};
+			}
+			else 
+			{
+				ctx.Response = new HttpResponseMessage
+				{
+					StatusCode = HttpStatusCode.Conflict,
+				};
+			}
 
 			SerializeError(ctx, new
 			{

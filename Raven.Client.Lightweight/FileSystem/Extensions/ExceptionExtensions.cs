@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
@@ -49,7 +50,20 @@ namespace Raven.Client.FileSystem
 			}
 			if (webException.StatusCode == HttpStatusCode.MethodNotAllowed)
 			{
-				return new JsonSerializer().Deserialize<ConcurrencyException>(new JsonTextReader(new StringReader(webException.Message)));
+				var text = webException.ResponseString;
+				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
+				{
+					url = (string) null,
+					actualETag = Etag.Empty,
+					expectedETag = Etag.Empty,
+					error = (string) null
+				});
+
+				return new ConcurrencyException(errorResults.error)
+				{
+					ActualETag = errorResults.actualETag,
+					ExpectedETag = errorResults.expectedETag
+				};
 			}
 			if (webException.StatusCode == HttpStatusCode.NotFound)
 			{
