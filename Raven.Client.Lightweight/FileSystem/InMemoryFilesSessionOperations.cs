@@ -39,7 +39,7 @@ namespace Raven.Client.FileSystem
         /// <summary>
         /// Translate between a key and its associated entity
         /// </summary>
-        protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        protected readonly Dictionary<string, FileHeader> entitiesByKey = new Dictionary<string, FileHeader>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// The files waiting to be deleted
@@ -135,48 +135,52 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-	        if (deletedEntities.Contains(path))
-		        throw new InvalidOperationException("The file '" + path + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
-
-            var operation = new UploadFileOperation(this, path, stream.Length, stream.CopyTo, metadata, etag);
-
-            IncrementRequestCount();
-
-            registeredOperations.Enqueue(operation);   
+			RegisterUploadInternal(path, stream.Length, stream.CopyTo, metadata, etag);
         }
 
         public void RegisterUpload(FileHeader file, Stream stream, Etag etag = null)
         {
-            if (deletedEntities.Contains(file.FullPath))
-                throw new InvalidOperationException("The file '" + file.FullPath + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
-
-            var operation = new UploadFileOperation(this, file.FullPath, stream.Length, stream.CopyTo, file.Metadata, etag);
-
-            IncrementRequestCount();
-
-            registeredOperations.Enqueue(operation);   
+			RegisterUploadInternal(file.FullPath, stream.Length, stream.CopyTo, file.Metadata, etag);
         }
 
         public void RegisterUpload(string path, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, path, size, write, metadata, etag);
-
-            IncrementRequestCount();
-
-            registeredOperations.Enqueue(operation);           
+			RegisterUploadInternal(path, size, write, metadata, etag);
         }
 
         public void RegisterUpload(FileHeader file, long size, Action<Stream> write, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, file.FullPath, size, write, file.Metadata, etag);
-
-            IncrementRequestCount();
-
-            registeredOperations.Enqueue(operation);     
+            RegisterUploadInternal(file.FullPath, size, write, file.Metadata, etag);
         }
+
+	    internal void RegisterUploadInternal(string path, long size, Action<Stream> content, RavenJObject metadata, Etag etag)
+	    {
+			if (deletedEntities.Contains(path))
+				throw new InvalidOperationException("The file '" + path + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
+
+			FileHeader existingEntity;
+		    if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(path, out existingEntity))
+		    {
+			    if (IsDeleted(path) == false) // do not set etag if we already know that file was deleted
+				    etag = existingEntity.Etag;
+		    }
+
+			var operation = new UploadFileOperation(this, path, size, content, metadata, etag);
+
+			IncrementRequestCount();
+
+			registeredOperations.Enqueue(operation); 
+	    }
 
         public void RegisterFileDeletion(string path, Etag etag = null)
         {
+			FileHeader existingEntity;
+			if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(path, out existingEntity))
+			{
+				if (IsDeleted(path) == false) // do not set etag if we already know that file was deleted
+					etag = existingEntity.Etag;
+			}
+
 	        deletedEntities.Add(path);
 
             var operation = new DeleteFileOperation(this, path, etag);
@@ -188,17 +192,18 @@ namespace Raven.Client.FileSystem
 
         public void RegisterFileDeletion(FileHeader file, Etag etag = null)
         {
-			deletedEntities.Add(file.Directory);
-
-			var operation = new DeleteFileOperation(this, file.Directory, etag);
-
-            IncrementRequestCount();
-
-            registeredOperations.Enqueue(operation); 
+			RegisterFileDeletion(file.FullPath, etag);
         }
 
         public void RegisterRename(string sourceFile, string destinationFile, Etag etag = null)
         {
+			FileHeader existingEntity;
+			if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(sourceFile, out existingEntity))
+			{
+				if (IsDeleted(sourceFile) == false) // do not set etag if we already know that file was deleted
+					etag = existingEntity.Etag;
+			}
+
             var operation = new RenameFileOperation(this, sourceFile, destinationFile, etag);
 
             IncrementRequestCount();
@@ -208,7 +213,7 @@ namespace Raven.Client.FileSystem
 
         public void RegisterRename(FileHeader sourceFile, string destinationFile, Etag etag = null)
         {
-            RegisterRename(sourceFile.Directory, destinationFile, etag);
+            RegisterRename(sourceFile.FullPath, destinationFile, etag);
         }
 
         public void AddToCache(string filename, FileHeader fileHeader)
@@ -227,7 +232,7 @@ namespace Raven.Client.FileSystem
             fileHeader = null;
 
             if (entitiesByKey.ContainsKey(filename))
-                fileHeader = entitiesByKey[filename] as FileHeader;
+                fileHeader = entitiesByKey[filename];
 
             return fileHeader != null;
         }
@@ -315,7 +320,7 @@ namespace Raven.Client.FileSystem
         {
             foreach( var key in entitiesByKey.Keys)
             {
-                var fileHeader = entitiesByKey[key] as FileHeader;
+                var fileHeader = entitiesByKey[key];
 
                 if (EntityChanged(fileHeader) && !UploadRegisteredForFile(fileHeader.FullPath, operations))
                 {
@@ -337,7 +342,7 @@ namespace Raven.Client.FileSystem
 				var result = results[i];
                 var savedEntity = data.Entities[i];
 
-				object existingEntity;
+				FileHeader existingEntity;
 				if (entitiesByKey.TryGetValue(savedEntity, out existingEntity) == false)
 				{
 					var operation = data.Operations[i];
@@ -350,7 +355,7 @@ namespace Raven.Client.FileSystem
 					continue;
 				}
 
-                var existingFileHeader = (FileHeader)existingEntity;
+                var existingFileHeader = existingEntity;
                 existingFileHeader.Metadata = result.Metadata;
                 existingFileHeader.OriginalMetadata = (RavenJObject)result.Metadata.CloneToken();
                 existingFileHeader.Refresh();
@@ -394,7 +399,7 @@ namespace Raven.Client.FileSystem
             if (filename == null || !entitiesByKey.ContainsKey(filename))
                 return false;
 
-            var fileHeader = entitiesByKey[filename] as FileHeader;
+            var fileHeader = entitiesByKey[filename];
             return EntityChanged(fileHeader);
         }
 

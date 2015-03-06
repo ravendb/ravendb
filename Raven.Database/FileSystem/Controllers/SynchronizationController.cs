@@ -142,8 +142,8 @@ namespace Raven.Database.FileSystem.Controllers
 
                 Storage.Batch(accessor =>
                 {
-                    StorageOperationsTask.IndicateFileToDelete(canonicalFilename);
-                    accessor.RenameFile(tempFileName, canonicalFilename);
+                    StorageOperationsTask.IndicateFileToDelete(canonicalFilename, null);
+                    accessor.RenameFile(tempFileName, canonicalFilename, null);
 
                     Search.Delete(tempFileName);
                     Search.Index(canonicalFilename, sourceMetadata, updateResult.Etag);
@@ -298,7 +298,7 @@ namespace Raven.Database.FileSystem.Controllers
 			DeleteSynchronizationReport(fileName, accessor);
 
 			// remove previous .downloading file
-			StorageOperationsTask.IndicateFileToDelete(RavenFileNameHelper.DownloadingFileName(fileName));
+			StorageOperationsTask.IndicateFileToDelete(RavenFileNameHelper.DownloadingFileName(fileName), null);
 		}
 
 		[HttpPost]
@@ -426,7 +426,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                     Storage.Batch(accessor =>
                     {
-                        StorageOperationsTask.IndicateFileToDelete(canonicalFilename);
+                        StorageOperationsTask.IndicateFileToDelete(canonicalFilename, null);
 
                         var tombstoneMetadata = new RavenJObject
                                                     {
@@ -522,7 +522,7 @@ namespace Raven.Database.FileSystem.Controllers
                     Name = canonicalFilename,
                     Rename = canonicalRename,
                     MetadataAfterOperation = sourceMetadata.DropRenameMarkers()
-                });
+                }, null);
 			}
 			catch (Exception ex)
 			{

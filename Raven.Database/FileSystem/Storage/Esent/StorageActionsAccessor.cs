@@ -539,7 +539,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
             using (var update = new Update(session, Files, JET_prep.Replace))
             {
-				var existingEtag = EnsureFileEtagMatch(filename, etag, "POST");
+				var existingEtag = EnsureFileEtagMatch(filename, etag);
 				metadata.Remove(Constants.MetadataEtagField);
 
                 var existingMetadata = RetrieveMetadata();
@@ -599,36 +599,10 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["file_count"], -1);
 		}
 
-		public void RenameFile(string filename, string rename, bool commitPeriodically = false)
+		public void RenameFile(string filename, string rename, Etag etag, bool commitPeriodically = false)
 		{
 		    try
 		    {
-                Api.JetSetCurrentIndex(session, Usage, "by_name_and_pos");
-                Api.MakeKey(session, Usage, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
-                if (Api.TrySeek(session, Usage, SeekGrbit.SeekGE))
-                {
-                    var count = 0;
-                    do
-                    {
-                        var name = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
-                        if (name != filename)
-                            break;
-
-                        using (var update = new Update(session, Usage, JET_prep.Replace))
-                        {
-                            Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["name"], rename, Encoding.Unicode);
-
-                            update.Save();
-                        }
-
-                        if (commitPeriodically && count++ > 1000)
-                        {
-                            PulseTransaction();
-                            count = 0;
-                        }
-                    } while (Api.TryMoveNext(session, Usage));
-                }
-
                 Api.JetSetCurrentIndex(session, Files, "by_name");
                 Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
                 if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
@@ -636,10 +610,38 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
                 using (var update = new Update(session, Files, JET_prep.Replace))
                 {
+					EnsureFileEtagMatch(filename, etag);
+
                     Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], rename, Encoding.Unicode);
 
                     update.Save();
                 }
+
+				Api.JetSetCurrentIndex(session, Usage, "by_name_and_pos");
+				Api.MakeKey(session, Usage, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				if (Api.TrySeek(session, Usage, SeekGrbit.SeekGE))
+				{
+					var count = 0;
+					do
+					{
+						var name = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
+						if (name != filename)
+							break;
+
+						using (var update = new Update(session, Usage, JET_prep.Replace))
+						{
+							Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["name"], rename, Encoding.Unicode);
+
+							update.Save();
+						}
+
+						if (commitPeriodically && count++ > 1000)
+						{
+							PulseTransaction();
+							count = 0;
+						}
+					} while (Api.TryMoveNext(session, Usage));
+				}
 		    }
 		    catch (Exception e)
 		    {
@@ -915,7 +917,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			return configs;
 		}
 
-		private Etag EnsureFileEtagMatch(string key, Etag etag, string method)
+		private Etag EnsureFileEtagMatch(string key, Etag etag)
 		{
 			var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
 
@@ -934,7 +936,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 						}
 					}
 
-					throw new ConcurrencyException(method + " attempted on file '" + key +
+					throw new ConcurrencyException("Operation attempted on file '" + key +
 												   "' using a non current etag")
 					{
 						ActualETag = existingEtag,

@@ -183,7 +183,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			if (latestValidRevision <= 0)
 				return;
 
-			FileSystem.StorageOperationsTask.IndicateFileToDelete(string.Format("{0}/revisions/{1}", name, latestValidRevision));
+			FileSystem.StorageOperationsTask.IndicateFileToDelete(string.Format("{0}/revisions/{1}", name, latestValidRevision), null);
 		}
 
 		private static bool TryGetVersioningConfiguration(string name, RavenJObject metadata, IStorageActionsAccessor accessor, out VersioningConfiguration versioningConfiguration)

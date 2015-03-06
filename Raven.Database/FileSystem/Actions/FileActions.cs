@@ -36,7 +36,7 @@ namespace Raven.Database.FileSystem.Actions
 		{
 		}
 
-		public async Task PutAsync(string name, RavenJObject metadata, Func<Task<Stream>> streamAsync, PutOperationOptions options)
+		public async Task PutAsync(string name, Etag etag, RavenJObject metadata, Func<Task<Stream>> streamAsync, PutOperationOptions options)
 		{
 			try
 			{
@@ -94,7 +94,7 @@ namespace Raven.Database.FileSystem.Actions
 
 					using (FileSystem.DisableAllTriggersForCurrentThread())
 					{
-						StorageOperationsTask.IndicateFileToDelete(name);
+						StorageOperationsTask.IndicateFileToDelete(name, etag);
 					}
 
 					var putResult = accessor.PutFile(name, size, metadata);
@@ -113,7 +113,7 @@ namespace Raven.Database.FileSystem.Actions
 
 					if (readFileToDatabase.TotalSizeRead != size)
 					{
-						StorageOperationsTask.IndicateFileToDelete(name);
+						StorageOperationsTask.IndicateFileToDelete(name, null);
 						throw new HttpResponseException(HttpStatusCode.BadRequest);
 					}
 

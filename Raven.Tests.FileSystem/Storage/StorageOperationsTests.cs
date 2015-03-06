@@ -44,7 +44,7 @@ namespace Raven.Tests.FileSystem
 
             client.UploadAsync(filename, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 })).Wait();
 
-            rfs.StorageOperationsTask.IndicateFileToDelete(filename);
+			rfs.StorageOperationsTask.IndicateFileToDelete(filename, null);
 
 			DeleteFileOperation deleteFile = null;
 			rfs.Storage.Batch(accessor =>
@@ -62,7 +62,7 @@ namespace Raven.Tests.FileSystem
 
 			await client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5}));
 
-			rfs.StorageOperationsTask.IndicateFileToDelete("toDelete.bin");
+			rfs.StorageOperationsTask.IndicateFileToDelete("toDelete.bin", null);
 
 			await rfs.StorageOperationsTask.CleanupDeletedFilesAsync();
 
@@ -80,7 +80,7 @@ namespace Raven.Tests.FileSystem
 
             await client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
-			rfs.StorageOperationsTask.IndicateFileToDelete(FileHeader.Canonize("toDelete.bin"));
+			rfs.StorageOperationsTask.IndicateFileToDelete(FileHeader.Canonize("toDelete.bin"), null);
 
             await rfs.StorageOperationsTask.CleanupDeletedFilesAsync();
 
@@ -104,7 +104,7 @@ namespace Raven.Tests.FileSystem
 			await client.UploadAsync("toDelete.bin", new MemoryStream(bytes));
 
 
-			rfs.StorageOperationsTask.IndicateFileToDelete(FileHeader.Canonize("toDelete.bin"));
+			rfs.StorageOperationsTask.IndicateFileToDelete(FileHeader.Canonize("toDelete.bin"), null);
 
 			await rfs.StorageOperationsTask.CleanupDeletedFilesAsync();
 
@@ -130,7 +130,7 @@ namespace Raven.Tests.FileSystem
 
 			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
 
-            rfs.StorageOperationsTask.IndicateFileToDelete(filename);
+			rfs.StorageOperationsTask.IndicateFileToDelete(filename, null);
 
 			rfs.Storage.Batch( accessor =>
                     accessor.SetConfigurationValue(RavenFileNameHelper.SyncLockNameForFile(filename), 
@@ -160,7 +160,7 @@ namespace Raven.Tests.FileSystem
 
 			client.UploadAsync(downloadingFileName, new RandomStream(1)).Wait();
 
-			rfs.StorageOperationsTask.IndicateFileToDelete(downloadingFileName);
+			rfs.StorageOperationsTask.IndicateFileToDelete(downloadingFileName, null);
 
 			rfs.Storage.Batch(accessor =>
 				accessor.SetConfigurationValue(RavenFileNameHelper.SyncLockNameForFile(fileName), LockFileTests.SynchronizationConfig(DateTime.UtcNow)));

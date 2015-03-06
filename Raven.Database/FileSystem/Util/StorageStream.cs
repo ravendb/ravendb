@@ -49,7 +49,7 @@ namespace Raven.Database.FileSystem.Util
 				case StorageStreamAccess.CreateAndWrite:
 					TransactionalStorage.Batch(accessor =>
 					{
-						operations.IndicateFileToDelete(fileName);
+						operations.IndicateFileToDelete(fileName, null);
 						var putResult = accessor.PutFile(fileName, null, metadata);
 						indexStorage.Index(fileName, metadata, putResult.Etag);
 					});

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using NLog;
-
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
@@ -59,7 +59,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 			});
 		}
 
-		public void RenameFile(RenameFileOperation operation)
+		public void RenameFile(RenameFileOperation operation, Etag etag)
 		{
 			var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
 			notificationPublisher.Publish(new FileChangeNotification
@@ -79,7 +79,7 @@ namespace Raven.Database.FileSystem.Infrastructure
                     accessor.Delete(previousRenameTombstone.FullPath);
 				}
 
-                accessor.RenameFile(operation.Name, operation.Rename, true);
+                accessor.RenameFile(operation.Name, operation.Rename, etag, true);
                 accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation, null);
 
                 // copy renaming file metadata and set special markers
@@ -101,7 +101,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 			});
 		}
 
-		public void IndicateFileToDelete(string fileName)
+		public void IndicateFileToDelete(string fileName, Etag etag)
 		{
 			var deletingFileName = RavenFileNameHelper.DeletingFileName(fileName);
 			var fileExists = true;
@@ -137,7 +137,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 				{
 					try
 					{
-						accessor.RenameFile(fileName, deletingFileName);
+						accessor.RenameFile(fileName, deletingFileName, etag);
 						renameSucceeded = true;
 					}
 					catch (FileExistsException) // it means that .deleting file was already existed
@@ -280,7 +280,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 				{
 					try
 					{
-						RenameFile(renameOperation);
+						RenameFile(renameOperation, null);
 						Log.Debug("File '{0}' was renamed to '{1}'", renameOperation.Name, renameOperation.Rename);
 
 					}

@@ -48,7 +48,7 @@ namespace Raven.Client.FileSystem.Impl
 
             if (update)
             {
-                await commands.UpdateMetadataAsync(Filename, Metadata, Etag);
+                await commands.UpdateMetadataAsync(Filename, Metadata, Etag).ConfigureAwait(false);
                 
                 foreach ( var listener in sessionOperations.Listeners.MetadataChangeListeners )
                 {
@@ -56,7 +56,7 @@ namespace Raven.Client.FileSystem.Impl
                 }
             }
 
-            var metadata = await commands.GetMetadataForAsync(Filename);
+            var metadata = await commands.GetMetadataForAsync(Filename).ConfigureAwait(false);
             if (metadata == null)
                 return null;
 

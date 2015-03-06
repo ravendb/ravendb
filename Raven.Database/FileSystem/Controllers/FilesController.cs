@@ -149,7 +149,7 @@ namespace Raven.Database.FileSystem.Controllers
 						throw new FileNotFoundException();
 					}
 
-					StorageOperationsTask.IndicateFileToDelete(name);
+					StorageOperationsTask.IndicateFileToDelete(name, GetEtag());
 
 					if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
 					    // don't create a tombstone for .downloading file
@@ -292,6 +292,7 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             name = FileHeader.Canonize(name);
             rename = FileHeader.Canonize(rename);
+			var etag = GetEtag();
 
 			try
 			{
@@ -305,8 +306,8 @@ namespace Raven.Database.FileSystem.Controllers
 						throw new FileNotFoundException();
 					}
 
-					var existingHeader = accessor.ReadFile(rename);
-					if (existingHeader != null && !existingHeader.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker))
+					var existingFile = accessor.ReadFile(rename);
+					if (existingFile != null && !existingFile.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker))
 					{
 						throw new HttpResponseException(
 							Request.CreateResponse(HttpStatusCode.Forbidden,
@@ -322,11 +323,11 @@ namespace Raven.Database.FileSystem.Controllers
 						Rename = rename,
 						MetadataAfterOperation = metadata
 					};
-
+					//TODO arek - need to ensure that config will be deleted if there is ConcurrencyException
 					accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
 					accessor.PulseTransaction(); // commit rename operation config
 
-					StorageOperationsTask.RenameFile(operation);
+					StorageOperationsTask.RenameFile(operation, etag);
 				});
 			}
 			catch (FileNotFoundException)
@@ -352,7 +353,8 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			try
 			{
-				var headers = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
+				var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
+				var etag = GetEtag();
 
 				var options = new FileActions.PutOperationOptions();
 
@@ -374,7 +376,7 @@ namespace Raven.Database.FileSystem.Controllers
 				options.ContentLength = Request.Content.Headers.ContentLength;
 				options.TransferEncodingChunked = Request.Headers.TransferEncodingChunked ?? false;
 
-				await FileSystem.Files.PutAsync(name, headers, () => Request.Content.ReadAsStreamAsync(), options);
+				await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
 			}
 			catch (Exception ex)
 			{

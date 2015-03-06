@@ -58,7 +58,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 					foreach (var file in accessor.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue).Where(file => file != null))
 					{
 						if (versioningConfiguration != null && versioningConfiguration.PurgeOnDelete) 
-							FileSystem.StorageOperationsTask.IndicateFileToDelete(file.FullPath);
+							FileSystem.StorageOperationsTask.IndicateFileToDelete(file.FullPath, null);
 						else
 						{
 							file.Metadata.Remove(Constants.RavenReadOnly);

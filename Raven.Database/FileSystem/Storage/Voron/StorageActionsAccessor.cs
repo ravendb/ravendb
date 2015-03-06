@@ -388,7 +388,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             if (file == null)
                 throw new FileNotFoundException(filename);
 
-	        var existingEtag = EnsureDocumentEtagMatch(filename, etag, "POST", file);
+	        var existingEtag = EnsureDocumentEtagMatch(filename, etag, file);
 
 	        var newEtag = uuidGenerator.CreateSequentialUuid();
             metadata.Remove(RavenConstants.MetadataEtagField);
@@ -470,7 +470,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 			fileCount.Delete(writeBatch.Value, CreateKey(nameOfFileThatShouldNotBeCounted));
         }
 
-        public void RenameFile(string filename, string rename, bool commitPeriodically = false)
+        public void RenameFile(string filename, string rename, Etag etag, bool commitPeriodically = false)
         {
             ushort version;
             ushort? renameVersion;
@@ -483,6 +483,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
             var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
             if (file == null)
                 throw new FileNotFoundException("Could not find file: " + filename);
+
+			EnsureDocumentEtagMatch(filename, etag, file);
 
             RenameUsage(filename, rename, commitPeriodically);
             DeleteFile(filename);
@@ -922,7 +924,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
                    };
         }
 
-        private Etag EnsureDocumentEtagMatch(string key, Etag etag, string method, RavenJObject file)
+        private Etag EnsureDocumentEtagMatch(string key, Etag etag, RavenJObject file)
         {
 	        var existingEtag = Etag.Parse(file.Value<byte[]>("etag"));
 
@@ -941,7 +943,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 						}
 					}
 
-					throw new ConcurrencyException(method + " attempted on file '" + key +
+					throw new ConcurrencyException("Operation attempted on file '" + key +
 												   "' using a non current etag")
 					{
 						ActualETag = existingEtag,

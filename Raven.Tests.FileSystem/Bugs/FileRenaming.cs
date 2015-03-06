@@ -19,7 +19,7 @@ namespace Raven.Tests.FileSystem.Bugs
                 });
 
             transactionalStorage.Batch(
-                accessor => accessor.RenameFile("test.bin", "test.result.bin"));
+                accessor => accessor.RenameFile("test.bin", "test.result.bin", null));
 
             transactionalStorage.Batch(
                 accessor =>
@@ -62,7 +62,7 @@ namespace Raven.Tests.FileSystem.Bugs
                     });
             // rename the 2nd file
             transactionalStorage.Batch(
-                accessor => accessor.RenameFile("test1.bin", "test.result.bin"));
+                accessor => accessor.RenameFile("test1.bin", "test.result.bin", null));
             // check the renamed file
             transactionalStorage.Batch(
                 accessor =>
