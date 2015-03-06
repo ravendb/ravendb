@@ -81,6 +81,7 @@
     <Compile Include="ClusterDatabases.cs" />
     <Compile Include="RaftTestBase.cs" />
     <Compile Include="ClusterReplication.cs" />
+    <Compile Include="RaftWithAuthn.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rachis\Rachis\Rachis.csproj">
