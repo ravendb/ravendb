@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -19,6 +20,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.OAuth;
 using Raven.Database.Raft.Commands;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
@@ -41,10 +43,48 @@ namespace Raven.Database.Raft
 
 		private readonly HttpClient httpClient;
 
+		private readonly ConcurrentDictionary<string, SecuredAuthenticator> _securedAuthenticatorCache = new ConcurrentDictionary<string, SecuredAuthenticator>();
+
 		public ClusterManagementHttpClient(RaftEngine raftEngine)
 		{
 			this.raftEngine = raftEngine;
 			httpClient = new HttpClient();
+		}
+
+		private HttpRaftRequest CreateRequest(NodeConnectionInfo node, string url, string method)
+		{
+			var request = new HttpRaftRequest(node, url, method, info => new Tuple<IDisposable, HttpClient>(null, httpClient))
+			{
+				UnauthorizedResponseAsyncHandler = HandleUnauthorizedResponseAsync,
+				ForbiddenResponseAsyncHandler = HandleForbiddenResponseAsync
+			};
+			GetAuthenticator(node).ConfigureRequest(this, new WebRequestEventArgs
+			{
+				Client = httpClient,
+				Credentials = new OperationCredentials(node.ApiKey, null) //TODO: fix me
+			});
+			return request;
+		}
+
+		internal async Task<Action<HttpClient>> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse, NodeConnectionInfo nodeConnectionInfo)
+		{
+			var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
+
+
+			if (string.IsNullOrEmpty(oauthSource))
+				oauthSource = nodeConnectionInfo.Uri.AbsoluteUri + "/OAuth/API-Key";
+
+			return await GetAuthenticator(nodeConnectionInfo).DoOAuthRequestAsync(nodeConnectionInfo.Uri.AbsoluteUri, oauthSource, nodeConnectionInfo.ApiKey);
+		}
+
+		internal async Task<Action<HttpClient>> HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse, NodeConnectionInfo nodeConnection)
+		{
+			throw new NotImplementedException();
+		}
+
+		internal SecuredAuthenticator GetAuthenticator(NodeConnectionInfo info)
+		{
+			return _securedAuthenticatorCache.GetOrAdd(info.Name, _ => new SecuredAuthenticator());
 		}
 
 		public async Task SendJoinServerAsync(NodeConnectionInfo nodeConnectionInfo)
@@ -63,22 +103,25 @@ namespace Raven.Database.Raft
 		public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
 		{
 			var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/join";
-			var content = new JsonContent(RavenJToken.FromObject(newNode));
 
-			var response = await httpClient.PostAsync(url, content).ConfigureAwait(false);
-
-			if (response.IsSuccessStatusCode)
-				return CanJoinResult.CanJoin;
-
-			switch (response.StatusCode)
+			using (var request = CreateRequest(leaderNode, url, "POST"))
 			{
-				case HttpStatusCode.NotModified:
-					return CanJoinResult.AlreadyJoined;
-				case HttpStatusCode.NotAcceptable:
-					return CanJoinResult.InAnotherCluster;
-				default:
-					throw await CreateErrorResponseExceptionAsync(response);
+				var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(newNode))).ConfigureAwait(false);
+
+				if (response.IsSuccessStatusCode)
+					return CanJoinResult.CanJoin;
+
+				switch (response.StatusCode)
+				{
+					case HttpStatusCode.NotModified:
+						return CanJoinResult.AlreadyJoined;
+					case HttpStatusCode.NotAcceptable:
+						return CanJoinResult.InAnotherCluster;
+					default:
+						throw await CreateErrorResponseExceptionAsync(response);
+				}
 			}
+			
 		}
 
 		public Task SendClusterConfigurationAsync(ClusterConfiguration configuration)
@@ -126,11 +169,14 @@ namespace Raven.Database.Raft
 		private async Task SendDatabaseDeleteInternalAsync(NodeConnectionInfo node, string databaseName, bool hardDelete)
 		{
 			var url = node.Uri.AbsoluteUri + "admin/cluster/commands/cluster/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
-			var response = await httpClient.DeleteAsync(url).ConfigureAwait(false);
-			if (response.IsSuccessStatusCode)
-				return;
+			using (var request = CreateRequest(node, url, "DELETE"))
+			{
+				var response = await request.ExecuteAsync().ConfigureAwait(false);
+				if (response.IsSuccessStatusCode)
+					return;
 
-			throw await CreateErrorResponseExceptionAsync(response);
+				throw await CreateErrorResponseExceptionAsync(response);
+			}
 		}
 
 		private Task SendClusterConfigurationInternalAsync(NodeConnectionInfo leaderNode, ClusterConfiguration configuration)
@@ -146,30 +192,36 @@ namespace Raven.Database.Raft
 		private async Task PutAsync(NodeConnectionInfo node, string action, object content)
 		{
 			var url = node.Uri.AbsoluteUri + action;
-			var response = await httpClient.PutAsync(url, new JsonContent(RavenJObject.FromObject(content))).ConfigureAwait(false);
-			if (response.IsSuccessStatusCode)
-				return;
+			using (var request = CreateRequest(node, url, "PUT"))
+			{
+				var response = await request.WriteAsync(() => new JsonContent(RavenJObject.FromObject(content))).ConfigureAwait(false);
+				if (response.IsSuccessStatusCode)
+					return;
 
-			throw await CreateErrorResponseExceptionAsync(response);
+				throw await CreateErrorResponseExceptionAsync(response);
+			}
 		}
 
 		public async Task<CanJoinResult> SendCanJoinAsync(NodeConnectionInfo nodeConnectionInfo)
 		{
 			var url = nodeConnectionInfo.Uri.AbsoluteUri + "admin/cluster/canJoin?topologyId=" + raftEngine.CurrentTopology.TopologyId;
 
-			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
-
-			if (response.IsSuccessStatusCode)
-				return CanJoinResult.CanJoin;
-
-			switch (response.StatusCode)
+			using (var request = CreateRequest(nodeConnectionInfo, url, "GET"))
 			{
-				case HttpStatusCode.NotModified:
-					return CanJoinResult.AlreadyJoined;
-				case HttpStatusCode.NotAcceptable:
-					return CanJoinResult.InAnotherCluster;
-				default:
-					throw await CreateErrorResponseExceptionAsync(response);
+				var response = await request.ExecuteAsync().ConfigureAwait(false);
+
+				if (response.IsSuccessStatusCode)
+					return CanJoinResult.CanJoin;
+
+				switch (response.StatusCode)
+				{
+					case HttpStatusCode.NotModified:
+						return CanJoinResult.AlreadyJoined;
+					case HttpStatusCode.NotAcceptable:
+						return CanJoinResult.InAnotherCluster;
+					default:
+						throw await CreateErrorResponseExceptionAsync(response);
+				}
 			}
 		}
 
@@ -197,11 +249,14 @@ namespace Raven.Database.Raft
 		public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
 		{
 			var url = leavingNode.Uri.AbsoluteUri + "admin/cluster/leave?name=" + leavingNode.Name;
-			var response = await httpClient.GetAsync(url).ConfigureAwait(false);
-			if (response.IsSuccessStatusCode)
-				return;
+			using (var request = CreateRequest(leavingNode, url, "GET"))
+			{
+				var response = await request.ExecuteAsync().ConfigureAwait(false);
+				if (response.IsSuccessStatusCode)
+					return;
 
-			throw await CreateErrorResponseExceptionAsync(response);
+				throw await CreateErrorResponseExceptionAsync(response);
+			}
 		}
 
 		private static async Task<ErrorResponseException> CreateErrorResponseExceptionAsync(HttpResponseMessage response)

@@ -48,7 +48,7 @@ namespace Rachis.Transport
 						req.Term, req.LastIncludedIndex, req.LastIncludedTerm, req.From, Uri.EscapeDataString(JsonConvert.SerializeObject(req.Topology)), req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "POST"))
 				{
-					var httpResponseMessage = await request.WriteAsync(new SnapshotContent(streamWriter));
+					var httpResponseMessage = await request.WriteAsync(() => new SnapshotContent(streamWriter));
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
@@ -127,7 +127,7 @@ namespace Rachis.Transport
 					req.Term, req.LeaderCommit, req.PrevLogTerm, req.PrevLogIndex, req.EntriesCount, req.From, req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "POST"))
 				{
-					var httpResponseMessage = await request.WriteAsync(new EntriesContent(req.Entries));
+					var httpResponseMessage = await request.WriteAsync(() => new EntriesContent(req.Entries));
 
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)

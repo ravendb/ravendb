@@ -30,7 +30,7 @@ namespace Rachis.Transport
 
 		public Func<HttpResponseMessage, NodeConnectionInfo, Task<Action<HttpClient>>> ForbiddenResponseAsyncHandler { get; set; }
 
-		internal HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, string method, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection)
+		public HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, string method, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection)
 		{
 			Url = url;
 			Method = method;
@@ -105,11 +105,11 @@ namespace Rachis.Transport
 			return Response;
 		}
 
-		public async Task<HttpResponseMessage> WriteAsync(HttpContent content)
+		public async Task<HttpResponseMessage> WriteAsync(Func<HttpContent> content)
 		{
 			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Content = content
+				Content = content()
 			});
 
 			return Response;
@@ -172,7 +172,9 @@ namespace Rachis.Transport
 
 			if (httpClient != null)
 			{
-				returnToQueue.Dispose();
+				if (returnToQueue != null)
+					returnToQueue.Dispose();	
+
 				httpClient = null;
 			}
 		}
