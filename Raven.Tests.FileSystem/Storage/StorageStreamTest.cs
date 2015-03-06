@@ -1,38 +1,34 @@
 using System;
 using System.IO;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.MEF;
-using Raven.Database.FileSystem.Infrastructure;
-using Raven.Database.FileSystem.Notifications;
-using Raven.Database.FileSystem.Plugins;
-using Raven.Database.FileSystem.Search;
+using Raven.Database.FileSystem;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
+using Raven.Tests.Helpers;
 using Xunit;
-using Raven.Database.Config;
 
 namespace Raven.Tests.FileSystem
 {
-	public class StorageStreamTest : StorageTest
+	public class StorageStreamTest : RavenFilesTestBase
 	{
-        private InMemoryRavenConfiguration CreateIndexConfiguration ()
-        {
-            var configuration = new InMemoryRavenConfiguration();
-            configuration.FileSystem.IndexStoragePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+		private RavenFileSystem fs;
+		private ITransactionalStorage transactionalStorage;
 
-            return configuration;
-        }
+		public StorageStreamTest()
+		{
+			NewAsyncClient();
+			fs = GetFileSystem();
+			transactionalStorage = fs.Storage;
+		}
 
 		[Fact]
 		public void StorageStream_should_write_to_storage_by_64kB_pages()
 		{
 			using (var stream = StorageStream.CreatingNewAndWritting(
-                                                    transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()),
-                                                    new StorageOperationsTask(transactionalStorage, new OrderedPartCollection<AbstractFileDeleteTrigger>(), new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
-				                                    "file", new RavenJObject()))
+				transactionalStorage, fs.Search,
+				fs.Files,
+				"file", new RavenJObject()))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
 
@@ -55,10 +51,10 @@ namespace Raven.Tests.FileSystem
 		[Fact]
 		public void SynchronizingFileStream_should_write_to_storage_by_64kB_pages()
 		{
-            using (var stream = SynchronizingFileStream.CreatingOrOpeningAndWriting(
-                                                            transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()),
-                                                            new StorageOperationsTask(transactionalStorage, new OrderedPartCollection<AbstractFileDeleteTrigger>(), new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
-                                                            "file", new RavenJObject()))
+			using (var stream = SynchronizingFileStream.CreatingOrOpeningAndWriting(
+				transactionalStorage, fs.Search,
+				fs.Files,
+				"file", new RavenJObject()))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
 
@@ -88,9 +84,9 @@ namespace Raven.Tests.FileSystem
 			new Random().NextBytes(buffer);
 
 			using (var stream = StorageStream.CreatingNewAndWritting(
-                                                    transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()),
-                                                    new StorageOperationsTask(transactionalStorage, new OrderedPartCollection<AbstractFileDeleteTrigger>(), new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
-				                                    "file", new RavenJObject()))
+				transactionalStorage, fs.Search,
+				fs.Files,
+				"file", new RavenJObject()))
 			{
 				stream.Write(buffer, 0, StorageConstants.MaxPageSize);
 			}
@@ -120,25 +116,6 @@ namespace Raven.Tests.FileSystem
 				{
 					Assert.Equal(subBuffer[i], readBuffer[i]);
 				}
-			}
-		}
-
-		private class EmptyNotificationsPublisher : INotificationPublisher
-		{
-			public void Publish(Notification change)
-			{
-			}
-		}
-
-		private class MockIndexStorage : IndexStorage
-		{
-            public MockIndexStorage(InMemoryRavenConfiguration configuration)
-                : base("mock", configuration)
-			{
-			}
-
-			public override void Index(string key, RavenJObject metadata, Etag etag)
-			{
 			}
 		}
 	}

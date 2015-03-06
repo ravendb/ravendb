@@ -118,7 +118,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                 Historian.UpdateLastModified(sourceMetadata);
                 
-                var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWriting(Storage, Search, StorageOperationsTask, tempFileName, sourceMetadata);
+                var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWriting(Storage, Search, Files, tempFileName, sourceMetadata);
 
                 var provider = new MultipartSyncStreamProvider(synchronizingFile, localFile);
 
@@ -142,7 +142,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                 Storage.Batch(accessor =>
                 {
-                    StorageOperationsTask.IndicateFileToDelete(canonicalFilename, null);
+                    Files.IndicateFileToDelete(canonicalFilename, null);
                     accessor.RenameFile(tempFileName, canonicalFilename, null);
 
                     Search.Delete(tempFileName);
@@ -298,7 +298,7 @@ namespace Raven.Database.FileSystem.Controllers
 			DeleteSynchronizationReport(fileName, accessor);
 
 			// remove previous .downloading file
-			StorageOperationsTask.IndicateFileToDelete(RavenFileNameHelper.DownloadingFileName(fileName), null);
+			Files.IndicateFileToDelete(RavenFileNameHelper.DownloadingFileName(fileName), null);
 		}
 
 		[HttpPost]
@@ -426,7 +426,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                     Storage.Batch(accessor =>
                     {
-                        StorageOperationsTask.IndicateFileToDelete(canonicalFilename, null);
+                        Files.IndicateFileToDelete(canonicalFilename, null);
 
                         var tombstoneMetadata = new RavenJObject
                                                     {
@@ -516,7 +516,7 @@ namespace Raven.Database.FileSystem.Controllers
                     ConflictArtifactManager.Delete(canonicalFilename); 
                 }
 					
-                StorageOperationsTask.RenameFile(new RenameFileOperation
+                Files.RenameFile(new RenameFileOperation
                 {
                     FileSystem = FileSystem.Name,
                     Name = canonicalFilename,

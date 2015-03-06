@@ -149,7 +149,7 @@ namespace Raven.Database.FileSystem.Controllers
 						throw new FileNotFoundException();
 					}
 
-					StorageOperationsTask.IndicateFileToDelete(name, GetEtag());
+					Files.IndicateFileToDelete(name, GetEtag());
 
 					if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
 					    // don't create a tombstone for .downloading file
@@ -327,7 +327,7 @@ namespace Raven.Database.FileSystem.Controllers
 					accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
 					accessor.PulseTransaction(); // commit rename operation config
 
-					StorageOperationsTask.RenameFile(operation, etag);
+					Files.RenameFile(operation, etag);
 				});
 			}
 			catch (FileNotFoundException)

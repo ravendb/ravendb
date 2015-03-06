@@ -508,7 +508,6 @@
     <Compile Include="FileSystem\Infrastructure\LimitedStream.cs" />
     <Compile Include="FileSystem\Infrastructure\NoBufferPolicySelector.cs" />
     <Compile Include="FileSystem\Infrastructure\SequenceActions.cs" />
-    <Compile Include="FileSystem\Infrastructure\StorageOperationsTask.cs" />
     <Compile Include="FileSystem\Infrastructure\TempDirectoryTools.cs" />
     <Compile Include="FileSystem\Infrastructure\UuidGenerator.cs" />
     <Compile Include="FileSystem\Notifications\INotificationPublisher.cs" />

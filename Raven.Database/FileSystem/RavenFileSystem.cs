@@ -45,7 +45,6 @@ namespace Raven.Database.FileSystem
 		private readonly IndexStorage search;
 		private readonly SigGenerator sigGenerator;
 		private readonly ITransactionalStorage storage;
-		private readonly StorageOperationsTask storageOperationsTask;
 		private readonly SynchronizationTask synchronizationTask;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
 	    private readonly TransportState transportState;
@@ -87,7 +86,6 @@ namespace Raven.Database.FileSystem
             search = new IndexStorage(name, systemConfiguration);
 
             conflictArtifactManager = new ConflictArtifactManager(storage, search);
-            storageOperationsTask = new StorageOperationsTask(storage, DeleteTriggers, search, notificationPublisher);
 
 			Tasks = new TaskActions(this, Log);
 			Files = new FileActions(this, Log);
@@ -260,11 +258,6 @@ namespace Raven.Database.FileSystem
 		public SynchronizationTask SynchronizationTask
 		{
 			get { return synchronizationTask; }
-		}
-
-		public StorageOperationsTask StorageOperationsTask
-		{
-			get { return storageOperationsTask; }
 		}
 
 		public ConflictArtifactManager ConflictArtifactManager

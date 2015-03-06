@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Exceptions;
+using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Search;
 using Raven.Database.FileSystem.Storage;
@@ -29,7 +30,7 @@ namespace Raven.Database.FileSystem.Util
 
 		protected StorageStream(ITransactionalStorage transactionalStorage, string fileName,
 								StorageStreamAccess storageStreamAccess,
-								RavenJObject metadata, IndexStorage indexStorage, StorageOperationsTask operations)
+								RavenJObject metadata, IndexStorage indexStorage, FileActions operations)
 		{
 			TransactionalStorage = transactionalStorage;
 			StorageStreamAccess = storageStreamAccess;
@@ -103,7 +104,7 @@ namespace Raven.Database.FileSystem.Util
 		}
 
 		public static StorageStream CreatingNewAndWritting(ITransactionalStorage transactionalStorage,
-														   IndexStorage indexStorage, StorageOperationsTask operations,
+														   IndexStorage indexStorage, FileActions operations,
 														   string fileName, RavenJObject metadata)
 		{
 			if (indexStorage == null)

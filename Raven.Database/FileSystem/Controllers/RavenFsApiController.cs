@@ -7,6 +7,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
 using Raven.Client.FileSystem;
 using Raven.Database.Config;
+using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Notifications;
 using Raven.Database.FileSystem.Search;
@@ -171,6 +172,11 @@ namespace Raven.Database.FileSystem.Controllers
 			get { return FileSystem.Search; }
 		}
 
+	    protected FileActions Files
+	    {
+			get { return FileSystem.Files; }
+	    }
+
 		protected FileLockManager FileLockManager
 		{
 			get { return FileSystem.FileLockManager; }
@@ -194,11 +200,6 @@ namespace Raven.Database.FileSystem.Controllers
 		protected SynchronizationTask SynchronizationTask
 		{
 			get { return FileSystem.SynchronizationTask; }
-		}
-
-		protected StorageOperationsTask StorageOperationsTask
-		{
-			get { return FileSystem.StorageOperationsTask; }
 		}
 
 		protected PagingInfo Paging
