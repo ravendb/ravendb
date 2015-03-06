@@ -121,6 +121,7 @@
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
     <Compile Include="RaqvenDB_3222.cs" />
+    <Compile Include="RavenDB-3136.cs" />
     <Compile Include="RavenDB-3150.cs" />
     <Compile Include="RavenDB3075.cs" />
     <Compile Include="RavenDB_2627.cs" />
@@ -347,6 +348,7 @@
     <Compile Include="RavenDB_3042.cs" />
     <Compile Include="RavenDB_3071.cs" />
     <Compile Include="RavenDB_3082.cs" />
+    <Compile Include="RavenDB_3086.cs" />
     <Compile Include="RavenDB_3109.cs" />
     <Compile Include="RavenDB_3117.cs" />
     <Compile Include="RavenDB_3145.cs" />

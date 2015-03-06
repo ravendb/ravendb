@@ -41,6 +41,7 @@ using System.Runtime.Serialization;
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
+using Raven.Abstractions.Json;
 #endif
 
 namespace Raven.Imports.Newtonsoft.Json.Serialization
@@ -50,6 +51,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 		private JsonContract _rootContract;
 		private readonly List<object> _serializeStack = new List<object>();
 		private JsonSerializerProxy _internalSerializer;
+        private JsonConverterCollection _internalConverters;
 
 		Action<object, JsonWriter> beforeClosingObject;
 
@@ -66,6 +68,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
 			if (objectType != null)
 				_rootContract = Serializer._contractResolver.ResolveContract(objectType);
+
+            _internalConverters = Serializer.Converters;
 
 			SerializeValue(jsonWriter, value, GetContractSafe(value), null, null, null);
 		}
@@ -121,7 +125,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 				 || ((converter = (containerProperty != null) ? containerProperty.ItemConverter : null) != null)
 				 || ((converter = (containerContract != null) ? containerContract.ItemConverter : null) != null)
 				 || ((converter = valueContract.Converter) != null)
-				 || ((converter = Serializer.GetMatchingConverter(valueContract.UnderlyingType)) != null)
+                 || ((converter = JsonConverterCache.GetMatchingConverter(_internalConverters, valueContract.UnderlyingType)) != null)
 				 || ((converter = valueContract.InternalConverter) != null))
 				&& converter.CanWrite)
 			{
@@ -162,7 +166,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
           break;
 #endif
 				case JsonContractType.Linq:
-					((JToken)value).WriteTo(writer, Serializer.Converters.ToArray());
+                    ((JToken)value).WriteTo(writer, _internalConverters);
 					break;
 			}
 		}

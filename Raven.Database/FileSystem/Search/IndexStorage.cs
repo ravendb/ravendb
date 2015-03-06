@@ -175,7 +175,9 @@ namespace Raven.Database.FileSystem.Search
             if (EtagUtil.IsGreaterThan(lastEtag, lastStoredEtag))
                 return false;
 
-            return true;
+            var checkIndex = new CheckIndex(luceneDirectory);
+            var status = checkIndex.CheckIndex_Renamed_Method();
+            return status.clean;
         }
 
         protected Etag GetLastEtagForIndex()
