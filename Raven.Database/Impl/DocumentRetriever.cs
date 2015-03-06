@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Impl.DTC;
@@ -161,20 +162,36 @@ namespace Raven.Database.Impl
 		        var fieldsToFetchFromDocument = fieldsToFetch.Fields.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null).ToArray();
 		        if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
 		        {
-		            doc = GetDocumentWithCaching(queryResult.Key);
-		            if (doc != null)
+                    if (this.configuration.ImplicitFetchFieldsFromDocumentMode.Equals("Exception", StringComparison.InvariantCultureIgnoreCase))
 		            {
-		                if (fetchingId)
-		                {
-		                    queryResult.Projection[Constants.DocumentIdFieldName] = doc.Key;
-		                }
+		                string message = string.Format("Implicit fetching of fields from the document is disabled." + Environment.NewLine +
+		                                               "Check your index ({0}) to make sure that all fields you want to project are stored in the index." + Environment.NewLine +
+		                                               "You can control this behavior using the Raven/ImplicitFetchFieldsFromDocumentMode setting." + Environment.NewLine +
+                                                       "Fields to fetch from document are: {1}" + Environment.NewLine +
+                                                       "Fetching id: {2}", indexDefinition.Name, string.Join(", ", fieldsToFetchFromDocument), fetchingId);
+		                throw new ImplicitFetchFieldsFromDocumentNotAllowedException(message);
+		            }
+                    else if (this.configuration.ImplicitFetchFieldsFromDocumentMode.Equals("DoNothing", StringComparison.InvariantCultureIgnoreCase))
+		            {
+		                
+		            }
+		            else
+                    {
+                        doc = GetDocumentWithCaching(queryResult.Key);
+                        if (doc != null)
+                        {
+                            if (fetchingId)
+                            {
+                                queryResult.Projection[Constants.DocumentIdFieldName] = doc.Key;
+                            }
 
-		                var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
-		                foreach (var property in result)
-		                {
-		                    if (property.Value == null || property.Value.Type == JTokenType.Null) continue;
-		                    queryResult.Projection[property.Key] = property.Value;
-		                }
+                            var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
+                            foreach (var property in result)
+                            {
+                                if (property.Value == null || property.Value.Type == JTokenType.Null) continue;
+                                queryResult.Projection[property.Key] = property.Value;
+                            }
+                        }
 		            }
 		        }
 		    }

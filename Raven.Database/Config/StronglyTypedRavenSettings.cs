@@ -235,7 +235,7 @@ namespace Raven.Database.Config
 
 			TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 
-            ImplicitFieldsToFetchFromDocumentMode = new StringSetting(settings["Raven/ImplicitFieldsToFetchFromDocumentMode"], "Enabled");
+            ImplicitFetchFieldsFromDocumentMode = new StringSetting(settings["Raven/ImplicitFetchFieldsFromDocumentMode"], "Enabled");
 		    
             if (settings["Raven/MaxServicePointIdleTime"] != null) 
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
@@ -397,7 +397,7 @@ namespace Raven.Database.Config
 
 		public TimeSpanSetting TombstoneRetentionTime { get; private set; }
 
-        public StringSetting ImplicitFieldsToFetchFromDocumentMode { get; private set; }
+        public StringSetting ImplicitFetchFieldsFromDocumentMode { get; private set; }
 
 		public class VoronConfiguration
 		{

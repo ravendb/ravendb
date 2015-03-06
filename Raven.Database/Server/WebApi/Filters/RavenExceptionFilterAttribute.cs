@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http.Filters;
+using System.Web.Http.Results;
 using Jint.Runtime;
 
 using Raven.Abstractions.Connection;
@@ -23,6 +24,7 @@ namespace Raven.Database.Server.WebApi.Filters
 				{typeof (JavaScriptException), (ctx, e) => HandleJintException(ctx, e as JavaScriptException)},
 				{typeof (IndexDisabledException), (ctx, e) => HandleIndexDisabledException(ctx, e as IndexDisabledException)},
 				{typeof (IndexDoesNotExistsException), (ctx, e) => HandleIndexDoesNotExistsException(ctx, e as IndexDoesNotExistsException)},
+                {typeof (ImplicitFetchFieldsFromDocumentNotAllowedException), (ctx, e) => HandleImplicitFetchFieldsFromDocumentNotAllowedException(ctx, e as ImplicitFetchFieldsFromDocumentNotAllowedException)}
 			};
 
 		public override void OnException(HttpActionExecutedContext ctx)
@@ -152,5 +154,19 @@ namespace Raven.Database.Server.WebApi.Filters
 				Error = e.Information == null ? e.ToString() : e.Information.GetErrorMessage(),
 			});
 		}
+
+	    private static void HandleImplicitFetchFieldsFromDocumentNotAllowedException(HttpActionExecutedContext ctx, ImplicitFetchFieldsFromDocumentNotAllowedException e)
+	    {
+	        ctx.Response = new HttpResponseMessage
+	        {
+	            StatusCode = HttpStatusCode.InternalServerError
+	        };
+
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = e.Message
+            });
+	    }
 	}
 }

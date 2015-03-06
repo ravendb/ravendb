@@ -299,7 +299,7 @@ namespace Raven.Database.Config
 
 			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
 
-		    ImplicitFieldsToFetchFromDocumentMode = ravenSettings.ImplicitFieldsToFetchFromDocumentMode.Value;
+		    ImplicitFetchFieldsFromDocumentMode = ravenSettings.ImplicitFetchFieldsFromDocumentMode.Value;
 
 			IgnoreSslCertificateErros = GetIgnoreSslCertificateErrorModeMode();
 
@@ -1004,7 +1004,7 @@ namespace Raven.Database.Config
         ///     DoNothing (fields are not fetched from the document)
         ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
         /// </summary>
-        public string ImplicitFieldsToFetchFromDocumentMode { get; set; }
+        public string ImplicitFetchFieldsFromDocumentMode { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
