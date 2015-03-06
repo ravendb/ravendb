@@ -1190,6 +1190,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
     <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
@@ -1198,7 +1199,6 @@
     <EmbeddedResource Include="Server\WebUI\Raven.Studio.xap" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
-    <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Client\Aws\Amazon.AWS.endpoints.xml" />
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
