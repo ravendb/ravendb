@@ -470,7 +470,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 			fileCount.Delete(writeBatch.Value, CreateKey(nameOfFileThatShouldNotBeCounted));
         }
 
-        public void RenameFile(string filename, string rename, Etag etag, bool commitPeriodically = false)
+        public void RenameFile(string filename, string rename, bool commitPeriodically = false)
         {
             ushort version;
             ushort? renameVersion;
@@ -483,8 +483,6 @@ namespace Raven.Database.FileSystem.Storage.Voron
             var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
             if (file == null)
                 throw new FileNotFoundException("Could not find file: " + filename);
-
-			EnsureDocumentEtagMatch(filename, etag, file);
 
             RenameUsage(filename, rename, commitPeriodically);
             DeleteFile(filename);

@@ -48,7 +48,7 @@ namespace Raven.Database.FileSystem.Infrastructure
             UpdateLastModified(metadata, DateTimeOffset.UtcNow);
         }
 
-        public void UpdateLastModified(RavenJObject metadata, DateTimeOffset when) //TODO arek
+        public void UpdateLastModified(RavenJObject metadata, DateTimeOffset when)
         {
             // internally keep last modified date with millisecond precision
             metadata[Constants.LastModified] = when;

@@ -437,11 +437,11 @@ namespace Raven.Tests.FileSystem.Storage
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-				storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.RenameFile("file1", "file2", null)));
+				storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.RenameFile("file1", "file2")));
 
                 storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
 
-				storage.Batch(accessor => accessor.RenameFile("file1", "file2", null));
+				storage.Batch(accessor => accessor.RenameFile("file1", "file2"));
 
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.GetFile("file1", 0, 10)));
 
@@ -475,7 +475,7 @@ namespace Raven.Tests.FileSystem.Storage
 
                 storage.Batch(accessor => accessor.AssociatePage("file1", 1, 0, 10));
 
-				storage.Batch(accessor => accessor.RenameFile("file1", "file2", null));
+				storage.Batch(accessor => accessor.RenameFile("file1", "file2"));
 
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.GetFile("file1", 0, 10)));
 

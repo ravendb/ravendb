@@ -292,43 +292,10 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             name = FileHeader.Canonize(name);
             rename = FileHeader.Canonize(rename);
-			var etag = GetEtag();
 
 			try
 			{
-				Storage.Batch(accessor =>
-				{
-					AssertFileIsNotBeingSynced(name, accessor, true);
-
-					var metadata = accessor.GetFile(name, 0, 0).Metadata;
-					if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
-					{
-						throw new FileNotFoundException();
-					}
-
-					var existingFile = accessor.ReadFile(rename);
-					if (existingFile != null && !existingFile.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker))
-					{
-						throw new HttpResponseException(
-							Request.CreateResponse(HttpStatusCode.Forbidden,
-								new InvalidOperationException("Cannot rename because file " + rename + " already exists")));
-					}
-
-					Historian.UpdateLastModified(metadata);
-
-					var operation = new RenameFileOperation
-					{
-						FileSystem = FileSystem.Name,
-						Name = name,
-						Rename = rename,
-						MetadataAfterOperation = metadata
-					};
-					//TODO arek - need to ensure that config will be deleted if there is ConcurrencyException
-					accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
-					accessor.PulseTransaction(); // commit rename operation config
-
-					Files.RenameFile(operation, etag);
-				});
+				Files.Rename(name, rename, GetEtag());
 			}
 			catch (FileNotFoundException)
 			{
@@ -339,10 +306,10 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				throw ConcurrencyResponseException(ex);
 			}
-
-			log.Debug("File '{0}' was renamed to '{1}'", name, rename);
-
-			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+			catch (SynchronizationException ex)
+			{
+				throw new HttpResponseException(Request.CreateResponse((HttpStatusCode) 420, ex));
+			}
 
             return GetMessageWithString("", HttpStatusCode.NoContent);
 		}
@@ -359,17 +326,15 @@ namespace Raven.Database.FileSystem.Controllers
 				var options = new FileActions.PutOperationOptions();
 
 				Guid uploadIdentifier;
-				if (uploadId != null && Guid.TryParse(uploadId, out uploadIdentifier))
+				if (Guid.TryParse(uploadId, out uploadIdentifier))
 					options.UploadId = uploadIdentifier;
 
-				var sizeHeader = GetHeader("RavenFS-size");
 				long contentSize;
-				if (long.TryParse(sizeHeader, out contentSize))
+				if (long.TryParse(GetHeader("RavenFS-size"), out contentSize))
 					options.ContentSize = contentSize;
 
-				var lastModifiedHeader = GetHeader(Constants.RavenLastModified);
 				DateTimeOffset lastModified;
-				if (lastModifiedHeader != null && DateTimeOffset.TryParse(lastModifiedHeader, out lastModified))
+				if (DateTimeOffset.TryParse(GetHeader(Constants.RavenLastModified), out lastModified))
 					options.LastModified = lastModified;
 
 				options.PreserveTimestamps = preserveTimestamps;
@@ -378,17 +343,13 @@ namespace Raven.Database.FileSystem.Controllers
 
 				await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
 			}
-			catch (Exception ex)
+			catch (ConcurrencyException ex)
 			{
-				var concurrencyException = ex as ConcurrencyException;
-				if (concurrencyException != null)
-					throw ConcurrencyResponseException(concurrencyException);
-
-				var synchronizationException = ex as SynchronizationException;
-				if (synchronizationException != null)
-					throw new HttpResponseException(Request.CreateResponse((HttpStatusCode)420, synchronizationException));
-
-				throw;
+				throw ConcurrencyResponseException(ex);
+			}
+			catch (SynchronizationException ex)
+			{
+				throw new HttpResponseException(Request.CreateResponse((HttpStatusCode) 420, ex));
 			}
 
 			return GetEmptyMessage(HttpStatusCode.Created);

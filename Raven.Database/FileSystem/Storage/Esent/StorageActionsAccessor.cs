@@ -599,7 +599,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["file_count"], -1);
 		}
 
-		public void RenameFile(string filename, string rename, Etag etag, bool commitPeriodically = false)
+		public void RenameFile(string filename, string rename, bool commitPeriodically = false)
 		{
 		    try
 		    {
@@ -610,8 +610,6 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
                 using (var update = new Update(session, Files, JET_prep.Replace))
                 {
-					EnsureFileEtagMatch(filename, etag);
-
                     Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], rename, Encoding.Unicode);
 
                     update.Save();

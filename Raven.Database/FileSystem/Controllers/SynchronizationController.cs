@@ -143,7 +143,7 @@ namespace Raven.Database.FileSystem.Controllers
                 Storage.Batch(accessor =>
                 {
                     Files.IndicateFileToDelete(canonicalFilename, null);
-                    accessor.RenameFile(tempFileName, canonicalFilename, null);
+                    accessor.RenameFile(tempFileName, canonicalFilename);
 
                     Search.Delete(tempFileName);
                     Search.Index(canonicalFilename, sourceMetadata, updateResult.Etag);
@@ -516,7 +516,7 @@ namespace Raven.Database.FileSystem.Controllers
                     ConflictArtifactManager.Delete(canonicalFilename); 
                 }
 					
-                Files.RenameFile(new RenameFileOperation
+                Files.ExecuteRenameOperation(new RenameFileOperation
                 {
                     FileSystem = FileSystem.Name,
                     Name = canonicalFilename,

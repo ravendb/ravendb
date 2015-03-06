@@ -146,7 +146,7 @@ namespace Raven.Database.FileSystem.Actions
 					metadata["Content-MD5"] = readFileToDatabase.FileHash;
 
 					FileOperationResult updateMetadata = null;
-					Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null)); //TODO arek
+					Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null));
 
 					int totalSizeRead = readFileToDatabase.TotalSizeRead;
 					metadata["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
@@ -206,7 +206,51 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
-		public void RenameFile(RenameFileOperation operation, Etag etag)
+		public void Rename(string name, string rename, Etag etag)
+		{
+			Storage.Batch(accessor =>
+			{
+				AssertFileIsNotBeingSynced(name, accessor);
+
+				var existingFile = accessor.ReadFile(name);
+				if (existingFile == null || existingFile.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+					throw new FileNotFoundException();
+
+				var renamingFile = accessor.ReadFile(rename);
+				if (renamingFile != null && renamingFile.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker) == false)
+					throw new InvalidOperationException("Cannot rename because file " + rename + " already exists");
+
+				var metadata = existingFile.Metadata;
+
+				if (etag != null && existingFile.Etag != etag)
+					throw new ConcurrencyException("Operation attempted on file '" + name + "' using a non current etag")
+					{
+						ActualETag = existingFile.Etag,
+						ExpectedETag = etag
+					};
+				
+				Historian.UpdateLastModified(metadata);
+
+				var operation = new RenameFileOperation
+				{
+					FileSystem = FileSystem.Name,
+					Name = name,
+					Rename = rename,
+					MetadataAfterOperation = metadata
+				};
+
+				accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
+				accessor.PulseTransaction(); // commit rename operation config
+
+				ExecuteRenameOperation(operation, etag);
+			});
+
+			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
+
+			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+		}
+
+		public void ExecuteRenameOperation(RenameFileOperation operation, Etag etag)
 		{
 			var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
 			Publisher.Publish(new FileChangeNotification
@@ -226,7 +270,7 @@ namespace Raven.Database.FileSystem.Actions
 					accessor.Delete(previousRenameTombstone.FullPath);
 				}
 
-				accessor.RenameFile(operation.Name, operation.Rename, etag, true);
+				accessor.RenameFile(operation.Name, operation.Rename, true);
 				accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation, null);
 
 				// copy renaming file metadata and set special markers
@@ -257,16 +301,16 @@ namespace Raven.Database.FileSystem.Actions
 			{
 				AssertDeleteOperationNotVetoed(fileName);
 
-				var existingFileHeader = accessor.ReadFile(fileName);
+				var existingFile = accessor.ReadFile(fileName);
 
-				if (existingFileHeader == null)
+				if (existingFile == null)
 				{
 					// do nothing if file does not exist
 					fileExists = false;
 					return;
 				}
 
-				if (existingFileHeader.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+				if (existingFile.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
 				{
 					// if it is a tombstone drop it
 					accessor.Delete(fileName);
@@ -274,7 +318,14 @@ namespace Raven.Database.FileSystem.Actions
 					return;
 				}
 
-				var metadata = new RavenJObject(existingFileHeader.Metadata).WithDeleteMarker();
+				if (etag != null && existingFile.Etag != etag)
+					throw new ConcurrencyException("Operation attempted on file '" + fileName + "' using a non current etag")
+					{
+						ActualETag = existingFile.Etag,
+						ExpectedETag = etag
+					};
+
+				var metadata = new RavenJObject(existingFile.Metadata).WithDeleteMarker();
 
 				var renameSucceeded = false;
 
@@ -284,14 +335,14 @@ namespace Raven.Database.FileSystem.Actions
 				{
 					try
 					{
-						accessor.RenameFile(fileName, deletingFileName, etag);
+						accessor.RenameFile(fileName, deletingFileName);
 						renameSucceeded = true;
 					}
 					catch (FileExistsException) // it means that .deleting file was already existed
 					{
 						var deletingFileHeader = accessor.ReadFile(deletingFileName);
 
-						if (deletingFileHeader != null && deletingFileHeader.Equals(existingFileHeader))
+						if (deletingFileHeader != null && deletingFileHeader.Equals(existingFile))
 						{
 							fileExists = false; // the same file already marked as deleted no need to do it again
 							return;
@@ -427,7 +478,7 @@ namespace Raven.Database.FileSystem.Actions
 				{
 					try
 					{
-						RenameFile(renameOperation, null);
+						ExecuteRenameOperation(renameOperation, null);
 						Log.Debug("File '{0}' was renamed to '{1}'", renameOperation.Name, renameOperation.Rename);
 
 					}

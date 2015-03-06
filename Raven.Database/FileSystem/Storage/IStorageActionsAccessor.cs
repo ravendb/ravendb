@@ -46,7 +46,7 @@ namespace Raven.Database.FileSystem.Storage
 
         void DecrementFileCount(string nameOfFileThatShouldNotBeCounted);
 
-        void RenameFile(string filename, string rename, Etag etag, bool commitPeriodically = false);
+        void RenameFile(string filename, string rename, bool commitPeriodically = false);
 
         RavenJObject GetConfig(string name);
 
