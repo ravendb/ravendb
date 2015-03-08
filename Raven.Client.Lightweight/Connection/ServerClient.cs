@@ -500,7 +500,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.DisableAllCaching();
 		}
 
-		internal ReplicationDocument DirectGetReplicationDestinations(OperationMetadata operationMetadata)
+		internal ReplicationDocumentWithClusterInformation DirectGetReplicationDestinations(OperationMetadata operationMetadata)
 		{
 			return asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap();
 		}

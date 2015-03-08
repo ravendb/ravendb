@@ -5,6 +5,8 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
@@ -16,6 +18,8 @@ namespace Raven.Client
 	public abstract class Convention
 	{
 		protected Dictionary<Type, MemberInfo> idPropertyCache = new Dictionary<Type, MemberInfo>();
+
+		public ClusterBehavior ClusterBehavior { get; set; }
 
 		/// <summary>
 		/// How should we behave in a replicated environment when we can't 

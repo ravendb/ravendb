@@ -1826,7 +1826,7 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
 			if (fromEtag != null) // etags does not match between servers
-				return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication), skipAfter, token).ConfigureAwait(false);
+				return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null), skipAfter, token).ConfigureAwait(false);
 
 			return await ExecuteWithReplication("GET", operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata, skipAfter, token), token).ConfigureAwait(false);
 		}
@@ -2233,7 +2233,7 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 		internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string key, Etag etag, string[] conflictIds, OperationMetadata operationMetadata = null, CancellationToken token = default(CancellationToken))
 		{
 			if (operationMetadata == null)
-				operationMetadata = new OperationMetadata(Url);
+				operationMetadata = new OperationMetadata(Url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
 
 			if (conflictListeners.Length > 0 && resolvingConflict == false)
 			{
@@ -2352,7 +2352,7 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 										 replicationInformerGetter, databaseName, conflictListeners, false);
 		}
 
-		internal async Task<ReplicationDocument> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata)
+		internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata)
 		{
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", "GET", operationMetadata.Credentials, convention);
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
@@ -2360,7 +2360,7 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 				try
 				{
 					var requestJson = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return requestJson.JsonDeserialization<ReplicationDocument>();
+					return requestJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>();
 				}
 				catch (ErrorResponseException e)
 				{

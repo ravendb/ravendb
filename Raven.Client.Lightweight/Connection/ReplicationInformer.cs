@@ -34,10 +34,10 @@ namespace Raven.Client.Connection
 
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
 		{
-			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
+			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)).ResultUnwrap());
 		}
 
-        private Task UpdateReplicationInformationIfNeededInternal(string url, Func<ReplicationDocument> getReplicationDestinations)
+		private Task UpdateReplicationInformationIfNeededInternal(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
 		{
 			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
@@ -87,21 +87,22 @@ namespace Raven.Client.Connection
 
 		protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {
-            var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+			var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>();
             ReplicationDestinations = replicationDocument.Destinations.Select(x =>
             {
                 var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url : x.ClientVisibleUrl;
                 if (string.IsNullOrEmpty(url) || x.Disabled || x.IgnoredClient)
                     return null;
                 if (string.IsNullOrEmpty(x.Database))
-                    return new OperationMetadata(url, x.Username, x.Password, x.Domain, x.ApiKey);
+                    return new OperationMetadata(url, x.Username, x.Password, x.Domain, x.ApiKey, x.ClusterInformation);
 
                 return new OperationMetadata(
                     MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/",
                     x.Username,
                     x.Password,
                     x.Domain,
-                    x.ApiKey);
+                    x.ApiKey,
+					x.ClusterInformation);
             })
                 // filter out replication destination that don't have the url setup, we don't know how to reach them
                 // so we might as well ignore them. Probably private replication destination (using connection string names only)
@@ -126,15 +127,15 @@ namespace Raven.Client.Connection
 
 	    public void RefreshReplicationInformation(AsyncServerClient serverClient)
 		{
-			RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
+			RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)).ResultUnwrap());
 		}
 
         public override void RefreshReplicationInformation(ServerClient serverClient)
         {
-            RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)));
+            RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)));
         }
 
-		private void RefreshReplicationInformationInternal(string url, Func<ReplicationDocument> getReplicationDestinations)
+		private void RefreshReplicationInformationInternal(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
 		{
 			lock (this)
 			{

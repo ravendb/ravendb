@@ -93,7 +93,6 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(configurationDocument.MergedDocument);
 		}
 
-
 		[HttpGet]
 		[RavenRoute("configuration/versioning")]
 		[RavenRoute("databases/{databaseName}/configuration/versioning")]

@@ -1,0 +1,14 @@
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterBehavior.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+namespace Raven.Abstractions.Cluster
+{
+	public enum ClusterBehavior
+	{
+		ReadFromLeaderWriteToLeader = 1,
+		ReadFromAllWriteToLeader = 2,
+		None = 0
+	}
+}

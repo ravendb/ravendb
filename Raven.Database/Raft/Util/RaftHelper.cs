@@ -13,6 +13,7 @@ using Rachis.Transport;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Util;
 
 namespace Raven.Database.Raft.Util
 {
@@ -44,13 +45,32 @@ namespace Raven.Database.Raft.Util
 			return engine.CurrentTopology.AllNodes.First(x => x.Name != selfNode.Name);
 		}
 
+		public static bool IsClusterDatabase(this DocumentDatabase database)
+		{
+			if (database.IsSystemDatabase())
+				return false;
+
+			var value = database.Configuration.Settings.Get(Constants.Cluster.NonClusterDatabaseMarker);
+			if (string.IsNullOrEmpty(value)) 
+				return true;
+
+			bool result;
+			if (bool.TryParse(value, out result) == false)
+				return true;
+
+			if (result)
+				return false;
+
+			return true;
+		}
+
 		public static bool IsClusterDatabase(this DatabaseDocument document)
 		{
 			string value;
-			bool result;
 			if (document.Settings.TryGetValue(Constants.Cluster.NonClusterDatabaseMarker, out value) == false)
 				return true;
 
+			bool result;
 			if (bool.TryParse(value, out result) == false) 
 				return true;
 
@@ -66,7 +86,7 @@ namespace Raven.Database.Raft.Util
 				throw new InvalidOperationException("Not a cluster database. Database: " + document.Id);
 		}
 
-		public static string GetNormalizedNodeUrl(String url)
+		public static string GetNormalizedNodeUrl(string url)
 		{
 			return GetNodeUrl(url).AbsoluteUri.ToLower();
 		}

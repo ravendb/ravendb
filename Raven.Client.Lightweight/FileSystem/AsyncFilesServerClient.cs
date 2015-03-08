@@ -385,7 +385,7 @@ namespace Raven.Client.FileSystem
             if (fromEtag == null)
                 throw new ArgumentException("fromEtag");
 
-            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
 
             if ( pageSize != int.MaxValue )
             {
@@ -438,7 +438,7 @@ namespace Raven.Client.FileSystem
                 this.pageSize = pageSize;
 
                 this.requestFactory = client.RequestFactory;
-                this.operationMetadata = new OperationMetadata(client.BaseUrl, client.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+                this.operationMetadata = new OperationMetadata(client.BaseUrl, client.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
                 this.headers = client.OperationsHeaders;
                 this.conventions = client.Conventions;
             }
@@ -768,7 +768,7 @@ namespace Raven.Client.FileSystem
 
         public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size)
         {
-            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
             return UploadAsyncImpl(operationMetadata, filename, source, metadata, true, size);
         }
 
@@ -1215,12 +1215,12 @@ namespace Raven.Client.FileSystem
 
             public Task<RavenJObject> GetMetadataForAsync(string filename)
             {
-                return client.GetMetadataForAsyncImpl(filename, new OperationMetadata(client.BaseUrl, credentials));
+                return client.GetMetadataForAsyncImpl(filename, new OperationMetadata(client.BaseUrl, credentials, null));
             }
 
             public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
             {                
-                var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials));
+                var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials, null));
                 await stream.CopyToAsync(destination);
             }
 

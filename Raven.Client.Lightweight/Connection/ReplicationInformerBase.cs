@@ -287,7 +287,7 @@ namespace Raven.Client.Connection
 			CancellationToken token = default (CancellationToken))
         {
             var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
-            var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials);
+            var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials, null);
 
             var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
             var operationResult = new AsyncOperationResult<T>();
@@ -383,7 +383,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             try
             {
 				cancellationToken.ThrowCancellationIfNotDefault(); //canceling the task here potentially will stop the recursion
-                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata).ConfigureAwait(false);
+                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials, primaryOperationMetadata.ClusterInformation) : operationMetadata).ConfigureAwait(false);
                 ResetFailureCount(operationMetadata.Url);
                 return new AsyncOperationResult<T>
                 {

@@ -43,15 +43,6 @@ namespace Raven.Database.Server.Controllers
 			queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
 		}
 
-		public void InitializeFrom(RavenDbApiController other)
-		{
-			DatabaseName = other.DatabaseName;
-			queryFromPostRequest = other.queryFromPostRequest;
-			Configuration = other.Configuration;
-			ControllerContext = other.ControllerContext;
-			ActionContext = other.ActionContext;
-		}
-
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);

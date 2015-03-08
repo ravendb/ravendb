@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Replication
@@ -52,5 +53,15 @@ namespace Raven.Abstractions.Replication
 	/// </summary>
 	public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
 	{
+	}
+
+	public class ReplicationDocumentWithClusterInformation : ReplicationDocument<ReplicationDestination.ReplicationDestinationWithClusterInformation>
+	{
+		public ReplicationDocumentWithClusterInformation()
+		{
+			ClusterInformation = ClusterInformation.NotInCluster;
+		}
+
+		public ClusterInformation ClusterInformation { get; set; }
 	}
 }
