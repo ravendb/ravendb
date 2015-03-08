@@ -42,8 +42,8 @@ namespace Raven.Client.FileSystem
         void RegisterFileDeletion(string path, Etag etag = null);
         void RegisterFileDeletion(FileHeader path, Etag etag = null);
 
-        void RegisterRename(string sourceFile, string destinationFile);
-        void RegisterRename(FileHeader sourceFile, string destinationFile);
+        void RegisterRename(string sourceFile, string destinationFile, Etag etag = null);
+        void RegisterRename(FileHeader sourceFile, string destinationFile, Etag etag = null);
 
         /// <summary>
         /// Saves all the changes to the Raven server.

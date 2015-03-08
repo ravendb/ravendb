@@ -33,6 +33,7 @@ using System.Linq.Expressions;
 #endif
 #if !(NET20 || NET35 || SILVERLIGHT || PORTABLE40 || PORTABLE)
 using System.Numerics;
+using Raven.Abstractions.Json;
 #endif
 
 namespace Raven.Imports.Newtonsoft.Json.Linq
@@ -605,6 +606,78 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       }
     }
 
+
+    public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+    {
+        if (converters != null && converters.Count > 0 && _value != null)
+        {
+            JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, _value.GetType());
+            if (matchingConverter != null)
+            {
+                matchingConverter.WriteJson(writer, _value, JsonSerializer.CreateDefault());
+                return;
+            }
+        }
+
+        switch (_valueType)
+        {
+            case JTokenType.Comment:
+                writer.WriteComment((_value != null) ? _value.ToString() : null);
+                return;
+            case JTokenType.Raw:
+                writer.WriteRawValue((_value != null) ? _value.ToString() : null);
+                return;
+            case JTokenType.Null:
+                writer.WriteNull();
+                return;
+            case JTokenType.Undefined:
+                writer.WriteUndefined();
+                return;
+            case JTokenType.Integer:
+#if !(NET20 || NET35 || SILVERLIGHT || PORTABLE40 || PORTABLE)
+                if (_value is BigInteger)
+                    writer.WriteValue((BigInteger)_value);
+                else
+#endif
+                    writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
+                return;
+            case JTokenType.Float:
+                if (_value is decimal)
+                    writer.WriteValue((decimal)_value);
+                else if (_value is double)
+                    writer.WriteValue((double)_value);
+                else if (_value is float)
+                    writer.WriteValue((float)_value);
+                else
+                    writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
+                return;
+            case JTokenType.String:
+                writer.WriteValue((_value != null) ? _value.ToString() : null);
+                return;
+            case JTokenType.Boolean:
+                writer.WriteValue(Convert.ToBoolean(_value, CultureInfo.InvariantCulture));
+                return;
+            case JTokenType.Date:
+#if !NET20
+                if (_value is DateTimeOffset)
+                    writer.WriteValue((DateTimeOffset)_value);
+                else
+#endif
+                    writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
+                return;
+            case JTokenType.Bytes:
+                writer.WriteValue((byte[])_value);
+                return;
+            case JTokenType.Guid:
+            case JTokenType.Uri:
+            case JTokenType.TimeSpan:
+                writer.WriteValue((_value != null) ? _value.ToString() : null);
+                return;
+        }
+
+        throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
+    }
+
     /// <summary>
     /// Writes this token to a <see cref="JsonWriter"/>.
     /// </summary>
@@ -612,73 +685,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
     public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
     {
-      if (converters != null && converters.Length > 0 && _value != null)
-      {
-        JsonConverter matchingConverter = JsonSerializer.GetMatchingConverter(converters, _value.GetType());
-        if (matchingConverter != null)
-        {
-          matchingConverter.WriteJson(writer, _value, JsonSerializer.CreateDefault());
-          return;
-        }
-      }
-
-      switch (_valueType)
-      {
-        case JTokenType.Comment:
-          writer.WriteComment((_value != null) ? _value.ToString() : null);
-          return;
-        case JTokenType.Raw:
-          writer.WriteRawValue((_value != null) ? _value.ToString() : null);
-          return;
-        case JTokenType.Null:
-          writer.WriteNull();
-          return;
-        case JTokenType.Undefined:
-          writer.WriteUndefined();
-          return;
-        case JTokenType.Integer:
-#if !(NET20 || NET35 || SILVERLIGHT || PORTABLE40 || PORTABLE)
-          if (_value is BigInteger)
-            writer.WriteValue((BigInteger)_value);
-          else
-#endif
-          writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
-          return;
-        case JTokenType.Float:
-          if (_value is decimal)
-            writer.WriteValue((decimal)_value);
-          else if (_value is double)
-            writer.WriteValue((double)_value);
-          else if (_value is float)
-            writer.WriteValue((float)_value);
-          else
-            writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
-          return;
-        case JTokenType.String:
-          writer.WriteValue((_value != null) ? _value.ToString() : null);
-          return;
-        case JTokenType.Boolean:
-          writer.WriteValue(Convert.ToBoolean(_value, CultureInfo.InvariantCulture));
-          return;
-        case JTokenType.Date:
-#if !NET20
-          if (_value is DateTimeOffset)
-            writer.WriteValue((DateTimeOffset)_value);
-          else
-#endif
-            writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
-          return;
-        case JTokenType.Bytes:
-          writer.WriteValue((byte[])_value);
-          return;
-        case JTokenType.Guid:
-        case JTokenType.Uri:
-        case JTokenType.TimeSpan:
-          writer.WriteValue((_value != null) ? _value.ToString() : null);
-          return;
-      }
-
-      throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
+        WriteTo(writer, new JsonConverterCollection(converters));
     }
 
     internal override int GetDeepHashCode()

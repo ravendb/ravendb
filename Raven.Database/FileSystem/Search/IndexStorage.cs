@@ -31,7 +31,7 @@ namespace Raven.Database.FileSystem.Search
     /// </summary>
     public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-        private const string IndexVersion = "1.0.0.0";
+        private const string IndexVersion = "1.0.0.1";
 
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
         private static readonly ILog StartupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
@@ -175,7 +175,9 @@ namespace Raven.Database.FileSystem.Search
             if (EtagUtil.IsGreaterThan(lastEtag, lastStoredEtag))
                 return false;
 
-            return true;
+            var checkIndex = new CheckIndex(luceneDirectory);
+            var status = checkIndex.CheckIndex_Renamed_Method();
+            return status.clean;
         }
 
         protected Etag GetLastEtagForIndex()
@@ -224,7 +226,7 @@ namespace Raven.Database.FileSystem.Search
                             foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
                             {
                                 if (!file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
-                                    Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata);
+                                    Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata, file.Etag);
                             }
                         });
 
@@ -399,7 +401,7 @@ namespace Raven.Database.FileSystem.Search
 			return topDocs;
 		}
 
-        private void Index(IndexWriter writer, string key, RavenJObject metadata)
+        private void Index(IndexWriter writer, string key, RavenJObject metadata, Etag etag)
         {
 	        if (filesystem.ReadTriggers.CanReadFile(key, metadata, ReadOperation.Index) == false)
 				return;
@@ -430,20 +432,21 @@ namespace Raven.Database.FileSystem.Search
                     }
                 }
 
+	            if (doc.GetField(Constants.MetadataEtagField) == null)
+		            doc.Add(new Field(Constants.MetadataEtagField, etag.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+
                 writer.DeleteDocuments(new Term("__key", lowerKey));
                 writer.AddDocument(doc);
 
-                // yes, this is slow, but we aren't expecting high writes count
-                var etag = lookup["ETag"].First();
-                var customCommitData = new Dictionary<string, string>() { { "LastETag", etag.Value.ToString() } };
+                var customCommitData = new Dictionary<string, string>() { { "LastETag", etag.ToString() } };
                 writer.Commit(customCommitData);
                 ReplaceSearcher(writer);
             }
         }
 
-	    public virtual void Index(string key, RavenJObject metadata)
+	    public virtual void Index(string key, RavenJObject metadata, Etag etag)
         {
-            Index(writer, key, metadata);
+            Index(writer, key, metadata, etag);
         }
 
         private static Document CreateDocument(string lowerKey, RavenJObject metadata)

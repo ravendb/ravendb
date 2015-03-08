@@ -126,6 +126,18 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       return new JConstructor(this);
     }
 
+    public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+    {
+        writer.WriteStartConstructor(_name);
+
+        foreach (JToken token in Children())
+        {
+            token.WriteTo(writer, converters);
+        }
+
+        writer.WriteEndConstructor();
+    }
+
     /// <summary>
     /// Writes this token to a <see cref="JsonWriter"/>.
     /// </summary>
@@ -133,14 +145,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
     public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
     {
-      writer.WriteStartConstructor(_name);
-
-      foreach (JToken token in Children())
-      {
-        token.WriteTo(writer, converters);
-      }
-
-      writer.WriteEndConstructor();
+        WriteTo(writer, new JsonConverterCollection(converters));
     }
 
     /// <summary>

@@ -45,7 +45,6 @@ namespace Raven.Database.FileSystem
 		private readonly IndexStorage search;
 		private readonly SigGenerator sigGenerator;
 		private readonly ITransactionalStorage storage;
-		private readonly StorageOperationsTask storageOperationsTask;
 		private readonly SynchronizationTask synchronizationTask;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
 	    private readonly TransportState transportState;
@@ -87,7 +86,6 @@ namespace Raven.Database.FileSystem
             search = new IndexStorage(name, systemConfiguration);
 
             conflictArtifactManager = new ConflictArtifactManager(storage, search);
-            storageOperationsTask = new StorageOperationsTask(storage, DeleteTriggers, search, notificationPublisher);
 
 			Tasks = new TaskActions(this, Log);
 			Files = new FileActions(this, Log);
@@ -105,12 +103,11 @@ namespace Raven.Database.FileSystem
 
 	    public void Initialize()
         {
-            storage.Initialize(FileCodecs);
+		    var generator = new UuidGenerator();
+		    storage.Initialize(generator, FileCodecs);
+			generator.EtagBase = new SequenceActions(storage).GetNextValue("Raven/Etag");
 
-            var replicationHiLo = new SynchronizationHiLo(storage);
-            var sequenceActions = new SequenceActions(storage);
-            var uuidGenerator = new UuidGenerator(sequenceActions);
-            historian = new Historian(storage, replicationHiLo, uuidGenerator);
+            historian = new Historian(storage, new SynchronizationHiLo(storage));
 
             search.Initialize(this);
 
@@ -261,11 +258,6 @@ namespace Raven.Database.FileSystem
 		public SynchronizationTask SynchronizationTask
 		{
 			get { return synchronizationTask; }
-		}
-
-		public StorageOperationsTask StorageOperationsTask
-		{
-			get { return storageOperationsTask; }
 		}
 
 		public ConflictArtifactManager ConflictArtifactManager

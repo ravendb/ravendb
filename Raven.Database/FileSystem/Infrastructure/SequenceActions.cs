@@ -1,6 +1,5 @@
 ﻿using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Storage;
-using Raven.Database.FileSystem.Storage.Esent;
 
 namespace Raven.Database.FileSystem.Infrastructure
 {

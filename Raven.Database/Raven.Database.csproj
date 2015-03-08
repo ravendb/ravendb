@@ -254,6 +254,8 @@
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
     <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
+    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From04To05.cs" />
+    <Compile Include="FileSystem\Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
@@ -507,7 +509,6 @@
     <Compile Include="FileSystem\Infrastructure\LimitedStream.cs" />
     <Compile Include="FileSystem\Infrastructure\NoBufferPolicySelector.cs" />
     <Compile Include="FileSystem\Infrastructure\SequenceActions.cs" />
-    <Compile Include="FileSystem\Infrastructure\StorageOperationsTask.cs" />
     <Compile Include="FileSystem\Infrastructure\TempDirectoryTools.cs" />
     <Compile Include="FileSystem\Infrastructure\UuidGenerator.cs" />
     <Compile Include="FileSystem\Notifications\INotificationPublisher.cs" />
@@ -605,7 +606,6 @@
     <Compile Include="FileSystem\Synchronization\SynchronizationWorkItem.cs" />
     <Compile Include="FileSystem\Util\AwaitableQueue.cs" />
     <Compile Include="FileSystem\Util\CombinedStream.cs" />
-    <Compile Include="FileSystem\Util\ConcurrencyAwareExecutor.cs" />
     <Compile Include="FileSystem\Util\FilePathTools.cs" />
     <Compile Include="FileSystem\Util\HashKey.cs" />
     <Compile Include="FileSystem\Util\NarrowedStream.cs" />

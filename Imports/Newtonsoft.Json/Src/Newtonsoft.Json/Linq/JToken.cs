@@ -385,6 +385,8 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
     public abstract void WriteTo(JsonWriter writer, params JsonConverter[] converters);
 
+    public abstract void WriteTo(JsonWriter writer, JsonConverterCollection converters);
+
     /// <summary>
     /// Returns the indented JSON for this token.
     /// </summary>

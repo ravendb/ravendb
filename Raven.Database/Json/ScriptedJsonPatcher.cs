@@ -152,6 +152,7 @@ namespace Raven.Database.Json
 		private void PrepareEngine(ScriptedPatchRequest patch, string docId, int size, ScriptedJsonPatcherOperationScope scope, Engine jintEngine)
 		{
 			scope.AdditionalStepsPerSize = additionalStepsPerSize;
+			scope.MaxSteps = maxSteps;
 
 			jintEngine.Global.Delete("PutDocument", false);
 			jintEngine.Global.Delete("LoadDocument", false);

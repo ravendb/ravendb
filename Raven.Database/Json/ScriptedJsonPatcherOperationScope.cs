@@ -26,6 +26,7 @@ namespace Raven.Database.Json
 		public RavenJObject DebugActions { get; private set; }		
 
 		public int AdditionalStepsPerSize { get; set; }
+		public int MaxSteps { get; set; }
 
 		protected ScriptedJsonPatcherOperationScope(DocumentDatabase database, bool debugMode)
 		{
@@ -108,15 +109,15 @@ namespace Raven.Database.Json
 			JsonDocument document;
 			if (documentKeyContext.TryGetValue(documentKey, out document) == false)
 				document = Database.Documents.Get(documentKey, null);
-
-			if (document.SerializedSizeOnDisk != 0)
+			
+			if (document != null)
 			{
-				totalStatements += (document.SerializedSizeOnDisk * AdditionalStepsPerSize);
+				totalStatements += (MaxSteps/2 + (document.SerializedSizeOnDisk*AdditionalStepsPerSize));
 				engine.Options.MaxStatements(totalStatements);
 			}
 
 			var loadedDoc = document == null ? null : document.ToJson();
-			
+
 			if (loadedDoc == null)
 				return JsValue.Null;
 
