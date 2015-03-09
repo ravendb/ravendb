@@ -16,7 +16,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-
+using Rachis.Transport;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
@@ -36,6 +36,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Impl;
+using Raven.Database.Raft;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -873,6 +874,31 @@ namespace Raven.Tests.Helpers
 			var requestFactory = store.JsonRequestFactory;
 			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", "POST", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
 			request.ExecuteRequest();
+		}
+
+		protected RavenDbServer CreateServerWithOAuth(int port, string apiKey, out NodeConnectionInfo nodeConnectionInfo)
+		{
+			var server = GetNewServer(port, enableAuthentication: true);
+			nodeConnectionInfo = ClusterManagerFactory.CreateSelfConnection(server.SystemDatabase);
+			nodeConnectionInfo.ApiKey = apiKey;
+
+			EnableAuthentication(server.SystemDatabase);
+
+			var apiKeyTokens = apiKey.Split('/');
+
+			server.SystemDatabase.Documents.Put("Raven/ApiKeys/" + apiKeyTokens[0], null, RavenJObject.FromObject(new ApiKeyDefinition
+			{
+				Databases = new List<ResourceAccess>
+						            {
+							            new ResourceAccess { TenantId = "*", Admin = true }, 
+										new ResourceAccess { TenantId = "<system>", Admin = true },
+						            },
+				Enabled = true,
+				Name = apiKeyTokens[0],
+				Secret = apiKeyTokens[1]
+			}), new RavenJObject(), null);
+
+			return server;
 		}
 	}
 }

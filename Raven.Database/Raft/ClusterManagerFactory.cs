@@ -25,6 +25,21 @@ namespace Raven.Database.Raft
 {
 	public static class ClusterManagerFactory
 	{
+		public static NodeConnectionInfo CreateSelfConnection(DocumentDatabase database)
+		{
+			var configuration = database.Configuration;
+
+			var nodeName = RaftHelper.GetNodeName(database.TransactionalStorage.Id);
+
+			var url = configuration.ServerUrl;
+
+			return new NodeConnectionInfo
+			{
+				Name = nodeName,
+				Uri = RaftHelper.GetNodeUrl(url)
+			};
+		}
+
 		public static ClusterManager Create(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord)
 		{
 			if (systemDatabase == null)
@@ -36,16 +51,7 @@ namespace Raven.Database.Raft
 			DatabaseHelper.AssertSystemDatabase(systemDatabase);
 
 			var configuration = systemDatabase.Configuration;
-
-			var nodeName = RaftHelper.GetNodeName(systemDatabase.TransactionalStorage.Id);
-
-			var url = configuration.ServerUrl;
-
-			var nodeConnectionInfo = new NodeConnectionInfo
-			{
-				Name = nodeName,
-				Uri = RaftHelper.GetNodeUrl(url)
-			};
+			var nodeConnectionInfo = CreateSelfConnection(systemDatabase);
 
 			StorageEnvironmentOptions options;
 			if (configuration.RunInMemory == false)
@@ -61,7 +67,7 @@ namespace Raven.Database.Raft
 				options = StorageEnvironmentOptions.CreateMemoryOnly();
 			}
 
-			var transport = new HttpTransport(nodeName);
+			var transport = new HttpTransport(nodeConnectionInfo.Name);
 			var stateMachine = new ClusterStateMachine(systemDatabase, databasesLandlord);
 			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine)
 									{
@@ -93,7 +99,7 @@ namespace Raven.Database.Raft
 			engine.Engine.CurrentLeader = null;
 		}
 
-		public static void InitializeTopology(DocumentDatabase systemDatabase, ClusterManager engine)
+		public static void InitializeTopology(ClusterManager engine)
 		{
 			InitializeTopology(engine.Engine.Options.SelfConnection, engine);
 		}

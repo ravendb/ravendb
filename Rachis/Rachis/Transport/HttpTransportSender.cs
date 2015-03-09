@@ -14,7 +14,8 @@ using System.Threading.Tasks;
 
 using NLog;
 using Rachis.Messages;
-
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.OAuth;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis.Transport
@@ -27,6 +28,8 @@ namespace Rachis.Transport
 	{
 		private readonly HttpTransportBus _bus;
 
+		private readonly ConcurrentDictionary<string, SecuredAuthenticator> _securedAuthenticatorCache = new ConcurrentDictionary<string, SecuredAuthenticator>();
+
 		private readonly ConcurrentDictionary<string, ConcurrentQueue<HttpClient>> _httpClientsCache = new ConcurrentDictionary<string, ConcurrentQueue<HttpClient>>();
 		private readonly Logger _log;
 		public HttpTransportSender(string name, HttpTransportBus bus)
@@ -38,15 +41,14 @@ namespace Rachis.Transport
 
 		public void Stream(NodeConnectionInfo dest, InstallSnapshotRequest req, Action<Stream> streamWriter)
 		{
-			HttpClient client;
-			using (GetConnection(dest, out client))
+			LogStatus("install snapshot to " + dest, async () =>
 			{
-				LogStatus("install snapshot to " + dest, async () =>
+				var requestUri =
+					string.Format("raft/installSnapshot?term={0}&=lastIncludedIndex={1}&lastIncludedTerm={2}&from={3}&topology={4}&clusterTopologyId={5}",
+						req.Term, req.LastIncludedIndex, req.LastIncludedTerm, req.From, Uri.EscapeDataString(JsonConvert.SerializeObject(req.Topology)), req.ClusterTopologyId);
+				using (var request = CreateRequest(dest, requestUri, "POST"))
 				{
-					var requestUri =
-						string.Format("raft/installSnapshot?term={0}&=lastIncludedIndex={1}&lastIncludedTerm={2}&from={3}&topology={4}&clusterTopologyId={5}",
-							req.Term, req.LastIncludedIndex, req.LastIncludedTerm, req.From, Uri.EscapeDataString(JsonConvert.SerializeObject(req.Topology)), req.ClusterTopologyId);
-					var httpResponseMessage = await client.PostAsync(requestUri, new SnapshotContent(streamWriter));
+					var httpResponseMessage = await request.WriteAsync(() => new SnapshotContent(streamWriter));
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
@@ -55,8 +57,8 @@ namespace Rachis.Transport
 					}
 					var installSnapshotResponse = JsonConvert.DeserializeObject<InstallSnapshotResponse>(reply);
 					SendToSelf(installSnapshotResponse);
-				});
-			}
+				}
+			});
 		}
 
 		public class SnapshotContent : HttpContent
@@ -82,16 +84,51 @@ namespace Rachis.Transport
 			}
 		}
 
+		private HttpRaftRequest CreateRequest(NodeConnectionInfo node, string url, string method)
+		{
+			var request = new HttpRaftRequest(node, url, method, info =>
+			{
+				HttpClient client;
+				var dispose = (IDisposable) GetConnection(info, out client);
+				return Tuple.Create(dispose, client);
+			})
+			{
+				UnauthorizedResponseAsyncHandler = HandleUnauthorizedResponseAsync, 
+				ForbiddenResponseAsyncHandler = HandleForbiddenResponseAsync
+			};
+			GetAuthenticator(node).ConfigureRequest(this, new WebRequestEventArgs
+			{
+				Client = request.httpClient,
+				Credentials = new OperationCredentials(node.ApiKey, null) //TODO: fix me
+			});
+			return request;
+		}
+
+		internal async Task<Action<HttpClient>> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse, NodeConnectionInfo nodeConnectionInfo)
+		{
+			var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
+
+			if (string.IsNullOrEmpty(oauthSource))
+				oauthSource = nodeConnectionInfo.Uri.AbsoluteUri + "/OAuth/API-Key";
+
+			return await GetAuthenticator(nodeConnectionInfo).DoOAuthRequestAsync(nodeConnectionInfo.Uri.AbsoluteUri, oauthSource, nodeConnectionInfo.ApiKey);
+		}
+
+		internal async Task<Action<HttpClient>> HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse, NodeConnectionInfo nodeConnection)
+		{
+			throw new NotImplementedException();
+		}
+
 		public void Send(NodeConnectionInfo dest, AppendEntriesRequest req)
 		{
-			HttpClient client;
-			using (GetConnection(dest, out client))
+			LogStatus("append entries to " + dest, async () =>
 			{
-				LogStatus("append entries to " + dest, async () =>
+				var requestUri = string.Format("raft/appendEntries?term={0}&leaderCommit={1}&prevLogTerm={2}&prevLogIndex={3}&entriesCount={4}&from={5}&clusterTopologyId={6}",
+					req.Term, req.LeaderCommit, req.PrevLogTerm, req.PrevLogIndex, req.EntriesCount, req.From, req.ClusterTopologyId);
+				using (var request = CreateRequest(dest, requestUri, "POST"))
 				{
-					var requestUri = string.Format("raft/appendEntries?term={0}&leaderCommit={1}&prevLogTerm={2}&prevLogIndex={3}&entriesCount={4}&from={5}&clusterTopologyId={6}",
-						req.Term, req.LeaderCommit, req.PrevLogTerm, req.PrevLogIndex, req.EntriesCount, req.From, req.ClusterTopologyId);
-					var httpResponseMessage = await client.PostAsync(requestUri,new EntriesContent(req.Entries));
+					var httpResponseMessage = await request.WriteAsync(() => new EntriesContent(req.Entries));
+
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
@@ -99,9 +136,9 @@ namespace Rachis.Transport
 						return;
 					}
 					var appendEntriesResponse = JsonConvert.DeserializeObject<AppendEntriesResponse>(reply);
-					SendToSelf(appendEntriesResponse);
-				});
-			}
+					SendToSelf(appendEntriesResponse);	
+				}
+			});
 		}
 
 		private class EntriesContent : HttpContent
@@ -146,14 +183,13 @@ namespace Rachis.Transport
 
 		public void Send(NodeConnectionInfo dest, CanInstallSnapshotRequest req)
 		{
-			HttpClient client;
-			using (GetConnection(dest, out client))
+			LogStatus("can install snapshot to " + dest, async () =>
 			{
-				LogStatus("can install snapshot to " + dest, async () =>
+				var requestUri = string.Format("raft/canInstallSnapshot?term={0}&=index{1}&from={2}&clusterTopologyId={3}", req.Term, req.Index,
+					req.From, req.ClusterTopologyId);
+				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var requestUri = string.Format("raft/canInstallSnapshot?term={0}&=index{1}&from={2}&clusterTopologyId={3}", req.Term, req.Index,
-						req.From, req.ClusterTopologyId);
-					var httpResponseMessage = await client.GetAsync(requestUri);
+					var httpResponseMessage = await request.ExecuteAsync();
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
@@ -162,20 +198,19 @@ namespace Rachis.Transport
 					}
 					var canInstallSnapshotResponse = JsonConvert.DeserializeObject<CanInstallSnapshotResponse>(reply);
 					SendToSelf(canInstallSnapshotResponse);
-				});
-			}
+				}
+			});
 		}
 
 		public void Send(NodeConnectionInfo dest, RequestVoteRequest req)
 		{
-			HttpClient client;
-			using (GetConnection(dest, out client))
+			LogStatus("request vote from " + dest, async () =>
 			{
-				LogStatus("request vote from " + dest, async () =>
+				var requestUri = string.Format("raft/requestVote?term={0}&lastLogIndex={1}&lastLogTerm={2}&trialOnly={3}&forcedElection={4}&from={5}&clusterTopologyId={6}", 
+					req.Term, req.LastLogIndex, req.LastLogTerm, req.TrialOnly, req.ForcedElection, req.From, req.ClusterTopologyId);
+				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var requestUri = string.Format("raft/requestVote?term={0}&lastLogIndex={1}&lastLogTerm={2}&trialOnly={3}&forcedElection={4}&from={5}&clusterTopologyId={6}", 
-						req.Term, req.LastLogIndex, req.LastLogTerm, req.TrialOnly, req.ForcedElection, req.From, req.ClusterTopologyId);
-					var httpResponseMessage = await client.GetAsync(requestUri);
+					var httpResponseMessage = await request.ExecuteAsync();
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
@@ -184,8 +219,8 @@ namespace Rachis.Transport
 					}
 					var requestVoteResponse = JsonConvert.DeserializeObject<RequestVoteResponse>(reply);
 					SendToSelf(requestVoteResponse);
-				});
-			}
+				}
+			});
 		}
 
 		private void SendToSelf(object o)
@@ -195,12 +230,12 @@ namespace Rachis.Transport
 
 		public void Send(NodeConnectionInfo dest, TimeoutNowRequest req)
 		{
-			HttpClient client;
-			using (GetConnection(dest, out client))
+			LogStatus("timeout to " + dest, async () =>
 			{
-				LogStatus("timeout to " + dest, async () =>
+				var requestUri = string.Format("raft/timeoutNow?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
+				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var message = await client.GetAsync(string.Format("raft/timeoutNow?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId));
+					var message = await request.ExecuteAsync();
 					var reply = await message.Content.ReadAsStringAsync();
 					if (message.IsSuccessStatusCode == false)
 					{
@@ -208,18 +243,18 @@ namespace Rachis.Transport
 						return;
 					}
 					SendToSelf(new NothingToDo());
-				});
-			}
+				}
+			});
 		}
 
 		public void Send(NodeConnectionInfo dest, DisconnectedFromCluster req)
 		{
-			HttpClient client;
-			using (GetConnection(dest, out client))
+			LogStatus("disconnect " + dest, async () =>
 			{
-				LogStatus("disconnect " + dest, async () =>
+				var requestUri = string.Format("raft/disconnectFromCluster?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
+				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var message = await client.GetAsync(string.Format("raft/disconnectFromCluster?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId));
+					var message = await request.ExecuteAsync();
 					var reply = await message.Content.ReadAsStringAsync();
 					if (message.IsSuccessStatusCode == false)
 					{
@@ -227,8 +262,8 @@ namespace Rachis.Transport
 						return;
 					}
 					SendToSelf(new NothingToDo());
-				});
-			}
+				}
+			});
 		}
 
 		private ConcurrentDictionary<Task, object> _runningOps = new ConcurrentDictionary<Task, object>();
@@ -270,6 +305,9 @@ namespace Rachis.Transport
 				}
 			}
 			_httpClientsCache.Clear();
+
+			_securedAuthenticatorCache.Clear();
+
 			var array = _runningOps.Keys.ToArray();
 			_runningOps.Clear();
 			try
@@ -289,7 +327,12 @@ namespace Rachis.Transport
 		}
 
 
-		private ReturnToQueue GetConnection(NodeConnectionInfo info, out HttpClient result)
+		internal SecuredAuthenticator GetAuthenticator(NodeConnectionInfo info)
+		{
+			return _securedAuthenticatorCache.GetOrAdd(info.Name, _ => new SecuredAuthenticator());
+		}
+
+		internal ReturnToQueue GetConnection(NodeConnectionInfo info, out HttpClient result)
 		{
 			var connectionQueue = _httpClientsCache.GetOrAdd(info.Name, _ => new ConcurrentQueue<HttpClient>());
 
@@ -304,7 +347,7 @@ namespace Rachis.Transport
 			return new ReturnToQueue(result, connectionQueue);
 		}
 
-		private struct ReturnToQueue : IDisposable
+		internal struct ReturnToQueue : IDisposable
 		{
 			private readonly HttpClient client;
 			private readonly ConcurrentQueue<HttpClient> queue;
@@ -321,5 +364,6 @@ namespace Rachis.Transport
 			}
 		}
 
+	
 	}
 }
