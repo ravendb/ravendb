@@ -31,7 +31,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 		[HttpGet]
         [RavenRoute("fs/{fileSystemName}/files")]
-        public HttpResponseMessage Get()
+		public HttpResponseMessage Get([FromUri] string[] fileNames)
 		{
 			var list = new List<FileHeader>();
 
@@ -67,6 +67,11 @@ namespace Raven.Database.FileSystem.Controllers
                             if (FileSystem.ReadTriggers.CanReadFile(FileHeader.Canonize(file.FullPath), file.Metadata, ReadOperation.Load) == false) 
                                 continue;
 
+							if (file.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+							{
+								continue;
+							}
+
 							matchedFiles++;
 
 							if (matchedFiles <= filesToSkip)
@@ -83,9 +88,31 @@ namespace Raven.Database.FileSystem.Controllers
 			}
 			else
 			{
-				int results;
-				var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
-				Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
+				if (fileNames != null && fileNames.Length > 0)
+				{
+					Storage.Batch(accessor =>
+					{
+						foreach (var path in fileNames.Where(x => x != null).Select(FileHeader.Canonize))
+						{
+							var file = accessor.ReadFile(path);
+
+							if (file == null || file.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+							{
+								list.Add(null);
+								continue;
+							}
+
+							list.Add(file);
+						}
+					});
+				}
+				else
+				{
+					int results;
+					var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
+
+					Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
+				}
 			}
 
 			return GetMessageWithObject(list)
@@ -219,25 +246,6 @@ namespace Raven.Database.FileSystem.Controllers
 
 			return httpResponseMessage;
 		}
-
-        [HttpGet]
-        [RavenRoute("fs/{fileSystemName}/files/metadata")]
-        public HttpResponseMessage Metadata([FromUri] string[] fileNames)
-        {
-            if (fileNames == null || fileNames.Length == 0)
-            {
-                log.Debug("'fileNames' parameter should have a value.");
-                return GetEmptyMessage(HttpStatusCode.BadRequest);
-            }
-
-            var ravenPaths = fileNames.Where(x => x != null).Select(FileHeader.Canonize);
-
-            var list = new List<FileHeader>();
-            Storage.Batch(accessor => list.AddRange(ravenPaths.Select(accessor.ReadFile).Where(x => x != null)));
-
-            return GetMessageWithObject(list)
-                       .WithNoCache();
-        }
 
 		[HttpPost]
         [RavenRoute("fs/{fileSystemName}/files/{*name}")]

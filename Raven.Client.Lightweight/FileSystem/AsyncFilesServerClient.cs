@@ -639,7 +639,7 @@ namespace Raven.Client.FileSystem
 
         private async Task<FileHeader[]> GetAsyncImpl(string[] filenames, OperationMetadata operation)
         {
-            var requestUriBuilder = new StringBuilder("/files/metadata?");
+            var requestUriBuilder = new StringBuilder("/files?");
             for( int i = 0; i < filenames.Length; i++ )
             {
                 requestUriBuilder.Append("fileNames=" + Uri.EscapeDataString(filenames[i]));
@@ -651,8 +651,19 @@ namespace Raven.Client.FileSystem
 	        {
 				try
 				{
-					var response = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return response.JsonDeserialization<FileHeader>();
+					var response = (RavenJArray) await request.ReadResponseJsonAsync().ConfigureAwait(false);
+
+					var results = response.JsonDeserialization<FileHeader>();
+
+					results.ForEach(x =>
+					{
+						if (x == null)
+							return;
+
+						x.Metadata = new RavenJObject(x.Metadata, StringComparer.OrdinalIgnoreCase); // ensure metadata keys aren't case sensitive
+					});
+
+					return results;
 				}
 				catch (Exception e)
 				{
