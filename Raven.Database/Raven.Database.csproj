@@ -279,6 +279,7 @@
     <Compile Include="Raft\Storage\Handlers\DatabaseUpdateCommandHandler.cs" />
     <Compile Include="Raft\Util\RaftHelper.cs" />
     <Compile Include="Raft\ClusterManagerFactory.cs" />
+    <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Server\WebApi\ MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />

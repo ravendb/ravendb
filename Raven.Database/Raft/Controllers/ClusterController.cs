@@ -158,28 +158,5 @@ namespace Raven.Database.Raft.Controllers
 			} while ((b & 0x80) != 0);
 			return count;
 		}
-
-		private HttpResponseMessage RedirectToLeader()
-		{
-			var leaderNode = ClusterManager.Engine.GetLeaderNode();
-
-			if (leaderNode == null)
-			{
-				return Request.CreateResponse(HttpStatusCode.BadRequest, new
-				{
-					Error = "There is no current leader, try again later"
-				});
-			}
-
-			var message = Request.CreateResponse(HttpStatusCode.Redirect);
-			message.Headers.Location = new UriBuilder(leaderNode.Uri)
-			{
-				Path = Request.RequestUri.LocalPath,
-				Query = Request.RequestUri.Query.TrimStart('?'),
-				Fragment = Request.RequestUri.Fragment
-			}.Uri;
-
-			return message;
-		}
 	}
 }

@@ -15,7 +15,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class DocumentsController : RavenDbApiController
+	public class DocumentsController : ClusterAwareRavenDbApiController
 	{
 		[HttpGet]
 		[RavenRoute("docs")]

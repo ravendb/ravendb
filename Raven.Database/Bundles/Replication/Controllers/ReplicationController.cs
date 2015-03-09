@@ -193,7 +193,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				if (destinationIsLeader)
 				{
 					var destinationUrl = RaftHelper.GetNormalizedNodeUrl(destination.Url);
-					var node = currentTopology.AllNodes.FirstOrDefault(x => x.Uri.AbsoluteUri.ToLowerInvariant() == destinationUrl);
+					var node = currentTopology.AllVotingNodes.FirstOrDefault(x => x.Uri.AbsoluteUri.ToLowerInvariant() == destinationUrl);
 					if (node != null)
 						destinationIsLeader = node.Name == currentLeader;
 					else

@@ -108,6 +108,8 @@ namespace Raven.Client.Connection.Async
 				? (IRequestExecuter)new ClusterRequestExecuter(this) 
 				: new DefaultRequestExecuter(this, replicationInformer);
 
+			this.OperationsHeaders[Constants.Cluster.ClusterAwareHeader] = (clusterBehavior != ClusterBehavior.None).ToString();
+
 			this.requestExecuter.UpdateReplicationInformationIfNeeded();
 		}
 

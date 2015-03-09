@@ -33,6 +33,8 @@ namespace Raven.Tests.Raft
 			{
 				var result = store1.DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
 
+
+				result = store1.DatabaseCommands.Put("keys/2", null, new RavenJObject(), new RavenJObject());
 				//Thread.Sleep(TimeSpan.FromMinutes(30));
 			}
 		}

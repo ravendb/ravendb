@@ -92,7 +92,7 @@ namespace Raven.Client.Connection.Request
 			var localLeaderNode = LeaderNode;
 			if (localLeaderNode == null)
 			{
-				UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata => serverClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap());
+				UpdateReplicationInformationIfNeeded(); // maybe start refresh task
 
 				if (leaderNodeSelected.Wait(TimeSpan.FromSeconds(10)) == false)
 					throw new InvalidOperationException("Cluster is not reachable. No leader was selected, aborting.");
@@ -128,7 +128,7 @@ namespace Raven.Client.Connection.Request
 				if (errorResponseException == null)
 					throw;
 
-				if (errorResponseException.StatusCode == HttpStatusCode.Redirect)
+				if (errorResponseException.StatusCode == HttpStatusCode.Redirect || errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed)
 				{
 					LeaderNode = null;
 					return ExecuteWithinClusterInternalAsync(method, operation, token, numberOfRetries);
