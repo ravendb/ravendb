@@ -134,7 +134,7 @@ namespace Raven.Database.Actions
                     {
                         docCount = 0;
 						var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
-                        var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
 
                         foreach (var doc in docs)
                         {
@@ -421,7 +421,7 @@ namespace Raven.Database.Actions
                     var documents = etag == null
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
 										: actions.Documents.GetDocumentsAfter(etag, pageSize, token);
-                    var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState);
+                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     int docCount = 0;
                     foreach (var doc in documents)
                     {
@@ -471,7 +471,7 @@ namespace Raven.Database.Actions
 
             JsonDocument.EnsureIdInMetadata(document);
 
-            return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
+            return new DocumentRetriever(null, null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
         }
 
@@ -494,7 +494,7 @@ namespace Raven.Database.Actions
             }
 
             JsonDocument.EnsureIdInMetadata(document);
-            return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
+            return new DocumentRetriever(null, null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
         }
 
@@ -520,7 +520,7 @@ namespace Raven.Database.Actions
             TransactionalStorage.Batch(
             actions =>
             {
-                docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
+                docRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
                 using (new CurrentTransformationScope(Database, docRetriever))
                 {
                     var document = Get(key, transactionInformation);
