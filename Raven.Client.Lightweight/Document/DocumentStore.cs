@@ -615,12 +615,12 @@ namespace Raven.Client.Document
 				}
 				return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
 					currentSessionId, GetReplicationInformerForDatabase, null,
-					Listeners.ConflictListeners, true));
+					Listeners.ConflictListeners, true, Conventions.ClusterBehavior));
 			};
 
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, Listeners.ConflictListeners, true);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;

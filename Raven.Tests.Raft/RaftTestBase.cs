@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Remoting.Channels;
 using System.Threading;
 using Rachis;
@@ -24,7 +25,7 @@ namespace Raven.Tests.Raft
 {
 	public class RaftTestBase : RavenTestBase
 	{
-		protected int port = 8079;
+		private int port = 9000;
 
 		public void WaitForDelete(IDatabaseCommands commands, string key, TimeSpan? timeout = null)
 		{
@@ -38,12 +39,12 @@ namespace Raven.Tests.Raft
 			if (!done)
 				throw new Exception("WaitForDelete failed");
 		}
-		
 
-		public List<DocumentStore> CreateRaftCluster(int numberOfNodes)
+
+		public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null)
 		{
 			var nodes = Enumerable.Range(0, numberOfNodes)
-				.Select(x => GetNewServer(port--))
+				.Select(x => GetNewServer(port--, activeBundles: activeBundles, databaseName: databaseName))
 				.ToList();
 
 			var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -86,7 +87,7 @@ namespace Raven.Tests.Raft
 			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
 
 			return nodes
-				.Select(node => NewRemoteDocumentStore(ravenDbServer: node))
+				.Select(node => NewRemoteDocumentStore(ravenDbServer: node, activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
 				.ToList();
 		}
 

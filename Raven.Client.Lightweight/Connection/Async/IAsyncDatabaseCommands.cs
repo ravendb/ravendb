@@ -12,6 +12,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -122,7 +123,7 @@ namespace Raven.Client.Connection.Async
 		///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
 		///     with the specified database
 		/// </summary>
-		IAsyncDatabaseCommands ForDatabase(string database);
+		IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
 		/// <summary>
 		///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts

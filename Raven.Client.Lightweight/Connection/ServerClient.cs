@@ -13,6 +13,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client.Changes;
@@ -356,9 +357,9 @@ namespace Raven.Client.Connection
 			return asyncServerClient.ForceReadFromMaster();
 		}
 
-		public IDatabaseCommands ForDatabase(string database)
+		public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
 		{
-			return new ServerClient(asyncServerClient.ForDatabaseInternal(database));
+			return new ServerClient(asyncServerClient.ForDatabaseInternal(database, clusterBehavior));
 		}
 
 		public IDatabaseCommands ForSystemDatabase()

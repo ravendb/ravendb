@@ -60,8 +60,11 @@ namespace Raven.Abstractions.Replication
 		public ReplicationDocumentWithClusterInformation()
 		{
 			ClusterInformation = ClusterInformation.NotInCluster;
+			ClusterCommitIndex = -1;
 		}
 
 		public ClusterInformation ClusterInformation { get; set; }
+
+		public long ClusterCommitIndex { get; set; }
 	}
 }

@@ -100,16 +100,5 @@ namespace Raven.Tests.Raft
 				RemoveFromCluster(servers[i]);	
 			}
 		}
-
-		[Fact]
-		public async Task T1()
-		{
-			var clusterStores = CreateRaftCluster(3);
-
-			var client = servers[0].Options.ClusterManager.Client;
-			await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
-
-			Thread.Sleep(TimeSpan.FromMinutes(30));
-		}
 	}
 }

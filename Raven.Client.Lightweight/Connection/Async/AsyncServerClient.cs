@@ -3,21 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Client.Indexes;
-using Raven.Database.Data;
-using Raven.Imports.Newtonsoft.Json.Linq;
+
 using Raven.Abstractions;
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -29,12 +17,28 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Connection.Request;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Client.Indexes;
 using Raven.Client.Listeners;
+using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Client.Connection.Async
 {
@@ -54,6 +58,8 @@ namespace Raven.Client.Connection.Async
 		private readonly IDocumentStoreReplicationInformer replicationInformer;
 		private int requestCount;
 		private int readStripingBase;
+
+		private IRequestExecuter requestExecuter;
 
 		public string Url
 		{
@@ -76,7 +82,7 @@ namespace Raven.Client.Connection.Async
 		public AsyncServerClient(string url, DocumentConvention convention, OperationCredentials credentials,
 								 HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId,
 								 Func<string, IDocumentStoreReplicationInformer> replicationInformerGetter, string databaseName,
-								 IDocumentConflictListener[] conflictListeners, bool incrementReadStripe)
+								 IDocumentConflictListener[] conflictListeners, bool incrementReadStripe, ClusterBehavior clusterBehavior)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.url = url;
@@ -98,7 +104,11 @@ namespace Raven.Client.Connection.Async
 			this.replicationInformer = replicationInformerGetter(databaseName);
 			this.readStripingBase = replicationInformer.GetReadStripingBase(incrementReadStripe);
 
-			this.replicationInformer.UpdateReplicationInformationIfNeeded(this);
+			this.requestExecuter = clusterBehavior != ClusterBehavior.None 
+				? (IRequestExecuter)new ClusterRequestExecuter(this) 
+				: new DefaultRequestExecuter(this, replicationInformer);
+
+			this.requestExecuter.UpdateReplicationInformationIfNeeded();
 		}
 
 		public void Dispose()
@@ -491,9 +501,9 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		public IAsyncDatabaseCommands ForDatabase(string database)
+		public IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
 		{
-			return ForDatabaseInternal(database);
+			return ForDatabaseInternal(database, clusterBehavior);
 		}
 
 		public IAsyncDatabaseCommands ForSystemDatabase()
@@ -501,7 +511,7 @@ namespace Raven.Client.Connection.Async
 			return ForSystemDatabaseInternal();
 		}
 
-		internal AsyncServerClient ForDatabaseInternal(string database)
+		internal AsyncServerClient ForDatabaseInternal(string database, ClusterBehavior? clusterBehavior = null)
 		{
 			if (database == Constants.SystemDatabase)
 				return ForSystemDatabaseInternal();
@@ -511,7 +521,7 @@ namespace Raven.Client.Connection.Async
 			if (databaseUrl == url)
 				return this;
 
-			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, database, conflictListeners, false) { operationsHeaders = operationsHeaders };
+			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, database, conflictListeners, false, clusterBehavior ?? convention.ClusterBehavior) { operationsHeaders = operationsHeaders };
 		}
 
 		internal AsyncServerClient ForSystemDatabaseInternal()
@@ -520,7 +530,7 @@ namespace Raven.Client.Connection.Async
 			if (databaseUrl == url)
 				return this;
 
-			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, databaseName, conflictListeners, false) { operationsHeaders = operationsHeaders };
+			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, databaseName, conflictListeners, false, ClusterBehavior.None) { operationsHeaders = operationsHeaders };
 		}
 
 		public NameValueCollection OperationsHeaders
@@ -2170,8 +2180,7 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 			currentlyExecuting = true;
 			try
 			{
-				return await replicationInformer
-					.ExecuteWithReplicationAsync(method, Url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStripingBase, operation, token).ConfigureAwait(false);
+				return await requestExecuter.ExecuteOperationAsync(method, currentRequest, readStripingBase, operation, token).ConfigureAwait(false);
 			}
 			finally
 			{
@@ -2349,7 +2358,7 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 		internal AsyncServerClient WithInternal(ICredentials credentialsForSession)
 		{
 			return new AsyncServerClient(url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId,
-										 replicationInformerGetter, databaseName, conflictListeners, false);
+										 replicationInformerGetter, databaseName, conflictListeners, false, convention.ClusterBehavior);
 		}
 
 		internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata)
