@@ -90,17 +90,19 @@ namespace Raven.Client.Connection.Request
 				throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.");
 
 			var localLeaderNode = LeaderNode;
-			if (localLeaderNode == null && refreshReplicationInformationTask != null)
-				leaderNodeSelected.Wait(TimeSpan.FromSeconds(5));
+			if (localLeaderNode == null)
+			{
+				UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata => serverClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap());
+
+				if (leaderNodeSelected.Wait(TimeSpan.FromSeconds(10)) == false)
+					throw new InvalidOperationException("Cluster is not reachable. No leader was selected, aborting.");
+			}
 
 			localLeaderNode = LeaderNode;
 			if (localLeaderNode == null)
-			{
-				await UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata => serverClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap());
 				return await ExecuteWithinClusterInternalAsync(method, operation, token, numberOfRetries - 1);
-			}
 
-			return await TryClusterOperationAsync(method, localLeaderNode, operation, token, numberOfRetries - 1);
+			return await TryClusterOperationAsync(method, localLeaderNode, operation, token, numberOfRetries);
 		}
 
 		private Task<T> TryClusterOperationAsync<T>(string method, OperationMetadata localLeaderNode, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries)
@@ -148,42 +150,50 @@ namespace Raven.Client.Connection.Request
 
 			lock (this)
 			{
-				var nodes = NodeUrls;
-
-				if (nodes.Count == 0)
-					nodes.Add(primaryNode);
-
 				var taskCopy = refreshReplicationInformationTask;
 				if (taskCopy != null)
 					return taskCopy;
 
 				return refreshReplicationInformationTask = Task.Factory.StartNew(() =>
 				{
-					var replicationDocuments = nodes
-						.Select(operationMetadata => new
-						{
-							Node = operationMetadata,
-							ReplicationDocument = getReplicationDestinations(operationMetadata)
-						})
-						.ToArray();
-
-					var newestTopology = replicationDocuments
-						.Where(x => x.ReplicationDocument != null)
-						.OrderByDescending(x => x.ReplicationDocument.ClusterCommitIndex)
-						.FirstOrDefault();
-
-					if (newestTopology == null)
+					for(var i = 0; i < 20; i++)
 					{
-						LeaderNode = primaryNode;
-						Nodes = new List<OperationMetadata>
-						{
-							primaryNode
-						};
-						return;
-					}
+						var nodes = NodeUrls;
 
-					Nodes = GetNodes(newestTopology.Node, newestTopology.ReplicationDocument);
-					LeaderNode = GetLeaderNode(Nodes);
+						if (nodes.Count == 0)
+							nodes.Add(primaryNode);
+
+						var replicationDocuments = nodes
+							.Select(operationMetadata => new
+							{
+								Node = operationMetadata,
+								ReplicationDocument = getReplicationDestinations(operationMetadata)
+							})
+							.ToArray();
+
+						var newestTopology = replicationDocuments
+							.Where(x => x.ReplicationDocument != null)
+							.OrderByDescending(x => x.ReplicationDocument.ClusterCommitIndex)
+							.FirstOrDefault();
+
+						if (newestTopology == null)
+						{
+							LeaderNode = primaryNode;
+							Nodes = new List<OperationMetadata>
+							{
+								primaryNode
+							};
+							return;
+						}
+
+						Nodes = GetNodes(newestTopology.Node, newestTopology.ReplicationDocument);
+						LeaderNode = GetLeaderNode(Nodes);
+
+						if (LeaderNode != null)
+							return;
+
+						Thread.Sleep(500);
+					}
 				}).ContinueWith(t => refreshReplicationInformationTask = null);
 			}
 		}
