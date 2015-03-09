@@ -33,6 +33,8 @@ namespace Raven.Tests.FileSystem
 		public void Dispose()
 		{
 			transactionalStorage.Dispose();
+
+			IOExtensions.DeleteDirectory("test");
 		}
 	}
 }
