@@ -668,19 +668,6 @@ namespace Raven.Database.FileSystem.Synchronization
                 return null;
             }
 
-            // TODO Check if the call to GetFile is needed.
-            FileAndPagesInformation fileAndPages = null;
-            {
-                try
-                {
-                    storage.Batch(accessor => fileAndPages = accessor.GetFile(fileName, 0, 0));
-                }
-                catch (FileNotFoundException)
-                {
-
-                }
-            }
-
             return result;
 		}
 
