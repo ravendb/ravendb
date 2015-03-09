@@ -1004,7 +1004,7 @@ namespace Raven.Database.Config
         ///     DoNothing (fields are not fetched from the document)
         ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
         /// </summary>
-        public string ImplicitFetchFieldsFromDocumentMode { get; set; }
+        public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
