@@ -28,8 +28,8 @@ namespace Raven.Database.Json
 
 		private class ScriptedPatchRequestAndCustomFunctionsToken
 		{
-			protected internal readonly ScriptedPatchRequest request;
-			protected internal readonly RavenJObject customFunctions;
+			private readonly ScriptedPatchRequest request;
+			private readonly RavenJObject customFunctions;
 
 			public ScriptedPatchRequestAndCustomFunctionsToken(ScriptedPatchRequest request, RavenJObject customFunctions)
 			{
@@ -39,15 +39,14 @@ namespace Raven.Database.Json
 
 			public override bool Equals(object obj)
 			{
-				if (ReferenceEquals(null, obj)) return false;
 				if (ReferenceEquals(this, obj)) return true;
 				var other = obj as ScriptedPatchRequestAndCustomFunctionsToken;
 				if (ReferenceEquals(null, other)) return false;
-				if (this.request.Equals(other.request))
+				if (request.Equals(other.request))
 				{
-					if (this.customFunctions == null && other.customFunctions == null)
+					if (customFunctions == null && other.customFunctions == null)
 						return true;
-					if (this.customFunctions != null && other.customFunctions != null)
+					if (customFunctions != null && other.customFunctions != null)
 						return RavenJTokenEqualityComparer.Default.Equals(this.customFunctions, other.customFunctions);
 				}
 				return false;
@@ -55,12 +54,11 @@ namespace Raven.Database.Json
 
 			public override int GetHashCode()
 			{
-				var hashCode = request.GetHashCode();
-				if (customFunctions != null)
+				unchecked
 				{
-					hashCode += RavenJTokenEqualityComparer.Default.GetHashCode(customFunctions);
+					return ((request != null ? request.GetHashCode() : 0)*397) ^
+						(customFunctions != null ? RavenJTokenEqualityComparer.Default.GetHashCode(customFunctions) : 0);
 				}
-				return hashCode;
 			}
 		}
 
