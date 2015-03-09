@@ -689,19 +689,14 @@ namespace Raven.Client.FileSystem
 				}
 				catch (Exception e)
 				{
-					var aggregateException = e as AggregateException;
-
-					var responseException = e as ErrorResponseException;
-					if (responseException == null && aggregateException != null)
-						responseException = aggregateException.ExtractSingleInnerException() as ErrorResponseException;
-					if (responseException != null)
+					try
 					{
-						if (responseException.StatusCode == HttpStatusCode.NotFound)
-							return null;
 						throw e.SimplifyException();
 					}
-
-					throw e.SimplifyException();
+					catch (FileNotFoundException)
+					{
+						return null;
+					}
 				}
 	        }
         }

@@ -71,7 +71,18 @@ namespace Raven.Client.FileSystem
 			}
 			if (errorResposeException.StatusCode == HttpStatusCode.NotFound)
 			{
-				return new FileNotFoundException();
+				var text = errorResposeException.ResponseString;
+
+				if(string.IsNullOrEmpty(text))
+					return new FileNotFoundException();
+
+				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
+				{
+					url = (string) null,
+					error = (string) null
+				});
+
+				return new FileNotFoundException(errorResults.error);
 			}
             if (errorResposeException.StatusCode == HttpStatusCode.BadRequest)
             {

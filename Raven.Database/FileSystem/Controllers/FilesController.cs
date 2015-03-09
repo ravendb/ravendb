@@ -213,7 +213,7 @@ namespace Raven.Database.FileSystem.Controllers
 			if (fileAndPages.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
 			{
 				log.Debug("Cannot get metadata of a file '{0}' because file was deleted", name);
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+				throw new FileNotFoundException();
 			}
             
 			var httpResponseMessage = GetEmptyMessage();
