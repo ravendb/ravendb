@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,6 +10,7 @@ using Jint.Runtime;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Controllers;
 using Raven.Json.Linq;
 
@@ -24,6 +26,8 @@ namespace Raven.Database.Server.WebApi.Filters
 				{typeof (JavaScriptException), (ctx, e) => HandleJintException(ctx, e as JavaScriptException)},
 				{typeof (IndexDisabledException), (ctx, e) => HandleIndexDisabledException(ctx, e as IndexDisabledException)},
 				{typeof (IndexDoesNotExistsException), (ctx, e) => HandleIndexDoesNotExistsException(ctx, e as IndexDoesNotExistsException)},
+				{typeof (SynchronizationException), (ctx, e) => HandleSynchronizationException(ctx, e as SynchronizationException)},
+				{typeof (FileNotFoundException), (ctx, e) => HandleFileNotFoundException(ctx, e as FileNotFoundException)}
 			};
 
 		public override void OnException(HttpActionExecutedContext ctx)
@@ -57,6 +61,9 @@ namespace Raven.Database.Server.WebApi.Filters
 
 		public static void SerializeError(HttpActionExecutedContext ctx, object error)
 		{
+			if (ctx.Request.Method == HttpMethod.Head) // head request must not return a message body in the response
+				return;
+
 			ctx.Response.Content = new JsonContent(RavenJObject.FromObject(error))
 				.WithRequest(ctx.Request);
 		}
@@ -161,6 +168,35 @@ namespace Raven.Database.Server.WebApi.Filters
 			{
 				Url = ctx.Request.RequestUri.PathAndQuery,
 				Error = e.Information == null ? e.ToString() : e.Information.GetErrorMessage(),
+			});
+		}
+
+
+		private static void HandleSynchronizationException(HttpActionExecutedContext ctx, SynchronizationException e)
+		{
+			ctx.Response = new HttpResponseMessage
+			{
+				StatusCode = (HttpStatusCode) 420
+			};
+
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RequestUri.PathAndQuery,
+				Error = e.Message
+			});
+		}
+
+		private static void HandleFileNotFoundException(HttpActionExecutedContext ctx, FileNotFoundException e)
+		{
+			ctx.Response = new HttpResponseMessage
+			{
+				StatusCode = HttpStatusCode.NotFound
+			};
+
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RequestUri.PathAndQuery,
+				Error = e.Message
 			});
 		}
 	}

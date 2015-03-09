@@ -289,28 +289,6 @@ namespace Raven.Database.FileSystem.Controllers
 			return response;
 		}
 
-		protected void AssertFileIsNotBeingSynced(string fileName, IStorageActionsAccessor accessor,
-		                                          bool wrapByResponseException = false)
-		{
-			if (FileLockManager.TimeoutExceeded(fileName, accessor))
-			{
-				FileLockManager.UnlockByDeletingSyncConfiguration(fileName, accessor);
-			}
-			else
-			{
-				Log.Debug("Cannot execute operation because file '{0}' is being synced", fileName);
-
-				var beingSyncedException = new SynchronizationException(string.Format("File {0} is being synced", fileName));
-
-				if (wrapByResponseException)
-				{
-					throw new HttpResponseException(Request.CreateResponse((HttpStatusCode)420, beingSyncedException));
-				}
-
-				throw beingSyncedException;
-			}
-		}
-
 		protected HttpResponseException BadRequestException(string message)
 		{
 			return

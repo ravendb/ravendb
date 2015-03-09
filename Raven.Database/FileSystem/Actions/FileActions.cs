@@ -192,7 +192,7 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
-		private void AssertFileIsNotBeingSynced(string fileName, IStorageActionsAccessor accessor)
+		public void AssertFileIsNotBeingSynced(string fileName, IStorageActionsAccessor accessor)
 		{
 			if (FileLockManager.TimeoutExceeded(fileName, accessor))
 			{

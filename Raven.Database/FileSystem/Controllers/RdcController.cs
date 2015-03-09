@@ -66,15 +66,8 @@ namespace Raven.Database.FileSystem.Controllers
             var canonicalFilename = FileHeader.Canonize(id);
 
 			FileAndPagesInformation fileAndPages = null;
-			try
-			{
-                Storage.Batch(accessor => fileAndPages = accessor.GetFile(canonicalFilename, 0, 0));
-			}
-			catch (FileNotFoundException)
-			{
-				Log.Debug("Signature manifest for a file '{0}' was not found", id);
-				return Request.CreateResponse(HttpStatusCode.NotFound);
-			}
+			
+			Storage.Batch(accessor => fileAndPages = accessor.GetFile(canonicalFilename, 0, 0));
 
 			long? fileLength = fileAndPages.TotalSize;
 

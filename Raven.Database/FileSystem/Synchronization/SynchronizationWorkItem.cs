@@ -131,7 +131,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				default:
 					return new SynchronizationReport(FileName, FileETag, SynchronizationType)
 					{
-						Exception = new SynchronizationException(string.Format("Unknown resulution stragegy: {0}", conflictResolutionStrategy)),
+						Exception = new SynchronizationException(string.Format("Unknown resolution strategy: {0}", conflictResolutionStrategy)),
 					};
 			}
 		}

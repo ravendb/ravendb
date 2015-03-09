@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Connection;
+﻿using System.Diagnostics;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -1226,11 +1227,6 @@ namespace Raven.Client.FileSystem
                 this.credentials = client.PrimaryCredentials;
                 this.convention = convention;
                 this.client = client;
-            }
-
-            public Task<RavenJObject> GetMetadataForAsync(string filename)
-            {
-                return client.GetMetadataForAsyncImpl(filename, new OperationMetadata(client.BaseUrl, credentials));
             }
 
             public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)

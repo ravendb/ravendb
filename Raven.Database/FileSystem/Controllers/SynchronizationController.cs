@@ -93,7 +93,7 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				Storage.Batch(accessor =>
 				{
-                    AssertFileIsNotBeingSynced(canonicalFilename, accessor);
+                    Files.AssertFileIsNotBeingSynced(canonicalFilename, accessor);
                     FileLockManager.LockByCreatingSyncConfiguration(canonicalFilename, sourceServerInfo, accessor);
 				});
 
@@ -321,7 +321,7 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				Storage.Batch(accessor =>
 				{
-                    AssertFileIsNotBeingSynced(canonicalFilename, accessor);
+                    Files.AssertFileIsNotBeingSynced(canonicalFilename, accessor);
                     FileLockManager.LockByCreatingSyncConfiguration(canonicalFilename, sourceServerInfo, accessor);
 				});
 
@@ -402,7 +402,7 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				Storage.Batch(accessor =>
 				{
-                    AssertFileIsNotBeingSynced(canonicalFilename, accessor);
+                    Files.AssertFileIsNotBeingSynced(canonicalFilename, accessor);
                     FileLockManager.LockByCreatingSyncConfiguration(canonicalFilename, sourceServerInfo, accessor);
 				});
 
@@ -497,7 +497,7 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				Storage.Batch(accessor =>
 				{
-                    AssertFileIsNotBeingSynced(canonicalFilename, accessor);
+                    Files.AssertFileIsNotBeingSynced(canonicalFilename, accessor);
                     FileLockManager.LockByCreatingSyncConfiguration(canonicalFilename, sourceServerInfo, accessor);
 				});
 
