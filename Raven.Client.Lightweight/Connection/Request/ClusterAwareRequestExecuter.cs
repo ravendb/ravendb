@@ -82,7 +82,7 @@ namespace Raven.Client.Connection.Request
 
 		public Task UpdateReplicationInformationIfNeeded()
 		{
-			if (lastUpdate.AddMinutes(5) > SystemTime.UtcNow)
+			if (lastUpdate.AddMinutes(5) > SystemTime.UtcNow && LeaderNode != null)
 				return new CompletedTask();
 
 			return UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata => serverClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap());
@@ -120,9 +120,6 @@ namespace Raven.Client.Connection.Request
 		private async Task<T> TryClusterOperationAsync<T>(string method, OperationMetadata localLeaderNode, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries)
 		{
 			token.ThrowIfCancellationRequested();
-
-			if (numberOfRetries < 0)
-				throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.");
 
 			var shouldRetry = false;
 			try

@@ -20,7 +20,6 @@ namespace Raven.Tests.Raft
 		[InlineData(1)]
 		[InlineData(3)]
 		[InlineData(5)]
-		[InlineData(11)]
 		public async Task ClientsShouldBeAbleToPerformCommandsEvenIfTheyDoNotPointToLeader(int numberOfNodes)
 		{
 			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
