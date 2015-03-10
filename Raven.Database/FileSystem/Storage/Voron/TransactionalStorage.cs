@@ -20,6 +20,7 @@ using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Voron.Backup;
 using Raven.Database.FileSystem.Storage.Voron.Impl;
@@ -56,6 +57,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         private IdGenerator idGenerator;
 	    private OrderedPartCollection<AbstractFileCodec> fileCodecs;
+	    private UuidGenerator uuidGenerator;
 
 	    public TransactionalStorage(InMemoryRavenConfiguration configuration)
         {
@@ -115,12 +117,13 @@ namespace Raven.Database.FileSystem.Storage.Voron
             return options;
         }
 
-		public void Initialize(OrderedPartCollection<AbstractFileCodec> codecs)
+		public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs)
         {
 			if (codecs == null)
 				throw new ArgumentNullException("codecs");
 
 			fileCodecs = codecs;
+			uuidGenerator = generator;
 
             bool runInMemory;
             bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
@@ -206,7 +209,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 	        {
 				snapshotRef.Value = tableStorage.CreateSnapshot();
                 writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false }; // prevent from disposing after write to allow read from batch OnStorageCommit
-                var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshotRef, idGenerator, bufferPool, fileCodecs);
+                var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshotRef, idGenerator, bufferPool, uuidGenerator, fileCodecs);
 				if (disableBatchNesting.Value == null)
                     current.Value = storageActionsAccessor;
 

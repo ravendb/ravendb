@@ -7,7 +7,7 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 using Xunit;
@@ -22,14 +22,14 @@ namespace Raven.Tests.FileSystem.Storage
     {
         [Theory]
         [PropertyData("Storages")]
-        public void PutFileWithoutEtagShouldThrow(string requestedStorage)
+        public void PutFileShouldCreateEtag(string requestedStorage)
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor =>
                 {
-                    var e = Assert.Throws<InvalidOperationException>(() => accessor.PutFile("file1", null, new RavenJObject { { "key1", "value1" } }));
-                    Assert.Equal("Metadata of file file1 does not contain 'ETag' key", e.Message);
+                    var result = accessor.PutFile("file1", null, new RavenJObject { { "key1", "value1" } });
+                    Assert.NotNull(result.Etag);
                 });
             }
         }
@@ -38,13 +38,10 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public void PutFile(string requestedStorage)
         {
-            var etag1 = Guid.NewGuid();
-            var etag2 = Guid.NewGuid();
-
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject()));
 
                 storage.Batch(accessor =>
                 {
@@ -61,7 +58,7 @@ namespace Raven.Tests.FileSystem.Storage
 
                     Assert.NotNull(file1Metadata);
                     Assert.Equal(1, file1Metadata.Count);
-                    Assert.Equal(etag1, file1Metadata.Value<Guid>(Constants.MetadataEtagField));
+					Assert.Equal("00000000-0000-0000-0000-000000000001", file1Metadata.Value<string>(Constants.MetadataEtagField));
 
                     var file2 = accessor.GetFile("file2", 5, 10);
 
@@ -76,7 +73,7 @@ namespace Raven.Tests.FileSystem.Storage
 
                     Assert.NotNull(file2Metadata);
                     Assert.Equal(1, file2Metadata.Count);
-                    Assert.Equal(etag2, file2Metadata.Value<Guid>(Constants.MetadataEtagField));
+					Assert.Equal("00000000-0000-0000-0000-000000000002", file2Metadata.Value<string>(Constants.MetadataEtagField));
                 });
             }
         }
@@ -85,16 +82,13 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public void ReadFile(string requestedStorage)
         {
-            var etag1 = Guid.NewGuid();
-            var etag2 = Guid.NewGuid();
-
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Null(accessor.ReadFile("file1")));
 
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject()));
 
 
                 storage.Batch(accessor =>
@@ -110,7 +104,7 @@ namespace Raven.Tests.FileSystem.Storage
 
                     Assert.NotNull(file1Metadata);
                     Assert.Equal(1, file1Metadata.Count);
-                    Assert.Equal(etag1, file1Metadata.Value<Guid>(Constants.MetadataEtagField));
+                    Assert.Equal(EtagUtil.Increment(Etag.Empty, 1), Etag.Parse(file1Metadata.Value<string>(Constants.MetadataEtagField)));
 
                     var file2 = accessor.ReadFile("file2");
 
@@ -123,7 +117,7 @@ namespace Raven.Tests.FileSystem.Storage
 
                     Assert.NotNull(file2Metadata);
                     Assert.Equal(1, file2Metadata.Count);
-                    Assert.Equal(etag2, file2Metadata.Value<Guid>(Constants.MetadataEtagField));
+					Assert.Equal(EtagUtil.Increment(Etag.Empty, 2), Etag.Parse(file2Metadata.Value<string>(Constants.MetadataEtagField)));
                 });
             }
         }
@@ -139,8 +133,8 @@ namespace Raven.Tests.FileSystem.Storage
             {
                 storage.Batch(accessor => accessor.Delete("file1"));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject()));
 
                 storage.Batch(accessor => accessor.Delete("file2"));
 
@@ -164,21 +158,17 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public void GetFileCount(string requestedStorage)
         {
-            var etag1 = Guid.NewGuid();
-            var etag2 = Guid.NewGuid();
-            var etag3 = Guid.NewGuid();
-
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Equal(0, accessor.GetFileCount()));
 
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject()));
 
                 storage.Batch(accessor => Assert.Equal(2, accessor.GetFileCount()));
 
-                storage.Batch(accessor => accessor.PutFile("file3", 10, new RavenJObject().WithETag(etag3), tombstone: true));
+                storage.Batch(accessor => accessor.PutFile("file3", 10, new RavenJObject(), tombstone: true));
 
                 storage.Batch(accessor => Assert.Equal(2, accessor.GetFileCount()));
 
@@ -208,15 +198,12 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public void CompleteFileUpload(string requestedStorage)
         {
-            var etag1 = Guid.NewGuid();
-            var etag2 = Guid.NewGuid();
-
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.CompleteFileUpload("file1")));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject()));
 
                 storage.Batch(accessor => accessor.CompleteFileUpload("file1"));
                 storage.Batch(accessor => accessor.CompleteFileUpload("file2"));
@@ -248,14 +235,14 @@ namespace Raven.Tests.FileSystem.Storage
             {
                 storage.Batch(accessor => Assert.Empty(accessor.ReadFiles(0, 10)));
 
-                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("/file4", 10, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("/file5", null, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("/file6", 10, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("/file7", null, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("/file8", 10, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file4", 10, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file5", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file6", 10, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file7", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file8", 10, new RavenJObject()));
 
                 storage.Batch(accessor =>
                 {
@@ -313,40 +300,30 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public void GetFilesAfter(string requestedStorage)
         {
-            var etag1 = Guid.Parse("00000000-0000-0000-0000-000000000001");
-            var etag2 = Guid.Parse("00000000-0000-0000-0000-000000000002");
-            var etag3 = Guid.Parse("00000000-0000-0000-0000-000000000003");
-            var etag4 = Guid.Parse("00000000-0000-0000-0000-000000000004");
-            var etag5 = Guid.Parse("00000000-0000-0000-0000-000000000005");
-            var etag6 = Guid.Parse("00000000-0000-0000-0000-000000000006");
-            var etag7 = Guid.Parse("00000000-0000-0000-0000-000000000007");
-            var etag8 = Guid.Parse("00000000-0000-0000-0000-000000000008");
-            var etag9 = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
-
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Empty(accessor.GetFilesAfter(Guid.NewGuid(), 10)));
 
-                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject().WithETag(etag1)));
-                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject().WithETag(etag2)));
-                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject().WithETag(etag3)));
-                storage.Batch(accessor => accessor.PutFile("/file4", 10, new RavenJObject().WithETag(etag4)));
-                storage.Batch(accessor => accessor.PutFile("/file5", null, new RavenJObject().WithETag(etag5)));
-                storage.Batch(accessor => accessor.PutFile("/file6", 10, new RavenJObject().WithETag(etag6)));
-                storage.Batch(accessor => accessor.PutFile("/file7", null, new RavenJObject().WithETag(etag7)));
-                storage.Batch(accessor => accessor.PutFile("/file8", 10, new RavenJObject().WithETag(etag8)));
+                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file4", 10, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file5", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file6", 10, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file7", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.PutFile("/file8", 10, new RavenJObject()));
 
                 storage.Batch(accessor =>
                 {
                     var fileNames = accessor
-                        .GetFilesAfter(etag9, 10)
+                        .GetFilesAfter(EtagUtil.Increment(Etag.Empty, 8), 10)
                         .Select(x => x.Name)
                         .ToList();
 
                     Assert.Empty(fileNames);
 
                     fileNames = accessor
-                        .GetFilesAfter(etag1, 10)
+						.GetFilesAfter(EtagUtil.Increment(Etag.Empty, 1), 10)
                         .Select(x => x.Name)
                         .ToList();
 
@@ -360,7 +337,7 @@ namespace Raven.Tests.FileSystem.Storage
                     Assert.Contains("file8", fileNames);
 
                     fileNames = accessor
-                        .GetFilesAfter(etag1, 2)
+						.GetFilesAfter(EtagUtil.Increment(Etag.Empty, 1), 2)
                         .Select(x => x.Name)
                         .ToList();
 
@@ -369,7 +346,7 @@ namespace Raven.Tests.FileSystem.Storage
                     Assert.Contains("file3", fileNames);
 
                     fileNames = accessor
-                        .GetFilesAfter(etag5, 10)
+						.GetFilesAfter(EtagUtil.Increment(Etag.Empty, 5), 10)
                         .Select(x => x.Name)
                         .ToList();
 
@@ -379,7 +356,7 @@ namespace Raven.Tests.FileSystem.Storage
                     Assert.Contains("file8", fileNames);
 
                     fileNames = accessor
-                        .GetFilesAfter(etag6, 3)
+						.GetFilesAfter(EtagUtil.Increment(Etag.Empty, 6), 3)
                         .Select(x => x.Name)
                         .ToList();
 
@@ -394,16 +371,6 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public void GetLastEtag(string requestedStorage)
         {
-            var etag1 = Etag.Parse("00000000-0000-0000-0000-000000000001");
-            var etag2 = Etag.Parse("00000000-0000-0000-0000-000000000002");
-            var etag3 = Etag.Parse("00000000-0000-0000-0000-000000000003");
-            var etag4 = Etag.Parse("00000000-0000-0000-0000-000000000004");
-            var etag5 = Etag.Parse("00000000-0000-0000-0000-000000000005");
-            var etag6 = Etag.Parse("00000000-0000-0000-0000-000000000006");
-            var etag7 = Etag.Parse("00000000-0000-0000-0000-000000000007");
-            var etag8 = Etag.Parse("00000000-0000-0000-0000-000000000008");
-            var etag9 = Etag.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
-
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
 
@@ -411,22 +378,22 @@ namespace Raven.Tests.FileSystem.Storage
                 storage.Batch(accessor => etag = accessor.GetLastEtag());
                 Assert.Equal(Etag.Empty, etag);
 
-                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject()));
 
                 storage.Batch(accessor => etag = accessor.GetLastEtag());
-                Assert.Equal(etag1, etag);
+				Assert.Equal(EtagUtil.Increment(Etag.Empty, 1), etag);
                 
-                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject().WithETag(etag3)));
+                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject()));
                 storage.Batch(accessor => etag = accessor.GetLastEtag());
-                Assert.Equal(etag3, etag);
+				Assert.Equal(EtagUtil.Increment(Etag.Empty, 2), etag);
 
-                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject()));
                 storage.Batch(accessor => etag = accessor.GetLastEtag());
-                Assert.Equal(etag3, etag);
+				Assert.Equal(EtagUtil.Increment(Etag.Empty, 3), etag);
 
-                storage.Batch(accessor => accessor.PutFile("/file9", 10, new RavenJObject().WithETag(etag9)));
+                storage.Batch(accessor => accessor.PutFile("/file9", 10, new RavenJObject()));
                 storage.Batch(accessor => etag = accessor.GetLastEtag());
-                Assert.Equal(etag9, etag);
+				Assert.Equal(EtagUtil.Increment(Etag.Empty, 4), etag);
             }
         }
 
@@ -434,18 +401,13 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public void UpdateFileMetadata(string requestedStorage)
         {
-            var etag1 = Guid.NewGuid();
-            var etag2 = Guid.NewGuid();
-
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.UpdateFileMetadata("file1", new RavenJObject())));
+                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.UpdateFileMetadata("file1", new RavenJObject(), null)));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
 
-                storage.Batch(accessor => Assert.Throws<InvalidOperationException>(() => accessor.UpdateFileMetadata("file1", new RavenJObject())));
-
-                storage.Batch(accessor => accessor.UpdateFileMetadata("file1", new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.UpdateFileMetadata("file1", new RavenJObject(), null));
 
                 storage.Batch(accessor =>
                 {
@@ -462,7 +424,9 @@ namespace Raven.Tests.FileSystem.Storage
 
                     Assert.NotNull(file1Metadata);
                     Assert.Equal(1, file1Metadata.Count);
-                    Assert.Equal(etag2, file1Metadata.Value<Guid>(Constants.MetadataEtagField));
+
+					// note that file etag will be incremented two times - by put and update metadata methods
+					Assert.Equal("00000000-0000-0000-0000-000000000002", file1Metadata.Value<string>(Constants.MetadataEtagField));
                 });
             }
         }
@@ -471,15 +435,13 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public void RenameFile1(string requestedStorage)
         {
-            var etag1 = Guid.NewGuid();
-
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.RenameFile("file1", "file2")));
+				storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.RenameFile("file1", "file2")));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
 
-                storage.Batch(accessor => accessor.RenameFile("file1", "file2"));
+				storage.Batch(accessor => accessor.RenameFile("file1", "file2"));
 
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.GetFile("file1", 0, 10)));
 
@@ -498,7 +460,7 @@ namespace Raven.Tests.FileSystem.Storage
 
                     Assert.NotNull(fileMetadata);
                     Assert.Equal(1, fileMetadata.Count);
-                    Assert.Equal(etag1, fileMetadata.Value<Guid>(Constants.MetadataEtagField));
+					Assert.Equal("00000000-0000-0000-0000-000000000001", fileMetadata.Value<string>(Constants.MetadataEtagField));
                 });
             }
         }
@@ -507,15 +469,13 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public void RenameFile2(string requestedStorage)
         {
-            var etag1 = Guid.NewGuid();
-
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
 
                 storage.Batch(accessor => accessor.AssociatePage("file1", 1, 0, 10));
 
-                storage.Batch(accessor => accessor.RenameFile("file1", "file2"));
+				storage.Batch(accessor => accessor.RenameFile("file1", "file2"));
 
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.GetFile("file1", 0, 10)));
 
@@ -537,7 +497,7 @@ namespace Raven.Tests.FileSystem.Storage
 
                     Assert.NotNull(fileMetadata);
                     Assert.Equal(1, fileMetadata.Count);
-                    Assert.Equal(etag1, fileMetadata.Value<Guid>(Constants.MetadataEtagField));
+					Assert.Equal("00000000-0000-0000-0000-000000000001", fileMetadata.Value<string>(Constants.MetadataEtagField));
                 });
             }
         }

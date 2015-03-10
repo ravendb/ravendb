@@ -1,4 +1,6 @@
-﻿using Raven.Json.Linq;
+﻿using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
@@ -74,6 +76,23 @@ namespace Raven.Tests.FileSystem
             Assert.Contains("TestKey", terms);
             Assert.Contains("Another", terms);
         }
+
+		[Fact]
+		public async Task CanSearchByEtag()
+		{
+			var client = NewAsyncClient();
+
+			await client.UploadAsync("1", StreamOfLength(1));
+			await client.UploadAsync("2", StreamOfLength(2));
+
+			var result = await client.SearchAsync("ETag:" + (await client.GetMetadataForAsync("1"))[Constants.MetadataEtagField]);
+			Assert.Equal(1, result.FileCount);
+			Assert.Equal("1", result.Files[0].Name);
+
+			result = await client.SearchAsync("ETag:" + (await client.GetMetadataForAsync("2"))[Constants.MetadataEtagField]);
+			Assert.Equal(1, result.FileCount);
+			Assert.Equal("2", result.Files[0].Name);
+		}
 
         private Stream StreamOfLength(int length)
         {

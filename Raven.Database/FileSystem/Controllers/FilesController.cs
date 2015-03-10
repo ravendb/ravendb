@@ -136,7 +136,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			try
 			{
-				ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
+				Storage.Batch(accessor =>
 				{
 					AssertFileIsNotBeingSynced(name, accessor, true);
 
@@ -149,15 +149,15 @@ namespace Raven.Database.FileSystem.Controllers
 						throw new FileNotFoundException();
 					}
 
-					StorageOperationsTask.IndicateFileToDelete(name);
+					Files.IndicateFileToDelete(name, GetEtag());
 
-					if ( !name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
-						    // don't create a tombstone for .downloading file
-						    metadata != null) // and if file didn't exist
+					if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
+					    // don't create a tombstone for .downloading file
+					    metadata != null) // and if file didn't exist
 					{
-                        var tombstoneMetadata = new RavenJObject 
-                        {
-                            {
+						var tombstoneMetadata = new RavenJObject
+						{
+							{
 								SynchronizationConstants.RavenSynchronizationHistory, metadata[SynchronizationConstants.RavenSynchronizationHistory]
 							},
 							{
@@ -166,15 +166,14 @@ namespace Raven.Database.FileSystem.Controllers
 							{
 								SynchronizationConstants.RavenSynchronizationSource, metadata[SynchronizationConstants.RavenSynchronizationSource]
 							}
-                        }.WithDeleteMarker();
+						}.WithDeleteMarker();
 
-                        Historian.UpdateLastModified(tombstoneMetadata);
+						Historian.UpdateLastModified(tombstoneMetadata);
 
-                        accessor.PutFile(name, 0, tombstoneMetadata, true);
-                        accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name));
-						// delete conflict item too
+						accessor.PutFile(name, 0, tombstoneMetadata, true);
+						accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name)); // delete conflict item too
 					}
-				}), ConcurrencyResponseException);
+				});
 			}
 			catch (FileNotFoundException)
 			{
@@ -246,19 +245,20 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             name = FileHeader.Canonize(name);
 
-            var headers = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
+            var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
-            Historian.UpdateLastModified(headers);
-            Historian.Update(name, headers);
+            Historian.UpdateLastModified(metadata);
+            Historian.Update(name, metadata);
+
+			FileOperationResult updateMetadata = null;
 
             try
             {
-                ConcurrencyAwareExecutor.Execute(() =>
-                                                 Storage.Batch(accessor =>
-                                                 {
-                                                     AssertFileIsNotBeingSynced(name, accessor, true);
-                                                     accessor.UpdateFileMetadata(name, headers);
-                                                 }), ConcurrencyResponseException);
+		        Storage.Batch(accessor =>
+		        {
+			        AssertFileIsNotBeingSynced(name, accessor, true);
+			        updateMetadata = accessor.UpdateFileMetadata(name, metadata, GetEtag());
+		        });
             }
             catch (FileNotFoundException)
             {
@@ -266,7 +266,7 @@ namespace Raven.Database.FileSystem.Controllers
                 return GetEmptyMessage(HttpStatusCode.NotFound);
             }
 
-            Search.Index(name, headers);
+            Search.Index(name, metadata, updateMetadata.Etag);
 
             Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
@@ -287,50 +287,17 @@ namespace Raven.Database.FileSystem.Controllers
 
 			try
 			{
-				ConcurrencyAwareExecutor.Execute(() =>
-					Storage.Batch(accessor =>
-					{
-						AssertFileIsNotBeingSynced(name, accessor, true);
-
-						var metadata = accessor.GetFile(name, 0, 0).Metadata;
-						if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
-						{
-							throw new FileNotFoundException();
-						}
-
-						var existingHeader = accessor.ReadFile(rename);
-						if (existingHeader != null && !existingHeader.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker))
-						{
-							throw new HttpResponseException(
-								Request.CreateResponse(HttpStatusCode.Forbidden,
-													new InvalidOperationException("Cannot rename because file " + rename + " already exists")));
-						}
-
-                        Historian.UpdateLastModified(metadata);
-
-                        var operation = new RenameFileOperation
-                        {
-                            FileSystem = FileSystem.Name,
-                            Name = name,
-                            Rename = rename,
-                            MetadataAfterOperation = metadata
-                        };
-
-                        accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
-                        accessor.PulseTransaction(); // commit rename operation config
-
-                        StorageOperationsTask.RenameFile(operation);
-					}), ConcurrencyResponseException);
+				Files.Rename(name, rename, GetEtag());
 			}
 			catch (FileNotFoundException)
 			{
 				log.Debug("Cannot rename a file '{0}' to '{1}' because a file was not found", name, rename);
-                return GetEmptyMessage(HttpStatusCode.NotFound);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 			}
-
-			log.Debug("File '{0}' was renamed to '{1}'", name, rename);
-
-			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+			catch (SynchronizationException ex)
+			{
+				throw new HttpResponseException(Request.CreateResponse((HttpStatusCode) 420, ex));
+			}
 
             return GetMessageWithString("", HttpStatusCode.NoContent);
 		}
@@ -341,41 +308,32 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			try
 			{
-				var headers = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
+				var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
+				var etag = GetEtag();
 
 				var options = new FileActions.PutOperationOptions();
 
 				Guid uploadIdentifier;
-				if (uploadId != null && Guid.TryParse(uploadId, out uploadIdentifier))
+				if (Guid.TryParse(uploadId, out uploadIdentifier))
 					options.UploadId = uploadIdentifier;
 
-				var sizeHeader = GetHeader("RavenFS-size");
 				long contentSize;
-				if (long.TryParse(sizeHeader, out contentSize))
+				if (long.TryParse(GetHeader("RavenFS-size"), out contentSize))
 					options.ContentSize = contentSize;
 
-				var lastModifiedHeader = GetHeader(Constants.RavenLastModified);
 				DateTimeOffset lastModified;
-				if (lastModifiedHeader != null && DateTimeOffset.TryParse(lastModifiedHeader, out lastModified))
+				if (DateTimeOffset.TryParse(GetHeader(Constants.RavenLastModified), out lastModified))
 					options.LastModified = lastModified;
 
 				options.PreserveTimestamps = preserveTimestamps;
 				options.ContentLength = Request.Content.Headers.ContentLength;
 				options.TransferEncodingChunked = Request.Headers.TransferEncodingChunked ?? false;
 
-				await FileSystem.Files.PutAsync(name, headers, () => Request.Content.ReadAsStreamAsync(), options);
+				await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
 			}
-			catch (Exception ex)
+			catch (SynchronizationException ex)
 			{
-				var concurrencyException = ex as ConcurrencyException;
-				if (concurrencyException != null)
-					throw ConcurrencyResponseException(concurrencyException);
-
-				var synchronizationException = ex as SynchronizationException;
-				if (synchronizationException != null)
-					throw new HttpResponseException(Request.CreateResponse((HttpStatusCode)420, synchronizationException));
-
-				throw;
+				throw new HttpResponseException(Request.CreateResponse((HttpStatusCode) 420, ex));
 			}
 
 			return GetEmptyMessage(HttpStatusCode.Created);

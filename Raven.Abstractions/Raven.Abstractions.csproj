@@ -246,6 +246,7 @@
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\ClientNotSupportedException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\ImplicitFetchFieldsFromDocumentNotAllowedException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
@@ -285,6 +286,7 @@
     <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
+    <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
     <Compile Include="Json\JsonLinqEnumerableConverter.cs" />
     <Compile Include="Json\JsonTextReaderAsync.cs" />

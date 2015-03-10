@@ -58,11 +58,11 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 					foreach (var file in accessor.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue).Where(file => file != null))
 					{
 						if (versioningConfiguration != null && versioningConfiguration.PurgeOnDelete) 
-							FileSystem.StorageOperationsTask.IndicateFileToDelete(file.FullPath);
+							FileSystem.Files.IndicateFileToDelete(file.FullPath, null);
 						else
 						{
 							file.Metadata.Remove(Constants.RavenReadOnly);
-							accessor.UpdateFileMetadata(file.FullPath, file.Metadata);
+							accessor.UpdateFileMetadata(file.FullPath, file.Metadata, null);
 						}
 					}
 				});

@@ -27,13 +27,82 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
-  /// <summary>
-  /// Represents a collection of <see cref="JsonConverter"/>.
-  /// </summary>
-  public class JsonConverterCollection : Collection<JsonConverter>
-  {
-  }
+    /// <summary>
+    /// Represents a collection of <see cref="JsonConverter"/>.
+    /// </summary>
+    public class JsonConverterCollection : Collection<JsonConverter>
+    {
+
+        public static readonly JsonConverterCollection Empty = new JsonConverterCollection();
+
+        static JsonConverterCollection()
+        {
+            Empty.Freeze();
+        }
+
+        public JsonConverterCollection()
+        {
+            this.IsFrozen = false;
+        }
+
+        public JsonConverterCollection(IEnumerable<JsonConverter> converters)          
+        {
+            this.IsFrozen = false;
+
+            if ( converters != null )
+            {
+                foreach (var item in converters)
+                    this.Add(item);
+            }
+        }
+
+        protected override void ClearItems()
+        {
+            if (IsFrozen)
+                throw new InvalidOperationException("Cannot modify a frozen collection.");
+
+            base.ClearItems();
+        }
+
+        protected override void InsertItem(int index, JsonConverter item)
+        {
+            if (IsFrozen)
+                throw new InvalidOperationException("Cannot modify a frozen collection.");
+          
+            base.InsertItem(index, item);
+        }
+
+        protected override void RemoveItem(int index)
+        {
+            if (IsFrozen)
+                throw new InvalidOperationException("Cannot modify a frozen collection.");
+
+            base.RemoveItem(index);
+        }
+
+        protected override void SetItem(int index, JsonConverter item)
+        {
+            if (IsFrozen)
+                throw new InvalidOperationException("Cannot modify a frozen collection.");
+
+            base.SetItem(index, item);
+        }
+
+        public bool IsFrozen
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+
+        public void Freeze()
+        {
+            this.IsFrozen = true;
+        }
+    }
 }

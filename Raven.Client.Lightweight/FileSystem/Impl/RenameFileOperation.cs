@@ -1,9 +1,7 @@
 ﻿using Raven.Abstractions.FileSystem;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client.FileSystem.Impl
 {
@@ -13,8 +11,9 @@ namespace Raven.Client.FileSystem.Impl
 
         public string Filename { get; set; }
         public string Destination { get; private set; }
+		public Etag Etag { get; private set; }
 
-        public RenameFileOperation(InMemoryFilesSessionOperations sessionOperations, string sourcePath, string destinationPath)
+        public RenameFileOperation(InMemoryFilesSessionOperations sessionOperations, string sourcePath, string destinationPath, Etag etag)
         {
             if (string.IsNullOrWhiteSpace(sourcePath))
                 throw new ArgumentNullException("sourcePath", "The source path cannot be null, empty or whitespace.");
@@ -25,12 +24,13 @@ namespace Raven.Client.FileSystem.Impl
             this.sessionOperations = sessionOperations;
             this.Filename = sourcePath;
             this.Destination = destinationPath;
+	        this.Etag = etag;
         }
         public async Task<FileHeader> Execute(IAsyncFilesSession session)
         {
             var commands = session.Commands;
 
-            await commands.RenameAsync(Filename, Destination)
+            await commands.RenameAsync(Filename, Destination, Etag)
                           .ConfigureAwait(false);
 
             var metadata = await commands.GetMetadataForAsync(Destination);

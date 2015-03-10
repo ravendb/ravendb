@@ -1,7 +1,4 @@
 ﻿using Raven.Json.Linq;
-using Raven.Database.FileSystem.Extensions;
-using System;
-using System.Collections.Specialized;
 using System.Linq;
 using Xunit;
 
@@ -9,15 +6,13 @@ namespace Raven.Tests.FileSystem.Bugs
 {
     public class FileRenaming : StorageTest
     {
-        private readonly RavenJObject metadataWithEtag = new RavenJObject().WithETag(Guid.Empty);
-
         [Fact]
         public void Should_rename_file_and_content()
         {
             transactionalStorage.Batch(
                 accessor =>
                 {
-					accessor.PutFile("test.bin", 3, metadataWithEtag);
+					accessor.PutFile("test.bin", 3, new RavenJObject());
                     var pageId = accessor.InsertPage(new byte[] { 1, 2, 3 }, 3);
                     accessor.AssociatePage("test.bin", pageId, 0, 3);
                     accessor.CompleteFileUpload("test.bin");
@@ -44,7 +39,7 @@ namespace Raven.Tests.FileSystem.Bugs
             transactionalStorage.Batch(
                 accessor =>
                     {
-						accessor.PutFile("test0.bin", 3, metadataWithEtag);
+						accessor.PutFile("test0.bin", 3, new RavenJObject());
                         var pageId = accessor.InsertPage(new byte[] { 1, 2, 3 }, 3);
                         accessor.AssociatePage("test0.bin", pageId, 0, 3);
                         accessor.CompleteFileUpload("test0.bin");
@@ -53,7 +48,7 @@ namespace Raven.Tests.FileSystem.Bugs
             transactionalStorage.Batch(
                 accessor =>
                     {
-						accessor.PutFile("test1.bin", 3, metadataWithEtag);
+						accessor.PutFile("test1.bin", 3, new RavenJObject());
                         var pageId = accessor.InsertPage(new byte[] { 4, 5, 6 }, 3);
                         accessor.AssociatePage("test1.bin", pageId, 0, 3);
                         accessor.CompleteFileUpload("test1.bin");

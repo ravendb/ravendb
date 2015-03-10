@@ -19,7 +19,7 @@ namespace Raven.Database.FileSystem.Actions
 
 		public void StartSynchronizeDestinationsInBackground()
 		{
-			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
+			Task.Factory.StartNew(async () => await SynchronizationTask.Execute(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
 		}
 	}
 }

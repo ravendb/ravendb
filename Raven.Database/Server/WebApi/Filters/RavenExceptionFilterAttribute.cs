@@ -4,11 +4,13 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http.Filters;
+using System.Web.Http.Results;
 using Jint.Runtime;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Database.FileSystem.Controllers;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.WebApi.Filters
@@ -23,6 +25,7 @@ namespace Raven.Database.Server.WebApi.Filters
 				{typeof (JavaScriptException), (ctx, e) => HandleJintException(ctx, e as JavaScriptException)},
 				{typeof (IndexDisabledException), (ctx, e) => HandleIndexDisabledException(ctx, e as IndexDisabledException)},
 				{typeof (IndexDoesNotExistsException), (ctx, e) => HandleIndexDoesNotExistsException(ctx, e as IndexDoesNotExistsException)},
+                {typeof (ImplicitFetchFieldsFromDocumentNotAllowedException), (ctx, e) => HandleImplicitFetchFieldsFromDocumentNotAllowedException(ctx, e as ImplicitFetchFieldsFromDocumentNotAllowedException)}
 			};
 
 		public override void OnException(HttpActionExecutedContext ctx)
@@ -92,10 +95,20 @@ namespace Raven.Database.Server.WebApi.Filters
 
 		private static void HandleConcurrencyException(HttpActionExecutedContext ctx, ConcurrencyException e)
 		{
-			ctx.Response = new HttpResponseMessage
+			if (ctx.ActionContext.ControllerContext.Controller is RavenFsApiController)
 			{
-				StatusCode = HttpStatusCode.Conflict,
-			};
+				ctx.Response = new HttpResponseMessage
+				{
+					StatusCode = HttpStatusCode.MethodNotAllowed,
+				};
+			}
+			else 
+			{
+				ctx.Response = new HttpResponseMessage
+				{
+					StatusCode = HttpStatusCode.Conflict,
+				};
+			}
 
 			SerializeError(ctx, new
 			{
@@ -152,5 +165,19 @@ namespace Raven.Database.Server.WebApi.Filters
 				Error = e.Information == null ? e.ToString() : e.Information.GetErrorMessage(),
 			});
 		}
+
+	    private static void HandleImplicitFetchFieldsFromDocumentNotAllowedException(HttpActionExecutedContext ctx, ImplicitFetchFieldsFromDocumentNotAllowedException e)
+	    {
+	        ctx.Response = new HttpResponseMessage
+	        {
+	            StatusCode = HttpStatusCode.InternalServerError
+	        };
+
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = e.Message
+            });
+	    }
 	}
 }

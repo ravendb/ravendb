@@ -6,7 +6,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Config;
 using Raven.Database.Impl.DTC;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -31,25 +33,27 @@ namespace Raven.Database.Impl
 		private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		private readonly InMemoryRavenConfiguration configuration;
 		private readonly IStorageActionsAccessor actions;
 		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
 		private readonly InFlightTransactionalState inFlightTransactionalState;
 		private readonly Dictionary<string, RavenJToken> transformerParameters;
-	    private readonly HashSet<string> itemsToInclude;
+		private readonly HashSet<string> itemsToInclude;
 		private bool disableCache;
 
-	    public Etag Etag = Etag.Empty;
+		public Etag Etag = Etag.Empty;
 
-		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
+		public DocumentRetriever(InMemoryRavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
 			InFlightTransactionalState inFlightTransactionalState,
-            Dictionary<string, RavenJToken> transformerParameters = null,
-            HashSet<string> itemsToInclude = null)
+			Dictionary<string, RavenJToken> transformerParameters = null,
+			HashSet<string> itemsToInclude = null)
 		{
+			this.configuration = configuration;
 			this.actions = actions;
 			this.triggers = triggers;
 			this.inFlightTransactionalState = inFlightTransactionalState;
 			this.transformerParameters = transformerParameters ?? new Dictionary<string, RavenJToken>();
-		    this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
+			this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
 		}
 
 		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch, bool skipDuplicateCheck)
@@ -82,11 +86,11 @@ namespace Raven.Database.Impl
 				TempIndexScore = resultingDocument.TempIndexScore,
 				DataAsJson =
 					resultingDocument.DataAsJson.IsSnapshot
-						? (RavenJObject) resultingDocument.DataAsJson.CreateSnapshot()
+						? (RavenJObject)resultingDocument.DataAsJson.CreateSnapshot()
 						: resultingDocument.DataAsJson,
 				Metadata =
 					resultingDocument.Metadata.IsSnapshot
-						? (RavenJObject) resultingDocument.Metadata.CreateSnapshot()
+						? (RavenJObject)resultingDocument.Metadata.CreateSnapshot()
 						: resultingDocument.Metadata,
 			};
 
@@ -129,62 +133,78 @@ namespace Raven.Database.Impl
 
 			JsonDocument doc = null;
 
-		    if (fieldsToFetch.IsProjection)
-		    {
-		        if (indexDefinition.IsMapReduce == false)
-		        {
-		            bool hasStoredFields = false;
-		            FieldStorage value;
-		            if (indexDefinition.Stores.TryGetValue(Constants.AllFields, out value))
-		            {
-		                hasStoredFields = value != FieldStorage.No;
-		            }
-		            foreach (var fieldToFetch in fieldsToFetch.Fields)
-		            {
-		                if (indexDefinition.Stores.TryGetValue(fieldToFetch, out value) == false && value != FieldStorage.No) continue;
-		                hasStoredFields = true;
-		            }
-		            if (hasStoredFields == false)
-		            {
-		                // duplicate document, filter it out
-		                if (loadedIds.Add(queryResult.Key) == false) return null;
-		            }
-		        }
+			if (fieldsToFetch.IsProjection)
+			{
+				if (indexDefinition.IsMapReduce == false)
+				{
+					bool hasStoredFields = false;
+					FieldStorage value;
+					if (indexDefinition.Stores.TryGetValue(Constants.AllFields, out value))
+					{
+						hasStoredFields = value != FieldStorage.No;
+					}
+					foreach (var fieldToFetch in fieldsToFetch.Fields)
+					{
+						if (indexDefinition.Stores.TryGetValue(fieldToFetch, out value) == false && value != FieldStorage.No) continue;
+						hasStoredFields = true;
+					}
+					if (hasStoredFields == false)
+					{
+						// duplicate document, filter it out
+						if (loadedIds.Add(queryResult.Key) == false) return null;
+					}
+				}
 
-		        // We have to load the document if user explicitly asked for the id, since 
-		        // we normalize the casing for the document id on the index, and we need to return
-		        // the id to the user with the same casing they gave us.
-		        var fetchingId = fieldsToFetch.HasField(Constants.DocumentIdFieldName);
-		        var fieldsToFetchFromDocument = fieldsToFetch.Fields.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null).ToArray();
-		        if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
-		        {
-		            doc = GetDocumentWithCaching(queryResult.Key);
-		            if (doc != null)
-		            {
-		                if (fetchingId)
-		                {
-		                    queryResult.Projection[Constants.DocumentIdFieldName] = doc.Key;
-		                }
+				// We have to load the document if user explicitly asked for the id, since 
+				// we normalize the casing for the document id on the index, and we need to return
+				// the id to the user with the same casing they gave us.
+				var fetchingId = fieldsToFetch.HasField(Constants.DocumentIdFieldName);
+				var fieldsToFetchFromDocument = fieldsToFetch.Fields.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null).ToArray();
+				if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
+				{
+					switch (configuration.ImplicitFetchFieldsFromDocumentMode)
+					{
+						case ImplicitFetchFieldsMode.Enabled:
+							doc = GetDocumentWithCaching(queryResult.Key);
+							if (doc != null)
+							{
+								if (fetchingId)
+								{
+									queryResult.Projection[Constants.DocumentIdFieldName] = doc.Key;
+								}
 
-		                var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
-		                foreach (var property in result)
-		                {
-		                    if (property.Value == null || property.Value.Type == JTokenType.Null) continue;
-		                    queryResult.Projection[property.Key] = property.Value;
-		                }
-		            }
-		        }
-		    }
+								var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
+								foreach (var property in result)
+								{
+									if (property.Value == null || property.Value.Type == JTokenType.Null) continue;
+									queryResult.Projection[property.Key] = property.Value;
+								}
+							}
+							break;
+						case ImplicitFetchFieldsMode.DoNothing:
+							break;
+						case ImplicitFetchFieldsMode.Exception:
+							string message = string.Format("Implicit fetching of fields from the document is disabled." + Environment.NewLine +
+												  "Check your index ({0}) to make sure that all fields you want to project are stored in the index." + Environment.NewLine +
+												  "You can control this behavior using the Raven/ImplicitFetchFieldsFromDocumentMode setting." + Environment.NewLine +
+												  "Fields to fetch from document are: {1}" + Environment.NewLine +
+												  "Fetching id: {2}", indexDefinition.Name, string.Join(", ", fieldsToFetchFromDocument), fetchingId);
+							throw new ImplicitFetchFieldsFromDocumentNotAllowedException(message);
+						default:
+							throw new ArgumentOutOfRangeException(configuration.ImplicitFetchFieldsFromDocumentMode.ToString());
+					}
+				}
+			}
 			else if (fieldsToFetch.FetchAllStoredFields && string.IsNullOrEmpty(queryResult.Key) == false
-                && (fieldsToFetch.Query== null || fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false)
-                )
-		    {
-                // duplicate document, filter it out
-                if (loadedIds.Add(queryResult.Key) == false)
-                    return null;
+				&& (fieldsToFetch.Query == null || fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false)
+				)
+			{
+				// duplicate document, filter it out
+				if (loadedIds.Add(queryResult.Key) == false)
+					return null;
 
-                doc = GetDocumentWithCaching(queryResult.Key);
-		    }
+				doc = GetDocumentWithCaching(queryResult.Key);
+			}
 
 			var metadata = GetMetadata(doc);
 			metadata.Remove("@id");
@@ -203,7 +223,7 @@ namespace Raven.Database.Impl
 				return new RavenJObject();
 
 			if (doc.Metadata.IsSnapshot)
-				return (RavenJObject) doc.Metadata.CreateSnapshot();
+				return (RavenJObject)doc.Metadata.CreateSnapshot();
 
 			return doc.Metadata;
 		}
@@ -216,9 +236,9 @@ namespace Raven.Database.Impl
 			JsonDocument doc;
 			if (disableCache == false && cache.TryGetValue(key, out doc))
 				return doc;
-				
+
 			doc = actions.Documents.DocumentByKey(key);
-            JsonDocument.EnsureIdInMetadata(doc);
+			JsonDocument.EnsureIdInMetadata(doc);
 
 			if (doc != null && doc.Metadata != null)
 				doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
@@ -226,7 +246,7 @@ namespace Raven.Database.Impl
 			var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
 			if (nonAuthoritativeInformationBehavior != null)
 				doc = nonAuthoritativeInformationBehavior(doc);
-			if(disableCache == false)
+			if (disableCache == false)
 				cache[key] = doc;
 			if (cache.Count > 2048)
 			{
@@ -299,30 +319,30 @@ namespace Raven.Database.Impl
 			if (jId != null)
 				return Include(jId.Value.ToString());
 
-		    var items = new List<dynamic>();
+			var items = new List<dynamic>();
 			foreach (var itemId in (IEnumerable)maybeId)
 			{
-			    var include = Include(itemId);// this is where the real work happens
-			    items.Add(include);
+				var include = Include(itemId);// this is where the real work happens
+				items.Add(include);
 			}
-		    return new DynamicList(items);
+			return new DynamicList(items);
 
 		}
 		public dynamic Include(string id)
 		{
 			ItemsToInclude.Add(id);
-		    return Load(id);
+			return Load(id);
 		}
 
 		public dynamic Include(IEnumerable<string> ids)
 		{
-            var items = new List<dynamic>();
-            foreach (var itemId in ids)
-            {
-                var include = Include(itemId);// this is where the real work happens
-                items.Add(include);
-            }
-            return new DynamicList(items);
+			var items = new List<dynamic>();
+			foreach (var itemId in ids)
+			{
+				var include = Include(itemId);// this is where the real work happens
+				items.Add(include);
+			}
+			return new DynamicList(items);
 		}
 
 		public dynamic Load(string id)
@@ -331,8 +351,8 @@ namespace Raven.Database.Impl
 			document = ProcessReadVetoes(document, null, ReadOperation.Load);
 			if (document == null)
 			{
-			    Etag = Etag.HashWith(Etag.Empty);
-			    return new DynamicNullObject();
+				Etag = Etag.HashWith(Etag.Empty);
+				return new DynamicNullObject();
 			}
 			Etag = Etag.HashWith(document.Etag);
 			if (document.Metadata.ContainsKey("Raven-Read-Veto"))
@@ -347,8 +367,8 @@ namespace Raven.Database.Impl
 		{
 			if (maybeId == null || maybeId is DynamicNullObject)
 			{
-			    Etag = Etag.HashWith(Etag.Empty);
-			    return new DynamicNullObject();
+				Etag = Etag.HashWith(Etag.Empty);
+				return new DynamicNullObject();
 			}
 			var id = maybeId as string;
 			if (id != null)
@@ -365,10 +385,10 @@ namespace Raven.Database.Impl
 			return new DynamicList(items.Select(x => (object)x).ToArray());
 		}
 
-        public Dictionary<string, RavenJToken> TransformerParameters { get { return this.transformerParameters; } }
-	    public HashSet<string> ItemsToInclude
-	    {
-	        get { return itemsToInclude; }
-	    }
+		public Dictionary<string, RavenJToken> TransformerParameters { get { return this.transformerParameters; } }
+		public HashSet<string> ItemsToInclude
+		{
+			get { return itemsToInclude; }
+		}
 	}
 }

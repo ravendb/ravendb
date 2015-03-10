@@ -200,6 +200,14 @@ namespace Raven.Abstractions.Data
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 		[JsonIgnore]
 	    public Action OnCompleted = delegate { };
+
+        public void RunCompleted()
+        {
+            var onCompleted = OnCompleted;
+            OnCompleted = null;
+            if (onCompleted != null)
+                onCompleted();
+        }
 	}
 
 	public enum IndexingOperation

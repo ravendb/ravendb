@@ -146,6 +146,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.IndexAndTransformerReplicationLatencyInSec.Value, actual => actual.IndexAndTransformerReplicationLatencyInSec);
 			configurationComparer.Assert(expected => expected.MaxConcurrentRequestsForDatabaseDuringLoad.Value, actual => actual.MaxConcurrentRequestsForDatabaseDuringLoad);
 			configurationComparer.Assert(expected => expected.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value, actual => actual.Replication.MaxNumberOfItemsToReceiveInSingleBatch);
+            configurationComparer.Assert(expected => expected.ImplicitFetchFieldsFromDocumentMode.Value, actual => actual.ImplicitFetchFieldsFromDocumentMode);
 			configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
 			configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
 
