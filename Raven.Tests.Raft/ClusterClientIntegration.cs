@@ -3,13 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Data;
-using Raven.Database.Config;
 using Raven.Database.Raft.Dto;
 using Raven.Json.Linq;
 
@@ -20,7 +17,7 @@ namespace Raven.Tests.Raft
 	public class ClusterClientIntegration : RaftTestBase
 	{
 		[Fact]
-		public async Task T1()
+		public async Task ClientsShouldBeAbleToPerformCommandsEvenIfTheyDoNotPointToLeader()
 		{
 			var clusterStores = CreateRaftCluster(3, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
@@ -30,12 +27,16 @@ namespace Raven.Tests.Raft
 			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
 
 			using (var store1 = clusterStores[0])
+			using (var store2 = clusterStores[1])
+			using (var store3 = clusterStores[2])
 			{
-				var result = store1.DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
+				store1.DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
+				store2.DatabaseCommands.Put("keys/2", null, new RavenJObject(), new RavenJObject());
+				store3.DatabaseCommands.Put("keys/3", null, new RavenJObject(), new RavenJObject());
 
-
-				result = store1.DatabaseCommands.Put("keys/2", null, new RavenJObject(), new RavenJObject());
-				//Thread.Sleep(TimeSpan.FromMinutes(30));
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/1"));
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/2"));
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/3"));
 			}
 		}
 	}

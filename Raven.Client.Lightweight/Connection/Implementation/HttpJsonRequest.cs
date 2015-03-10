@@ -114,6 +114,7 @@ namespace Raven.Client.Connection
 			{
 				recreateHandler = () => new WebRequestHandler
 				{
+					AllowAutoRedirect = false,
 					UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
 					Credentials = _credentials != null ? _credentials.Credentials : null,
 				};

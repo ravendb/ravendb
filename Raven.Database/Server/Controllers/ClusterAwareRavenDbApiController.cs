@@ -47,27 +47,27 @@ namespace Raven.Database.Server.Controllers
 			if (ClusterManager.IsLeader())
 				return await base.ExecuteAsync(controllerContext, cancellationToken);
 
-			return RedirectToLeader();
+			return RedirectToLeader(controllerContext.Request);
 		}
 
-		private HttpResponseMessage RedirectToLeader()
+		private HttpResponseMessage RedirectToLeader(HttpRequestMessage request)
 		{
 			var leaderNode = ClusterManager.Engine.GetLeaderNode();
 
 			if (leaderNode == null)
 			{
-				return Request.CreateResponse(HttpStatusCode.ExpectationFailed, new
+				return request.CreateResponse(HttpStatusCode.ExpectationFailed, new
 				{
 					Error = "There is no current leader, try again later"
 				});
 			}
 
-			var message = Request.CreateResponse(HttpStatusCode.Redirect);
+			var message = request.CreateResponse(HttpStatusCode.Redirect);
 			message.Headers.Location = new UriBuilder(leaderNode.Uri)
 			{
-				Path = Request.RequestUri.LocalPath,
-				Query = Request.RequestUri.Query.TrimStart('?'),
-				Fragment = Request.RequestUri.Fragment
+				Path = request.RequestUri.LocalPath,
+				Query = request.RequestUri.Query.TrimStart('?'),
+				Fragment = request.RequestUri.Fragment
 			}.Uri;
 
 			return message;

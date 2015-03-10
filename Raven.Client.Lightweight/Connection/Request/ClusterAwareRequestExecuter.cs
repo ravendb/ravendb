@@ -105,21 +105,22 @@ namespace Raven.Client.Connection.Request
 
 			localLeaderNode = LeaderNode;
 			if (localLeaderNode == null)
-				return await ExecuteWithinClusterInternalAsync(method, operation, token, numberOfRetries - 1);
+				return await ExecuteWithinClusterInternalAsync(method, operation, token, numberOfRetries - 1).ConfigureAwait(false);
 
-			return await TryClusterOperationAsync(method, localLeaderNode, operation, token, numberOfRetries);
+			return await TryClusterOperationAsync(method, localLeaderNode, operation, token, numberOfRetries).ConfigureAwait(false);
 		}
 
-		private Task<T> TryClusterOperationAsync<T>(string method, OperationMetadata localLeaderNode, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries)
+		private async Task<T> TryClusterOperationAsync<T>(string method, OperationMetadata localLeaderNode, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries)
 		{
 			token.ThrowIfCancellationRequested();
 
 			if (numberOfRetries < 0)
 				throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.");
 
+			var shouldRetry = false;
 			try
 			{
-				return operation(localLeaderNode);
+				return await operation(localLeaderNode).ConfigureAwait(false);
 			}
 			catch (Exception e)
 			{
@@ -133,19 +134,15 @@ namespace Raven.Client.Connection.Request
 				if (errorResponseException == null)
 					throw;
 
-				if (errorResponseException.StatusCode == HttpStatusCode.Redirect || errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed)
-				{
-					LeaderNode = null;
-					return ExecuteWithinClusterInternalAsync(method, operation, token, numberOfRetries);
-				}
+				if (errorResponseException.StatusCode == HttpStatusCode.Redirect || errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed) 
+					shouldRetry = true;
 
-				if (errorResponseException.StatusCode == HttpStatusCode.Unauthorized)
-				{
-					return TryClusterOperationAsync(method, localLeaderNode, operation, token, numberOfRetries - 1);
-				}
-
-				throw;
+				if (shouldRetry == false)
+					throw;
 			}
+
+			LeaderNode = null;
+			return await ExecuteWithinClusterInternalAsync(method, operation, token, numberOfRetries - 1);
 		}
 
 		private Task UpdateReplicationInformationForCluster(OperationMetadata primaryNode, Func<OperationMetadata, ReplicationDocumentWithClusterInformation> getReplicationDestinations)
