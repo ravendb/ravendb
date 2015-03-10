@@ -300,7 +300,7 @@ namespace Raven.Database.Server.Controllers
                 keys = accessor.MapReduce.GetSourcesForIndexForDebug(definition.IndexId, prefix, GetPageSize(Database.Configuration.MaxPageSize))
                     .ToList(); 
             });
-            return GetMessageWithObject(new { keys.Count, Results = keys });
+	        return GetMessageWithObject(new {keys.Count, Results = keys});
         }
 
 		private HttpResponseMessage GetIndexMappedResult(string index)
@@ -322,11 +322,6 @@ namespace Raven.Database.Server.Controllers
 						.ToList();
 				});
 
-				if (string.IsNullOrEmpty(startsWith) == false)
-                    return GetMessageWithObject(new
-                    {
-						Results = keys
-                    });
 				return GetMessageWithObject(new
 				{
 					keys.Count,
