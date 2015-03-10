@@ -22,7 +22,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 			this.synchronizationHiLo = synchronizationHiLo;
 		}
 
-		public void Update(string fileName, RavenJObject sourceMetadata)
+		public void Update(string fileName, RavenJObject sourceMetadata) // TODO arek - move this to a dedicated put trigger
 		{
 			var fileMetadata = GetMetadata(fileName);
             var serverId = fileMetadata.Value<string>(SynchronizationConstants.RavenSynchronizationSource);

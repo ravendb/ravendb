@@ -29,6 +29,7 @@ using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Client.FileSystem
 {
@@ -1573,12 +1574,12 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, ServerInfo sourceServer)
+            public async Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
             {
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/rename?filename=" + Uri.EscapeDataString(currentName) + "&rename=" + Uri.EscapeDataString(newName), "PATCH", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					request.AddHeaders(metadata);
-					request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
+					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
 					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
 					try
@@ -1593,12 +1594,12 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, ServerInfo sourceServer)
+            public async Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
             {
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization?fileName=" + Uri.EscapeDataString(fileName), "DELETE", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					request.AddHeaders(metadata);
-					request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
+					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
 					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
 					try
@@ -1613,12 +1614,12 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, ServerInfo sourceServer)
+            public async Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
             {
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName), "POST", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					request.AddHeaders(metadata);
-					request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
+					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
 					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
 					try

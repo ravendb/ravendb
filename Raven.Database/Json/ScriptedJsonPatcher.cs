@@ -80,9 +80,10 @@ namespace Raven.Database.Json
 		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size, string docId, ScriptedJsonPatcherOperationScope scope)
 		{
 			Engine jintEngine;
+			var customFunctions = scope.CustomFunctions != null ? scope.CustomFunctions.DataAsJson : null;
 			try
 			{
-				jintEngine = ScriptsCache.CheckoutScript(CreateEngine, patch);
+				jintEngine = ScriptsCache.CheckoutScript(CreateEngine, patch, customFunctions);
 			}
 			catch (NotSupportedException e)
 			{
@@ -108,7 +109,7 @@ namespace Raven.Database.Json
 
 				OutputLog(jintEngine);
 
-				ScriptsCache.CheckinScript(patch, jintEngine);
+				ScriptsCache.CheckinScript(patch, jintEngine, customFunctions);
 
 				return scope.ConvertReturnValue(jsObject);
 			}
@@ -160,7 +161,7 @@ namespace Raven.Database.Json
 
 			CustomizeEngine(jintEngine, scope);
 
-			jintEngine.SetValue("PutDocument", (Func<string, object, object,string>)((key, document, metadata) => scope.PutDocument(key, document, metadata, jintEngine)));
+			jintEngine.SetValue("PutDocument", (Func<string, object, object, string>)((key, document, metadata) => scope.PutDocument(key, document, metadata, jintEngine)));
 			jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref totalScriptSteps)));
 			jintEngine.SetValue("DeleteDocument", (Action<string>)(scope.DeleteDocument));
 			jintEngine.SetValue("__document_id", docId);
@@ -179,7 +180,7 @@ namespace Raven.Database.Json
 					jintEngine.SetValue(kvp.Key, jsInstance);
 				}
 			}
-			
+
 			jintEngine.ResetStatementsCount();
 			if (size != 0)
 			{
@@ -243,31 +244,10 @@ namespace Raven.Database.Json
 
 		protected virtual void CustomizeEngine(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
-			RavenJToken functions;
-			if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
-				return;
-
-			engine.Execute(string.Format(@"var customFunctions = function() {{  var exports = {{ }}; {0};
-	return exports;
-}}();
-for(var customFunction in customFunctions) {{
-	this[customFunction] = customFunctions[customFunction];
-}};", functions), new ParserOptions { Source = "customFunctions.js"});
 		}
 
 		protected virtual void RemoveEngineCustomizations(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
-			RavenJToken functions;
-			if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
-				return;
-
-			engine.Execute(@"
-if(customFunctions) { 
-	for(var customFunction in customFunctions) { 
-		delete this[customFunction]; 
-	}; 
-};");
-			engine.SetValue("customFunctions", JsValue.Undefined);
 		}
 
 		private void OutputLog(Engine engine)

@@ -22,7 +22,7 @@ namespace Raven.Database.FileSystem.Synchronization
 			FileAndPagesInformation fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
 
-            return destination.DeleteAsync(FileName, fileAndPages.Metadata, ServerInfo);
+            return destination.DeleteAsync(FileName, fileAndPages.Metadata, FileSystemInfo);
 		}
 
 		public override bool Equals(object obj)

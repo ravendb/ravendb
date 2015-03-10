@@ -5,9 +5,11 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
+using Raven.Client.Connection;
 using Raven.Client.FileSystem;
 using Raven.Database.Config;
 using Raven.Database.FileSystem.Actions;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Notifications;
 using Raven.Database.FileSystem.Search;
@@ -36,6 +38,7 @@ using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Controllers
 {
@@ -175,6 +178,11 @@ namespace Raven.Database.FileSystem.Controllers
 	    protected FileActions Files
 	    {
 			get { return FileSystem.Files; }
+	    }
+
+	    protected SynchronizationActions Synchronizations
+	    {
+			get { return FileSystem.Synchronizations; }
 	    }
 
 		protected FileLockManager FileLockManager
@@ -382,7 +390,14 @@ namespace Raven.Database.FileSystem.Controllers
 	    public override void MarkRequestDuration(long duration)
 	    {
 	        FileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
-	    }        
+	    }
+
+		protected FileSystemInfo GetSourceFileSystemInfo()
+		{
+			var json = GetHeader(SyncingMultipartConstants.SourceFileSystemInfo);
+
+			return RavenJObject.Parse(json).JsonDeserialization<FileSystemInfo>();
+		}
 
         #region Metadata Headers Handling
 

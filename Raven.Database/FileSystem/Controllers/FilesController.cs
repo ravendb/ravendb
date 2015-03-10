@@ -154,49 +154,49 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             name = FileHeader.Canonize(name);
 
-			Storage.Batch(accessor =>
-			{
-				Files.AssertFileIsNotBeingSynced(name, accessor);
-
-				var fileAndPages = accessor.GetFile(name, 0, 0);
-
-				var metadata = fileAndPages.Metadata;
-
-				if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+				Storage.Batch(accessor =>
 				{
-					throw new FileNotFoundException();
-				}
+					Synchronizations.AssertFileIsNotBeingSynced(name);
 
-				Files.IndicateFileToDelete(name, GetEtag());
+					var fileAndPages = accessor.GetFile(name, 0, 0);
 
-				if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
-					// don't create a tombstone for .downloading file
-					metadata != null) // and if file didn't exist
-				{
-					var tombstoneMetadata = new RavenJObject
+					var metadata = fileAndPages.Metadata;
+
+					if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
 					{
-						{
-							SynchronizationConstants.RavenSynchronizationHistory, metadata[SynchronizationConstants.RavenSynchronizationHistory]
-						},
-						{
-							SynchronizationConstants.RavenSynchronizationVersion, metadata[SynchronizationConstants.RavenSynchronizationVersion]
-						},
-						{
-							SynchronizationConstants.RavenSynchronizationSource, metadata[SynchronizationConstants.RavenSynchronizationSource]
-						}
-					}.WithDeleteMarker();
+						throw new FileNotFoundException();
+					}
 
-					Historian.UpdateLastModified(tombstoneMetadata);
+					Files.IndicateFileToDelete(name, GetEtag());
 
-					accessor.PutFile(name, 0, tombstoneMetadata, true);
-					accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name)); // delete conflict item too
-				}
-			});
+					if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
+					    // don't create a tombstone for .downloading file
+					    metadata != null) // and if file didn't exist
+					{
+						var tombstoneMetadata = new RavenJObject
+						{
+							{
+								SynchronizationConstants.RavenSynchronizationHistory, metadata[SynchronizationConstants.RavenSynchronizationHistory]
+							},
+							{
+								SynchronizationConstants.RavenSynchronizationVersion, metadata[SynchronizationConstants.RavenSynchronizationVersion]
+							},
+							{
+								SynchronizationConstants.RavenSynchronizationSource, metadata[SynchronizationConstants.RavenSynchronizationSource]
+							}
+						}.WithDeleteMarker();
+
+						Historian.UpdateLastModified(tombstoneMetadata);
+
+						accessor.PutFile(name, 0, tombstoneMetadata, true);
+						accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name)); // delete conflict item too
+					}
+				});
 
 			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
 			log.Debug("File '{0}' was deleted", name);
 
-			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -241,7 +241,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 		    Storage.Batch(accessor =>
 		    {
-			    Files.AssertFileIsNotBeingSynced(name, accessor);
+			    Synchronizations.AssertFileIsNotBeingSynced(name);
 			    updateMetadata = accessor.UpdateFileMetadata(name, metadata, GetEtag());
 		    });
 
@@ -249,7 +249,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
-			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 
             log.Debug("Metadata of a file '{0}' was updated", name);
 
