@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -7,7 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -32,9 +32,31 @@ namespace Raven.Database.Server.Controllers
             using (var cts = new CancellationTokenSource())
             using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
-                var jsonCommandArray = await ReadJsonArrayAsync();
+                RavenJArray jsonCommandArray;
 
-                cts.Token.ThrowIfCancellationRequested();
+	            try
+	            {
+		            jsonCommandArray = await ReadJsonArrayAsync();
+	            }
+	            catch (InvalidOperationException e)
+	            {
+					Log.Debug("Failed to deserialize document batch request. Error: " + e);
+					return GetMessageWithObject(new
+					{
+						Message = "Could not understand json, please check its validity."
+					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+		            
+	            }
+	            catch (InvalidDataException e)
+	            {
+					Log.Debug("Failed to deserialize document batch request. Error: " + e);
+		            return GetMessageWithObject(new
+		            {
+			            e.Message
+					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+	            }
+
+	            cts.Token.ThrowIfCancellationRequested();
 
                 var transactionInformation = GetRequestTransaction();
                 var commands =
@@ -94,7 +116,29 @@ namespace Raven.Database.Server.Controllers
             var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
             var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
-            var patchRequestJson = await ReadJsonArrayAsync();
+            RavenJArray patchRequestJson;
+	        try
+			{
+				patchRequestJson = await ReadJsonArrayAsync();
+			}
+			catch (InvalidOperationException e)
+			{
+				Log.Debug("Failed to deserialize document batch request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					Message = "Could not understand json, please check its validity."
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+
+			}
+			catch (InvalidDataException e)
+			{
+				Log.Debug("Failed to deserialize document batch request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					e.Message
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+			}
+
             var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
             return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, options), id, cts);
         }
@@ -109,8 +153,32 @@ namespace Raven.Database.Server.Controllers
             var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
             var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
-            var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
-            var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
+
+	        RavenJObject advPatchRequestJson;
+
+	        try
+	        {
+				advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
+			}
+			catch (InvalidOperationException e)
+			{
+				Log.Debug("Failed to deserialize document batch request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					Message = "Could not understand json, please check its validity."
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+
+			}
+			catch (InvalidDataException e)
+			{
+				Log.Debug("Failed to deserialize document batch request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					e.Message
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+			}
+
+	        var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
             return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, options), id, cts);
         }
 
