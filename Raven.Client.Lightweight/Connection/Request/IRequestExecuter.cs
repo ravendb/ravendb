@@ -12,7 +12,7 @@ namespace Raven.Client.Connection.Request
 
 		Task<T> ExecuteOperationAsync<T>(string method, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token);
 
-		Task UpdateReplicationInformationIfNeeded();
+		Task UpdateReplicationInformationIfNeeded(bool force = false);
 
 		HttpJsonRequest AddHeaders(HttpJsonRequest httpJsonRequest);
 	}

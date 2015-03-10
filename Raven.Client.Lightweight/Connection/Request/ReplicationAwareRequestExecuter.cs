@@ -42,8 +42,11 @@ namespace Raven.Client.Connection.Request
 			return replicationInformer.ExecuteWithReplicationAsync(method, serverClient.Url, serverClient.PrimaryCredentials, currentRequest, currentReadStripingBase, operation, token);
 		}
 
-		public Task UpdateReplicationInformationIfNeeded()
+		public Task UpdateReplicationInformationIfNeeded(bool force = false)
 		{
+			if (force)
+				throw new NotSupportedException("Force is not supported in ReplicationAwareRequestExecuter");
+
 			return replicationInformer.UpdateReplicationInformationIfNeeded(serverClient);
 		}
 

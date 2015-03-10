@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -24,6 +25,10 @@ namespace Raven.Client.Connection.Request
 {
 	public class ClusterAwareRequestExecuter : IRequestExecuter
 	{
+		private const int WaitForLeaderTimeoutInSeconds = 15;
+
+		private const int GetReplicationDestinationsTimeoutInSeconds = WaitForLeaderTimeoutInSeconds / 3;
+
 		private readonly AsyncServerClient serverClient;
 
 		private readonly ManualResetEventSlim leaderNodeSelected = new ManualResetEventSlim();
@@ -80,12 +85,22 @@ namespace Raven.Client.Connection.Request
 			return ExecuteWithinClusterInternalAsync(method, operation, token);
 		}
 
-		public Task UpdateReplicationInformationIfNeeded()
+		public Task UpdateReplicationInformationIfNeeded(bool force = false)
 		{
-			if (lastUpdate.AddMinutes(5) > SystemTime.UtcNow && LeaderNode != null)
+			if (force == false && lastUpdate.AddMinutes(5) > SystemTime.UtcNow && LeaderNode != null)
 				return new CompletedTask();
 
-			return UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata => serverClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap());
+			LeaderNode = null;
+			return UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
+			{
+				return serverClient.DirectGetReplicationDestinationsAsync(operationMetadata, TimeSpan.FromSeconds(GetReplicationDestinationsTimeoutInSeconds)).ContinueWith(t =>
+				{
+					if (t.IsFaulted || t.IsCanceled)
+						return null;
+
+					return t.Result;
+				});
+			});
 		}
 
 		public HttpJsonRequest AddHeaders(HttpJsonRequest httpJsonRequest)
@@ -94,7 +109,7 @@ namespace Raven.Client.Connection.Request
 			return httpJsonRequest;
 		}
 
-		private async Task<T> ExecuteWithinClusterInternalAsync<T>(string method, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries = 3)
+		private async Task<T> ExecuteWithinClusterInternalAsync<T>(string method, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries = 2)
 		{
 			token.ThrowIfCancellationRequested();
 
@@ -106,19 +121,19 @@ namespace Raven.Client.Connection.Request
 			{
 				UpdateReplicationInformationIfNeeded(); // maybe start refresh task
 
-				if (leaderNodeSelected.Wait(TimeSpan.FromSeconds(10)) == false)
+				if (leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds)) == false)
 					throw new InvalidOperationException("Cluster is not reachable. No leader was selected, aborting.");
-			}
 
-			localLeaderNode = LeaderNode;
-			if (localLeaderNode == null)
-				return await ExecuteWithinClusterInternalAsync(method, operation, token, numberOfRetries - 1).ConfigureAwait(false);
+				localLeaderNode = LeaderNode;
+			}
 
 			return await TryClusterOperationAsync(method, localLeaderNode, operation, token, numberOfRetries).ConfigureAwait(false);
 		}
 
 		private async Task<T> TryClusterOperationAsync<T>(string method, OperationMetadata localLeaderNode, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries)
 		{
+			Debug.Assert(localLeaderNode != null);
+
 			token.ThrowIfCancellationRequested();
 
 			var shouldRetry = false;
@@ -135,21 +150,27 @@ namespace Raven.Client.Connection.Request
 				else
 					errorResponseException = e as ErrorResponseException;
 
-				if (errorResponseException == null)
-					throw;
-
-				if (errorResponseException.StatusCode == HttpStatusCode.Redirect || errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed) 
+				bool wasTimeout;
+				if (HttpConnectionHelper.IsServerDown(e, out wasTimeout))
 					shouldRetry = true;
+				else
+				{
+					if (errorResponseException == null)
+						throw;
+
+					if (errorResponseException.StatusCode == HttpStatusCode.Redirect || errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed)
+						shouldRetry = true;
+				}
 
 				if (shouldRetry == false)
 					throw;
 			}
 
 			LeaderNode = null;
-			return await ExecuteWithinClusterInternalAsync(method, operation, token, numberOfRetries - 1);
+			return await ExecuteWithinClusterInternalAsync(method, operation, token, numberOfRetries - 1).ConfigureAwait(false);
 		}
 
-		private Task UpdateReplicationInformationForCluster(OperationMetadata primaryNode, Func<OperationMetadata, ReplicationDocumentWithClusterInformation> getReplicationDestinations)
+		private Task UpdateReplicationInformationForCluster(OperationMetadata primaryNode, Func<OperationMetadata, Task<ReplicationDocumentWithClusterInformation>> getReplicationDestinationsTask)
 		{
 			lock (this)
 			{
@@ -170,13 +191,19 @@ namespace Raven.Client.Connection.Request
 							.Select(operationMetadata => new
 							{
 								Node = operationMetadata,
-								ReplicationDocument = getReplicationDestinations(operationMetadata)
+								Task = getReplicationDestinationsTask(operationMetadata)
 							})
 							.ToArray();
 
+						var tasks = replicationDocuments
+							.Select(x => x.Task)
+							.ToArray();
+
+						Task.WaitAll(tasks);
+
 						var newestTopology = replicationDocuments
-							.Where(x => x.ReplicationDocument != null)
-							.OrderByDescending(x => x.ReplicationDocument.ClusterCommitIndex)
+							.Where(x => x.Task.Result != null)
+							.OrderByDescending(x => x.Task.Result.ClusterCommitIndex)
 							.FirstOrDefault();
 
 						if (newestTopology == null)
@@ -189,7 +216,7 @@ namespace Raven.Client.Connection.Request
 							return;
 						}
 
-						Nodes = GetNodes(newestTopology.Node, newestTopology.ReplicationDocument);
+						Nodes = GetNodes(newestTopology.Node, newestTopology.Task.Result);
 						LeaderNode = GetLeaderNode(Nodes);
 
 						if (LeaderNode != null)
@@ -197,6 +224,12 @@ namespace Raven.Client.Connection.Request
 
 						Thread.Sleep(500);
 					}
+
+					LeaderNode = primaryNode;
+					Nodes = new List<OperationMetadata>
+					{
+						primaryNode
+					};
 				}).ContinueWith(t =>
 				{
 					lastUpdate = SystemTime.UtcNow;

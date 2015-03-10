@@ -193,16 +193,6 @@ namespace Raven.Tests.Core.ChangesApi
                 throw new NotImplementedException();
             }
 
-            public bool IsServerDown(Exception exception, out bool timeout)
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
-            {
-                throw new NotImplementedException();
-            }
-
             public void Dispose()
             {
                 throw new NotImplementedException();

@@ -2381,9 +2381,9 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 										 replicationInformerGetter, requestExecuterGetter, databaseName, conflictListeners, false, convention.ClusterBehavior);
 		}
 
-		internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata)
+		internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, TimeSpan? timeout = null)
 		{
-			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", "GET", operationMetadata.Credentials, convention);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", "GET", operationMetadata.Credentials, convention, timeout);
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(url, operationMetadata.Url, replicationInformer, requestExecuter, HandleReplicationStatusChanges))
 			{
 				try

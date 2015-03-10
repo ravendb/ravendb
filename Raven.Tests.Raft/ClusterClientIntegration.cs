@@ -3,6 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Cluster;
@@ -10,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Request;
 using Raven.Database.Raft.Dto;
+using Raven.Database.Raft.Util;
 using Raven.Json.Linq;
 
 using Xunit;
@@ -101,6 +105,52 @@ namespace Raven.Tests.Raft
 
 				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/1"));
 				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/2"));
+			}
+		}
+
+		[Theory]
+		[InlineData(2)]
+		//[InlineData(3)]
+		//[InlineData(5)]
+		public async Task T1(int numberOfNodes)
+		{
+			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
+
+			var managementClient = servers[0].Options.ClusterManager.Client;
+			await managementClient.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
+
+			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+
+			clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeeded(force: true));
+
+			for (int i = 0; i < clusterStores.Count; i++)
+			{
+				var store = clusterStores[i];
+
+				store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject(), new RavenJObject());
+			}
+
+			for (int i = 0; i < clusterStores.Count; i++)
+			{
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + i));
+			}
+
+			Thread.Sleep(10000);
+
+			servers
+				.First(x => x.Options.ClusterManager.IsLeader())
+				.Dispose();
+
+			for (int i = 0; i < clusterStores.Count; i++)
+			{
+				var store = clusterStores[i];
+
+				store.DatabaseCommands.Put("keys/" + (i + clusterStores.Count), null, new RavenJObject(), new RavenJObject());
+			}
+
+			for (int i = 0; i < clusterStores.Count; i++)
+			{
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + (i + clusterStores.Count)));
 			}
 		}
 	}

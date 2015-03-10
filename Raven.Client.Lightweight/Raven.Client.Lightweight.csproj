@@ -102,6 +102,7 @@
     <Compile Include="Connection\AdminServerClient.cs" />
     <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
     <Compile Include="Connection\Async\AsyncServerClientBase.cs" />
+    <Compile Include="Connection\HttpConnectionHelper.cs" />
     <Compile Include="Connection\Request\ClusterAwareRequestExecuter.cs" />
     <Compile Include="Connection\Request\ReplicationAwareRequestExecuter.cs" />
     <Compile Include="Connection\Request\IRequestExecuter.cs" />

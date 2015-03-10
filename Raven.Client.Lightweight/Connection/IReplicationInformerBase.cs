@@ -46,10 +46,6 @@ namespace Raven.Client.Connection
         Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token = default (CancellationToken));
 
         void ForceCheck(string primaryUrl, bool shouldForceCheck);
-
-        bool IsServerDown(Exception exception, out bool timeout);
-
-        bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode);
     }
 
     public interface IReplicationInformerBase<in TClient> : IReplicationInformerBase

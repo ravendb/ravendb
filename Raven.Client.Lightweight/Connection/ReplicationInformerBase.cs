@@ -419,7 +419,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                         throw;
 
                     bool wasTimeout;
-                    if (IsServerDown(e, out wasTimeout))
+                    if (HttpConnectionHelper.IsServerDown(e, out wasTimeout))
                     {
                         return new AsyncOperationResult<T>
                         {
@@ -434,91 +434,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken);
         }
 
-		public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
-		{
-			var aggregateException = e as AggregateException;
-			if (aggregateException != null)
-			{
-				e = aggregateException.ExtractSingleInnerException();
-			}
-
-			var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
-		    if (ere != null)
-		    {
-			    return httpStatusCode.Contains(ere.StatusCode);
-		    }
-			var webException = (e as WebException) ?? (e.InnerException as WebException);
-			if (webException != null)
-			{
-				var httpWebResponse = webException.Response as HttpWebResponse;
-				if (httpWebResponse != null && httpStatusCode.Contains(httpWebResponse.StatusCode))
-					return true;
-			}
-
-			return false;
-		}
-
-		public virtual bool IsServerDown(Exception e, out bool timeout)
-		{
-			timeout = false;
-
-			var aggregateException = e as AggregateException;
-			if (aggregateException != null)
-			{
-				e = aggregateException.ExtractSingleInnerException();
-			}
-
-		    var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
-		    if (ere != null)
-		    {
-		        if (IsServerDown(ere.StatusCode, out timeout))
-		            return true;
-		    }
-
-			var webException = (e as WebException) ?? (e.InnerException as WebException);
-			if (webException != null)
-			{
-				switch (webException.Status)
-				{
-					case WebExceptionStatus.Timeout:
-						timeout = true;
-						return true;
-					case WebExceptionStatus.NameResolutionFailure:
-					case WebExceptionStatus.ReceiveFailure:
-					case WebExceptionStatus.PipelineFailure:
-					case WebExceptionStatus.ConnectionClosed:
-					case WebExceptionStatus.ConnectFailure:
-					case WebExceptionStatus.SendFailure:
-						return true;
-				}
-
-				var httpWebResponse = webException.Response as HttpWebResponse;
-				if (httpWebResponse != null)
-				{
-					if (IsServerDown(httpWebResponse.StatusCode, out timeout))
-                        return true;
-				}
-			}
-			return
- e.InnerException is SocketException ||
- e.InnerException is IOException;
-		}
-
-        private static bool IsServerDown(HttpStatusCode httpStatusCode, out bool timeout)
-	    {
-            timeout = false;
-            switch (httpStatusCode)
-	        {
-	            case HttpStatusCode.RequestTimeout:
-	            case HttpStatusCode.GatewayTimeout:
-	                timeout = true;
-	                return true;
-	            case HttpStatusCode.BadGateway:
-	            case HttpStatusCode.ServiceUnavailable:
-	                return true;
-	        }
-	        return false;
-	    }
+		
 
 	    public virtual void Dispose()
 		{
@@ -529,7 +445,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 		public void ForceCheck(string primaryUrl, bool shouldForceCheck)
 		{
-			var failureCounter = this.GetHolder(primaryUrl);
+			var failureCounter = GetHolder(primaryUrl);
 			failureCounter.ForceCheck = shouldForceCheck;
 		}
 	}

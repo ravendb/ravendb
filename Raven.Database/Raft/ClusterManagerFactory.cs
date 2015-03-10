@@ -71,8 +71,8 @@ namespace Raven.Database.Raft
 			var stateMachine = new ClusterStateMachine(systemDatabase, databasesLandlord);
 			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine)
 									{
-										ElectionTimeout = 2000,
-										HeartbeatTimeout = 750
+										//ElectionTimeout = 2000,
+										//HeartbeatTimeout = 750
 									};
 
 			if (Debugger.IsAttached)
