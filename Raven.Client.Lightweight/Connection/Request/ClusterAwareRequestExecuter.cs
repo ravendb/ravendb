@@ -11,10 +11,12 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 
@@ -29,6 +31,8 @@ namespace Raven.Client.Connection.Request
 		private Task refreshReplicationInformationTask;
 
 		private OperationMetadata leaderNode;
+
+		private DateTime lastUpdate = DateTime.MinValue;
 
 		public OperationMetadata LeaderNode
 		{
@@ -78,6 +82,9 @@ namespace Raven.Client.Connection.Request
 
 		public Task UpdateReplicationInformationIfNeeded()
 		{
+			if (lastUpdate.AddMinutes(5) > SystemTime.UtcNow)
+				return new CompletedTask();
+
 			return UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata => serverClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap());
 		}
 
@@ -193,7 +200,11 @@ namespace Raven.Client.Connection.Request
 
 						Thread.Sleep(500);
 					}
-				}).ContinueWith(t => refreshReplicationInformationTask = null);
+				}).ContinueWith(t =>
+				{
+					lastUpdate = SystemTime.UtcNow;
+					refreshReplicationInformationTask = null;
+				});
 			}
 		}
 

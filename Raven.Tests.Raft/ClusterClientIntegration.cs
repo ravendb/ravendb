@@ -10,33 +10,48 @@ using Raven.Abstractions.Data;
 using Raven.Database.Raft.Dto;
 using Raven.Json.Linq;
 
-using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Raft
 {
 	public class ClusterClientIntegration : RaftTestBase
 	{
-		[Fact]
-		public async Task ClientsShouldBeAbleToPerformCommandsEvenIfTheyDoNotPointToLeader()
+		[Theory]
+		[InlineData(1)]
+		[InlineData(3)]
+		[InlineData(5)]
+		[InlineData(11)]
+		public async Task ClientsShouldBeAbleToPerformCommandsEvenIfTheyDoNotPointToLeader(int numberOfNodes)
 		{
-			var clusterStores = CreateRaftCluster(3, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
+			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
 			var managementClient = servers[0].Options.ClusterManager.Client;
 			await managementClient.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
 			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
 
-			using (var store1 = clusterStores[0])
-			using (var store2 = clusterStores[1])
-			using (var store3 = clusterStores[2])
+			for (int i = 0; i < clusterStores.Count; i++)
 			{
-				store1.DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
-				store2.DatabaseCommands.Put("keys/2", null, new RavenJObject(), new RavenJObject());
-				store3.DatabaseCommands.Put("keys/3", null, new RavenJObject(), new RavenJObject());
+				var store = clusterStores[i];
 
-				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/1"));
-				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/2"));
-				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/3"));
+				store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject(), new RavenJObject());
+			}
+
+			for (int i = 0; i < clusterStores.Count; i++)
+			{
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + i));
+			}
+
+			for (int i = 0; i < clusterStores.Count; i++)
+			{
+				var store = clusterStores[i];
+
+				store.DatabaseCommands.Put("keys/" + (i + clusterStores.Count), null, new RavenJObject(), new RavenJObject());
+			}
+
+			for (int i = 0; i < clusterStores.Count; i++)
+			{
+				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + (i + clusterStores.Count)));
 			}
 		}
 	}

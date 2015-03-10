@@ -24,11 +24,20 @@ namespace Raven.Database.Raft.Util
 			return engine.Engine.CurrentTopology.AllNodes.Any();
 		}
 
-		public static NodeConnectionInfo GetLeaderNode(this RaftEngine engine)
+		public static NodeConnectionInfo GetLeaderNode(this RaftEngine engine, int waitTimeoutInSeconds = 0)
 		{
+			if (waitTimeoutInSeconds > 0)
+				engine.WaitForLeader(waitTimeoutInSeconds * 1000);
+
 			var leader = engine.CurrentLeader;
 			if (leader == null)
+			{
+				if (waitTimeoutInSeconds > 0)
+					throw new InvalidOperationException(string.Format("No leader. Waited {0} seconds.", waitTimeoutInSeconds));
+
 				return null;
+			}
+				
 
 			return engine.CurrentTopology.AllNodes.Single(x => x.Name == leader);
 		}
@@ -36,13 +45,6 @@ namespace Raven.Database.Raft.Util
 		public static bool IsLeader(this ClusterManager engine)
 		{
 			return engine.Engine.State == RaftEngineState.Leader;
-		}
-
-		public static NodeConnectionInfo GetFirstNonSelfNode(this RaftEngine engine)
-		{
-			var selfNode = engine.Options.SelfConnection;
-
-			return engine.CurrentTopology.AllNodes.First(x => x.Name != selfNode.Name);
 		}
 
 		public static bool IsClusterDatabase(this DocumentDatabase database)

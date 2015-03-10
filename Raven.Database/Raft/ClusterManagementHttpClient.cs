@@ -31,15 +31,9 @@ namespace Raven.Database.Raft
 {
 	public class ClusterManagementHttpClient
 	{
-		private readonly RaftEngine raftEngine;
+		private const int WaitForLeaderTimeoutInSeconds = 15;
 
-		private NodeConnectionInfo SelfConnection
-		{
-			get
-			{
-				return raftEngine.Options.SelfConnection;
-			}
-		}
+		private readonly RaftEngine raftEngine;
 
 		private readonly HttpClient httpClient;
 
@@ -97,7 +91,7 @@ namespace Raven.Database.Raft
 			catch (NotLeadingException)
 			{
 			}
-			await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(), nodeConnectionInfo);
+			await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), nodeConnectionInfo);
 		}
 
 		public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
@@ -134,7 +128,7 @@ namespace Raven.Database.Raft
 			}
 			catch (NotLeadingException)
 			{
-				return SendClusterConfigurationInternalAsync(raftEngine.GetLeaderNode(), configuration);
+				return SendClusterConfigurationInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), configuration);
 			}
 		}
 
@@ -148,7 +142,7 @@ namespace Raven.Database.Raft
 			}
 			catch (NotLeadingException)
 			{
-				return SendDatabaseUpdateInternalAsync(raftEngine.GetLeaderNode(), databaseName, document);
+				return SendDatabaseUpdateInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), databaseName, document);
 			}
 		}
 
@@ -162,7 +156,7 @@ namespace Raven.Database.Raft
 			}
 			catch (NotLeadingException)
 			{
-				return SendDatabaseDeleteInternalAsync(raftEngine.GetLeaderNode(), databaseName, hardDelete);
+				return SendDatabaseDeleteInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), databaseName, hardDelete);
 			}
 		}
 
@@ -229,7 +223,7 @@ namespace Raven.Database.Raft
 		{
 			try
 			{
-				if (raftEngine.GetLeaderNode() == node)
+				if (raftEngine.Options.SelfConnection == node)
 				{
 					await raftEngine.StepDownAsync().ConfigureAwait(false);
 					raftEngine.WaitForLeader();
@@ -243,7 +237,7 @@ namespace Raven.Database.Raft
 			{
 			}
 
-			await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(), node);
+			await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node);
 		}
 
 		public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
