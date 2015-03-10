@@ -3,7 +3,6 @@ using System.Text;
 
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
-using Raven.Client.Extensions;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Raven.Database.Util;
 
@@ -15,14 +14,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using System.IO;
 	using System.Linq;
 
-	using Raven.Abstractions;
-	using Raven.Abstractions.Data;
-	using Raven.Abstractions.Extensions;
-	using Raven.Abstractions.MEF;
-	using Raven.Database.Impl;
-	using Raven.Database.Indexing;
-	using Raven.Database.Plugins;
-	using Raven.Database.Storage.Voron.Impl;
+	using Abstractions;
+	using Abstractions.Data;
+	using Abstractions.Extensions;
+	using Abstractions.MEF;
+	using Database.Impl;
+	using Indexing;
+	using Plugins;
+	using Impl;
 	using Raven.Json.Linq;
 
 	using global::Voron;
@@ -242,6 +241,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				if (!iterator.Seek(Slice.BeforeAllKeys)) 
 					return Enumerable.Empty<string>();
 
+				var needExactMatch = take == 1;
 				var results = new List<string>();
 				do
 				{
@@ -257,7 +257,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
 
-					if (string.IsNullOrEmpty(startsWith) == false && reduceKey.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
+					if (StringHelper.Compare(startsWith, reduceKey, needExactMatch) == false)
 						continue;
 
 					results.Add(reduceKey);
@@ -306,7 +306,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public IEnumerable<string> GetSourcesForIndexForDebug(int view, string startsWith, int take)
+		public IEnumerable<string> GetSourcesForIndexForDebug(int view, string startsWith, int take)
         {
             var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
             using (var iterator = mappedResultsByView.MultiRead(Snapshot, CreateKey(view)))
@@ -314,6 +314,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 if (!iterator.Seek(Slice.BeforeAllKeys))
                     return Enumerable.Empty<string>();
 
+	            var needExactMatch = take == 1;
                 var results = new HashSet<string>();
                 do
                 {
@@ -322,8 +323,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     var docId = value.ReadString(MappedResultFields.DocId);
 
-                    if (string.IsNullOrEmpty(startsWith) == false && docId.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
-                        continue;
+					if (StringHelper.Compare(startsWith, docId, needExactMatch) == false)
+						continue;
 
                     results.Add(docId);
                 }
@@ -332,7 +333,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 return results;
             }
         }
-       
 
 		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int view, string reduceKey, int level, int start, int take)
 		{

@@ -3,15 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
@@ -21,12 +20,10 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Compression.Plugin;
-using Raven.Bundles.Compression.Streams;
-using Raven.Database.Impl;
-using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Raven.Storage.Esent.StorageActions;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IDocumentStorageActions
 	{
@@ -41,7 +38,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			return DocumentByKeyInternal(key, (metadata, createDocument) =>
 			{
-				Debug.Assert(metadata.Etag != null);
+				System.Diagnostics.Debug.Assert(metadata.Etag != null);
 				return new JsonDocument
 				{
 					DataAsJson = createDocument(metadata.Key, metadata.Etag, metadata.Metadata),

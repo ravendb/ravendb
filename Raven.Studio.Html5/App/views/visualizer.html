@@ -131,7 +131,7 @@
             <button id="fullScreenButton" class="btn btn-default" data-bind="visible: hasIndexSelected, click: toggleFullscreen" title="Fullscreen mode">
                 <i class="fa fa-expand"></i>
             </button>
-            <button id="keysDialogBtn" class="btn btn-default" title="Displays information about inserted document ids and reduce keys" data-bind="visible: hasIndexSelected, click: displayKeyInfo">
+            <button id="keysDialogBtn" class="btn btn-default" title="Displays information about inserted document ids and reduce keys" data-bind="visible: hasIndexSelected, click: displayKeyInfo, enable: docKeysOrReduceKeysSelected">
                 <i class="fa fa-key"></i>
             </button>
             <button class="btn btn-default" title="Clear" data-bind="visible: hasIndexSelected, click: clearChart">
