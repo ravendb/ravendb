@@ -170,10 +170,10 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
-		private void AssertPutOperationNotVetoed(string name, RavenJObject headers)
+		internal void AssertPutOperationNotVetoed(string name, RavenJObject metadata)
 		{
 			var vetoResult = FileSystem.PutTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, headers) })
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, metadata) })
 				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
 			if (vetoResult != null)
 			{

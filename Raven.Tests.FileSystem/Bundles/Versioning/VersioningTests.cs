@@ -31,6 +31,27 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 		[Theory]
 		[PropertyData("Storages")]
+		public async Task FirstUploadWillCreateRevision(string requestedStorage)
+		{
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 10 });
+
+				using (var session = store.OpenAsyncSession())
+				{
+					session.RegisterUpload("test.txt", StringToStream("abc"));
+
+					await session.SaveChangesAsync();
+
+					var revisions = await session.GetRevisionNamesForAsync("test.txt", 0, 128);
+
+					Assert.Equal(1, revisions.Length);
+				}
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
 		public async Task Simple(string requestedStorage)
 		{
 			const string FileName = "file1.txt";
