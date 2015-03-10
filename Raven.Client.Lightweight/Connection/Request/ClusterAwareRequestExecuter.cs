@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="ClusterRequestExecuter.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ClusterAwareRequestExecuter.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -11,8 +11,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
@@ -20,7 +20,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection.Request
 {
-	public class ClusterRequestExecuter : IRequestExecuter
+	public class ClusterAwareRequestExecuter : IRequestExecuter
 	{
 		private readonly AsyncServerClient serverClient;
 
@@ -63,14 +63,13 @@ namespace Raven.Client.Connection.Request
 
 		public List<OperationMetadata> Nodes { get; private set; }
 
-		public ClusterRequestExecuter(AsyncServerClient serverClient)
+		public ClusterAwareRequestExecuter(AsyncServerClient serverClient)
 		{
-			if (serverClient.convention.ClusterBehavior == ClusterBehavior.None)
-				throw new InvalidOperationException("Invalid cluster behavior.");
-
 			this.serverClient = serverClient;
 			Nodes = new List<OperationMetadata>();
 		}
+
+		public ReplicationDestination[] FailoverServers { get; set; }
 
 		public Task<T> ExecuteOperationAsync<T>(string method, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
 		{
@@ -80,6 +79,12 @@ namespace Raven.Client.Connection.Request
 		public Task UpdateReplicationInformationIfNeeded()
 		{
 			return UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata => serverClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap());
+		}
+
+		public HttpJsonRequest AddHeaders(HttpJsonRequest httpJsonRequest)
+		{
+			httpJsonRequest.AddHeader(Constants.Cluster.ClusterAwareHeader, "true");
+			return httpJsonRequest;
 		}
 
 		private async Task<T> ExecuteWithinClusterInternalAsync<T>(string method, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries = 3)
@@ -145,9 +150,6 @@ namespace Raven.Client.Connection.Request
 
 		private Task UpdateReplicationInformationForCluster(OperationMetadata primaryNode, Func<OperationMetadata, ReplicationDocumentWithClusterInformation> getReplicationDestinations)
 		{
-			if (serverClient.convention.ClusterBehavior == ClusterBehavior.None)
-				throw new InvalidOperationException("Invalid cluster behavior.");
-
 			lock (this)
 			{
 				var taskCopy = refreshReplicationInformationTask;
@@ -156,7 +158,7 @@ namespace Raven.Client.Connection.Request
 
 				return refreshReplicationInformationTask = Task.Factory.StartNew(() =>
 				{
-					for(var i = 0; i < 20; i++)
+					for (var i = 0; i < 20; i++)
 					{
 						var nodes = NodeUrls;
 

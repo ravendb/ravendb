@@ -102,8 +102,8 @@
     <Compile Include="Connection\AdminServerClient.cs" />
     <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
     <Compile Include="Connection\Async\AsyncServerClientBase.cs" />
-    <Compile Include="Connection\Request\ClusterRequestExecuter.cs" />
-    <Compile Include="Connection\Request\DefaultRequestExecuter.cs" />
+    <Compile Include="Connection\Request\ClusterAwareRequestExecuter.cs" />
+    <Compile Include="Connection\Request\ReplicationAwareRequestExecuter.cs" />
     <Compile Include="Connection\Request\IRequestExecuter.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\CompressedStreamContent.cs" />

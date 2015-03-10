@@ -12,6 +12,7 @@ using System.Net.Http;
 using System.Security;
 using System.Threading;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -20,6 +21,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Connection.Request;
 using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -50,6 +52,8 @@ namespace Raven.Client.Document
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 
 		private readonly ConcurrentDictionary<string, IDocumentStoreReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IDocumentStoreReplicationInformer>(StringComparer.OrdinalIgnoreCase);
+
+		private readonly ConcurrentDictionary<string, ClusterAwareRequestExecuter> clusterAwareRequestExecuters = new ConcurrentDictionary<string, ClusterAwareRequestExecuter>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
@@ -261,7 +265,7 @@ namespace Raven.Client.Document
 			// try to wait until all the async disposables are completed
 			Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
 
-			if(Subscriptions != null)
+			if (Subscriptions != null)
 				Subscriptions.Dispose();
 
 			// if this is still going, we continue with disposal, it is for grace only, anyway
@@ -614,20 +618,19 @@ namespace Raven.Client.Document
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
 				return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-					currentSessionId, GetReplicationInformerForDatabase, null,
+					currentSessionId, GetReplicationInformerForDatabase, GetRequestExecuterForDatabase, null,
 					Listeners.ConflictListeners, true, Conventions.ClusterBehavior));
 			};
 
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, GetRequestExecuterForDatabase, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
 				return asyncServerClient.ForDatabase(DefaultDatabase);
 			};
 		}
-
 
 		public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
 		{
@@ -655,6 +658,36 @@ namespace Raven.Client.Document
 			}
 
 			return result;
+		}
+
+		private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string dbName, ClusterBehavior clusterBehavior)
+		{
+			var key = Url;
+			dbName = dbName ?? DefaultDatabase;
+			if (string.IsNullOrEmpty(dbName) == false)
+				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
+
+			IRequestExecuter requestExecuter;
+			if (clusterBehavior == ClusterBehavior.None)
+				requestExecuter = new ReplicationAwareRequestExecuter(serverClient, replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)));
+			else
+				requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter(serverClient));
+
+			if (FailoverServers == null)
+				return requestExecuter;
+
+			if (dbName == DefaultDatabase)
+			{
+				if (FailoverServers.IsSetForDefaultDatabase && requestExecuter.FailoverServers == null)
+					requestExecuter.FailoverServers = FailoverServers.ForDefaultDatabase;
+			}
+			else
+			{
+				if (FailoverServers.IsSetForDatabase(dbName) && requestExecuter.FailoverServers == null)
+					requestExecuter.FailoverServers = FailoverServers.GetForDatabase(dbName);
+			}
+
+			return requestExecuter;
 		}
 
 		/// <summary>
@@ -704,7 +737,7 @@ namespace Raven.Client.Document
 					Conventions,
 					GetReplicationInformerForDatabase(database),
 					() => databaseChanges.Remove(database),
-					(key, etag, conflictIds, metadata) => ((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
+					(key, etag, conflictIds, metadata) => ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
 			}
 		}
 
@@ -851,7 +884,7 @@ namespace Raven.Client.Document
 		{
 			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? DefaultDatabase);
 
-            return changes == null ? new CompletedTask() : changes.ConnectionTask;
+			return changes == null ? new CompletedTask() : changes.ConnectionTask;
 		}
 	}
 }

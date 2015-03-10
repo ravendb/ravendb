@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -15,9 +16,11 @@ using System.Net.Http.Headers;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Replication;
+using Raven.Client.Connection.Request;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -25,7 +28,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
-using System.Collections;
 
 namespace Raven.Client.Connection
 {
@@ -508,11 +510,18 @@ namespace Raven.Client.Connection
 			return this;
 		}
 
-		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, IDocumentStoreReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
+		public HttpJsonRequest AddRequestExecuterAndReplicationHeaders(
+			string thePrimaryUrl,
+			string currentUrl,
+			IDocumentStoreReplicationInformer replicationInformer,
+			IRequestExecuter requestExecuter,
+			Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
-			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
+			requestExecuter.AddHeaders(this);
+
+			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase)) 
 				return this;
-			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0)
+			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0) 
 				return this; // not because of failover, no need to do this.
 
 			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
