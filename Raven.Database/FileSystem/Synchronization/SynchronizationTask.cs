@@ -23,6 +23,7 @@ using Raven.Client.FileSystem.Connection;
 using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
 using System.Threading;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
@@ -71,14 +72,14 @@ namespace Raven.Database.FileSystem.Synchronization
 			get { return synchronizationQueue; }
 		}
 
-        public void IncomingSynchronizationStarted(string fileName, ServerInfo sourceServerInfo, Guid sourceFileETag, SynchronizationType type)
+        public void IncomingSynchronizationStarted(string fileName, FileSystemInfo sourceFileSystemInfo, Guid sourceFileETag, SynchronizationType type)
         {
-            var activeForDestination = activeIncomingSynchronizations.GetOrAdd(sourceServerInfo.FileSystemUrl,
+            var activeForDestination = activeIncomingSynchronizations.GetOrAdd(sourceFileSystemInfo.Url,
                                                        new ConcurrentDictionary<string, SynchronizationDetails>());
 
             var syncDetails = new SynchronizationDetails()
             {
-                DestinationUrl = sourceServerInfo.FileSystemUrl,
+                DestinationUrl = sourceFileSystemInfo.Url,
                 FileETag = sourceFileETag,
                 FileName = fileName,
                 Type = type
@@ -88,17 +89,17 @@ namespace Raven.Database.FileSystem.Synchronization
             {
                 Log.Debug("File '{0}' with ETag {1} was added to an incoming active synchronization queue for a destination {2}",
                           fileName,
-                          sourceFileETag, sourceServerInfo.FileSystemUrl);
+                          sourceFileETag, sourceFileSystemInfo.Url);
             }
         }
 
-        public void IncomingSynchronizationFinished(string fileName, ServerInfo sourceServerInfo, Guid sourceFileETag)
+        public void IncomingSynchronizationFinished(string fileName, FileSystemInfo sourceFileSystemInfo, Guid sourceFileETag)
         {
             ConcurrentDictionary<string, SynchronizationDetails> activeSourceTasks;
 
-            if (activeIncomingSynchronizations.TryGetValue(sourceServerInfo.FileSystemUrl, out activeSourceTasks) == false)
+            if (activeIncomingSynchronizations.TryGetValue(sourceFileSystemInfo.Url, out activeSourceTasks) == false)
             {
-                Log.Warn("Could not get an active synchronization queue for {0}", sourceServerInfo.FileSystemUrl);
+                Log.Warn("Could not get an active synchronization queue for {0}", sourceFileSystemInfo.Url);
                 return;
             }
 
@@ -106,7 +107,7 @@ namespace Raven.Database.FileSystem.Synchronization
             if (activeSourceTasks.TryRemove(fileName, out removingItem))
             {
                 Log.Debug("File '{0}' with ETag {1} was removed from an active synchronization queue for a destination {2}",
-                          fileName, sourceFileETag, sourceServerInfo);
+                          fileName, sourceFileETag, sourceFileSystemInfo);
             }
         }
 

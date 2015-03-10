@@ -5,15 +5,15 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.FileSystem
 {
-	public class ServerInfo
+	public class FileSystemInfo
 	{
-		public string FileSystemUrl { get; set; }
+		public string Url { get; set; }
 
 		public Guid Id { get; set; }
 
 		public override string ToString()
 		{
-			return string.Format("{0} [{1}]", FileSystemUrl, Id);
+			return string.Format("{0} [{1}]", Url, Id);
 		}
 
 		public string AsJson()

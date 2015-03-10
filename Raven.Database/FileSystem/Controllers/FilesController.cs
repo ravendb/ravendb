@@ -138,7 +138,7 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				Storage.Batch(accessor =>
 				{
-					AssertFileIsNotBeingSynced(name, accessor, true);
+					Synchronizations.AssertFileIsNotBeingSynced(name);
 
 					var fileAndPages = accessor.GetFile(name, 0, 0);
 
@@ -183,7 +183,7 @@ namespace Raven.Database.FileSystem.Controllers
 			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
 			log.Debug("File '{0}' was deleted", name);
 
-			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -256,7 +256,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
 		        Storage.Batch(accessor =>
 		        {
-			        AssertFileIsNotBeingSynced(name, accessor, true);
+			        Synchronizations.AssertFileIsNotBeingSynced(name);
 			        updateMetadata = accessor.UpdateFileMetadata(name, metadata, GetEtag());
 		        });
             }
@@ -270,7 +270,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
-			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 
             log.Debug("Metadata of a file '{0}' was updated", name);
 

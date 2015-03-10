@@ -19,6 +19,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 using Xunit;
 using Xunit.Extensions;
+using FileSystemInfo = System.IO.FileSystemInfo;
 
 namespace Raven.Tests.FileSystem.Migration
 {

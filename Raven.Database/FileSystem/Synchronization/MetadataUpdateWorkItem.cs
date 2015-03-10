@@ -32,7 +32,7 @@ namespace Raven.Database.FileSystem.Synchronization
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
-			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
+			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, FileSystemInfo.Url);
 
 	        if (conflict != null)
 	        {
@@ -42,7 +42,7 @@ namespace Raven.Database.FileSystem.Synchronization
 					return report;
 	        }
 
-            return await destination.UpdateMetadataAsync(FileName, FileMetadata, ServerInfo);
+            return await destination.UpdateMetadataAsync(FileName, FileMetadata, FileSystemInfo);
 		}
 
 		public override bool Equals(object obj)
