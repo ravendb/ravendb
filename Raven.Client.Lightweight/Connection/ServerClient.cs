@@ -24,6 +24,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Connection.Request;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -64,6 +65,11 @@ namespace Raven.Client.Connection
 		public DocumentConvention Convention
 		{
 			get { return asyncServerClient.convention; }
+		}
+
+		public IRequestExecuter RequestExecuter
+		{
+			get { return asyncServerClient.RequestExecuter; }
 		}
 
 		public IDocumentStoreReplicationInformer ReplicationInformer
@@ -359,7 +365,11 @@ namespace Raven.Client.Connection
 
 		public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
 		{
-			return new ServerClient(asyncServerClient.ForDatabaseInternal(database, clusterBehavior));
+			var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database, clusterBehavior);
+			if (asyncServerClient == newAsyncServerClient) 
+				return this;
+
+			return new ServerClient(newAsyncServerClient);
 		}
 
 		public IDatabaseCommands ForSystemDatabase()

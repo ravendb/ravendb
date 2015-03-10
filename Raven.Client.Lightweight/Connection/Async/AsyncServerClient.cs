@@ -46,6 +46,9 @@ namespace Raven.Client.Connection.Async
 	{
 		private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
+
+		private readonly ClusterBehavior clusterBehavior;
+
 		private readonly string url;
 		private readonly string rootUrl;
 		private readonly OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
@@ -67,6 +70,11 @@ namespace Raven.Client.Connection.Async
 		public string Url
 		{
 			get { return url; }
+		}
+
+		public IRequestExecuter RequestExecuter
+		{
+			get { return requestExecuter; }
 		}
 
 		public IDocumentStoreReplicationInformer ReplicationInformer
@@ -111,6 +119,7 @@ namespace Raven.Client.Connection.Async
 			this.credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
 			this.databaseName = databaseName;
 			this.conflictListeners = conflictListeners;
+			this.clusterBehavior = clusterBehavior;
 
 			this.replicationInformerGetter = replicationInformerGetter;
 			this.requestExecuterGetter = requestExecuterGetter;
@@ -526,12 +535,13 @@ namespace Raven.Client.Connection.Async
 			if (database == Constants.SystemDatabase)
 				return ForSystemDatabaseInternal();
 
-			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
-			databaseUrl = databaseUrl + "/databases/" + database + "/";
-			if (databaseUrl == url)
+			var requestedClusterBehavior = clusterBehavior ?? convention.ClusterBehavior;
+
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url).ForDatabase(database);
+			if (databaseUrl == url && this.clusterBehavior == requestedClusterBehavior)
 				return this;
 
-			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, requestExecuterGetter, database, conflictListeners, false, clusterBehavior ?? convention.ClusterBehavior) { operationsHeaders = operationsHeaders };
+			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, requestExecuterGetter, database, conflictListeners, false, requestedClusterBehavior) { operationsHeaders = operationsHeaders };
 		}
 
 		internal AsyncServerClient ForSystemDatabaseInternal()
