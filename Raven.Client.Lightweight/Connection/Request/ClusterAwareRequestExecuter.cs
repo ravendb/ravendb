@@ -25,9 +25,9 @@ namespace Raven.Client.Connection.Request
 {
 	public class ClusterAwareRequestExecuter : IRequestExecuter
 	{
-		private const int WaitForLeaderTimeoutInSeconds = 15;
+		private const int WaitForLeaderTimeoutInSeconds = 30;
 
-		private const int GetReplicationDestinationsTimeoutInSeconds = WaitForLeaderTimeoutInSeconds / 3;
+		private const int GetReplicationDestinationsTimeoutInSeconds = 2;
 
 		private readonly AsyncServerClient serverClient;
 
@@ -180,7 +180,7 @@ namespace Raven.Client.Connection.Request
 
 				return refreshReplicationInformationTask = Task.Factory.StartNew(() =>
 				{
-					for (var i = 0; i < 20; i++)
+					for (;;)
 					{
 						var nodes = NodeUrls;
 
@@ -224,12 +224,6 @@ namespace Raven.Client.Connection.Request
 
 						Thread.Sleep(500);
 					}
-
-					LeaderNode = primaryNode;
-					Nodes = new List<OperationMetadata>
-					{
-						primaryNode
-					};
 				}).ContinueWith(t =>
 				{
 					lastUpdate = SystemTime.UtcNow;

@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -14,6 +13,7 @@ using Rachis.Commands;
 using Rachis.Storage;
 using Rachis.Transport;
 
+using Raven.Abstractions.Logging;
 using Raven.Database.Raft.Storage;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Tenancy;
@@ -25,6 +25,8 @@ namespace Raven.Database.Raft
 {
 	public static class ClusterManagerFactory
 	{
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
 		public static NodeConnectionInfo CreateSelfConnection(DocumentDatabase database)
 		{
 			var configuration = database.Configuration;
@@ -67,26 +69,18 @@ namespace Raven.Database.Raft
 				options = StorageEnvironmentOptions.CreateMemoryOnly();
 			}
 
-			var transport = new HttpTransport(nodeConnectionInfo.Name);
+			var transport = new HttpTransport(nodeConnectionInfo.Name, systemDatabase.WorkContext.CancellationToken);
 			var stateMachine = new ClusterStateMachine(systemDatabase, databasesLandlord);
-			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine)
-									{
-										//ElectionTimeout = 2000,
-										//HeartbeatTimeout = 750
-									};
+			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine);
+			var raftEngine = new RaftEngine(raftEngineOptions);
 
-			//if (Debugger.IsAttached)
-			//{
-			//	raftEngineOptions.ElectionTimeout *= 5;
-			//	raftEngineOptions.HeartbeatTimeout *= 5;
-			//}
-
-			return new ClusterManager(new RaftEngine(raftEngineOptions));
+			return new ClusterManager(raftEngine);
 		}
 
 		public static void InitializeTopology(NodeConnectionInfo nodeConnection, ClusterManager clusterManager)
 		{
-			var topology = new Topology(Guid.Parse(nodeConnection.Name), new List<NodeConnectionInfo> { nodeConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
+			var topologyId = Guid.Parse(nodeConnection.Name);
+			var topology = new Topology(topologyId, new List<NodeConnectionInfo> { nodeConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
 
 			var tcc = new TopologyChangeCommand
 					  {
@@ -97,6 +91,8 @@ namespace Raven.Database.Raft
 			clusterManager.Engine.StartTopologyChange(tcc);
 			clusterManager.Engine.CommitTopologyChange(tcc);
 			clusterManager.Engine.CurrentLeader = null;
+
+			Log.Info("Initialized Topology: " + topologyId);
 		}
 
 		public static void InitializeTopology(ClusterManager engine)

@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Rachis;
@@ -53,7 +54,8 @@ namespace Raven.Database.Raft
 				HttpClient client;
 				var dispose = (IDisposable) GetConnection(info, out client);
 				return Tuple.Create(dispose, client);
-			})
+			},
+			CancellationToken.None)
 			{
 				UnauthorizedResponseAsyncHandler = HandleUnauthorizedResponseAsync,
 				ForbiddenResponseAsyncHandler = HandleForbiddenResponseAsync

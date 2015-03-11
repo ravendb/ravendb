@@ -30,7 +30,7 @@ namespace Rachis.Tests
 
 		public HttpTransportPingTest()
 		{
-			_node1Transport = new HttpTransport("node1");
+			_node1Transport = new HttpTransport("node1", CancellationToken.None);
 
 			var node1 = new NodeConnectionInfo { Name = "node1", Uri = new Uri("http://localhost:9079") };
 			var engineOptions = new RaftEngineOptions(node1, StorageEnvironmentOptions.CreateMemoryOnly(), _node1Transport, new DictionaryStateMachine())
@@ -56,7 +56,7 @@ namespace Rachis.Tests
 		[Fact]
 		public void CanSendRequestVotesAndGetReply()
 		{
-			using (var node2Transport = new HttpTransport("node2"))
+			using (var node2Transport = new HttpTransport("node2", CancellationToken.None))
 			{
 				var node1 = new NodeConnectionInfo { Name = "node1", Uri = new Uri("http://localhost:9079") };
 				node2Transport.Send(node1, new RequestVoteRequest
@@ -82,7 +82,7 @@ namespace Rachis.Tests
 		[Fact]
 		public void CanSendTimeoutNow()
 		{
-			using (var node2Transport = new HttpTransport("node2"))
+			using (var node2Transport = new HttpTransport("node2", CancellationToken.None))
 			{
 				var node1 = new NodeConnectionInfo { Name = "node1", Uri = new Uri("http://localhost:9079") };
 				node2Transport.Send(node1, new AppendEntriesRequest
@@ -140,7 +140,7 @@ namespace Rachis.Tests
 		[Fact]
 		public void CanAskIfCanInstallSnapshot()
 		{
-			using (var node2Transport = new HttpTransport("node2"))
+			using (var node2Transport = new HttpTransport("node2", CancellationToken.None))
 			{
 				var node1 = new NodeConnectionInfo { Name = "node1", Uri = new Uri("http://localhost:9079") };
 
@@ -165,7 +165,7 @@ namespace Rachis.Tests
 		[Fact]
 		public void CanSendEntries()
 		{
-			using (var node2Transport = new HttpTransport("node2"))
+			using (var node2Transport = new HttpTransport("node2", CancellationToken.None))
 			{
 				var node1 = new NodeConnectionInfo { Name = "node1", Uri = new Uri("http://localhost:9079") };
 
@@ -209,7 +209,7 @@ namespace Rachis.Tests
 		[Fact]
 		public void CanInstallSnapshot()
 		{
-			using (var node2Transport = new HttpTransport("node2"))
+			using (var node2Transport = new HttpTransport("node2", CancellationToken.None))
 			{
 				var node1 = new NodeConnectionInfo { Name = "node1", Uri = new Uri("http://localhost:9079") };
 

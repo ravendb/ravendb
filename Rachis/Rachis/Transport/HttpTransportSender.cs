@@ -11,11 +11,13 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security;
+using System.Threading;
 using System.Threading.Tasks;
 
 using NLog;
 using Rachis.Messages;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -29,16 +31,18 @@ namespace Rachis.Transport
 	{
 		private readonly HttpTransportBus _bus;
 
+		private readonly CancellationToken _cancellationToken;
+
 		private readonly ConcurrentDictionary<string, SecuredAuthenticator> _securedAuthenticatorCache = new ConcurrentDictionary<string, SecuredAuthenticator>();
 
 		private readonly ConcurrentDictionary<string, ConcurrentQueue<HttpClient>> _httpClientsCache = new ConcurrentDictionary<string, ConcurrentQueue<HttpClient>>();
 		private readonly Logger _log;
-		public HttpTransportSender(string name, HttpTransportBus bus)
+		public HttpTransportSender(string name, HttpTransportBus bus, CancellationToken cancellationToken)
 		{
 			_bus = bus;
+			_cancellationToken = cancellationToken;
 			_log = LogManager.GetLogger(GetType().Name + "." + name);
 		}
-
 
 		public void Stream(NodeConnectionInfo dest, InstallSnapshotRequest req, Action<Stream> streamWriter)
 		{
@@ -92,7 +96,8 @@ namespace Rachis.Transport
 				HttpClient client;
 				var dispose = (IDisposable) GetConnection(info, out client);
 				return Tuple.Create(dispose, client);
-			})
+			},
+			_cancellationToken)
 			{
 				UnauthorizedResponseAsyncHandler = HandleUnauthorizedResponseAsync, 
 				ForbiddenResponseAsyncHandler = HandleForbiddenResponseAsync
@@ -312,7 +317,7 @@ namespace Rachis.Transport
 			});
 		}
 
-		private ConcurrentDictionary<Task, object> _runningOps = new ConcurrentDictionary<Task, object>();
+		private readonly ConcurrentDictionary<Task, object> _runningOps = new ConcurrentDictionary<Task, object>();
 
 		private void LogStatus(string details, Func<Task> operation)
 		{

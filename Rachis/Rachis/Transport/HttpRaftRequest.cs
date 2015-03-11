@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Rachis.Transport
@@ -18,39 +19,42 @@ namespace Rachis.Transport
 	{
 		internal readonly string Url;
 		internal readonly string Method;
-		private readonly Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection;
-		public HttpClient HttpClient { get; private set; }
-		private IDisposable returnToQueue;
 
-		private readonly NodeConnectionInfo nodeConnection;
-		private bool isRequestSentToServer;
+		private readonly Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> _getConnection;
+		private readonly CancellationToken _cancellationToken;
+		private IDisposable _returnToQueue;
+		private readonly NodeConnectionInfo _nodeConnection;
+		private bool _isRequestSentToServer;
 
 		public Func<HttpResponseMessage, NodeConnectionInfo, Task<Action<HttpClient>>> UnauthorizedResponseAsyncHandler { get; set; }
 
 		public Func<HttpResponseMessage, NodeConnectionInfo, Task<Action<HttpClient>>> ForbiddenResponseAsyncHandler { get; set; }
 
-		public HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, string method, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection)
+		public HttpClient HttpClient { get; private set; }
+
+		public HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, string method, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection, CancellationToken cancellationToken)
 		{
 			Url = url;
 			Method = method;
-			this.getConnection = getConnection;
-			this.nodeConnection = nodeConnection;
+			_getConnection = getConnection;
+			_cancellationToken = cancellationToken;
+			_nodeConnection = nodeConnection;
 
 			var connection = getConnection(nodeConnection);
-			returnToQueue = connection.Item1;
+			_returnToQueue = connection.Item1;
 			HttpClient = connection.Item2;
 		}
 
 		private Task SendRequestInternal(Func<HttpRequestMessage> getRequestMessage)
 		{
-			if (isRequestSentToServer && Debugger.IsAttached == false)
+			if (_isRequestSentToServer && Debugger.IsAttached == false)
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
-			isRequestSentToServer = true;
+			_isRequestSentToServer = true;
 
 			return RunWithAuthRetry(async () =>
 			{
 				var requestMessage = getRequestMessage();
-				Response = await HttpClient.SendAsync(requestMessage).ConfigureAwait(false);
+				Response = await HttpClient.SendAsync(requestMessage, _cancellationToken).ConfigureAwait(false);
 
 				return CheckForAuthErrors();
 			});
@@ -107,7 +111,7 @@ namespace Rachis.Transport
 			if (UnauthorizedResponseAsyncHandler == null)
 				return false;
 
-			var unauthorizedResponseAsync = UnauthorizedResponseAsyncHandler(unauthorizedResponse, nodeConnection);
+			var unauthorizedResponseAsync = UnauthorizedResponseAsyncHandler(unauthorizedResponse, _nodeConnection);
 			if (unauthorizedResponseAsync == null)
 				return false;
 
@@ -121,7 +125,7 @@ namespace Rachis.Transport
 			if (ForbiddenResponseAsyncHandler == null)
 				return;
 
-			var forbiddenResponseAsync = ForbiddenResponseAsyncHandler(forbiddenResponse, nodeConnection);
+			var forbiddenResponseAsync = ForbiddenResponseAsyncHandler(forbiddenResponse, _nodeConnection);
 			if (forbiddenResponseAsync == null)
 				return;
 
@@ -130,7 +134,7 @@ namespace Rachis.Transport
 
 		private void RecreateHttpClient(Action<HttpClient> configureHttpClient)
 		{
-			var connection = getConnection(nodeConnection);
+			var connection = _getConnection(_nodeConnection);
 			var newHttpClient = connection.Item2;
 			var newReturnToQueue = connection.Item1;
 			configureHttpClient(newHttpClient);
@@ -138,8 +142,8 @@ namespace Rachis.Transport
 			DisposeInternal();
 
 			HttpClient = newHttpClient;
-			returnToQueue = newReturnToQueue;
-			isRequestSentToServer = false;
+			_returnToQueue = newReturnToQueue;
+			_isRequestSentToServer = false;
 		}
 
 		public HttpResponseMessage Response { get; private set; }
@@ -159,8 +163,8 @@ namespace Rachis.Transport
 
 			if (HttpClient != null)
 			{
-				if (returnToQueue != null)
-					returnToQueue.Dispose();	
+				if (_returnToQueue != null)
+					_returnToQueue.Dispose();	
 
 				HttpClient = null;
 			}

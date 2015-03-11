@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -509,9 +510,31 @@ namespace Rachis
 		public void Dispose()
 		{
 			_eventLoopCancellationTokenSource.Cancel();
-			_eventLoopTask.Wait(500);
 
-			PersistentState.Dispose();
+			var exceptions = new List<Exception>();
+
+			try
+			{
+				_eventLoopTask.Wait();
+			}
+			catch (Exception e)
+			{
+				exceptions.Add(e);
+			}
+
+			try
+			{
+				PersistentState.Dispose();
+			}
+			catch (Exception e)
+			{
+				exceptions.Add(e);
+			}
+			
+			if (exceptions.Count == 0)
+				return;
+			
+			throw new AggregateException(exceptions);
 		}
 
 		internal virtual void OnCandidacyAnnounced()

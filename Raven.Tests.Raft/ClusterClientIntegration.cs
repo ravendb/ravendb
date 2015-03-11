@@ -3,13 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Request;
 using Raven.Database.Raft.Dto;
@@ -109,10 +108,9 @@ namespace Raven.Tests.Raft
 		}
 
 		[Theory]
-		[InlineData(2)]
-		//[InlineData(3)]
-		//[InlineData(5)]
-		public async Task T1(int numberOfNodes)
+		[InlineData(3)]
+		[InlineData(5)]
+		public async Task ClientShouldHandleLeaderShutdown(int numberOfNodes)
 		{
 			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
@@ -134,8 +132,6 @@ namespace Raven.Tests.Raft
 			{
 				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + i));
 			}
-
-			Thread.Sleep(10000);
 
 			servers
 				.First(x => x.Options.ClusterManager.IsLeader())

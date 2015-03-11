@@ -3,22 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.Remoting.Channels;
-using System.Threading;
-using Rachis;
 using Rachis.Transport;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Raft;
 using Raven.Database.Raft.Util;
-using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using Xunit;
 
 namespace Raven.Tests.Raft
@@ -83,7 +80,7 @@ namespace Raven.Tests.Raft
 			if (numberOfNodes == 1)
 				allNodesFinishedJoining.Set();
 
-			Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfNodes));
+			Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfNodes), "Not all nodes become voters. " + leader.Options.ClusterManager.Engine.CurrentTopology);
 			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
 
 			WaitForClusterToBecomeNonStale(nodes);
