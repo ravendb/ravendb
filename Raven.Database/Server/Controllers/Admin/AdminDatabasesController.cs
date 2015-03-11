@@ -82,7 +82,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			json.Remove("Id");
 
 			var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
-			var docKey = Constants.RavenDatabasesPrefix + id;
+			var docKey = Constants.Database.Prefix + id;
 			var putResult = Database.Documents.Put(docKey, etag, json, metadata, null);
 
 			return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);

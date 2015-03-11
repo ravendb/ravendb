@@ -131,7 +131,7 @@ namespace Raven.Bundles.LiveTest
 			int nextStart = 0;
 			var databaseDocuments = systemDatabase
 				.Documents
-				.GetDocumentsWithIdStartingWith(Constants.RavenDatabasesPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
+				.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
 
 			var databaseIds = databaseDocuments
 				.Select(x => ((RavenJObject)x)["@metadata"])
@@ -145,8 +145,8 @@ namespace Raven.Bundles.LiveTest
 				try
 				{
 					var key = databaseId;
-					if (key.StartsWith(Constants.RavenDatabasesPrefix))
-						key = key.Substring(Constants.RavenDatabasesPrefix.Length);
+					if (key.StartsWith(Constants.Database.Prefix))
+						key = key.Substring(Constants.Database.Prefix.Length);
 
 					var shouldCleanup = false;
 
@@ -163,7 +163,7 @@ namespace Raven.Bundles.LiveTest
 
 					databaseLandlord.Cleanup(key, maxTimeResourceCanBeIdle, database => false);
 
-					var docKey = Constants.RavenDatabasesPrefix + key;
+					var docKey = Constants.Database.Prefix + key;
 					systemDatabase.Documents.Delete(docKey, null, null);
 
 					if (configuration == null)

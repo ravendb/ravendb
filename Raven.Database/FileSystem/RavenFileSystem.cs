@@ -3,13 +3,11 @@ using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Threading;
-
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Actions;
@@ -56,13 +54,16 @@ namespace Raven.Database.FileSystem
 
         private Historian historian;
 
-        public string Name { get; private set;}
+        public string Name { get; private set; }
 
-		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState receivedTransportState = null)
+	    public string ResourceName { get; private set; }
+
+	    public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState receivedTransportState = null)
 		{
 			ExtensionsState = new AtomicDictionary<object>();
 
 		    Name = name;
+			ResourceName = string.Concat(Abstractions.Data.Constants.FileSystem.UrlPrefix, "/", name);
 			this.systemConfiguration = systemConfiguration;
 
 			systemConfiguration.Container.SatisfyImportsOnce(this);

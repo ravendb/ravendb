@@ -88,7 +88,8 @@ class changesApi {
                     setTimeout(() => this.connect(action), 3 * 1000);
                 }
                 else if (e.status != ResponseCodes.Forbidden) { // authorized connection
-                    this.commandBase.reportError(e.responseJSON.Error);
+                    var error = !!e.responseJSON ? e.responseJSON.Error : e.responseText;
+                    this.commandBase.reportError(error);
                     this.connectToChangesApiTask.reject();
                 }
             });
