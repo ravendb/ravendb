@@ -154,43 +154,43 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             name = FileHeader.Canonize(name);
 
-				Storage.Batch(accessor =>
+			Storage.Batch(accessor =>
+			{
+				Synchronizations.AssertFileIsNotBeingSynced(name);
+
+				var fileAndPages = accessor.GetFile(name, 0, 0);
+
+				var metadata = fileAndPages.Metadata;
+
+				if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
 				{
-					Synchronizations.AssertFileIsNotBeingSynced(name);
+					throw new FileNotFoundException();
+				}
 
-					var fileAndPages = accessor.GetFile(name, 0, 0);
+				Files.IndicateFileToDelete(name, GetEtag());
 
-					var metadata = fileAndPages.Metadata;
-
-					if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+				if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
+					// don't create a tombstone for .downloading file
+					metadata != null) // and if file didn't exist
+				{
+					var tombstoneMetadata = new RavenJObject
 					{
-						throw new FileNotFoundException();
-					}
-
-					Files.IndicateFileToDelete(name, GetEtag());
-
-					if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
-					    // don't create a tombstone for .downloading file
-					    metadata != null) // and if file didn't exist
-					{
-						var tombstoneMetadata = new RavenJObject
 						{
-							{
-								SynchronizationConstants.RavenSynchronizationHistory, metadata[SynchronizationConstants.RavenSynchronizationHistory]
-							},
-							{
-								SynchronizationConstants.RavenSynchronizationVersion, metadata[SynchronizationConstants.RavenSynchronizationVersion]
-							},
-							{
-								SynchronizationConstants.RavenSynchronizationSource, metadata[SynchronizationConstants.RavenSynchronizationSource]
-							}
-						}.WithDeleteMarker();
+							SynchronizationConstants.RavenSynchronizationHistory, metadata[SynchronizationConstants.RavenSynchronizationHistory]
+						},
+						{
+							SynchronizationConstants.RavenSynchronizationVersion, metadata[SynchronizationConstants.RavenSynchronizationVersion]
+						},
+						{
+							SynchronizationConstants.RavenSynchronizationSource, metadata[SynchronizationConstants.RavenSynchronizationSource]
+						}
+					}.WithDeleteMarker();
 
-						Historian.UpdateLastModified(tombstoneMetadata);
+					Historian.UpdateLastModified(tombstoneMetadata);
 
-						accessor.PutFile(name, 0, tombstoneMetadata, true);
-						accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name)); // delete conflict item too
-					}
+					accessor.PutFile(name, 0, tombstoneMetadata, true);
+					accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name)); // delete conflict item too
+				}
 				});
 
 			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
@@ -249,7 +249,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
-			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+			Synchronizations.StartSynchronizeDestinationsInBackground();
 
             log.Debug("Metadata of a file '{0}' was updated", name);
 
@@ -266,7 +266,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			Files.Rename(name, rename, GetEtag());
 
-            return GetMessageWithString("", HttpStatusCode.NoContent);
+            return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPut]
