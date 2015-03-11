@@ -42,19 +42,11 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/config")]
         public HttpResponseMessage Get(string name)
 		{
-			try
-			{
-                RavenJObject config = null;
-                Storage.Batch(accessor => { config = accessor.GetConfig(name); });
+            RavenJObject config = null;
+            Storage.Batch(accessor => { config = accessor.GetConfig(name); });
                 
-                return this.GetMessageWithObject(config, HttpStatusCode.OK)
-                           .WithNoCache();
-			}
-			catch (FileNotFoundException)
-			{
-                return this.GetEmptyMessage(HttpStatusCode.NotFound)
-                           .WithNoCache();
-			}
+            return this.GetMessageWithObject(config)
+                        .WithNoCache();
 		}
 
         [HttpGet]

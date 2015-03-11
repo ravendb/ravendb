@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Client.FileSystem
 {
@@ -158,9 +159,9 @@ namespace Raven.Client.FileSystem
         Task<SynchronizationReport> StartAsync(string filename, IAsyncFilesCommands destination);
         Task<SynchronizationReport> StartAsync(string filename, SynchronizationDestination destination);
 
-        Task<SynchronizationReport> DeleteAsync(string filename, RavenJObject metadata, ServerInfo sourceServer);
-        Task<SynchronizationReport> RenameAsync(string filename, string newName, RavenJObject metadata, ServerInfo sourceServer);
-        Task<SynchronizationReport> UpdateMetadataAsync(string filename, RavenJObject metadata, ServerInfo sourceServer);
+        Task<SynchronizationReport> DeleteAsync(string filename, RavenJObject metadata, FileSystemInfo sourceFileSystem);
+        Task<SynchronizationReport> RenameAsync(string filename, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
+        Task<SynchronizationReport> UpdateMetadataAsync(string filename, RavenJObject metadata, FileSystemInfo sourceFileSystem);
     }
 
     public interface IAsyncFilesStorageCommands : IDisposable, IHoldProfilingInformation

@@ -25,10 +25,7 @@ namespace Raven.Tests.FileSystem
 		[Fact]
 		public void StorageStream_should_write_to_storage_by_64kB_pages()
 		{
-			using (var stream = StorageStream.CreatingNewAndWritting(
-				transactionalStorage, fs.Search,
-				fs.Files,
-				"file", new RavenJObject()))
+			using (var stream = StorageStream.CreatingNewAndWritting(fs, "file", new RavenJObject()))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
 
@@ -51,10 +48,7 @@ namespace Raven.Tests.FileSystem
 		[Fact]
 		public void SynchronizingFileStream_should_write_to_storage_by_64kB_pages()
 		{
-			using (var stream = SynchronizingFileStream.CreatingOrOpeningAndWriting(
-				transactionalStorage, fs.Search,
-				fs.Files,
-				"file", new RavenJObject()))
+			using (var stream = SynchronizingFileStream.CreatingOrOpeningAndWriting(fs, "file", new RavenJObject()))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
 
@@ -83,15 +77,12 @@ namespace Raven.Tests.FileSystem
 
 			new Random().NextBytes(buffer);
 
-			using (var stream = StorageStream.CreatingNewAndWritting(
-				transactionalStorage, fs.Search,
-				fs.Files,
-				"file", new RavenJObject()))
+			using (var stream = StorageStream.CreatingNewAndWritting(fs, "file", new RavenJObject()))
 			{
 				stream.Write(buffer, 0, StorageConstants.MaxPageSize);
 			}
 
-			using (var stream = StorageStream.Reading(transactionalStorage, "file"))
+			using (var stream = StorageStream.Reading(fs.Storage, "file"))
 			{
 				var readBuffer = new byte[10];
 

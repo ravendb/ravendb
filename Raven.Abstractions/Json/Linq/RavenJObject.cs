@@ -87,9 +87,13 @@ namespace Raven.Json.Linq
 			Properties = new DictionaryWithParentSnapshot(comparer);
 		}
 
-		public RavenJObject(RavenJObject other)
+		public RavenJObject(RavenJObject other) : this(other, other.comparer)
 		{
-			Properties = new DictionaryWithParentSnapshot(other.comparer);
+		}
+
+		public RavenJObject(RavenJObject other, IEqualityComparer<string> comparer)
+		{
+			Properties = new DictionaryWithParentSnapshot(comparer);
 			foreach (var kv in other.Properties)
 			{
 				Properties.Add(kv);

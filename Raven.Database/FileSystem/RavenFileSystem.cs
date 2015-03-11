@@ -89,7 +89,7 @@ namespace Raven.Database.FileSystem
 
 			Tasks = new TaskActions(this, Log);
 			Files = new FileActions(this, Log);
-			Synchronization = new SynchronizationActions(this, Log);
+			Synchronizations = new SynchronizationActions(this, Log);
 
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
@@ -99,7 +99,7 @@ namespace Raven.Database.FileSystem
 
 		public FileActions Files { get; private set; }
 
-		public SynchronizationActions Synchronization { get; private set; }
+		public SynchronizationActions Synchronizations { get; private set; }
 
 	    public void Initialize()
         {

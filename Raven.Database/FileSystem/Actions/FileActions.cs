@@ -95,7 +95,7 @@ namespace Raven.Database.FileSystem.Actions
 				Storage.Batch(accessor =>
 				{
 					AssertPutOperationNotVetoed(name, metadata);
-					AssertFileIsNotBeingSynced(name, accessor);
+					FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
 
 					var contentLength = options.ContentLength;
 					var contentSize = options.ContentSize;
@@ -156,7 +156,7 @@ namespace Raven.Database.FileSystem.Actions
 
 					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
 
-					FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+					FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 				}
 			}
 			catch (Exception ex)
@@ -170,10 +170,10 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
-		private void AssertPutOperationNotVetoed(string name, RavenJObject headers)
+		internal void AssertPutOperationNotVetoed(string name, RavenJObject metadata)
 		{
 			var vetoResult = FileSystem.PutTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, headers) })
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, metadata) })
 				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
 			if (vetoResult != null)
 			{
@@ -192,25 +192,11 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
-		private void AssertFileIsNotBeingSynced(string fileName, IStorageActionsAccessor accessor)
-		{
-			if (FileLockManager.TimeoutExceeded(fileName, accessor))
-			{
-				FileLockManager.UnlockByDeletingSyncConfiguration(fileName, accessor);
-			}
-			else
-			{
-				Log.Debug("Cannot execute operation because file '{0}' is being synced", fileName);
-
-				throw new SynchronizationException(string.Format("File {0} is being synced", fileName));
-			}
-		}
-
 		public void Rename(string name, string rename, Etag etag)
 		{
 			Storage.Batch(accessor =>
 			{
-				AssertFileIsNotBeingSynced(name, accessor);
+				FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
 
 				var existingFile = accessor.ReadFile(name);
 				if (existingFile == null || existingFile.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
@@ -247,7 +233,7 @@ namespace Raven.Database.FileSystem.Actions
 
 			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
 
-			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 		}
 
 		public void ExecuteRenameOperation(RenameFileOperation operation, Etag etag)

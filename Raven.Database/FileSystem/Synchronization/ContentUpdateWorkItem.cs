@@ -60,7 +60,7 @@ namespace Raven.Database.FileSystem.Synchronization
             if (!IsRemoteRdcCompatible(destinationServerRdcStats))
                 throw new SynchronizationException("Incompatible RDC version detected on destination server");
 
-            var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
+            var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, FileSystemInfo.Url);
 	        if (conflict != null)
 	        {
 		        var report = await HandleConflict(destination, conflict, log);
@@ -152,7 +152,7 @@ namespace Raven.Database.FileSystem.Synchronization
 		{
 			Cts.Token.ThrowIfCancellationRequested();
 
-			multipartRequest = new SynchronizationMultipartRequest(destination, ServerInfo, FileName, FileMetadata, sourceFileStream, needList);
+			multipartRequest = new SynchronizationMultipartRequest(destination, FileSystemInfo, FileName, FileMetadata, sourceFileStream, needList);
 
 			var bytesToTransferCount = needList.Where(x => x.BlockType == RdcNeedType.Source).Sum(x => (double)x.BlockLength);
 

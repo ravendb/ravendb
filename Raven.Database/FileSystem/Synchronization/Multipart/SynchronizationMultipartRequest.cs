@@ -17,6 +17,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization.Multipart
 {
@@ -25,16 +26,16 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
         private readonly IAsyncFilesSynchronizationCommands destination;
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
-		private readonly ServerInfo serverInfo;
+		private readonly FileSystemInfo fileSystemInfo;
         private readonly RavenJObject sourceMetadata;
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
 
-        public SynchronizationMultipartRequest(IAsyncFilesSynchronizationCommands destination, ServerInfo serverInfo, string fileName,
+        public SynchronizationMultipartRequest(IAsyncFilesSynchronizationCommands destination, FileSystemInfo fileSystemInfo, string fileName,
                                                RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
 		{
 			this.destination = destination;
-			this.serverInfo = serverInfo;
+			this.fileSystemInfo = fileSystemInfo;
 			this.fileName = fileName;
 			this.sourceMetadata = sourceMetadata;
 			this.sourceStream = sourceStream;
@@ -64,7 +65,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 				request.AddHeader("If-None-Match", "\"" + sourceMetadata.Value<string>(Constants.MetadataEtagField) + "\"");
 
 				request.AddHeader(SyncingMultipartConstants.FileName, fileName);
-				request.AddHeader(SyncingMultipartConstants.SourceServerInfo, serverInfo.AsJson());
+				request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, fileSystemInfo.AsJson());
 
 				try
 				{

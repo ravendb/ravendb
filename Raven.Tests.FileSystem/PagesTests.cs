@@ -179,6 +179,8 @@ namespace Raven.Tests.FileSystem
 		public void Dispose()
 		{
 			storage.Dispose();
+
+			IOExtensions.DeleteDirectory("test");
 		}
 	}
 }
