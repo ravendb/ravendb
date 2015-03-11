@@ -86,6 +86,8 @@ namespace Raven.Tests.Raft
 			Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfNodes));
 			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
 
+			WaitForClusterToBecomeNonStale(nodes);
+
 			return nodes
 				.Select(node => NewRemoteDocumentStore(ravenDbServer: node, activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
 				.ToList();
@@ -143,6 +145,15 @@ namespace Raven.Tests.Raft
 			{
 				leader.Options.ClusterManager.Engine.RemoveFromClusterAsync(serverToRemove.Options.ClusterManager.Engine.Options.SelfConnection).Wait(10000);
 			}
+		}
+
+		private void WaitForClusterToBecomeNonStale(IReadOnlyCollection<RavenDbServer> nodes)
+		{
+			var numberOfNodes = nodes.Count;
+			var result = SpinWait.SpinUntil(() => nodes.All(x => x.Options.ClusterManager.Engine.CurrentTopology.AllVotingNodes.Count() == numberOfNodes), TimeSpan.FromSeconds(10));
+
+			if (result == false)
+				throw new InvalidOperationException("Cluster is stale.");
 		}
 	}
 }

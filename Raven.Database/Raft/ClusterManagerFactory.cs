@@ -75,16 +75,16 @@ namespace Raven.Database.Raft
 										//HeartbeatTimeout = 750
 									};
 
-			if (Debugger.IsAttached)
-			{
-				raftEngineOptions.ElectionTimeout *= 5;
-				raftEngineOptions.HeartbeatTimeout *= 5;
-			}
+			//if (Debugger.IsAttached)
+			//{
+			//	raftEngineOptions.ElectionTimeout *= 5;
+			//	raftEngineOptions.HeartbeatTimeout *= 5;
+			//}
 
 			return new ClusterManager(new RaftEngine(raftEngineOptions));
 		}
 
-		public static void InitializeTopology(NodeConnectionInfo nodeConnection, ClusterManager engine)
+		public static void InitializeTopology(NodeConnectionInfo nodeConnection, ClusterManager clusterManager)
 		{
 			var topology = new Topology(Guid.Parse(nodeConnection.Name), new List<NodeConnectionInfo> { nodeConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
 
@@ -93,10 +93,10 @@ namespace Raven.Database.Raft
 						  Requested = topology
 					  };
 
-			engine.Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
-			engine.Engine.StartTopologyChange(tcc);
-			engine.Engine.CommitTopologyChange(tcc);
-			engine.Engine.CurrentLeader = null;
+			clusterManager.Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
+			clusterManager.Engine.StartTopologyChange(tcc);
+			clusterManager.Engine.CommitTopologyChange(tcc);
+			clusterManager.Engine.CurrentLeader = null;
 		}
 
 		public static void InitializeTopology(ClusterManager engine)

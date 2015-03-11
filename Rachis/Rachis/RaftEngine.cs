@@ -157,7 +157,7 @@ namespace Rachis
 			}
 
 			_commitIndex = StateMachine.LastAppliedIndex;
-			_eventLoopTask = Task.Run(() => EventLoop());
+			_eventLoopTask = Task.Factory.StartNew(EventLoop, TaskCreationOptions.LongRunning);
 		}
 
 		public RaftEngineOptions Options
@@ -409,6 +409,7 @@ namespace Rachis
 								tcc.Requested, Name);
 						}
 
+						StartTopologyChange(tcc);
 						CommitTopologyChange(tcc);
 					}
 
