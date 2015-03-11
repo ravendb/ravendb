@@ -149,6 +149,9 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.ImplicitFetchFieldsFromDocumentMode.Value, actual => actual.ImplicitFetchFieldsFromDocumentMode);
 			configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
 			configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
+			configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);
+			configurationComparer.Ignore(x => x.AnonymousUserAccessMode);
+			configurationComparer.Ignore(x => x.TransactionMode);
 
 			Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
 			Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);
@@ -238,7 +241,12 @@ namespace Raven.Tests.Core.Configuration
 				var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 				foreach (var property in properties)
 				{
-					if (property.PropertyType.FullName.StartsWith("System") == false)
+					if (property.Name == "ImplicitFetchFieldsFromDocumentMode")
+					{
+						
+					}
+					if (property.PropertyType.IsEnum == false &&
+						property.PropertyType.FullName.StartsWith("System") == false)
 					{
 						var propertyPath = parentPropertyPath == null ? property.Name : parentPropertyPath + "." + property.Name;
 						foreach (var info in GetPropertyPathsToCheck(property.GetValue(o), propertyPath))

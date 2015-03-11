@@ -301,7 +301,7 @@ namespace Raven.Database.Config
 
 		    ImplicitFetchFieldsFromDocumentMode = ravenSettings.ImplicitFetchFieldsFromDocumentMode.Value;
 
-			IgnoreSslCertificateErros = GetIgnoreSslCertificateErrorModeMode();
+			IgnoreSslCertificateErrors = GetIgnoreSslCertificateErrorModeMode();
 
 			PostInit();
 
@@ -703,7 +703,7 @@ namespace Raven.Database.Config
 		/// </summary>
 		public byte[] OAuthTokenKey { get; set; }
 
-		public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErros { get; set; }
+		public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
 
 		#endregion
 
