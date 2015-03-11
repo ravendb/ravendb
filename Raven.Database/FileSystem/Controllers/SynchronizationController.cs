@@ -136,7 +136,7 @@ namespace Raven.Database.FileSystem.Controllers
                 synchronizingFile.Dispose();
                 sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
 
-				FileOperationResult updateResult = null;
+				MetadataUpdateResult updateResult = null;
                 Storage.Batch(accessor => updateResult = accessor.UpdateFileMetadata(tempFileName, sourceMetadata, null));
 
                 Storage.Batch(accessor =>
@@ -305,7 +305,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                 Historian.UpdateLastModified(sourceMetadata);
 
-				FileOperationResult updateMetadata = null;
+				MetadataUpdateResult updateMetadata = null;
                 Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(fileName, sourceMetadata, null));
 
                 Search.Index(fileName, sourceMetadata, updateMetadata.Etag);

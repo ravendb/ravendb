@@ -404,5 +404,42 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 				Assert.Equal(Content3, StreamToString(stream));
 			}
 		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task ShouldCreateRevisionAfterMetadataUpdate(string requestedStorage)
+		{
+			const string fileName = "file1.txt";
+
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+
+				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content2));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(fileName, 0, 100);
+					Assert.Equal(2, revisions.Length);
+				}
+
+				await store.AsyncFilesCommands.UpdateMetadataAsync(fileName, new RavenJObject{ { "New", "Data" } });
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(fileName, 0, 100);
+					Assert.Equal(3, revisions.Length);
+
+					var revisionFile = await session.LoadFileAsync(revisions[2]);
+
+					Assert.Equal("Data", revisionFile.Metadata.Value<string>("New"));
+
+					var stream = await store.AsyncFilesCommands.DownloadAsync(revisionFile.FullPath);
+					Assert.NotNull(stream);
+					Assert.Equal(Content2, StreamToString(stream));
+				}
+			}
+		}
 	}
 }

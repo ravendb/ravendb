@@ -192,9 +192,9 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			return Api.RetrieveColumnAsInt32(session, Pages, tableColumnsCache.PagesColumns["id"]).Value;
 		}
 
-        public FileOperationResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
+        public MetadataUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
         {
-	        FileOperationResult result;
+	        MetadataUpdateResult result;
 
             using (var update = new Update(session, Files, JET_prep.Insert))
             {
@@ -212,7 +212,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
                 update.Save();
 
-				result = new FileOperationResult
+				result = new MetadataUpdateResult
 				{
 					PrevEtag = null,
 					Etag = newEtag
@@ -357,7 +357,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
 						fileInformation.Pages.Add(new PageInformation
 							                          {
 								                          Size = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_size"]).Value,
-								                          Id = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_id"]).Value
+								                          Id = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_id"]).Value,
+														  PositionInFile = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["file_pos"]).Value
 							                          });
 					} while (Api.TryMoveNext(session, Usage) && fileInformation.Pages.Count < pagesToLoad);
 				}
@@ -530,7 +531,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			Api.JetDelete(session, Files);
 		}
 
-        public FileOperationResult UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag)
+        public MetadataUpdateResult UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag)
         {
             Api.JetSetCurrentIndex(session, Files, "by_name");
             Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -557,7 +558,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
                 update.Save();
 
-	            return new FileOperationResult
+	            return new MetadataUpdateResult
 	            {
 		            PrevEtag = existingEtag,
 		            Etag = newEtag

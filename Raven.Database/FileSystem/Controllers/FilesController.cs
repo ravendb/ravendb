@@ -234,30 +234,13 @@ namespace Raven.Database.FileSystem.Controllers
 
             var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
-            Historian.UpdateLastModified(metadata);
-            Historian.Update(name, metadata);
+			Files.UpdateMetadata(name, metadata, GetEtag());
 
-			FileOperationResult updateMetadata = null;
-
-		    Storage.Batch(accessor =>
-		    {
-			    Synchronizations.AssertFileIsNotBeingSynced(name);
-			    updateMetadata = accessor.UpdateFileMetadata(name, metadata, GetEtag());
-		    });
-
-            Search.Index(name, metadata, updateMetadata.Etag);
-
-            Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
-
-			Synchronizations.StartSynchronizeDestinationsInBackground();
-
-            log.Debug("Metadata of a file '{0}' was updated", name);
-
-            //Hack needed by jquery on the client side. We need to find a better solution for this
+			//Hack needed by jquery on the client side. We need to find a better solution for this
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
-		[HttpPatch]
+	    [HttpPatch]
         [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Patch(string name, string rename)
 		{

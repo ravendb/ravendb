@@ -139,7 +139,7 @@ namespace Raven.Database.FileSystem.Actions
 
 					metadata["Content-MD5"] = readFileToDatabase.FileHash;
 
-					FileOperationResult updateMetadata = null;
+					MetadataUpdateResult updateMetadata = null;
 					Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null));
 
 					int totalSizeRead = readFileToDatabase.TotalSizeRead;
@@ -172,6 +172,17 @@ namespace Raven.Database.FileSystem.Actions
 			if (vetoResult != null)
 			{
 				throw new OperationVetoedException("PUT vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+			}
+		}
+
+		internal void AssertMetadataUpdateOperationNotVetoed(string name, RavenJObject metadata)
+		{
+			var vetoResult = FileSystem.MetadataUpdateTriggers
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowUpdate(name, metadata) })
+				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+			if (vetoResult != null)
+			{
+				throw new OperationVetoedException("POST vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
 			}
 		}
 
@@ -228,6 +239,38 @@ namespace Raven.Database.FileSystem.Actions
 			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
 
 			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+		}
+
+		public void UpdateMetadata(string name, RavenJObject metadata, Etag etag)
+		{
+			MetadataUpdateResult updateMetadata = null;
+
+			Storage.Batch(accessor =>
+			{
+				AssertMetadataUpdateOperationNotVetoed(name, metadata);
+				FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
+
+				Historian.UpdateLastModified(metadata);
+				Historian.Update(name, metadata);
+
+				FileSystem.MetadataUpdateTriggers.Apply(trigger => trigger.OnUpdate(name, metadata));
+
+				updateMetadata = accessor.UpdateFileMetadata(name, metadata, etag);
+
+				FileSystem.MetadataUpdateTriggers.Apply(trigger => trigger.AfterUpdate(name, metadata));
+			});
+
+			Search.Index(name, metadata, updateMetadata.Etag);
+
+			FileSystem.Publisher.Publish(new FileChangeNotification
+			{
+				File = FilePathTools.Cannoicalise(name),
+				Action = FileChangeAction.Update
+			});
+
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+
+			Log.Debug("Metadata of a file '{0}' was updated", name);
 		}
 
 		public void ExecuteRenameOperation(RenameFileOperation operation, Etag etag)

@@ -3,16 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.ComponentModel.Composition;
-using System.Linq;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Plugins;
-using Raven.Database.FileSystem.Storage;
-using Raven.Database.FileSystem.Util;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -22,90 +16,26 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 	[ExportMetadata("Bundle", "Versioning")]
 	public class VersioningPutTrigger : AbstractFilePutTrigger
 	{
+		private VersioningTriggerActions actions;
+
+		public override void Initialize()
+		{
+			actions = new VersioningTriggerActions(FileSystem);
+		}
+
 		public override VetoResult AllowPut(string name, RavenJObject metadata)
 		{
-			VetoResult veto = VetoResult.Allowed;
-			FileSystem.Storage.Batch(accessor =>
-			{
-				var file = accessor.ReadFile(name);
-				if (file == null)
-					return;
-
-				if (FileSystem.ChangesToRevisionsAllowed() == false &&
-					file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" &&
-					accessor.IsVersioningActive())
-				{
-					veto = VetoResult.Deny("Modifying a historical revision is not allowed");
-				}
-			});
-
-			return veto;
+			return actions.AllowOperation(name, metadata);
 		}
 
 		public override void OnPut(string name, RavenJObject metadata)
 		{
-			if (metadata.ContainsKey(Constants.RavenCreateVersion))
-			{
-				metadata.__ExternalState[Constants.RavenCreateVersion] = metadata[Constants.RavenCreateVersion];
-				metadata.Remove(Constants.RavenCreateVersion);
-			}
-
-			if (metadata.ContainsKey(Constants.RavenIgnoreVersioning))
-			{
-				metadata.__ExternalState[Constants.RavenIgnoreVersioning] = metadata[Constants.RavenIgnoreVersioning];
-				metadata.Remove(Constants.RavenIgnoreVersioning);
-				return;
-			}
-
-			FileSystem.Storage.Batch(accessor =>
-			{
-				VersioningConfiguration versioningConfiguration;
-				if (TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false) 
-					return;
-
-				long revision;
-
-				if (metadata.__ExternalState.ContainsKey("Synchronization-Next-Revision"))
-					revision = (long) metadata.__ExternalState["Synchronization-Next-Revision"];
-				else
-					revision = GetNextRevisionNumber(name, accessor);
-
-				RemoveOldRevisions(name, revision, versioningConfiguration);
-
-				metadata.__ExternalState["Next-Revision"] = revision;
-				metadata.__ExternalState["Parent-Revision"] = metadata.Value<string>(VersioningUtil.RavenFileRevision);
-
-				metadata[VersioningUtil.RavenFileRevisionStatus] = RavenJToken.FromObject("Current");
-				metadata[VersioningUtil.RavenFileRevision] = RavenJToken.FromObject(revision);
-			});
+			actions.InitializeMetadata(name, metadata);
 		}
 
 		public override void AfterPut(string name, long? size, RavenJObject metadata)
 		{
-			FileSystem.Storage.Batch(accessor =>
-			{
-				VersioningConfiguration versioningConfiguration;
-				if (TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false) return;
-
-				using (FileSystem.DisableAllTriggersForCurrentThread())
-				{
-					var copyHeaders = new RavenJObject(metadata);
-					copyHeaders[VersioningUtil.RavenFileRevisionStatus] = RavenJToken.FromObject("Historical");
-					copyHeaders[Constants.RavenReadOnly] = true;
-					copyHeaders.Remove(VersioningUtil.RavenFileRevision);
-					object parentRevision;
-					metadata.__ExternalState.TryGetValue("Parent-Revision", out parentRevision);
-					if (parentRevision != null)
-					{
-						copyHeaders[VersioningUtil.RavenFileParentRevision] = name + "/revisions/" + parentRevision;
-					}
-
-					object value;
-					metadata.__ExternalState.TryGetValue("Next-Revision", out value);
-
-					accessor.PutFile(name + "/revisions/" + value, size, copyHeaders);
-				}
-			});
+			actions.PutRevisionFile(name, size, metadata);
 		}
 
 		public override void OnUpload(string name, RavenJObject metadata, int pageId, int pagePositionInFile, int pageSize)
@@ -113,7 +43,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			FileSystem.Storage.Batch(accessor =>
 			{
 				VersioningConfiguration versioningConfiguration;
-				if (TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false) 
+				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false) 
 					return;
 
 				object value;
@@ -128,7 +58,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			FileSystem.Storage.Batch(accessor =>
 			{
 				VersioningConfiguration versioningConfiguration;
-				if (TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false) 
+				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false) 
 					return;
 
 				object value;
@@ -150,10 +80,10 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			FileSystem.Storage.Batch(accessor =>
 			{
 				VersioningConfiguration versioningConfiguration;
-				if (TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
+				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
 					return;
 
-				var revision = GetNextRevisionNumber(name, accessor);
+				var revision = actions.GetNextRevisionNumber(name, accessor);
 
 				metadata.__ExternalState["Synchronization-Next-Revision"] = revision;
 			});
@@ -164,7 +94,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			FileSystem.Storage.Batch(accessor =>
 			{
 				VersioningConfiguration versioningConfiguration;
-				if (TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
+				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
 					return;
 
 				var revision = (long) metadata.__ExternalState["Synchronization-Next-Revision"];
@@ -174,74 +104,8 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 
 				accessor.RenameFile(tempFileRevision, fileRevision, true);
 
-				RemoveOldRevisions(name, revision, versioningConfiguration);
+				actions.RemoveOldRevisions(name, revision, versioningConfiguration);
 			});
-		}
-
-		private static long GetNextRevisionNumber(string name, IStorageActionsAccessor accessor)
-		{
-			long revision = 1;
-
-			var existingFile = accessor.ReadFile(name);
-			if (existingFile != null)
-			{
-				RavenJToken existingRevisionToken;
-				if (existingFile.Metadata.TryGetValue(VersioningUtil.RavenFileRevision, out existingRevisionToken))
-					revision = existingRevisionToken.Value<int>() + 1;
-			}
-			else
-			{
-				var latestRevisionsFile = GetLatestRevisionsFile(name, accessor);
-				if (latestRevisionsFile != null)
-				{
-					var id = latestRevisionsFile.FullPath;
-					if (id.StartsWith(name, StringComparison.CurrentCultureIgnoreCase))
-					{
-						var revisionNum = id.Substring((name + "/revisions/").Length);
-						int result;
-						if (int.TryParse(revisionNum, out result))
-							revision = result + 1;
-					}
-				}
-			}
-
-			return revision;
-		}
-
-		private static FileHeader GetLatestRevisionsFile(string name, IStorageActionsAccessor accessor)
-		{
-			return accessor
-				.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue)
-				.LastOrDefault();
-		}
-
-		private void RemoveOldRevisions(string name, long revision, VersioningConfiguration versioningConfiguration)
-		{
-			var latestValidRevision = revision - versioningConfiguration.MaxRevisions;
-			if (latestValidRevision <= 0)
-				return;
-
-			using (FileSystem.DisableAllTriggersForCurrentThread())
-			{
-				FileSystem.Files.IndicateFileToDelete(string.Format("{0}/revisions/{1}", name, latestValidRevision), null);
-			}
-		}
-
-		private static bool TryGetVersioningConfiguration(string name, RavenJObject metadata, IStorageActionsAccessor accessor, out VersioningConfiguration versioningConfiguration)
-		{
-			versioningConfiguration = null;
-			if (name.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
-				return false;
-
-			if (metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical")
-				return false;
-
-			versioningConfiguration = accessor.GetVersioningConfiguration();
-			if (versioningConfiguration == null || versioningConfiguration.Exclude
-				|| (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion))
-				|| metadata.__ExternalState.ContainsKey(Constants.RavenIgnoreVersioning))
-				return false;
-			return true;
-		}
+		}		
 	}
 }
