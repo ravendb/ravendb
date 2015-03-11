@@ -876,6 +876,19 @@ namespace Raven.Tests.Helpers
 			request.ExecuteRequest();
 		}
 
+		protected RavenDbServer CreateServerWithWindowsCredentials(int port, string username, string password, string domain, out NodeConnectionInfo nodeConnectionInfo)
+		{
+			var server = GetNewServer(port, enableAuthentication: true);
+			nodeConnectionInfo = ClusterManagerFactory.CreateSelfConnection(server.SystemDatabase);
+			nodeConnectionInfo.Username = username;
+			nodeConnectionInfo.Password = password;
+			nodeConnectionInfo.Domain = domain;
+
+			EnableAuthentication(server.SystemDatabase);
+			NewRemoteDocumentStore(ravenDbServer: server);
+			return server;
+		}
+
 		protected RavenDbServer CreateServerWithOAuth(int port, string apiKey, out NodeConnectionInfo nodeConnectionInfo)
 		{
 			var server = GetNewServer(port, enableAuthentication: true);
@@ -898,7 +911,22 @@ namespace Raven.Tests.Helpers
 				Secret = apiKeyTokens[1]
 			}), new RavenJObject(), null);
 
+			NewRemoteDocumentStore(ravenDbServer: server);
+
 			return server;
+		}
+
+		protected void WaitForClusterToSettle(int numberOfNodes)
+		{
+			servers.ForEach(server =>
+			{
+				Assert.True(SpinWait.SpinUntil(() =>
+				{
+					var topology = server.Options.ClusterManager.Engine.CurrentTopology;
+					return topology.AllVotingNodes.Count() == numberOfNodes;
+				}, TimeSpan.FromSeconds(15)));
+
+			});
 		}
 	}
 }

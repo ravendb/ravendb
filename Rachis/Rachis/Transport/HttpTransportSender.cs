@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security;
 using System.Threading.Tasks;
 
 using NLog;
@@ -98,8 +99,8 @@ namespace Rachis.Transport
 			};
 			GetAuthenticator(node).ConfigureRequest(this, new WebRequestEventArgs
 			{
-				Client = request.httpClient,
-				Credentials = new OperationCredentials(node.ApiKey, null) //TODO: fix me
+				Client = request.HttpClient,
+				Credentials = node.ToOperationCredentials()
 			});
 			return request;
 		}
@@ -108,15 +109,60 @@ namespace Rachis.Transport
 		{
 			var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 
+			if (nodeConnectionInfo.ApiKey == null)
+			{
+				AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse, nodeConnectionInfo);
+				return null;
+			}
+
 			if (string.IsNullOrEmpty(oauthSource))
 				oauthSource = nodeConnectionInfo.Uri.AbsoluteUri + "/OAuth/API-Key";
 
 			return await GetAuthenticator(nodeConnectionInfo).DoOAuthRequestAsync(nodeConnectionInfo.Uri.AbsoluteUri, oauthSource, nodeConnectionInfo.ApiKey);
 		}
 
-		internal async Task<Action<HttpClient>> HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse, NodeConnectionInfo nodeConnection)
+		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, NodeConnectionInfo nodeConnectionInfo)
 		{
-			throw new NotImplementedException();
+			if (nodeConnectionInfo.Username == null)
+				return;
+
+			var authHeaders = response.Headers.WwwAuthenticate.FirstOrDefault();
+			if (authHeaders == null || (authHeaders.ToString().Contains("NTLM") == false && authHeaders.ToString().Contains("Negotiate") == false))
+			{
+				// we are trying to do windows auth, but we didn't get the windows auth headers
+				throw new SecurityException(
+					"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
+					+ " but either wrong credentials where entered or the specified server does not support Windows authentication." +
+					Environment.NewLine +
+					"If you are running inside IIS, make sure to enable Windows authentication.");
+			}
+		}
+
+		internal Task<Action<HttpClient>> HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse, NodeConnectionInfo nodeConnection)
+		{
+			if (nodeConnection.ApiKey == null)
+			{
+				AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, nodeConnection);
+				return null;
+			}
+
+			return null;
+		}
+
+		private void AssertForbiddenCredentialSupportWindowsAuth(HttpResponseMessage response, NodeConnectionInfo nodeConnection)
+		{
+			if (nodeConnection.ToOperationCredentials().Credentials == null)
+				return;
+
+			var requiredAuth = response.Headers.GetFirstValue("Raven-Required-Auth");
+			if (requiredAuth == "Windows")
+			{
+				// we are trying to do windows auth, but we didn't get the windows auth headers
+				throw new SecurityException(
+					"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
+					Environment.NewLine +
+					"If you are running inside IIS, make sure to enable Windows authentication.");
+			}
 		}
 
 		public void Send(NodeConnectionInfo dest, AppendEntriesRequest req)
@@ -332,15 +378,21 @@ namespace Rachis.Transport
 			return _securedAuthenticatorCache.GetOrAdd(info.Name, _ => new SecuredAuthenticator());
 		}
 
-		internal ReturnToQueue GetConnection(NodeConnectionInfo info, out HttpClient result)
+		internal ReturnToQueue GetConnection(NodeConnectionInfo nodeConnection, out HttpClient result)
 		{
-			var connectionQueue = _httpClientsCache.GetOrAdd(info.Name, _ => new ConcurrentQueue<HttpClient>());
+			var connectionQueue = _httpClientsCache.GetOrAdd(nodeConnection.Name, _ => new ConcurrentQueue<HttpClient>());
 
 			if (connectionQueue.TryDequeue(out result) == false)
 			{
-				result = new HttpClient
+				var webRequestHandler = new WebRequestHandler
 				{
-					BaseAddress = info.Uri
+					UseDefaultCredentials = nodeConnection.HasCredentials() == false,
+					Credentials = nodeConnection.ToOperationCredentials().Credentials
+				};
+
+				result = new HttpClient(webRequestHandler)
+				{
+					BaseAddress = nodeConnection.Uri
 				};
 			}
 

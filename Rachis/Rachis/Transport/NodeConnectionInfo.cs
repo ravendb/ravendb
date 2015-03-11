@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Net;
+using Raven.Abstractions.Connection;
 
 namespace Rachis.Transport
 {
@@ -62,6 +64,22 @@ namespace Rachis.Transport
 		public static bool operator !=(NodeConnectionInfo left, NodeConnectionInfo right)
 		{
 			return !Equals(left, right);
+		}
+
+		public OperationCredentials ToOperationCredentials()
+		{
+			if (Username != null)
+			{
+				var networkCredentials = new NetworkCredential(Username, Password, Domain);
+				return new OperationCredentials(ApiKey, networkCredentials);
+			}
+
+			return new OperationCredentials(ApiKey, null);
+		}
+
+		public bool HasCredentials()
+		{
+			return !string.IsNullOrEmpty(ApiKey) || Username != null;
 		}
 	}
 }

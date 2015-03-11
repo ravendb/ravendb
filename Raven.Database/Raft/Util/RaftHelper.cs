@@ -6,11 +6,11 @@
 
 using System;
 using System.Linq;
-
+using System.Net;
 using Rachis;
 using Rachis.Commands;
 using Rachis.Transport;
-
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Util;

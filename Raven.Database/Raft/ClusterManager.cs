@@ -25,6 +25,9 @@ namespace Raven.Database.Raft
 		{
 			if (Engine != null)
 				Engine.Dispose();
+
+			if (Client != null)
+				Client.Dispose();
 		}
 	}
 }

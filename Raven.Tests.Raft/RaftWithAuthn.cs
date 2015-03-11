@@ -53,9 +53,49 @@ namespace Raven.Tests.Raft
 			var client = servers[0].Options.ClusterManager.Client;
 			await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
+			Assert.Equal(3, stores.Count);
+
 			stores.ForEach(store =>
 			{
-				WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
+				WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromMinutes(1));
+				var configurationJson = store.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
+				var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+				Assert.True(configuration.EnableReplication);
+			});
+		}
+
+		[Fact]
+		public async Task CanCreateClusterWithWindowsAuthAndSendCommandToLeader()
+		{
+			const string username = "";
+			const string password = "";
+			const string domain = "";
+
+			Assert.NotNull(password);
+
+			NodeConnectionInfo leaderNci;
+			var leader = CreateServerWithWindowsCredentials(8079, username, password, domain, out leaderNci);
+
+			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager);
+			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
+
+			NodeConnectionInfo secondConnectionInfo;
+			CreateServerWithWindowsCredentials(8078, username, password, domain, out secondConnectionInfo);
+			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
+
+			NodeConnectionInfo thirdConnectionInfo;
+			CreateServerWithWindowsCredentials(8077, username, password, domain, out thirdConnectionInfo);
+			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
+
+			Assert.True(servers[0].Options.ClusterManager.IsLeader());
+			var client = servers[0].Options.ClusterManager.Client;
+			await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
+
+			Assert.Equal(3, stores.Count);
+
+			stores.ForEach(store =>
+			{
+				WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromMinutes(1));
 				var configurationJson = store.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
 				var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
 				Assert.True(configuration.EnableReplication);
@@ -85,25 +125,54 @@ namespace Raven.Tests.Raft
 			var client = servers[1].Options.ClusterManager.Client;
 			await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = false });
 
+			Assert.Equal(3, stores.Count);
+
 			stores.ForEach(store =>
 			{
-				WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
+				WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromMinutes(1));
 				var configurationJson = store.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
 				var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
 				Assert.False(configuration.EnableReplication);
 			});
 		}
 
-		private void WaitForClusterToSettle(int numberOfNodes)
+		[Fact]
+		public async Task CanCreateClusterWithWindowsAuthAndSendCommandToNonLeader()
 		{
-			servers.ForEach(server =>
-			{
-				Assert.True(SpinWait.SpinUntil(() =>
-				{
-					var topology = server.Options.ClusterManager.Engine.CurrentTopology;
-					return topology.AllVotingNodes.Count() == numberOfNodes;
-				}, TimeSpan.FromSeconds(15)));
+			const string username = "";
+			const string password = "";
+			const string domain = "";
 
+			Assert.NotNull(password);
+
+			NodeConnectionInfo leaderNci;
+			var leader = CreateServerWithWindowsCredentials(8079, username, password, domain, out leaderNci);
+
+			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager);
+			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
+
+			NodeConnectionInfo secondConnectionInfo;
+			CreateServerWithWindowsCredentials(8078, username, password, domain, out secondConnectionInfo);
+			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
+
+			NodeConnectionInfo thirdConnectionInfo;
+			CreateServerWithWindowsCredentials(8077, username, password, domain, out thirdConnectionInfo);
+			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
+
+			WaitForClusterToSettle(3);
+
+			Assert.False(servers[1].Options.ClusterManager.IsLeader());
+			var client = servers[1].Options.ClusterManager.Client;
+			await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = false });
+
+			Assert.Equal(3, stores.Count);
+
+			stores.ForEach(store =>
+			{
+				WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey, TimeSpan.FromMinutes(1));
+				var configurationJson = store.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
+				var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+				Assert.False(configuration.EnableReplication);
 			});
 		}
 	}
