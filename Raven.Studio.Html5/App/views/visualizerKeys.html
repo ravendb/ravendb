@@ -1,4 +1,4 @@
-﻿<div class="messageBox" tabindex="-1" >
+﻿<div class="messageBox" tabindex="-1" style="width: 500px;">
     <div class="modal-header">
         <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
             <i class="fa fa-times"></i>
@@ -7,14 +7,14 @@
     </div>
     <div class="modal-body" data-bind="with: visualizer">
         <div class="row">
-            <div class="col-md-6">
-                <h4>Document Ids</h4>
+            <div class="col-lg-6">
+                <h4>Document Ids (<span data-bind="text: docKeys().length"></span>)</h4>
                 <ul data-bind="foreach: docKeys">
                     <li data-bind="text: $data"></li>
                 </ul>
             </div>
-            <div class="col-md-6">
-                <h4>Reduce Keys</h4>
+            <div class="col-lg-6">
+                <h4>Reduce Keys (<span data-bind="text: reduceKeys().length"></span>)</h4>
                 <ul data-bind="foreach: reduceKeys">
                     <li data-bind="text: $data"></li>
                 </ul>

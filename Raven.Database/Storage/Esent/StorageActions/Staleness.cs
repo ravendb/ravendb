@@ -4,15 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
-using Raven.Database.Storage;
+using Raven.Abstractions.Extensions;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IStalenessStorageActions
 	{

@@ -323,7 +323,7 @@ namespace Raven.Database.Server.Controllers
                 keys = accessor.MapReduce.GetSourcesForIndexForDebug(definition.IndexId, prefix, GetPageSize(Database.Configuration.MaxPageSize))
                     .ToList(); 
             });
-            return GetMessageWithObject(new { keys.Count, Results = keys });
+	        return GetMessageWithObject(new {keys.Count, Results = keys});
         }
 
 		private HttpResponseMessage GetIndexMappedResult(string index)
@@ -337,11 +337,6 @@ namespace Raven.Database.Server.Controllers
 			{
 				var sourceId = GetQueryStringValue("sourceId");
 				var startsWith = GetQueryStringValue("startsWith");
-				var keyToSearch = GetQueryStringValue("contains");
-				if (string.IsNullOrEmpty(startsWith) && string.IsNullOrEmpty(keyToSearch) == false)
-				{
-					startsWith = keyToSearch;
-				}
 
 				List<string> keys = null;
 				Database.TransactionalStorage.Batch(accessor =>
@@ -349,12 +344,7 @@ namespace Raven.Database.Server.Controllers
                     keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
 						.ToList();
 				});
-			    
-                if (string.IsNullOrEmpty(keyToSearch) == false)
-                    return GetMessageWithObject(new
-                    {
-                        Results = keys.Contains(keyToSearch)
-                    });
+
 				return GetMessageWithObject(new
 				{
 					keys.Count,

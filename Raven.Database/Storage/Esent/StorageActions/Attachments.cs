@@ -9,16 +9,17 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Data;
-using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Storage.Esent;
+using Raven.Storage.Esent.StorageActions;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IAttachmentsStorageActions
 	{

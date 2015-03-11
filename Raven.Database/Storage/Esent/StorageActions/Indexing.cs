@@ -5,23 +5,19 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Abstractions.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Storage;
-using Raven.Database.Storage.Esent.Debug;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IIndexingStorageActions
 	{
