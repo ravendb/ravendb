@@ -36,10 +36,9 @@ namespace Raven.Client.FileSystem.Changes
         public FilesChangesClient(string url, string apiKey,
                                        ICredentials credentials,
                                        HttpJsonRequestFactory jsonRequestFactory, FilesConvention conventions,
-                                       IReplicationInformerBase replicationInformer,
                                        Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync,
                                        Action onDispose)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions, replicationInformer, onDispose)
+            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
         {
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
         }

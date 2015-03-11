@@ -735,7 +735,6 @@ namespace Raven.Client.Document
 					Credentials,
 					jsonRequestFactory,
 					Conventions,
-					GetReplicationInformerForDatabase(database),
 					() => databaseChanges.Remove(database),
 					(key, etag, conflictIds, metadata) => ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
 			}

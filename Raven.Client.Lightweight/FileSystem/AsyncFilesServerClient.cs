@@ -69,7 +69,7 @@ namespace Raven.Client.FileSystem
                 this.ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
 
-                notifications = new Lazy<FilesChangesClient>( () => new FilesChangesClient(BaseUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, TryResolveConflictByUsingRegisteredListenersAsync, () => { }));
+                notifications = new Lazy<FilesChangesClient>( () => new FilesChangesClient(BaseUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, TryResolveConflictByUsingRegisteredListenersAsync, () => { }));
 
                 InitializeSecurity();
             }
