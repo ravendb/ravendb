@@ -146,7 +146,7 @@ namespace Raven.Database.FileSystem.Actions
 					metadata["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
 
 					Search.Index(name, metadata, updateMetadata.Etag);
-					Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
+					Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = name });
 
 					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
 
@@ -264,7 +264,7 @@ namespace Raven.Database.FileSystem.Actions
 
 			FileSystem.Publisher.Publish(new FileChangeNotification
 			{
-				File = FilePathTools.Cannoicalise(name),
+				File = name,
 				Action = FileChangeAction.Update
 			});
 
@@ -278,7 +278,7 @@ namespace Raven.Database.FileSystem.Actions
 			var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
 			Publisher.Publish(new FileChangeNotification
 			{
-				File = FilePathTools.Cannoicalise(operation.Name),
+				File = operation.Name,
 				Action = FileChangeAction.Renaming
 			});
 
@@ -310,7 +310,7 @@ namespace Raven.Database.FileSystem.Actions
 			Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
 			Publisher.Publish(new FileChangeNotification
 			{
-				File = FilePathTools.Cannoicalise(operation.Rename),
+				File = operation.Rename,
 				Action = FileChangeAction.Renamed
 			});
 		}

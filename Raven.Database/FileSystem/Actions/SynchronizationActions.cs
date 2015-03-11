@@ -56,7 +56,7 @@ namespace Raven.Database.FileSystem.Actions
 		{
 			Publisher.Publish(new FileChangeNotification
 			{
-				File = FilePathTools.Cannoicalise(fileName),
+				File = fileName,
 				Action = action
 			});
 		}

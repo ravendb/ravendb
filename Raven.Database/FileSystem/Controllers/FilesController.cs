@@ -193,7 +193,7 @@ namespace Raven.Database.FileSystem.Controllers
 				}
 				});
 
-			Publisher.Publish(new FileChangeNotification { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Delete });
+			Publisher.Publish(new FileChangeNotification { File = name, Action = FileChangeAction.Delete });
 			log.Debug("File '{0}' was deleted", name);
 
 			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
