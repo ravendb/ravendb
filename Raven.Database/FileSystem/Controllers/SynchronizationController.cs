@@ -280,8 +280,7 @@ namespace Raven.Database.FileSystem.Controllers
 			var sourceFileETag = GetEtag();
 			var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
-            Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
-					  sourceFileETag, sourceInfo);
+            Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceInfo);
 
             var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.MetadataUpdate);
 
@@ -488,11 +487,11 @@ namespace Raven.Database.FileSystem.Controllers
 					
                 Files.ExecuteRenameOperation(new RenameFileOperation
                 {
-                    FileSystem = FileSystem.Name,
-                    Name = fileName,
-                    Rename = rename,
-                    MetadataAfterOperation = sourceMetadata.DropRenameMarkers()
-                }, null);
+	                FileSystem = FileSystem.Name,
+	                Name = fileName,
+	                Rename = rename,
+	                MetadataAfterOperation = sourceMetadata.DropRenameMarkers()
+                });
 			}
 			catch (Exception ex)
 			{

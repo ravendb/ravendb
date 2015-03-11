@@ -233,7 +233,7 @@ namespace Raven.Database.FileSystem.Actions
 				accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
 				accessor.PulseTransaction(); // commit rename operation config
 
-				ExecuteRenameOperation(operation, etag);
+				ExecuteRenameOperation(operation);
 			});
 
 			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
@@ -273,7 +273,7 @@ namespace Raven.Database.FileSystem.Actions
 			Log.Debug("Metadata of a file '{0}' was updated", name);
 		}
 
-		public void ExecuteRenameOperation(RenameFileOperation operation, Etag etag)
+		public void ExecuteRenameOperation(RenameFileOperation operation)
 		{
 			var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
 			Publisher.Publish(new FileChangeNotification
@@ -501,7 +501,7 @@ namespace Raven.Database.FileSystem.Actions
 				{
 					try
 					{
-						ExecuteRenameOperation(renameOperation, null);
+						ExecuteRenameOperation(renameOperation);
 						Log.Debug("File '{0}' was renamed to '{1}'", renameOperation.Name, renameOperation.Rename);
 
 					}
