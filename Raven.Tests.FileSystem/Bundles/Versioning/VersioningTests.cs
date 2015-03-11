@@ -8,7 +8,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Bundles.Versioning.Data;
@@ -204,7 +204,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 				Assert.NotNull(stream);
 				Assert.Equal(Content1, StreamToString(stream));
 
-				var e = await AssertAsync.Throws<InvalidOperationException>(async () => await store.AsyncFilesCommands.DeleteAsync(FileName + "/revisions/1"));
+				var e = await AssertAsync.Throws<ErrorResponseException>(async () => await store.AsyncFilesCommands.DeleteAsync(FileName + "/revisions/1"));
 				Assert.True(e.Message.Contains("Deleting a historical revision is not allowed"));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1");
@@ -402,6 +402,102 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
 				Assert.Equal(Content3, StreamToString(stream));
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task CannotModifyHistoricalRevisionByDefault_PUT(string requestedStorage)
+		{
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+
+				await store.AsyncFilesCommands.UploadAsync("file.txt", StringToStream(Content1));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync("file.txt", 0, 100);
+					Assert.Equal(1, revisions.Length);
+
+					session.RegisterUpload(revisions[0], StringToStream(Content2));
+
+					var ex = await ThrowsAsync<ErrorResponseException>(() => session.SaveChangesAsync());
+
+					Assert.Contains("PUT vetoed on file /file.txt/revisions/1 by Raven.Database.FileSystem.Bundles.Versioning.Plugins.VersioningPutTrigger because: Modifying a historical revision is not allowed", ex.Message);
+				}
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task CanModifyHistoricalRevisionIfProperConfigurationSet_PUT(string requestedStorage)
+		{
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: configuration => configuration.Settings[Constants.FileSystem.Versioning.ChangesToRevisionsAllowed] = "true"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+
+				await store.AsyncFilesCommands.UploadAsync("file.txt", StringToStream(Content1));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync("file.txt", 0, 100);
+					Assert.Equal(1, revisions.Length);
+
+					session.RegisterUpload(revisions[0], StringToStream(Content2));
+
+					await session.SaveChangesAsync();
+				}
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task CannotModifyHistoricalRevisionByDefault_POST(string requestedStorage)
+		{
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+
+				await store.AsyncFilesCommands.UploadAsync("file.txt", StringToStream(Content1));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync("file.txt", 0, 100);
+					Assert.Equal(1, revisions.Length);
+
+					var revision = await session.LoadFileAsync(revisions[0]);
+
+					revision.Metadata.Add("new", "item");
+
+					var ex = await ThrowsAsync<ErrorResponseException>(() => session.SaveChangesAsync());
+
+					Assert.Contains("POST vetoed on file /file.txt/revisions/1 by Raven.Database.FileSystem.Bundles.Versioning.Plugins.VersioningMetadataUpdateTrigger because: Modifying a historical revision is not allowed", ex.Message);
+				}
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task CanModifyHistoricalRevisionIfProperConfigurationSet_POST(string requestedStorage)
+		{
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: configuration => configuration.Settings[Constants.FileSystem.Versioning.ChangesToRevisionsAllowed] = "true"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+
+				await store.AsyncFilesCommands.UploadAsync("file.txt", StringToStream(Content1));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync("file.txt", 0, 100);
+					Assert.Equal(1, revisions.Length);
+
+					var revision = await session.LoadFileAsync(revisions[0]);
+
+					revision.Metadata.Add("new", "item");
+
+					await session.SaveChangesAsync();
+				}
 			}
 		}
 
