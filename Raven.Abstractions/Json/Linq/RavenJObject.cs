@@ -206,6 +206,8 @@ namespace Raven.Json.Linq
 						break;
 					case JsonToken.PropertyName:
 						propName = reader.Value.ToString();
+						if (String.Equals(propName, String.Empty))
+							throw new InvalidDataException("Deserializing Json object with empty string as property name is not supported.");
 						break;
 					case JsonToken.EndObject:
 						return o;
@@ -398,6 +400,9 @@ namespace Raven.Json.Linq
 						break;
 					case JsonToken.PropertyName:
 						propName = reader.Value.ToString();
+						if (String.Equals(propName, String.Empty))
+							throw new InvalidDataException("Deserializing Json object with empty string as property name is not supported.");
+
 						break;
 					case JsonToken.EndObject:
 						return o;

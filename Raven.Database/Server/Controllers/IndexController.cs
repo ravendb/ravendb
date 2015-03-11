@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -104,7 +105,29 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> IndexPut(string id)
 		{
 			var index = id;
-			var jsonIndex = await ReadJsonAsync();
+			RavenJObject jsonIndex;
+
+			try
+			{
+				jsonIndex = await ReadJsonAsync();
+			}
+			catch (InvalidOperationException e)
+			{
+				Log.Debug("Failed to deserialize index request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					Message = "Could not understand json, please check its validity."
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+
+			}
+			catch (InvalidDataException e)
+			{
+				Log.Debug("Failed to deserialize index request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					e.Message
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+			}
 
 			var data = jsonIndex.JsonDeserialization<IndexDefinition>();
 
