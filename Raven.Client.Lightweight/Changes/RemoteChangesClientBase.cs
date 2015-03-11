@@ -28,7 +28,6 @@ namespace Raven.Client.Changes
         private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
         private readonly Convention conventions;
-        private readonly IReplicationInformerBase replicationInformer;
 
         private readonly Action onDispose;                
 
@@ -46,7 +45,6 @@ namespace Raven.Client.Changes
             ICredentials credentials,
             HttpJsonRequestFactory jsonRequestFactory,
             Convention conventions,
-            IReplicationInformerBase replicationInformer,
             Action onDispose )
         {
             // Precondition
@@ -62,7 +60,6 @@ namespace Raven.Client.Changes
             this.credentials = new OperationCredentials(apiKey, credentials);
             this.jsonRequestFactory = jsonRequestFactory;
             this.conventions = conventions;
-            this.replicationInformer = replicationInformer;
             this.onDispose = onDispose;            
 
             this.Task = EstablishConnection()

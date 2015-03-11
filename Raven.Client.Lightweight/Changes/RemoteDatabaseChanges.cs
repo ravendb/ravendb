@@ -38,10 +38,9 @@ namespace Raven.Client.Changes
         public RemoteDatabaseChanges(string url, string apiKey,
                                        ICredentials credentials,
                                        HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions,
-                                       IReplicationInformerBase replicationInformer,
                                        Action onDispose,                                
                                        Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
-            : base ( url, apiKey, credentials, jsonRequestFactory, conventions, replicationInformer, onDispose)
+            : base ( url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
         {
             this.Conventions = conventions;
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;

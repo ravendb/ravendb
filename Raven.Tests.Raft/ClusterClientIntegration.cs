@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Request;
@@ -102,8 +103,10 @@ namespace Raven.Tests.Raft
 				nonClusterCommands1.Put("keys/1", null, new RavenJObject(), new RavenJObject());
 				nonClusterCommands2.Put("keys/2", null, new RavenJObject(), new RavenJObject());
 
-				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/1"));
-				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/2"));
+				var allNonClusterCommands = new[] {nonClusterCommands1, nonClusterCommands2};
+				
+				allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/1"));
+				allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/2"));
 			}
 		}
 
