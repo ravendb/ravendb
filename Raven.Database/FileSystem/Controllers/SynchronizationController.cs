@@ -278,6 +278,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			var sourceInfo = GetSourceFileSystemInfo();
 			var sourceFileETag = GetEtag();
+			var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
             Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceInfo);
@@ -289,6 +290,7 @@ namespace Raven.Database.FileSystem.Controllers
 				Storage.Batch(accessor =>
 				{
                     Synchronizations.AssertFileIsNotBeingSynced(fileName);
+					Files.AssertMetadataUpdateOperationNotVetoed(fileName, sourceMetadata);
                     FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceInfo, accessor);
 				});
 
@@ -299,14 +301,17 @@ namespace Raven.Database.FileSystem.Controllers
                 Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
 				var localMetadata = Synchronizations.GetLocalMetadata(fileName);
-                var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
-
+               
                 AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceInfo, out isConflictResolved);
 
                 Historian.UpdateLastModified(sourceMetadata);
 
+				FileSystem.MetadataUpdateTriggers.Apply(trigger => trigger.OnUpdate(fileName, sourceMetadata));
+
 				MetadataUpdateResult updateMetadata = null;
                 Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(fileName, sourceMetadata, null));
+
+				FileSystem.MetadataUpdateTriggers.Apply(trigger => trigger.AfterUpdate(fileName, sourceMetadata));
 
                 Search.Index(fileName, sourceMetadata, updateMetadata.Etag);
 
