@@ -7,8 +7,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -29,56 +31,100 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Raft
 {
-	public class ClusterManagementHttpClient
+	public class ClusterManagementHttpClient : IDisposable
 	{
 		private const int WaitForLeaderTimeoutInSeconds = 15;
 
 		private readonly RaftEngine raftEngine;
 
-		private readonly HttpClient httpClient;
+		private readonly ConcurrentDictionary<string, ConcurrentQueue<HttpClient>> _httpClientsCache = new ConcurrentDictionary<string, ConcurrentQueue<HttpClient>>();
 
 		private readonly ConcurrentDictionary<string, SecuredAuthenticator> _securedAuthenticatorCache = new ConcurrentDictionary<string, SecuredAuthenticator>();
 
 		public ClusterManagementHttpClient(RaftEngine raftEngine)
 		{
 			this.raftEngine = raftEngine;
-			httpClient = new HttpClient();
 		}
 
 		private HttpRaftRequest CreateRequest(NodeConnectionInfo node, string url, string method)
 		{
-			var request = new HttpRaftRequest(node, url, method, info => new Tuple<IDisposable, HttpClient>(null, httpClient))
+			var request = new HttpRaftRequest(node, url, method, info =>
+			{
+				HttpClient client;
+				var dispose = (IDisposable) GetConnection(info, out client);
+				return Tuple.Create(dispose, client);
+			})
 			{
 				UnauthorizedResponseAsyncHandler = HandleUnauthorizedResponseAsync,
 				ForbiddenResponseAsyncHandler = HandleForbiddenResponseAsync
 			};
 			GetAuthenticator(node).ConfigureRequest(this, new WebRequestEventArgs
 			{
-				Client = httpClient,
-				Credentials = new OperationCredentials(node.ApiKey, null) //TODO: fix me
+				Client = request.HttpClient,
+				Credentials = node.ToOperationCredentials()
 			});
 			return request;
 		}
 
-		internal async Task<Action<HttpClient>> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse, NodeConnectionInfo nodeConnectionInfo)
+		internal Task<Action<HttpClient>> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse, NodeConnectionInfo nodeConnectionInfo)
 		{
 			var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 
+			if (nodeConnectionInfo.ApiKey == null)
+			{
+				AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse, nodeConnectionInfo);
+				return null;
+			}
 
 			if (string.IsNullOrEmpty(oauthSource))
 				oauthSource = nodeConnectionInfo.Uri.AbsoluteUri + "/OAuth/API-Key";
 
-			return await GetAuthenticator(nodeConnectionInfo).DoOAuthRequestAsync(nodeConnectionInfo.Uri.AbsoluteUri, oauthSource, nodeConnectionInfo.ApiKey);
+			return GetAuthenticator(nodeConnectionInfo).DoOAuthRequestAsync(nodeConnectionInfo.Uri.AbsoluteUri, oauthSource, nodeConnectionInfo.ApiKey);
 		}
 
-		internal async Task<Action<HttpClient>> HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse, NodeConnectionInfo nodeConnection)
+		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, NodeConnectionInfo nodeConnectionInfo)
 		{
-			throw new NotImplementedException();
+			if (nodeConnectionInfo.Username == null)
+				return;
+
+			var authHeaders = response.Headers.WwwAuthenticate.FirstOrDefault();
+			if (authHeaders == null || (authHeaders.ToString().Contains("NTLM") == false && authHeaders.ToString().Contains("Negotiate") == false))
+			{
+				// we are trying to do windows auth, but we didn't get the windows auth headers
+				throw new SecurityException(
+					"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
+					+ " but either wrong credentials where entered or the specified server does not support Windows authentication." +
+					Environment.NewLine +
+					"If you are running inside IIS, make sure to enable Windows authentication.");
+			}
 		}
 
-		internal SecuredAuthenticator GetAuthenticator(NodeConnectionInfo info)
+
+		internal Task<Action<HttpClient>> HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse, NodeConnectionInfo nodeConnection)
 		{
-			return _securedAuthenticatorCache.GetOrAdd(info.Name, _ => new SecuredAuthenticator());
+			if (nodeConnection.ApiKey == null)
+			{
+				AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, nodeConnection);
+				return null;
+			}
+
+			return null;
+		}
+
+		private void AssertForbiddenCredentialSupportWindowsAuth(HttpResponseMessage response, NodeConnectionInfo nodeConnection)
+		{
+			if (nodeConnection.ToOperationCredentials().Credentials == null)
+				return;
+
+			var requiredAuth = response.Headers.GetFirstValue("Raven-Required-Auth");
+			if (requiredAuth == "Windows")
+			{
+				// we are trying to do windows auth, but we didn't get the windows auth headers
+				throw new SecurityException(
+					"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
+					Environment.NewLine +
+					"If you are running inside IIS, make sure to enable Windows authentication.");
+			}
 		}
 
 		public async Task SendJoinServerAsync(NodeConnectionInfo nodeConnectionInfo)
@@ -115,7 +161,6 @@ namespace Raven.Database.Raft
 						throw await CreateErrorResponseExceptionAsync(response);
 				}
 			}
-			
 		}
 
 		public Task SendClusterConfigurationAsync(ClusterConfiguration configuration)
@@ -301,15 +346,77 @@ namespace Raven.Database.Raft
 
 		public async Task<Guid> GetDatabaseId(NodeConnectionInfo nodeConnectionInfo)
 		{
-			var response = await httpClient.GetAsync(nodeConnectionInfo.Uri + "/stats").ConfigureAwait(false);
-			if (!response.IsSuccessStatusCode)
-				throw new InvalidOperationException("Unable to fetch database statictics for: " + nodeConnectionInfo.Uri);
-
-			using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+			var url = nodeConnectionInfo.Uri + "/stats";
+			using (var request = CreateRequest(nodeConnectionInfo, url, "GET"))
 			{
-				var json = RavenJToken.TryLoad(responseStream);
-				var stats = json.JsonDeserialization<DatabaseStatistics>();
-				return stats.DatabaseId;
+				var response = await request.ExecuteAsync();
+				if (!response.IsSuccessStatusCode)
+					throw new InvalidOperationException("Unable to fetch database statictics for: " + nodeConnectionInfo.Uri);
+
+				using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+				{
+					var json = RavenJToken.TryLoad(responseStream);
+					var stats = json.JsonDeserialization<DatabaseStatistics>();
+					return stats.DatabaseId;
+				}
+			}
+		}
+
+		public void Dispose()
+		{
+			foreach (var q in _httpClientsCache.Select(x => x.Value))
+			{
+				HttpClient result;
+				while (q.TryDequeue(out result))
+				{
+					result.Dispose();
+				}
+			}
+			_httpClientsCache.Clear();
+
+			_securedAuthenticatorCache.Clear();
+		}
+
+		internal SecuredAuthenticator GetAuthenticator(NodeConnectionInfo info)
+		{
+			return _securedAuthenticatorCache.GetOrAdd(info.Name, _ => new SecuredAuthenticator());
+		}
+
+		internal ReturnToQueue GetConnection(NodeConnectionInfo nodeConnection, out HttpClient result)
+		{
+			var connectionQueue = _httpClientsCache.GetOrAdd(nodeConnection.Name, _ => new ConcurrentQueue<HttpClient>());
+
+			if (connectionQueue.TryDequeue(out result) == false)
+			{
+				var webRequestHandler = new WebRequestHandler
+				{
+					UseDefaultCredentials = nodeConnection.HasCredentials() == false,
+					Credentials = nodeConnection.ToOperationCredentials().Credentials
+				};
+
+				result = new HttpClient(webRequestHandler)
+				{
+					BaseAddress = nodeConnection.Uri
+				};
+			}
+
+			return new ReturnToQueue(result, connectionQueue);
+		}
+
+		internal struct ReturnToQueue : IDisposable
+		{
+			private readonly HttpClient client;
+			private readonly ConcurrentQueue<HttpClient> queue;
+
+			public ReturnToQueue(HttpClient client, ConcurrentQueue<HttpClient> queue)
+			{
+				this.client = client;
+				this.queue = queue;
+			}
+
+			public void Dispose()
+			{
+				queue.Enqueue(client);
 			}
 		}
 	}

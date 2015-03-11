@@ -19,11 +19,10 @@ namespace Rachis.Transport
 		internal readonly string Url;
 		internal readonly string Method;
 		private readonly Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection;
-		internal volatile HttpClient httpClient;
+		public HttpClient HttpClient { get; private set; }
 		private IDisposable returnToQueue;
 
 		private readonly NodeConnectionInfo nodeConnection;
-		private readonly Func<HttpMessageHandler> recreateHandler;
 		private bool isRequestSentToServer;
 
 		public Func<HttpResponseMessage, NodeConnectionInfo, Task<Action<HttpClient>>> UnauthorizedResponseAsyncHandler { get; set; }
@@ -37,24 +36,12 @@ namespace Rachis.Transport
 			this.getConnection = getConnection;
 			this.nodeConnection = nodeConnection;
 
-			/* TODO
-			if (factory.httpMessageHandler != null)
-				recreateHandler = () => factory.httpMessageHandler;
-			else
-			{
-				recreateHandler = () => new WebRequestHandler
-				{
-					UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
-					Credentials = _credentials != null ? _credentials.Credentials : null,
-				};
-			}*/
-
 			var connection = getConnection(nodeConnection);
 			returnToQueue = connection.Item1;
-			httpClient = connection.Item2;
+			HttpClient = connection.Item2;
 		}
 
-		private Task SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
+		private Task SendRequestInternal(Func<HttpRequestMessage> getRequestMessage)
 		{
 			if (isRequestSentToServer && Debugger.IsAttached == false)
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
@@ -63,7 +50,7 @@ namespace Rachis.Transport
 			return RunWithAuthRetry(async () =>
 			{
 				var requestMessage = getRequestMessage();
-				Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+				Response = await HttpClient.SendAsync(requestMessage).ConfigureAwait(false);
 
 				return CheckForAuthErrors();
 			});
@@ -150,7 +137,7 @@ namespace Rachis.Transport
 
 			DisposeInternal();
 
-			httpClient = newHttpClient;
+			HttpClient = newHttpClient;
 			returnToQueue = newReturnToQueue;
 			isRequestSentToServer = false;
 		}
@@ -170,12 +157,12 @@ namespace Rachis.Transport
 				Response = null;
 			}
 
-			if (httpClient != null)
+			if (HttpClient != null)
 			{
 				if (returnToQueue != null)
 					returnToQueue.Dispose();	
 
-				httpClient = null;
+				HttpClient = null;
 			}
 		}
 	}
