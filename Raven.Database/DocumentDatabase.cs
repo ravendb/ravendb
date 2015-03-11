@@ -93,6 +93,7 @@ namespace Raven.Database
 			TimerManager = new ResourceTimerManager();
 			DocumentLock = new PutSerialLock();
 			Name = configuration.DatabaseName;
+			ResourceName = Name;
 			Configuration = configuration;
 			transportState = recievedTransportState ?? new TransportState();
 			ExtensionsState = new AtomicDictionary<object>();
@@ -333,6 +334,8 @@ namespace Raven.Database
 		///     database
 		/// </summary>
 		public string Name { get; private set; }
+
+		public string ResourceName { get; private set; }
 
 		public NotificationActions Notifications { get; private set; }
 
