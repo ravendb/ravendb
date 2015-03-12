@@ -6,6 +6,7 @@
 using System;
 using System.ComponentModel.Composition;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.Plugins;
@@ -40,17 +41,35 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 					if (versioningConfiguration == null)
 						return;
 
-					foreach (var file in accessor.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue).Where(file => file != null))
-					{
-						if (versioningConfiguration.KeepRevisionsOnRename)
-						{
-							var revision = file.FullPath.Substring(file.FullPath.LastIndexOf("/", StringComparison.InvariantCulture) + 1);
+					var revisions = accessor.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue).Where(file => file != null).ToArray();
 
-							accessor.RenameFile(string.Format("{0}/revisions/{1}", name, revision), string.Format("{0}/revisions/{1}", renamed, revision), true);
+					for (int i = 0; i < revisions.Length; i++)
+					{
+						var file = revisions[i];
+
+						if (versioningConfiguration.ResetOnRename)
+						{
+							if (i == (revisions.Length - 1))
+							{
+								// reset file revision
+								metadata[VersioningUtil.RavenFileRevision] = RavenJToken.FromObject(1);
+								metadata.Remove(VersioningUtil.RavenFileParentRevision);
+								accessor.UpdateFileMetadata(renamed, metadata, null);
+
+								// rename last existing revision to [renamed]/revisions/1
+								var revision = file.Name;
+								accessor.RenameFile(string.Format("{0}/revisions/{1}", name, revision), string.Format("{0}/revisions/{1}", renamed, 1), true);
+							}
+							else
+							{
+								FileSystem.Files.IndicateFileToDelete(file.FullPath, null);
+							}
 						}
 						else
 						{
-							FileSystem.Files.IndicateFileToDelete(file.FullPath, null);// TODO arek the last revision needs to be renamed anyway
+							var revision = file.Name;
+
+							accessor.RenameFile(string.Format("{0}/revisions/{1}", name, revision), string.Format("{0}/revisions/{1}", renamed, revision), true);
 						}
 					}
 				});

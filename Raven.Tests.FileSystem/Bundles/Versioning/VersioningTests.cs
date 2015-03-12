@@ -4,14 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
-using Raven.Bundles.Versioning.Data;
 using Raven.Client.FileSystem.Bundles.Versioning;
 using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Bundles.Versioning;
@@ -36,7 +34,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 		{
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 10 });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 10 });
 
 				using (var session = store.OpenAsyncSession())
 				{
@@ -59,7 +57,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 10 });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 10 });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -87,7 +85,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 3 });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 3 });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -118,7 +116,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, PurgeOnDelete = false });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, PurgeOnDelete = false });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -158,7 +156,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, PurgeOnDelete = true });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, PurgeOnDelete = true });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -192,7 +190,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -222,7 +220,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: configuration => configuration.Settings[Constants.FileSystem.Versioning.ChangesToRevisionsAllowed] = "true"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -248,7 +246,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -271,7 +269,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName1, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName1, StringToStream(Content2));
@@ -311,7 +309,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -336,7 +334,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, Exclude = true });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, Exclude = true });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -362,7 +360,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, ExcludeUnlessExplicit = true });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, ExcludeUnlessExplicit = true });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
@@ -388,7 +386,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, ExcludeUnlessExplicit = true });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, ExcludeUnlessExplicit = true });
 
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1), new RavenJObject { { Constants.RavenCreateVersion, true } });
 				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2), new RavenJObject { { Constants.RavenCreateVersion, true } });
@@ -412,7 +410,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 		{
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync("file.txt", StringToStream(Content1));
 
@@ -436,7 +434,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 		{
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: configuration => configuration.Settings[Constants.FileSystem.Versioning.ChangesToRevisionsAllowed] = "true"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync("file.txt", StringToStream(Content1));
 
@@ -458,7 +456,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 		{
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync("file.txt", StringToStream(Content1));
 
@@ -484,7 +482,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 		{
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: configuration => configuration.Settings[Constants.FileSystem.Versioning.ChangesToRevisionsAllowed] = "true"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync("file.txt", StringToStream(Content1));
 
@@ -510,7 +508,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
 				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content2));
@@ -552,28 +550,85 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content1));
 				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content3));
 
 				using (var session = store.OpenAsyncSession())
 				{
 					var revisions = await session.GetRevisionNamesForAsync(fileName, 0, 100);
-					Assert.Equal(2, revisions.Length);
+					Assert.Equal(3, revisions.Length);
 				}
 
 				await store.AsyncFilesCommands.RenameAsync(fileName, newFileName);
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var revisions = await session.GetRevisionNamesForAsync(fileName, 0, 100);
+					var revisions = await session.GetRevisionNamesForAsync(newFileName, 0, 100);
 					Assert.Equal(1, revisions.Length);
 
-					//TODO arek
-					//var revisionFile = await session.LoadFileAsync(revisions[2]);
+					var revisionFile = await session.LoadFileAsync(revisions[0]);
 
-					//Assert.Equal("Data", revisionFile.Metadata.Value<string>("New"));
+					var stream = await store.AsyncFilesCommands.DownloadAsync(revisionFile.FullPath);
+					Assert.NotNull(stream);
+					Assert.Equal(Content3, StreamToString(stream));
+				}
 
-					//var stream = await store.AsyncFilesCommands.DownloadAsync(revisionFile.FullPath);
-					//Assert.NotNull(stream);
-					//Assert.Equal(Content2, StreamToString(stream));
+				// make sure that versioning keep working
+				await store.AsyncFilesCommands.UploadAsync(newFileName, StringToStream(Content4));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(newFileName, 0, 100);
+					Assert.Equal(2, revisions.Length);
+				}
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task ShouldRenameAllRevisions(string requestedStorage)
+		{
+			const string fileName = "file1.txt";
+			const string newFileName = "file2.txt";
+
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, ResetOnRename = false });
+
+				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content3));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(fileName, 0, 100);
+					Assert.Equal(3, revisions.Length);
+				}
+
+				await store.AsyncFilesCommands.RenameAsync(fileName, newFileName);
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(newFileName, 0, 100);
+					Assert.Equal(3, revisions.Length);
+
+					var revisionFile = await session.LoadFileAsync(revisions[2]);
+
+					var stream = await store.AsyncFilesCommands.DownloadAsync(revisionFile.FullPath);
+					Assert.NotNull(stream);
+					Assert.Equal(Content3, StreamToString(stream));
+				}
+
+				// make sure that versioning keep working
+				await store.AsyncFilesCommands.UploadAsync(newFileName, StringToStream(Content4));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(newFileName, 0, 100);
+					Assert.Equal(4, revisions.Length);
+
+					var stream = await store.AsyncFilesCommands.DownloadAsync(revisions[3]);
+					Assert.NotNull(stream);
+					Assert.Equal(Content4, StreamToString(stream));
 				}
 			}
 		}

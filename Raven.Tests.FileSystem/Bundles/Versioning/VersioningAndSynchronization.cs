@@ -5,8 +5,8 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using Raven.Abstractions.FileSystem;
-using Raven.Bundles.Versioning.Data;
 using Raven.Client.FileSystem.Bundles.Versioning;
+using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Bundles.Versioning;
 using Raven.Json.Linq;
@@ -27,7 +27,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 			{
 				const int maxRevisions = 2;
 
-				await destination.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration
+				await destination.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration
 				{
 					Id = VersioningUtil.DefaultConfigurationName,
 					MaxRevisions = maxRevisions
@@ -98,7 +98,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 			{
 				const int maxRevisions = 2;
 
-				await destination.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration
+				await destination.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration
 				{
 					Id = VersioningUtil.DefaultConfigurationName,
 					MaxRevisions = maxRevisions

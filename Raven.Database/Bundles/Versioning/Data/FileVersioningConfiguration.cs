@@ -25,16 +25,21 @@ namespace Raven.Database.Bundles.Versioning.Data
 		/// </summary>
 		public bool ExcludeUnlessExplicit { get; set; }
 
+		/// <summary>
+		/// Determines whether existing revisions should be deleted together with a related file. Default: false
+		/// </summary>
 		public bool PurgeOnDelete { get; set; }
 
 		/// <summary>
-		/// It determines if existing revisions should be kept after a file rename. Default: false means that existing revisions will be deleted after the rename operation.
+		/// Determines if versioning should be reset on file rename. Default: 'true', means that the last existing revision will become first revision while
+		/// the other ones will be deleted. If you set this option to 'false' then revisions will be renamed according to the new name of the related file.
 		/// </summary>
-		public bool KeepRevisionsOnRename { get; set; }
+		public bool ResetOnRename { get; set; }
 
 		public FileVersioningConfiguration()
 		{
 			MaxRevisions = int.MaxValue;
+			ResetOnRename = true;
 		} 
 	}
 }
