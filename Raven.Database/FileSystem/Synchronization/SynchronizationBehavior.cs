@@ -4,12 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization.Multipart;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 
@@ -38,7 +41,9 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		public string Rename { get; set; }
 
-		public SynchronizationReport Execute()
+		public HttpContent MultipartContent { get; set; }
+
+		public async Task<SynchronizationReport> Execute()
 		{
 			var report = new SynchronizationReport(fileName, sourceFileEtag, type);
 			
@@ -48,7 +53,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
 				NotifyStart();
 
-				Cleanup();
+				Prepare();
 
 				var localMetadata = fs.Synchronizations.GetLocalMetadata(fileName);
 
@@ -62,6 +67,12 @@ namespace Raven.Database.FileSystem.Synchronization
 						break;
 					case SynchronizationType.Rename:
 						ExecuteRename(Rename);
+						break;
+					case SynchronizationType.MetadataUpdate:
+						ExecuteMetadataUpdate();
+						break;
+					case SynchronizationType.ContentUpdate:
+						await ExecuteContentUpdate(localMetadata, report);
 						break;
 					default:
 						throw new ArgumentOutOfRangeException("type", type.ToString());
@@ -95,31 +106,14 @@ namespace Raven.Database.FileSystem.Synchronization
 			return report;
 		}
 
-		private void ExecuteRename(string rename)
-		{
-			fs.Files.ExecuteRenameOperation(new RenameFileOperation
-			{
-				FileSystem = fs.Name,
-				Name = fileName,
-				Rename = rename,
-				MetadataAfterOperation = metadata.DropRenameMarkers()
-			});
-		}
-
 		private void AssertOperationAndLockFile()
 		{
 			fs.Storage.Batch(accessor =>
 			{
 				fs.Synchronizations.AssertFileIsNotBeingSynced(fileName);
 
-				//switch (type)
-				//{TODO arek
-				//	case SynchronizationType.Delete:
-				//		fs.Files.AssertDeleteOperationNotVetoed(fileName);
-				//		break;
-				//	default:
-				//		throw new ArgumentOutOfRangeException("type", type.ToString());
-				//}
+				if (type == SynchronizationType.ContentUpdate)
+					fs.Files.AssertPutOperationNotVetoed(fileName, metadata);
 
 				fs.FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceFs, accessor);
 			});
@@ -155,7 +149,7 @@ namespace Raven.Database.FileSystem.Synchronization
 			});
 		}
 
-		private void Cleanup()
+		private void Prepare()
 		{
 			fs.Storage.Batch(accessor =>
 			{
@@ -237,26 +231,84 @@ namespace Raven.Database.FileSystem.Synchronization
 			fs.Storage.Batch(accessor =>
 			{
 				fs.Files.IndicateFileToDelete(fileName, null);
-
-				var tombstoneMetadata = new RavenJObject
-                                                    {
-                                                        {
-                                                            SynchronizationConstants.RavenSynchronizationHistory,
-                                                            localMetadata[SynchronizationConstants.RavenSynchronizationHistory]
-                                                        },
-                                                        {
-                                                            SynchronizationConstants.RavenSynchronizationVersion,
-                                                            localMetadata[SynchronizationConstants.RavenSynchronizationVersion]
-                                                        },
-                                                        {
-                                                            SynchronizationConstants.RavenSynchronizationSource,
-                                                            localMetadata[SynchronizationConstants.RavenSynchronizationSource]
-                                                        }
-                                                    }.WithDeleteMarker();
-
-				fs.Historian.UpdateLastModified(tombstoneMetadata);
-				accessor.PutFile(fileName, 0, tombstoneMetadata, true);
+				fs.Files.PutTombstone(fileName, localMetadata);
 			});
+		}
+
+		private void ExecuteMetadataUpdate()
+		{
+			fs.Files.UpdateMetadata(fileName, metadata, null);
+		}
+
+		private void ExecuteRename(string rename)
+		{
+			fs.Files.ExecuteRenameOperation(new RenameFileOperation
+			{
+				FileSystem = fs.Name,
+				Name = fileName,
+				Rename = rename,
+				MetadataAfterOperation = metadata.DropRenameMarkers()
+			});
+		}
+
+		private async Task ExecuteContentUpdate(RavenJObject localMetadata, SynchronizationReport report)
+		{
+			var tempFileName = RavenFileNameHelper.DownloadingFileName(fileName);
+
+			fs.PutTriggers.Apply(trigger => trigger.BeforeSynchronization(fileName, metadata)); // TODO arek - maybe could be moved to a separate kind of synchronization triggers
+
+			using (var localFile = localMetadata != null ? StorageStream.Reading(fs.Storage, fileName) : null)
+			{
+				fs.PutTriggers.Apply(trigger => trigger.OnPut(tempFileName, metadata));
+
+				fs.Historian.UpdateLastModified(metadata);
+
+				var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWriting(fs, tempFileName, metadata);
+
+				fs.PutTriggers.Apply(trigger => trigger.AfterPut(tempFileName, null, metadata));
+
+				var provider = new MultipartSyncStreamProvider(synchronizingFile, localFile);
+
+				Log.Debug("Starting to process/read multipart content of a file '{0}'", fileName);
+
+				await MultipartContent.ReadAsMultipartAsync(provider);
+
+				Log.Debug("Multipart content of a file '{0}' was processed/read", fileName);
+
+				report.BytesCopied = provider.BytesCopied;
+				report.BytesTransfered = provider.BytesTransfered;
+				report.NeedListLength = provider.NumberOfFileParts;
+
+				synchronizingFile.PreventUploadComplete = false;
+				synchronizingFile.Flush();
+				synchronizingFile.Dispose();
+				metadata["Content-MD5"] = synchronizingFile.FileHash;
+
+				MetadataUpdateResult updateResult = null;
+				fs.Storage.Batch(accessor => updateResult = accessor.UpdateFileMetadata(tempFileName, metadata, null));
+
+				fs.Storage.Batch(accessor =>
+				{
+					using (fs.DisableAllTriggersForCurrentThread())
+					{
+						fs.Files.IndicateFileToDelete(fileName, null);
+					}
+
+					fs.PutTriggers.Apply(trigger => trigger.AfterSynchronization(fileName, tempFileName, metadata));
+
+					accessor.RenameFile(tempFileName, fileName);
+
+					fs.Search.Delete(tempFileName);
+					fs.Search.Index(fileName, metadata, updateResult.Etag);
+				});
+
+				if (localFile == null)
+					Log.Debug("Temporary downloading file '{0}' was renamed to '{1}'. Indexes were updated.", tempFileName, fileName);
+				else
+					Log.Debug("Old file '{0}' was deleted. Indexes were updated.", fileName);
+
+				fs.Publisher.Publish(new FileChangeNotification { File = fileName, Action = localFile == null ? FileChangeAction.Add : FileChangeAction.Update });
+			}
 		}
 
 		private static bool ShouldAddExceptionToReport(Exception ex)

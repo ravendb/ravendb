@@ -178,7 +178,7 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
-		internal void AssertMetadataUpdateOperationNotVetoed(string name, RavenJObject metadata)
+		private void AssertMetadataUpdateOperationNotVetoed(string name, RavenJObject metadata)
 		{
 			var vetoResult = FileSystem.MetadataUpdateTriggers
 				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowUpdate(name, metadata) })
@@ -255,6 +255,16 @@ namespace Raven.Database.FileSystem.Actions
 			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 		}
 
+		public void UpdateMetadataFromController(string name, RavenJObject metadata, Etag etag) // TODO arek
+		{
+			FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
+
+			Historian.Update(name, metadata);
+			UpdateMetadata(name, metadata, etag);
+
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+		}
+
 		public void UpdateMetadata(string name, RavenJObject metadata, Etag etag)
 		{
 			MetadataUpdateResult updateMetadata = null;
@@ -262,11 +272,9 @@ namespace Raven.Database.FileSystem.Actions
 			Storage.Batch(accessor =>
 			{
 				AssertMetadataUpdateOperationNotVetoed(name, metadata);
-				FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
 
 				Historian.UpdateLastModified(metadata);
-				Historian.Update(name, metadata);
-
+				
 				FileSystem.MetadataUpdateTriggers.Apply(trigger => trigger.OnUpdate(name, metadata));
 
 				updateMetadata = accessor.UpdateFileMetadata(name, metadata, etag);
@@ -281,8 +289,6 @@ namespace Raven.Database.FileSystem.Actions
 				File = name,
 				Action = FileChangeAction.Update
 			});
-
-			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 
 			Log.Debug("Metadata of a file '{0}' was updated", name);
 		}
@@ -419,6 +425,31 @@ namespace Raven.Database.FileSystem.Actions
 				Search.Delete(fileName);
 				Search.Delete(deletingFileName);
 			}
+		}
+
+		public void PutTombstone(string fileName, RavenJObject metadata)
+		{
+			Storage.Batch(accessor =>
+			{
+				var tombstoneMetadata = new RavenJObject
+				{
+					{
+						SynchronizationConstants.RavenSynchronizationHistory,
+						metadata[SynchronizationConstants.RavenSynchronizationHistory]
+					},
+					{
+						SynchronizationConstants.RavenSynchronizationVersion,
+						metadata[SynchronizationConstants.RavenSynchronizationVersion]
+					},
+					{
+						SynchronizationConstants.RavenSynchronizationSource,
+						metadata[SynchronizationConstants.RavenSynchronizationSource]
+					}
+				}.WithDeleteMarker();
+
+				Historian.UpdateLastModified(tombstoneMetadata);
+				accessor.PutFile(fileName, 0, tombstoneMetadata, true);
+			});
 		}
 
 		public Task CleanupDeletedFilesAsync()

@@ -162,38 +162,20 @@ namespace Raven.Database.FileSystem.Controllers
 
 				var metadata = fileAndPages.Metadata;
 
-				if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
-				{
+				if(metadata == null)
 					throw new FileNotFoundException();
-				}
+
+				if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+					throw new FileNotFoundException();
 
 				Files.IndicateFileToDelete(name, GetEtag());
 
-				if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
-					// don't create a tombstone for .downloading file
-					metadata != null) // and if file didn't exist
+				if (!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix)) // don't create a tombstone for .downloading file
 				{
-					var tombstoneMetadata = new RavenJObject
-					{
-						{
-							SynchronizationConstants.RavenSynchronizationHistory, metadata[SynchronizationConstants.RavenSynchronizationHistory]
-						},
-						{
-							SynchronizationConstants.RavenSynchronizationVersion, metadata[SynchronizationConstants.RavenSynchronizationVersion]
-						},
-						{
-							SynchronizationConstants.RavenSynchronizationSource, metadata[SynchronizationConstants.RavenSynchronizationSource]
-						}
-					}.WithDeleteMarker();
-
-					Historian.UpdateLastModified(tombstoneMetadata);
-
-					accessor.PutFile(name, 0, tombstoneMetadata, true);
+					Files.PutTombstone(name, metadata);
 					accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name)); // delete conflict item too
 				}
-				});
-
-			
+			});
 
 			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 
@@ -233,7 +215,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
-			Files.UpdateMetadata(name, metadata, GetEtag());
+			Files.UpdateMetadataFromController(name, metadata, GetEtag());
 
 			//Hack needed by jquery on the client side. We need to find a better solution for this
             return GetEmptyMessage(HttpStatusCode.NoContent);

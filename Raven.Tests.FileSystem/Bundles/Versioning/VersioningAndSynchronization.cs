@@ -34,7 +34,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 				});
 
 				await source.AsyncFilesCommands.UploadAsync("file.txt", CreateUniformFileStream(1024));
-				await source.AsyncFilesCommands.Synchronization.StartAsync("file.txt", destination.AsyncFilesCommands);
+				var synchronizationReport = await source.AsyncFilesCommands.Synchronization.StartAsync("file.txt", destination.AsyncFilesCommands);
 
 				using (var dstSession = destination.OpenAsyncSession())
 				{
