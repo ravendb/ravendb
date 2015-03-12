@@ -83,13 +83,13 @@ namespace Raven.Database.FileSystem.Actions
 
 				Historian.Update(name, metadata);
 
-				SynchronizationTask.Cancel(name);
-
 				long? size = -1;
 				Storage.Batch(accessor =>
 				{
-					AssertPutOperationNotVetoed(name, metadata);
 					FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
+					AssertPutOperationNotVetoed(name, metadata);
+
+					SynchronizationTask.Cancel(name);
 
 					var contentLength = options.ContentLength;
 					var contentSize = options.ContentSize;
@@ -152,8 +152,6 @@ namespace Raven.Database.FileSystem.Actions
 					Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = name });
 
 					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
-
-					FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 				}
 			}
 			catch (Exception ex)
@@ -209,60 +207,6 @@ namespace Raven.Database.FileSystem.Actions
 			{
 				throw new OperationVetoedException("DELETE vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
 			}
-		}
-
-		public void Rename(string name, string rename, Etag etag)
-		{
-			Storage.Batch(accessor =>
-			{
-				FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
-
-				var existingFile = accessor.ReadFile(name);
-				if (existingFile == null || existingFile.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
-					throw new FileNotFoundException();
-
-				var renamingFile = accessor.ReadFile(rename);
-				if (renamingFile != null && renamingFile.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker) == false)
-					throw new InvalidOperationException("Cannot rename because file " + rename + " already exists");
-
-				var metadata = existingFile.Metadata;
-
-				if (etag != null && existingFile.Etag != etag)
-					throw new ConcurrencyException("Operation attempted on file '" + name + "' using a non current etag")
-					{
-						ActualETag = existingFile.Etag,
-						ExpectedETag = etag
-					};
-				
-				Historian.UpdateLastModified(metadata);
-
-				var operation = new RenameFileOperation
-				{
-					FileSystem = FileSystem.Name,
-					Name = name,
-					Rename = rename,
-					MetadataAfterOperation = metadata
-				};
-
-				accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
-				accessor.PulseTransaction(); // commit rename operation config
-
-				ExecuteRenameOperation(operation);
-			});
-
-			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
-
-			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
-		}
-
-		public void UpdateMetadataFromController(string name, RavenJObject metadata, Etag etag) // TODO arek
-		{
-			FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
-
-			Historian.Update(name, metadata);
-			UpdateMetadata(name, metadata, etag);
-
-			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 		}
 
 		public void UpdateMetadata(string name, RavenJObject metadata, Etag etag)

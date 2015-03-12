@@ -2,17 +2,16 @@
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Storage.Exceptions;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Plugins;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
-using Raven.Json.Linq;
 
 using System;
 using System.Collections.Generic;
@@ -214,8 +213,17 @@ namespace Raven.Database.FileSystem.Controllers
             name = FileHeader.Canonize(name);
 
             var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
+			var etag = GetEtag();
 
-			Files.UpdateMetadataFromController(name, metadata, GetEtag());
+			Storage.Batch(accessor =>
+			{
+				Synchronizations.AssertFileIsNotBeingSynced(name);
+
+				Historian.Update(name, metadata);
+				Files.UpdateMetadata(name, metadata, etag);
+
+				Synchronizations.StartSynchronizeDestinationsInBackground();
+			});
 
 			//Hack needed by jquery on the client side. We need to find a better solution for this
             return GetEmptyMessage(HttpStatusCode.NoContent);
@@ -227,8 +235,48 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             name = FileHeader.Canonize(name);
             rename = FileHeader.Canonize(rename);
+		    var etag = GetEtag();
 
-			Files.Rename(name, rename, GetEtag());
+			Storage.Batch(accessor =>
+			{
+				FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
+
+				var existingFile = accessor.ReadFile(name);
+				if (existingFile == null || existingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker))
+					throw new FileNotFoundException();
+
+				var renamingFile = accessor.ReadFile(rename);
+				if (renamingFile != null && renamingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker) == false)
+					throw new FileExistsException("Cannot rename because file " + rename + " already exists");
+
+				var metadata = existingFile.Metadata;
+
+				if (etag != null && existingFile.Etag != etag)
+					throw new ConcurrencyException("Operation attempted on file '" + name + "' using a non current etag")
+					{
+						ActualETag = existingFile.Etag,
+						ExpectedETag = etag
+					};
+
+				Historian.UpdateLastModified(metadata);
+
+				var operation = new RenameFileOperation
+				{
+					FileSystem = FileSystem.Name,
+					Name = name,
+					Rename = rename,
+					MetadataAfterOperation = metadata
+				};
+
+				accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
+				accessor.PulseTransaction(); // commit rename operation config
+
+				Files.ExecuteRenameOperation(operation);
+			});
+
+			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
+
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -259,6 +307,8 @@ namespace Raven.Database.FileSystem.Controllers
 			options.TransferEncodingChunked = Request.Headers.TransferEncodingChunked ?? false;
 
 			await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
+
+			Synchronizations.StartSynchronizeDestinationsInBackground();
 
 			return GetEmptyMessage(HttpStatusCode.Created);
 		}
