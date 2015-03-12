@@ -245,8 +245,10 @@
     <Compile Include="FileSystem\Actions\SynchronizationActions.cs" />
     <Compile Include="FileSystem\Actions\TaskActions.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningRenameTrigger.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningSynchronizationTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningTriggerActions.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileRenameTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\AbstractSynchronizationTrigger.cs" />
     <Compile Include="FileSystem\Plugins\Builtins\HideDeletingFilesTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />

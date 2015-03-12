@@ -60,6 +60,10 @@ namespace Raven.Database.FileSystem.Synchronization
 				bool conflictResolved;
 				AssertConflictDetection(localMetadata, out conflictResolved);
 
+				fs.SynchronizationTriggers.Apply(trigger => trigger.BeforeSynchronization(fileName, metadata, type));
+
+				dynamic afterSynchronizationTriggerData = null;
+
 				switch (type)
 				{
 					case SynchronizationType.Delete:
@@ -73,10 +77,18 @@ namespace Raven.Database.FileSystem.Synchronization
 						break;
 					case SynchronizationType.ContentUpdate:
 						await ExecuteContentUpdate(localMetadata, report);
+						
+						afterSynchronizationTriggerData = new
+						{
+							TempFileName = RavenFileNameHelper.DownloadingFileName(fileName)
+						};
 						break;
 					default:
 						throw new ArgumentOutOfRangeException("type", type.ToString());
 				}
+
+
+				fs.SynchronizationTriggers.Apply(trigger => trigger.AfterSynchronization(fileName, metadata, type, afterSynchronizationTriggerData));
 
 				if (conflictResolved)
 				{
@@ -255,8 +267,6 @@ namespace Raven.Database.FileSystem.Synchronization
 		{
 			var tempFileName = RavenFileNameHelper.DownloadingFileName(fileName);
 
-			fs.PutTriggers.Apply(trigger => trigger.BeforeSynchronization(fileName, metadata)); // TODO arek - maybe could be moved to a separate kind of synchronization triggers
-
 			using (var localFile = localMetadata != null ? StorageStream.Reading(fs.Storage, fileName) : null)
 			{
 				fs.PutTriggers.Apply(trigger => trigger.OnPut(tempFileName, metadata));
@@ -293,8 +303,6 @@ namespace Raven.Database.FileSystem.Synchronization
 					{
 						fs.Files.IndicateFileToDelete(fileName, null);
 					}
-
-					fs.PutTriggers.Apply(trigger => trigger.AfterSynchronization(fileName, tempFileName, metadata));
 
 					accessor.RenameFile(tempFileName, fileName);
 

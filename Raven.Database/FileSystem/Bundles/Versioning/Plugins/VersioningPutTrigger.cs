@@ -73,39 +73,6 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 
 				accessor.UpdateFileMetadata(fileName, currentMetadata, null);
 			});
-		}
-
-		public override void BeforeSynchronization(string name, RavenJObject metadata)
-		{
-			FileSystem.Storage.Batch(accessor =>
-			{
-				FileVersioningConfiguration versioningConfiguration;
-				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
-					return;
-
-				var revision = actions.GetNextRevisionNumber(name, accessor);
-
-				metadata.__ExternalState["Synchronization-Next-Revision"] = revision;
-			});
-		}
-
-		public override void AfterSynchronization(string name, string tempFile, RavenJObject metadata)
-		{
-			FileSystem.Storage.Batch(accessor =>
-			{
-				FileVersioningConfiguration versioningConfiguration;
-				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
-					return;
-
-				var revision = (long) metadata.__ExternalState["Synchronization-Next-Revision"];
-
-				var tempFileRevision = string.Format("{0}/revisions/{1}", tempFile, revision);
-				var fileRevision = string.Format("{0}/revisions/{1}", name, revision);
-
-				accessor.RenameFile(tempFileRevision, fileRevision, true);
-
-				actions.RemoveOldRevisions(name, revision, versioningConfiguration);
-			});
-		}		
+		}	
 	}
 }
