@@ -9,6 +9,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 
@@ -35,10 +36,12 @@ namespace Raven.Database.FileSystem.Synchronization
 			this.fs = fs;
 		}
 
+		public string Rename { get; set; }
+
 		public SynchronizationReport Execute()
 		{
 			var report = new SynchronizationReport(fileName, sourceFileEtag, type);
-
+			
 			try
 			{
 				AssertOperationAndLockFile();
@@ -49,16 +52,30 @@ namespace Raven.Database.FileSystem.Synchronization
 
 				var localMetadata = fs.Synchronizations.GetLocalMetadata(fileName);
 
-				bool isConflictResolved;
-				AssertConflictDetection(localMetadata, out isConflictResolved);
+				bool conflictResolved;
+				AssertConflictDetection(localMetadata, out conflictResolved);
 
 				switch (type)
 				{
 					case SynchronizationType.Delete:
 						ExecuteDelete(localMetadata);
 						break;
+					case SynchronizationType.Rename:
+						ExecuteRename(Rename);
+						break;
 					default:
 						throw new ArgumentOutOfRangeException("type", type.ToString());
+				}
+
+				if (conflictResolved)
+				{
+					fs.ConflictArtifactManager.Delete(fileName);
+
+					fs.Publisher.Publish(new ConflictNotification
+					{
+						FileName = fileName,
+						Status = ConflictStatus.Resolved
+					});
 				}
 			}
 			catch (Exception ex)
@@ -76,6 +93,17 @@ namespace Raven.Database.FileSystem.Synchronization
 			NotifyEnd();
 
 			return report;
+		}
+
+		private void ExecuteRename(string rename)
+		{
+			fs.Files.ExecuteRenameOperation(new RenameFileOperation
+			{
+				FileSystem = fs.Name,
+				Name = fileName,
+				Rename = rename,
+				MetadataAfterOperation = metadata.DropRenameMarkers()
+			});
 		}
 
 		private void AssertOperationAndLockFile()

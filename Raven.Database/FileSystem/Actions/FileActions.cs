@@ -189,7 +189,7 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
-		internal void AssertRenameOperationNotVetoed(string name, string newName)
+		private void AssertRenameOperationNotVetoed(string name, string newName)
 		{
 			var vetoResult = FileSystem.RenameTriggers
 				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowRename(name, newName) })
@@ -216,7 +216,6 @@ namespace Raven.Database.FileSystem.Actions
 			Storage.Batch(accessor =>
 			{
 				FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
-				AssertRenameOperationNotVetoed(name, rename);
 
 				var existingFile = accessor.ReadFile(name);
 				if (existingFile == null || existingFile.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
@@ -248,11 +247,7 @@ namespace Raven.Database.FileSystem.Actions
 				accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
 				accessor.PulseTransaction(); // commit rename operation config
 
-				FileSystem.RenameTriggers.Apply(trigger => trigger.OnRename(name, metadata));
-
 				ExecuteRenameOperation(operation);
-
-				FileSystem.RenameTriggers.Apply(trigger => trigger.AfterRename(name, rename, metadata));
 			});
 
 			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
@@ -295,14 +290,13 @@ namespace Raven.Database.FileSystem.Actions
 		public void ExecuteRenameOperation(RenameFileOperation operation)
 		{
 			var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
-			Publisher.Publish(new FileChangeNotification
-			{
-				File = operation.Name,
-				Action = FileChangeAction.Renaming
-			});
 
 			Storage.Batch(accessor =>
 			{
+				AssertRenameOperationNotVetoed(operation.Name, operation.Rename);
+
+				Publisher.Publish(new FileChangeNotification { File = operation.Name, Action = FileChangeAction.Renaming });
+
 				var previousRenameTombstone = accessor.ReadFile(operation.Rename);
 
 				if (previousRenameTombstone != null &&
@@ -312,8 +306,12 @@ namespace Raven.Database.FileSystem.Actions
 					accessor.Delete(previousRenameTombstone.FullPath);
 				}
 
+				FileSystem.RenameTriggers.Apply(trigger => trigger.OnRename(operation.Name, operation.MetadataAfterOperation));
+
 				accessor.RenameFile(operation.Name, operation.Rename, true);
 				accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation, null);
+
+				FileSystem.RenameTriggers.Apply(trigger => trigger.AfterRename(operation.Name, operation.Rename, operation.MetadataAfterOperation));
 
 				// copy renaming file metadata and set special markers
 				var tombstoneMetadata = new RavenJObject(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
@@ -327,11 +325,7 @@ namespace Raven.Database.FileSystem.Actions
 			});
 
 			Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
-			Publisher.Publish(new FileChangeNotification
-			{
-				File = operation.Rename,
-				Action = FileChangeAction.Renamed
-			});
+			Publisher.Publish(new FileChangeNotification { File = operation.Rename, Action = FileChangeAction.Renamed });
 		}
 
 		public void IndicateFileToDelete(string fileName, Etag etag)

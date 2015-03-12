@@ -381,79 +381,20 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/synchronization/Rename")]
         public HttpResponseMessage Rename(string fileName, string rename)
 		{
-            bool isConflictResolved = false;
-
             fileName = FileHeader.Canonize(fileName);
             rename = FileHeader.Canonize(rename);
 
 			var sourceInfo = GetSourceFileSystemInfo();
-			var sourceFileETag = GetEtag();
+			var sourceFileEtag = GetEtag();
             var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,
-					  rename, sourceFileETag, sourceInfo);
+					  rename, sourceFileEtag, sourceInfo);
 
-            var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.Rename);
-
-			try
+			var report = new SynchronizationBehavior(fileName, sourceFileEtag, sourceMetadata, sourceInfo, SynchronizationType.Rename, FileSystem)
 			{
-				Storage.Batch(accessor =>
-				{
-					Synchronizations.AssertFileIsNotBeingSynced(fileName);
-					Files.AssertRenameOperationNotVetoed(fileName, rename);
-                    FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceInfo, accessor);
-				});
-
-                SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceInfo, sourceFileETag, SynchronizationType.Rename);
-
-                Synchronizations.PublishSynchronizationNotification(fileName, sourceInfo, report.Type, SynchronizationAction.Start);
-
-                Storage.Batch(accessor => StartupProceed(fileName, accessor));
-
-				var localMetadata = Synchronizations.GetLocalMetadata(fileName);
-
-                AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceInfo, out isConflictResolved);
-                
-				if (isConflictResolved)
-                {
-                    ConflictArtifactManager.Delete(fileName); 
-                }
-
-				FileSystem.RenameTriggers.Apply(trigger => trigger.OnRename(fileName, sourceMetadata));
-
-                Files.ExecuteRenameOperation(new RenameFileOperation
-                {
-	                FileSystem = FileSystem.Name,
-	                Name = fileName,
-	                Rename = rename,
-	                MetadataAfterOperation = sourceMetadata.DropRenameMarkers()
-                });
-
-				FileSystem.RenameTriggers.Apply(trigger => trigger.AfterRename(fileName, rename, sourceMetadata));
-			}
-			catch (Exception ex)
-			{
-				if (ShouldAddExceptionToReport(ex))
-				{
-					report.Exception = ex;
-					Log.WarnException(string.Format("Error was occurred during renaming synchronization of file '{0}' from {1}", fileName, sourceInfo), ex);
-				}
-			}
-			finally
-			{
-				Synchronizations.FinishSynchronization(fileName, report, sourceInfo, sourceFileETag);               
-			}
-
-            Synchronizations.PublishSynchronizationNotification(fileName, sourceInfo, report.Type, SynchronizationAction.Finish);
-
-            if (isConflictResolved)
-            {
-                Publisher.Publish(new ConflictNotification
-                {
-                    FileName = fileName,
-                    Status = ConflictStatus.Resolved
-                });
-            }
+				Rename = rename
+			}.Execute();
 
 			if (report.Exception == null)
 				Log.Debug("File '{0}' was renamed to '{1}' during synchronization from {2}", fileName, rename, sourceInfo);
