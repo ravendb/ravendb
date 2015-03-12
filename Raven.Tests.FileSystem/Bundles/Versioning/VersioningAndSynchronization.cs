@@ -3,9 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Bundles.Versioning;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Bundles.Versioning;
@@ -297,6 +299,41 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 				using (var dstSession = destination.OpenAsyncSession())
 				{
 					var revisions = await dstSession.GetRevisionNamesForAsync("renamed.txt", 0, 128);
+
+					Assert.Equal(0, revisions.Length);
+				}
+			}
+		}
+
+		[Fact]
+		public async Task RevisionsShouldNotBeSynchronized()
+		{
+			using (var source = NewStore(activeBundles: "Versioning"))
+			using (var destination = NewStore(1))
+			{
+				const int maxRevisions = 2;
+
+				await source.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration
+				{
+					Id = VersioningUtil.DefaultConfigurationName,
+					MaxRevisions = maxRevisions
+				});
+
+				await source.AsyncFilesCommands.UploadAsync("test.txt", StringToStream("abc"));
+				await source.AsyncFilesCommands.UploadAsync("test.txt", StringToStream("def"));
+
+				await source.AsyncFilesCommands.Synchronization.SetDestinationsAsync(destination.AsyncFilesCommands.ToSynchronizationDestination());
+
+				var results = await source.AsyncFilesCommands.Synchronization.SynchronizeAsync(true);
+			
+				Assert.Equal(1, results.Length);
+				Assert.Equal(1, results[0].Reports.Count());
+
+				using (var dstSession = destination.OpenAsyncSession())
+				{
+					Assert.NotNull(await dstSession.LoadFileAsync("test.txt"));
+
+					var revisions = await dstSession.GetRevisionNamesForAsync("test.txt", 0, 128);
 
 					Assert.Equal(0, revisions.Length);
 				}
