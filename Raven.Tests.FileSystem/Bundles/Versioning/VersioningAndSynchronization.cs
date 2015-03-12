@@ -167,5 +167,96 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 				}
 			}
 		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task RenameSynchronizationShouldRemoveRevisionsByDefault(string requestedStorage)
+		{
+			using (var source = NewStore())
+			using (var destination = NewStore(1, requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await destination.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration
+				{
+					Id = VersioningUtil.DefaultConfigurationName,
+				});
+
+				await source.AsyncFilesCommands.UploadAsync("file.txt", CreateUniformFileStream(1024));
+				await source.AsyncFilesCommands.Synchronization.StartAsync("file.txt", destination.AsyncFilesCommands);
+
+				using (var dstSession = destination.OpenAsyncSession())
+				{
+					var revisions = await dstSession.GetRevisionNamesForAsync("file.txt", 0, 128);
+
+					Assert.Equal(1, revisions.Length);
+				}
+
+				await source.AsyncFilesCommands.UploadAsync("file.txt", CreateUniformFileStream(1024,  'c'));
+				await source.AsyncFilesCommands.Synchronization.StartAsync("file.txt", destination.AsyncFilesCommands);
+
+				using (var dstSession = destination.OpenAsyncSession())
+				{
+					var revisions = await dstSession.GetRevisionNamesForAsync("file.txt", 0, 128);
+
+					Assert.Equal(2, revisions.Length);
+				}
+
+				await source.AsyncFilesCommands.RenameAsync("file.txt", "renamed.txt");
+				await source.AsyncFilesCommands.Synchronization.StartAsync("file.txt", destination.AsyncFilesCommands);
+
+				using (var dstSession = destination.OpenAsyncSession())
+				{
+					var revisions = await dstSession.GetRevisionNamesForAsync("renamed.txt", 0, 128);
+
+					Assert.Equal(1, revisions.Length);
+				}
+
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task RenameSynchronizationShouldKeepRevisionsIfDefined(string requestedStorage)
+		{
+			using (var source = NewStore())
+			using (var destination = NewStore(1, requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await destination.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration
+				{
+					Id = VersioningUtil.DefaultConfigurationName,
+					ResetOnRename = false
+				});
+
+				await source.AsyncFilesCommands.UploadAsync("file.txt", CreateUniformFileStream(1024));
+				await source.AsyncFilesCommands.Synchronization.StartAsync("file.txt", destination.AsyncFilesCommands);
+
+				using (var dstSession = destination.OpenAsyncSession())
+				{
+					var revisions = await dstSession.GetRevisionNamesForAsync("file.txt", 0, 128);
+
+					Assert.Equal(1, revisions.Length);
+				}
+
+				await source.AsyncFilesCommands.UploadAsync("file.txt", CreateUniformFileStream(1024, 'c'));
+				await source.AsyncFilesCommands.Synchronization.StartAsync("file.txt", destination.AsyncFilesCommands);
+
+				using (var dstSession = destination.OpenAsyncSession())
+				{
+					var revisions = await dstSession.GetRevisionNamesForAsync("file.txt", 0, 128);
+
+					Assert.Equal(2, revisions.Length);
+				}
+
+				await source.AsyncFilesCommands.RenameAsync("file.txt", "renamed.txt");
+				await source.AsyncFilesCommands.Synchronization.StartAsync("file.txt", destination.AsyncFilesCommands);
+
+				using (var dstSession = destination.OpenAsyncSession())
+				{
+					var revisions = await dstSession.GetRevisionNamesForAsync("renamed.txt", 0, 128);
+
+					Assert.Equal(2, revisions.Length);
+				}
+
+			}
+		}
 	}
 }

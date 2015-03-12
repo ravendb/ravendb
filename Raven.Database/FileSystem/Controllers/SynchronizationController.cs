@@ -484,7 +484,9 @@ namespace Raven.Database.FileSystem.Controllers
                 {
                     ConflictArtifactManager.Delete(fileName); 
                 }
-					
+
+				FileSystem.RenameTriggers.Apply(trigger => trigger.OnRename(fileName, sourceMetadata));
+
                 Files.ExecuteRenameOperation(new RenameFileOperation
                 {
 	                FileSystem = FileSystem.Name,
@@ -492,6 +494,8 @@ namespace Raven.Database.FileSystem.Controllers
 	                Rename = rename,
 	                MetadataAfterOperation = sourceMetadata.DropRenameMarkers()
                 });
+
+				FileSystem.RenameTriggers.Apply(trigger => trigger.AfterRename(fileName, rename, sourceMetadata));
 			}
 			catch (Exception ex)
 			{
