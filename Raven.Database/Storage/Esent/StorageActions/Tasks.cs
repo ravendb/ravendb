@@ -4,16 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
-using Raven.Database.Storage;
 using Raven.Database.Tasks;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.StorageActions
 {
-	using System.Collections.Generic;
-
 	public partial class DocumentStorageActions : ITasksStorageActions
 	{
 		public void AddTask(DatabaseTask task, DateTime addedAt)

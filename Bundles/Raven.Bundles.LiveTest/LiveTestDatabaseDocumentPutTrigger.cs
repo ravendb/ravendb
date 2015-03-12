@@ -26,7 +26,7 @@ namespace Raven.Bundles.LiveTest
 			if (string.IsNullOrEmpty(Database.Name) == false && Database.Name != Constants.SystemDatabase)
 				return;
 
-			if (key.StartsWith(Constants.RavenDatabasesPrefix, StringComparison.OrdinalIgnoreCase) == false)
+			if (key.StartsWith(Constants.Database.Prefix, StringComparison.OrdinalIgnoreCase) == false)
 				return;
 
 			RavenJObject settings;

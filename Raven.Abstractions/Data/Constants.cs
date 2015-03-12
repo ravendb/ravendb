@@ -168,9 +168,18 @@ namespace Raven.Abstractions.Data
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
 		//Counters
+		public static partial class Counter
+		{
+			public const string Prefix = "Raven/Counters/";
+			public const string DataDirectory = "Raven/Counters/DataDir";
+			public const string UrlPrefix = "counters";
+		}
+
 		public const byte GroupSeperator = 29;
 		public const char GroupSeperatorChar = (char)GroupSeperator;
 		public const string GroupSeperatorString = "\u001D";
+
+
 
         public const string MetadataEtagField = "ETag";
 
@@ -188,8 +197,13 @@ namespace Raven.Abstractions.Data
 
 
 		// General
-		public const string RavenDatabasesPrefix = "Raven/Databases/";
-
+		public static partial class Database
+		{
+			public const string Prefix = "Raven/Databases/";
+			public const string DataDirectory = "Raven/Databases/DataDir";
+			public const string UrlPrefix = "databases";
+		}
+		
         public static partial class FileSystem
         {
 			public const string Prefix = "Raven/FileSystems/";
@@ -197,6 +211,7 @@ namespace Raven.Abstractions.Data
             public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
             public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
             public const string Storage = "Raven/FileSystem/Storage";
+	        public const string UrlPrefix = "fs";
 
 	        public static class Versioning
 	        {
@@ -206,8 +221,8 @@ namespace Raven.Abstractions.Data
 
 		// Subscriptions
 		public const string RavenSubscriptionsPrefix = "Raven/Subscriptions/";
-        
-        public static partial class Esent
+
+	    public static partial class Esent
         {
             public const string CircularLog = "Raven/Esent/CircularLog";
             public const string CacheSizeMax = "Raven/Esent/CacheSizeMax";

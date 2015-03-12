@@ -82,15 +82,15 @@ namespace Raven.Tests.Bundles.LiveTest
 					.ForDatabase("Northwind3")
 					.GetStatistics();
 
-				Assert.NotNull(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind"));
-				Assert.NotNull(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind2"));
+				Assert.NotNull(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind"));
+				Assert.NotNull(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind2"));
 
 				store.ServerIfEmbedded
 					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
-				Assert.Null(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind"));
-				Assert.NotNull(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind2"));
+				Assert.Null(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind"));
+				Assert.NotNull(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind2"));
 
 				store.ServerIfEmbedded.Server.Options.DatabaseLandlord.LastRecentlyUsed["Northwind2"] = DateTime.MinValue;
 
@@ -98,8 +98,8 @@ namespace Raven.Tests.Bundles.LiveTest
 					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
-				Assert.Null(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind2"));
-				Assert.NotNull(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind3"));
+				Assert.Null(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind2"));
+				Assert.NotNull(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind3"));
 			}
 		}
 

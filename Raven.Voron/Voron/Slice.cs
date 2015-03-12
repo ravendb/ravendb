@@ -164,10 +164,10 @@ namespace Voron
 						{
 							fixed (byte* b = otherSlice.Array)
 							{
-								return MemoryUtils.Compare(a, b, size);
+                                return StdLib.memcmp(a, b, size);
 							}
 						}
-						return MemoryUtils.Compare(a, otherSlice.Pointer, size);
+                        return StdLib.memcmp(a, otherSlice.Pointer, size);
 					}
 				}
 
@@ -175,11 +175,11 @@ namespace Voron
 				{
 					fixed (byte* b = otherSlice.Array)
 					{
-						return MemoryUtils.Compare(Pointer, b, size);
+                        return StdLib.memcmp(Pointer, b, size);
 					}
 				}
 
-				return MemoryUtils.Compare(Pointer, otherSlice.Pointer, size);
+                return StdLib.memcmp(Pointer, otherSlice.Pointer, size);
 			}
 
 			var prefixedSlice = other as PrefixedSlice;

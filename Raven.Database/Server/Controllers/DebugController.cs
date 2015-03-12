@@ -16,6 +16,7 @@ using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Linq;
@@ -24,6 +25,7 @@ using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 using IOExtensions = Raven.Database.Extensions.IOExtensions;
 
 namespace Raven.Database.Server.Controllers
@@ -63,7 +65,30 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/debug/format-index")]
 		public async Task<HttpResponseMessage> FormatIndex()
 		{
-			var array = await ReadJsonArrayAsync();
+			RavenJArray array;
+
+			try
+			{
+				array = await ReadJsonArrayAsync();
+			}
+			catch (InvalidOperationException e)
+			{
+				Log.Debug("Failed to deserialize debug request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					Message = "Could not understand json, please check its validity."
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+
+			}
+			catch (InvalidDataException e)
+			{
+				Log.Debug("Failed to deserialize debug request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					e.Message
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+			}
+
 			var results = new string[array.Length];
 			for (int i = 0; i < array.Length; i++)
 			{

@@ -327,6 +327,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
+    <Compile Include="Storage\StringHelper.cs" />
     <Compile Include="Storage\Voron\Impl\TableOfStructures.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From11To12.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
