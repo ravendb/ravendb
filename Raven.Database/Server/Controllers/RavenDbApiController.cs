@@ -573,7 +573,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 
-        public override bool SetupRequestToProperDatabase(RequestManager rm)
+        public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
         {
             var tenantId = this.DatabaseName;
             var landlord = this.DatabasesLandlord;
@@ -624,7 +624,7 @@ namespace Raven.Database.Server.Controllers
 
 						try
 						{
-							if (resourceStoreTask.Wait(TimeSpan.FromSeconds(TimeToWaitForDatabaseToLoad)) == false)
+                            if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(TimeToWaitForDatabaseToLoad))) != resourceStoreTask)
 							{
 								var msg = string.Format("The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.", tenantId, TimeToWaitForDatabaseToLoad);
 								Logger.Warn(msg);

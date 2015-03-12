@@ -705,7 +705,7 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-	    public abstract bool SetupRequestToProperDatabase(RequestManager requestManager);
+	    public abstract Task<bool> SetupRequestToProperDatabase(RequestManager requestManager);
 
         public abstract string TenantName { get; }
 
