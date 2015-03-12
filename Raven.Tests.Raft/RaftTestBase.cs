@@ -152,5 +152,14 @@ namespace Raven.Tests.Raft
 			if (result == false)
 				throw new InvalidOperationException("Cluster is stale.");
 		}
+
+		protected void WaitForClusterToBecomeNonStale(int numberOfNodes)
+		{
+			servers.ForEach(server => Assert.True(SpinWait.SpinUntil(() =>
+			{
+				var topology = server.Options.ClusterManager.Engine.CurrentTopology;
+				return topology.AllVotingNodes.Count() == numberOfNodes;
+			}, TimeSpan.FromSeconds(15))));
+		}
 	}
 }

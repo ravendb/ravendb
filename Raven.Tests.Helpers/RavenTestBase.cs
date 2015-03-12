@@ -915,18 +915,5 @@ namespace Raven.Tests.Helpers
 
 			return server;
 		}
-
-		protected void WaitForClusterToSettle(int numberOfNodes)
-		{
-			servers.ForEach(server =>
-			{
-				Assert.True(SpinWait.SpinUntil(() =>
-				{
-					var topology = server.Options.ClusterManager.Engine.CurrentTopology;
-					return topology.AllVotingNodes.Count() == numberOfNodes;
-				}, TimeSpan.FromSeconds(15)));
-
-			});
-		}
 	}
 }

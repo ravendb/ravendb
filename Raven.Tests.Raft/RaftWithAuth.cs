@@ -11,7 +11,6 @@ using Raven.Database.Raft;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Security;
-using Raven.Tests.Helpers;
 
 using System;
 using System.Threading.Tasks;
@@ -19,7 +18,7 @@ using Xunit;
 
 namespace Raven.Tests.Raft
 {
-	public class RaftWithAuth : RavenTestBase
+	public class RaftWithAuth : RaftTestBase
 	{
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
@@ -113,7 +112,7 @@ namespace Raven.Tests.Raft
 			CreateServerWithOAuth(8077, "User3/pass", out thirdConnectionInfo);
 			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
 
-			WaitForClusterToSettle(3);
+			WaitForClusterToBecomeNonStale(3);
 
 			Assert.False(servers[1].Options.ClusterManager.IsLeader());
 			var client = servers[1].Options.ClusterManager.Client;
@@ -153,7 +152,7 @@ namespace Raven.Tests.Raft
 			CreateServerWithWindowsCredentials(8077, username, password, domain, out thirdConnectionInfo);
 			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
 
-			WaitForClusterToSettle(3);
+			WaitForClusterToBecomeNonStale(3);
 
 			Assert.False(servers[1].Options.ClusterManager.IsLeader());
 			var client = servers[1].Options.ClusterManager.Client;
