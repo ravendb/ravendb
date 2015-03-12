@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Specialized;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Replication;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Connection.Request
 {
@@ -10,10 +12,14 @@ namespace Raven.Client.Connection.Request
 	{
 		ReplicationDestination[] FailoverServers { get; set; }
 
-		Task<T> ExecuteOperationAsync<T>(string method, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token);
+		Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, string method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token);
 
-		Task UpdateReplicationInformationIfNeeded(bool force = false);
+		Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient, bool force = false);
 
-		HttpJsonRequest AddHeaders(HttpJsonRequest httpJsonRequest);
+		IDisposable ForceReadFromMaster();
+
+		event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
+
+		void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl);
 	}
 }

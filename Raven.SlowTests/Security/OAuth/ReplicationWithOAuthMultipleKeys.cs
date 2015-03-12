@@ -76,7 +76,7 @@ namespace Raven.SlowTests.Security.OAuth
 			Assert.Equal("Hibernating Rhinos", company.Name);
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			servers[0].Dispose();
 
@@ -105,7 +105,7 @@ namespace Raven.SlowTests.Security.OAuth
 			Assert.Equal("Hibernating Rhinos", company.Name);
 
 			var serverClient = (ServerClient)store1.DatabaseCommands;
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			servers[0].Dispose();
 
@@ -129,7 +129,7 @@ namespace Raven.SlowTests.Security.OAuth
 			Assert.NotNull(store2.DatabaseCommands.GetIndex("MyIndex"));
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			servers[0].Dispose();
 
@@ -149,7 +149,7 @@ namespace Raven.SlowTests.Security.OAuth
 			Assert.NotNull(await store2.AsyncDatabaseCommands.GetIndexAsync("MyIndex"));
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			servers[0].Dispose();
 

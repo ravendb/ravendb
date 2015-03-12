@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
@@ -122,7 +123,7 @@ namespace Raven.Tests.Raft
 
 			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
 
-			clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeeded(force: true));
+			clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands, force: true));
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{

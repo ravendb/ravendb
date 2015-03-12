@@ -618,13 +618,13 @@ namespace Raven.Client.Document
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
 				return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-					currentSessionId, GetReplicationInformerForDatabase, GetRequestExecuterForDatabase, null,
+					currentSessionId, GetRequestExecuterForDatabase, null,
 					Listeners.ConflictListeners, true, Conventions.ClusterBehavior));
 			};
 
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, GetRequestExecuterForDatabase, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetRequestExecuterForDatabase, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
@@ -660,7 +660,7 @@ namespace Raven.Client.Document
 			return result;
 		}
 
-		private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string dbName, ClusterBehavior clusterBehavior)
+		private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string dbName, ClusterBehavior clusterBehavior, bool incrementStrippingBase)
 		{
 			var key = Url;
 			dbName = dbName ?? DefaultDatabase;
@@ -669,9 +669,9 @@ namespace Raven.Client.Document
 
 			IRequestExecuter requestExecuter;
 			if (clusterBehavior == ClusterBehavior.None)
-				requestExecuter = new ReplicationAwareRequestExecuter(serverClient, replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)));
+				requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)), incrementStrippingBase);
 			else
-				requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter(serverClient));
+				requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter());
 
 			if (FailoverServers == null)
 				return requestExecuter;

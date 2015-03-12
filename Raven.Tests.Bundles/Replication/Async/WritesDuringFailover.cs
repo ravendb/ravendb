@@ -25,8 +25,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 			TellFirstInstanceToReplicateToSecondInstance();
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			using (var session = store1.OpenAsyncSession())
 			{
@@ -56,7 +56,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			TellFirstInstanceToReplicateToSecondInstance();
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			using (var session = store1.OpenAsyncSession())
 			{
@@ -83,7 +83,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			TellFirstInstanceToReplicateToSecondInstance();
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 			
 			using (var session = store1.OpenAsyncSession())
 			{
@@ -116,7 +116,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			TellFirstInstanceToReplicateToSecondInstance();
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 
 			using (var session = store1.OpenAsyncSession())

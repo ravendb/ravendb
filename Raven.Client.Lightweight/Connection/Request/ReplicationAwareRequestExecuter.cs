@@ -5,9 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Specialized;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
 
@@ -15,14 +17,19 @@ namespace Raven.Client.Connection.Request
 {
 	public class ReplicationAwareRequestExecuter : IRequestExecuter
 	{
-		private readonly AsyncServerClient serverClient;
-
 		private readonly IDocumentStoreReplicationInformer replicationInformer;
 
-		public ReplicationAwareRequestExecuter(AsyncServerClient serverClient, IDocumentStoreReplicationInformer replicationInformer)
+		private int readStripingBase;
+
+		public ReplicationAwareRequestExecuter(IDocumentStoreReplicationInformer replicationInformer, bool incrementReadStripe)
 		{
-			this.serverClient = serverClient;
 			this.replicationInformer = replicationInformer;
+			this.readStripingBase = replicationInformer.GetReadStripingBase(incrementReadStripe);
+		}
+
+		public IDocumentStoreReplicationInformer ReplicationInformer
+		{
+			get { return replicationInformer; }
 		}
 
 		public ReplicationDestination[] FailoverServers
@@ -37,12 +44,12 @@ namespace Raven.Client.Connection.Request
 			}
 		}
 
-		public Task<T> ExecuteOperationAsync<T>(string method, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
+		public Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, string method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
 		{
-			return replicationInformer.ExecuteWithReplicationAsync(method, serverClient.Url, serverClient.PrimaryCredentials, currentRequest, currentReadStripingBase, operation, token);
+			return replicationInformer.ExecuteWithReplicationAsync(method, serverClient.Url, serverClient.PrimaryCredentials, currentRequest, readStripingBase, operation, token);
 		}
 
-		public Task UpdateReplicationInformationIfNeeded(bool force = false)
+		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient, bool force = false)
 		{
 			if (force)
 				throw new NotSupportedException("Force is not supported in ReplicationAwareRequestExecuter");
@@ -50,9 +57,52 @@ namespace Raven.Client.Connection.Request
 			return replicationInformer.UpdateReplicationInformationIfNeeded(serverClient);
 		}
 
-		public HttpJsonRequest AddHeaders(HttpJsonRequest httpJsonRequest)
+		public void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl)
 		{
-			return httpJsonRequest;
+			if (serverClient.Url.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
+				return;
+			if (ReplicationInformer.GetFailureCount(serverClient.Url) <= 0)
+				return; // not because of failover, no need to do this.
+
+			var lastPrimaryCheck = ReplicationInformer.GetFailureLastCheck(serverClient.Url);
+			httpJsonRequest.AddHeader(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(serverClient.Url));
+			httpJsonRequest.AddHeader(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
+
+			httpJsonRequest.AddReplicationStatusChangeBehavior(serverClient.Url, currentUrl, HandleReplicationStatusChanges);
+
+		}
+
+		private static string ToRemoteUrl(string primaryUrl)
+		{
+			var uriBuilder = new UriBuilder(primaryUrl);
+			if (uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
+				uriBuilder.Host = Environment.MachineName;
+			return uriBuilder.Uri.ToString();
+		}
+
+		public IDisposable ForceReadFromMaster()
+		{
+			var old = readStripingBase;
+			readStripingBase = -1;// this means that will have to use the master url first
+			return new DisposableAction(() => readStripingBase = old);
+		}
+
+		public void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
+		{
+			if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
+				return;
+
+			var forceCheck = headers[Constants.RavenForcePrimaryServerCheck];
+			bool shouldForceCheck;
+			if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
+			{
+				replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
+			} 
+		}
+
+		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged {
+			add { replicationInformer.FailoverStatusChanged += value; }
+			remove { replicationInformer.FailoverStatusChanged -= value; }
 		}
 	}
 }

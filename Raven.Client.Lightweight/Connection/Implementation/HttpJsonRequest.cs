@@ -26,6 +26,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
 
@@ -512,37 +513,18 @@ namespace Raven.Client.Connection
 		}
 
 		public HttpJsonRequest AddRequestExecuterAndReplicationHeaders(
-			string thePrimaryUrl,
-			string currentUrl,
-			IDocumentStoreReplicationInformer replicationInformer,
-			IRequestExecuter requestExecuter,
-			Action<NameValueCollection, string, string> handleReplicationStatusChanges)
+			AsyncServerClient serverClient,
+			string currentUrl)
 		{
-			requestExecuter.AddHeaders(this);
-
-			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase)) 
-				return this;
-			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0) 
-				return this; // not because of failover, no need to do this.
-
-			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
-			headers.Set(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(thePrimaryUrl));
-			headers.Set(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
-
-			primaryUrl = thePrimaryUrl;
-			operationUrl = currentUrl;
-
-			HandleReplicationStatusChanges = handleReplicationStatusChanges;
-
+			serverClient.RequestExecuter.AddHeaders(this, serverClient, currentUrl);
 			return this;
 		}
 
-		private static string ToRemoteUrl(string primaryUrl)
+		internal void AddReplicationStatusChangeBehavior(string thePrimaryUrl, string currentUrl, Action<NameValueCollection, string, string> handler)
 		{
-			var uriBuilder = new UriBuilder(primaryUrl);
-			if (uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
-				uriBuilder.Host = Environment.MachineName;
-			return uriBuilder.Uri.ToString();
+			primaryUrl = thePrimaryUrl;
+			operationUrl = currentUrl;
+			HandleReplicationStatusChanges = handler;
 		}
 
 		/// <summary>

@@ -40,8 +40,8 @@ namespace Raven.Client.Connection
 
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
 		{
-			add { asyncServerClient.ReplicationInformer.FailoverStatusChanged += value; }
-			remove { asyncServerClient.ReplicationInformer.FailoverStatusChanged -= value; }
+			add { asyncServerClient.RequestExecuter.FailoverStatusChanged += value; }
+			remove { asyncServerClient.RequestExecuter.FailoverStatusChanged -= value; }
 		}
 
 		public ServerClient(AsyncServerClient asyncServerClient)
@@ -70,11 +70,6 @@ namespace Raven.Client.Connection
 		public IRequestExecuter RequestExecuter
 		{
 			get { return asyncServerClient.RequestExecuter; }
-		}
-
-		public IDocumentStoreReplicationInformer ReplicationInformer
-		{
-			get { return asyncServerClient.ReplicationInformer; }
 		}
 
 		#region IDatabaseCommands Members
