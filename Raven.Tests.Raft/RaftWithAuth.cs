@@ -1,14 +1,8 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RaftWithAuthn.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RaftWithAuth.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Rachis.Transport;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -16,16 +10,16 @@ using Raven.Database.Config;
 using Raven.Database.Raft;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
-using Raven.Database.Server;
 using Raven.Database.Server.Security;
-using Raven.Json.Linq;
-using Raven.Server;
 using Raven.Tests.Helpers;
+
+using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Raven.Tests.Raft
 {
-	public class RaftWithAuthn : RavenTestBase
+	public class RaftWithAuth : RavenTestBase
 	{
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{

@@ -515,7 +515,7 @@ namespace Rachis
 
 			try
 			{
-				_eventLoopTask.Wait();
+				_eventLoopTask.Wait(1000);
 			}
 			catch (Exception e)
 			{
