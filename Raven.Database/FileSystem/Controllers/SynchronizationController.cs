@@ -364,85 +364,17 @@ namespace Raven.Database.FileSystem.Controllers
 
 			var sourceInfo = GetSourceFileSystemInfo();
 			var sourceFileETag = GetEtag();
+			var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
             Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceInfo);
 
-            var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.Delete);
-
-			try
-			{
-				Storage.Batch(accessor =>
-				{
-                    Synchronizations.AssertFileIsNotBeingSynced(fileName);
-					Files.AssertDeleteOperationNotVetoed(fileName);
-                    FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceInfo, accessor);
-				});
-
-                SynchronizationTask.IncomingSynchronizationStarted(fileName, sourceInfo, sourceFileETag, SynchronizationType.Delete);
-
-                Synchronizations.PublishSynchronizationNotification(fileName, sourceInfo, report.Type, SynchronizationAction.Start);
-
-                Storage.Batch(accessor => StartupProceed(fileName, accessor));
-
-				var localMetadata = Synchronizations.GetLocalMetadata(fileName);
-
-				if (localMetadata != null)
-				{
-                    var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
-
-                    bool isConflictResolved;
-
-                    AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceInfo, out isConflictResolved);
-
-                    Storage.Batch(accessor =>
-                    {
-                        Files.IndicateFileToDelete(fileName, null);
-
-                        var tombstoneMetadata = new RavenJObject
-                                                    {
-                                                        {
-                                                            SynchronizationConstants.RavenSynchronizationHistory,
-                                                            localMetadata[SynchronizationConstants.RavenSynchronizationHistory]
-                                                        },
-                                                        {
-                                                            SynchronizationConstants.RavenSynchronizationVersion,
-                                                            localMetadata[SynchronizationConstants.RavenSynchronizationVersion]
-                                                        },
-                                                        {
-                                                            SynchronizationConstants.RavenSynchronizationSource,
-                                                            localMetadata[SynchronizationConstants.RavenSynchronizationSource]
-                                                        }
-                                                    }.WithDeleteMarker();
-
-                        Historian.UpdateLastModified(tombstoneMetadata);
-                        accessor.PutFile(fileName, 0, tombstoneMetadata, true);
-                    });
-
-                    Synchronizations.PublishFileNotification(fileName, FileChangeAction.Delete);
-				}
-			}
-			catch (Exception ex)
-			{
-				if (ShouldAddExceptionToReport(ex))
-				{
-					report.Exception = ex;
-
-					Log.WarnException(string.Format("Error was occurred during deletion synchronization of file '{0}' from {1}", fileName, sourceInfo), ex);
-				}
-			}
-			finally
-			{
-				Synchronizations.FinishSynchronization(fileName, report, sourceInfo, sourceFileETag);               
-			}
-
-            Synchronizations.PublishSynchronizationNotification(fileName, sourceInfo, report.Type, SynchronizationAction.Finish);
+			var report = new SynchronizationBehavior(fileName, sourceFileETag, sourceMetadata, sourceInfo, SynchronizationType.Delete, FileSystem)
+								.Execute();
 
 			if (report.Exception == null)
-			{
 				Log.Debug("File '{0}' was deleted during synchronization from {1}", fileName, sourceInfo);
-			}
 
-            return GetMessageWithObject(report, HttpStatusCode.OK);
+			return GetMessageWithObject(report);
 		}
 
 		[HttpPatch]
@@ -801,7 +733,7 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/synchronization/IncrementLastETag")]
 		public HttpResponseMessage IncrementLastETag(Guid sourceServerId, string sourceFileSystemUrl, string sourceFileETag)
 		{
-			Synchronizations.IncermentLastEtag(sourceServerId, sourceFileSystemUrl, sourceFileETag);
+			Synchronizations.IncrementLastEtag(sourceServerId, sourceFileSystemUrl, sourceFileETag);
 
 			return GetEmptyMessage();
 		}

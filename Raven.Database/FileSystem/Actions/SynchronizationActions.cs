@@ -81,7 +81,7 @@ namespace Raven.Database.FileSystem.Actions
 				// we want to execute those operation in a single batch but we also have to ensure that
 				// Raven/Synchronization/Sources/sourceServerId config is modified only by one finishing synchronization at the same time
 				synchronizationFinishLocks.GetOrAdd(sourceFileSystem.Id, new ReaderWriterLockSlim()).EnterWriteLock();
-				SynchronizationTask.IncomingSynchronizationFinished(fileName, sourceFileSystem, sourceFileETag);
+				SynchronizationTask.IncomingSynchronizationFinished(fileName, sourceFileSystem, sourceFileETag); //TODO arek remove - this was moved to SynchronizationBehavior.Notify
 
 				Storage.Batch(accessor =>
 				{
@@ -157,7 +157,7 @@ namespace Raven.Database.FileSystem.Actions
 			return info;
 		}
 
-		public void IncermentLastEtag(Guid sourceServerId, string sourceFileSystemUrl, string sourceFileETag)
+		public void IncrementLastEtag(Guid sourceServerId, string sourceFileSystemUrl, string sourceFileETag)
 		{
 			try
 			{

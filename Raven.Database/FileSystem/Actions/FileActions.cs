@@ -128,7 +128,10 @@ namespace Raven.Database.FileSystem.Actions
 
 					if (readFileToDatabase.TotalSizeRead != size)
 					{
-						IndicateFileToDelete(name, null);
+						using (FileSystem.DisableAllTriggersForCurrentThread())
+						{
+							IndicateFileToDelete(name, null);
+						}
 						throw new HttpResponseException(HttpStatusCode.BadRequest);
 					}
 
@@ -407,6 +410,9 @@ namespace Raven.Database.FileSystem.Actions
 					FileSystem.DeleteTriggers.Apply(trigger => trigger.AfterDelete(fileName));
 
 					Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
+					Publisher.Publish(new FileChangeNotification { File = fileName, Action = FileChangeAction.Delete });
+					
+					Log.Debug("File '{0}' was deleted", fileName);
 				}
 				else
 				{
