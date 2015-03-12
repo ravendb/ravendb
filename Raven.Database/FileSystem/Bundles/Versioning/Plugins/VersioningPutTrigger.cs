@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System.ComponentModel.Composition;
 
-using Raven.Bundles.Versioning.Data;
+using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -42,7 +42,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 		{
 			FileSystem.Storage.Batch(accessor =>
 			{
-				VersioningConfiguration versioningConfiguration;
+				FileVersioningConfiguration versioningConfiguration;
 				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false) 
 					return;
 
@@ -57,7 +57,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 		{
 			FileSystem.Storage.Batch(accessor =>
 			{
-				VersioningConfiguration versioningConfiguration;
+				FileVersioningConfiguration versioningConfiguration;
 				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false) 
 					return;
 
@@ -79,7 +79,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 		{
 			FileSystem.Storage.Batch(accessor =>
 			{
-				VersioningConfiguration versioningConfiguration;
+				FileVersioningConfiguration versioningConfiguration;
 				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
 					return;
 
@@ -93,7 +93,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 		{
 			FileSystem.Storage.Batch(accessor =>
 			{
-				VersioningConfiguration versioningConfiguration;
+				FileVersioningConfiguration versioningConfiguration;
 				if (actions.TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
 					return;
 

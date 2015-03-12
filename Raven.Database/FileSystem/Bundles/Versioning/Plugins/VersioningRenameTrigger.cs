@@ -1,0 +1,60 @@
+﻿// -----------------------------------------------------------------------
+//  <copyright file="VersioningRenameTrigger.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+using System;
+using System.ComponentModel.Composition;
+using System.Linq;
+using Raven.Database.FileSystem.Plugins;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.Plugins;
+using Raven.Json.Linq;
+
+namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
+{
+	[InheritedExport(typeof(AbstractFileRenameTrigger))]
+	[ExportMetadata("Bundle", "Versioning")]
+	public class VersioningRenameTrigger : AbstractFileRenameTrigger
+	{
+		private VersioningTriggerActions actions;
+
+		public override void Initialize()
+		{
+			actions = new VersioningTriggerActions(FileSystem);
+		}
+
+		public override VetoResult AllowRename(string name)
+		{
+			return actions.AllowOperation(name, null);
+		}
+
+		public override void AfterRename(string name, string renamed, RavenJObject metadata)
+		{
+			using (FileSystem.DisableAllTriggersForCurrentThread())
+			{
+				FileSystem.Storage.Batch(accessor =>
+				{
+					var versioningConfiguration = accessor.GetVersioningConfiguration();
+
+					if (versioningConfiguration == null)
+						return;
+
+					foreach (var file in accessor.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue).Where(file => file != null))
+					{
+						if (versioningConfiguration.KeepRevisionsOnRename)
+						{
+							var revision = file.FullPath.Substring(file.FullPath.LastIndexOf("/", StringComparison.InvariantCulture) + 1);
+
+							accessor.RenameFile(string.Format("{0}/revisions/{1}", name, revision), string.Format("{0}/revisions/{1}", renamed, revision), true);
+						}
+						else
+						{
+							FileSystem.Files.IndicateFileToDelete(file.FullPath, null);// TODO arek the last revision needs to be renamed anyway
+						}
+					}
+				});
+			}
+		}
+	}
+}

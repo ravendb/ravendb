@@ -235,6 +235,7 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Versioning\Data\FileVersioningConfiguration.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\EnumSetting.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
@@ -243,7 +244,9 @@
     <Compile Include="FileSystem\Actions\ReadFileToDatabase.cs" />
     <Compile Include="FileSystem\Actions\SynchronizationActions.cs" />
     <Compile Include="FileSystem\Actions\TaskActions.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningRenameTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningTriggerActions.cs" />
+    <Compile Include="FileSystem\Plugins\AbstractFileRenameTrigger.cs" />
     <Compile Include="FileSystem\Plugins\Builtins\HideDeletingFilesTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />

@@ -7,7 +7,7 @@ using System;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
-using Raven.Bundles.Versioning.Data;
+using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -60,7 +60,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 
 			fileSystem.Storage.Batch(accessor =>
 			{
-				VersioningConfiguration versioningConfiguration;
+				FileVersioningConfiguration versioningConfiguration;
 				if (TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
 					return;
 
@@ -87,7 +87,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 
 			fileSystem.Storage.Batch(accessor =>
 			{
-				VersioningConfiguration versioningConfiguration;
+				FileVersioningConfiguration versioningConfiguration;
 				if (TryGetVersioningConfiguration(name, metadata, accessor, out versioningConfiguration) == false)
 					return;
 
@@ -115,7 +115,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			return revisionFile;
 		}
 
-		public bool TryGetVersioningConfiguration(string name, RavenJObject metadata, IStorageActionsAccessor accessor, out VersioningConfiguration versioningConfiguration)
+		public bool TryGetVersioningConfiguration(string name, RavenJObject metadata, IStorageActionsAccessor accessor, out FileVersioningConfiguration versioningConfiguration)
 		{
 			versioningConfiguration = null;
 			if (name.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
@@ -132,7 +132,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			return true;
 		}
 
-		public void RemoveOldRevisions(string name, long revision, VersioningConfiguration versioningConfiguration)
+		public void RemoveOldRevisions(string name, long revision, FileVersioningConfiguration versioningConfiguration)
 		{
 			var latestValidRevision = revision - versioningConfiguration.MaxRevisions;
 			if (latestValidRevision <= 0)

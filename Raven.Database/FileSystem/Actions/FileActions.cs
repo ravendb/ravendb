@@ -233,7 +233,11 @@ namespace Raven.Database.FileSystem.Actions
 				accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
 				accessor.PulseTransaction(); // commit rename operation config
 
+				FileSystem.RenameTriggers.Apply(trigger => trigger.OnRename(name, metadata));
+
 				ExecuteRenameOperation(operation);
+
+				FileSystem.RenameTriggers.Apply(trigger => trigger.AfterRename(name, rename, metadata));
 			});
 
 			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);

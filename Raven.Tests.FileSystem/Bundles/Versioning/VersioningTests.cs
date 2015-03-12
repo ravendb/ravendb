@@ -13,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.FileSystem.Bundles.Versioning;
+using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Bundles.Versioning;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -534,6 +535,45 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 					var stream = await store.AsyncFilesCommands.DownloadAsync(revisionFile.FullPath);
 					Assert.NotNull(stream);
 					Assert.Equal(Content2, StreamToString(stream));
+				}
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task ShouldDeleteRevisionsAfterRenameByDefault(string requestedStorage)
+		{
+			const string fileName = "file1.txt";
+			const string newFileName = "file2.txt";
+
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+
+				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(fileName, StringToStream(Content2));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(fileName, 0, 100);
+					Assert.Equal(2, revisions.Length);
+				}
+
+				await store.AsyncFilesCommands.RenameAsync(fileName, newFileName);
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(fileName, 0, 100);
+					Assert.Equal(1, revisions.Length);
+
+					//TODO arek
+					//var revisionFile = await session.LoadFileAsync(revisions[2]);
+
+					//Assert.Equal("Data", revisionFile.Metadata.Value<string>("New"));
+
+					//var stream = await store.AsyncFilesCommands.DownloadAsync(revisionFile.FullPath);
+					//Assert.NotNull(stream);
+					//Assert.Equal(Content2, StreamToString(stream));
 				}
 			}
 		}

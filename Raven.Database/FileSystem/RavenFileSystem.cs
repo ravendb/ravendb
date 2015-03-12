@@ -185,6 +185,8 @@ namespace Raven.Database.FileSystem
 
 			MetadataUpdateTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 
+			RenameTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
 			DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 
 			ReadTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
@@ -199,6 +201,8 @@ namespace Raven.Database.FileSystem
 			PutTriggers.Apply(initialization => initialization.SecondStageInit());
 
 			MetadataUpdateTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			RenameTriggers.Apply(initialization => initialization.SecondStageInit());
 
 			DeleteTriggers.Apply(initialization => initialization.SecondStageInit());
 
@@ -218,6 +222,9 @@ namespace Raven.Database.FileSystem
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractFileMetadataUpdateTrigger> MetadataUpdateTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileRenameTrigger> RenameTriggers { get; set; }
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractFileDeleteTrigger> DeleteTriggers { get; set; }
