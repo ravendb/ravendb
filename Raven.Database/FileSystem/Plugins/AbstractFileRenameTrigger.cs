@@ -28,7 +28,7 @@ namespace Raven.Database.FileSystem.Plugins
 		{
 		}
 
-		public virtual VetoResult AllowRename(string name)
+		public virtual VetoResult AllowRename(string name, string newName)
 		{
 			return VetoResult.Allowed;
 		}

@@ -3,12 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.ComponentModel.Composition;
 using System.Linq;
-using Raven.Abstractions.Data;
 using Raven.Database.FileSystem.Plugins;
-using Raven.Database.FileSystem.Storage;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -25,7 +22,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			actions = new VersioningTriggerActions(FileSystem);
 		}
 
-		public override VetoResult AllowRename(string name)
+		public override VetoResult AllowRename(string name, string newName)
 		{
 			return actions.AllowOperation(name, null);
 		}

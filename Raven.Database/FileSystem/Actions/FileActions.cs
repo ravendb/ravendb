@@ -186,6 +186,17 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
+		internal void AssertRenameOperationNotVetoed(string name, string newName)
+		{
+			var vetoResult = FileSystem.RenameTriggers
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowRename(name, newName) })
+				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+			if (vetoResult != null)
+			{
+				throw new OperationVetoedException("PATCH vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+			}
+		}
+
 		private void AssertDeleteOperationNotVetoed(string name)
 		{
 			var vetoResult = FileSystem.DeleteTriggers
@@ -202,6 +213,7 @@ namespace Raven.Database.FileSystem.Actions
 			Storage.Batch(accessor =>
 			{
 				FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
+				AssertRenameOperationNotVetoed(name, rename);
 
 				var existingFile = accessor.ReadFile(name);
 				if (existingFile == null || existingFile.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))

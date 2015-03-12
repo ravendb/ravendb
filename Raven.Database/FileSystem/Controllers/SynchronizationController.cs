@@ -374,6 +374,7 @@ namespace Raven.Database.FileSystem.Controllers
 				Storage.Batch(accessor =>
 				{
                     Synchronizations.AssertFileIsNotBeingSynced(fileName);
+					Files.AssertDeleteOperationNotVetoed(fileName);
                     FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceInfo, accessor);
 				});
 
@@ -467,6 +468,7 @@ namespace Raven.Database.FileSystem.Controllers
 				Storage.Batch(accessor =>
 				{
 					Synchronizations.AssertFileIsNotBeingSynced(fileName);
+					Files.AssertRenameOperationNotVetoed(fileName, rename);
                     FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceInfo, accessor);
 				});
 
