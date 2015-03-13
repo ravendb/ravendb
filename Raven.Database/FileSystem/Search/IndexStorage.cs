@@ -34,7 +34,7 @@ namespace Raven.Database.FileSystem.Search
     /// </summary>
     public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-        private const string IndexVersion = "1.0.0.1";
+        private const string IndexVersion = "1.0.0.2";
 
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
         private static readonly ILog StartupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
