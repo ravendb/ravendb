@@ -398,8 +398,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
 			if (!metadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
 				metadata["Content-MD5"] = existingMetadata["Content-MD5"];
-			if (!metadata.ContainsKey("RavenFS-Size") && existingMetadata.ContainsKey("RavenFS-Size"))
-				metadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
+			if (!metadata.ContainsKey(RavenConstants.FileSystem.RavenFsSize) && existingMetadata.ContainsKey(RavenConstants.FileSystem.RavenFsSize))
+				metadata[RavenConstants.FileSystem.RavenFsSize] = existingMetadata[RavenConstants.FileSystem.RavenFsSize];
 
 	        file["etag"] = newEtag.ToByteArray();
             file["metadata"] = metadata;

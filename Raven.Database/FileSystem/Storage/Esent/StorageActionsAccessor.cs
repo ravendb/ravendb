@@ -548,8 +548,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
 	            if (!metadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
 		            metadata["Content-MD5"] = existingMetadata["Content-MD5"];
 
-	            if (!metadata.ContainsKey("RavenFS-Size") && existingMetadata.ContainsKey("RavenFS-Size"))
-		            metadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
+				if (!metadata.ContainsKey(Constants.FileSystem.RavenFsSize) && existingMetadata.ContainsKey(Constants.FileSystem.RavenFsSize))
+					metadata[Constants.FileSystem.RavenFsSize] = existingMetadata[Constants.FileSystem.RavenFsSize];
 
 	            var newEtag = uuidGenerator.CreateSequentialUuid();
 

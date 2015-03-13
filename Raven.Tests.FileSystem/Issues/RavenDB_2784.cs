@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
@@ -32,7 +33,7 @@ namespace Raven.Tests.FileSystem.Issues
 				var downloadData = new MemoryStream();
 				stream.CopyTo(downloadData);
 
-				Assert.Equal(fileHeader.Value<long>("RavenFS-Size"), downloadData.Length);
+				Assert.Equal(fileHeader.Value<long>(Constants.FileSystem.RavenFsSize), downloadData.Length);
 			}
 		}
 	}

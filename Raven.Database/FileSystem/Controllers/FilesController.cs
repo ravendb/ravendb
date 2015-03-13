@@ -295,7 +295,7 @@ namespace Raven.Database.FileSystem.Controllers
 				options.UploadId = uploadIdentifier;
 
 			long contentSize;
-			if (long.TryParse(GetHeader("RavenFS-size"), out contentSize))
+			if (long.TryParse(GetHeader(Constants.FileSystem.RavenFsSize), out contentSize))
 				options.ContentSize = contentSize;
 
 			DateTimeOffset lastModified;

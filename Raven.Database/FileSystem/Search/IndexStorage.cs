@@ -45,7 +45,7 @@ namespace Raven.Database.FileSystem.Search
 
 		private static readonly string[] ExcludeNumericFields =
 	    {
-		    "RavenFS-Size",
+		    Constants.FileSystem.RavenFsSize,
 			"Content-Length",
 		    SynchronizationConstants.RavenSynchronizationVersion,
 		    VersioningUtil.RavenFileRevision,

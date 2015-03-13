@@ -62,7 +62,7 @@ namespace Raven.Tests.FileSystem.Bugs
             var metadata = await client.GetMetadataForAsync("abc.txt");
 
             Assert.True(metadata.ContainsKey(Constants.LastModified));
-            Assert.True(metadata.ContainsKey("RavenFS-Size"));
+			Assert.True(metadata.ContainsKey(Constants.FileSystem.RavenFsSize));
             Assert.True(metadata.ContainsKey(Constants.MetadataEtagField));
             Assert.True(metadata.ContainsKey("Content-MD5"));
             Assert.True(metadata.ContainsKey("Content-Length"));
