@@ -7,6 +7,8 @@ using System;
 
 using Rachis;
 
+using Raven.Database.Impl;
+
 namespace Raven.Database.Raft
 {
 	public class ClusterManager : IDisposable
@@ -23,11 +25,21 @@ namespace Raven.Database.Raft
 
 		public void Dispose()
 		{
-			if (Engine != null)
-				Engine.Dispose();
+			var aggregator = new ExceptionAggregator("ClusterManager disposal error.");
 
-			if (Client != null)
-				Client.Dispose();
+			aggregator.Execute(() =>
+			{
+				if (Client != null)
+					Client.Dispose();
+			});
+
+			aggregator.Execute(() =>
+			{
+				if (Engine != null)
+					Engine.Dispose();
+			});
+
+			aggregator.ThrowIfNeeded();
 		}
 	}
 }

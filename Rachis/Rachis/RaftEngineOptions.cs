@@ -6,7 +6,7 @@ using Voron;
 
 namespace Rachis
 {
-	public class RaftEngineOptions
+	public class RaftEngineOptions : IDisposable
 	{
 		public RaftEngineOptions(NodeConnectionInfo connection, StorageEnvironmentOptions storageOptions, ITransport transport, IRaftStateMachine stateMachine)
 		{
@@ -47,5 +47,11 @@ namespace Rachis
 		public int HeartbeatTimeout { get; set; }
 
 		public NodeConnectionInfo SelfConnection { get; set; }
+
+		public void Dispose()
+		{
+			if (Transport != null)
+				Transport.Dispose();
+		}
 	}
 }

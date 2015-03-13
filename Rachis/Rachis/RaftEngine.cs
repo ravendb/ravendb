@@ -515,7 +515,7 @@ namespace Rachis
 
 			try
 			{
-				_eventLoopTask.Wait(1000);
+				_eventLoopTask.Wait();
 			}
 			catch (Exception e)
 			{
@@ -530,10 +530,19 @@ namespace Rachis
 			{
 				exceptions.Add(e);
 			}
+
+			try
+			{
+				_raftEngineOptions.Dispose();
+			}
+			catch (Exception e)
+			{
+				exceptions.Add(e);
+			}
 			
 			if (exceptions.Count == 0)
 				return;
-			
+
 			throw new AggregateException(exceptions);
 		}
 

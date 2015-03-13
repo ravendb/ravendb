@@ -30,7 +30,15 @@ namespace Raven.Tests.Raft
 {
 	public class RaftTestBase : RavenTestBase
 	{
-		private int port = 9000;
+		private static int portRangeStart = 9000;
+
+		private static int numberOfPortRequests;
+
+		private static int GetPort()
+		{
+			var portRequest = Interlocked.Increment(ref numberOfPortRequests);
+			return portRangeStart - (portRequest % 25);
+		}
 
 		public static IEnumerable<object[]> Nodes
 		{
@@ -69,7 +77,7 @@ namespace Raven.Tests.Raft
 		public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null)
 		{
 			var nodes = Enumerable.Range(0, numberOfNodes)
-				.Select(x => GetNewServer(port--, activeBundles: activeBundles, databaseName: databaseName))
+				.Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName))
 				.ToList();
 
 			var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -124,7 +132,7 @@ namespace Raven.Tests.Raft
 			Assert.NotNull(leader);
 
 			var nodes = Enumerable.Range(0, numberOfExtraNodes)
-				.Select(x => GetNewServer(port--))
+				.Select(x => GetNewServer(portRangeStart--))
 				.ToList();
 
 			var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -190,7 +198,7 @@ namespace Raven.Tests.Raft
 			}, TimeSpan.FromSeconds(15))));
 		}
 
-		protected void SetupReplicationInCluster(List<DocumentStore> clusterStores, bool enable = true)
+		protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true)
 		{
 			var clusterStore = clusterStores[0];
 			var requestFactory = new HttpRavenRequestFactory();
@@ -199,7 +207,7 @@ namespace Raven.Tests.Raft
 			{
 				Url = clusterStore.Url
 			});
-			replicationRequest.Write(RavenJObject.FromObject(new ClusterConfiguration { EnableReplication = enable }));
+			replicationRequest.Write(RavenJObject.FromObject(new ClusterConfiguration { EnableReplication = enableReplication }));
 			replicationRequest.ExecuteRequest();
 
 			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));

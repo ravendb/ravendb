@@ -10,7 +10,7 @@ namespace Rachis.Interfaces
 	/// <summary>
 	/// abstraction for transport between Raft nodes.
 	/// </summary>
-	public interface ITransport
+	public interface ITransport : IDisposable
 	{
 		bool TryReceiveMessage(int timeout, CancellationToken cancellationToken, out MessageContext messageContext);
 

@@ -108,6 +108,10 @@ namespace Rachis.Transport
 			{
 				_parent.AddToQueue(this, From, new TimeoutException(), evenIfDisconnected: true);
 			}
+
+			public void Dispose()
+			{
+			}
 		}
 
 		private void AddToQueue<T>(InMemoryTransport src, string dest, T message, Stream stream = null,

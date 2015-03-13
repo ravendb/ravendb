@@ -20,7 +20,7 @@ namespace Raven.Tests.Raft.Client
 		{
 			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
-			SetupReplicationInCluster(clusterStores);
+			SetupClusterConfiguration(clusterStores);
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
@@ -41,7 +41,7 @@ namespace Raven.Tests.Raft.Client
 		{
 			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
-			SetupReplicationInCluster(clusterStores);
+			SetupClusterConfiguration(clusterStores);
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{

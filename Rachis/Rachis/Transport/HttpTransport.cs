@@ -14,7 +14,7 @@ using Rachis.Messages;
 
 namespace Rachis.Transport
 {
-	public class HttpTransport : ITransport, IDisposable
+	public class HttpTransport : ITransport
 	{
 		private readonly CancellationToken _cancellationToken;
 
