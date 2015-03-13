@@ -12,7 +12,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class QueriesController : RavenDbApiController
+	public class QueriesController : ClusterAwareRavenDbApiController
 	{
 		[HttpGet]
 		[RavenRoute("queries")]

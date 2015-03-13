@@ -6,14 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
-using Raven.Database.Raft;
 using Raven.Database.Raft.Dto;
 
 using Xunit;
@@ -23,7 +21,7 @@ namespace Raven.Tests.Raft
 	public class ClusterReplication : RaftTestBase
 	{
 		[Fact]
-		public async Task EnablingReplicationInClusterWillCreateGlobalReplicationDestinationsOnEachNode()
+		public void EnablingReplicationInClusterWillCreateGlobalReplicationDestinationsOnEachNode()
 		{
 			var clusterStores = CreateRaftCluster(3);
 
@@ -31,10 +29,7 @@ namespace Raven.Tests.Raft
 			using (clusterStores[1])
 			using (clusterStores[2])
 			{
-				var client = servers[0].Options.ClusterManager.Client;
-				await client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = true});
-
-				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+				EnableReplicationInCluster(clusterStores);
 
 				AssertReplicationDestinations(clusterStores, (i, j, destination) =>
 				{
@@ -45,7 +40,7 @@ namespace Raven.Tests.Raft
 
 				clusterStores.ForEach(store => store.DatabaseCommands.ForSystemDatabase().Delete(Constants.Global.ReplicationDestinationsDocumentName, null));
 
-				await client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false});
+				EnableReplicationInCluster(clusterStores, false);
 
 				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
 

@@ -1,28 +1,25 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="ClusterClientIntegration.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="Basic.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-using System.Threading.Tasks;
 
 using Raven.Abstractions.Cluster;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
-using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Json.Linq;
 
 using Xunit;
 using Xunit.Extensions;
 
-namespace Raven.Tests.Raft
+namespace Raven.Tests.Raft.Client
 {
-	public class ClusterClientIntegration : RaftTestBase
+	public class Basic : RaftTestBase
 	{
 		[Fact]
 		public void RequestExecuterShouldDependOnClusterBehavior()
@@ -48,17 +45,12 @@ namespace Raven.Tests.Raft
 		}
 
 		[Theory]
-		[InlineData(1)]
-		[InlineData(3)]
-		[InlineData(5)]
-		public async Task ClientsShouldBeAbleToPerformCommandsEvenIfTheyDoNotPointToLeader(int numberOfNodes)
+		[PropertyData("Nodes")]
+		public void ClientsShouldBeAbleToPerformCommandsEvenIfTheyDoNotPointToLeader(int numberOfNodes)
 		{
 			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
-			var managementClient = servers[0].Options.ClusterManager.Client;
-			await managementClient.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
-
-			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+			EnableReplicationInCluster(clusterStores);
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
@@ -86,14 +78,11 @@ namespace Raven.Tests.Raft
 		}
 
 		[Fact]
-		public async Task NonClusterCommandsCanPerformCommandsOnClusterServers()
+		public void NonClusterCommandsCanPerformCommandsOnClusterServers()
 		{
 			var clusterStores = CreateRaftCluster(2, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
-			var managementClient = servers[0].Options.ClusterManager.Client;
-			await managementClient.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
-
-			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+			EnableReplicationInCluster(clusterStores);
 
 			using (var store1 = clusterStores[0])
 			using (var store2 = clusterStores[1])
@@ -104,8 +93,8 @@ namespace Raven.Tests.Raft
 				nonClusterCommands1.Put("keys/1", null, new RavenJObject(), new RavenJObject());
 				nonClusterCommands2.Put("keys/2", null, new RavenJObject(), new RavenJObject());
 
-				var allNonClusterCommands = new[] {nonClusterCommands1, nonClusterCommands2};
-				
+				var allNonClusterCommands = new[] { nonClusterCommands1, nonClusterCommands2 };
+
 				allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/1"));
 				allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/2"));
 			}
@@ -114,14 +103,11 @@ namespace Raven.Tests.Raft
 		[Theory]
 		[InlineData(3)]
 		[InlineData(5)]
-		public async Task ClientShouldHandleLeaderShutdown(int numberOfNodes)
+		public void ClientShouldHandleLeaderShutdown(int numberOfNodes)
 		{
 			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
-			var managementClient = servers[0].Options.ClusterManager.Client;
-			await managementClient.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
-
-			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
+			EnableReplicationInCluster(clusterStores);
 
 			clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands, force: true));
 

@@ -136,8 +136,9 @@ namespace Raven.Database.Raft
 				destination.Database = null;
 				destination.Disabled = enableReplication == false;
 				destination.Domain = node.Domain;
-				//destination.Password = node.Password;
+				destination.Password = node.Password;
 				destination.TransitiveReplicationBehavior = TransitiveReplicationOptions.Replicate;
+				destination.SkipIndexReplication = false;
 				destination.Url = node.Uri.AbsoluteUri;
 				destination.Username = node.Username;
 			}

@@ -15,10 +15,7 @@ namespace Raven.Tests.Raft
 	public class ClusterDatabases : RaftTestBase
 	{
 		[Theory]
-		[InlineData(1)]
-		[InlineData(3)]
-		[InlineData(5)]
-		[InlineData(11)]
+		[PropertyData("Nodes")]
 		public void DatabaseShouldBeCreatedOnAllNodes(int numberOfNodes)
 		{
 			var clusterStores = CreateRaftCluster(numberOfNodes);
@@ -41,10 +38,7 @@ namespace Raven.Tests.Raft
 		}
 
 		[Theory]
-		[InlineData(1)]
-		[InlineData(3)]
-		[InlineData(5)]
-		[InlineData(11)]
+		[PropertyData("Nodes")]
 		public void DatabaseShouldBeDeletedOnAllNodes(int numberOfNodes)
 		{
 			var clusterStores = CreateRaftCluster(numberOfNodes);

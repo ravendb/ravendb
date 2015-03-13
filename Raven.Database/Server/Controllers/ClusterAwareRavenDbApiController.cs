@@ -19,16 +19,27 @@ namespace Raven.Database.Server.Controllers
 {
 	public class ClusterAwareRavenDbApiController : RavenDbApiController
 	{
+		protected virtual bool ForceClusterAwareness
+		{
+			get
+			{
+				return false;
+			}
+		}
+
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
-			IEnumerable<string> values;
-			if (controllerContext.Request.Headers.TryGetValues(Constants.Cluster.ClusterAwareHeader, out values) == false)
-				return await base.ExecuteAsync(controllerContext, cancellationToken);
+			if (ForceClusterAwareness == false)
+			{
+				IEnumerable<string> values;
+				if (controllerContext.Request.Headers.TryGetValues(Constants.Cluster.ClusterAwareHeader, out values) == false)
+					return await base.ExecuteAsync(controllerContext, cancellationToken);
 
-			var clusterAwareHeader = values.FirstOrDefault();
-			bool clusterAware;
-			if (clusterAwareHeader == null || bool.TryParse(clusterAwareHeader, out clusterAware) == false || clusterAware == false)
-				return await base.ExecuteAsync(controllerContext, cancellationToken);
+				var clusterAwareHeader = values.FirstOrDefault();
+				bool clusterAware;
+				if (clusterAwareHeader == null || bool.TryParse(clusterAwareHeader, out clusterAware) == false || clusterAware == false)
+					return await base.ExecuteAsync(controllerContext, cancellationToken);
+			}
 
 			InnerInitialization(controllerContext);
 
