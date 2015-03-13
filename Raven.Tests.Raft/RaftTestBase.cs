@@ -190,7 +190,7 @@ namespace Raven.Tests.Raft
 			}, TimeSpan.FromSeconds(15))));
 		}
 
-		protected void EnableReplicationInCluster(List<DocumentStore> clusterStores, bool enable = true)
+		protected void SetupReplicationInCluster(List<DocumentStore> clusterStores, bool enable = true)
 		{
 			var clusterStore = clusterStores[0];
 			var requestFactory = new HttpRavenRequestFactory();

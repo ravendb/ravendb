@@ -35,7 +35,7 @@ namespace Raven.Tests.Raft.Client
 
 			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
-			EnableReplicationInCluster(clusterStores);
+			SetupReplicationInCluster(clusterStores);
 
 			var store1 = clusterStores[0];
 			store1.DatabaseCommands.PutIndex("Test/Index", new Test_Index().CreateIndexDefinition(), true);

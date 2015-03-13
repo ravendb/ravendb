@@ -1,17 +1,18 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="Documents.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="Attachments.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Cluster;
+using System.IO;
 
+using Raven.Abstractions.Cluster;
 using Raven.Json.Linq;
 
 using Xunit.Extensions;
 
 namespace Raven.Tests.Raft.Client
 {
-	public class Documents : RaftTestBase
+	public class Attachments : RaftTestBase
 	{
 		[Theory]
 		[PropertyData("Nodes")]
@@ -25,12 +26,12 @@ namespace Raven.Tests.Raft.Client
 			{
 				var store = clusterStores[i];
 
-				store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject(), new RavenJObject());
+				store.DatabaseCommands.PutAttachment("keys/" + i, null, new MemoryStream(), new RavenJObject());
 			}
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
-				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/" + i));
+				clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetAttachment("keys/" + i) != null));
 			}
 		}
 
@@ -46,24 +47,24 @@ namespace Raven.Tests.Raft.Client
 			{
 				var store = clusterStores[i];
 
-				store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject(), new RavenJObject());
+				store.DatabaseCommands.PutAttachment("keys/" + i, null, new MemoryStream(), new RavenJObject());
 			}
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
-				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/" + i));
+				clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetAttachment("keys/" + i) != null));
 			}
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
 				var store = clusterStores[i];
 
-				store.DatabaseCommands.Delete("keys/" + i, null);
+				store.DatabaseCommands.DeleteAttachment("keys/" + i, null);
 			}
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
-				clusterStores.ForEach(store => WaitForDelete(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/" + i));
+				clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetAttachment("keys/" + i) == null));
 			}
 		}
 	}

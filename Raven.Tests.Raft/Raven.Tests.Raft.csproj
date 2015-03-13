@@ -81,6 +81,8 @@
     <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
       <Link>Properties\TestAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Client\Attachments.cs" />
+    <Compile Include="Client\Batches.cs" />
     <Compile Include="Client\Documents.cs" />
     <Compile Include="Client\Indexes.cs" />
     <Compile Include="ClusterBasic.cs" />

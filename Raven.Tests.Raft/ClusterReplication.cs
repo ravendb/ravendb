@@ -29,7 +29,7 @@ namespace Raven.Tests.Raft
 			using (clusterStores[1])
 			using (clusterStores[2])
 			{
-				EnableReplicationInCluster(clusterStores);
+				SetupReplicationInCluster(clusterStores);
 
 				AssertReplicationDestinations(clusterStores, (i, j, destination) =>
 				{
@@ -40,7 +40,7 @@ namespace Raven.Tests.Raft
 
 				clusterStores.ForEach(store => store.DatabaseCommands.ForSystemDatabase().Delete(Constants.Global.ReplicationDestinationsDocumentName, null));
 
-				EnableReplicationInCluster(clusterStores, false);
+				SetupReplicationInCluster(clusterStores, false);
 
 				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
 
