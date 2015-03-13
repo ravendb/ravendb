@@ -110,9 +110,10 @@ namespace Raven.Database.FileSystem
 
             historian = new Historian(storage, new SynchronizationHiLo(storage));
 
+			InitializeTriggersExceptIndexCodecs();
+
             search.Initialize(this);
 
-			InitializeTriggersExceptIndexCodecs();
 			SecondStageInitialization();
         }
 
