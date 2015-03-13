@@ -126,13 +126,13 @@ namespace Raven.Tests.Raft
 				.ToList();
 		}
 
-		public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes)
+		public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null)
 		{
 			var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.IsLeader());
 			Assert.NotNull(leader);
 
 			var nodes = Enumerable.Range(0, numberOfExtraNodes)
-				.Select(x => GetNewServer(portRangeStart--))
+				.Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName))
 				.ToList();
 
 			var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -161,7 +161,7 @@ namespace Raven.Tests.Raft
 			}
 
 			return nodes
-				.Select(node => NewRemoteDocumentStore(ravenDbServer: node))
+				.Select(node => NewRemoteDocumentStore(ravenDbServer: node, activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
 				.ToList();
 		}
 
