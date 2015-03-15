@@ -43,7 +43,7 @@ namespace Raven.Tests.Bundles.Replication
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands)
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
 					.Wait();
 				
 				var replicationDestinations = replicationInformerForDatabase.ReplicationDestinationsUrls;
@@ -78,7 +78,7 @@ namespace Raven.Tests.Bundles.Replication
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands)
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
 					.Wait();
 				
 				using (var session = store.OpenSession())
@@ -109,15 +109,14 @@ namespace Raven.Tests.Bundles.Replication
 									Conventions =
 										{
 											FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-										}
+										},
 								})
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("FailoverTest");
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands)
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
 					.Wait();
-				
-
+									
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinationsUrls);
 
 				using (var session = store.OpenSession())

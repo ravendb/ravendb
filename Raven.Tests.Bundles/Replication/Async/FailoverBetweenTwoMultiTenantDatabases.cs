@@ -37,7 +37,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
 
 				var replicationDestinations = replicationInformerForDatabase.ReplicationDestinationsUrls;
 				
@@ -80,7 +80,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
 
 				using (var session = store.OpenAsyncSession())
 				{
@@ -125,7 +125,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("FailoverTest");
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
 

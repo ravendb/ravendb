@@ -57,6 +57,8 @@ namespace Raven.Abstractions.Replication
 			set
 			{
 				_sourceCollections = value;
+				if (_sourceCollections.Length > 0)
+					IgnoredClient = true;
 			}
 		}
 

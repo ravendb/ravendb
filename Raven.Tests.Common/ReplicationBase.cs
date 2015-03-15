@@ -81,7 +81,7 @@ namespace Raven.Tests.Common
 
         protected virtual void ConfigureServer(RavenDBOptions options)
         {
-            
+			   
         }
 
         protected virtual void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
@@ -235,6 +235,19 @@ namespace Raven.Tests.Common
         {
 
         }
+
+		protected void SetupReplication(IDatabaseCommands source, Dictionary<DocumentStore, string[]> destinations)
+		{
+			
+			var destinationDocs = destinations.Select(destination => new RavenJObject
+	            {
+		            { "Url", destination.Key.Url },
+		            { "Database", destination.Key.DefaultDatabase },
+					{ "SourceCollections", RavenJToken.FromObject(destination.Value ?? (object)"[]") }
+	            }).ToList();			
+
+			SetupReplication(source, destinationDocs);
+		}
 
 		protected void SetupReplication(IDatabaseCommands source, string[] sourceCollections, params DocumentStore[] destinations)
 		{

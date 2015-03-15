@@ -1,21 +1,63 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Lucene.Net.Documents;
+using Raven.Abstractions.Replication;
 using Raven.Client;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Tests.Common;
 using Xunit;
 
 namespace Raven.Tests.Bundles.Replication
 {
+	//tests for http://issues.hibernatingrhinos.com/issue/RavenDB-3229
 	public class CollectionSpecific : ReplicationBase
 	{
 		private DocumentStore store3;
 		private DocumentStore store2;
 		private DocumentStore store1;
+
+		[Fact]
+		public void Replication_from_specific_collection_should_not_be_valid_failover_destination()
+		{
+			store1 = CreateStore(databaseName: "FailoverTest");
+			store2 = CreateStore(databaseName: "FailoverTest");
+			
+			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), new[]{ "C1s" }, store2);
+
+			using (var store = new DocumentStore
+			{
+				DefaultDatabase = "FailoverTest",
+				Url = store1.Url,
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
+				}
+			})
+			{
+				store.Initialize();
+				
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
+											  .Wait();
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new C1());
+					session.SaveChanges();
+				}
+
+				WaitForDocument(store2.DatabaseCommands.ForDatabase("FailoverTest"), "C1s/1");
+
+				servers[0].Dispose();
+
+				using (var session = store.OpenSession())
+				{
+					var load = session.Load<C1>("C1s/1");
+					Assert.NotNull(load);
+				}
+			}
+		}
 
 		[Fact]
 		public void Replication_from_specified_collections_only_should_work()
@@ -26,9 +68,8 @@ namespace Raven.Tests.Bundles.Replication
 
 			var ids = WriteTracers(store1);
 
-			var aa = store1.DatabaseCommands.Get(ids.Item1);
-
 			SetupReplication(store1.DatabaseCommands, new[] { "C2s" }, store2, store3);
+			
 
 			Assert.True(WaitForDocument(store2.DatabaseCommands, ids.Item2, 1000));
 			Assert.False(WaitForDocument(store2.DatabaseCommands, ids.Item1, 1000));

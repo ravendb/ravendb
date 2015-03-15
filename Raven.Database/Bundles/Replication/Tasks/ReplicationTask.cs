@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System.Security.Cryptography;
+using System.Text;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -423,7 +424,8 @@ namespace Raven.Bundles.Replication.Tasks
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 
 							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.InvalidEtag && 
-								destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.InvalidEtag)
+								destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.InvalidEtag &&
+								(destination.CollectionsToReplicate == null || destination.CollectionsToReplicate.Count == 0))
 							{
 								DateTime lastSent;
 								if (destinationAlertSent.TryGetValue(destination.ConnectionStringOptions.Url, out lastSent) && (SystemTime.UtcNow - lastSent).TotalMinutes < 1)
@@ -658,6 +660,9 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
 						  "&dbid=" + docDb.TransactionalStorage.Id;
+				if (destination.CollectionsToReplicate != null && destination.CollectionsToReplicate.Count > 0)
+					url += ("&collections=" + String.Join(";", destination.CollectionsToReplicate));
+
 				if (lastDocEtag != null)
 					url += "&docEtag=" + lastDocEtag;
 				if (lastAttachmentEtag != null)
@@ -806,7 +811,14 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
-				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl()
+				var sourceServerUrl = UrlEncodedServerUrl();
+				if (destination.CollectionsToReplicate != null && destination.CollectionsToReplicate.Count > 0)
+				{
+					var commaDelimitedCollections = String.Join(";", destination.CollectionsToReplicate);
+					sourceServerUrl += ("&collections=" + commaDelimitedCollections);
+				}
+
+				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + sourceServerUrl
 						  + "&dbid=" + docDb.TransactionalStorage.Id +
 						  "&count=" + jsonDocuments.Length;
 
@@ -1304,6 +1316,10 @@ namespace Raven.Bundles.Replication.Tasks
 				docDb.TransactionalStorage.Batch(accessor => currentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
 						  "&currentEtag=" + currentEtag + "&dbid=" + docDb.TransactionalStorage.Id;
+
+				if (destination.CollectionsToReplicate != null && destination.CollectionsToReplicate.Count > 0)
+					url += ("&collections=" + String.Join(";", destination.CollectionsToReplicate));
+
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
 				var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformationWithBatchInformation>();
 				return lastReplicatedEtagFrom;
@@ -1443,7 +1459,7 @@ namespace Raven.Bundles.Replication.Tasks
 			};
 
 			replicationStrategy.CollectionsToReplicate = (destination.ShouldReplicateFromSpecificCollections) ?
-				new HashSet<string>(destination.SourceCollections) : null;
+				destination.SourceCollections.ToList() : null;
 
 			if (string.IsNullOrEmpty(destination.Username) == false)
 			{

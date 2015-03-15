@@ -124,7 +124,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		}
 
-		public HashSet<string> CollectionsToReplicate { get; set; }
+		public List<string> CollectionsToReplicate { get; set; }
 
 		public string CurrentDatabaseId { get; set; }
 

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 
@@ -74,6 +75,7 @@ namespace Raven.Abstractions.Util
 			GC.Collect(generation, collectionMode);
 		}
 
+		//[MethodImpl(MethodImplOptions.Synchronized)]
 		public static void CollectGarbage(bool compactLoh, Action afterCollect)
 		{
 			ReleaseMemoryBeforeGC();

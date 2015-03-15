@@ -23,6 +23,8 @@ namespace Raven.Bundles.Replication.Data
 
 		public int? LastBatchSize { get; set; }
 
+		public string SourceCollections { get; set; }
+
 		public override string ToString()
 		{
 			return string.Format("LastDocumentEtag: {0}, LastAttachmentEtag: {1}", LastDocumentEtag, LastAttachmentEtag);

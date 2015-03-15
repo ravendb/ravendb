@@ -155,7 +155,7 @@ namespace Raven.SlowTests.Issues
                 TellFirstInstanceToReplicateToSecondInstance();
 
                 var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store1.AsyncDatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store1.AsyncDatabaseCommands);
 
                 var people = InitializeData(store1);
                 var lastPersonId = people.Last().Id;

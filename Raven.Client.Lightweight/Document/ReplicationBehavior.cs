@@ -53,9 +53,11 @@ namespace Raven.Client.Document
 
 			var destinationsToCheck = replicationDocument.Destinations
 			                                             .Where(x => x.Disabled == false && x.IgnoredClient == false)
-			                                             .Select(x => string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url.ForDatabase(x.Database) : x.ClientVisibleUrl.ForDatabase(x.Database))
-			                                             .ToList();
-
+			                                             .Select(x => new 
+														 {
+															 Url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url.ForDatabase(x.Database) : x.ClientVisibleUrl.ForDatabase(x.Database),
+															 x.SourceCollections
+			                                             }).ToList();
 
 			if (destinationsToCheck.Count == 0)
 				return 0;
@@ -71,8 +73,8 @@ namespace Raven.Client.Document
 			var sourceUrl = documentStore.Url.ForDatabase(database ?? documentStore.DefaultDatabase);
 			var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token);
 			var sourceDbId = sourceStatistics.DatabaseId.ToString();
-
-			var tasks = destinationsToCheck.Select(url => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, cts.Token)).ToArray();
+			
+			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, destination.SourceCollections, cts.Token)).ToArray();
 
 		    try
 		    {
@@ -105,13 +107,13 @@ namespace Raven.Client.Document
 		    }
 		}
 
-		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, CancellationToken cancellationToken)
+		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, string[] sourceCollections, CancellationToken cancellationToken)
 		{
 		    while (true)
 		    {
 		        cancellationToken.ThrowIfCancellationRequested();
 
-				var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId);
+				var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId, sourceCollections);
 
 		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
 
@@ -122,11 +124,11 @@ namespace Raven.Client.Document
 		    }
 		}
 
-	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId)
+	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId, string[] sourceCollections = null)
 		{
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
-				destinationUrl.LastReplicatedEtagFor(sourceUrl, sourceDbId),
+				destinationUrl.LastReplicatedEtagFor(sourceUrl, sourceDbId, sourceCollections),
 				"GET",
 				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);
