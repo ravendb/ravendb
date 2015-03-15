@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 
@@ -17,6 +19,24 @@ namespace Raven.Abstractions.Util
 	{
 		private static readonly ConcurrentSet<WeakReference<Action>> _releaseMemoryBeforeGC = new ConcurrentSet<WeakReference<Action>>();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+		private static readonly Process currentProcess;
+
+		private static long memoryBeforeLastGC;
+		private static long memoryAfterLastGC;
+
+		private static DateTime lastGCDateTime;
+
+		private static int delayBetweenGCInMinutes;
+		private const int DefaultDelayBetweenGCInMinutes = 1;
+
+		static RavenGC()
+		{
+			currentProcess = Process.GetCurrentProcess();
+			lastGCDateTime = DateTime.MinValue;
+			memoryAfterLastGC = 0;
+			memoryBeforeLastGC = 0;
+			delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
+		}
 
 		public static void Register(Action action)
 		{
@@ -32,14 +52,22 @@ namespace Raven.Abstractions.Util
 			});
 		}
 
-		public static void CollectGarbage(bool waitForPendingFinalizers = false)
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		public static void CollectGarbage(bool waitForPendingFinalizers = false, bool isAdmin = false)
 		{
-			ReleaseMemoryBeforeGC();
+			if (ShouldCollectNow() || isAdmin)
+			{
+				ReleaseMemoryBeforeGC();
 
-			GC.Collect();
+				CalculateMemoryBefore();
+				GC.Collect();
 
-			if (waitForPendingFinalizers)
-				GC.WaitForPendingFinalizers();
+				if (waitForPendingFinalizers)
+					GC.WaitForPendingFinalizers();
+
+				CalculateMemoryAfter();				
+				lastGCDateTime = DateTime.UtcNow;
+			}
 		}
 
 		private static void ReleaseMemoryBeforeGC()
@@ -67,26 +95,103 @@ namespace Raven.Abstractions.Util
 			inactiveHandlers.ForEach(x => _releaseMemoryBeforeGC.TryRemove(x));
 		}
 
-		public static void CollectGarbage(int generation, GCCollectionMode collectionMode = GCCollectionMode.Default)
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		public static void CollectGarbage(int generation, GCCollectionMode collectionMode = GCCollectionMode.Default, bool isAdmin = false)
 		{
-			ReleaseMemoryBeforeGC();
+			if (ShouldCollectNow() || isAdmin)
+			{
+				ReleaseMemoryBeforeGC();
+				CalculateMemoryBefore();
+				GC.Collect(generation, collectionMode);
+				CalculateMemoryAfter();
+				log.Debug("Finished GC, before was {0}kb, after is {1}kb", memoryBeforeLastGC, memoryAfterLastGC);
 
-			GC.Collect(generation, collectionMode);
+				lastGCDateTime = DateTime.UtcNow;
+			}
 		}
 
-		public static void CollectGarbage(bool compactLoh, Action afterCollect)
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		public static void CollectGarbage(bool compactLoh, Action afterCollect, bool isAdmin = false)
 		{
-			ReleaseMemoryBeforeGC();
+			if (ShouldCollectNow() || isAdmin)
+			{
+				ReleaseMemoryBeforeGC();
+				if (compactLoh)
+					SetCompactLog.Value();
 
-			if (compactLoh)
-				SetCompactLog.Value();
+				CalculateMemoryBefore();
+				GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+				if (afterCollect != null)
+					afterCollect();
 
-			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+				GC.WaitForPendingFinalizers();
+				CalculateMemoryAfter();
+				log.Debug("Finished GC, before was {0}kb, after is {1}kb", memoryBeforeLastGC, memoryAfterLastGC);
 
-			if (afterCollect != null)
-				afterCollect();
+				lastGCDateTime = DateTime.UtcNow;
+			}
+		}
 
-			GC.WaitForPendingFinalizers();
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static void CalculateMemoryBefore()
+		{
+			memoryBeforeLastGC = currentProcess.PrivateMemorySize64 + currentProcess.VirtualMemorySize64;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static void CalculateMemoryAfter()
+		{
+			memoryAfterLastGC = currentProcess.PrivateMemorySize64 + currentProcess.VirtualMemorySize64;
+		}
+
+		private static bool ShouldCollectNow()
+		{
+			currentProcess.Refresh();
+			var nowTime = DateTime.UtcNow;
+			if (memoryAfterLastGC == 0 || memoryBeforeLastGC == 0) //running for the first time
+			{
+				log.Debug("GCing for the first time...");
+				return true;
+			}
+
+			//if last time was freed enough memory (more than 10%) allow the GC and store last GC time
+			if (DifferenceAsDecimalPercents(memoryBeforeLastGC, memoryAfterLastGC) >= 0.1)
+			{
+				log.Debug("Allowing GC because difference of memory before and after GC equals or more than 10% - last time was released {0}kbs.", Math.Abs(memoryAfterLastGC - memoryBeforeLastGC)/1024);
+				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
+				
+				return true;
+			}
+			
+			//if last time not enough memory was freed, but enough time passed since last allowed GC,
+			//reset delay and allow GC
+			if ((nowTime - lastGCDateTime).TotalMinutes >= delayBetweenGCInMinutes && 
+			    DifferenceAsDecimalPercents(memoryBeforeLastGC, memoryAfterLastGC) < 0.1)
+			{
+				log.Debug("Allowing GC because more than {1} minutes passed since last GC - last time was released {0}kbs.", Math.Abs(memoryAfterLastGC - memoryBeforeLastGC) / 1024, (nowTime - lastGCDateTime).TotalMinutes);
+				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
+
+				return true;
+			}
+
+			//not enough memory was freed the last time, and not enough time passed
+			// -> reset last time, increase delay threshold and disallow GC (too early!)
+			lastGCDateTime = nowTime;
+			delayBetweenGCInMinutes += 5;
+
+			log.Debug("Disallowing GC (not enough memory released last time and not enough time passed since last GC). New interval between GCs will be {0}min",delayBetweenGCInMinutes);
+			return false;
+		}
+
+		private static double DifferenceAsDecimalPercents(long v1, long v2)
+		{
+			double x1 = v1;
+			double x2 = v2;
+			
+			if (x1 > 0.0 && x2 > 0.0)
+				return Math.Abs(x1 - x2)/x2;
+
+			return 0.0;			
 		}
 
 		// this is just the code below, but we have to run on 4.5, not just 4.5.1
