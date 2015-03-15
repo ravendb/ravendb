@@ -212,6 +212,7 @@ namespace Raven.Abstractions.Data
             public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
             public const string Storage = "Raven/FileSystem/Storage";
 	        public const string UrlPrefix = "fs";
+	        public const string RavenFsSize = "RavenFS-Size";
 
 	        public static class Versioning
 	        {

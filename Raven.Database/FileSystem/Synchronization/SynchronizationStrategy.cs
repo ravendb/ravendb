@@ -42,6 +42,9 @@ namespace Raven.Database.FileSystem.Synchronization
             if (ExistsRenameTombstone(file.FullPath, candidatesToSynchronization))
 				return false;
 
+	        if (file.FullPath.Contains("/revisions/"))
+		        return false;
+
 			return true;
 		}
 

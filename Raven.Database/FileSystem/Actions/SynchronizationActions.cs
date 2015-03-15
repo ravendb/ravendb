@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.FileSystem.Storage;
@@ -23,7 +22,7 @@ namespace Raven.Database.FileSystem.Actions
 {
 	public class SynchronizationActions : ActionsBase
 	{
-		private readonly ConcurrentDictionary<Guid, ReaderWriterLockSlim> SynchronizationFinishLocks = new ConcurrentDictionary<Guid, ReaderWriterLockSlim>();
+		private readonly ConcurrentDictionary<Guid, ReaderWriterLockSlim> synchronizationFinishLocks = new ConcurrentDictionary<Guid, ReaderWriterLockSlim>();
 
 		public SynchronizationActions(RavenFileSystem fileSystem, ILog log)
 			: base(fileSystem, log)
@@ -52,36 +51,13 @@ namespace Raven.Database.FileSystem.Actions
 			});
 		}
 
-		public void PublishFileNotification(string fileName, FileChangeAction action)
-		{
-			Publisher.Publish(new FileChangeNotification
-			{
-				File = FilePathTools.Cannoicalise(fileName),
-				Action = action
-			});
-		}
-
-		public void PublishSynchronizationNotification(string fileName, FileSystemInfo sourceFileSystem, SynchronizationType type, SynchronizationAction action)
-		{
-			Publisher.Publish(new SynchronizationUpdateNotification
-			{
-				FileName = fileName,
-				SourceFileSystemUrl = sourceFileSystem.Url,
-				SourceServerId = sourceFileSystem.Id,
-				Type = type,
-				Action = action,
-				Direction = SynchronizationDirection.Incoming
-			});
-		}
-
 		public void FinishSynchronization(string fileName, SynchronizationReport report, FileSystemInfo sourceFileSystem, Etag sourceFileETag)
 		{
 			try
 			{
 				// we want to execute those operation in a single batch but we also have to ensure that
 				// Raven/Synchronization/Sources/sourceServerId config is modified only by one finishing synchronization at the same time
-				SynchronizationFinishLocks.GetOrAdd(sourceFileSystem.Id, new ReaderWriterLockSlim()).EnterWriteLock();
-				SynchronizationTask.IncomingSynchronizationFinished(fileName, sourceFileSystem, sourceFileETag);
+				synchronizationFinishLocks.GetOrAdd(sourceFileSystem.Id, new ReaderWriterLockSlim()).EnterWriteLock();
 
 				Storage.Batch(accessor =>
 				{
@@ -89,19 +65,16 @@ namespace Raven.Database.FileSystem.Actions
 					FileLockManager.UnlockByDeletingSyncConfiguration(fileName, accessor);
 
 					if (report.Exception == null)
-					{
 						SaveSynchronizationSourceInformation(sourceFileSystem, sourceFileETag);
-					}
 				});
 			}
 			catch (Exception ex)
 			{
-				Log.ErrorException(
-					string.Format("Failed to finish synchronization of a file '{0}' from {1}", fileName, sourceFileSystem), ex);
+				Log.ErrorException(string.Format("Failed to finish synchronization of a file '{0}' from {1}", fileName, sourceFileSystem), ex);
 			}
 			finally
 			{
-				SynchronizationFinishLocks.GetOrAdd(sourceFileSystem.Id, new ReaderWriterLockSlim()).ExitWriteLock();
+				synchronizationFinishLocks.GetOrAdd(sourceFileSystem.Id, new ReaderWriterLockSlim()).ExitWriteLock();
 			}
 		}
 
@@ -157,13 +130,13 @@ namespace Raven.Database.FileSystem.Actions
 			return info;
 		}
 
-		public void IncermentLastEtag(Guid sourceServerId, string sourceFileSystemUrl, string sourceFileETag)
+		public void IncrementLastEtag(Guid sourceServerId, string sourceFileSystemUrl, string sourceFileETag)
 		{
 			try
 			{
 				// we want to execute those operation in a single batch but we also have to ensure that
 				// Raven/Synchronization/Sources/sourceServerId config is modified only by one finishing synchronization at the same time
-				SynchronizationFinishLocks.GetOrAdd(sourceServerId, new ReaderWriterLockSlim()).EnterWriteLock();
+				synchronizationFinishLocks.GetOrAdd(sourceServerId, new ReaderWriterLockSlim()).EnterWriteLock();
 
 				SaveSynchronizationSourceInformation(new FileSystemInfo
 				{
@@ -178,7 +151,7 @@ namespace Raven.Database.FileSystem.Actions
 			}
 			finally
 			{
-				SynchronizationFinishLocks.GetOrAdd(sourceServerId, new ReaderWriterLockSlim()).ExitWriteLock();
+				synchronizationFinishLocks.GetOrAdd(sourceServerId, new ReaderWriterLockSlim()).ExitWriteLock();
 			}
 		}
 
@@ -223,9 +196,7 @@ namespace Raven.Database.FileSystem.Actions
 			}
 
 			if (result.ContainsKey(SynchronizationConstants.RavenDeleteMarker))
-			{
 				return null;
-			}
 
 			return result;
 		}

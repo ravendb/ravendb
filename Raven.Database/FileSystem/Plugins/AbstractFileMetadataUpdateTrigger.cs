@@ -1,17 +1,16 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="AbstractFilePutTrigger.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="AbstractFileMetadataUpdateTrigger.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.ComponentModel.Composition;
-
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Plugins
 {
 	[InheritedExport]
-	public abstract class AbstractFilePutTrigger : IRequiresFileSystemInitialization
+	public abstract class AbstractFileMetadataUpdateTrigger : IRequiresFileSystemInitialization
 	{
 		public RavenFileSystem FileSystem { get; private set; }
 
@@ -29,24 +28,16 @@ namespace Raven.Database.FileSystem.Plugins
 		{
 		}
 
-		public virtual VetoResult AllowPut(string name, RavenJObject metadata)
+		public virtual VetoResult AllowUpdate(string name, RavenJObject metadata)
 		{
 			return VetoResult.Allowed;
 		}
 
-		public virtual void OnPut(string name, RavenJObject metadata)
+		public virtual void OnUpdate(string name, RavenJObject metadata)
 		{
 		}
 
-		public virtual void AfterPut(string name, long? size, RavenJObject metadata)
-		{
-		}
-
-		public virtual void OnUpload(string name, RavenJObject metadata, int pageId, int pagePositionInFile, int pageSize)
-		{
-		}
-
-		public virtual void AfterUpload(string name, RavenJObject metadata)
+		public virtual void AfterUpdate(string name, RavenJObject metadata)
 		{
 		}
 	}

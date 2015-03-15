@@ -24,7 +24,7 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
 		public void Create(string fileName, ConflictItem conflict)
 		{
             RavenJObject metadata = null;
-			FileOperationResult updateMetadata = null;
+			MetadataUpdateResult updateMetadata = null;
 
 			storage.Batch(
 				accessor =>
@@ -42,7 +42,7 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
 		public void Delete(string fileName, IStorageActionsAccessor actionsAccessor = null)
 		{
             RavenJObject metadata = null;
-			FileOperationResult updateResult = null;
+			MetadataUpdateResult updateResult = null;
 
 			Action<IStorageActionsAccessor> delete = accessor =>
 			{

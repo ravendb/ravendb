@@ -110,9 +110,10 @@ namespace Raven.Database.FileSystem
 
             historian = new Historian(storage, new SynchronizationHiLo(storage));
 
+			InitializeTriggersExceptIndexCodecs();
+
             search.Initialize(this);
 
-			InitializeTriggersExceptIndexCodecs();
 			SecondStageInitialization();
         }
 
@@ -184,9 +185,15 @@ namespace Raven.Database.FileSystem
 
 			PutTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 
+			MetadataUpdateTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			RenameTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
 			DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 
 			ReadTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			SynchronizationTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		private void SecondStageInitialization()
@@ -197,9 +204,15 @@ namespace Raven.Database.FileSystem
 
 			PutTriggers.Apply(initialization => initialization.SecondStageInit());
 
+			MetadataUpdateTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			RenameTriggers.Apply(initialization => initialization.SecondStageInit());
+
 			DeleteTriggers.Apply(initialization => initialization.SecondStageInit());
 
 			ReadTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			SynchronizationTriggers.Apply(initialization => initialization.SecondStageInit());
 		}
 
 		/// <summary>
@@ -214,10 +227,20 @@ namespace Raven.Database.FileSystem
 		public OrderedPartCollection<AbstractFilePutTrigger> PutTriggers { get; set; }
 
 		[ImportMany]
+		public OrderedPartCollection<AbstractFileMetadataUpdateTrigger> MetadataUpdateTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileRenameTrigger> RenameTriggers { get; set; }
+
+		[ImportMany]
 		public OrderedPartCollection<AbstractFileDeleteTrigger> DeleteTriggers { get; set; }
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractFileReadTrigger> ReadTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractSynchronizationTrigger> SynchronizationTriggers { get; set; }
+
 
 	    public ITransactionalStorage Storage
 		{
