@@ -3,7 +3,7 @@ using Raven.Abstractions.Util;
 using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.SlowTests
+namespace Raven.Tests.Core
 {
 	public class RavenGCTests : RavenTestBase
 	{
@@ -35,9 +35,6 @@ namespace Raven.SlowTests
 				new Random().NextBytes(bytes);
 				reference = new WeakReference(bytes, true);
 			});			
-
-			//sanity check
-			Assert.Equal(DateTime.MinValue, RavenGC.LastForcedGCTime);
 
 			allocateStuff(4096 * 1024);
 			Assert.True(RavenGC.CollectGarbage(true, () => { }));
