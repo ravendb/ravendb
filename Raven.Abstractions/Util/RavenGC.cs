@@ -28,7 +28,7 @@ namespace Raven.Abstractions.Util
 
 		private static int delayBetweenGCInMinutes;
 		private const int DefaultDelayBetweenGCInMinutes = 1;
-
+		private const int MaxDelayBetweenGCInMinutes = 60;
 		static RavenGC()
 		{
 			currentProcess = Process.GetCurrentProcess();
@@ -67,6 +67,7 @@ namespace Raven.Abstractions.Util
 
 				CalculateMemoryAfter();				
 				lastGCDateTime = DateTime.UtcNow;
+				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
 			}
 		}
 
@@ -107,6 +108,7 @@ namespace Raven.Abstractions.Util
 				log.Debug("Finished GC, before was {0}kb, after is {1}kb", memoryBeforeLastGC, memoryAfterLastGC);
 
 				lastGCDateTime = DateTime.UtcNow;
+				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
 			}
 		}
 
@@ -129,6 +131,7 @@ namespace Raven.Abstractions.Util
 				log.Debug("Finished GC, before was {0}kb, after is {1}kb", memoryBeforeLastGC, memoryAfterLastGC);
 
 				lastGCDateTime = DateTime.UtcNow;
+				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
 			}
 		}
 
@@ -165,8 +168,7 @@ namespace Raven.Abstractions.Util
 			
 			//if last time not enough memory was freed, but enough time passed since last allowed GC,
 			//reset delay and allow GC
-			if ((nowTime - lastGCDateTime).TotalMinutes >= delayBetweenGCInMinutes && 
-			    DifferenceAsDecimalPercents(memoryBeforeLastGC, memoryAfterLastGC) < 0.1)
+			if ((nowTime - lastGCDateTime).TotalMinutes >= delayBetweenGCInMinutes)
 			{
 				log.Debug("Allowing GC because more than {1} minutes passed since last GC - last time was released {0}kbs.", Math.Abs(memoryAfterLastGC - memoryBeforeLastGC) / 1024, (nowTime - lastGCDateTime).TotalMinutes);
 				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
@@ -177,7 +179,8 @@ namespace Raven.Abstractions.Util
 			//not enough memory was freed the last time, and not enough time passed
 			// -> reset last time, increase delay threshold and disallow GC (too early!)
 			lastGCDateTime = nowTime;
-			delayBetweenGCInMinutes += 5;
+			
+			delayBetweenGCInMinutes = Math.Max(5 + delayBetweenGCInMinutes, MaxDelayBetweenGCInMinutes);
 
 			log.Debug("Disallowing GC (not enough memory released last time and not enough time passed since last GC). New interval between GCs will be {0}min",delayBetweenGCInMinutes);
 			return false;
@@ -206,5 +209,6 @@ namespace Raven.Abstractions.Util
 			var lambda = Expression.Lambda<Action>(Expression.Assign(Expression.MakeMemberAccess(null, prop), Expression.Constant(value)));
 			return lambda.Compile();
 		});
+		
 	}
 }
