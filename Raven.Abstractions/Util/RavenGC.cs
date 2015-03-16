@@ -30,6 +30,11 @@ namespace Raven.Abstractions.Util
 		private const int MaxDelayBetweenGCInMinutes = 60;
 		static RavenGC()
 		{
+			ResetHistory();
+		}
+
+		public static void ResetHistory()
+		{
 			lastForcedGCTime = DateTime.MinValue;
 			memoryAfterLastForcedGC = 0;
 			memoryBeforeLastForcedGC = 0;
@@ -63,28 +68,6 @@ namespace Raven.Abstractions.Util
 			});
 		}
 
-		[MethodImpl(MethodImplOptions.Synchronized)]
-		public static bool CollectGarbage(bool waitForPendingFinalizers = false, bool isAdmin = false)
-		{
-			if (ShouldCollectNow() || isAdmin)
-			{
-				ReleaseMemoryBeforeGC();
-
-				CalculateMemoryBefore();
-				GC.Collect();
-
-				if (waitForPendingFinalizers)
-					GC.WaitForPendingFinalizers();
-
-				CalculateMemoryAfter();				
-				lastForcedGCTime = DateTime.UtcNow;
-				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
-				return true;
-			}
-
-			return false;
-		}
-
 		private static void ReleaseMemoryBeforeGC()
 		{
 			var inactiveHandlers = new List<WeakReference<Action>>();
@@ -110,67 +93,71 @@ namespace Raven.Abstractions.Util
 			inactiveHandlers.ForEach(x => _releaseMemoryBeforeGC.TryRemove(x));
 		}
 
-		[MethodImpl(MethodImplOptions.Synchronized)]
-		public static bool CollectGarbage(int generation, GCCollectionMode collectionMode = GCCollectionMode.Default, bool isAdmin = false)
+		public static bool CollectGarbage(int generation, GCCollectionMode collectionMode = GCCollectionMode.Default, bool forceByUser = false)
 		{
-			if (ShouldCollectNow() || isAdmin)
-			{
-				ReleaseMemoryBeforeGC();
-				CalculateMemoryBefore();
-				GC.Collect(generation, collectionMode);
-				CalculateMemoryAfter();
-				log.Debug("Finished GC, before was {0}kb, after is {1}kb", MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
+			return CollectGarbageInternal(false, null, forceByUser, generation, collectionMode, false);
+		}
 
-				lastForcedGCTime = DateTime.UtcNow;
-				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
-				return true;
-			}
-
-			return false;
+		public static bool CollectGarbage(bool compactLoh, Action afterCollect, bool forceByUser = false)
+		{
+			return CollectGarbageInternal(compactLoh, afterCollect, forceByUser, GC.MaxGeneration, GCCollectionMode.Forced, true);
 		}
 
 		[MethodImpl(MethodImplOptions.Synchronized)]
-		public static bool CollectGarbage(bool compactLoh, Action afterCollect, bool isAdmin = false)
+		private static bool CollectGarbageInternal(bool compactLoh, Action afterCollect, bool forceByUser, int maxGeneration, GCCollectionMode gcCollectionMode, bool waitForPendingFinalizers)
 		{
-			if (ShouldCollectNow() || isAdmin)
-			{
-				ReleaseMemoryBeforeGC();
-				if (compactLoh)
-					SetCompactLog.Value();
+			if (!ShouldCollectNow() && !forceByUser)
+				return false;
 
-				CalculateMemoryBefore();
-				GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-				if (afterCollect != null)
-					afterCollect();
-
-				GC.WaitForPendingFinalizers();
-				CalculateMemoryAfter();
-				log.Debug("Finished GC, before was {0}kb, after is {1}kb", MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
-
-				lastForcedGCTime = DateTime.UtcNow;
-				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
-
-				return true;
-			}
-
-			return false;
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static void CalculateMemoryBefore()
-		{
+			ReleaseMemoryBeforeGC();
 			memoryBeforeLastForcedGC = GC.GetTotalMemory(false);
-		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static void CalculateMemoryAfter()
-		{
-			memoryAfterLastForcedGC = GC.GetTotalMemory(false); 
+			if (compactLoh)
+				SetCompactLog.Value();
+
+			GC.Collect(maxGeneration, gcCollectionMode);
+			if (afterCollect != null)
+				afterCollect();
+
+			if (waitForPendingFinalizers)
+				GC.WaitForPendingFinalizers();
+
+			memoryAfterLastForcedGC = GC.GetTotalMemory(false);
+			memoryDifferenceLastGc = DifferenceAsDecimalPercents(MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
+
+			log.Info("Finished GC, before was {0:#,#}kb, after is {1#,#}kb", MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
+
+
+			// -> reset last time, increase delay threshold and disallow GC (too early!)
+			lastForcedGCTime = SystemTime.UtcNow;
+
+			var old = delayBetweenGCInMinutes;
+			if (memoryDifferenceLastGc < 0.1)
+			{
+				delayBetweenGCInMinutes = Math.Max(5 + delayBetweenGCInMinutes, MaxDelayBetweenGCInMinutes);
+
+				if (old != delayBetweenGCInMinutes)
+				{
+					log.Debug("Increasing delay for forced GC (not enough memory released, so we need to back off). " +
+					          "New interval between GCs will be {0} minutes", delayBetweenGCInMinutes);
+				}
+			}
+			else
+			{
+				if (old != delayBetweenGCInMinutes)
+				{
+					log.Debug("Resetting delay for forced GC (enough memory was released to make it useful, so we don't need to back off). " +
+							  "New interval between GCs will be {0} minutes", delayBetweenGCInMinutes);
+				}
+				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;				
+			}
+
+			return true;
 		}
 
 		private static bool ShouldCollectNow()
 		{
-			var nowTime = DateTime.UtcNow;
+			var nowTime = SystemTime.UtcNow;
 			if (MemoryAfterLastForcedGC == 0 || MemoryBeforeLastForcedGC == 0) //running for the first time
 			{
 				log.Debug("GCing for the first time...");
@@ -178,7 +165,7 @@ namespace Raven.Abstractions.Util
 			}
 
 			//if last time was freed enough memory (more than 10%) allow the GC and store last GC time
-			if (DifferenceAsDecimalPercents(MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC) >= 0.1)
+			if (memoryDifferenceLastGc >= 0.1)
 			{
 				log.Debug("Allowing GC because difference of memory before and after GC equals or more than 10% - last time was released {0}kbs.", Math.Abs(MemoryAfterLastForcedGC - MemoryBeforeLastForcedGC)/1024);
 				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
@@ -191,18 +178,10 @@ namespace Raven.Abstractions.Util
 			if ((nowTime - LastForcedGCTime).TotalMinutes >= delayBetweenGCInMinutes)
 			{
 				log.Debug("Allowing GC because more than {1} minutes passed since last GC - last time was released {0}kbs.", Math.Abs(MemoryAfterLastForcedGC - MemoryBeforeLastForcedGC) / 1024, (nowTime - LastForcedGCTime).TotalMinutes);
-				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
-
 				return true;
 			}
 
 			//not enough memory was freed the last time, and not enough time passed
-			// -> reset last time, increase delay threshold and disallow GC (too early!)
-			lastForcedGCTime = nowTime;
-			
-			delayBetweenGCInMinutes = Math.Max(5 + delayBetweenGCInMinutes, MaxDelayBetweenGCInMinutes);
-
-			log.Debug("Disallowing GC (not enough memory released last time and not enough time passed since last GC). New interval between GCs will be {0}min",delayBetweenGCInMinutes);
 			return false;
 		}
 
@@ -229,6 +208,6 @@ namespace Raven.Abstractions.Util
 			var lambda = Expression.Lambda<Action>(Expression.Assign(Expression.MakeMemberAccess(null, prop), Expression.Constant(value)));
 			return lambda.Compile();
 		});
-		
+		private static double memoryDifferenceLastGc;
 	}
 }
