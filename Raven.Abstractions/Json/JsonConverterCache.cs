@@ -15,44 +15,58 @@ namespace Raven.Abstractions.Json
     {
         private static CompoundKeyEqualityComparer Comparer = new CompoundKeyEqualityComparer();
 
-        private class CompoundKey
+        private abstract class CompoundKey
         {
             internal readonly int HashKey;
 
-            public CompoundKey( int hashKey )
+	        protected CompoundKey( int hashKey )
             {
                 this.HashKey = hashKey;
             }
+
+	        public abstract JsonConverterCollection Collection { get;  }
         }
 
         private sealed class FastCompoundKey : CompoundKey
         {
-            public readonly Type Type;
-            public readonly JsonConverterCollection Collection;
+            private readonly JsonConverterCollection collection;
 
             public FastCompoundKey(Type type, JsonConverterCollection collection)
-                : base(type.GetHashCode() * 17 + collection.GetHashCode())
+                : base(type.GetHashCode() * 17 ^ collection.GetHashCode())
             {
                 Debug.Assert(collection.IsFrozen);
 
-                this.Type = type;
-                this.Collection = collection;
+                this.collection = collection;
             }
+
+	        public override JsonConverterCollection Collection
+	        {
+		        get { return collection; }
+	        }
         }
 
         private sealed class SlowCompoundKey : CompoundKey
         {
-            public readonly Type Type;
-            public readonly WeakReference<JsonConverterCollection> Collection;
+            private readonly WeakReference<JsonConverterCollection> collection;
 
             public SlowCompoundKey(Type type, JsonConverterCollection collection)
-                : base(type.GetHashCode() * 17 + collection.GetHashCode())
+                : base(type.GetHashCode() * 17 ^ collection.GetHashCode())
             {
                 Debug.Assert(collection.IsFrozen);
 
-                this.Type = type;
-                this.Collection = new WeakReference<JsonConverterCollection>(collection);
+                this.collection = new WeakReference<JsonConverterCollection>(collection);
             }
+
+
+			public override JsonConverterCollection Collection
+			{
+				get
+				{
+					JsonConverterCollection target;
+					collection.TryGetTarget(out target);
+					return target;
+				}
+			}
         }
 
 
@@ -123,24 +137,8 @@ namespace Raven.Abstractions.Json
                 if (x == null || y == null)
                     return false;
 
-                SlowCompoundKey k;
-                FastCompoundKey @this;
-                if (x is FastCompoundKey)
-                {
-                    @this = x as FastCompoundKey;
-                    k = y as SlowCompoundKey;
-                }
-                else
-                {
-                    @this = y as FastCompoundKey;
-                    k = x as SlowCompoundKey;
-                }
 
-                JsonConverterCollection kCollection;
-                if (!k.Collection.TryGetTarget(out kCollection))
-                    return false;
-
-                return @this.Collection == kCollection;
+                return x.Collection == y.Collection;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

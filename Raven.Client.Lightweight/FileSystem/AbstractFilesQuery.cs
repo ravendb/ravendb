@@ -137,10 +137,15 @@ namespace Raven.Client.FileSystem
 
             if (fieldName.EndsWith("_numeric"))
             {
+	            var transformToRangeValue = TransformToRangeValue(new WhereParams
+	            {
+		            Value = whereParams.Value, FieldName = whereParams.FieldName
+	            });
+
                 queryText.Append("[");
-                queryText.Append(transformToEqualValue);
+                queryText.Append(transformToRangeValue);
                 queryText.Append(" TO ");
-                queryText.Append(transformToEqualValue);
+				queryText.Append(transformToRangeValue);
                 queryText.Append("]");
             }
             else
@@ -683,19 +688,16 @@ namespace Raven.Client.FileSystem
             if (whereParams.Value is TimeSpan)
                 return NumberUtil.NumberToString(((TimeSpan)whereParams.Value).Ticks);
 
-
-            if (whereParams.Value is float)
-                return NumberUtil.NumberToString((float)whereParams.Value);
-            if (whereParams.Value is double)
-                return NumberUtil.NumberToString((double)whereParams.Value);
-            
-            //TODO Change the server to recognize the different types.
-            if (whereParams.Value is int)
-                return whereParams.Value.ToString();
-            if (whereParams.Value is long)
-                return whereParams.Value.ToString();
-            if (whereParams.Value is decimal)
-                return whereParams.Value.ToString();
+			if (whereParams.Value is int)
+				return NumberUtil.NumberToString((int) whereParams.Value);
+			if (whereParams.Value is long)
+				return NumberUtil.NumberToString((long) whereParams.Value);
+			if (whereParams.Value is decimal)
+				return NumberUtil.NumberToString((double) (decimal) whereParams.Value);
+			if (whereParams.Value is double)
+				return NumberUtil.NumberToString((double) whereParams.Value);
+			if (whereParams.Value is float)
+				return NumberUtil.NumberToString((float) whereParams.Value);
 
             if (whereParams.Value is string)
                 return RavenQuery.Escape(whereParams.Value.ToString(), false, true);

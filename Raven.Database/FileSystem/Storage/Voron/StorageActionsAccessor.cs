@@ -119,7 +119,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             return newPageId;
         }
 
-        public FileOperationResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
+        public MetadataUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
         {
 			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
@@ -156,7 +156,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 		        fileCount.Add(writeBatch.Value, key, key);
 	        }
 
-	        return new FileOperationResult()
+	        return new MetadataUpdateResult()
 	        {
 		        Etag = newEtag
 	        };
@@ -276,7 +276,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
                             fileInformation.Pages.Add(new PageInformation
                                                       {
                                                           Id = usage.Value<int>("page_id"),
-                                                          Size = usage.Value<int>("page_size")
+                                                          Size = usage.Value<int>("page_size"),
+														  PositionInFile = usage.Value<int>("file_pos")
                                                       });
                         }
                         while (iterator.MoveNext() && fileInformation.Pages.Count < pagesToLoad);
@@ -379,7 +380,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             DeleteFile(filename);
         }
 
-        public FileOperationResult UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag)
+        public MetadataUpdateResult UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag)
         {
             var key = CreateKey(filename);
 
@@ -397,8 +398,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
 			if (!metadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
 				metadata["Content-MD5"] = existingMetadata["Content-MD5"];
-			if (!metadata.ContainsKey("RavenFS-Size") && existingMetadata.ContainsKey("RavenFS-Size"))
-				metadata["RavenFS-Size"] = existingMetadata["RavenFS-Size"];
+			if (!metadata.ContainsKey(RavenConstants.FileSystem.RavenFsSize) && existingMetadata.ContainsKey(RavenConstants.FileSystem.RavenFsSize))
+				metadata[RavenConstants.FileSystem.RavenFsSize] = existingMetadata[RavenConstants.FileSystem.RavenFsSize];
 
 	        file["etag"] = newEtag.ToByteArray();
             file["metadata"] = metadata;
@@ -410,7 +411,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             filesByEtag.Delete(writeBatch.Value, CreateKey(existingEtag));
             filesByEtag.Add(writeBatch.Value, CreateKey(newEtag), key);
 
-	        return new FileOperationResult()
+	        return new MetadataUpdateResult()
 	        {
 		        PrevEtag = existingEtag,
 		        Etag = newEtag

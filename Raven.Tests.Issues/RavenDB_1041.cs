@@ -4,7 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
@@ -45,42 +48,58 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			var i = await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName);
+			var replicatedEtagInfos = new ConcurrentQueue<ReplicatedEtagInfo>();
+			var i = await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName, actions:replicatedEtagInfos);
+			try
+			{
+				Assert.Equal(2, i);
 
-			Assert.Equal(2, i);
 
-			Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
-			Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+				Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+				Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(JsonConvert.SerializeObject(replicatedEtagInfos.ToArray()), e);
+			}
 		}
 
-		[Fact]
-		public async Task CanWaitForReplicationOfParticularEtag()
-		{
-			var store1 = CreateStore(requestedStorageType:"esent");
-            var store2 = CreateStore(requestedStorageType: "esent");
-            var store3 = CreateStore(requestedStorageType: "esent");
+	    [Fact]
+	    public async Task CanWaitForReplicationOfParticularEtag()
+	    {
+		    var store1 = CreateStore(requestedStorageType: "esent");
+		    var store2 = CreateStore(requestedStorageType: "esent");
+		    var store3 = CreateStore(requestedStorageType: "esent");
 
-			SetupReplication(store1.DatabaseCommands, store2, store3);
+		    SetupReplication(store1.DatabaseCommands, store2, store3);
 
-			var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
-			var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
+		    var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
+		    var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
 
-			var i = await ((DocumentStore)store1).Replication.WaitAsync(putResult.ETag);
+		    var i = await ((DocumentStore) store1).Replication.WaitAsync(putResult.ETag);
 
-			Assert.Equal(2,i);
+		    Assert.Equal(2, i);
 
-			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
-			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
+		    Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
+		    Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
 
-			i = await ((DocumentStore)store1).Replication.WaitAsync(putResult2.ETag);
+		    var replicatedEtagInfos = new ConcurrentQueue<ReplicatedEtagInfo>();
+		    i = await ((DocumentStore) store1).Replication.WaitAsync(putResult2.ETag, actions: replicatedEtagInfos);
+		    try
+		    {
+			    Assert.Equal(2, i);
 
-			Assert.Equal(2, i);
 
-			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/2"));
-			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/2"));
-		}
+			    Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+			    Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+		    }
+		    catch (Exception e)
+		    {
+			    throw new InvalidOperationException(JsonConvert.SerializeObject(replicatedEtagInfos.ToArray()), e);
+		    }
+	    }
 
-		[Fact]
+	    [Fact]
 		public async Task CanWaitForReplicationInAsyncManner()
 		{
 			var store1 = CreateStore();

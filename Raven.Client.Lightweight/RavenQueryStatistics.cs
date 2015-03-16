@@ -77,6 +77,10 @@ namespace Raven.Client
 		/// </summary>
 		public Dictionary<string, double> TimingsInMilliseconds { get; set; }
 
+
+
+        public Etag ResultEtag { get; set; }
+
 		/// <summary>
 		/// The size of the request which were sent from the server.
 		/// This value is the _uncompressed_ size. 
@@ -100,10 +104,11 @@ namespace Raven.Client
 			TimingsInMilliseconds = qr.TimingsInMilliseconds;
 			LastQueryTime = qr.LastQueryTime;
 			ResultSize = qr.ResultSize;
+		    ResultEtag = qr.ResultEtag;
 			ScoreExplanations = qr.ScoreExplanations;
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Gets or sets explanations of document scores 
 		/// </summary>
 		public Dictionary<string, string> ScoreExplanations { get; set; }

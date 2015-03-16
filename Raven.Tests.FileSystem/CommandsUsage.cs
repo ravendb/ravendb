@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -414,7 +415,7 @@ namespace Raven.Tests.FileSystem
 			{
 				await client.RenameAsync("file1.bin", "file2.bin");
 			}
-			catch (InvalidOperationException e)
+			catch (ErrorResponseException e)
 			{
 				ex = e.GetBaseException();
 			}

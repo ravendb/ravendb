@@ -22,7 +22,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 			this.synchronizationHiLo = synchronizationHiLo;
 		}
 
-		public void Update(string fileName, RavenJObject sourceMetadata) // TODO arek - move this to a dedicated put trigger
+		public void Update(string fileName, RavenJObject sourceMetadata)
 		{
 			var fileMetadata = GetMetadata(fileName);
             var serverId = fileMetadata.Value<string>(SynchronizationConstants.RavenSynchronizationSource);
@@ -75,7 +75,7 @@ namespace Raven.Database.FileSystem.Infrastructure
             if (metadata.ContainsKey(SynchronizationConstants.RavenSynchronizationHistory))
             {
                 var array = (RavenJArray) metadata[SynchronizationConstants.RavenSynchronizationHistory];
-                var items = array.Values<RavenJObject>().Select(x => JsonExtensions.JsonDeserialization<HistoryItem>(x));
+                var items = array.Values<RavenJObject>().Select(x => x.JsonDeserialization<HistoryItem>());
                 return new List<HistoryItem>(items);
             }
 

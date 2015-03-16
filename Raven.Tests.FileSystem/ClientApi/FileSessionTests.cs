@@ -492,7 +492,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                     resultingStream = await session.DownloadAsync("test1.file", metadata);
 
                     Assert.NotNull(metadata.Value);
-                    Assert.Equal(128, metadata.Value.Value<long>("RavenFS-Size"));
+					Assert.Equal(128, metadata.Value.Value<long>(Constants.FileSystem.RavenFsSize));
                 }
             }
         }

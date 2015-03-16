@@ -89,12 +89,7 @@ namespace Raven.Client.FileSystem
                 return new BadRequestException();
             }
 
-			using (var reader = new StringReader(errorResposeException.Message))
-			{
-				var readToEnd = reader.ReadToEnd();
-				return new InvalidOperationException(
-					errorResposeException + Environment.NewLine + readToEnd, errorResposeException);
-			}
+			return errorResposeException;
 		}
 
 		public static Task<T> TryThrowBetterError<T>(this Task<T> self)

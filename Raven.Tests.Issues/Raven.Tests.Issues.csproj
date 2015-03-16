@@ -116,6 +116,7 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB_3271.cs" />
     <Compile Include="RavenDB_3276.cs" />
     <Compile Include="BulkInsertAuth.cs" />
     <Compile Include="BulkInsertClient.cs" />
@@ -124,6 +125,8 @@
     <Compile Include="RaqvenDB_3222.cs" />
     <Compile Include="RavenDB-3136.cs" />
     <Compile Include="RavenDB-3150.cs" />
+    <Compile Include="RavenDB-3277.cs" />
+    <Compile Include="RavenDB-3300.cs" />
     <Compile Include="RavenDB3075.cs" />
     <Compile Include="RavenDB_2627.cs" />
     <Compile Include="RavenDB_2867.cs" />
@@ -434,6 +437,10 @@
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Bundles\Raven.Client.Authorization\Raven.Client.Authorization.csproj">
+      <Project>{3A852FD2-E0F9-449C-8F66-0C6A180D030A}</Project>
+      <Name>Raven.Client.Authorization</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Bundles\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj">
       <Project>{d185331d-2b7c-4251-8ebe-140ede1fab9f}</Project>
       <Name>Raven.Client.UniqueConstraints</Name>

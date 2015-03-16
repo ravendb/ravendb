@@ -3,10 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.IO;
+using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Versioning.Data;
+using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Util;
 
 namespace Raven.Database.FileSystem.Bundles.Versioning
 {
@@ -29,29 +34,58 @@ namespace Raven.Database.FileSystem.Bundles.Versioning
 			return result;
 		}
 
-		public static bool IsVersioningActive(this RavenFileSystem fileSystem)
+		public static bool IsVersioningActive(this RavenFileSystem fileSystem, string filePath)
 		{
 			var exists = false;
-			fileSystem.Storage.Batch(accessor => exists = accessor.IsVersioningActive());
+			fileSystem.Storage.Batch(accessor => exists = accessor.IsVersioningActive(filePath));
 
 			return exists;
 		}
 
-		public static bool IsVersioningActive(this IStorageActionsAccessor accessor)
+		public static bool IsVersioningActive(this IStorageActionsAccessor accessor, string filePath)
 		{
-			return accessor.ConfigExists(DefaultConfigurationName);
+			var versioningConfiguration = GetVersioningConfiguration(accessor, filePath);
+			return versioningConfiguration != null && versioningConfiguration.Exclude == false;
 		}
 
-		public static VersioningConfiguration GetVersioningConfiguration(this IStorageActionsAccessor accessor)
+		public static FileVersioningConfiguration GetVersioningConfiguration(this IStorageActionsAccessor accessor, string filePath)
 		{
-			if (IsVersioningActive(accessor) == false) 
-				return null;
+			FileVersioningConfiguration fileVersioningConfiguration;
+			var directoryName = RavenFileNameHelper.RavenDirectory(Path.GetDirectoryName(filePath));
 
-			var configuration = accessor.GetConfig(DefaultConfigurationName);
-			if (configuration == null) 
-				return null;
+			while (string.IsNullOrEmpty(directoryName) == false && directoryName != "/")
+			{
+				var configurationName = "Raven/Versioning/" + directoryName.TrimStart('/');
 
-			return configuration.JsonDeserialization<VersioningConfiguration>();
+				if (TryGetDeserializedConfig(accessor, configurationName, out fileVersioningConfiguration)) 
+					return fileVersioningConfiguration;
+
+				directoryName = RavenFileNameHelper.RavenDirectory(Path.GetDirectoryName(directoryName));
+			}
+
+			if (TryGetDeserializedConfig(accessor, DefaultConfigurationName, out fileVersioningConfiguration))
+				return fileVersioningConfiguration;
+
+			return null;
+		}
+
+		private static bool TryGetDeserializedConfig(IStorageActionsAccessor accessor, string configurationName, out FileVersioningConfiguration fileVersioningConfiguration)
+		{
+			if (accessor.ConfigExists(configurationName) == false)
+			{
+				fileVersioningConfiguration = null;
+				return false;
+			}
+
+			var configuration = accessor.GetConfig(configurationName);
+			if (configuration == null)
+			{
+				fileVersioningConfiguration = null;
+				return false;
+			}
+
+			fileVersioningConfiguration = configuration.JsonDeserialization<FileVersioningConfiguration>();
+			return true;
 		}
 	}
 }

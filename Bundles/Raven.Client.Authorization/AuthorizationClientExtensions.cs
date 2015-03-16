@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
@@ -109,8 +110,8 @@ namespace Raven.Client.Authorization
 		public static void SecureFor(this IDocumentSession session, string userId, string operation)
 		{
 			var databaseCommands = ((DocumentSession)session).DatabaseCommands;
-			databaseCommands.OperationsHeaders[Constants.RavenAuthorizationUser] = userId;
-			databaseCommands.OperationsHeaders[Constants.RavenAuthorizationOperation] = operation;
+			databaseCommands.OperationsHeaders[Constants.Authorization.RavenAuthorizationUser] = userId;
+			databaseCommands.OperationsHeaders[Constants.Authorization.RavenAuthorizationOperation] = operation;
 		}
 	}
 }

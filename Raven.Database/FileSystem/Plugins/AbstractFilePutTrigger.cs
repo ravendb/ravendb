@@ -49,13 +49,5 @@ namespace Raven.Database.FileSystem.Plugins
 		public virtual void AfterUpload(string name, RavenJObject metadata)
 		{
 		}
-
-		public virtual void BeforeSynchronization(string name, RavenJObject metadata)
-		{
-		}
-
-		public virtual void AfterSynchronization(string name, string tempFileName, RavenJObject metadata)
-		{
-		}
 	}
 }

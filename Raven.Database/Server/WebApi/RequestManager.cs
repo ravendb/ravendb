@@ -254,17 +254,7 @@ namespace Raven.Database.Server.WebApi
                 
                 return nameValueCollection;
             });
-            CurrentOperationContext.RavenAuthenticatedUser.Value = string.Empty;
-            foreach (var innerHeader in innerHeaders)
-            {
-                if (innerHeader.Key.Equals("Raven-Authorization-User"))
-                {
-                    CurrentOperationContext.RavenAuthenticatedUser.Value = innerHeader.Value.FirstOrDefault();
-                }
-            }
-            
-            
-
+          
 			CurrentOperationContext.User.Value = null;
 
 			LogContext.DatabaseName.Value = databaseName;
