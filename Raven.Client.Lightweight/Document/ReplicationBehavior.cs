@@ -113,7 +113,7 @@ namespace Raven.Client.Document
 
 				var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId);
 
-		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
+		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
 
 		        if (replicated)
 		            return;
@@ -139,7 +139,6 @@ namespace Raven.Client.Document
 			    {
 				    DestinationUrl = destinationUrl, 
 					DocumentEtag = Etag.Parse(json.Value<string>("LastDocumentEtag")), 
-					AttachmentEtag = Etag.Parse(json.Value<string>("LastAttachmentEtag"))
 			    };
 		    }
 		}
