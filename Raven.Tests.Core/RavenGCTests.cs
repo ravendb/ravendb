@@ -7,6 +7,11 @@ namespace Raven.Tests.Core
 {
 	public class RavenGCTests : RavenTestBase
 	{
+		public RavenGCTests()
+		{
+			RavenGC.ResetHistory();
+		}
+
 		[Fact]
 		public void Before_and_after_memory_allocation_should_be_recorded_correctly()
 		{
