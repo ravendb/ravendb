@@ -39,9 +39,9 @@ namespace Raven.Tests.Core
 				var bytes = new byte[sizeToAllocate];
 				new Random().NextBytes(bytes);
 				reference = new WeakReference(bytes, true);
-			});			
+			});
 
-			allocateStuff(4096 * 1024);
+			allocateStuff((int)GC.GetTotalMemory(false) / 5);
 			Assert.True(RavenGC.CollectGarbage(true, () => { }));
 
 			//sanity check
