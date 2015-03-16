@@ -178,7 +178,7 @@ namespace Raven.Client.Connection.Request
 				return refreshReplicationInformationTask = Task.Factory.StartNew(() =>
 				{
 					var tryFailoverServers = false;
-					var triedFailoverServers = FailoverServers.Length == 0;
+					var triedFailoverServers = FailoverServers == null || FailoverServers.Length == 0;
 					for (; ; )
 					{
 						var nodes = NodeUrls;
