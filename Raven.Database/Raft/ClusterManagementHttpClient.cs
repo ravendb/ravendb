@@ -133,13 +133,13 @@ namespace Raven.Database.Raft
 		{
 			try
 			{
-				await raftEngine.AddToClusterAsync(nodeConnectionInfo);
+				await raftEngine.AddToClusterAsync(nodeConnectionInfo).ConfigureAwait(false);
 				return;
 			}
 			catch (NotLeadingException)
 			{
 			}
-			await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), nodeConnectionInfo);
+			await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), nodeConnectionInfo).ConfigureAwait(false);
 		}
 
 		public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
@@ -160,7 +160,7 @@ namespace Raven.Database.Raft
 					case HttpStatusCode.NotAcceptable:
 						return CanJoinResult.InAnotherCluster;
 					default:
-						throw await CreateErrorResponseExceptionAsync(response);
+						throw await CreateErrorResponseExceptionAsync(response).ConfigureAwait(false);
 				}
 			}
 		}
@@ -216,7 +216,7 @@ namespace Raven.Database.Raft
 				if (response.IsSuccessStatusCode)
 					return;
 
-				throw await CreateErrorResponseExceptionAsync(response);
+				throw await CreateErrorResponseExceptionAsync(response).ConfigureAwait(false);
 			}
 		}
 
@@ -239,7 +239,7 @@ namespace Raven.Database.Raft
 				if (response.IsSuccessStatusCode)
 					return;
 
-				throw await CreateErrorResponseExceptionAsync(response);
+				throw await CreateErrorResponseExceptionAsync(response).ConfigureAwait(false);
 			}
 		}
 
@@ -261,7 +261,7 @@ namespace Raven.Database.Raft
 					case HttpStatusCode.NotAcceptable:
 						return CanJoinResult.InAnotherCluster;
 					default:
-						throw await CreateErrorResponseExceptionAsync(response);
+						throw await CreateErrorResponseExceptionAsync(response).ConfigureAwait(false);
 				}
 			}
 		}
@@ -277,14 +277,14 @@ namespace Raven.Database.Raft
 				}
 				else
 				{
-					await raftEngine.RemoveFromClusterAsync(node);
+					await raftEngine.RemoveFromClusterAsync(node).ConfigureAwait(false);
 				}
 			}
 			catch (NotLeadingException)
 			{
 			}
 
-			await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node);
+			await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node).ConfigureAwait(false);
 		}
 
 		public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
@@ -296,7 +296,7 @@ namespace Raven.Database.Raft
 				if (response.IsSuccessStatusCode)
 					return;
 
-				throw await CreateErrorResponseExceptionAsync(response);
+				throw await CreateErrorResponseExceptionAsync(response).ConfigureAwait(false);
 			}
 		}
 
@@ -351,7 +351,7 @@ namespace Raven.Database.Raft
 			var url = nodeConnectionInfo.Uri + "/stats";
 			using (var request = CreateRequest(nodeConnectionInfo, url, "GET"))
 			{
-				var response = await request.ExecuteAsync();
+				var response = await request.ExecuteAsync().ConfigureAwait(false);
 				if (!response.IsSuccessStatusCode)
 					throw new InvalidOperationException("Unable to fetch database statictics for: " + nodeConnectionInfo.Uri);
 

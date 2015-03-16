@@ -49,7 +49,7 @@ namespace Rachis.Behaviors
 			AppendCommand(new NopCommand());
 			_stopHeartbeatCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(Engine.CancellationToken, _disposedCancellationTokenSource.Token);
 
-			_heartbeatTask = Task.Run(() => Heartbeat(), _stopHeartbeatCancellationTokenSource.Token);
+			_heartbeatTask = Task.Factory.StartNew(Heartbeat, _stopHeartbeatCancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 		}
 
 		private void OnTopologyChanged(TopologyChangeCommand tcc)

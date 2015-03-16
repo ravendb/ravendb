@@ -91,7 +91,7 @@ namespace Rachis.Transport
 
 		public async Task<HttpResponseMessage> ExecuteAsync()
 		{
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url));
+			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)).ConfigureAwait(false);
 
 			return Response;
 		}
@@ -101,7 +101,7 @@ namespace Rachis.Transport
 			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = content()
-			});
+			}).ConfigureAwait(false);
 
 			return Response;
 		}

@@ -28,7 +28,7 @@ namespace Raven.Database.Raft.Controllers
 		[RavenRoute("admin/cluster/commands/cluster/configuration")]
 		public async Task<HttpResponseMessage> ClusterConfiguration()
 		{
-			var configuration = await ReadJsonObjectAsync<ClusterConfiguration>();
+			var configuration = await ReadJsonObjectAsync<ClusterConfiguration>().ConfigureAwait(false);
 			if (configuration == null)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
@@ -40,7 +40,7 @@ namespace Raven.Database.Raft.Controllers
 		[RavenRoute("admin/cluster/commands/cluster/database/{*id}")]
 		public async Task<HttpResponseMessage> CreateDatabase(string id)
 		{
-			var document = await ReadJsonObjectAsync<DatabaseDocument>();
+			var document = await ReadJsonObjectAsync<DatabaseDocument>().ConfigureAwait(false);
 			if (document == null)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
@@ -80,28 +80,28 @@ namespace Raven.Database.Raft.Controllers
 			var topology = ClusterManager.Engine.CurrentTopology;
 
 			if (ClusterManager.IsLeader())
-				return await GetEmptyMessageAsTask(HttpStatusCode.NotModified);
+				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			if (topology.AllNodes.Any())
 				return GetMessageWithString("Server is already in cluster.", HttpStatusCode.NotAcceptable);
 
-			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>();
+			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
 
 			ClusterManagerFactory.InitializeTopology(nodeConnectionInfo, ClusterManager);
 
-			return await GetEmptyMessageAsTask(HttpStatusCode.Created);
+			return GetEmptyMessage(HttpStatusCode.Created);
 		}
 
 		[HttpPost]
 		[RavenRoute("admin/cluster/join")]
 		public async Task<HttpResponseMessage> JoinToCluster()
 		{
-			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>();
+			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
 			if (nodeConnectionInfo == null)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			if (nodeConnectionInfo.Name == null)
-				nodeConnectionInfo.Name = RaftHelper.GetNodeName(await ClusterManager.Client.GetDatabaseId(nodeConnectionInfo));
+				nodeConnectionInfo.Name = RaftHelper.GetNodeName(await ClusterManager.Client.GetDatabaseId(nodeConnectionInfo).ConfigureAwait(false));
 
 			var canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
 			switch (canJoinResult)
@@ -145,7 +145,7 @@ namespace Raven.Database.Raft.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			var node = ClusterManager.Engine.CurrentTopology.GetNodeByName(nodeName);
-			await ClusterManager.Client.SendLeaveAsync(node);
+			await ClusterManager.Client.SendLeaveAsync(node).ConfigureAwait(false);
 
 			return GetMessageWithObject(new
 			{

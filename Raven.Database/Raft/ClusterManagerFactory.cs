@@ -73,6 +73,7 @@ namespace Raven.Database.Raft
 			var stateMachine = new ClusterStateMachine(systemDatabase, databasesLandlord);
 			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine);
 			var raftEngine = new RaftEngine(raftEngineOptions);
+			stateMachine.RaftEngine = raftEngine;
 
 			return new ClusterManager(raftEngine);
 		}

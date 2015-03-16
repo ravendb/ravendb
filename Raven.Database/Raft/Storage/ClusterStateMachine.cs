@@ -5,9 +5,12 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
-
+using NetTopologySuite.IO;
+using Rachis;
 using Rachis.Commands;
 using Rachis.Interfaces;
 using Rachis.Messages;
@@ -20,6 +23,7 @@ using Raven.Database.Raft.Storage.Handlers;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Raft.Storage
@@ -35,6 +39,8 @@ namespace Raven.Database.Raft.Storage
 		private readonly Dictionary<Type, CommandHandler> handlers = new Dictionary<Type, CommandHandler>();
 
 		private long lastAppliedIndex;
+
+		internal RaftEngine RaftEngine { get; set; } 
 
 		public ClusterStateMachine(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord)
 		{
@@ -111,23 +117,144 @@ namespace Raven.Database.Raft.Storage
 		{
 			get
 			{
-				return false;
+				return database.Configuration.RunInMemory == false;
 			}
 		}
 
 		public void CreateSnapshot(long index, long term, ManualResetEventSlim allowFurtherModifications)
 		{
-			throw new NotImplementedException();
+			//TODO: consider move this code to separate class - as RAFT usages will grow we might endup with lots of documents to export
+			var directoryPath = Path.Combine(database.Configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft", "Snapshot");
+			if (Directory.Exists(directoryPath) == false)
+				Directory.CreateDirectory(directoryPath);
+			var filePath = Path.Combine(directoryPath, string.Format("Full-{0:D19}-{1:D19}.Snapshot", index, term));
+
+			using (var file = new FileStream(filePath, FileMode.Create))
+			using (var streamWriter = new StreamWriter(file))
+			using (var jsonTextWriter = new JsonTextWriter(streamWriter))
+			{
+				database.TransactionalStorage.Batch(accessor =>
+				{
+					allowFurtherModifications.Set();
+
+					jsonTextWriter.WriteStartObject();
+
+					jsonTextWriter.WritePropertyName(Constants.Cluster.ClusterConfigurationDocumentKey);
+
+					var clusterConfig = accessor.Documents.DocumentByKey(Constants.Cluster.ClusterConfigurationDocumentKey);
+					if (clusterConfig != null)
+					{
+						var json = clusterConfig.ToJson();
+						json.WriteTo(jsonTextWriter);
+					}
+					else
+					{
+						jsonTextWriter.WriteNull();
+					}
+
+					jsonTextWriter.WriteEndObject();
+
+				});
+			}
 		}
 
 		public ISnapshotWriter GetSnapshotWriter()
 		{
-			throw new NotImplementedException();
+			return new SnapshotWriter(database.Configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory);
+		}
+
+		public class SnapshotWriter : ISnapshotWriter
+		{
+			private readonly FileStream _file;
+
+			public SnapshotWriter(string dataDirectory)
+			{
+				var directoryPath = Path.Combine(dataDirectory, "Raft", "Snapshot");
+				var file = Directory.GetFiles(directoryPath, "*.Snapshot").LastOrDefault();
+
+				if (file == null)
+					throw new InvalidOperationException("Could not find a full backup file to start the snapshot writing");
+
+				var last = Path.GetFileNameWithoutExtension(file);
+				Debug.Assert(last != null);
+				var parts = last.Split('-');
+				if (parts.Length != 3)
+					throw new InvalidOperationException("Invalid snapshot file name " + file + ", could not figure out index & term");
+
+				Index = long.Parse(parts[1]);
+				Term = long.Parse(parts[2]);
+
+				_file = File.OpenRead(file);
+			}
+
+			public void Dispose()
+			{
+				if (_file != null)
+				{
+					_file.Dispose();
+				}
+			}
+
+			public long Index { get; private set; }
+			public long Term { get; private set; }
+			public void WriteSnapshot(Stream stream)
+			{
+				var writer = new BinaryWriter(stream);
+				writer.Write(_file.Length);
+				writer.Flush();
+				_file.CopyTo(stream);
+			}
 		}
 
 		public void ApplySnapshot(long term, long index, Stream stream)
 		{
-			throw new NotImplementedException();
+			var reader = new BinaryReader(stream);
+			
+			var len = reader.ReadInt64();
+			var buffer = new byte[16 * 1024];
+			var fileBuffer = new byte[len];
+			var memoryStream = new MemoryStream(fileBuffer);
+
+			var totalFileRead = 0;
+			while (totalFileRead < len)
+			{
+				var read = stream.Read(buffer, 0, (int)Math.Min(buffer.Length, len - totalFileRead));
+				if (read == 0)
+					throw new EndOfStreamException();
+				totalFileRead += read;
+				memoryStream.Write(buffer, 0, read);
+			}
+
+			memoryStream.Position = 0;
+
+			database.TransactionalStorage.Batch(accessor =>
+			{
+				using (var streamReader = new StreamReader(memoryStream))
+				using (var jsonReader = new JsonTextReader(streamReader))
+				{
+					if (jsonReader.Read() == false)
+						throw new InvalidDataException("StartObject was expected");
+					if (jsonReader.TokenType != JsonToken.StartObject)
+						throw new InvalidDataException("StartObject was expected");
+
+					while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndObject)
+					{
+						if (jsonReader.TokenType != JsonToken.PropertyName)
+							throw new InvalidDataException("PropertyName was expected");
+						var documentKey = jsonReader.Value.ToString();
+						if (jsonReader.Read() == false)
+							throw new InvalidDataException("StartObject was expected");
+						if (jsonReader.TokenType != JsonToken.StartObject)
+							throw new InvalidDataException("StartObject was expected");
+						var json = (RavenJObject) RavenJToken.ReadFrom(jsonReader);
+						var metadata = json.Value<RavenJObject>(Constants.Metadata) ?? new RavenJObject();
+						json.Remove(Constants.Metadata);
+						accessor.Documents.InsertDocument(documentKey, json, metadata, true);
+					}
+				}
+				UpdateLastAppliedIndex(index, accessor);
+				LastAppliedIndex = index;
+			});
 		}
 
 		private void UpdateLastAppliedIndex(long index, IStorageActionsAccessor accessor)

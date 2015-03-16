@@ -63,17 +63,17 @@ namespace Raven.Database.Raft.Controllers
 		public async Task<HttpResponseMessage> InstallSnapshot([FromUri]InstallSnapshotRequest request, [FromUri]string topology)
 		{
 			request.Topology = JsonConvert.DeserializeObject<Topology>(topology);
-			var stream = await Request.Content.ReadAsStreamAsync();
+			var stream = await Request.Content.ReadAsStreamAsync().ConfigureAwait(false);
 			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
 			Bus.Publish(request, taskCompletionSource, stream);
-			return await taskCompletionSource.Task;
+			return await taskCompletionSource.Task.ConfigureAwait(false);
 		}
 
 		[HttpPost]
 		[RavenRoute("raft/appendEntries")]
 		public async Task<HttpResponseMessage> AppendEntries([FromUri]AppendEntriesRequest request, [FromUri]int entriesCount)
 		{
-			var stream = await Request.Content.ReadAsStreamAsync();
+			var stream = await Request.Content.ReadAsStreamAsync().ConfigureAwait(false);
 			request.Entries = new LogEntry[entriesCount];
 			for (int i = 0; i < entriesCount; i++)
 			{
@@ -99,7 +99,7 @@ namespace Raven.Database.Raft.Controllers
 
 			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
 			Bus.Publish(request, taskCompletionSource);
-			return await taskCompletionSource.Task;
+			return await taskCompletionSource.Task.ConfigureAwait(false);
 		}
 
 		[HttpGet]

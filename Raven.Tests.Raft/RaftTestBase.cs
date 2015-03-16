@@ -34,7 +34,7 @@ namespace Raven.Tests.Raft
 
 		private static int numberOfPortRequests;
 
-		private static int GetPort()
+		internal static int GetPort()
 		{
 			var portRequest = Interlocked.Increment(ref numberOfPortRequests);
 			return portRangeStart - (portRequest % 25);
@@ -74,10 +74,10 @@ namespace Raven.Tests.Raft
 				throw new Exception("WaitFor failed");
 		}
 
-		public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null)
+		public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
 		{
 			var nodes = Enumerable.Range(0, numberOfNodes)
-				.Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName))
+				.Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
 				.ToList();
 
 			var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -126,13 +126,13 @@ namespace Raven.Tests.Raft
 				.ToList();
 		}
 
-		public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null)
+		public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
 		{
 			var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.IsLeader());
 			Assert.NotNull(leader);
 
 			var nodes = Enumerable.Range(0, numberOfExtraNodes)
-				.Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName))
+				.Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
 				.ToList();
 
 			var allNodesFinishedJoining = new ManualResetEventSlim();

@@ -49,12 +49,12 @@ namespace Rachis.Transport
 			LogStatus("install snapshot to " + dest, async () =>
 			{
 				var requestUri =
-					string.Format("raft/installSnapshot?term={0}&=lastIncludedIndex={1}&lastIncludedTerm={2}&from={3}&topology={4}&clusterTopologyId={5}",
+					string.Format("raft/installSnapshot?term={0}&lastIncludedIndex={1}&lastIncludedTerm={2}&from={3}&topology={4}&clusterTopologyId={5}",
 						req.Term, req.LastIncludedIndex, req.LastIncludedTerm, req.From, Uri.EscapeDataString(JsonConvert.SerializeObject(req.Topology)), req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "POST"))
 				{
-					var httpResponseMessage = await request.WriteAsync(() => new SnapshotContent(streamWriter));
-					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
+					var httpResponseMessage = await request.WriteAsync(() => new SnapshotContent(streamWriter)).ConfigureAwait(false);
+					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
 						_log.Warn("Error installing snapshot to {0}. Status: {1}\r\n{2}", dest.Name, httpResponseMessage.StatusCode, reply);
@@ -123,7 +123,7 @@ namespace Rachis.Transport
 			if (string.IsNullOrEmpty(oauthSource))
 				oauthSource = nodeConnectionInfo.Uri.AbsoluteUri + "/OAuth/API-Key";
 
-			return await GetAuthenticator(nodeConnectionInfo).DoOAuthRequestAsync(nodeConnectionInfo.Uri.AbsoluteUri, oauthSource, nodeConnectionInfo.ApiKey);
+			return await GetAuthenticator(nodeConnectionInfo).DoOAuthRequestAsync(nodeConnectionInfo.Uri.AbsoluteUri, oauthSource, nodeConnectionInfo.ApiKey).ConfigureAwait(false);
 		}
 
 		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, NodeConnectionInfo nodeConnectionInfo)
@@ -178,9 +178,9 @@ namespace Rachis.Transport
 					req.Term, req.LeaderCommit, req.PrevLogTerm, req.PrevLogIndex, req.EntriesCount, req.From, req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "POST"))
 				{
-					var httpResponseMessage = await request.WriteAsync(() => new EntriesContent(req.Entries));
+					var httpResponseMessage = await request.WriteAsync(() => new EntriesContent(req.Entries)).ConfigureAwait(false);
 
-					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
+					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
 						_log.Warn("Error appending entries to {0}. Status: {1}\r\n{2}", dest.Name, httpResponseMessage.StatusCode, reply);
@@ -236,12 +236,12 @@ namespace Rachis.Transport
 		{
 			LogStatus("can install snapshot to " + dest, async () =>
 			{
-				var requestUri = string.Format("raft/canInstallSnapshot?term={0}&=index{1}&from={2}&clusterTopologyId={3}", req.Term, req.Index,
+				var requestUri = string.Format("raft/canInstallSnapshot?term={0}&index={1}&from={2}&clusterTopologyId={3}", req.Term, req.Index,
 					req.From, req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var httpResponseMessage = await request.ExecuteAsync();
-					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
+					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
+					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
 						_log.Warn("Error checking if can install snapshot to {0}. Status: {1}\r\n{2}", dest.Name, httpResponseMessage.StatusCode, reply);
@@ -261,8 +261,8 @@ namespace Rachis.Transport
 					req.Term, req.LastLogIndex, req.LastLogTerm, req.TrialOnly, req.ForcedElection, req.From, req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var httpResponseMessage = await request.ExecuteAsync();
-					var reply = await httpResponseMessage.Content.ReadAsStringAsync();
+					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
+					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
 						_log.Warn("Error requesting vote from {0}. Status: {1}\r\n{2}", dest.Name, httpResponseMessage.StatusCode, reply);
@@ -286,8 +286,8 @@ namespace Rachis.Transport
 				var requestUri = string.Format("raft/timeoutNow?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var message = await request.ExecuteAsync();
-					var reply = await message.Content.ReadAsStringAsync();
+					var message = await request.ExecuteAsync().ConfigureAwait(false);
+					var reply = await message.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (message.IsSuccessStatusCode == false)
 					{
 						_log.Warn("Error appending entries to {0}. Status: {1}\r\n{2}", dest.Name, message.StatusCode, message, reply);
@@ -305,8 +305,8 @@ namespace Rachis.Transport
 				var requestUri = string.Format("raft/disconnectFromCluster?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var message = await request.ExecuteAsync();
-					var reply = await message.Content.ReadAsStringAsync();
+					var message = await request.ExecuteAsync().ConfigureAwait(false);
+					var reply = await message.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (message.IsSuccessStatusCode == false)
 					{
 						_log.Warn("Error sending disconnecton notification to {0}. Status: {1}\r\n{2}", dest.Name, message.StatusCode, message, reply);

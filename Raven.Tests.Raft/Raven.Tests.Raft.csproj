@@ -85,6 +85,7 @@
     <Compile Include="Client\Batches.cs" />
     <Compile Include="Client\Documents.cs" />
     <Compile Include="Client\Indexes.cs" />
+    <Compile Include="Snapshotting.cs" />
     <Compile Include="ClusterBasic.cs" />
     <Compile Include="Client\Basic.cs" />
     <Compile Include="ClusterDatabases.cs" />
