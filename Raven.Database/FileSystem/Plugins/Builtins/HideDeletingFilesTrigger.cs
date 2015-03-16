@@ -5,11 +5,10 @@
 // -----------------------------------------------------------------------
 using System.ComponentModel.Composition;
 using Raven.Abstractions.FileSystem;
-using Raven.Database.FileSystem.Plugins;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
-namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
+namespace Raven.Database.FileSystem.Plugins.Builtins
 {
 	[InheritedExport(typeof(AbstractFileReadTrigger))]
 	public class HideDeletingFilesTrigger : AbstractFileReadTrigger

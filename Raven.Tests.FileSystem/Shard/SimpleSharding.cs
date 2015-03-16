@@ -154,7 +154,7 @@ namespace Raven.Tests.FileSystem.Shard
 			var name4 = await shardedClient.UploadAsync("4", StreamOfLength(4));
 			var name5 = await shardedClient.UploadAsync("5", StreamOfLength(5));
 
-			var result = await shardedClient.SearchAsync("__size_numeric:[2 TO 4]");
+			var result = await shardedClient.SearchAsync("__size_numeric:[Lx2 TO Lx4]");
 			var files = result.Files;
 			var fileNames = files.Select(f => f.FullPath).ToArray();
 

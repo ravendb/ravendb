@@ -299,7 +299,9 @@ namespace Raven.Database.Config
 
 			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
 
-			IgnoreSslCertificateErros = GetIgnoreSslCertificateErrorModeMode();
+		    ImplicitFetchFieldsFromDocumentMode = ravenSettings.ImplicitFetchFieldsFromDocumentMode.Value;
+
+			IgnoreSslCertificateErrors = GetIgnoreSslCertificateErrorModeMode();
 
 			PostInit();
 
@@ -701,7 +703,7 @@ namespace Raven.Database.Config
 		/// </summary>
 		public byte[] OAuthTokenKey { get; set; }
 
-		public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErros { get; set; }
+		public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
 
 		#endregion
 
@@ -994,6 +996,15 @@ namespace Raven.Database.Config
 		/// How long can we keep the new index in memory before we have to flush it
 		/// </summary>
 		public TimeSpan NewIndexInMemoryMaxTime { get; set; }
+
+        /// <summary>
+        /// How FieldsToFetch are extracted from the document.
+        /// Default: Enabled. 
+        /// Other values are: 
+        ///     DoNothing (fields are not fetched from the document)
+        ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
+        /// </summary>
+        public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

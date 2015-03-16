@@ -378,7 +378,7 @@ namespace Raven.Database.Indexing
 					performanceResult = IndexDocuments(actions, batchForIndex, token);
 				});
 
-				performanceResult.OnCompleted();
+				performanceResult.RunCompleted();
 			}
 			catch (Exception e)
 			{
@@ -431,7 +431,7 @@ namespace Raven.Database.Indexing
 			var lastEtag = last.Etag;
 			var lastModified = last.LastModified.Value;
 
-			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers, context.Database.InFlightTransactionalState);
+			var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers, context.Database.InFlightTransactionalState);
 
 			var filteredDocs =
 				BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>

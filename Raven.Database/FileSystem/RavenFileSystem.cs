@@ -3,13 +3,11 @@ using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Threading;
-
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Actions;
@@ -45,7 +43,6 @@ namespace Raven.Database.FileSystem
 		private readonly IndexStorage search;
 		private readonly SigGenerator sigGenerator;
 		private readonly ITransactionalStorage storage;
-		private readonly StorageOperationsTask storageOperationsTask;
 		private readonly SynchronizationTask synchronizationTask;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
 	    private readonly TransportState transportState;
@@ -57,13 +54,16 @@ namespace Raven.Database.FileSystem
 
         private Historian historian;
 
-        public string Name { get; private set;}
+        public string Name { get; private set; }
 
-		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState receivedTransportState = null)
+	    public string ResourceName { get; private set; }
+
+	    public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState receivedTransportState = null)
 		{
 			ExtensionsState = new AtomicDictionary<object>();
 
 		    Name = name;
+			ResourceName = string.Concat(Abstractions.Data.Constants.FileSystem.UrlPrefix, "/", name);
 			this.systemConfiguration = systemConfiguration;
 
 			systemConfiguration.Container.SatisfyImportsOnce(this);
@@ -87,11 +87,10 @@ namespace Raven.Database.FileSystem
             search = new IndexStorage(name, systemConfiguration);
 
             conflictArtifactManager = new ConflictArtifactManager(storage, search);
-            storageOperationsTask = new StorageOperationsTask(storage, DeleteTriggers, search, notificationPublisher);
 
 			Tasks = new TaskActions(this, Log);
 			Files = new FileActions(this, Log);
-			Synchronization = new SynchronizationActions(this, Log);
+			Synchronizations = new SynchronizationActions(this, Log);
 
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
@@ -101,20 +100,20 @@ namespace Raven.Database.FileSystem
 
 		public FileActions Files { get; private set; }
 
-		public SynchronizationActions Synchronization { get; private set; }
+		public SynchronizationActions Synchronizations { get; private set; }
 
 	    public void Initialize()
         {
-            storage.Initialize(FileCodecs);
+		    var generator = new UuidGenerator();
+		    storage.Initialize(generator, FileCodecs);
+			generator.EtagBase = new SequenceActions(storage).GetNextValue("Raven/Etag");
 
-            var replicationHiLo = new SynchronizationHiLo(storage);
-            var sequenceActions = new SequenceActions(storage);
-            var uuidGenerator = new UuidGenerator(sequenceActions);
-            historian = new Historian(storage, replicationHiLo, uuidGenerator);
+            historian = new Historian(storage, new SynchronizationHiLo(storage));
+
+			InitializeTriggersExceptIndexCodecs();
 
             search.Initialize(this);
 
-			InitializeTriggersExceptIndexCodecs();
 			SecondStageInitialization();
         }
 
@@ -186,9 +185,15 @@ namespace Raven.Database.FileSystem
 
 			PutTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 
+			MetadataUpdateTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			RenameTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
 			DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 
 			ReadTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			SynchronizationTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		private void SecondStageInitialization()
@@ -199,9 +204,15 @@ namespace Raven.Database.FileSystem
 
 			PutTriggers.Apply(initialization => initialization.SecondStageInit());
 
+			MetadataUpdateTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			RenameTriggers.Apply(initialization => initialization.SecondStageInit());
+
 			DeleteTriggers.Apply(initialization => initialization.SecondStageInit());
 
 			ReadTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			SynchronizationTriggers.Apply(initialization => initialization.SecondStageInit());
 		}
 
 		/// <summary>
@@ -216,10 +227,20 @@ namespace Raven.Database.FileSystem
 		public OrderedPartCollection<AbstractFilePutTrigger> PutTriggers { get; set; }
 
 		[ImportMany]
+		public OrderedPartCollection<AbstractFileMetadataUpdateTrigger> MetadataUpdateTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileRenameTrigger> RenameTriggers { get; set; }
+
+		[ImportMany]
 		public OrderedPartCollection<AbstractFileDeleteTrigger> DeleteTriggers { get; set; }
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractFileReadTrigger> ReadTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractSynchronizationTrigger> SynchronizationTriggers { get; set; }
+
 
 	    public ITransactionalStorage Storage
 		{
@@ -261,11 +282,6 @@ namespace Raven.Database.FileSystem
 		public SynchronizationTask SynchronizationTask
 		{
 			get { return synchronizationTask; }
-		}
-
-		public StorageOperationsTask StorageOperationsTask
-		{
-			get { return storageOperationsTask; }
 		}
 
 		public ConflictArtifactManager ConflictArtifactManager

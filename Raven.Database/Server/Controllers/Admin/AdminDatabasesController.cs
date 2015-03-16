@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			Etag etag = GetEtag();
-			string error = CheckExistingDatbaseName(id, etag);
+			string error = CheckExistingDatabaseName(id, etag);
 			if (error != null)
 			{
 				return GetMessageWithString(error, HttpStatusCode.BadRequest);
@@ -82,7 +82,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			json.Remove("Id");
 
 			var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
-			var docKey = Constants.RavenDatabasesPrefix + id;
+			var docKey = Constants.Database.Prefix + id;
 			var putResult = Database.Documents.Put(docKey, etag, json, metadata, null);
 
 			return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);
@@ -306,7 +306,8 @@ namespace Raven.Database.Server.Controllers.Admin
             Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
             return new MessageWithStatusCode();
         }
-		private string CheckExistingDatbaseName(string id, Etag etag)
+
+		private string CheckExistingDatabaseName(string id, Etag etag)
 		{
 			string errorMessage = null;
 			var docKey = "Raven/Databases/" + id;

@@ -7,7 +7,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class visualizerKeys extends dialogViewModelBase {
 
-    constructor(private visualizer:visualizer) {
+    constructor(private visualizer: visualizer) {
         super();
     }
 

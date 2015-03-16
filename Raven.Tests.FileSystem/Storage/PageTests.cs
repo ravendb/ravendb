@@ -105,7 +105,7 @@ namespace Raven.Tests.FileSystem.Storage
             {
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.AssociatePage("file1", 10, 10, 10)));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(Guid.NewGuid()))); 
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject())); 
 
                 storage.Batch(accessor => accessor.AssociatePage("file1", 10, 10, 999));
 
@@ -125,9 +125,9 @@ namespace Raven.Tests.FileSystem.Storage
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
 
-                storage.Batch(accessor => accessor.PutFile("file2", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("file2", null, new RavenJObject()));
 
                 storage.Batch(accessor => accessor.AssociatePage("file1", 1, 10, 3));
                 storage.Batch(accessor => accessor.AssociatePage("file1", 2, 8, 4));

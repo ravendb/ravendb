@@ -138,7 +138,7 @@ namespace Raven.Database.Queries
 
 					database.TransactionalStorage.Batch(actions =>
 					{
-						documentRetriever = new DocumentRetriever(actions, database.ReadTriggers, database.InFlightTransactionalState, query.TransformerParameters, idsToLoad);
+						documentRetriever = new DocumentRetriever(database.Configuration, actions, database.ReadTriggers, database.InFlightTransactionalState, query.TransformerParameters, idsToLoad);
 
 						using (new CurrentTransformationScope(database, documentRetriever))
 						{

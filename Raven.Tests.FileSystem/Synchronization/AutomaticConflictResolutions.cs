@@ -17,6 +17,7 @@ using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 using Xunit;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {
@@ -85,9 +86,9 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			var metadata = await sourceClient.GetMetadataForAsync("test");
 
-			var request = new SynchronizationMultipartRequest(destinationClient.Synchronization, new ServerInfo()
+			var request = new SynchronizationMultipartRequest(destinationClient.Synchronization, new FileSystemInfo()
 			{
-				FileSystemUrl = sourceClient.UrlFor(),
+				Url = sourceClient.UrlFor(),
 				Id = sourceClient.GetServerIdAsync().Result
 			}, "test", metadata, sourceStream, new[]
 			{

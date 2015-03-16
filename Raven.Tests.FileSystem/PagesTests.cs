@@ -4,6 +4,7 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Esent;
 
@@ -17,7 +18,7 @@ namespace Raven.Tests.FileSystem
 	{
 		readonly TransactionalStorage storage;
 
-        private readonly RavenJObject metadataWithEtag = new RavenJObject().WithETag(Guid.Empty);
+        private readonly RavenJObject metadataWithEtag = new RavenJObject();
 		public PagesTests()
 		{
 			var configuration = new InMemoryRavenConfiguration
@@ -34,7 +35,7 @@ namespace Raven.Tests.FileSystem
 
 			IOExtensions.DeleteDirectory("test");
 			storage = new TransactionalStorage(configuration);
-			storage.Initialize(new OrderedPartCollection<AbstractFileCodec>());
+			storage.Initialize(new UuidGenerator(), new OrderedPartCollection<AbstractFileCodec>());
 		}
 
 		[Fact]
@@ -178,6 +179,8 @@ namespace Raven.Tests.FileSystem
 		public void Dispose()
 		{
 			storage.Dispose();
+
+			IOExtensions.DeleteDirectory("test");
 		}
 	}
 }

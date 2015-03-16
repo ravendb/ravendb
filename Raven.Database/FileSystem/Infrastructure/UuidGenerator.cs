@@ -1,22 +1,21 @@
 ﻿using System;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 
 namespace Raven.Database.FileSystem.Infrastructure
 {
 	public class UuidGenerator
 	{
-		private readonly long currentEtagBase;
-		private readonly SequenceActions sequenceActions;
+		private long currentEtagBase;
 		private long sequentialUuidCounter;
 
-		public UuidGenerator(SequenceActions sequenceActions)
+		public long EtagBase
 		{
-			this.sequenceActions = sequenceActions;
-			currentEtagBase = sequenceActions.GetNextValue("Raven/Etag");
+			set { currentEtagBase = value; }
 		}
 
-		public Guid CreateSequentialUuid()
+		public Etag CreateSequentialUuid()
 		{
 			var ticksAsBytes = BitConverter.GetBytes(currentEtagBase);
 			Array.Reverse(ticksAsBytes);
@@ -26,7 +25,9 @@ namespace Raven.Database.FileSystem.Infrastructure
 			var bytes = new byte[16];
 			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
 			Array.Copy(currentAsBytes, 0, bytes, 8, currentAsBytes.Length);
-			return bytes.TransformToGuidWithProperSorting();
+
+			Etag sequentialUuid = Etag.Parse(bytes);
+			return sequentialUuid;
 		}
 	}
 }

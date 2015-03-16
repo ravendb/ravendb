@@ -4,7 +4,7 @@ using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
-using Raven.Abstractions.FileSystem;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
@@ -12,11 +12,11 @@ namespace Raven.Database.FileSystem.Synchronization
 	{
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
-		public void LockByCreatingSyncConfiguration(string fileName, ServerInfo sourceServer, IStorageActionsAccessor accessor)
+		public void LockByCreatingSyncConfiguration(string fileName, FileSystemInfo sourceFileSystem, IStorageActionsAccessor accessor)
 		{
 			var syncLock = new SynchronizationLock
 			{
-				SourceServer = sourceServer,
+				SourceFileSystem = sourceFileSystem,
 				FileLockedAt = DateTime.UtcNow
 			};
 

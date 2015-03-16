@@ -16,9 +16,9 @@ namespace Raven.Database.Server.Connections
 {
 	public class WebSocketsRequestParser
 	{
-		private const string CountersUrlPrefix = "counters";
-		private const string DatabasesUrlPrefix = "databases";
-		private const string FilesystemsUrlPrefix = "fs";
+		private const string CountersUrlPrefix = Constants.Counter.UrlPrefix;
+		private const string DatabasesUrlPrefix = Constants.Database.UrlPrefix;
+		private const string FileSystemsUrlPrefix = Constants.FileSystem.UrlPrefix;
 
 		protected DatabasesLandlord DatabasesLandlord { get; private set; }
 
@@ -63,7 +63,7 @@ namespace Raven.Database.Server.Connections
 			}
 
 			request.ActiveResource = await GetActiveResource(request);
-			request.ResourceName = request.ActiveResource.Name ?? Constants.SystemDatabase;
+			request.ResourceName = request.ActiveResource.ResourceName ?? Constants.SystemDatabase;
 		}
 
 		protected virtual void AuthenticateRequest(WebSocketRequest request)
@@ -122,8 +122,8 @@ namespace Raven.Database.Server.Connections
 					case DatabasesUrlPrefix:
 						activeResource = await DatabasesLandlord.GetDatabaseInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2));
 						break;
-					case FilesystemsUrlPrefix:
-						activeResource = await fileSystemsLandlord.GetFileSystemInternal(resourcePath.Substring(FilesystemsUrlPrefix.Length + 2));
+					case FileSystemsUrlPrefix:
+						activeResource = await fileSystemsLandlord.GetFileSystemInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2));
 						break;
 					default:
 						throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Illegal websocket path.");

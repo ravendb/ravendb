@@ -34,6 +34,7 @@ using Raven.Database.Storage;
 using Raven.Database.Storage.Esent;
 using Raven.Database.Storage.Esent.Backup;
 using Raven.Database.Storage.Esent.Debug;
+using Raven.Database.Storage.Esent.StorageActions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Storage.Esent.SchemaUpdates;
