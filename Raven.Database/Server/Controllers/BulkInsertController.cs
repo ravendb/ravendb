@@ -80,14 +80,12 @@ namespace Raven.Database.Server.Controllers
             var currentDatabase = Database;
             var timeout = tre.TimeoutAfter(currentDatabase.Configuration.BulkImportBatchTimeout);
             var user = CurrentOperationContext.User.Value;
-            var requestDisposables = CurrentOperationContext.RequestDisposables.Value;
             var headers = CurrentOperationContext.Headers.Value;
             var task = Task.Factory.StartNew(() =>
             {
                 try
                 {
                     CurrentOperationContext.User.Value = user;
-                    CurrentOperationContext.RequestDisposables.Value = requestDisposables;
                     CurrentOperationContext.Headers.Value = headers;
                     currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token);
                 }
@@ -109,8 +107,10 @@ namespace Raven.Database.Server.Controllers
                 {
                     status.Completed = true;
                     status.Documents = documents;
+	                CurrentOperationContext.User.Value = null;
+	                CurrentOperationContext.Headers.Value = null;
                 }
-            });
+			}, tre.Token);
 
             long id;
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
