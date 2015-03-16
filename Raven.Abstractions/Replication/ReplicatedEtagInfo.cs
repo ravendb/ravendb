@@ -13,6 +13,6 @@ namespace Raven.Abstractions.Replication
 	{
 		public string DestinationUrl { get; set; }
 		public Etag DocumentEtag { get; set; }
-
+		public AggregateException Error { get; set; }
 	}
 }
