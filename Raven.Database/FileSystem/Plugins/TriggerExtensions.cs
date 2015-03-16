@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Plugins;
@@ -19,11 +20,20 @@ namespace Raven.Database.FileSystem.Plugins
 			foreach (var trigger in triggers)
 			{
 				var result = trigger.Value.AllowRead(name, metadata, operation);
-				if (result.Veto == ReadVetoResult.ReadAllow.Allow)
-					continue;
 
-				Log.Debug("Trigger {0} asked us to ignore {1}", trigger.Value, name);
-				return false;
+				switch (result.Veto)
+				{
+					case ReadVetoResult.ReadAllow.Allow:
+						break;
+					case ReadVetoResult.ReadAllow.Ignore:
+						Log.Debug("Trigger {0} asked us to ignore {1}", trigger.Value, name);
+						return false;
+					case ReadVetoResult.ReadAllow.Deny:
+						Log.Debug("Trigger {0} denied to read {1} because {2}", trigger.Value, name, result.Reason);
+						return false;
+					default:
+						throw new ArgumentOutOfRangeException(result.Veto.ToString());
+				}
 			}
 
 			return true;

@@ -15,12 +15,10 @@ namespace Raven.Database.FileSystem.Infrastructure
 	{
 		private readonly ITransactionalStorage storage;
 		private readonly SynchronizationHiLo synchronizationHiLo;
-		private readonly UuidGenerator uuidGenerator;
 
-		public Historian(ITransactionalStorage storage, SynchronizationHiLo synchronizationHiLo, UuidGenerator uuidGenerator)
+		public Historian(ITransactionalStorage storage, SynchronizationHiLo synchronizationHiLo)
 		{
 			this.storage = storage;
-			this.uuidGenerator = uuidGenerator;
 			this.synchronizationHiLo = synchronizationHiLo;
 		}
 
@@ -55,7 +53,6 @@ namespace Raven.Database.FileSystem.Infrastructure
             // internally keep last modified date with millisecond precision
             metadata[Constants.LastModified] = when;
             metadata[Constants.RavenLastModified] = when;
-            metadata[Constants.MetadataEtagField] = new RavenJValue(uuidGenerator.CreateSequentialUuid());
         }
 
         private RavenJObject GetMetadata(string fileName)
@@ -78,7 +75,7 @@ namespace Raven.Database.FileSystem.Infrastructure
             if (metadata.ContainsKey(SynchronizationConstants.RavenSynchronizationHistory))
             {
                 var array = (RavenJArray) metadata[SynchronizationConstants.RavenSynchronizationHistory];
-                var items = array.Values<RavenJObject>().Select(x => JsonExtensions.JsonDeserialization<HistoryItem>(x));
+                var items = array.Values<RavenJObject>().Select(x => x.JsonDeserialization<HistoryItem>());
                 return new List<HistoryItem>(items);
             }
 

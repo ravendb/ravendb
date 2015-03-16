@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Specialized;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Xunit;
@@ -16,8 +15,6 @@ namespace Raven.Tests.FileSystem.Synchronization
         private string Destination = string.Format("{0}/fs/{1}", "http://dest", "test");
 		private const string FileName = "test.txt";
 
-        private static readonly RavenJObject EmptyETagMetadata = new RavenJObject().WithETag(Guid.Empty);
-
 		private readonly SynchronizationQueue queue;
 
 		public SynchronizationQueueTests()
@@ -28,7 +25,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Fact]
 		public void Should_not_enqueue_synchronization_if_the_same_work_is_active()
 		{
-			transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, EmptyETagMetadata));
+			transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, new RavenJObject()));
 
 			queue.EnqueueSynchronization(Destination, new MetadataUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage));
 
@@ -47,7 +44,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Fact]
 		public void Should_enqueue_to_pending_if_work_of_the_same_type_but_with_different_etag_is_active()
 		{
-			transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, EmptyETagMetadata));
+			transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, new RavenJObject()));
 
 			queue.EnqueueSynchronization(Destination, new MetadataUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage));
 
@@ -56,7 +53,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			queue.TryDequePendingSynchronization(Destination, out work);
 			queue.SynchronizationStarted(work, Destination);
 
-            transactionalStorage.Batch(accessor => accessor.UpdateFileMetadata(FileName, new RavenJObject().WithETag(Guid.NewGuid())));			
+            transactionalStorage.Batch(accessor => accessor.UpdateFileMetadata(FileName, new RavenJObject(), null));			
 
 			var metadataUpdateWorkItem = new MetadataUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage);
 
@@ -73,20 +70,20 @@ namespace Raven.Tests.FileSystem.Synchronization
 		{
 			using (var sigGenerator = new SigGenerator())
 			{
-				transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, EmptyETagMetadata));
+				transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, new RavenJObject()));
 
 				queue.EnqueueSynchronization(Destination, new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, sigGenerator));
 
 				Assert.Equal(1, queue.Pending.Count());
 
-				var greaterGuid = Guid.NewGuid();
+				Etag newerEtag = null;
 
-				transactionalStorage.Batch(accessor => accessor.UpdateFileMetadata(FileName, new RavenJObject().WithETag(greaterGuid)));
+				transactionalStorage.Batch(accessor => newerEtag = accessor.UpdateFileMetadata(FileName, new RavenJObject(), null).Etag);
 
 				queue.EnqueueSynchronization(Destination, new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, new SigGenerator()));
 
 				Assert.Equal(1, queue.Pending.Count());
-				Assert.Equal(greaterGuid, queue.Pending.ToArray()[0].FileETag);
+				Assert.True(newerEtag.CompareTo(queue.Pending.ToArray()[0].FileETag) == 0);
 			}
 		}
 
@@ -95,7 +92,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		{
 			using (var sigGenerator = new SigGenerator())
 			{
-				transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, EmptyETagMetadata));
+				transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, new RavenJObject()));
 
 				var contentUpdateWorkItem = new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, sigGenerator);
 
@@ -109,7 +106,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Fact]
 		public void Should_delete_other_works_if_delete_item_enqueued()
 		{
-			transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, EmptyETagMetadata));
+			transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, new RavenJObject()));
 
 			queue.EnqueueSynchronization(Destination, new MetadataUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage));
 			queue.EnqueueSynchronization(Destination, new RenameWorkItem(FileName, "rename.txt", "http://localhost:12345", transactionalStorage));

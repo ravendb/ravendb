@@ -13,9 +13,13 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
+using Raven.Client.Document;
 using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
@@ -438,6 +442,17 @@ namespace Raven.Tests.Helpers
             return ms;
         }
 
+		protected async Task WaitForRestoreAsync(string url, long operationId)
+		{
+			using (var sysDbStore = new DocumentStore
+			{
+				Url = url
+			}.Initialize())
+			{
+				await new Operation((AsyncServerClient) sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletionAsync();
+			}
+		}
+
         protected void WaitForBackup(IAsyncFilesCommands filesCommands, bool checkError)
         {
             var done = SpinWait.SpinUntil(() =>
@@ -462,5 +477,19 @@ namespace Raven.Tests.Helpers
             
             Assert.True(done);
         }
+
+		public async static Task<T> ThrowsAsync<T>(Func<Task> testCode) where T : Exception
+		{
+			try
+			{
+				await testCode();
+				Assert.Throws<T>(() => { }); // Use xUnit's default behavior.
+			}
+			catch (T exception)
+			{
+				return exception;
+			}
+			return null;
+		}
     }
 }

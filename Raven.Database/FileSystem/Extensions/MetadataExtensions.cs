@@ -4,15 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Newtonsoft.Json;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http.Headers;
 
 namespace Raven.Database.FileSystem.Extensions
 {
@@ -21,13 +18,7 @@ namespace Raven.Database.FileSystem.Extensions
 	/// Extensions for handling metadata
 	/// </summary>
 	public static class MetadataExtensions
-	{ 
-        public static RavenJObject WithETag(this RavenJObject metadata, Guid etag)
-        {
-            metadata[Constants.MetadataEtagField] = new RavenJValue(etag);
-            return metadata;
-        }
-
+	{
         public static RavenJObject DropRenameMarkers(this RavenJObject metadata)
 		{
 			metadata.Remove(SynchronizationConstants.RavenDeleteMarker);

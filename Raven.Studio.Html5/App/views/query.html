@@ -79,7 +79,7 @@
             <button type="button" class="btn btn-default" data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>
-            <a href="#" target="_blank" data-bind="attr: { href: exportUrl }, visible: isStaticIndexSelected" class=" btn btn-default" title="Export CSV" download>
+            <a href="#" target="_blank" data-bind="attr: { href: exportUrl }, visible: isStaticIndexSelected, click: exportCsv" class=" btn btn-default" title="Export CSV" download>
                 <i class="fa fa-file-excel-o"></i>
             </a>
             <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">

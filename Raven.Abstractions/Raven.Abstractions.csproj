@@ -249,6 +249,7 @@
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\ClientNotSupportedException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\ImplicitFetchFieldsFromDocumentNotAllowedException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
@@ -366,7 +367,7 @@
     <Compile Include="FileSystem\ItemsPage.cs" />
     <Compile Include="FileSystem\Notification.cs" />
     <Compile Include="FileSystem\RdcStats.cs" />
-    <Compile Include="FileSystem\ServerInfo.cs" />
+    <Compile Include="FileSystem\FileSystemInfo.cs" />
     <Compile Include="FileSystem\FileSystemStats.cs" />
     <Compile Include="FileSystem\Signature.cs" />
     <Compile Include="FileSystem\SignatureManifest.cs" />

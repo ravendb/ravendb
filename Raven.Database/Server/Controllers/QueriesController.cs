@@ -1,10 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Data;
 using Raven.Database.Server.WebApi.Attributes;
@@ -35,8 +38,29 @@ namespace Raven.Database.Server.Controllers
 			RavenJArray itemsToLoad;
 		    if (isGet == false)
 		    {
-		        itemsToLoad = await ReadJsonArrayAsync();
-                AddRequestTraceInfo(sb =>
+			    try
+			    {
+				    itemsToLoad = await ReadJsonArrayAsync();
+			    }
+				catch (InvalidOperationException e)
+				{
+					Log.Debug("Failed to deserialize query request. Error: " + e);
+					return GetMessageWithObject(new
+					{
+						Message = "Could not understand json, please check its validity."
+					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+
+				}
+				catch (InvalidDataException e)
+				{
+					Log.Debug("Failed to deserialize query request. Error: " + e);
+					return GetMessageWithObject(new
+					{
+						e.Message
+					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+				}
+
+			    AddRequestTraceInfo(sb =>
                 {
                     foreach (var item in itemsToLoad)
                     {

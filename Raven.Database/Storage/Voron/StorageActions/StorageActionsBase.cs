@@ -20,6 +20,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 	using global::Voron;
 	using global::Voron.Impl;
+    using System.Globalization;
 
 	internal abstract class StorageActionsBase
 	{
@@ -41,12 +42,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		    this.bufferPool = bufferPool;
 		}
 
+        private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
+
 		protected string CreateKey(object value)
 		{
 			if (value == null)
 				throw new InvalidOperationException("Cannot create an empty key.");
 
-			return value.ToString().ToLowerInvariant();
+            return value.ToString().ToLower(Invariant);
 		}
 
 		protected string CreateKey(params object[] values)
@@ -55,13 +58,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new InvalidOperationException("Cannot create an empty key.");
 
 		    if (values.Length == 1)
-		        return values[0].ToString().ToLowerInvariant();
+                return values[0].ToString().ToLower(Invariant);
 
 		    var sb = new StringBuilder();
 			for (var i = 0; i < values.Length; i++)
 			{
 				var value = values[i];
-			    sb.Append(value.ToString().ToLowerInvariant());
+                sb.Append(value.ToString().ToLower(Invariant));
 			    if (i < values.Length - 1)
 			        sb.Append("/");
 			}

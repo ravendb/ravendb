@@ -12,6 +12,7 @@ using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Storage;
+using Raven.Database.Storage.Esent.StorageActions;
 using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent.SchemaUpdates.Updates

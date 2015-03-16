@@ -7,7 +7,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 {
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "0.4";
+		public const string SchemaVersion = "0.5";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)

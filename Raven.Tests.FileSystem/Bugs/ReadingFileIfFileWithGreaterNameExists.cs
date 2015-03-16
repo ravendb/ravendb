@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Specialized;
-using Raven.Database.FileSystem.Storage;
+﻿using Raven.Database.FileSystem.Storage;
 using Xunit;
 using Raven.Json.Linq;
-using Raven.Database.FileSystem.Extensions;
 
 namespace Raven.Tests.FileSystem.Bugs
 {
 	public class ReadingFileIfFileWithGreaterNameExists : StorageTest
 	{
-		private readonly RavenJObject metadataWithEtag = new RavenJObject().WithETag(Guid.Empty);
-
 		[Fact]
 		public void Should_work()
 		{
@@ -20,7 +15,7 @@ namespace Raven.Tests.FileSystem.Bugs
 			transactionalStorage.Batch(
 				accessor =>
 					{
-						accessor.PutFile(filename, 6, metadataWithEtag);
+						accessor.PutFile(filename, 6, new RavenJObject());
 						var pageId = accessor.InsertPage(new byte[] {1, 2, 3}, 3);
 						accessor.AssociatePage(filename, pageId, 0, 3);
 
@@ -33,7 +28,7 @@ namespace Raven.Tests.FileSystem.Bugs
 			transactionalStorage.Batch(
 				accessor =>
 					{
-						accessor.PutFile(greaterFileName, 6, metadataWithEtag);
+						accessor.PutFile(greaterFileName, 6, new RavenJObject());
 						var pageId = accessor.InsertPage(new byte[] {11, 22, 33}, 3);
 						accessor.AssociatePage(greaterFileName, pageId, 0, 3);
 

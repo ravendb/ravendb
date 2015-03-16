@@ -1,10 +1,4 @@
-﻿using Raven.Abstractions.Data;
-using Raven.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Raven.Abstractions.Exceptions;
 
 namespace Raven.Client.FileSystem
 {
@@ -33,5 +27,13 @@ namespace Raven.Client.FileSystem
         /// Gets the number of requests for this session
         /// </summary>
         int NumberOfRequests { get; }
+
+		/// <summary>
+		/// Gets or sets a value indicating whether the session should use optimistic concurrency.
+		/// When set to <c>true</c>, a check is made so that a change made behind the session back would fail
+		/// and raise <see cref="ConcurrencyException"/>.
+		/// </summary>
+		/// <value></value>
+		bool UseOptimisticConcurrency { get; set; }
     }
 }
