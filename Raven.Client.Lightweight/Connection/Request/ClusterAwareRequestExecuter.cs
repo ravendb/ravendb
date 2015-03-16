@@ -21,6 +21,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Request
 {
@@ -37,6 +38,8 @@ namespace Raven.Client.Connection.Request
 		private OperationMetadata leaderNode;
 
 		private DateTime lastUpdate = DateTime.MinValue;
+
+		private bool firstTime = true;
 
 		public OperationMetadata LeaderNode
 		{
@@ -171,9 +174,26 @@ namespace Raven.Client.Connection.Request
 		{
 			lock (this)
 			{
+				var serverHash = ServerHash.GetServerHash(primaryNode.Url);
+
 				var taskCopy = refreshReplicationInformationTask;
 				if (taskCopy != null)
 					return taskCopy;
+
+				if (firstTime)
+				{
+					firstTime = false;
+
+					var nodes = ReplicationInformerLocalCache.TryLoadClusterNodesFromLocalCache(serverHash);
+					if (nodes != null)
+					{
+						Nodes = nodes;
+						LeaderNode = GetLeaderNode(Nodes);
+
+						if (LeaderNode != null)
+							return new CompletedTask();
+					}
+				}
 
 				return refreshReplicationInformationTask = Task.Factory.StartNew(() =>
 				{
@@ -183,11 +203,15 @@ namespace Raven.Client.Connection.Request
 					{
 						var nodes = NodeUrls;
 
-						if (nodes.Count == 0)
-							nodes.Add(primaryNode);
-
-						if (tryFailoverServers)
+						if (tryFailoverServers == false)
 						{
+							if (nodes.Count == 0)
+								nodes.Add(primaryNode);
+						}
+						else
+						{
+							nodes.Add(primaryNode); // always check primary node during failover check
+
 							foreach (var failoverServer in FailoverServers)
 							{
 								var node = ConvertReplicationDestinationToOperationMetadata(failoverServer, ClusterInformation.NotInCluster);
@@ -234,6 +258,8 @@ namespace Raven.Client.Connection.Request
 						{
 							Nodes = GetNodes(newestTopology.Node, newestTopology.Task.Result);
 							LeaderNode = GetLeaderNode(Nodes);
+
+							ReplicationInformerLocalCache.TrySavingClusterNodesToLocalCache(serverHash, Nodes);
 
 							if (LeaderNode != null)
 								return;

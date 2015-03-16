@@ -7,6 +7,10 @@ namespace Raven.Client.Connection
 {
     public class OperationMetadata
     {
+	    internal OperationMetadata()
+	    {
+	    }
+
 		public OperationMetadata(string url, string username = null, string password = null, string domain = null, string apiKey = null, ClusterInformation clusterInformation = null)
         {
             Url = url;

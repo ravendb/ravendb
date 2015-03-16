@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Cluster;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Json.Linq;
