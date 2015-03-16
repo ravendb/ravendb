@@ -405,7 +405,7 @@ namespace Raven.Tests.Raft.Client
 			var response = await httpClient.GetAsync(url.Docs(0, 1024));
 			assertion(response);
 
-			response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url.Docs(0, 1024)));
+			response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url + "/docs?id=keys/1"));
 			assertion(response);
 
 			response = await httpClient.PutAsync(url.Doc("keys/1"), new JsonContent());
