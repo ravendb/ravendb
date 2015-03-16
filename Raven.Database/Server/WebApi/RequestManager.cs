@@ -257,7 +257,7 @@ namespace Raven.Database.Server.WebApi
             CurrentOperationContext.RavenAuthenticatedUser.Value = string.Empty;
             foreach (var innerHeader in innerHeaders)
             {
-                if (innerHeader.Key.Equals("Raven-Authenticated-User"))
+				if (innerHeader.Key.Equals(Constants.Authorization.RavenAuthorizationUser))
                 {
                     CurrentOperationContext.RavenAuthenticatedUser.Value = innerHeader.Value.FirstOrDefault();
                 }
