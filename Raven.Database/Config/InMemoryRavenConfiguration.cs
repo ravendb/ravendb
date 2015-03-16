@@ -50,6 +50,8 @@ namespace Raven.Database.Config
 
 		public IndexingConfiguration Indexing { get; set; }
 
+        public ClusterConfiguration Cluster { get; private set; }
+
 		public InMemoryRavenConfiguration()
 		{
 			Replication = new ReplicationConfiguration();
@@ -58,6 +60,7 @@ namespace Raven.Database.Config
             FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
+            Cluster = new ClusterConfiguration();
 
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -296,6 +299,12 @@ namespace Raven.Database.Config
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
+
+		    Cluster.ElectionTimeout = ravenSettings.Cluster.ElectionTimeout.Value;
+		    Cluster.HeartbeatTimeout = ravenSettings.Cluster.HeartbeatTimeout.Value;
+		    Cluster.MaxLogLengthBeforeCompaction = ravenSettings.Cluster.MaxLogLengthBeforeCompaction.Value;
+		    Cluster.MaxEntriesPerRequest = ravenSettings.Cluster.MaxEntriesPerRequest.Value;
+		    Cluster.MaxStepDownDrainTime = ravenSettings.Cluster.MaxStepDownDrainTime.Value;
 
 			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
 
@@ -1331,6 +1340,15 @@ namespace Raven.Database.Config
 		{
 			public int MaxNumberOfItemsToProcessInTestIndexes { get; set; }
 		}
+
+	    public class ClusterConfiguration
+	    {
+            public int ElectionTimeout { get; set; }
+            public int HeartbeatTimeout { get; set; }
+            public int MaxLogLengthBeforeCompaction { get; set; }
+            public TimeSpan MaxStepDownDrainTime { get; set; }
+            public int MaxEntriesPerRequest { get; set; }
+	    }
 
 		public void UpdateDataDirForLegacySystemDb()
 		{

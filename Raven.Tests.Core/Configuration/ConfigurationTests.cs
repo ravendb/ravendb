@@ -146,6 +146,11 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.IndexAndTransformerReplicationLatencyInSec.Value, actual => actual.IndexAndTransformerReplicationLatencyInSec);
 			configurationComparer.Assert(expected => expected.MaxConcurrentRequestsForDatabaseDuringLoad.Value, actual => actual.MaxConcurrentRequestsForDatabaseDuringLoad);
 			configurationComparer.Assert(expected => expected.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value, actual => actual.Replication.MaxNumberOfItemsToReceiveInSingleBatch);
+			configurationComparer.Assert(expected => expected.Cluster.HeartbeatTimeout.Value, actual => actual.Cluster.HeartbeatTimeout);
+			configurationComparer.Assert(expected => expected.Cluster.ElectionTimeout.Value, actual => actual.Cluster.ElectionTimeout);
+			configurationComparer.Assert(expected => expected.Cluster.MaxEntriesPerRequest.Value, actual => actual.Cluster.MaxEntriesPerRequest);
+			configurationComparer.Assert(expected => expected.Cluster.MaxStepDownDrainTime.Value, actual => actual.Cluster.MaxStepDownDrainTime);
+			configurationComparer.Assert(expected => expected.Cluster.MaxLogLengthBeforeCompaction.Value, actual => actual.Cluster.MaxLogLengthBeforeCompaction);
 			configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
 			configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
 

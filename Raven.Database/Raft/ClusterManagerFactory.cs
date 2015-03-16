@@ -71,7 +71,14 @@ namespace Raven.Database.Raft
 
 			var transport = new HttpTransport(nodeConnectionInfo.Name, systemDatabase.WorkContext.CancellationToken);
 			var stateMachine = new ClusterStateMachine(systemDatabase, databasesLandlord);
-			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine);
+			var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine)
+			{
+				ElectionTimeout = configuration.Cluster.ElectionTimeout,
+				HeartbeatTimeout = configuration.Cluster.HeartbeatTimeout,
+				MaxLogLengthBeforeCompaction = configuration.Cluster.MaxLogLengthBeforeCompaction,
+				MaxEntriesPerRequest = configuration.Cluster.MaxEntriesPerRequest,
+				MaxStepDownDrainTime = configuration.Cluster.MaxStepDownDrainTime
+			};
 			var raftEngine = new RaftEngine(raftEngineOptions);
 			stateMachine.RaftEngine = raftEngine;
 

@@ -8,6 +8,12 @@ namespace Rachis
 {
 	public class RaftEngineOptions : IDisposable
 	{
+	    public const int DefaultElectionTimeout = 1200;
+	    public const int DefaultHeartbeatTimeout = 300;
+	    public const int DefaultMaxLogLengthBeforeCompaction = 32*1024;
+	    public static readonly TimeSpan DefaultMaxStepDownDrainTime = TimeSpan.FromSeconds(15);
+	    public const int DefaultMaxEntiresPerRequest = 256;
+
 		public RaftEngineOptions(NodeConnectionInfo connection, StorageEnvironmentOptions storageOptions, ITransport transport, IRaftStateMachine stateMachine)
 		{
 			if (connection == null) throw new ArgumentNullException("connection");
@@ -20,12 +26,12 @@ namespace Rachis
 			StorageOptions = storageOptions;
 			Transport = transport;
 			StateMachine = stateMachine;
-			ElectionTimeout = 1200;
-			HeartbeatTimeout = 300;
+		    ElectionTimeout = DefaultElectionTimeout;
+		    HeartbeatTimeout = DefaultHeartbeatTimeout;
 			Stopwatch = new Stopwatch();
-			MaxLogLengthBeforeCompaction = 32 * 1024;
-			MaxStepDownDrainTime = TimeSpan.FromSeconds(15);
-			MaxEntriesPerRequest = 256;
+		    MaxLogLengthBeforeCompaction = DefaultMaxLogLengthBeforeCompaction;
+		    MaxStepDownDrainTime = DefaultMaxStepDownDrainTime;
+			MaxEntriesPerRequest = DefaultMaxEntiresPerRequest;
 		}
 
 		public int MaxEntriesPerRequest { get; set; }
