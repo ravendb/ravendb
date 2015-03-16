@@ -8,7 +8,9 @@ namespace Raven.Database.Bundles.Versioning.Data
 	public class FileVersioningConfiguration
 	{
 		/// <summary>
-		/// TODO arek - see RavenDB-3295
+		/// Id can be in the following format:
+		/// 1. Raven/Versioning/{directory/path} - When using this format, the impacted files are just ones with the located in the specified directory or its subdirectories.
+		/// 2. Raven/Versioning/DefaultConfiguration - This is a global configuration, which impacts just files that don't have a specific Raven/Versioning/{directory/path} corresponding to them.
 		/// </summary>
 		public string Id { get; set; }
 
