@@ -101,6 +101,7 @@
     <Compile Include="Bugs\UpdatingMetadata.cs" />
     <Compile Include="Bugs\UploadFilesWithTheSameContentConcurrently.cs" />
     <Compile Include="Bugs\UploadDownload.cs" />
+    <Compile Include="Bundles\Versioning\RavenDB_3295.cs" />
     <Compile Include="Bundles\Versioning\VersioningAndSynchronization.cs" />
     <Compile Include="Bundles\Versioning\VersioningTests.cs" />
     <Compile Include="ClientApi\FileQueryTests.cs" />

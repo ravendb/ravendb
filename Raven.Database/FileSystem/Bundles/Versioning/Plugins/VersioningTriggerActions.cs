@@ -34,7 +34,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 
 				if (fileSystem.ChangesToRevisionsAllowed() == false &&
 					file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" &&
-					accessor.IsVersioningActive())
+					accessor.IsVersioningActive(name))
 				{
 					veto = VetoResult.Deny("Modifying a historical revision is not allowed");
 				}
@@ -124,7 +124,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			if (metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical")
 				return false;
 
-			versioningConfiguration = accessor.GetVersioningConfiguration();
+			versioningConfiguration = accessor.GetVersioningConfiguration(name);
 			if (versioningConfiguration == null || versioningConfiguration.Exclude
 				|| (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion))
 				|| metadata.__ExternalState.ContainsKey(Constants.RavenIgnoreVersioning))
