@@ -122,8 +122,9 @@ namespace Raven.Database.Extensions
 				throw new IOException("Could not delete " + Path.GetFullPath(directory), e);
 			}
 
-			RavenGC.CollectGarbage(2, GCCollectionMode.Forced, forceByUser: false);
+			GC.Collect();
 			GC.WaitForPendingFinalizers();
+
 			Thread.Sleep(100);
 		}
 
