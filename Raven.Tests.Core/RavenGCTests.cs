@@ -27,33 +27,5 @@ namespace Raven.Tests.Core
 
 			Assert.True(RavenGC.MemoryBeforeLastForcedGC > RavenGC.MemoryAfterLastForcedGC);	
 		}
-
-		//short period of time assumed to be passed between releases
-		[Fact]
-		public void GC_should_not_occur_twice_if_not_enough_memory_released()
-		{
-// ReSharper disable once RedundantAssignment
-			WeakReference reference;
-			var allocateStuff = new Action<int>(sizeToAllocate =>
-			{
-				var bytes = new byte[sizeToAllocate];
-				new Random().NextBytes(bytes);
-				reference = new WeakReference(bytes, true);
-			});
-
-			allocateStuff((int)GC.GetTotalMemory(false) / 5);
-			Assert.True(RavenGC.CollectGarbage(true, () => { }));
-
-			//sanity check
-			Assert.True(RavenGC.MemoryBeforeLastForcedGC > RavenGC.MemoryAfterLastForcedGC);	
-
-			allocateStuff(1024);
-			//this time the collection _should_ occur, since
-			//last time it had freed more than 10% of memory
-			Assert.True(RavenGC.CollectGarbage(true, () => { }));
-
-			//now it should _not_ do the GC, since last time no memory was GC'd
-			Assert.False(RavenGC.CollectGarbage(true, () => { }));
-		}
 	}
 }
