@@ -41,7 +41,7 @@ namespace Raven.Database.FileSystem.Search
 
 		private const string DateIndexFormat = "yyyy-MM-dd_HH-mm-ss";
 
-		public static Regex IsNumeric = new Regex(@"^-?(\d*\.?\d*)$", RegexOptions.Compiled & RegexOptions.CultureInvariant); //TODO arek
+		public static Regex IsNumeric = new Regex(@"^-?(\d*\.?\d*)$", RegexOptions.Compiled & RegexOptions.CultureInvariant);
 
 		private static readonly string[] ExcludeNumericFields =
 	    {
