@@ -24,14 +24,14 @@ namespace Raven.Tests.Raft
 	public class SnaphshottingTest : RaftTestBase
 	{
 		[Fact]
-		public async Task CanInstallSnapshot()
+		public void CanInstallSnapshot()
 		{
 			CreateRaftCluster(3, inMemory:false); // 3 nodes
 
 			for (var i = 0; i < 5; i++)
 			{
 				var client = servers[0].Options.ClusterManager.Client;
-				await client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false}).ConfigureAwait(false);
+				client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false}).Wait(3000);
 			}
 
 			WaitForClusterToBecomeNonStale(3);
