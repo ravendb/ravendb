@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -14,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -59,13 +59,13 @@ namespace Raven.Client.Connection.Request
 			}
 		}
 
-		public List<OperationMetadata> NodeUrls
+		public HashSet<OperationMetadata> NodeUrls
 		{
 			get
 			{
 				return Nodes
 					.Select(x => new OperationMetadata(x))
-					.ToList();
+					.ToHashSet();
 			}
 		}
 
@@ -177,12 +177,26 @@ namespace Raven.Client.Connection.Request
 
 				return refreshReplicationInformationTask = Task.Factory.StartNew(() =>
 				{
-					for (;;)
+					var tryFailoverServers = false;
+					var triedFailoverServers = FailoverServers.Length == 0;
+					for (; ; )
 					{
 						var nodes = NodeUrls;
 
 						if (nodes.Count == 0)
 							nodes.Add(primaryNode);
+
+						if (tryFailoverServers)
+						{
+							foreach (var failoverServer in FailoverServers)
+							{
+								var node = ConvertReplicationDestinationToOperationMetadata(failoverServer, ClusterInformation.NotInCluster);
+								if (node != null)
+									nodes.Add(node);
+							}
+
+							triedFailoverServers = true;
+						}
 
 						var replicationDocuments = nodes
 							.Select(operationMetadata => new
@@ -203,7 +217,10 @@ namespace Raven.Client.Connection.Request
 							.OrderByDescending(x => x.Task.Result.ClusterCommitIndex)
 							.FirstOrDefault();
 
-						if (newestTopology == null)
+						if (newestTopology == null && FailoverServers != null && FailoverServers.Length > 0 && tryFailoverServers == false)
+							tryFailoverServers = true;
+
+						if (newestTopology == null && triedFailoverServers)
 						{
 							LeaderNode = primaryNode;
 							Nodes = new List<OperationMetadata>
@@ -213,11 +230,14 @@ namespace Raven.Client.Connection.Request
 							return;
 						}
 
-						Nodes = GetNodes(newestTopology.Node, newestTopology.Task.Result);
-						LeaderNode = GetLeaderNode(Nodes);
+						if (newestTopology != null)
+						{
+							Nodes = GetNodes(newestTopology.Node, newestTopology.Task.Result);
+							LeaderNode = GetLeaderNode(Nodes);
 
-						if (LeaderNode != null)
-							return;
+							if (LeaderNode != null)
+								return;
+						}
 
 						Thread.Sleep(500);
 					}
@@ -236,23 +256,26 @@ namespace Raven.Client.Connection.Request
 
 		private static List<OperationMetadata> GetNodes(OperationMetadata node, ReplicationDocumentWithClusterInformation replicationDocument)
 		{
-			var nodes = replicationDocument.Destinations.Select(x =>
-			{
-				var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url : x.ClientVisibleUrl;
-				if (string.IsNullOrEmpty(url) || x.Disabled || x.IgnoredClient)
-					return null;
-
-				if (string.IsNullOrEmpty(x.Database))
-					return new OperationMetadata(url, x.Username, x.Password, x.Domain, x.ApiKey, x.ClusterInformation);
-
-				return new OperationMetadata(MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/", x.Username, x.Password, x.Domain, x.ApiKey, x.ClusterInformation);
-			})
-			.Where(x => x != null)
-			.ToList();
+			var nodes = replicationDocument.Destinations
+				.Select(x => ConvertReplicationDestinationToOperationMetadata(x, x.ClusterInformation))
+				.Where(x => x != null)
+				.ToList();
 
 			nodes.Add(new OperationMetadata(node.Url, node.Credentials, replicationDocument.ClusterInformation));
 
 			return nodes;
+		}
+
+		private static OperationMetadata ConvertReplicationDestinationToOperationMetadata(ReplicationDestination destination, ClusterInformation clusterInformation)
+		{
+			var url = string.IsNullOrEmpty(destination.ClientVisibleUrl) ? destination.Url : destination.ClientVisibleUrl;
+			if (string.IsNullOrEmpty(url) || destination.Disabled || destination.IgnoredClient)
+				return null;
+
+			if (string.IsNullOrEmpty(destination.Database))
+				return new OperationMetadata(url, destination.Username, destination.Password, destination.Domain, destination.ApiKey, clusterInformation);
+
+			return new OperationMetadata(MultiDatabase.GetRootDatabaseUrl(url).ForDatabase(destination.Database), destination.Username, destination.Password, destination.Domain, destination.ApiKey, clusterInformation);
 		}
 
 		public IDisposable ForceReadFromMaster()

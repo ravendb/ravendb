@@ -44,5 +44,38 @@ namespace Raven.Client.Connection
 		public ClusterInformation ClusterInformation { get; private set; }
 
         public OperationCredentials Credentials { get; private set; }
+
+	    protected bool Equals(OperationMetadata other)
+	    {
+		    return string.Equals(Url, other.Url) && Equals(ClusterInformation, other.ClusterInformation) && Equals(Credentials, other.Credentials);
+	    }
+
+	    public override bool Equals(object obj)
+	    {
+		    if (ReferenceEquals(null, obj))
+		    {
+			    return false;
+		    }
+		    if (ReferenceEquals(this, obj))
+		    {
+			    return true;
+		    }
+		    if (obj.GetType() != GetType())
+		    {
+			    return false;
+		    }
+		    return Equals((OperationMetadata)obj);
+	    }
+
+	    public override int GetHashCode()
+	    {
+		    unchecked
+		    {
+			    int hashCode = (Url != null ? Url.GetHashCode() : 0);
+			    hashCode = (hashCode * 397) ^ (ClusterInformation != null ? ClusterInformation.GetHashCode() : 0);
+			    hashCode = (hashCode * 397) ^ (Credentials != null ? Credentials.GetHashCode() : 0);
+			    return hashCode;
+		    }
+	    }
     }
 }

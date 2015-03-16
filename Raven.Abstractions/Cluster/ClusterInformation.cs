@@ -22,5 +22,35 @@ namespace Raven.Abstractions.Cluster
 		public bool IsInCluster { get; set; }
 
 		public bool IsLeader { get; set; }
+
+		protected bool Equals(ClusterInformation other)
+		{
+			return IsInCluster.Equals(other.IsInCluster) && IsLeader.Equals(other.IsLeader);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj))
+			{
+				return false;
+			}
+			if (ReferenceEquals(this, obj))
+			{
+				return true;
+			}
+			if (obj.GetType() != GetType())
+			{
+				return false;
+			}
+			return Equals((ClusterInformation)obj);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				return (IsInCluster.GetHashCode() * 397) ^ IsLeader.GetHashCode();
+			}
+		}
 	}
 }
