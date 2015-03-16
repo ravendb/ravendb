@@ -292,7 +292,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25)
+	    public Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -311,7 +311,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25)
+	    public Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -364,8 +364,41 @@ namespace Raven.Client.FileSystem
 					}
 	            }
             });
-
         }
+
+		public Task DeleteByQueryAsync(string query, string[] orderByFields = null, int start = 0, int pageSize = int.MaxValue)
+		{
+			return ExecuteWithReplication("DELETE", async operation =>
+			{
+				var requestUriBuilder = new StringBuilder(operation.Url)
+					.Append("/search/?query=")
+					.Append(Uri.EscapeUriString(query))
+					.Append("&start=")
+					.Append(start)
+					.Append("&pageSize=")
+					.Append(pageSize);
+
+				if (orderByFields != null)
+				{
+					foreach (var sortField in orderByFields)
+					{
+						requestUriBuilder.Append("&sort=").Append(sortField);
+					}
+				}
+
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriBuilder.ToString(), "DELETE", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+				{
+					try
+					{
+						await request.ReadResponseJsonAsync().ConfigureAwait(false);
+					}
+					catch (Exception e)
+					{
+						throw e.SimplifyException();
+					}
+				}
+			});
+		}
 
         public Task<RavenJObject> GetMetadataForAsync(string filename)
         {
@@ -396,10 +429,10 @@ namespace Raven.Client.FileSystem
             else
             {
                 var sb = new StringBuilder(operationMetadata.Url)
-                .Append("/streams/files?etag=")
-                .Append(fromEtag)
-                .Append("&pageSize=")
-                .Append(pageSize);
+					.Append("/streams/files?etag=")
+					.Append(fromEtag)
+					.Append("&pageSize=")
+					.Append(pageSize);
 
                 var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions)
                                             .AddOperationHeaders(OperationsHeaders));

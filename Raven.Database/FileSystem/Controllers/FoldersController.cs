@@ -1,7 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Logging;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 
@@ -9,6 +13,8 @@ namespace Raven.Database.FileSystem.Controllers
 {
 	public class FoldersController : RavenFsApiController
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		[HttpGet]
         [RavenRoute("fs/{fileSystemName}/folders/Subdirectories/{*directory}")]
         public HttpResponseMessage Subdirectories(string directory = null)
@@ -37,8 +43,26 @@ namespace Raven.Database.FileSystem.Controllers
 			                                .Skip(Paging.Start)
 			                                .Take(Paging.PageSize);
 
-            return this.GetMessageWithObject(result)
+            return GetMessageWithObject(result)
                        .WithNoCache();
+		}
+
+		[HttpDelete]
+		[RavenRoute("fs/{fileSystemName}/folder")]
+		public HttpResponseMessage DeleteDirectory(string pathToDirectory)
+		{
+			pathToDirectory = FileHeader.Canonize(pathToDirectory);
+			pathToDirectory += "/";
+
+			Storage.Batch(accessor =>
+			{
+				var filesAndPages = accessor.GetFilesStartingWith(pathToDirectory, 0, Int32.MaxValue);
+				DeleteFiles(filesAndPages, accessor, log);
+			});
+
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 	}
 }

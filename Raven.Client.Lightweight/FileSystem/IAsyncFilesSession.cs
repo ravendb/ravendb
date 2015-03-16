@@ -42,6 +42,8 @@ namespace Raven.Client.FileSystem
         void RegisterFileDeletion(string path, Etag etag = null);
         void RegisterFileDeletion(FileHeader path, Etag etag = null);
 
+		void RegisterDeletionQuery(string query, string[] orderByFields = null, int start = 0, int pageSize = int.MaxValue);
+
         void RegisterRename(string sourceFile, string destinationFile, Etag etag = null);
         void RegisterRename(FileHeader sourceFile, string destinationFile, Etag etag = null);
 

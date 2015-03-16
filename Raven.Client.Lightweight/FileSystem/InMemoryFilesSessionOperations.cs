@@ -129,9 +129,7 @@ namespace Raven.Client.FileSystem
         /// <value>The max number of requests per session.</value>
         public int MaxNumberOfRequestsPerSession { get; set; }
 
-
         private Queue<IFilesOperation> registeredOperations = new Queue<IFilesOperation>();
-
 
         public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
@@ -187,13 +185,22 @@ namespace Raven.Client.FileSystem
 
             IncrementRequestCount();
 
-            registeredOperations.Enqueue(operation); 
+            registeredOperations.Enqueue(operation);
         }
 
         public void RegisterFileDeletion(FileHeader file, Etag etag = null)
         {
 			RegisterFileDeletion(file.FullPath, etag);
         }
+
+		public void RegisterDeletionQuery(string query, string[] orderByFields = null, int start = 0, int pageSize = int.MaxValue)
+	    {
+			var operation = new DeleteByQueryOperation(query, orderByFields, start, pageSize);
+
+			IncrementRequestCount();
+
+			registeredOperations.Enqueue(operation);
+	    }
 
         public void RegisterRename(string sourceFile, string destinationFile, Etag etag = null)
         {
@@ -269,26 +276,27 @@ namespace Raven.Client.FileSystem
             var changes = new SaveChangesData();
             var operationsToExecute = registeredOperations;
             registeredOperations = new Queue<IFilesOperation>();
-            
+
             PrepareForSaveChanges(changes, operationsToExecute.ToList());
 
             try
             {
                 var results = new List<FileHeader>();
-	            foreach (var op in changes.Operations)
+	            
+				foreach (var op in changes.Operations)
                 {
                     AssertConflictsAreNotAffectingOperation(op);
                     var operationResult = await op.Execute((IAsyncFilesSession)this).ConfigureAwait(false);
                     if (operationResult != null)
                         results.Add(operationResult);
                 }
+
                 ProcessResults(results, changes);
             }
             finally
             {
                 deletedEntities.Clear();
             }
-
         }
 
         private void PrepareForSaveChanges(SaveChangesData changes, List<IFilesOperation> operations)
@@ -296,29 +304,35 @@ namespace Raven.Client.FileSystem
             PrepareForDeletion(changes, operations);
             PrepareForUpdate(changes, operations);
             
-            operations.RemoveAll( x => typeof(DeleteFileOperation) == x.GetType());
+            operations.RemoveAll(x => x.GetType() == typeof(DeleteFileOperation) || x.GetType() == typeof(DeleteByQueryOperation));
 
             // all other operations
             foreach (var op in operations)
             {
-                changes.Entities.Add(op.Filename);
+                changes.Entities.Add(op.FileName);
                 changes.Operations.Add(op);
             }
         }
 
-        private void PrepareForDeletion(SaveChangesData changes, IEnumerable<IFilesOperation> operations)
+		private void PrepareForDeletion(SaveChangesData changes, List<IFilesOperation> operations)
         {
             var deleteOperations = operations.OfType<DeleteFileOperation>().ToList();
             foreach (var op in deleteOperations)
             {
                 changes.Operations.Add(op);
-                deletedEntities.Add(op.Filename);
+                deletedEntities.Add(op.FileName);
             }
+
+	        var deleteByQueryOperations = operations.OfType<DeleteByQueryOperation>().ToList();
+			foreach (var op in deleteByQueryOperations)
+			{
+				changes.Operations.Add(op);
+			}
         }
 
-        private void PrepareForUpdate(SaveChangesData changes, IEnumerable<IFilesOperation> operations)
+        private void PrepareForUpdate(SaveChangesData changes, List<IFilesOperation> operations)
         {
-            foreach( var key in entitiesByKey.Keys)
+            foreach(var key in entitiesByKey.Keys)
             {
                 var fileHeader = entitiesByKey[key];
 
@@ -330,9 +344,9 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        private bool UploadRegisteredForFile(string fileName, IEnumerable<IFilesOperation> operations)
+        private static bool UploadRegisteredForFile(string fileName, IEnumerable<IFilesOperation> operations)
         {
-            return operations.Any(o => { return o.Filename == fileName && o.GetType() == typeof(UploadFileOperation); });
+            return operations.Any(o => string.IsNullOrEmpty(o.FileName) == false && o.FileName == fileName && o.GetType() == typeof(UploadFileOperation));
         }
 
         private void ProcessResults(IList<FileHeader> results, SaveChangesData data)
@@ -351,7 +365,7 @@ namespace Raven.Client.FileSystem
 					{
 						AddToCache(result.Name, result);
 					}
-
+					
 					continue;
 				}
 
@@ -379,7 +393,7 @@ namespace Raven.Client.FileSystem
             string fileName = null;
             if (operation.GetType() == typeof(UploadFileOperation) || operation.GetType() == typeof(RenameFileOperation) || operation.GetType() == typeof(UpdateMetadataOperation))
             {
-                fileName = operation.Filename;
+                fileName = operation.FileName;
             }
 
             if (fileName != null && conflicts.Contains(fileName))

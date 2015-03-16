@@ -362,7 +362,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 				do
 				{
 					var key = iterator.CurrentKey.ToString();
-
+					
 					ushort version;
 					var file = LoadFileByKey(key, out version);
 					

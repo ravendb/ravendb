@@ -424,7 +424,7 @@ If you really want to do in memory filtering on the data returned from the query
 
         bool IAsyncFilesQuery<T>.IsDistinct
         {
-            get { return this.isDistinct; }
+            get { return isDistinct; }
         }
 
         #endregion 
@@ -449,12 +449,12 @@ If you really want to do in memory filtering on the data returned from the query
 			return this;
 		}
 
-        public IAsyncFilesQuery<T> OnDirectory(string path = null, bool recursive = false)
+	    public IAsyncFilesQuery<T> OnDirectory(string path = null, bool recursive = false)
         {
             if (string.IsNullOrWhiteSpace(path))
                 path = string.Empty;
 
-            var normalizedPath = path;
+            string normalizedPath;
             if (!path.StartsWith("/"))
                 normalizedPath = "/" + path.TrimEnd('/');
             else
@@ -494,5 +494,14 @@ If you really want to do in memory filtering on the data returned from the query
 
             return this;
         }
+
+		void IAsyncFilesQuery<T>.RegisterDeletion()
+		{
+			var query = ToString();
+			if (string.IsNullOrWhiteSpace(query))
+				throw new ArgumentException("Query is empty! Did you forget OnDirectory before RegisterDeletion?");
+
+			Session.RegisterDeletionQuery(query, orderByFields, start, pageSize);
+		}
     }
 }

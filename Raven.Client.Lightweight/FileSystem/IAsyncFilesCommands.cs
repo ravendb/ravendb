@@ -60,14 +60,12 @@ namespace Raven.Client.FileSystem
         IAsyncFilesCommands With(ICredentials credentials);
         IAsyncFilesCommands With(OperationCredentials credentials);
 
-
         Task<Guid> GetServerIdAsync();
         Task<FileSystemStats> GetStatisticsAsync();
 
-
         Task DeleteAsync(string filename, Etag etag = null);
         Task RenameAsync(string currentName, string newName, Etag etag = null);
-
+	    
         Task<RavenJObject> GetMetadataForAsync(string filename);
 
         Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null);
@@ -81,16 +79,15 @@ namespace Raven.Client.FileSystem
 
         Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 1024);
         Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 1024);
+		Task DeleteByQueryAsync(string query, string[] orderByFields = null, int start = 0, int pageSize = int.MaxValue);
         Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 1024);
-
+	    
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 1024);
 
         Task<FileHeader[]> GetAsync(string[] filename);
 		Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize);
 
         Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue);
-
-        
     }
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation

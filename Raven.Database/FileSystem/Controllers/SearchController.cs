@@ -1,18 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Web.Http;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Raven.Database.FileSystem.Storage;
 using System.Net.Http;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Logging;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
 	public class SearchController : RavenFsApiController
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/search/Terms")]
         public HttpResponseMessage Terms([FromUri] string query  = "")
@@ -47,6 +50,22 @@ namespace Raven.Database.FileSystem.Controllers
 			};
 
             return this.GetMessageWithObject(result);
+		}
+
+		[HttpDelete]
+		[RavenRoute("fs/{fileSystemName}/search")]
+		public HttpResponseMessage DeleteByQuery(string query, [FromUri] string[] sort)
+		{
+			int results;
+			var keys = Search.Query(query, sort, Paging.Start, Paging.PageSize, out results);
+
+			Storage.Batch(accessor =>
+			{
+				var files = keys.Select(accessor.ReadFile);
+				DeleteFiles(files, accessor, log);
+			});
+
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 	}
 }

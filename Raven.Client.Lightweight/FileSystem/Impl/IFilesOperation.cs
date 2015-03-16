@@ -1,18 +1,12 @@
-﻿using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
-using Raven.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
+﻿using Raven.Abstractions.FileSystem;
 using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Impl
 {
     internal interface IFilesOperation 
     {
-        String Filename { get; set; }
+        string FileName { get; }
+
         Task<FileHeader> Execute(IAsyncFilesSession session);
     }
 }
