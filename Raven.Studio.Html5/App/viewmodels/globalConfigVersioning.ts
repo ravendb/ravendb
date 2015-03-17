@@ -114,7 +114,9 @@ class globalConfigVersioning extends viewModelBase {
         var entry = new versioningEntry({
             Id: "DefaultConfiguration",
             MaxRevisions: 5,
-            Exclude: false
+            Exclude: false,
+			ExcludeUnlessExplicit: false,
+			PurgeOnDelete: false
         });
         entry.fromDatabase(true);
 

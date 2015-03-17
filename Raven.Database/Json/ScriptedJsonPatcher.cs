@@ -80,7 +80,7 @@ namespace Raven.Database.Json
 		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size, string docId, ScriptedJsonPatcherOperationScope scope)
 		{
 			Engine jintEngine;
-			var customFunctions = scope.CustomFunctions != null ? scope.CustomFunctions.DataAsJson : null;
+			var customFunctions = scope.CustomFunctions;
 			try
 			{
 				jintEngine = ScriptsCache.CheckoutScript(CreateEngine, patch, customFunctions);
