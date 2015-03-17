@@ -416,12 +416,7 @@ namespace Raven.Bundles.Replication.Tasks
 						{
 							destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
 							if (destinationsReplicationInformationForSource == null)
-							{
-								destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
-
-								if (destinationsReplicationInformationForSource == null)
 									return false;
-							}
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 

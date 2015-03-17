@@ -17,7 +17,6 @@ using System.Threading.Tasks;
 using NLog;
 using Rachis.Messages;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -27,7 +26,7 @@ namespace Rachis.Transport
 	/// All requests are fire & forget, with the reply coming in (if at all)
 	/// from the resulting thread.
 	/// </summary>
-	public class HttpTransportSender  : IDisposable
+	public class HttpTransportSender : IDisposable
 	{
 		private readonly HttpTransportBus _bus;
 
@@ -36,7 +35,11 @@ namespace Rachis.Transport
 		private readonly ConcurrentDictionary<string, SecuredAuthenticator> _securedAuthenticatorCache = new ConcurrentDictionary<string, SecuredAuthenticator>();
 
 		private readonly ConcurrentDictionary<string, ConcurrentQueue<HttpClient>> _httpClientsCache = new ConcurrentDictionary<string, ConcurrentQueue<HttpClient>>();
+
+		private readonly ConcurrentDictionary<NodeConnectionInfo, int> _connectionFailureCounts = new ConcurrentDictionary<NodeConnectionInfo, int>();
+
 		private readonly Logger _log;
+
 		public HttpTransportSender(string name, HttpTransportBus bus, CancellationToken cancellationToken)
 		{
 			_bus = bus;
@@ -54,6 +57,8 @@ namespace Rachis.Transport
 				using (var request = CreateRequest(dest, requestUri, "POST"))
 				{
 					var httpResponseMessage = await request.WriteAsync(() => new SnapshotContent(streamWriter)).ConfigureAwait(false);
+					UpdateConnectionFailureCounts(dest, httpResponseMessage);
+
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
@@ -94,12 +99,12 @@ namespace Rachis.Transport
 			var request = new HttpRaftRequest(node, url, method, info =>
 			{
 				HttpClient client;
-				var dispose = (IDisposable) GetConnection(info, out client);
+				var dispose = (IDisposable)GetConnection(info, out client);
 				return Tuple.Create(dispose, client);
 			},
 			_cancellationToken)
 			{
-				UnauthorizedResponseAsyncHandler = HandleUnauthorizedResponseAsync, 
+				UnauthorizedResponseAsyncHandler = HandleUnauthorizedResponseAsync,
 				ForbiddenResponseAsyncHandler = HandleForbiddenResponseAsync
 			};
 			GetAuthenticator(node).ConfigureRequest(this, new WebRequestEventArgs
@@ -172,6 +177,9 @@ namespace Rachis.Transport
 
 		public void Send(NodeConnectionInfo dest, AppendEntriesRequest req)
 		{
+			if (MaybeIgnoreFrequentRequestsIfServerDown(dest))
+				return;
+
 			LogStatus("append entries to " + dest, async () =>
 			{
 				var requestUri = string.Format("raft/appendEntries?term={0}&leaderCommit={1}&prevLogTerm={2}&prevLogIndex={3}&entriesCount={4}&from={5}&clusterTopologyId={6}",
@@ -179,6 +187,7 @@ namespace Rachis.Transport
 				using (var request = CreateRequest(dest, requestUri, "POST"))
 				{
 					var httpResponseMessage = await request.WriteAsync(() => new EntriesContent(req.Entries)).ConfigureAwait(false);
+					UpdateConnectionFailureCounts(dest, httpResponseMessage);
 
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
@@ -187,7 +196,7 @@ namespace Rachis.Transport
 						return;
 					}
 					var appendEntriesResponse = JsonConvert.DeserializeObject<AppendEntriesResponse>(reply);
-					SendToSelf(appendEntriesResponse);	
+					SendToSelf(appendEntriesResponse);
 				}
 			});
 		}
@@ -241,6 +250,8 @@ namespace Rachis.Transport
 				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
 					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
+					UpdateConnectionFailureCounts(dest, httpResponseMessage);
+
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
@@ -255,13 +266,18 @@ namespace Rachis.Transport
 
 		public void Send(NodeConnectionInfo dest, RequestVoteRequest req)
 		{
+			if (MaybeIgnoreFrequentRequestsIfServerDown(dest))
+				return;
+
 			LogStatus("request vote from " + dest, async () =>
 			{
-				var requestUri = string.Format("raft/requestVote?term={0}&lastLogIndex={1}&lastLogTerm={2}&trialOnly={3}&forcedElection={4}&from={5}&clusterTopologyId={6}", 
+				var requestUri = string.Format("raft/requestVote?term={0}&lastLogIndex={1}&lastLogTerm={2}&trialOnly={3}&forcedElection={4}&from={5}&clusterTopologyId={6}",
 					req.Term, req.LastLogIndex, req.LastLogTerm, req.TrialOnly, req.ForcedElection, req.From, req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
 					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
+					UpdateConnectionFailureCounts(dest, httpResponseMessage);
+
 					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
 					if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
 					{
@@ -286,11 +302,13 @@ namespace Rachis.Transport
 				var requestUri = string.Format("raft/timeoutNow?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var message = await request.ExecuteAsync().ConfigureAwait(false);
-					var reply = await message.Content.ReadAsStringAsync().ConfigureAwait(false);
-					if (message.IsSuccessStatusCode == false)
+					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
+					UpdateConnectionFailureCounts(dest, httpResponseMessage);
+
+					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
+					if (httpResponseMessage.IsSuccessStatusCode == false)
 					{
-						_log.Warn("Error appending entries to {0}. Status: {1}\r\n{2}", dest.Name, message.StatusCode, message, reply);
+						_log.Warn("Error appending entries to {0}. Status: {1}\r\n{2}", dest.Name, httpResponseMessage.StatusCode, httpResponseMessage, reply);
 						return;
 					}
 					SendToSelf(new NothingToDo());
@@ -305,11 +323,13 @@ namespace Rachis.Transport
 				var requestUri = string.Format("raft/disconnectFromCluster?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
 				using (var request = CreateRequest(dest, requestUri, "GET"))
 				{
-					var message = await request.ExecuteAsync().ConfigureAwait(false);
-					var reply = await message.Content.ReadAsStringAsync().ConfigureAwait(false);
-					if (message.IsSuccessStatusCode == false)
+					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
+					UpdateConnectionFailureCounts(dest, httpResponseMessage);
+
+					var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
+					if (httpResponseMessage.IsSuccessStatusCode == false)
 					{
-						_log.Warn("Error sending disconnecton notification to {0}. Status: {1}\r\n{2}", dest.Name, message.StatusCode, message, reply);
+						_log.Warn("Error sending disconnecton notification to {0}. Status: {1}\r\n{2}", dest.Name, httpResponseMessage.StatusCode, httpResponseMessage, reply);
 						return;
 					}
 					SendToSelf(new NothingToDo());
@@ -347,7 +367,7 @@ namespace Rachis.Transport
 
 		public void Dispose()
 		{
-			foreach (var q in _httpClientsCache.Select(x=>x.Value))
+			foreach (var q in _httpClientsCache.Select(x => x.Value))
 			{
 				HttpClient result;
 				while (q.TryDequeue(out result))
@@ -421,6 +441,47 @@ namespace Rachis.Transport
 			}
 		}
 
-	
+		private bool MaybeIgnoreFrequentRequestsIfServerDown(NodeConnectionInfo node)
+		{
+			int connectionFailureCount;
+			if (_connectionFailureCounts.TryGetValue(node, out connectionFailureCount) == false)
+				return false;
+
+			if (connectionFailureCount < 10)
+				return false;
+
+			return connectionFailureCount % 10 != 0;
+		}
+
+		private void UpdateConnectionFailureCounts(NodeConnectionInfo node, HttpResponseMessage response)
+		{
+			_connectionFailureCounts.AddOrUpdate(node, 0, (_, failureCount) =>
+			{
+				if (response.IsSuccessStatusCode)
+					return 0;
+
+				bool timeout;
+				if (IsServerDown(response.StatusCode, out timeout))
+					return failureCount + 1;
+
+				return 0;
+			});
+		}
+
+		private static bool IsServerDown(HttpStatusCode httpStatusCode, out bool timeout)
+		{
+			timeout = false;
+			switch (httpStatusCode)
+			{
+				case HttpStatusCode.RequestTimeout:
+				case HttpStatusCode.GatewayTimeout:
+					timeout = true;
+					return true;
+				case HttpStatusCode.BadGateway:
+				case HttpStatusCode.ServiceUnavailable:
+					return true;
+			}
+			return false;
+		}
 	}
 }
