@@ -1246,7 +1246,6 @@ interface synchronizationConfigDto {
     MaxNumberOfSynchronizationsPerDestination: number;
     SynchronizationLockTimeoutMiliseconds: number;
 }
-}
 
 interface copyFromParentDto<T> {
     copyFromParent(parent: T);
