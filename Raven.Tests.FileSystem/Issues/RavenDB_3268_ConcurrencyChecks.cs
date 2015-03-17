@@ -54,6 +54,9 @@ namespace Raven.Tests.FileSystem.Issues
 					catch (ConcurrencyException ex)
 					{
 						Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
+
+						Assert.NotNull(ex.ExpectedETag);
+						Assert.NotNull(ex.ActualETag);
 					}	
 				}
 			}
@@ -143,6 +146,9 @@ namespace Raven.Tests.FileSystem.Issues
 					catch (ConcurrencyException ex)
 					{
 						Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
+
+						Assert.NotNull(ex.ExpectedETag);
+						Assert.NotNull(ex.ActualETag);
 					}
 				}
 			}
@@ -226,6 +232,9 @@ namespace Raven.Tests.FileSystem.Issues
 					catch (ConcurrencyException ex)
 					{
 						Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
+
+						Assert.NotNull(ex.ExpectedETag);
+						Assert.NotNull(ex.ActualETag);
 					}
 				}
 			}
@@ -309,6 +318,9 @@ namespace Raven.Tests.FileSystem.Issues
 					catch (ConcurrencyException ex)
 					{
 						Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
+
+						Assert.NotNull(ex.ExpectedETag);
+						Assert.NotNull(ex.ActualETag);
 					}
 				}
 			}

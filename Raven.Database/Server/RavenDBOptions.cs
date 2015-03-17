@@ -33,7 +33,7 @@ namespace Raven.Database.Server
 				if (db == null)
 				{
 					configuration.UpdateDataDirForLegacySystemDb();
-					systemDatabase = new DocumentDatabase(configuration);
+					systemDatabase = new DocumentDatabase(configuration, null);
 					systemDatabase.SpinBackgroundWorkers();
 				}
 				else

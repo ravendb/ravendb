@@ -8,7 +8,6 @@ import deleteCollection = require("viewmodels/deleteCollection");
 
 import collection = require("models/collection");
 import database = require("models/database");
-import document = require("models/document");
 import alert = require("models/alert");
 import changeSubscription = require('models/changeSubscription');
 import customFunctions = require("models/customFunctions");
@@ -17,7 +16,7 @@ import customColumnParams = require('models/customColumnParams');
 
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
-import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/getEffectiveCustomFunctionsCommand");
 import getOperationStatusCommand = require('commands/getOperationStatusCommand');
 import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/dismissAlertCommand");
@@ -209,9 +208,9 @@ class documents extends viewModelBase {
     }
 
     fetchCustomFunctions() {
-        var customFunctionsCommand = new getCustomFunctionsCommand(this.activeDatabase()).execute();
-        customFunctionsCommand.done((cf: customFunctions) => {
-            this.currentCustomFunctions(cf);
+        var customFunctionsCommand = new getEffectiveCustomFunctionsCommand(this.activeDatabase()).execute();
+        customFunctionsCommand.done((cf: configurationDocumentDto<customFunctionsDto>) => {
+            this.currentCustomFunctions(new customFunctions(cf.MergedDocument));
         });
     }
 

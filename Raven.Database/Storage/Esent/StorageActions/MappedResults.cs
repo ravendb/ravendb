@@ -5,26 +5,23 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Security.Cryptography;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
-using Raven.Database.Indexing;
-using Raven.Database.Storage;
-using Raven.Json.Linq;
-using System.Linq;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
+using Raven.Database.Indexing;
+using Raven.Json.Linq;
+using Raven.Storage.Esent.StorageActions;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.StorageActions
 {
-	using Raven.Abstractions.Util.Encryptors;
-
 	public partial class DocumentStorageActions : IMappedResultsStorageAction
 	{
 		private static readonly ThreadLocal<IHashEncryptor> localSha1 = new ThreadLocal<IHashEncryptor>(() => Encryptor.Current.CreateHash());
@@ -557,6 +554,7 @@ namespace Raven.Storage.Esent.StorageActions
 				throw;
 			}
 
+			var needExactMatch = take == 1;
 			var results = new HashSet<string>();
 			do
 			{
@@ -581,7 +579,7 @@ namespace Raven.Storage.Esent.StorageActions
 						continue;
 				}
 
-				if (string.IsNullOrEmpty(startsWith) == false && keyFromDb.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
+				if (StringHelper.Compare(startsWith, keyFromDb, needExactMatch) == false)
 					continue;
 
 				if (results.Add(keyFromDb))
@@ -592,7 +590,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults) && take > 0);
 		}
 
-        public IEnumerable<string> GetSourcesForIndexForDebug(int view, string startsWith, int take)
+		public IEnumerable<string> GetSourcesForIndexForDebug(int view, string startsWith, int take)
         {
             if (take <= 0)
                 yield break;
@@ -615,6 +613,7 @@ namespace Raven.Storage.Esent.StorageActions
                 throw;
             }
 
+			var needExactMatch = take == 1;
             var results = new HashSet<string>();
             do
             {
@@ -631,8 +630,8 @@ namespace Raven.Storage.Esent.StorageActions
                 var docId = Api.RetrieveColumnAsString(session, MappedResults,
                                            tableColumnsCache.MappedResultsColumns["document_key"]);
 
-                if (string.IsNullOrEmpty(startsWith) == false && docId.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
+				if (StringHelper.Compare(startsWith, docId, needExactMatch) == false)
+					continue;
 
                 if (results.Add(docId))
                 {

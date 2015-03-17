@@ -35,11 +35,15 @@ namespace Voron
 			Debug.Assert(Options == SliceOptions.Key);
 			Debug.Assert(other.Options == SliceOptions.Key);
 
-			var r = CompareData(other, KeyLength <= other.KeyLength ? KeyLength : other.KeyLength);
+            var srcKey = this.KeyLength;
+            var otherKey = other.KeyLength;
+            var length = srcKey <= otherKey ? srcKey : otherKey;
+
+            var r = CompareData(other, length);
 			if (r != 0)
 				return r;
 
-			return KeyLength - other.KeyLength;
+            return srcKey - otherKey;
 		}
 
 		public bool StartsWith(MemorySlice other)

@@ -117,9 +117,8 @@ namespace Raven.Tests.Issues
 					ApiKey = "key2/ThisIsMySecret2"
 				}.Initialize())
 				{
-					var exception = Assert.Throws<InvalidOperationException>(() => store.AsyncFilesCommands.BrowseAsync().ResultUnwrap());
-					var innerException = (ErrorResponseException)exception.InnerException;
-					Assert.Equal(HttpStatusCode.Forbidden, innerException.StatusCode);
+					var exception = Assert.Throws<ErrorResponseException>(() => store.AsyncFilesCommands.BrowseAsync().ResultUnwrap());
+					Assert.Equal(HttpStatusCode.Forbidden, exception.StatusCode);
 				}
 
 				using (var store = new DocumentStore

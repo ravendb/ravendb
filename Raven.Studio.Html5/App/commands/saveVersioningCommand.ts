@@ -4,7 +4,7 @@ import commandBase = require("commands/commandBase");
 import saveBulkOfDocuments = require("commands/saveBulkOfDocuments");
 
 class saveVersioningCommand extends commandBase {
-    constructor(private db: database, private versioningEntries: Array<versioningEntryDto>, private removeEntries: Array<versioningEntryDto> = []) {
+    constructor(private db: database, private versioningEntries: Array<versioningEntryDto>, private removeEntries: Array<versioningEntryDto> = [], private globalConfig = false) {
         super();
     }
 
@@ -15,7 +15,7 @@ class saveVersioningCommand extends commandBase {
         this.versioningEntries.forEach((dto: versioningEntryDto) => {
             var entry: document = new document(dto);
             commands.push({
-                Key: "Raven/Versioning/" + entry["Id"],
+                Key: (this.globalConfig ? "Raven/Global/Versioning/": "Raven/Versioning/") + entry["Id"],
                 Method: "PUT",
                 Document: entry.toDto(false),
                 Metadata: entry.__metadata.toDto(),
@@ -26,7 +26,7 @@ class saveVersioningCommand extends commandBase {
         this.removeEntries.forEach((dto: versioningEntryDto) => {
             var entry: document = new document(dto);
             commands.push({
-                Key: "Raven/Versioning/" + entry["Id"],
+                Key: (this.globalConfig ? "Raven/Global/Versioning/" : "Raven/Versioning/") + entry["Id"],
                 Method: "DELETE",
                 Etag: entry.__metadata.etag
             });

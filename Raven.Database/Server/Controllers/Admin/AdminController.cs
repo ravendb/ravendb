@@ -310,10 +310,10 @@ namespace Raven.Database.Server.Controllers.Admin
 				return;
 
 			var database = databaseTask.Result;
-			var replicationDocumentAsJson = database.Documents.Get(Constants.RavenReplicationDestinations, null);
-			if (replicationDocumentAsJson != null)
+			var configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
+			if (configurationDocument != null)
 			{
-				var replicationDocument = replicationDocumentAsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
+				var replicationDocument = configurationDocument.MergedDocument;
 				foreach (var destination in replicationDocument.Destinations)
 				{
 					destination.Disabled = true;
@@ -325,7 +325,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					.Put(Constants.RavenReplicationDestinations, null, RavenJObject.FromObject(replicationDocument), new RavenJObject(), null);
 			}
 
-			var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.RavenDatabasesPrefix + databaseName, null);
+			var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Database.Prefix + databaseName, null);
 			var databaseDocument = databaseDocumentAsJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
 			var bundles = databaseDocument.Settings[Constants.ActiveBundles].GetSemicolonSeparatedValues();
@@ -337,7 +337,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					.SystemDatabase
 					.Documents
 					.Put(
-						Constants.RavenDatabasesPrefix + databaseName,
+						Constants.Database.Prefix + databaseName,
 						null,
 						RavenJObject.FromObject(databaseDocument),
 						new RavenJObject

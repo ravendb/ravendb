@@ -1,0 +1,27 @@
+﻿<form class="custom-functions-form" id="customFunctionsContainer">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <button type="submit" class="btn btn-primary" data-bind="click: saveChanges, enable: isSaveEnabled, visible: activated()" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: activated() == false">
+                <i class="fa fa-plus"></i> Create global configuration for Custom Functions
+            </button>
+            <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated()">
+                <i class="fa fa-trash"></i> Remove global configuration for Custom Functions
+            </button>
+        </div>
+        <div class="panel-body">
+            <p data-bind="visible: activated() == false">
+                <i class="fa fa-info-circle text-info"></i> Global configuration for Custom functions is not currently defined.
+            </p>
+            <div data-bind="visible: activated()">
+                <div>
+                    <span style="margin-left: 10px">You can create custom JavaScript functions here by writing simple <a href="http://wiki.commonjs.org/wiki/Modules/1.1" target="about:blank">commonjs module</a>.
+                    </span>
+                    <span id="customFunctionsExample" class="help-cursor" data-placement="auto right" data-original-title="Delete Script" data-trigger="hover">See the example. <i class="fa fa-info-circle text-info"></i>
+                    </span>
+                </div>
+                <pre class="editor" id="customFunctionsEditor" data-bind="aceEditor: { code: documentText, fontSize: '18px', lang: 'ace/mode/javascript' }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 40 }"></pre>
+            </div>
+        </div>
+    </div>
+</form>

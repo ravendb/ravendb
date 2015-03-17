@@ -10,21 +10,17 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import queryIndexCommand = require("commands/queryIndexCommand");
-import moment = require("moment");
-import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
-import indexesShell = require("viewmodels/indexesShell");
 import database = require("models/database");
 import querySort = require("models/querySort");
 import collection = require("models/collection");
 import getTransformersCommand = require("commands/getTransformersCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/getEffectiveCustomFunctionsCommand");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocumentsMatchingQueryConfirm");
-import saveDocumentCommand = require("commands/saveDocumentCommand");
 import document = require("models/document");
 import customColumnParams = require("models/customColumnParams");
 import customColumns = require("models/customColumns");
 import selectColumns = require("viewmodels/selectColumns");
 import getCustomColumnsCommand = require("commands/getCustomColumnsCommand");
-import ace = require("ace/ace");
 import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getIndexTermsCommand = require("commands/getIndexTermsCommand");
@@ -35,6 +31,7 @@ import transformerType = require("models/transformer");
 import transformerQueryType = require("models/transformerQuery");
 import getIndexSuggestionsCommand = require("commands/getIndexSuggestionsCommand");
 import recentQueriesStorage = require("common/recentQueriesStorage");
+import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 
 class query extends viewModelBase {
     isTestIndex = ko.observable<boolean>(false);
@@ -62,7 +59,7 @@ class query extends viewModelBase {
     indexEntries = ko.observable(false);
     recentQueries = ko.observableArray<storedQueryDto>();
     rawJsonUrl = ko.observable<string>();
-    exportUrl = ko.observable<string>();
+    exportUrl: KnockoutComputed<string>;
     collections = ko.observableArray<collection>([]);
     collectionNames = ko.observableArray<string>();
     collectionNamesExceptCurrent: KnockoutComputed<string[]>;
@@ -71,6 +68,7 @@ class query extends viewModelBase {
     isIndexMapReduce: KnockoutComputed<boolean>;
     isLoading = ko.observable<boolean>(false);
     isCacheDisable = ko.observable<boolean>(false);
+    token = ko.observable<singleAuthToken>();
 
     contextName = ko.observable<string>();
     didDynamicChangeIndex: KnockoutComputed<boolean>;
@@ -180,11 +178,17 @@ class query extends viewModelBase {
         super.activate(indexNameOrRecentQueryHash);
 
         this.updateHelpLink('KCIMJK');
-
+        this.updateAuthToken();
         this.selectedIndex.subscribe(index => this.onIndexChanged(index));
         var db = this.activeDatabase();
         return $.when(this.fetchAllCollections(db), this.fetchAllIndexes(db))
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
+    }
+
+    updateAuthToken() {
+        new getSingleAuthTokenCommand(this.activeDatabase())
+            .execute()
+            .done(token => this.token(token));
     }
 
     attached() {
@@ -218,8 +222,10 @@ class query extends viewModelBase {
     private fetchCustomFunctions(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var task = new getCustomFunctionsCommand(db).execute();
-        task.done((cf: customFunctions) => this.currentCustomFunctions(cf))
+        var customFunctionsCommand = new getEffectiveCustomFunctionsCommand(db).execute();
+        customFunctionsCommand.done((cf: configurationDocumentDto<customFunctionsDto>) => {
+            this.currentCustomFunctions(new customFunctions(cf.MergedDocument));
+        })
             .always(() => deferred.resolve());
 
         return deferred;
@@ -388,7 +394,7 @@ class query extends viewModelBase {
             if (this.isCacheDisable()) queryCommand.cacheDisable();
             var db = this.activeDatabase();
             this.rawJsonUrl(appUrl.forResourceQuery(db) + queryCommand.getUrl());
-            this.exportUrl(appUrl.forResourceQuery(db) + queryCommand.getCsvUrl());
+            this.exportUrl = ko.computed(() => (appUrl.forResourceQuery(db) + queryCommand.getCsvUrl() + (this.token() ? "&singleUseAuthToken=" + this.token().Token : "")));
 
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
@@ -747,6 +753,12 @@ class query extends viewModelBase {
         this.queryText(value.substring(0, startIndex) + suggestion.Suggestion + value.substring(startIndex + suggestion.FieldValue.length));
         this.indexSuggestions([]);
         this.runQuery();
+    }
+
+    exportCsv() {
+        // schedule token update (to properly handle subseqent downloads)
+        setTimeout(() => this.updateAuthToken(), 50);
+        return true;
     }
 }
 

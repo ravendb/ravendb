@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !(NET35 || NET20 || PORTABLE)
+#if !(NET35 || NET20 || PORTABLE || ASPNETCORE50)
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -37,12 +37,16 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
-#if !NETFX_CORE
-using NUnit.Framework;
-#else
+#if NETFX_CORE
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
+#elif ASPNETCORE50
+using Xunit;
+using Test = Xunit.FactAttribute;
+using Assert = Newtonsoft.Json.Tests.XUnitAssert;
+#else
+using NUnit.Framework;
 #endif
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Tests.TestObjects;
@@ -51,83 +55,83 @@ using System.Globalization;
 
 namespace Newtonsoft.Json.Tests.Documentation
 {
-  public class Employee
-  {
-    public string Name { get; set; }
-    public Employee Manager { get; set; }
-  }
-
-  #region ShouldSerializeContractResolver
-  public class ShouldSerializeContractResolver : DefaultContractResolver
-  {
-    public new static readonly ShouldSerializeContractResolver Instance = new ShouldSerializeContractResolver();
-
-    protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
-    {
-      JsonProperty property = base.CreateProperty(member, memberSerialization);
-
-      if (property.DeclaringType == typeof(Employee) && property.PropertyName == "Manager")
-      {
-        property.ShouldSerialize =
-          instance =>
-            {
-              Employee e = (Employee) instance;
-              return e.Manager != e;
-            };
-      }
-
-      return property;
-    }
-  }
-  #endregion
-
-  [TestFixture]
-  public class ConditionalPropertiesTests : TestFixtureBase
-  {
-    #region EmployeeShouldSerializeExample
     public class Employee
     {
-      public string Name { get; set; }
-      public Employee Manager { get; set; }
+        public string Name { get; set; }
+        public Employee Manager { get; set; }
+    }
 
-      public bool ShouldSerializeManager()
-      {
-        // don't serialize the Manager property if an employee is their own manager
-        return (Manager != this);
-      }
+    #region ShouldSerializeContractResolver
+    public class ShouldSerializeContractResolver : DefaultContractResolver
+    {
+        public new static readonly ShouldSerializeContractResolver Instance = new ShouldSerializeContractResolver();
+
+        protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+        {
+            JsonProperty property = base.CreateProperty(member, memberSerialization);
+
+            if (property.DeclaringType == typeof(Employee) && property.PropertyName == "Manager")
+            {
+                property.ShouldSerialize =
+                    instance =>
+                    {
+                        Employee e = (Employee)instance;
+                        return e.Manager != e;
+                    };
+            }
+
+            return property;
+        }
     }
     #endregion
 
-    [Test]
-    public void ShouldSerializeClassTest()
+    [TestFixture]
+    public class ConditionalPropertiesTests : TestFixtureBase
     {
-      #region ShouldSerializeClassTest
-      Employee joe = new Employee();
-      joe.Name = "Joe Employee";
-      Employee mike = new Employee();
-      mike.Name = "Mike Manager";
+        #region EmployeeShouldSerializeExample
+        public class Employee
+        {
+            public string Name { get; set; }
+            public Employee Manager { get; set; }
 
-      joe.Manager = mike;
+            public bool ShouldSerializeManager()
+            {
+                // don't serialize the Manager property if an employee is their own manager
+                return (Manager != this);
+            }
+        }
+        #endregion
 
-      // mike is his own manager
-      // ShouldSerialize will skip this property
-      mike.Manager = mike;
+        [Test]
+        public void ShouldSerializeClassTest()
+        {
+            #region ShouldSerializeClassTest
+            Employee joe = new Employee();
+            joe.Name = "Joe Employee";
+            Employee mike = new Employee();
+            mike.Name = "Mike Manager";
 
-      string json = JsonConvert.SerializeObject(new[] { joe, mike }, Formatting.Indented);
-      // [
-      //   {
-      //     "Name": "Joe Employee",
-      //     "Manager": {
-      //       "Name": "Mike Manager"
-      //     }
-      //   },
-      //   {
-      //     "Name": "Mike Manager"
-      //   }
-      // ]
-      #endregion
+            joe.Manager = mike;
 
-      Assert.AreEqual(@"[
+            // mike is his own manager
+            // ShouldSerialize will skip this property
+            mike.Manager = mike;
+
+            string json = JsonConvert.SerializeObject(new[] { joe, mike }, Formatting.Indented);
+            // [
+            //   {
+            //     "Name": "Joe Employee",
+            //     "Manager": {
+            //       "Name": "Mike Manager"
+            //     }
+            //   },
+            //   {
+            //     "Name": "Mike Manager"
+            //   }
+            // ]
+            #endregion
+
+            StringAssert.AreEqual(@"[
   {
     ""Name"": ""Joe Employee"",
     ""Manager"": {
@@ -138,28 +142,28 @@ namespace Newtonsoft.Json.Tests.Documentation
     ""Name"": ""Mike Manager""
   }
 ]", json);
-    }
+        }
 
-    [Test]
-    public void ShouldSerializeContractResolverTest()
-    {
-      Newtonsoft.Json.Tests.Documentation.Employee joe = new Newtonsoft.Json.Tests.Documentation.Employee();
-      joe.Name = "Joe Employee";
-      Newtonsoft.Json.Tests.Documentation.Employee mike = new Newtonsoft.Json.Tests.Documentation.Employee();
-      mike.Name = "Mike Manager";
+        [Test]
+        public void ShouldSerializeContractResolverTest()
+        {
+            Newtonsoft.Json.Tests.Documentation.Employee joe = new Newtonsoft.Json.Tests.Documentation.Employee();
+            joe.Name = "Joe Employee";
+            Newtonsoft.Json.Tests.Documentation.Employee mike = new Newtonsoft.Json.Tests.Documentation.Employee();
+            mike.Name = "Mike Manager";
 
-      joe.Manager = mike;
-      mike.Manager = mike;
+            joe.Manager = mike;
+            mike.Manager = mike;
 
-      string json = JsonConvert.SerializeObject(
-        new[] {joe, mike},
-        Formatting.Indented,
-        new JsonSerializerSettings
-          {
-            ContractResolver = ShouldSerializeContractResolver.Instance
-          });
+            string json = JsonConvert.SerializeObject(
+                new[] { joe, mike },
+                Formatting.Indented,
+                new JsonSerializerSettings
+                {
+                    ContractResolver = ShouldSerializeContractResolver.Instance
+                });
 
-      Assert.AreEqual(@"[
+            StringAssert.AreEqual(@"[
   {
     ""Name"": ""Joe Employee"",
     ""Manager"": {
@@ -170,8 +174,8 @@ namespace Newtonsoft.Json.Tests.Documentation
     ""Name"": ""Mike Manager""
   }
 ]", json);
-
+        }
     }
-  }
 }
+
 #endif

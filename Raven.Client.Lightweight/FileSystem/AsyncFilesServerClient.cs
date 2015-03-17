@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Connection;
+﻿using System.Diagnostics;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -28,6 +29,7 @@ using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Client.FileSystem
 {
@@ -639,7 +641,7 @@ namespace Raven.Client.FileSystem
 
         private async Task<FileHeader[]> GetAsyncImpl(string[] filenames, OperationMetadata operation)
         {
-            var requestUriBuilder = new StringBuilder("/files/metadata?");
+            var requestUriBuilder = new StringBuilder("/files?");
             for( int i = 0; i < filenames.Length; i++ )
             {
                 requestUriBuilder.Append("fileNames=" + Uri.EscapeDataString(filenames[i]));
@@ -651,8 +653,19 @@ namespace Raven.Client.FileSystem
 	        {
 				try
 				{
-					var response = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return response.JsonDeserialization<FileHeader>();
+					var response = (RavenJArray) await request.ReadResponseJsonAsync().ConfigureAwait(false);
+
+					var results = response.JsonDeserialization<FileHeader>();
+
+					results.ForEach(x =>
+					{
+						if (x == null)
+							return;
+
+						x.Metadata = new RavenJObject(x.Metadata, StringComparer.OrdinalIgnoreCase); // ensure metadata keys aren't case sensitive
+					});
+
+					return results;
 				}
 				catch (Exception e)
 				{
@@ -677,19 +690,14 @@ namespace Raven.Client.FileSystem
 				}
 				catch (Exception e)
 				{
-					var aggregateException = e as AggregateException;
-
-					var responseException = e as ErrorResponseException;
-					if (responseException == null && aggregateException != null)
-						responseException = aggregateException.ExtractSingleInnerException() as ErrorResponseException;
-					if (responseException != null)
+					try
 					{
-						if (responseException.StatusCode == HttpStatusCode.NotFound)
-							return null;
 						throw e.SimplifyException();
 					}
-
-					throw e.SimplifyException();
+					catch (FileNotFoundException)
+					{
+						return null;
+					}
 				}
 	        }
         }
@@ -780,7 +788,7 @@ namespace Raven.Client.FileSystem
 
 	        using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, "PUT", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	        {
-		        metadata["RavenFS-Size"] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
+				metadata[Constants.FileSystem.RavenFsSize] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
 
 		        AddHeaders(metadata, request);
 				AddEtagHeader(request, etag);
@@ -1217,11 +1225,6 @@ namespace Raven.Client.FileSystem
                 this.client = client;
             }
 
-            public Task<RavenJObject> GetMetadataForAsync(string filename)
-            {
-                return client.GetMetadataForAsyncImpl(filename, new OperationMetadata(client.BaseUrl, credentials));
-            }
-
             public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
             {                
                 var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials));
@@ -1571,12 +1574,12 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, ServerInfo sourceServer)
+            public async Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
             {
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/rename?filename=" + Uri.EscapeDataString(currentName) + "&rename=" + Uri.EscapeDataString(newName), "PATCH", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					request.AddHeaders(metadata);
-					request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
+					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
 					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
 					try
@@ -1591,12 +1594,12 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, ServerInfo sourceServer)
+            public async Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
             {
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization?fileName=" + Uri.EscapeDataString(fileName), "DELETE", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					request.AddHeaders(metadata);
-					request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
+					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
 					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
 					try
@@ -1611,12 +1614,12 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, ServerInfo sourceServer)
+            public async Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
             {
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName), "POST", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					request.AddHeaders(metadata);
-					request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
+					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
 					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
 					try

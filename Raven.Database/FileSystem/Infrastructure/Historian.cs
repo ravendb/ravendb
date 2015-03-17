@@ -75,7 +75,7 @@ namespace Raven.Database.FileSystem.Infrastructure
             if (metadata.ContainsKey(SynchronizationConstants.RavenSynchronizationHistory))
             {
                 var array = (RavenJArray) metadata[SynchronizationConstants.RavenSynchronizationHistory];
-                var items = array.Values<RavenJObject>().Select(x => JsonExtensions.JsonDeserialization<HistoryItem>(x));
+                var items = array.Values<RavenJObject>().Select(x => x.JsonDeserialization<HistoryItem>());
                 return new List<HistoryItem>(items);
             }
 

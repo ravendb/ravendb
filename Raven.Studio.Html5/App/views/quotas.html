@@ -7,13 +7,40 @@
         <div class="panel panel-default">
             <div class="panel-heading">
                 <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
+                <span data-bind="visible: hasGlobalValues()">
+                    <button type="button" class="btn btn-default" data-bind="click: $root.useLocal.bind($root), visible: usingGlobal()">
+                        <i class="fa fa-arrow-down"></i> Override global configuration
+                    </button>
+                    <button type="button" class="btn btn-default" data-bind="click: $root.useGlobal.bind($root), visible: usingGlobal() == false">
+                        <i class="fa fa-arrow-up"></i> Use global configuration
+                    </button>
+                </span>
             </div>
             <div class="panel-body">
+                
+                <div class="form-group" data-bind="visible: hasGlobalValues">
+                    <div class="col-md-4 control-label">
+                        <strong>Property</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Effective value</strong>
+                    </div>
+                    <div class="col-md-4">
+                       <strong>Global value</strong>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <div class="col-md-4 control-label">Maximum size:</div>
-                    <div class="col-md-8">
-                        <div class="input-group">
-                            <input required type="number" class="form-control" data-bind="numericValue: maximumSize,valueUpdate: 'afterkeydown'" />
+                    <div class="col-md-4">
+                        <div class="input-group" data-bind="with: maximumSize">
+                            <input required type="number" class="form-control" min="0" data-bind="numericValue: effectiveValue, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
+                            <span class="input-group-addon">MB</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4" data-bind="visible: $root.hasGlobalValues">
+                        <div class="input-group" data-bind="with: maximumSize">
+                            <input required type="number" disabled="disabled" class="form-control" data-bind="numericValue: globalValue" />
                             <span class="input-group-addon">MB</span>
                         </div>
                     </div>
@@ -21,9 +48,15 @@
 
                 <div class="form-group">
                     <div class="col-md-4 control-label">Warning limit threshold:</div>
-                    <div class="col-md-8">
-                        <div class="input-group">
-                            <input required type="number" class="form-control" data-bind="numericValue: warningLimitThreshold, valueUpdate: 'afterkeydown'" />
+                    <div class="col-md-4">
+                        <div class="input-group" data-bind="with: warningLimitThreshold">
+                            <input required type="number" class="form-control" min="0" data-bind="numericValue: effectiveValue, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
+                            <span class="input-group-addon">MB</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4" data-bind="visible: $root.hasGlobalValues">
+                        <div class="input-group" data-bind="with: warningLimitThreshold">
+                            <input required type="number" disabled="disabled" class="form-control" data-bind="numericValue: globalValue" />
                             <span class="input-group-addon">MB</span>
                         </div>
                     </div>
@@ -31,9 +64,15 @@
 
                 <div class="form-group">
                     <div class="col-md-4 control-label">Maximum number of docs:</div>
-                    <div class="col-md-8">
-                        <div class="input-group">
-                            <input required type="number" class="form-control" data-bind="numericValue: maxNumberOfDocs,valueUpdate: 'afterkeydown'" />
+                    <div class="col-md-4">
+                        <div class="input-group" data-bind="with: maxNumberOfDocs">
+                            <input required type="number" class="form-control" min="0" data-bind="numericValue: effectiveValue, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
+                            <span class="input-group-addon">docs</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4" data-bind="visible: $root.hasGlobalValues">
+                        <div class="input-group" data-bind="with: maxNumberOfDocs">
+                            <input required type="number" disabled="disabled" class="form-control" data-bind="numericValue: globalValue" />
                             <span class="input-group-addon">docs</span>
                         </div>
                     </div>
@@ -41,9 +80,15 @@
 
                 <div class="form-group">
                     <div class="col-md-4 control-label">Warning threshold for docs:</div>
-                    <div class="col-md-8">
-                        <div class="input-group">
-                            <input required type="number" class="form-control" data-bind="numericValue: warningThresholdForDocs,valueUpdate: 'afterkeydown'" />
+                    <div class="col-md-4">
+                        <div class="input-group" data-bind="with: warningThresholdForDocs">
+                            <input required type="number" class="form-control" min="0" data-bind="numericValue: effectiveValue, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
+                            <span class="input-group-addon">docs</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4" data-bind="visible: $root.hasGlobalValues">
+                        <div class="input-group" data-bind="with: warningThresholdForDocs">
+                            <input required type="number" disabled="disabled" class="form-control" data-bind="numericValue: globalValue" />
                             <span class="input-group-addon">docs</span>
                         </div>
                     </div>

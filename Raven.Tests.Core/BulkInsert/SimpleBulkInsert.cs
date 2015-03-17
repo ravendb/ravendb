@@ -9,17 +9,19 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Core.BulkInsert
 {
 	public class SimpleBulkInsert : RavenCoreTestBase
 	{
-		[Fact]
-		public void BasicBulkInsert()
+        [Theory]
+        [PropertyData("InsertOptions")]
+        public void BasicBulkInsert(BulkInsertOptions options)
 		{
 			using (var store = GetDocumentStore())
 			{
-				using (var bulkInsert = store.BulkInsert())
+                using (var bulkInsert = store.BulkInsert(options: options))
 				{
 					for (int i = 0; i < 100; i++)
 					{
@@ -35,8 +37,9 @@ namespace Raven.Tests.Core.BulkInsert
 			}
 		}
 
-		[Fact]
-		public void BulkInsertShouldNotOverwriteWithOverwriteExistingSetToFalse()
+        [Theory]
+        [PropertyData("InsertOptions")]
+        public void BulkInsertShouldNotOverwriteWithOverwriteExistingSetToFalse(BulkInsertOptions options)
 		{
 			using (var store = GetDocumentStore())
 			{
@@ -51,9 +54,11 @@ namespace Raven.Tests.Core.BulkInsert
 					session.SaveChanges();
 				}
 
+                options.OverwriteExisting = false;
+
 				var e = Assert.Throws<ConcurrencyException>(() =>
 				{
-					using (var bulkInsert = store.BulkInsert(options: new BulkInsertOptions { OverwriteExisting = false }))
+                    using (var bulkInsert = store.BulkInsert(options: options))
 					{
 						for (var i = 0; i < 10; i++)
 						{
@@ -77,8 +82,9 @@ namespace Raven.Tests.Core.BulkInsert
 			}
 		}
 
-		[Fact]
-		public void BulkInsertShouldOverwriteWithOverwriteExistingSetToTrue()
+        [Theory]
+        [PropertyData("InsertOptions")]
+        public void BulkInsertShouldOverwriteWithOverwriteExistingSetToTrue(BulkInsertOptions options)
 		{
 			using (var store = GetDocumentStore())
 			{
@@ -94,7 +100,9 @@ namespace Raven.Tests.Core.BulkInsert
 					}
 				}
 
-				using (var bulkInsert = store.BulkInsert(options: new BulkInsertOptions { OverwriteExisting = true }))
+                options.OverwriteExisting = true;
+
+                using (var bulkInsert = store.BulkInsert(options: options))
 				{
 					for (int i = 0; i < 10; i++)
 					{

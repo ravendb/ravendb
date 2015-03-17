@@ -11,6 +11,11 @@ class replicationDestination {
     disabled = ko.observable<boolean>().extend({ required: true });
     clientVisibleUrl = ko.observable<string>().extend({ required: true });
     skipIndexReplication = ko.observable<boolean>().extend({ required: true });
+    hasGlobal = ko.observable<boolean>(false);
+    hasLocal = ko.observable<boolean>(true);
+
+    globalConfiguration = ko.observable<replicationDestination>();
+
     sourceCollections = ko.observableArray<string>().extend({required: false});
     enableReplicateOnlyFromCollections : boolean;
 
@@ -26,6 +31,9 @@ class replicationDestination {
             || "[empty]";
     });
     isValid = ko.computed(() => this.url() != null && this.url().length > 0);
+
+    canEdit = ko.computed(() => this.hasLocal());
+
 
     // data members for the ui
     isUserCredentials = ko.observable<boolean>(false);
@@ -80,6 +88,9 @@ class replicationDestination {
         } else if (this.apiKey()) {
             this.isApiKeyCredentials(true);
         }
+
+        this.hasGlobal(dto.HasGlobal);
+        this.hasLocal(dto.HasLocal);
     }
 
     static empty(databaseName: string): replicationDestination {
@@ -95,7 +106,9 @@ class replicationDestination {
             Disabled: false,
             ClientVisibleUrl: null,
             SkipIndexReplication: false,
-            SourceCollections: []
+            SourceCollections: [],
+            HasGlobal: false,
+            HasLocal: true
         });
     }
 
@@ -138,6 +151,27 @@ class replicationDestination {
             url = url.substring(0, url.length - 1);
         }
         return url;
+    }
+
+    copyFromGlobal() {
+        if (this.globalConfiguration()) {
+            var gConfig = this.globalConfiguration();
+            this.url(gConfig.url());
+            this.username(gConfig.username());
+            this.password(gConfig.password());
+            this.domain(gConfig.domain());
+            this.apiKey(gConfig.apiKey());
+            this.database(gConfig.database());
+            this.transitiveReplicationBehavior(gConfig.transitiveReplicationBehavior());
+            this.ignoredClient(gConfig.ignoredClient());
+            this.disabled(gConfig.disabled());
+            this.clientVisibleUrl(gConfig.clientVisibleUrl());
+            this.skipIndexReplication(gConfig.skipIndexReplication());
+            this.hasGlobal(true);
+            this.hasLocal(false);
+            this.isUserCredentials(gConfig.isUserCredentials());
+            this.isApiKeyCredentials(gConfig.isApiKeyCredentials());
+        }
     }
 }
 

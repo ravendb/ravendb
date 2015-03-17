@@ -192,7 +192,7 @@ namespace Raven.Database.Counters.Controllers
 	        get { throw new NotImplementedException(); }
 	    }
 
-	    public override bool SetupRequestToProperDatabase(RequestManager rm)
+	    public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
 		{
 			var tenantId = CountersName;
 
@@ -217,7 +217,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				try
 				{
-					if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
+                    if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
 					{
 						var msg = "The counter " + tenantId +
 								  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";

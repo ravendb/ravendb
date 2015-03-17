@@ -530,6 +530,7 @@ namespace Raven.Client.Document
             return this;
         }
 
+
         private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
         {
             var converters = new JsonConverterCollection(Default.Converters);
@@ -565,12 +566,14 @@ namespace Raven.Client.Document
         {
             get { return defaultConverters.Value; }
         }
-        
+
         private static JsonConverterCollection DefaultConvertersEnumsAsIntegers
         {
             get { return defaultConvertersEnumsAsIntegers.Value; }
         }
-        
+
+
+
 		/// <summary>
 		/// Creates the serializer.
 		/// </summary>
@@ -585,7 +588,7 @@ namespace Raven.Client.Document
 				TypeNameHandling = TypeNameHandling.Auto,
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                FloatParseHandling = FloatParseHandling.PreferDecimalFallbackToDouble,
+                FloatParseHandling = FloatParseHandling.Double,
                 Converters = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters
 			};
 

@@ -30,10 +30,6 @@ namespace Raven.Client.FileSystem
 
                 var innerException = task.Exception.ExtractSingleInnerException();
 
-				var webException = innerException as WebException;
-                if (webException != null)
-                    throw webException.SimplifyException();
-
                 var errorResponseException = innerException as ErrorResponseException;
                 if (errorResponseException != null)
                     throw errorResponseException.SimplifyException();
@@ -42,15 +38,23 @@ namespace Raven.Client.FileSystem
 			}).Unwrap();
 		}
 
-		public static Exception SimplifyException(this ErrorResponseException webException)
+		public static Exception SimplifyException(this ErrorResponseException errorResposeException)
 		{
-			if (webException.StatusCode == (HttpStatusCode)420)
+			if (errorResposeException.StatusCode == (HttpStatusCode) 420)
 			{
-				return new JsonSerializer().Deserialize<SynchronizationException>(new JsonTextReader(new StringReader(webException.Message)));
+				var text = errorResposeException.ResponseString;
+				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
+				{
+					url = (string) null,
+					error = (string) null
+				});
+
+				return new SynchronizationException(errorResults.error);
 			}
-			if (webException.StatusCode == HttpStatusCode.MethodNotAllowed)
+
+			if (errorResposeException.StatusCode == HttpStatusCode.MethodNotAllowed)
 			{
-				var text = webException.ResponseString;
+				var text = errorResposeException.ResponseString;
 				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
 				{
 					url = (string) null,
@@ -65,59 +69,27 @@ namespace Raven.Client.FileSystem
 					ExpectedETag = errorResults.expectedETag
 				};
 			}
-			if (webException.StatusCode == HttpStatusCode.NotFound)
+			if (errorResposeException.StatusCode == HttpStatusCode.NotFound)
 			{
-				return new FileNotFoundException();
+				var text = errorResposeException.ResponseString;
+
+				if(string.IsNullOrEmpty(text))
+					return new FileNotFoundException();
+
+				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
+				{
+					url = (string) null,
+					error = (string) null
+				});
+
+				return new FileNotFoundException(errorResults.error);
 			}
-            if (webException.StatusCode == HttpStatusCode.BadRequest)
+            if (errorResposeException.StatusCode == HttpStatusCode.BadRequest)
             {
                 return new BadRequestException();
             }
 
-			using (var reader = new StringReader(webException.Message))
-			{
-				var readToEnd = reader.ReadToEnd();
-				return new InvalidOperationException(
-					webException + Environment.NewLine + readToEnd, webException);
-			}
-		}
-
-        public static Exception SimplifyException(this WebException webException)
-		{
-			var httpWebResponse = webException.Response as HttpWebResponse;
-			if (httpWebResponse != null)
-			{
-				if (httpWebResponse.StatusCode == (HttpStatusCode)420)
-				{
-					using (var stream = webException.Response.GetResponseStream())
-					{
-						return new JsonSerializer().Deserialize<SynchronizationException>(new JsonTextReader(new StreamReader(stream)));
-					}
-				}
-				else if (httpWebResponse.StatusCode == HttpStatusCode.MethodNotAllowed)
-				{
-					using (var stream = webException.Response.GetResponseStream())
-					{
-						return new JsonSerializer().Deserialize<ConcurrencyException>(new JsonTextReader(new StreamReader(stream)));
-					}
-				}
-                else if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-				{
-					return new FileNotFoundException();
-				}
-                else if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
-                {
-                    return new BadRequestException();
-                }
-			}
-
-			using (var stream = webException.Response.GetResponseStream())
-			using (var reader = new StreamReader(stream))
-			{
-				var readToEnd = reader.ReadToEnd();
-				return new InvalidOperationException(
-					webException + Environment.NewLine + readToEnd);
-			}
+			return errorResposeException;
 		}
 
 		public static Task<T> TryThrowBetterError<T>(this Task<T> self)
@@ -128,10 +100,6 @@ namespace Raven.Client.FileSystem
 					return task;
 
                 var innerException = task.Exception.ExtractSingleInnerException();
-
-                var webException = innerException as WebException;
-                if (webException != null)
-                    throw webException.SimplifyException();
 
                 var errorResponseException = innerException as ErrorResponseException;
                 if (errorResponseException != null)
@@ -176,10 +144,6 @@ namespace Raven.Client.FileSystem
                 if (innerException != null)
                     return innerException.SimplifyException();
             }
-
-            var webException = exception as WebException;
-            if (webException != null)
-                throw webException.SimplifyException();
 
             var errorResponseException = exception as ErrorResponseException;
             if (errorResponseException != null)

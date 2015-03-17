@@ -13,6 +13,8 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
+using Raven.Database.Config;
+using Raven.Database.Config.Retriever;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
@@ -1349,15 +1351,10 @@ namespace Raven.Bundles.Replication.Tasks
 
 		internal ReplicationStrategy[] GetReplicationDestinations(Predicate<ReplicationDestination> predicate = null)
 		{
-			var document = docDb.Documents.Get(Constants.RavenReplicationDestinations, null);
-			if (document == null)
-			{
-				return new ReplicationStrategy[0];
-			}
-			ReplicationDocument replicationDocument;
+			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument;
 			try
 			{
-				replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+				configurationDocument = docDb.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			}
 			catch (Exception e)
 			{
@@ -1365,20 +1362,21 @@ namespace Raven.Bundles.Replication.Tasks
 				return new ReplicationStrategy[0];
 			}
 
-			if (string.IsNullOrWhiteSpace(replicationDocument.Source))
+			if (configurationDocument == null)
+			{
+				return new ReplicationStrategy[0];
+			}
+
+			var replicationDocument = configurationDocument.MergedDocument;
+
+			if (configurationDocument.LocalExists && string.IsNullOrWhiteSpace(replicationDocument.Source))
 			{
 				replicationDocument.Source = docDb.TransactionalStorage.Id.ToString();
-				replicationDocument.Destinations.ForEach(destination =>
-				{
-					if(destination.SourceCollections == null)
-						destination.SourceCollections = new string[0];
-				});
-
 				try
 				{
 					var ravenJObject = RavenJObject.FromObject(replicationDocument);
 					ravenJObject.Remove("Id");
-					docDb.Documents.Put(Constants.RavenReplicationDestinations, document.Etag, ravenJObject, document.Metadata, null);
+					docDb.Documents.Put(Constants.RavenReplicationDestinations, configurationDocument.Etag, ravenJObject, configurationDocument.Metadata, null);
 				}
 				catch (ConcurrencyException)
 				{

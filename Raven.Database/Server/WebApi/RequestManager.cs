@@ -155,8 +155,8 @@ namespace Raven.Database.Server.WebApi
 			try
 			{
 				Interlocked.Increment(ref concurrentRequests);
-
-				if (controller.SetupRequestToProperDatabase(this))
+			    var requestSuccess = await controller.SetupRequestToProperDatabase(this);
+                if (requestSuccess)
 				{
 					if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
 					{

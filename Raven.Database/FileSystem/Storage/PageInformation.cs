@@ -4,6 +4,7 @@
 	{
 		public int Id { get; set; }
 		public int Size { get; set; }
+		public int PositionInFile { get; set; }
 
 		public override bool Equals(object obj)
 		{
@@ -15,12 +16,12 @@
 			if (page == null)
 				return false;
 
-			return page.Id == Id && page.Size == Size;
+			return page.Id == Id && page.Size == Size && page.PositionInFile == PositionInFile;
 		}
 
 		public override int GetHashCode()
 		{
-			return Id.GetHashCode() ^ Size.GetHashCode();
+			return Id.GetHashCode() ^ Size.GetHashCode() ^ PositionInFile.GetHashCode();
 		}
 	}
 }

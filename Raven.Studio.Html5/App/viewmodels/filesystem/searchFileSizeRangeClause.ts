@@ -37,7 +37,7 @@ class searchFileSizeRangeClause extends searchDialogViewModel {
 
         value *= multiplier;
 
-        return value.toString();
+        return "Lx" + value.toString();
     }
 
     private getMultiplier(value: string) {

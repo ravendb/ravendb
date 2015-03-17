@@ -842,5 +842,68 @@ namespace Raven.Tests.FileSystem.ClientApi
 			    Assert.Equal(20, files.Select(x => x.Name).Distinct().Count());
 		    }
 	    }
-    }
+
+		[Fact]
+	    public async Task CanSearchByNumericMetadataFields()
+	    {
+			using (var store = NewStore())
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					var metadata = new RavenJObject();
+
+					metadata.Add("int", 5);
+					metadata.Add("long", 5L);
+					metadata.Add("float", 5.0f);
+					metadata.Add("double", 5.0);
+
+					metadata.Add("uint", 5u);
+					metadata.Add("ulong", 5UL);
+					metadata.Add("short", (short) 5);
+					metadata.Add("ushort", (ushort) 5);
+					metadata.Add("decimal", 5m);
+
+					session.RegisterUpload("test-1.file", CreateRandomFileStream(10), metadata);
+
+					var metadata2 = new RavenJObject();
+
+					metadata2.Add("int", 10);
+					metadata2.Add("long", 10L);
+					metadata2.Add("float", 10.0f);
+					metadata2.Add("double", 10.0);
+
+					metadata2.Add("uint", 10u);
+					metadata2.Add("ulong", 10UL);
+					metadata2.Add("short", (short) 10);
+					metadata2.Add("ushort", (ushort) 10);
+					metadata2.Add("decimal", 10m);
+
+					session.RegisterUpload("test-2.file", CreateRandomFileStream(10), metadata2);
+
+					await session.SaveChangesAsync();
+				}
+
+				var metadataKeys = new[]
+				{
+					"int", "long", "float", "double", "uint", "ulong", "short", "ushort", "decimal"
+				};
+
+				foreach (var key in metadataKeys)
+				{
+					using (var session = store.OpenAsyncSession())
+					{
+						Assert.Equal(1, (await session.Query().WhereEquals(key, 5).ToListAsync()).Count);
+						Assert.Equal(1, (await session.Query().WhereGreaterThan(key, 5).ToListAsync()).Count);
+						Assert.Equal(2, (await session.Query().WhereGreaterThanOrEqual(key, 5).ToListAsync()).Count);
+						Assert.Equal(1, (await session.Query().WhereLessThan(key, 10).ToListAsync()).Count);
+						Assert.Equal(2, (await session.Query().WhereLessThanOrEqual(key, 10).ToListAsync()).Count);
+						Assert.Equal(0, (await session.Query().WhereBetween(key, 5, 10).ToListAsync()).Count);
+						Assert.Equal(1, (await session.Query().WhereBetween(key, 0, 10).ToListAsync()).Count);
+						Assert.Equal(1, (await session.Query().WhereBetween(key, 5, 20).ToListAsync()).Count);
+						Assert.Equal(2, (await session.Query().WhereBetweenOrEqual(key, 5, 10).ToListAsync()).Count);
+					}
+				}
+			}
+		}
+	}
 }

@@ -23,6 +23,7 @@ using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
 using Raven.Client.FileSystem;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -63,7 +64,9 @@ namespace Raven.Database.Server.Controllers
             {
                 OverwriteExisting = GetOverwriteExisting(),
                 CheckReferencesInIndexes = GetCheckReferencesInIndexes(),
-				SkipOverwriteIfUnchanged = GetSkipOverwriteIfUnchanged()
+				SkipOverwriteIfUnchanged = GetSkipOverwriteIfUnchanged(),
+                Format = GetFormat(),
+                Compression = GetCompression(),
             };
 
             var operationId = ExtractOperationId();
@@ -83,7 +86,7 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token);
+                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, options, batchSize => documents += batchSize), operationId, tre.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -135,7 +138,7 @@ namespace Raven.Database.Server.Controllers
             return result;
         }
 
-        private IEnumerable<IEnumerable<JsonDocument>> YieldBatches(CancellationTimeout timeout, Stream inputStream, ManualResetEventSlim mre, Action<int> increaseDocumentsCount)
+        private IEnumerable<IEnumerable<JsonDocument>> YieldBatches(CancellationTimeout timeout, Stream inputStream, ManualResetEventSlim mre, BulkInsertOptions options, Action<int> increaseDocumentsCount)
         {
             try
             {
@@ -157,7 +160,7 @@ namespace Raven.Database.Server.Controllers
                         }
                         using (var stream = new PartialStream(inputStream, size))
                         {
-                            yield return YieldDocumentsInBatch(timeout, stream, increaseDocumentsCount);
+                            yield return YieldDeserializeDocumentsInBatch(timeout, stream, options, increaseDocumentsCount);
                         }
                     }
                 }
@@ -169,42 +172,118 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-        private IEnumerable<JsonDocument> YieldDocumentsInBatch(CancellationTimeout timeout, Stream partialStream, Action<int> increaseDocumentsCount)
+        private IEnumerable<JsonDocument> YieldDeserializeDocumentsInBatch(CancellationTimeout timeout, Stream partialStream, BulkInsertOptions options, Action<int> increaseDocumentsCount)
         {
-            using (var stream = new GZipStream(partialStream, CompressionMode.Decompress, leaveOpen: true))
+            switch (options.Compression)
             {
-                var reader = new BinaryReader(stream);
-                var count = reader.ReadInt32();
+                case BulkInsertCompression.GZip:
+                    {
+                        using (var gzip = new GZipStream(partialStream, CompressionMode.Decompress, leaveOpen: true))
+                        {
+                            return YieldDocumentsInBatch(timeout, gzip, options, increaseDocumentsCount);
+                        }
+                    }
+                case BulkInsertCompression.None:
+                    {
+                        return YieldDocumentsInBatch(timeout, partialStream, options, increaseDocumentsCount);
+                    }
+                default: throw new NotSupportedException(string.Format("The compression algorithm '{0}' is not supported", options.Compression.ToString()));
+            }
+        }
 
+        private IEnumerable<JsonDocument> YieldDocumentsInBatch(CancellationTimeout timeout, Stream partialStream, BulkInsertOptions options, Action<int> increaseDocumentsCount)
+        {
+            using ( var reader = new BinaryReader(partialStream) )
+            {
+                switch (options.Format)
+                {
+                    case BulkInsertFormat.Bson:
+                        {
+                            var count = reader.ReadInt32();
+
+                            return YieldBsonDocumentsInBatch(timeout, reader, count, increaseDocumentsCount).ToArray();
+                        }
+                    case BulkInsertFormat.Json:
+                        {
+                            var count = reader.ReadInt32();
+
+                            return YieldJsonDocumentsInBatch(timeout, partialStream, count, increaseDocumentsCount).ToArray();
+                        }
+                    default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", options.Format.ToString()));
+                }
+            }
+        }
+
+        private IEnumerable<JsonDocument> YieldBsonDocumentsInBatch(CancellationTimeout timeout, BinaryReader reader, int count, Action<int> increaseDocumentsCount)
+        {
+            using (var jsonReader = new BsonReader(reader) { SupportMultipleContent = true, DateTimeKindHandling = DateTimeKind.Unspecified })
+            {
                 for (var i = 0; i < count; i++)
                 {
                     timeout.Delay();
-                    var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader)
-                                                                 {
-                                                                     DateTimeKindHandling = DateTimeKind.Unspecified
-                                                                 });
 
-                    var metadata = doc.Value<RavenJObject>("@metadata");
-
-                    if (metadata == null)
-                        throw new InvalidOperationException("Could not find metadata for document");
-
-                    var id = metadata.Value<string>("@id");
-                    if (string.IsNullOrEmpty(id))
-                        throw new InvalidOperationException("Could not get id from metadata");
-
-                    doc.Remove("@metadata");
-
-                    yield return new JsonDocument
+                    while (jsonReader.Read())
                     {
-                        Key = id,
-                        DataAsJson = doc,
-                        Metadata = metadata
-                    };
+                        if (jsonReader.TokenType == JsonToken.StartObject)
+                            break;
+                    }
+
+                    if (jsonReader.TokenType != JsonToken.StartObject)
+                        throw new InvalidOperationException("Could not get document");
+
+                    var doc = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+
+                    yield return PrepareJsonDocument(doc);
                 }
 
                 increaseDocumentsCount(count);
             }
+        }
+
+        private IEnumerable<JsonDocument> YieldJsonDocumentsInBatch(CancellationTimeout timeout, Stream stream, int count, Action<int> increaseDocumentsCount)
+        {
+            using (JsonTextReader jsonReader = new JsonTextReader(new StreamReader(stream)) { SupportMultipleContent = true })
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    timeout.Delay();
+
+                    while (jsonReader.Read())
+                    {
+                        if (jsonReader.TokenType == JsonToken.StartObject)
+                            break;
+                    }
+
+                    if (jsonReader.TokenType != JsonToken.StartObject)
+                        throw new InvalidOperationException("Could not get document");
+
+                    var doc = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+
+                    yield return PrepareJsonDocument(doc);
+                }
+
+                increaseDocumentsCount(count);
+            }
+        }
+
+        private static JsonDocument PrepareJsonDocument(RavenJObject doc)
+        {
+            var metadata = doc.Value<RavenJObject>("@metadata");
+            if (metadata == null)
+                throw new InvalidOperationException("Could not find metadata for document");
+
+            var id = metadata.Value<string>("@id");
+            if (string.IsNullOrEmpty(id))
+                throw new InvalidOperationException("Could not get id from metadata");
+
+            doc.Remove("@metadata");
+
+            return new JsonDocument
+            {
+                Key = id,
+                DataAsJson = doc,
+                Metadata = metadata
+            };
         }
 
         public class BulkInsertStatus : IOperationState

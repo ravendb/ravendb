@@ -108,6 +108,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
+      <Link>Imports\Newtonsoft.Json\%(FileName)</Link>
+    </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\*.cs">
       <Link>Imports\Newtonsoft.Json\Bson\%(FileName)</Link>
     </Compile>
@@ -117,6 +120,9 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\*.cs">
       <Link>Imports\Newtonsoft.Json\Linq\%(FileName)</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\JsonPath\*.cs">
+      <Link>Imports\Newtonsoft.Json\Linq\JsonPath\%(FileName)</Link>
+    </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Schema\*.cs">
       <Link>Imports\Newtonsoft.Json\Schema\%(FileName)</Link>
     </Compile>
@@ -125,9 +131,6 @@
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
       <Link>Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
-    </Compile>
-    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
-      <Link>Imports\Newtonsoft.Json\%(FileName)</Link>
     </Compile>
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="Commands\DeleteCommandData.cs" />
@@ -246,6 +249,7 @@
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\ClientNotSupportedException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\ImplicitFetchFieldsFromDocumentNotAllowedException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
@@ -363,7 +367,7 @@
     <Compile Include="FileSystem\ItemsPage.cs" />
     <Compile Include="FileSystem\Notification.cs" />
     <Compile Include="FileSystem\RdcStats.cs" />
-    <Compile Include="FileSystem\ServerInfo.cs" />
+    <Compile Include="FileSystem\FileSystemInfo.cs" />
     <Compile Include="FileSystem\FileSystemStats.cs" />
     <Compile Include="FileSystem\Signature.cs" />
     <Compile Include="FileSystem\SignatureManifest.cs" />
@@ -427,6 +431,7 @@
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />
     <Compile Include="Util\MD5.cs" />
+    <Compile Include="Util\NetworkUtil.cs" />
     <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\RavenQuery.cs" />

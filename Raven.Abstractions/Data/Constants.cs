@@ -168,9 +168,18 @@ namespace Raven.Abstractions.Data
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
 		//Counters
+		public static partial class Counter
+		{
+			public const string Prefix = "Raven/Counters/";
+			public const string DataDirectory = "Raven/Counters/DataDir";
+			public const string UrlPrefix = "counters";
+		}
+
 		public const byte GroupSeperator = 29;
 		public const char GroupSeperatorChar = (char)GroupSeperator;
 		public const string GroupSeperatorString = "\u001D";
+
+
 
         public const string MetadataEtagField = "ETag";
 
@@ -188,8 +197,13 @@ namespace Raven.Abstractions.Data
 
 
 		// General
-		public const string RavenDatabasesPrefix = "Raven/Databases/";
-
+		public static partial class Database
+		{
+			public const string Prefix = "Raven/Databases/";
+			public const string DataDirectory = "Raven/Databases/DataDir";
+			public const string UrlPrefix = "databases";
+		}
+		
         public static partial class FileSystem
         {
 			public const string Prefix = "Raven/FileSystems/";
@@ -197,6 +211,8 @@ namespace Raven.Abstractions.Data
             public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
             public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
             public const string Storage = "Raven/FileSystem/Storage";
+	        public const string UrlPrefix = "fs";
+	        public const string RavenFsSize = "RavenFS-Size";
 
 	        public static class Versioning
 	        {
@@ -206,8 +222,8 @@ namespace Raven.Abstractions.Data
 
 		// Subscriptions
 		public const string RavenSubscriptionsPrefix = "Raven/Subscriptions/";
-        
-        public static partial class Esent
+
+	    public static partial class Esent
         {
             public const string CircularLog = "Raven/Esent/CircularLog";
             public const string CacheSizeMax = "Raven/Esent/CacheSizeMax";
@@ -228,6 +244,42 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
         }
+
+	    public class Versioning
+	    {
+			public const string RavenVersioningPrefix = "Raven/Versioning/";
+			public const string RavenVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
+	    }
+
+	    public class SqlReplication
+	    {
+			public const string SqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
+	    }
+
+        public class PeriodicExport
+        {
+            public const string AwsAccessKey = "Raven/AWSAccessKey";
+            public const string AwsSecretKey = "Raven/AWSSecretKey";
+            public const string AzureStorageAccount = "Raven/AzureStorageAccount";
+            public const string AzureStorageKey = "Raven/AzureStorageKey";
+        }
+
+	    public class Global
+	    {
+		    public const string GlobalSettingsDocumentKey = "Raven/Global/Settings";
+
+			public const string ReplicationConflictResolutionDocumentName = "Raven/Global/Replication/Config";
+		    public const string ReplicationDestinationsDocumentName = "Raven/Global/Replication/Destinations";
+
+		    public const string VersioningDocumentPrefix = "Raven/Global/Versioning/";
+		    public const string VersioningDefaultConfigurationDocumentName = "Raven/Global/Versioning/DefaultConfiguration";
+
+		    public const string PeriodicExportDocumentName = "Raven/Global/Backup/Periodic/Setup";
+
+		    public const string SqlReplicationConnectionsDocumentName = "Raven/Global/SqlReplication/Connections";
+
+		    public const string JavascriptFunctions = "Raven/Global/Javascript/Functions";
+	    }
 
 	    public static class Smuggler
 	    {

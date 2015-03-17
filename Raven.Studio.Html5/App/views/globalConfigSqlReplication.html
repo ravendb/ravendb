@@ -1,0 +1,67 @@
+﻿<form class="form-horizontal" role="form" data-bind="submit: $root.saveChanges">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, visible: activated()" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated()">
+                <i class="fa fa-plus"></i> Create global configuration for SQL Replication
+            </button>
+            <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated()">
+                <i class="fa fa-trash"></i> Remove global configuration for SQL Replication
+            </button>
+            <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection, visible: activated()" title="Add connection string (Alt+N)" accesskey="N">
+                <i class="fa fa-plus"></i> New connection string
+            </button>
+        </div>
+        <div class="panel-body" data-bind="with: connections">
+            <p data-bind="visible: !$root.activated()">
+                <i class="fa fa-info-circle text-info"></i> Global configuration for SQL Replication is not currently defined.
+            </p>
+            <p data-bind="visible: predefinedConnections().length === 0 && $root.activated()">
+                <i class="fa fa-warning text-warning"></i> You've got no SQL replication connections set up.
+            </p>
+            <div data-bind="foreach: predefinedConnections, if: $root.activated()">
+                <div class="col-sm-6">
+                    <div class="sql-replication-connection-card panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <span data-bind="text: name() || '[untitled]'"></span>
+                                <button type="button" class="close" aria-hidden="true" data-bind="click: function(){$root.removeSqlReplicationConnection($data)}" title="Remove this connection"><i class="fa fa-times"></i></button>
+                            </h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Name</label>
+                                <div class="col-sm-7">
+                                    <input required name="name" class="form-control" type="text" data-bind="value:name, valueUpdate: 'afterkeydown'"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">SQL Provider</label>
+                                <div class="col-sm-7">
+                                    <select tabindex="5" required class="form-control" data-bind="event:{change:function(val,event){$root.providerChanged($data,event);return true;}},options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Connection String</label>
+                                <div class="col-sm-7">
+                                    <textarea tabindex="6" rows="4" required class="form-control" data-bind="value: connectionString, valueUpdate: 'afterkeydown'"></textarea>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-sm-7 col-sm-offset-4">
+                                    <button type="button" class="btn btn-default" data-bind="enable: connectionTestState() === CONNECTION_STATE_STAND_BY, click: testConnection.bind($data, $root.getActiveDatabase.bind($root))">Test connection</button>
+                                    <br/>
+                                    <div class="progress progress-striped" data-bind="visible:connectionTestState() !== CONNECTION_STATE_STAND_BY">
+                                        <div class="progress-bar progress-bar-info" data-bind="css: {'active':connectionTestState() === CONNECTION_STATE_CONNECTING}" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; float: left;">
+                                            <span class="sr-only" data-bind="text:connectionTestState() === CONNECTION_STATE_CONNECTING?'Connecting':'Connected'"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

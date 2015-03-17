@@ -18,13 +18,10 @@ namespace Raven.Tests.FileSystem.Indexing
         {
             int port = 9999;
             var filesystem = Path.GetRandomFileName();
-            var nameof = "WillReindexAfterCrashing-" + DateTime.Now.Ticks;
 
-            string dataDirectoryPath;
-            using (var server = CreateServer(port, dataDirectory: nameof, runInMemory: false, requestedStorage: storage))
+			string dataDirectoryPath = NewDataPath("WillReindexAfterCrashing");
+			using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false, requestedStorage: storage))
             {
-                dataDirectoryPath = server.Configuration.DataDirectory;
-
                 var store = server.FilesStore;
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(filesystem);
 
@@ -52,7 +49,7 @@ namespace Raven.Tests.FileSystem.Indexing
             watcher.Deleted += (sender, args) => changed = true;
             watcher.EnableRaisingEvents = true;
 
-            using (var server = CreateServer(port, dataDirectory: nameof, runInMemory: false, requestedStorage: storage))
+			using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false, requestedStorage: storage))
             {
                 var store = server.FilesStore;
 
@@ -82,13 +79,11 @@ namespace Raven.Tests.FileSystem.Indexing
         {
             int port = 9999;
             var filesystem = Path.GetRandomFileName();
-            var nameof = "WillReindexAfterCrashing-" + DateTime.Now.Ticks;
 
-            string dataDirectoryPath;
-            using (var server = CreateServer(port, dataDirectory: nameof, runInMemory: false))
+            string dataDirectoryPath = NewDataPath("WillReindexAfterCorruption");
+	        
+            using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false))
             {
-                dataDirectoryPath = server.Configuration.DataDirectory;
-
                 var store = server.FilesStore;
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(filesystem);
 
@@ -114,7 +109,7 @@ namespace Raven.Tests.FileSystem.Indexing
             watcher.Deleted += (sender, args) => changed = true;
             watcher.EnableRaisingEvents = true;
 
-            using (var server = CreateServer(port, dataDirectory: nameof, runInMemory: false))
+            using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false))
             {
                 var store = server.FilesStore;
 
@@ -143,13 +138,10 @@ namespace Raven.Tests.FileSystem.Indexing
         {
             int port = 9999;
             var filesystem = Path.GetRandomFileName();
-            var nameof = "WillReindexAfterRequestedReset-" + DateTime.Now.Ticks;
 
-            string dataDirectoryPath;
-            using (var server = CreateServer(port, dataDirectory: nameof, runInMemory: false))
+			string dataDirectoryPath = NewDataPath("WillReindexAfterRequestedReset");
+            using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false))
             {
-                dataDirectoryPath = server.Configuration.DataDirectory;
-
                 var store = server.FilesStore;
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(filesystem);
 
@@ -199,10 +191,9 @@ namespace Raven.Tests.FileSystem.Indexing
         {
             int port = 9999;
             var filesystem = Path.GetRandomFileName();
-            var nameof = "WillReindexAfterCrashing-" + DateTime.Now.Ticks;
 
-            string dataDirectoryPath;
-            using (var server = CreateServer(port, dataDirectory: nameof, runInMemory: false))
+	        string dataDirectoryPath = NewDataPath("WillReindexAfterNoIndexes");
+            using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false))
             {
                 dataDirectoryPath = server.Configuration.DataDirectory;
 
@@ -224,7 +215,7 @@ namespace Raven.Tests.FileSystem.Indexing
             Directory.Delete( Path.Combine(filesystemDirectoryPath, filesystem, "Indexes"), true );
 
             // Ensure the index has been reseted.            
-            using (var server = CreateServer(port, dataDirectory: nameof, runInMemory: false))
+            using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false))
             {
                 var store = server.FilesStore;
 

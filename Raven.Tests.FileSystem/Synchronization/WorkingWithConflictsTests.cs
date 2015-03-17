@@ -18,6 +18,7 @@ using Raven.Json.Linq;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Raven.Tests.FileSystem.Tools;
 using Xunit;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {
@@ -238,7 +239,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 				                         };
 
 			request.AddHeaders(conflictedMetadata);
-			request.Headers[SyncingMultipartConstants.SourceServerInfo] = new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson();
+			request.Headers[SyncingMultipartConstants.SourceFileSystemInfo] = new FileSystemInfo {Id = Guid.Empty, Url = "http://localhost:12345"}.AsJson();
 
 			var response = await request.GetResponseAsync();
 
@@ -322,7 +323,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			webRequest.ContentLength = 0;
 			webRequest.Method = "POST";
 
-			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo, new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
+			webRequest.Headers.Add(SyncingMultipartConstants.SourceFileSystemInfo, new FileSystemInfo {Id = Guid.Empty, Url = "http://localhost:12345"}.AsJson());
             webRequest.Headers.Add(Constants.MetadataEtagField, new Guid().ToString());
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
 			webRequest.Headers.Add("If-None-Match", "\"" + Etag.Empty + "\"");

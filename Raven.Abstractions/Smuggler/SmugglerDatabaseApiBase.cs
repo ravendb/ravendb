@@ -35,7 +35,7 @@ namespace Raven.Abstractions.Smuggler
 
         protected SmugglerDatabaseApiBase(SmugglerDatabaseOptions options)
 		{
-			this.Options = options;
+			Options = options;
 		}
 
         public virtual async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
@@ -104,7 +104,7 @@ namespace Raven.Abstractions.Smuggler
 
 			try
 			{
-				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,leaveOpen: true))
+				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
 				using (var streamWriter = new StreamWriter(gZipStream))
 				{
 					var jsonWriter = new JsonTextWriter(streamWriter)
@@ -613,7 +613,7 @@ namespace Raven.Abstractions.Smuggler
             Operations.Configure(Options);
             Operations.Initialize(Options);
 			await DetectServerSupportedFeatures(importOptions.To);
-
+			
 			Stream sizeStream;
 
             var sw = Stopwatch.StartNew();
@@ -906,7 +906,7 @@ namespace Raven.Abstractions.Smuggler
                 lastEtagsDocument = Operations.GetDocument(continuationDocId);
                 if ( lastEtagsDocument == null )
                 {
-                    lastEtagsDocument = new JsonDocument()
+                    lastEtagsDocument = new JsonDocument
                     {
                         Key = continuationDocId,                        
                         Etag = Etag.Empty,

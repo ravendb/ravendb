@@ -6,6 +6,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Versioning.Data;
+using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Storage;
 
 namespace Raven.Database.FileSystem.Bundles.Versioning
@@ -42,7 +43,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning
 			return accessor.ConfigExists(DefaultConfigurationName);
 		}
 
-		public static VersioningConfiguration GetVersioningConfiguration(this IStorageActionsAccessor accessor)
+		public static FileVersioningConfiguration GetVersioningConfiguration(this IStorageActionsAccessor accessor)
 		{
 			if (IsVersioningActive(accessor) == false) 
 				return null;
@@ -51,7 +52,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning
 			if (configuration == null) 
 				return null;
 
-			return configuration.JsonDeserialization<VersioningConfiguration>();
+			return configuration.JsonDeserialization<FileVersioningConfiguration>();
 		}
 	}
 }

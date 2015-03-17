@@ -11,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reactive.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -21,12 +20,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util.Encryptors;
-using Raven.Abstractions.Util.Streams;
-using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
-using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Storage.Exceptions;
 using Raven.Database.FileSystem.Util;
@@ -89,13 +83,13 @@ namespace Raven.Database.FileSystem.Actions
 
 				Historian.Update(name, metadata);
 
-				SynchronizationTask.Cancel(name);
-
 				long? size = -1;
 				Storage.Batch(accessor =>
 				{
+					FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
 					AssertPutOperationNotVetoed(name, metadata);
-					AssertFileIsNotBeingSynced(name, accessor);
+
+					SynchronizationTask.Cancel(name);
 
 					var contentLength = options.ContentLength;
 					var contentSize = options.ContentSize;
@@ -134,7 +128,10 @@ namespace Raven.Database.FileSystem.Actions
 
 					if (readFileToDatabase.TotalSizeRead != size)
 					{
-						IndicateFileToDelete(name, null);
+						using (FileSystem.DisableAllTriggersForCurrentThread())
+						{
+							IndicateFileToDelete(name, null);
+						}
 						throw new HttpResponseException(HttpStatusCode.BadRequest);
 					}
 
@@ -145,18 +142,16 @@ namespace Raven.Database.FileSystem.Actions
 
 					metadata["Content-MD5"] = readFileToDatabase.FileHash;
 
-					FileOperationResult updateMetadata = null;
+					MetadataUpdateResult updateMetadata = null;
 					Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null));
 
 					int totalSizeRead = readFileToDatabase.TotalSizeRead;
 					metadata["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
 
 					Search.Index(name, metadata, updateMetadata.Etag);
-					Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
+					Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = name });
 
 					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
-
-					FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
 				}
 			}
 			catch (Exception ex)
@@ -170,14 +165,36 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
-		private void AssertPutOperationNotVetoed(string name, RavenJObject headers)
+		internal void AssertPutOperationNotVetoed(string name, RavenJObject metadata)
 		{
 			var vetoResult = FileSystem.PutTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, headers) })
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, metadata) })
 				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
 			if (vetoResult != null)
 			{
 				throw new OperationVetoedException("PUT vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+			}
+		}
+
+		private void AssertMetadataUpdateOperationNotVetoed(string name, RavenJObject metadata)
+		{
+			var vetoResult = FileSystem.MetadataUpdateTriggers
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowUpdate(name, metadata) })
+				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+			if (vetoResult != null)
+			{
+				throw new OperationVetoedException("POST vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+			}
+		}
+
+		private void AssertRenameOperationNotVetoed(string name, string newName)
+		{
+			var vetoResult = FileSystem.RenameTriggers
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowRename(name, newName) })
+				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+			if (vetoResult != null)
+			{
+				throw new OperationVetoedException("PATCH vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
 			}
 		}
 
@@ -192,75 +209,44 @@ namespace Raven.Database.FileSystem.Actions
 			}
 		}
 
-		private void AssertFileIsNotBeingSynced(string fileName, IStorageActionsAccessor accessor)
+		public void UpdateMetadata(string name, RavenJObject metadata, Etag etag)
 		{
-			if (FileLockManager.TimeoutExceeded(fileName, accessor))
-			{
-				FileLockManager.UnlockByDeletingSyncConfiguration(fileName, accessor);
-			}
-			else
-			{
-				Log.Debug("Cannot execute operation because file '{0}' is being synced", fileName);
+			MetadataUpdateResult updateMetadata = null;
 
-				throw new SynchronizationException(string.Format("File {0} is being synced", fileName));
-			}
-		}
-
-		public void Rename(string name, string rename, Etag etag)
-		{
 			Storage.Batch(accessor =>
 			{
-				AssertFileIsNotBeingSynced(name, accessor);
+				AssertMetadataUpdateOperationNotVetoed(name, metadata);
 
-				var existingFile = accessor.ReadFile(name);
-				if (existingFile == null || existingFile.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
-					throw new FileNotFoundException();
-
-				var renamingFile = accessor.ReadFile(rename);
-				if (renamingFile != null && renamingFile.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker) == false)
-					throw new InvalidOperationException("Cannot rename because file " + rename + " already exists");
-
-				var metadata = existingFile.Metadata;
-
-				if (etag != null && existingFile.Etag != etag)
-					throw new ConcurrencyException("Operation attempted on file '" + name + "' using a non current etag")
-					{
-						ActualETag = existingFile.Etag,
-						ExpectedETag = etag
-					};
-				
 				Historian.UpdateLastModified(metadata);
+				
+				FileSystem.MetadataUpdateTriggers.Apply(trigger => trigger.OnUpdate(name, metadata));
 
-				var operation = new RenameFileOperation
-				{
-					FileSystem = FileSystem.Name,
-					Name = name,
-					Rename = rename,
-					MetadataAfterOperation = metadata
-				};
+				updateMetadata = accessor.UpdateFileMetadata(name, metadata, etag);
 
-				accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
-				accessor.PulseTransaction(); // commit rename operation config
-
-				ExecuteRenameOperation(operation, etag);
+				FileSystem.MetadataUpdateTriggers.Apply(trigger => trigger.AfterUpdate(name, metadata));
 			});
 
-			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
+			Search.Index(name, metadata, updateMetadata.Etag);
 
-			FileSystem.Synchronization.StartSynchronizeDestinationsInBackground();
+			FileSystem.Publisher.Publish(new FileChangeNotification
+			{
+				File = name,
+				Action = FileChangeAction.Update
+			});
+
+			Log.Debug("Metadata of a file '{0}' was updated", name);
 		}
 
-		public void ExecuteRenameOperation(RenameFileOperation operation, Etag etag)
+		public void ExecuteRenameOperation(RenameFileOperation operation)
 		{
 			var configName = RavenFileNameHelper.RenameOperationConfigNameForFile(operation.Name);
-			Publisher.Publish(new FileChangeNotification
-			{
-				File = FilePathTools.Cannoicalise(operation.Name),
-				Action = FileChangeAction.Renaming
-			});
 
 			Storage.Batch(accessor =>
 			{
+				AssertRenameOperationNotVetoed(operation.Name, operation.Rename);
+
+				Publisher.Publish(new FileChangeNotification { File = operation.Name, Action = FileChangeAction.Renaming });
+
 				var previousRenameTombstone = accessor.ReadFile(operation.Rename);
 
 				if (previousRenameTombstone != null &&
@@ -270,8 +256,12 @@ namespace Raven.Database.FileSystem.Actions
 					accessor.Delete(previousRenameTombstone.FullPath);
 				}
 
+				FileSystem.RenameTriggers.Apply(trigger => trigger.OnRename(operation.Name, operation.MetadataAfterOperation));
+
 				accessor.RenameFile(operation.Name, operation.Rename, true);
 				accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation, null);
+
+				FileSystem.RenameTriggers.Apply(trigger => trigger.AfterRename(operation.Name, operation.Rename, operation.MetadataAfterOperation));
 
 				// copy renaming file metadata and set special markers
 				var tombstoneMetadata = new RavenJObject(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
@@ -285,11 +275,7 @@ namespace Raven.Database.FileSystem.Actions
 			});
 
 			Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
-			Publisher.Publish(new FileChangeNotification
-			{
-				File = FilePathTools.Cannoicalise(operation.Rename),
-				Action = FileChangeAction.Renamed
-			});
+			Publisher.Publish(new FileChangeNotification { File = operation.Rename, Action = FileChangeAction.Renamed });
 		}
 
 		public void IndicateFileToDelete(string fileName, Etag etag)
@@ -368,6 +354,9 @@ namespace Raven.Database.FileSystem.Actions
 					FileSystem.DeleteTriggers.Apply(trigger => trigger.AfterDelete(fileName));
 
 					Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
+					Publisher.Publish(new FileChangeNotification { File = fileName, Action = FileChangeAction.Delete });
+					
+					Log.Debug("File '{0}' was deleted", fileName);
 				}
 				else
 				{
@@ -380,6 +369,31 @@ namespace Raven.Database.FileSystem.Actions
 				Search.Delete(fileName);
 				Search.Delete(deletingFileName);
 			}
+		}
+
+		public void PutTombstone(string fileName, RavenJObject metadata)
+		{
+			Storage.Batch(accessor =>
+			{
+				var tombstoneMetadata = new RavenJObject
+				{
+					{
+						SynchronizationConstants.RavenSynchronizationHistory,
+						metadata[SynchronizationConstants.RavenSynchronizationHistory]
+					},
+					{
+						SynchronizationConstants.RavenSynchronizationVersion,
+						metadata[SynchronizationConstants.RavenSynchronizationVersion]
+					},
+					{
+						SynchronizationConstants.RavenSynchronizationSource,
+						metadata[SynchronizationConstants.RavenSynchronizationSource]
+					}
+				}.WithDeleteMarker();
+
+				Historian.UpdateLastModified(tombstoneMetadata);
+				accessor.PutFile(fileName, 0, tombstoneMetadata, true);
+			});
 		}
 
 		public Task CleanupDeletedFilesAsync()
@@ -478,7 +492,7 @@ namespace Raven.Database.FileSystem.Actions
 				{
 					try
 					{
-						ExecuteRenameOperation(renameOperation, null);
+						ExecuteRenameOperation(renameOperation);
 						Log.Debug("File '{0}' was renamed to '{1}'", renameOperation.Name, renameOperation.Rename);
 
 					}
@@ -565,98 +579,6 @@ namespace Raven.Database.FileSystem.Actions
 				renameFileTasks.TryRemove(fileName, out existingTask);
 			}
 			return false;
-		}
-
-		private class ReadFileToDatabase : IDisposable
-		{
-			private readonly byte[] buffer;
-			private readonly BufferPool bufferPool;
-			private readonly string filename;
-
-			private readonly RavenJObject headers;
-
-			private readonly Stream inputStream;
-			private readonly ITransactionalStorage storage;
-
-			private readonly OrderedPartCollection<AbstractFilePutTrigger> putTriggers;
-
-			private readonly IHashEncryptor md5Hasher;
-			public int TotalSizeRead;
-			private int pos;
-
-			public ReadFileToDatabase(BufferPool bufferPool, ITransactionalStorage storage, OrderedPartCollection<AbstractFilePutTrigger> putTriggers, Stream inputStream, string filename, RavenJObject headers)
-			{
-				this.bufferPool = bufferPool;
-				this.inputStream = inputStream;
-				this.storage = storage;
-				this.putTriggers = putTriggers;
-				this.filename = filename;
-				this.headers = headers;
-				buffer = bufferPool.TakeBuffer(StorageConstants.MaxPageSize);
-				md5Hasher = Encryptor.Current.CreateHash();
-			}
-
-			public string FileHash { get; private set; }
-
-			public void Dispose()
-			{
-				bufferPool.ReturnBuffer(buffer);
-			}
-
-			public async Task Execute()
-			{
-				while (true)
-				{
-					var read = await inputStream.ReadAsync(buffer);
-
-					TotalSizeRead += read;
-
-					if (read == 0) // nothing left to read
-					{
-						FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
-						headers["Content-MD5"] = FileHash;
-						storage.Batch(accessor =>
-						{
-							accessor.CompleteFileUpload(filename);
-							putTriggers.Apply(trigger => trigger.AfterUpload(filename, headers));
-						});
-						return; // task is done
-					}
-
-					int retries = 50;
-					bool shouldRetry;
-
-					do
-					{
-						try
-						{
-							storage.Batch(accessor =>
-							{
-								var hashKey = accessor.InsertPage(buffer, read);
-								accessor.AssociatePage(filename, hashKey, pos, read);
-								putTriggers.Apply(trigger => trigger.OnUpload(filename, headers, hashKey, pos, read));
-							});
-
-							shouldRetry = false;
-						}
-						catch (ConcurrencyException)
-						{
-							if (retries-- > 0)
-							{
-								shouldRetry = true;
-								Thread.Sleep(50);
-								continue;
-							}
-
-							throw;
-						}
-					} while (shouldRetry);
-
-					md5Hasher.TransformBlock(buffer, 0, read);
-
-					pos++;
-				}
-			}
 		}
 
 		public class PutOperationOptions

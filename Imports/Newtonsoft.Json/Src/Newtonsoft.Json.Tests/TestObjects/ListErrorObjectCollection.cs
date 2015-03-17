@@ -29,12 +29,12 @@ using Raven.Imports.Newtonsoft.Json.Serialization;
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  public class ListErrorObjectCollection : Collection<ListErrorObject>
-  {
-    [OnError]
-    internal void OnErrorMethod(StreamingContext context, ErrorContext errorContext)
+    public class ListErrorObjectCollection : Collection<ListErrorObject>
     {
-      errorContext.Handled = true;
+        [OnError]
+        internal void OnErrorMethod(StreamingContext context, ErrorContext errorContext)
+        {
+            errorContext.Handled = true;
+        }
     }
-  }
 }
