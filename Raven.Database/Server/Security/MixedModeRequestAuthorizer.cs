@@ -153,10 +153,6 @@ namespace Raven.Database.Server.Security
 				return false;
 			}
 
-			if (value.User != null)
-			{
-				CurrentOperationContext.RavenAuthenticatedUser.Value = value.User.Identity.Name;
-			}
 	        msg = null;
 	        statusCode = HttpStatusCode.OK;
 
