@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Net;
+using System.Net.Http;
+using System.Web.Http;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection.Async;
@@ -51,11 +54,65 @@ namespace Raven.Tests.Bundles.Replication
 
 				servers[0].Dispose();
 
+				//since the replication is collection specific, it is not a valid candidate for failover
+				var ex = Assert.Throws<HttpRequestException>(() =>
+				{
+					using (var session = store.OpenSession())
+						session.Load<C1>("C1s/1");
+				});
+
+				Assert.IsType<WebException>(ex.InnerException);
+				Assert.Equal("Unable to connect to the remote server", ex.InnerException.Message, StringComparer.InvariantCultureIgnoreCase);
+			}
+		}
+
+		[Fact]
+		public void Replication_from_specific_collection_should_not_be_valid_failover_destination2()
+		{
+			store1 = CreateStore(databaseName: "FailoverTest");
+			store2 = CreateStore(databaseName: "FailoverTest");
+			store3 = CreateStore(databaseName: "FailoverTest");
+
+			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store3.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), new[] { "C1s" }, store2);
+			UpdateReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), store3);
+
+			using (var store = new DocumentStore
+			{
+				DefaultDatabase = "FailoverTest",
+				Url = store1.Url,
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
+				}
+			})
+			{
+				store.Initialize();
+
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
+											  .Wait();
+
 				using (var session = store.OpenSession())
 				{
-					var load = session.Load<C1>("C1s/1");
-					Assert.NotNull(load);
+					session.Store(new C1());
+					session.SaveChanges();
 				}
+
+				WaitForDocument(store2.DatabaseCommands.ForDatabase("FailoverTest"), "C1s/1");
+				WaitForDocument(store3.DatabaseCommands.ForDatabase("FailoverTest"), "C1s/1");
+
+				servers[0].Dispose();
+
+				//since the replication is collection specific, it is not a valid candidate for failover
+				//however, here we have store3 that is _not_ collection specific, so it will fetch C1s/1 from store3
+				Assert.DoesNotThrow(() =>
+				{
+					using (var session = store.OpenSession())
+						session.Load<C1>("C1s/1");
+				});
 			}
 		}
 

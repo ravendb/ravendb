@@ -278,6 +278,21 @@ namespace Raven.Tests.Common
 			SetupReplication(source, destinationDocs);
         }
 
+		protected void UpdateReplication(IDatabaseCommands source, params DocumentStore[] destinations)
+		{
+			Assert.NotEmpty(destinations);
+
+
+			var destinationDocs = destinations.Select(destination => new RavenJObject
+	            {
+		            { "Url", destination.Url },
+		            { "Database", destination.DefaultDatabase }
+	            }).ToList();
+
+			UpdateReplication(source, destinationDocs);
+		}
+
+
         protected void SetupReplication(IDatabaseCommands source, params string[] urls)
         {
             Assert.NotEmpty(urls);
@@ -295,6 +310,22 @@ namespace Raven.Tests.Common
                            }
                        }, new RavenJObject());
         }
+
+		protected void UpdateReplication(IDatabaseCommands source, IEnumerable<RavenJObject> destinations)
+		{
+			Assert.NotEmpty(destinations);
+			var patches = new List<PatchRequest>();
+			foreach (var dest in destinations)
+			{
+				patches.Add(new PatchRequest
+				{
+					Type = PatchCommandType.Insert,
+					Name = "Destinations",
+					Value = dest
+				});
+			}
+			source.Patch(Constants.RavenReplicationDestinations, patches.ToArray());
+		}
 
         protected void RemoveReplication(IDatabaseCommands source)
         {

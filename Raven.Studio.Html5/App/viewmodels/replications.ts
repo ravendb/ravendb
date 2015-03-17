@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import replicationsSetup = require("models/replicationsSetup");
 import replicationConfig = require("models/replicationConfig")
 import replicationDestination = require("models/replicationDestination");
+import collection = require("models/collection");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/getReplicationsCommand");
 import updateServerPrefixHiLoCommand = require("commands/updateServerPrefixHiLoCommand");
@@ -13,13 +14,16 @@ import replicateAllIndexesCommand = require("commands/replicateAllIndexesCommand
 import replicateAllTransformersCommand = require("commands/replicateAllTransformersCommand");
 import replicateIndexesCommand = require("commands/replicateIndexesCommand");
 import replicateTransformersCommand = require("commands/replicateTransformersCommand");
+import getCollectionsCommand = require("commands/getCollectionsCommand");
 import appUrl = require("common/appUrl");
+import database = require("models/database");
 
 class replications extends viewModelBase {
 
     prefixForHilo = ko.observable<string>('');
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ Destinations: [], Source: null }));
+    collections = ko.observableArray<collection>();    
 
     serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
@@ -58,7 +62,12 @@ class replications extends viewModelBase {
         this.isServerPrefixForHiLoSaveEnabled = ko.computed(() => this.serverPrefixForHiLoDirtyFlag().isDirty());
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
-        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour]);
+
+        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour];
+
+        $.each(this.replicationsSetup().destinations(), (i, dest) => replicationSetupDirtyFlagItems.push(dest.sourceCollections));
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
+        
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
         this.isReplicateIndexesToAllEnabled = ko.computed(() => this.replicationsSetup().destinations().length > 0);
@@ -66,6 +75,11 @@ class replications extends viewModelBase {
             return (this.replicationConfigDirtyFlag().isDirty() || this.replicationsSetupDirtyFlag().isDirty() || this.serverPrefixForHiLoDirtyFlag().isDirty());
         });
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+
+        var db = this.activeDatabase();
+        this.fetchCollections(db).done(results => {
+            this.collections(results);
+        });
     }
 
     private fetchServerPrefixForHiLoCommand(db): JQueryPromise<any> {
@@ -93,6 +107,14 @@ class replications extends viewModelBase {
             .done(repSetup => this.replicationsSetup(new replicationsSetup(repSetup)))
             .always(() => deferred.resolve({ can: true }));
         return deferred;
+    }
+
+    public onReplicateToCollectionClick(destination: replicationDestination, collectionName: string) {
+        if (destination.sourceCollections.indexOf(collectionName) < 0) {
+            destination.sourceCollections.push(collectionName);
+        } else {
+            destination.sourceCollections.remove(collectionName);
+        }
     }
 
     createNewDestination() {
@@ -135,6 +157,10 @@ class replications extends viewModelBase {
                 .execute()
                 .done(() => this.replicationsSetupDirtyFlag().reset() );
         }
+    }
+
+    private fetchCollections(db: database): JQueryPromise<Array<collection>> {
+        return new getCollectionsCommand(db, this.collections()).execute();
     }
 
     sendReplicateCommand(destination: replicationDestination,parentClass: replications) {        

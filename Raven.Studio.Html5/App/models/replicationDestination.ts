@@ -11,7 +11,8 @@ class replicationDestination {
     disabled = ko.observable<boolean>().extend({ required: true });
     clientVisibleUrl = ko.observable<string>().extend({ required: true });
     skipIndexReplication = ko.observable<boolean>().extend({ required: true });
-    sourceCollections = ko.observable<string[]>().extend({required: false});
+    sourceCollections = ko.observableArray<string>().extend({required: false});
+    enableReplicateOnlyFromCollections : boolean;
 
     name = ko.computed(() => {
         var prefix = this.disabled() ? "[disabled]" : null;
@@ -71,6 +72,8 @@ class replicationDestination {
         this.clientVisibleUrl(dto.ClientVisibleUrl);
         this.skipIndexReplication(dto.SkipIndexReplication);
         this.sourceCollections(dto.SourceCollections);
+
+        this.enableReplicateOnlyFromCollections = typeof dto.SourceCollections !== 'undefined' && dto.SourceCollections.length > 0;
 
         if (this.username()) {
             this.isUserCredentials(true);
