@@ -90,11 +90,12 @@ namespace Raven.Client.FileSystem
 		/// </summary>
         protected InMemoryFilesSessionOperations( FilesStore filesStore, FilesSessionListeners listeners, Guid id)
 		{
-            this.Id = id;
+            Id = id;
             this.filesStore = filesStore;
-            this.theListeners = listeners;            
+            theListeners = listeners;            
 
-            this.MaxNumberOfRequestsPerSession = filesStore.Conventions.MaxNumberOfRequestsPerSession;
+            MaxNumberOfRequestsPerSession = filesStore.Conventions.MaxNumberOfRequestsPerSession;
+	        UseOptimisticConcurrency = filesStore.Conventions.DefaultUseOptimisticConcurrency;
 		}
 
         /// <summary>
