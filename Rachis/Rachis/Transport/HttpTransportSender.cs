@@ -443,14 +443,20 @@ namespace Rachis.Transport
 
 		private bool MaybeIgnoreFrequentRequestsIfServerDown(NodeConnectionInfo node)
 		{
-			int connectionFailureCount;
-			if (_connectionFailureCounts.TryGetValue(node, out connectionFailureCount) == false)
-				return false;
+			var ignore = false;
+			_connectionFailureCounts.AddOrUpdate(node, 0, (_, connectionFailureCount) =>
+			{
+				if (connectionFailureCount <= 20)
+					return connectionFailureCount;
 
-			if (connectionFailureCount < 10)
-				return false;
+				if (connectionFailureCount % 20 == 0)
+					return connectionFailureCount;
 
-			return connectionFailureCount % 10 != 0;
+				ignore = true;
+				return connectionFailureCount + 1;
+			});
+
+			return ignore;
 		}
 
 		private void UpdateConnectionFailureCounts(NodeConnectionInfo node, HttpResponseMessage response)
