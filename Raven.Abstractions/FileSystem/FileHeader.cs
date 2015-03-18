@@ -215,5 +215,4 @@ namespace Raven.Abstractions.FileSystem
             return name.TrimEnd('/');
         }
     }
-
 }

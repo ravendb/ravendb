@@ -1,15 +1,12 @@
 ﻿using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
-using Raven.Client.Connection;
 using Raven.Client.FileSystem;
 using Raven.Database.Config;
 using Raven.Database.FileSystem.Actions;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Notifications;
 using Raven.Database.FileSystem.Search;
@@ -20,7 +17,6 @@ using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 using System;
@@ -490,6 +486,5 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         #endregion Metadata Headers Handling
-
-    }
+	}
 }
