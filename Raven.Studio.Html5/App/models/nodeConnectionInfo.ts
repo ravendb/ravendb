@@ -56,18 +56,32 @@ class nodeConnectionInfo {
 
     useUserCredentials() {
         this.isUserCredentials(true);
-        this.isApiKeyCredentials(false);
+		this.isApiKeyCredentials(false);
+	    this.clearApiKeyCredentials();
     }
 
     useApiKeyCredentials() {
         this.isApiKeyCredentials(true);
-        this.isUserCredentials(false);
+		this.isUserCredentials(false);
+	    this.clearUserCredentials();
     }
 
     useNoCredentials() {
         this.isUserCredentials(false);
-        this.isApiKeyCredentials(false);
+		this.isApiKeyCredentials(false);
+		this.clearApiKeyCredentials()
+	    this.clearUserCredentials();
     }
+
+	private clearApiKeyCredentials() {
+		this.apiKey(null);
+	}
+
+	private clearUserCredentials() {
+		this.username(null);
+		this.password(null);
+		this.domain(null);
+	}
 }
 
 export = nodeConnectionInfo;

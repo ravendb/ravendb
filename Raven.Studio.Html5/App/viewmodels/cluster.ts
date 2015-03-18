@@ -14,6 +14,7 @@ import leaveRaftClusterCommand = require("commands/leaveRaftClusterCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import clusterConfiguration = require("models/clusterConfiguration");
 import saveClusterConfigurationCommand = require("commands/saveClusterConfigurationCommand");
+import updateRaftClusterCommand = require("commands/updateRaftClusterCommand");
 
 class cluster extends viewModelBase {
 
@@ -69,7 +70,7 @@ class cluster extends viewModelBase {
 
     addAnotherServerToCluster() {
         var newNode = nodeConnectionInfo.empty();
-        var dialog = new editNodeConnectionInfoDialog(newNode);
+        var dialog = new editNodeConnectionInfoDialog(newNode, false);
         dialog
             .onExit()
             .done(nci => {
@@ -84,7 +85,7 @@ class cluster extends viewModelBase {
         var newNode = nodeConnectionInfo.empty();
         newNode.name(this.systemDatabaseId());
         newNode.uri(this.serverUrl());
-        var dialog = new editNodeConnectionInfoDialog(newNode);
+        var dialog = new editNodeConnectionInfoDialog(newNode, false);
         dialog
             .onExit()
             .done(nci => {
@@ -95,6 +96,18 @@ class cluster extends viewModelBase {
         });
         app.showDialog(dialog);
     }
+
+	editNode(node: nodeConnectionInfo) {
+		var dialog = new editNodeConnectionInfoDialog(node, true);
+		dialog.onExit()
+			.done(nci => {
+				new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci)
+					.execute()
+					.done(() => setTimeout(() => this.fetchClusterTopology(appUrl.getSystemDatabase()), 500));
+			});
+
+		app.showDialog(dialog);
+	}
 
     leaveCluster(node: nodeConnectionInfo) {
         this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")

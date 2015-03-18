@@ -121,6 +121,19 @@ namespace Raven.Database.Raft.Controllers
 		}
 
 
+		[HttpPost]
+		[RavenRoute("admin/cluster/update")]
+		public async Task<HttpResponseMessage> Update()
+		{
+			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
+			if (nodeConnectionInfo == null)
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			await ClusterManager.Client.SendNodeUpdateAsync(nodeConnectionInfo).ConfigureAwait(false);
+
+			return GetEmptyMessage();
+		}
+
 		[HttpGet]
 		[RavenRoute("admin/cluster/canJoin")]
 		public Task<HttpResponseMessage> CanJoin([FromUri] Guid topologyId)

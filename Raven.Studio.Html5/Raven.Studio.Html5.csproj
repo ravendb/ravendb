@@ -35,6 +35,7 @@
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
+    <TypeScriptCompile Include="App\commands\updateRaftClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveClusterConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\leaveRaftClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
