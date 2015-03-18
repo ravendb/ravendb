@@ -87,11 +87,11 @@ namespace Raven.Tests.Issues
 		    i = await ((DocumentStore) store1).Replication.WaitAsync(putResult2.ETag, actions: replicatedEtagInfos);
 		    try
 		    {
-			    Assert.Equal(2, i);
 
+				Assert.Equal(2, i);
 
-			    Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
-			    Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+				Assert.NotNull(store2.DatabaseCommands.Get("Replicated/2"));
+				Assert.NotNull(store3.DatabaseCommands.Get("Replicated/2"));
 		    }
 		    catch (Exception e)
 		    {
