@@ -19,8 +19,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
 		public const string RavenShardId = "Raven-Shard-Id";
-        // turned into CurrentOperationContext.RavenAuthenticatedUser.Value
-        //public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
+        
+		
 		public const string LastModified = "Last-Modified";
         public const string CreationDate = "Creation-Date";
         public const string RavenCreationDate = "Raven-Creation-Date";
@@ -235,7 +235,7 @@ namespace Raven.Abstractions.Data
             public const string DbExtensionSize = "Raven/Esent/DbExtensionSize";
         }
 
-        public static partial class Voron
+        public static class Voron
         {
             public const string AllowIncrementalBackups = "Raven/Voron/AllowIncrementalBackups";
             public const string InitialFileSize = "Raven/Voron/InitialFileSize";
@@ -285,5 +285,12 @@ namespace Raven.Abstractions.Data
 	    {
 		    public const string CallContext = "Raven/Smuggler/CallContext";
 	    }
+
+		public class Authorization
+		{
+			public const string RavenAuthorizationUser = "Raven-Authorization-User";
+			public const string RavenAuthorizationOperation = "Raven-Authorization-Operation";
+			public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
+		}
 	}
 }

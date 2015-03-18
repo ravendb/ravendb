@@ -15,7 +15,6 @@ namespace Raven.Database.Server
 	{
 		public static readonly ThreadLocal<List<IDisposable>> RequestDisposables = new ThreadLocal<List<IDisposable>>(() => new List<IDisposable>());
 		public static readonly ThreadLocal<IPrincipal> User = new ThreadLocal<IPrincipal>(() => null);
-	    public static readonly ThreadLocal<string> RavenAuthenticatedUser = new ThreadLocal<string>(() => null);
         public static readonly ThreadLocal<Lazy<NameValueCollection>> Headers = new ThreadLocal<Lazy<NameValueCollection>>(() => null);
 
 	}
