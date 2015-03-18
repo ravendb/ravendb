@@ -16,6 +16,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Rachis;
+using Rachis.Commands;
+using Rachis.Storage;
 using Rachis.Transport;
 using Rachis.Utils;
 
@@ -263,6 +265,46 @@ namespace Raven.Database.Raft
 					default:
 						throw await CreateErrorResponseExceptionAsync(response).ConfigureAwait(false);
 				}
+			}
+		}
+
+		public Task SendNodeUpdateAsync(NodeConnectionInfo node)
+		{
+			try
+			{
+				var currentTopology = raftEngine.CurrentTopology;
+				var requestedTopology = new Topology(
+					currentTopology.TopologyId,
+					currentTopology.AllVotingNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList(),
+					currentTopology.NonVotingNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList(),
+					currentTopology.PromotableNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList());
+
+				var command = new TopologyChangeCommand
+				{
+					Completion = new TaskCompletionSource<object>(),
+					Requested = requestedTopology,
+					Previous = currentTopology
+				};
+
+				raftEngine.AppendCommand(command);
+				return command.Completion.Task;
+			}
+			catch (NotLeadingException)
+			{
+				return SendNodeUpdateInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node);
+			}
+		}
+
+		public async Task SendNodeUpdateInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo nodeToUpdate)
+		{
+			var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/update";
+			using (var request = CreateRequest(leaderNode, url, "POST"))
+			{
+				var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(nodeToUpdate))).ConfigureAwait(false);
+				if (response.IsSuccessStatusCode)
+					return;
+
+				throw await CreateErrorResponseExceptionAsync(response).ConfigureAwait(false);
 			}
 		}
 
