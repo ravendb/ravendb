@@ -134,16 +134,16 @@ namespace Raven.Client.FileSystem
         Task<SynchronizationReport> GetSynchronizationStatusForAsync(string filename);
         Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId);
         
-        Task<ItemsPage<ConflictItem>> GetConflictsAsync(int page = 0, int pageSize = 25);
+        Task<ItemsPage<ConflictItem>> GetConflictsAsync(int start = 0, int pageSize = 25);
         Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
         Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
 		Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
 
         Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);
 
-        Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25);
-        Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int page = 0, int pageSize = 25);
-        Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int page = 0, int pageSize = 25);
+        Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int start = 0, int pageSize = 25);
+        Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int start = 0, int pageSize = 25);
+        Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int start = 0, int pageSize = 25);
 
 
         Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null);
@@ -155,7 +155,7 @@ namespace Raven.Client.FileSystem
         Task<RdcStats> GetRdcStatsAsync();
 
 
-        Task<DestinationSyncResult[]> SynchronizeAsync(bool forceSyncingAll = false);
+        Task<DestinationSyncResult[]> StartAsync(bool forceSyncingAll = false);
         Task<SynchronizationReport> StartAsync(string filename, IAsyncFilesCommands destination);
         Task<SynchronizationReport> StartAsync(string filename, SynchronizationDestination destination);
 
