@@ -209,7 +209,7 @@ namespace Raven.Database.Raft
 
 		private async Task SendDatabaseDeleteInternalAsync(NodeConnectionInfo node, string databaseName, bool hardDelete)
 		{
-			var url = node.Uri.AbsoluteUri + "admin/cluster/commands/cluster/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
+			var url = node.Uri.AbsoluteUri + "admin/cluster/commands/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
 			using (var request = CreateRequest(node, url, "DELETE"))
 			{
 				var response = await request.ExecuteAsync().ConfigureAwait(false);
@@ -222,12 +222,12 @@ namespace Raven.Database.Raft
 
 		private Task SendClusterConfigurationInternalAsync(NodeConnectionInfo leaderNode, ClusterConfiguration configuration)
 		{
-			return PutAsync(leaderNode, "admin/cluster/commands/cluster/configuration", configuration);
+			return PutAsync(leaderNode, "admin/cluster/commands/configuration", configuration);
 		}
 
 		private Task SendDatabaseUpdateInternalAsync(NodeConnectionInfo leaderNode, string databaseName, DatabaseDocument document)
 		{
-			return PutAsync(leaderNode, "admin/cluster/commands/cluster/database/" + Uri.EscapeDataString(databaseName), document);
+			return PutAsync(leaderNode, "admin/cluster/commands/database/" + Uri.EscapeDataString(databaseName), document);
 		}
 
 		private async Task PutAsync(NodeConnectionInfo node, string action, object content)
@@ -381,12 +381,12 @@ namespace Raven.Database.Raft
 
 		internal SecuredAuthenticator GetAuthenticator(NodeConnectionInfo info)
 		{
-			return _securedAuthenticatorCache.GetOrAdd(info.Name, _ => new SecuredAuthenticator());
+			return _securedAuthenticatorCache.GetOrAdd(info.Uri.AbsoluteUri, _ => new SecuredAuthenticator());
 		}
 
 		internal ReturnToQueue GetConnection(NodeConnectionInfo nodeConnection, out HttpClient result)
 		{
-			var connectionQueue = _httpClientsCache.GetOrAdd(nodeConnection.Name, _ => new ConcurrentQueue<HttpClient>());
+			var connectionQueue = _httpClientsCache.GetOrAdd(nodeConnection.Uri.AbsoluteUri, _ => new ConcurrentQueue<HttpClient>());
 
 			if (connectionQueue.TryDequeue(out result) == false)
 			{

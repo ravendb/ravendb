@@ -25,7 +25,7 @@ namespace Raven.Database.Raft.Controllers
 	public class ClusterAdminController : BaseAdminController
 	{
 		[HttpPut]
-		[RavenRoute("admin/cluster/commands/cluster/configuration")]
+		[RavenRoute("admin/cluster/commands/configuration")]
 		public async Task<HttpResponseMessage> ClusterConfiguration()
 		{
 			var configuration = await ReadJsonObjectAsync<ClusterConfiguration>().ConfigureAwait(false);
@@ -37,7 +37,7 @@ namespace Raven.Database.Raft.Controllers
 		}
 
 		[HttpPut]
-		[RavenRoute("admin/cluster/commands/cluster/database/{*id}")]
+		[RavenRoute("admin/cluster/commands/database/{*id}")]
 		public async Task<HttpResponseMessage> CreateDatabase(string id)
 		{
 			var document = await ReadJsonObjectAsync<DatabaseDocument>().ConfigureAwait(false);
@@ -52,7 +52,7 @@ namespace Raven.Database.Raft.Controllers
 		}
 
 		[HttpDelete]
-		[RavenRoute("admin/cluster/commands/cluster/database/{*id}")]
+		[RavenRoute("admin/cluster/commands/database/{*id}")]
 		public async Task<HttpResponseMessage> DeleteDatabase(string id)
 		{
 			bool result;

@@ -35,6 +35,7 @@
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveClusterConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\leaveRaftClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
@@ -149,6 +150,7 @@
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\models\nodeConnectionInfo.ts" />
+    <TypeScriptCompile Include="App\models\clusterConfiguration.ts" />
     <TypeScriptCompile Include="App\models\topology.ts" />
     <TypeScriptCompile Include="App\models\configurationDocument.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />

@@ -13,7 +13,9 @@ using Raven.Database.Raft.Util;
 using Raven.Database.Server.Security;
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Document;
 using Xunit;
 
 namespace Raven.Tests.Raft
@@ -93,6 +95,11 @@ namespace Raven.Tests.Raft
 				var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
 				Assert.True(configuration.EnableReplication);
 			});
+		}
+
+		protected override void ModifyStore(DocumentStore documentStore)
+		{
+			documentStore.Credentials = null;
 		}
 
 		[Fact]

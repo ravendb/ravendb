@@ -70,7 +70,7 @@ namespace Rachis.Transport
 		{
 			if (Username != null)
 			{
-				var networkCredentials = new NetworkCredential(Username, Password, Domain);
+				var networkCredentials = new NetworkCredential(Username, Password, Domain ?? string.Empty);
 				return new OperationCredentials(ApiKey, networkCredentials);
 			}
 

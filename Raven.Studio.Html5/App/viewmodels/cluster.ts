@@ -11,22 +11,40 @@ import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 import extendRaftClusterCommand = require("commands/extendRaftClusterCommand");
 import leaveRaftClusterCommand = require("commands/leaveRaftClusterCommand");
+import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import clusterConfiguration = require("models/clusterConfiguration");
+import saveClusterConfigurationCommand = require("commands/saveClusterConfigurationCommand");
 
 class cluster extends viewModelBase {
 
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
-    serverUrl = ko.observable<string>();
+	serverUrl = ko.observable<string>();
+	isSaveEnabled: KnockoutComputed<boolean>;
+	clusterConfiguration = ko.observable<clusterConfiguration>();
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
 
         var db = appUrl.getSystemDatabase();
-        $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db))
+        $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db), this.fetchClusterConfiguration(db))
             .done(() => deferred.resolve({ can: true }))
             .fail(() => deferred.resolve({ redirect: appUrl.forAdminSettings() }));
         return deferred;
-    }
+	}
+
+	activate(args) {
+		super.activate(args);
+		this.dirtyFlag = new ko.DirtyFlag([this.clusterConfiguration]);
+		this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
+	}
+
+	fetchClusterConfiguration(db: database): JQueryPromise<any> {
+		return new getDocumentWithMetadataCommand("Raven/Cluster/Configuration", db, true)
+			.execute()
+			.done((result) => this.clusterConfiguration(result ? new clusterConfiguration(result) : clusterConfiguration.empty()))
+			.fail(() => messagePublisher.reportError("Unable to fetch cluster configuration"));
+	}
 
     fetchClusterTopology(db: database): JQueryPromise<any> {
         return new getClusterTopologyCommand(db)
@@ -85,7 +103,14 @@ class cluster extends viewModelBase {
                     .execute()
                     .done(() => setTimeout(() => this.fetchClusterTopology(appUrl.getSystemDatabase()), 500));
         });
-    }
+	}
+
+	saveClusterConfig() {
+		var db = appUrl.getSystemDatabase();
+		new saveClusterConfigurationCommand(this.clusterConfiguration().toDto(), db)
+			.execute()
+			.done(() => this.dirtyFlag().reset());
+	}
 }
 
 export = cluster;

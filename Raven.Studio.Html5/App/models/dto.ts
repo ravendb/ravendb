@@ -1262,3 +1262,7 @@ interface nodeConnectionInfoDto {
     Domain?: string;
     ApiKey?: string;
 }
+
+interface clusterConfigurationDto {
+	EnableReplication: boolean;
+}
