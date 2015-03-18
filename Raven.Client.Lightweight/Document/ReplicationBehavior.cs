@@ -75,10 +75,8 @@ namespace Raven.Client.Document
 			var sourceUrl = documentStore.Url.ForDatabase(database ?? documentStore.DefaultDatabase);
 			var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token);
 			var sourceDbId = sourceStatistics.DatabaseId.ToString();
-			
-			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, destination.SourceCollections, cts.Token)).ToArray();
 
-			var tasks = destinationsToCheck.Select(url => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, actions, cts.Token)).ToArray();
+			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, actions,destination.SourceCollections, cts.Token)).ToArray();
 
 		    try
 		    {
