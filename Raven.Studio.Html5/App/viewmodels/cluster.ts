@@ -34,6 +34,10 @@ class cluster extends viewModelBase {
         return deferred;
 	}
 
+	refresh() {
+		this.fetchClusterTopology(appUrl.getSystemDatabase());
+	}
+
 	activate(args) {
 		super.activate(args);
 		this.dirtyFlag = new ko.DirtyFlag([this.clusterConfiguration]);
