@@ -198,7 +198,6 @@ class replications extends viewModelBase {
     }
 
     sendReplicateCommand(destination: replicationDestination,parentClass: replications) {        
-    sendReplicateCommand(destination: replicationDestination, parentClass: replications) {
         var db = parentClass.activeDatabase();
         if (db) {
             new replicateIndexesCommand(db, destination).execute();
