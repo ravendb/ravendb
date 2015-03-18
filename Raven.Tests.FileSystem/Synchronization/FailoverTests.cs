@@ -24,7 +24,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		    await sourceClient.Synchronization.SetDestinationsAsync(destination);
 
 			sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 			
 			var destinationFiles = await destinationClient.SearchOnDirectoryAsync("/");
 			Assert.Equal(1, destinationFiles.FileCount);

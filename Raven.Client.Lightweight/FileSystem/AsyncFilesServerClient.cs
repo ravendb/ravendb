@@ -1285,7 +1285,7 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<DestinationSyncResult[]> SynchronizeAsync(bool forceSyncingAll = false)
+            public async Task<DestinationSyncResult[]> StartAsync(bool forceSyncingAll = false)
             {
                 var requestUriString = String.Format("{0}/synchronization/ToDestinations?forceSyncingAll={1}", client.BaseUrl, forceSyncingAll);
 
@@ -1449,9 +1449,9 @@ namespace Raven.Client.FileSystem
 				}
 	        }
 
-            public async Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int start = 0, int pageSize = 25)
             {
-                var requestUriString = String.Format("{0}/synchronization/finished?start={1}&pageSize={2}", client.BaseUrl, page,
+                var requestUriString = String.Format("{0}/synchronization/finished?start={1}&pageSize={2}", client.BaseUrl, start,
                                                          pageSize);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
@@ -1468,10 +1468,10 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int start = 0, int pageSize = 25)
             {
                 var requestUriString = String.Format("{0}/synchronization/active?start={1}&pageSize={2}",
-                                                        client.BaseUrl, page, pageSize);
+                                                        client.BaseUrl, start, pageSize);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
@@ -1487,10 +1487,10 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int start = 0, int pageSize = 25)
             {
                 var requestUriString = String.Format("{0}/synchronization/pending?start={1}&pageSize={2}",
-                                                     client.BaseUrl, page, pageSize);
+                                                     client.BaseUrl, start, pageSize);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
@@ -1555,9 +1555,9 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<ItemsPage<ConflictItem>> GetConflictsAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<ConflictItem>> GetConflictsAsync(int start = 0, int pageSize = 25)
             {
-                var requestUriString = String.Format("{0}/synchronization/conflicts?start={1}&pageSize={2}", client.BaseUrl, page,
+                var requestUriString = String.Format("{0}/synchronization/conflicts?start={1}&pageSize={2}", client.BaseUrl, start,
                                                          pageSize);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))

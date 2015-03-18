@@ -125,13 +125,13 @@ namespace Raven.Tests.FileSystem.Synchronization
             pages = await destination.Synchronization.GetConflictsAsync();
 			Assert.Equal(25, pages.TotalCount);
 
-            pages = await destination.Synchronization.GetConflictsAsync(1, 10);
+            pages = await destination.Synchronization.GetConflictsAsync(start: 1, pageSize: 10);
 			Assert.Equal(10, pages.TotalCount);
 
-            pages = await destination.Synchronization.GetConflictsAsync(2, 10);
+            pages = await destination.Synchronization.GetConflictsAsync(start: 2, pageSize: 10);
 			Assert.Equal(5, pages.TotalCount);
 
-            pages = await destination.Synchronization.GetConflictsAsync(10);
+            pages = await destination.Synchronization.GetConflictsAsync(start: 10);
 			Assert.Equal(0, pages.TotalCount);
 		}
 
@@ -370,7 +370,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var report = sourceClient.Synchronization.SynchronizeAsync().Result;
+			var report = sourceClient.Synchronization.StartAsync().Result;
 
 			Assert.Equal(1, report.Count());
 			Assert.Null(report.First().Reports);
@@ -398,7 +398,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var report = await sourceClient.Synchronization.SynchronizeAsync();
+			var report = await sourceClient.Synchronization.StartAsync();
 			Assert.Null(report.ToArray()[0].Exception);
 
             var syncingItem = await sourceClient.Configuration.GetKeyAsync<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test", destinationClient.ServerUrl));
@@ -422,7 +422,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var report = await sourceClient.Synchronization.SynchronizeAsync();
+			var report = await sourceClient.Synchronization.StartAsync();
 			Assert.Null(report.ToArray()[0].Exception);
 
 			var syncingItem = await sourceClient.Configuration.GetKeyAsync<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test", destinationClient.ServerUrl));
