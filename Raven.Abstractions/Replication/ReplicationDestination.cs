@@ -161,7 +161,7 @@ namespace Raven.Abstractions.Replication
 						   Database = source.Database,
 						   Disabled = source.Disabled,
 						   Domain = source.Domain,
-						   IgnoredClient = source.Disabled,
+						   IgnoredClient = source.IgnoredClient,
 						   ClusterInformation = new ClusterInformation(isInCluster, isLeader),
 						   Password = source.Password,
 						   SkipIndexReplication = source.SkipIndexReplication,
