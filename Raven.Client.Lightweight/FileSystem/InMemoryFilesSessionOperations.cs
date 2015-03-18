@@ -2,10 +2,8 @@
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Client.FileSystem.Impl;
-using Raven.Client.Util;
 using Raven.Json.Linq;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -193,9 +191,9 @@ namespace Raven.Client.FileSystem
 			RegisterFileDeletion(file.FullPath, etag);
         }
 
-		public void RegisterDeletionQuery(string query, string[] orderByFields = null, int start = 0, int pageSize = int.MaxValue)
+		public void RegisterDeletionQuery(string query)
 	    {
-			var operation = new DeleteByQueryOperation(query, orderByFields, start, pageSize);
+			var operation = new DeleteByQueryOperation(query);
 
 			IncrementRequestCount();
 

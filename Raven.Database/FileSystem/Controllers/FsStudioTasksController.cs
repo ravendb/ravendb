@@ -169,6 +169,5 @@ namespace Raven.Database.FileSystem.Controllers
 			public bool Faulted { get; set; }
 			public RavenJToken State { get; set; }
 		}
-		 
 	}
 }

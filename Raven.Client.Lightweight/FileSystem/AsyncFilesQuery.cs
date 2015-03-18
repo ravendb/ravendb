@@ -495,13 +495,13 @@ If you really want to do in memory filtering on the data returned from the query
             return this;
         }
 
-		void IAsyncFilesQuery<T>.RegisterDeletion()
+		void IAsyncFilesQuery<T>.RegisterResultsForDeletion()
 		{
 			var query = ToString();
 			if (string.IsNullOrWhiteSpace(query))
 				throw new ArgumentException("Query is empty! Did you forget OnDirectory before RegisterDeletion?");
 
-			Session.RegisterDeletionQuery(query, orderByFields, start, pageSize);
+			Session.RegisterDeletionQuery(query);
 		}
     }
 }

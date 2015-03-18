@@ -385,6 +385,7 @@ namespace Raven.Database.FileSystem.Controllers
 			    }
                 return GetEmptyMessage();
             });
+
             long id;
             Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
             {

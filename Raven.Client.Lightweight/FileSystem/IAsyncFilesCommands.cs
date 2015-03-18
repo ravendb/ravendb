@@ -79,7 +79,7 @@ namespace Raven.Client.FileSystem
 
         Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 1024);
         Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 1024);
-		Task DeleteByQueryAsync(string query, string[] orderByFields = null, int start = 0, int pageSize = int.MaxValue);
+		Task DeleteByQueryAsync(string query);
         Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 1024);
 	    
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 1024);

@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Raven.Abstractions.Connection;
+﻿using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -226,6 +225,22 @@ namespace Raven.Client.FileSystem
             }
         }
 
+		private async Task<RavenJToken> GetOperationStatusAsync(long id)
+		{
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, BaseUrl + "/operation/status?id=" + id, "GET", CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, Conventions).AddOperationHeaders(OperationsHeaders)))
+			{
+				try
+				{
+					return await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				}
+				catch (ErrorResponseException e)
+				{
+					if (e.StatusCode == HttpStatusCode.NotFound) return null;
+					throw;
+				}
+			}
+		}
+
         public Task<FileSystemStats> GetStatisticsAsync()
         {
             return ExecuteWithReplication("GET", async operation =>
@@ -366,31 +381,20 @@ namespace Raven.Client.FileSystem
             });
         }
 
-		public Task DeleteByQueryAsync(string query, string[] orderByFields = null, int start = 0, int pageSize = int.MaxValue)
+		public Task DeleteByQueryAsync(string query)
 		{
 			return ExecuteWithReplication("DELETE", async operation =>
 			{
-				var requestUriBuilder = new StringBuilder(operation.Url)
-					.Append("/search/?query=")
-					.Append(Uri.EscapeUriString(query))
-					.Append("&start=")
-					.Append(start)
-					.Append("&pageSize=")
-					.Append(pageSize);
+				var requestUriString = string.Format("{0}/search?query={1}", operation.Url, query);
 
-				if (orderByFields != null)
-				{
-					foreach (var sortField in orderByFields)
-					{
-						requestUriBuilder.Append("&sort=").Append(sortField);
-					}
-				}
-
-				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriBuilder.ToString(), "DELETE", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "DELETE", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 				{
 					try
 					{
-						await request.ReadResponseJsonAsync().ConfigureAwait(false);
+						var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+						var operationId = json.Value<long>("OperationId");
+						var op = new Operation(GetOperationStatusAsync, operationId);
+						await op.WaitForCompletionAsync();
 					}
 					catch (Exception e)
 					{

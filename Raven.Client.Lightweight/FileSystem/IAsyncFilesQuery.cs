@@ -18,6 +18,6 @@ namespace Raven.Client.FileSystem
 		/// <summary>
 		///   Deletes the files matching the query.
 		/// </summary>
-	    void RegisterDeletion();
+	    void RegisterResultsForDeletion();
     }
 }
