@@ -625,10 +625,10 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (EnsureSystemDatabase() == false)
 				return GetMessageWithString("Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
 
+			Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
+			Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
-			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-			DatabasesLandlord.ForAllDatabases(documentDatabase => documentDatabase.TransactionalStorage.ClearCaches());
-			GC.WaitForPendingFinalizers();
+			RavenGC.CollectGarbage(false, afterCollect, true);
 
 			return GetMessageWithString("GC Done");
 		}
@@ -645,7 +645,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
 			Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
-			RavenGC.CollectGarbage(true, afterCollect);
+			RavenGC.CollectGarbage(true, afterCollect, true);
 
 			return GetMessageWithString("LOH GC Done");
 		}

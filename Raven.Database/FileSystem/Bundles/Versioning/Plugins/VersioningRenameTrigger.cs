@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.ComponentModel.Composition;
 using System.Linq;
+using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -33,9 +34,8 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			{
 				FileSystem.Storage.Batch(accessor =>
 				{
-					var versioningConfiguration = accessor.GetVersioningConfiguration();
-
-					if (versioningConfiguration == null)
+					FileVersioningConfiguration versioningConfiguration;
+					if (actions.TryGetVersioningConfiguration(name, new RavenJObject(), accessor, out versioningConfiguration) == false)
 						return;
 
 					var revisions = accessor.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue).Where(file => file != null).ToArray();
