@@ -640,7 +640,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 			for (int i = 0; i < count; i++)
 			{
 				string name = "file-" + rnd.Next() + ".bin";
-				int size = rnd.Next(maxFileSizeInKb) * 1024;
+				int size = rnd.Next(maxFileSizeInKb / 2, maxFileSizeInKb) * 1024;
 				var content = (char)rnd.Next(byte.MaxValue);
 
 				creationTasks[i] = InitializeRandomFile(store, name, size);
