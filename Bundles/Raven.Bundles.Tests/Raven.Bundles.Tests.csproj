@@ -71,12 +71,14 @@
     </Compile>
     <Compile Include="Authorization\AuthorizationTest.cs" />
     <Compile Include="Authorization\Bugs\Bowes.cs" />
+    <Compile Include="Authorization\Bugs\PrestonStreaming.cs" />
     <Compile Include="Authorization\Bugs\DeanWard.cs" />
     <Compile Include="Authorization\Bugs\fampinheiro.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
     <Compile Include="Authorization\Bugs\Kwal.cs" />
     <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
     <Compile Include="Authorization\Bugs\Matthew.cs" />
+    <Compile Include="Authorization\Bugs\PrestonLazy.cs" />
     <Compile Include="Authorization\Bugs\Preston.cs" />
     <Compile Include="Authorization\Bugs\Wayne\MessagesForAccountByCreatorId.cs" />
     <Compile Include="Authorization\Bugs\Wayne\QueryTransformer.cs" />
