@@ -20,7 +20,6 @@ namespace Raven.Database.Server
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
-		private readonly ClusterManager clusterManager;
 
 		private bool preventDisposing;
 
@@ -47,7 +46,7 @@ namespace Raven.Database.Server
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
-				clusterManager = ClusterManagerFactory.Create(systemDatabase, databasesLandlord);
+				ClusterManager = new Reference<ClusterManager>();
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}
@@ -88,10 +87,7 @@ namespace Raven.Database.Server
 			get { return requestManager; }
 		}
 
-		public ClusterManager ClusterManager
-		{
-			get { return clusterManager; }
-		}
+		public Reference<ClusterManager> ClusterManager { get; private set; }
 
 		public void Dispose()
 		{
@@ -107,7 +103,7 @@ namespace Raven.Database.Server
                                 LogManager.GetTarget<AdminLogsTarget>(),
                                 requestManager,
                                 countersLandlord,
-								clusterManager
+								ClusterManager.Value
 		                    };
 
             var errors = new List<Exception>();

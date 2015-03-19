@@ -131,7 +131,7 @@ namespace Raven.Tests.Raft.Client
 			}
 
 			servers
-				.First(x => x.Options.ClusterManager.IsLeader())
+				.First(x => x.Options.ClusterManager.Value.IsLeader())
 				.Dispose();
 
 			for (int i = 0; i < clusterStores.Count; i++)
@@ -152,8 +152,8 @@ namespace Raven.Tests.Raft.Client
 		{
 			var clusterStores = CreateRaftCluster(2);
 
-			var nonLeaderServer = servers.Single(x => x.Options.ClusterManager.IsLeader() == false);
-			var leaderServer = servers.Single(x => x.Options.ClusterManager.IsLeader());
+			var nonLeaderServer = servers.Single(x => x.Options.ClusterManager.Value.IsLeader() == false);
+			var leaderServer = servers.Single(x => x.Options.ClusterManager.Value.IsLeader());
 			var nonLeaderStore = clusterStores[servers.IndexOf(nonLeaderServer)];
 			var leaderStore = clusterStores[servers.IndexOf(leaderServer)];
 			var nonLeaderUrl = nonLeaderStore.Url.ForDatabase(nonLeaderStore.DefaultDatabase);

@@ -37,7 +37,7 @@ namespace Raven.Tests.Raft.Client
 			foreach (var server in servers)
 			{
 				server.Options.DatabaseLandlord.ForAllDatabases(database => tasks.Add(database.StartupTasks.OfType<ReplicationTask>().First()));
-				server.Options.ClusterManager.Engine.Dispose();
+				server.Options.ClusterManager.Value.Engine.Dispose();
 			}
 
 			foreach (var task in tasks)

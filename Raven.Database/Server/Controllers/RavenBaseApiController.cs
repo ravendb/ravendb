@@ -17,8 +17,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 
-using Rachis;
-
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -123,10 +121,9 @@ namespace Raven.Database.Server.Controllers
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
-			clusterManager = (ClusterManager)controllerContext.Configuration.Properties[typeof(ClusterManager)];
+			clusterManager = ((Reference<ClusterManager>)controllerContext.Configuration.Properties[typeof(ClusterManager)]).Value;
 			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
             maxSecondsForTaskToWaitForDatabaseToLoad = (int)controllerContext.Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
-            //MaxSecondsForTaskToWaitForDatabaseToLoad
 		}
 
 		public async Task<T> ReadJsonObjectAsync<T>()
@@ -794,7 +791,8 @@ namespace Raven.Database.Server.Controllers
 			{
 				if (Configuration == null)
 					return clusterManager;
-				return (ClusterManager)Configuration.Properties[typeof(ClusterManager)];
+
+				return ((Reference<ClusterManager>)Configuration.Properties[typeof(ClusterManager)]).Value;
 			}
 		}
 

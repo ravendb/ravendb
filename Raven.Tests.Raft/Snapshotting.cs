@@ -30,23 +30,23 @@ namespace Raven.Tests.Raft
 
 			for (var i = 0; i < 5; i++)
 			{
-				var client = servers[0].Options.ClusterManager.Client;
+				var client = servers[0].Options.ClusterManager.Value.Client;
 				client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false}).Wait(3000);
 			}
 
 			WaitForClusterToBecomeNonStale(3);
 
-            var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.IsLeader());
+			var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
             Assert.NotNull(leader);
 
 		    var newServer = GetNewServer(GetPort(), runInMemory: false);
 
             var snapshotInstalledMre = new ManualResetEventSlim();
 
-		    newServer.Options.ClusterManager.Engine.SnapshotInstalled += () => snapshotInstalledMre.Set();
+			newServer.Options.ClusterManager.Value.Engine.SnapshotInstalled += () => snapshotInstalledMre.Set();
 
             var allNodesFinishedJoining = new ManualResetEventSlim();
-            leader.Options.ClusterManager.Engine.TopologyChanged += command =>
+			leader.Options.ClusterManager.Value.Engine.TopologyChanged += command =>
             {
                 if (command.Requested.AllNodeNames.All(command.Requested.IsVoter))
                 {
@@ -54,7 +54,7 @@ namespace Raven.Tests.Raft
                 }
             };
 
-            Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(new NodeConnectionInfo
+			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(new NodeConnectionInfo
             {
                 Name = RaftHelper.GetNodeName(newServer.SystemDatabase.TransactionalStorage.Id),
                 Uri = RaftHelper.GetNodeUrl(newServer.SystemDatabase.Configuration.ServerUrl)
@@ -66,7 +66,7 @@ namespace Raven.Tests.Raft
 
 		protected override void ModifyServer(RavenDbServer ravenDbServer)
 		{
-			ravenDbServer.Options.ClusterManager.Engine.Options.MaxLogLengthBeforeCompaction = 4;
+			ravenDbServer.Options.ClusterManager.Value.Engine.Options.MaxLogLengthBeforeCompaction = 4;
 		}
 	}
 }

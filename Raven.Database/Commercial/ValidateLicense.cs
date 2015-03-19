@@ -46,6 +46,7 @@ namespace Raven.Database.Commercial
 			{"documentExpiration","true"},
 			{"replication","true"},
 			{"versioning","true"},
+			{"cluster","false"}
 		};
 
 		static ValidateLicense()

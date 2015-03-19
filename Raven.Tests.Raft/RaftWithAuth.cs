@@ -33,19 +33,19 @@ namespace Raven.Tests.Raft
 			NodeConnectionInfo leaderNci;
 			var leader = CreateServerWithOAuth(8079, "Ayende/abc", out leaderNci);
 
-			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager);
-			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
+			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager.Value);
+			Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
 			NodeConnectionInfo secondConnectionInfo;
 			CreateServerWithOAuth(8078, "Marcin/cba", out secondConnectionInfo);
-			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
+			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
 
 			NodeConnectionInfo thirdConnectionInfo;
 			CreateServerWithOAuth(8077, "User3/pass", out thirdConnectionInfo);
-			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
+			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
 
-			Assert.True(servers[0].Options.ClusterManager.IsLeader());
-			var client = servers[0].Options.ClusterManager.Client;
+			Assert.True(servers[0].Options.ClusterManager.Value.IsLeader());
+			var client = servers[0].Options.ClusterManager.Value.Client;
 			await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
 			Assert.Equal(3, stores.Count);
@@ -71,19 +71,19 @@ namespace Raven.Tests.Raft
 			NodeConnectionInfo leaderNci;
 			var leader = CreateServerWithWindowsCredentials(8079, username, password, domain, out leaderNci);
 
-			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager);
-			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
+			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager.Value);
+			Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
 			NodeConnectionInfo secondConnectionInfo;
 			CreateServerWithWindowsCredentials(8078, username, password, domain, out secondConnectionInfo);
-			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
+			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
 
 			NodeConnectionInfo thirdConnectionInfo;
 			CreateServerWithWindowsCredentials(8077, username, password, domain, out thirdConnectionInfo);
-			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
+			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
 
-			Assert.True(servers[0].Options.ClusterManager.IsLeader());
-			var client = servers[0].Options.ClusterManager.Client;
+			Assert.True(servers[0].Options.ClusterManager.Value.IsLeader());
+			var client = servers[0].Options.ClusterManager.Value.Client;
 			await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = true });
 
 			Assert.Equal(3, stores.Count);
@@ -108,21 +108,21 @@ namespace Raven.Tests.Raft
 			NodeConnectionInfo leaderNci;
 			var leader = CreateServerWithOAuth(8079, "Ayende/abc", out leaderNci);
 
-			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager);
-			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
+			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager.Value);
+			Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
 			NodeConnectionInfo secondConnectionInfo;
 			CreateServerWithOAuth(8078, "Marcin/cba", out secondConnectionInfo);
-			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
+			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
 
 			NodeConnectionInfo thirdConnectionInfo;
 			CreateServerWithOAuth(8077, "User3/pass", out thirdConnectionInfo);
-			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
+			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
 
 			WaitForClusterToBecomeNonStale(3);
 
-			Assert.False(servers[1].Options.ClusterManager.IsLeader());
-			var client = servers[1].Options.ClusterManager.Client;
+			Assert.False(servers[1].Options.ClusterManager.Value.IsLeader());
+			var client = servers[1].Options.ClusterManager.Value.Client;
 			await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = false });
 
 			Assert.Equal(3, stores.Count);
@@ -148,21 +148,21 @@ namespace Raven.Tests.Raft
 			NodeConnectionInfo leaderNci;
 			var leader = CreateServerWithWindowsCredentials(8079, username, password, domain, out leaderNci);
 
-			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager);
-			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
+			ClusterManagerFactory.InitializeTopology(leaderNci, leader.Options.ClusterManager.Value);
+			Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
 			NodeConnectionInfo secondConnectionInfo;
 			CreateServerWithWindowsCredentials(8078, username, password, domain, out secondConnectionInfo);
-			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
+			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
 
 			NodeConnectionInfo thirdConnectionInfo;
 			CreateServerWithWindowsCredentials(8077, username, password, domain, out thirdConnectionInfo);
-			Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
+			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
 
 			WaitForClusterToBecomeNonStale(3);
 
-			Assert.False(servers[1].Options.ClusterManager.IsLeader());
-			var client = servers[1].Options.ClusterManager.Client;
+			Assert.False(servers[1].Options.ClusterManager.Value.IsLeader());
+			var client = servers[1].Options.ClusterManager.Value.Client;
 			await client.SendClusterConfigurationAsync(new ClusterConfiguration { EnableReplication = false });
 
 			Assert.Equal(3, stores.Count);

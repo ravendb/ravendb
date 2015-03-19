@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="ClusterKeeper.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ClusterKeeperTask.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -9,9 +9,12 @@ using System.Linq;
 
 using Rachis.Commands;
 using Rachis.Transport;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
+using Raven.Database.Commercial;
 using Raven.Database.Plugins;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
@@ -20,7 +23,7 @@ using Raven.Server;
 
 namespace Raven.Database.Raft
 {
-	public class ClusterKeeper : IServerStartupTask
+	public class ClusterKeeperTask : IServerStartupTask
 	{
 		private DocumentDatabase systemDatabase;
 
@@ -28,8 +31,11 @@ namespace Raven.Database.Raft
 
 		public void Execute(RavenDbServer server)
 		{
+			if (IsValidLicense() == false)
+				return;
+
 			systemDatabase = server.SystemDatabase;
-			clusterManager = server.Options.ClusterManager;
+			clusterManager = server.Options.ClusterManager.Value = ClusterManagerFactory.Create(systemDatabase, server.Options.DatabaseLandlord);
 
 			systemDatabase.Notifications.OnDocumentChange += (db, notification, metadata) =>
 			{
@@ -39,13 +45,33 @@ namespace Raven.Database.Raft
 						return;
 
 					HandleClusterConfigurationChanges();
-					return;
 				}
 			};
 
 			clusterManager.Engine.TopologyChanged += HandleTopologyChanges;
 
 			HandleClusterConfigurationChanges();
+		}
+
+		private static bool IsValidLicense()
+		{
+			if (SystemTime.UtcNow > new DateTime(2015, 6, 1))
+				throw new NotImplementedException("Time bomb. Enabled cluster for development.");
+
+			return true;
+
+			if (ValidateLicense.CurrentLicense.IsCommercial == false)
+				return false;
+
+			string value;
+			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("cluster", out value) == false)
+				return false;
+
+			bool cluster;
+			if (bool.TryParse(value, out cluster) == false)
+				return false;
+
+			return cluster;
 		}
 
 		public void Dispose()

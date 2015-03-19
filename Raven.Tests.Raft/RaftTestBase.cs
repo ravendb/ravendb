@@ -30,14 +30,14 @@ namespace Raven.Tests.Raft
 {
 	public class RaftTestBase : RavenTestBase
 	{
-		private static int portRangeStart = 9000;
+		private const int PortRangeStart = 9000;
 
 		private static int numberOfPortRequests;
 
 		internal static int GetPort()
 		{
 			var portRequest = Interlocked.Increment(ref numberOfPortRequests);
-			return portRangeStart - (portRequest % 25);
+			return PortRangeStart - (portRequest % 25);
 		}
 
 		public static IEnumerable<object[]> Nodes
@@ -85,13 +85,13 @@ namespace Raven.Tests.Raft
 			var random = new Random();
 			var leader = nodes[random.Next(0, numberOfNodes - 1)];
 
-			Console.WriteLine("Leader: " + leader.Options.ClusterManager.Engine.Options.SelfConnection.Uri);
+			Console.WriteLine("Leader: " + leader.Options.ClusterManager.Value.Engine.Options.SelfConnection.Uri);
 
-			ClusterManagerFactory.InitializeTopology(leader.Options.ClusterManager);
+			ClusterManagerFactory.InitializeTopology(leader.Options.ClusterManager.Value);
 
-			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
+			Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
-			leader.Options.ClusterManager.Engine.TopologyChanged += command =>
+			leader.Options.ClusterManager.Value.Engine.TopologyChanged += command =>
 			{
 				if (command.Requested.AllNodeNames.All(command.Requested.IsVoter))
 				{
@@ -106,7 +106,7 @@ namespace Raven.Tests.Raft
 				if (n == leader)
 					continue;
 
-				Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(new NodeConnectionInfo
+				Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(new NodeConnectionInfo
 																		{
 																			Name = RaftHelper.GetNodeName(n.SystemDatabase.TransactionalStorage.Id),
 																			Uri = RaftHelper.GetNodeUrl(n.SystemDatabase.Configuration.ServerUrl)
@@ -116,8 +116,8 @@ namespace Raven.Tests.Raft
 			if (numberOfNodes == 1)
 				allNodesFinishedJoining.Set();
 
-			Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfNodes), "Not all nodes become voters. " + leader.Options.ClusterManager.Engine.CurrentTopology);
-			Assert.True(leader.Options.ClusterManager.Engine.WaitForLeader());
+			Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfNodes), "Not all nodes become voters. " + leader.Options.ClusterManager.Value.Engine.CurrentTopology);
+			Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
 			WaitForClusterToBecomeNonStale(nodes);
 
@@ -128,7 +128,7 @@ namespace Raven.Tests.Raft
 
 		public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
 		{
-			var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.IsLeader());
+			var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
 			Assert.NotNull(leader);
 
 			var nodes = Enumerable.Range(0, numberOfExtraNodes)
@@ -136,7 +136,7 @@ namespace Raven.Tests.Raft
 				.ToList();
 
 			var allNodesFinishedJoining = new ManualResetEventSlim();
-			leader.Options.ClusterManager.Engine.TopologyChanged += command =>
+			leader.Options.ClusterManager.Value.Engine.TopologyChanged += command =>
 			{
 				if (command.Requested.AllNodeNames.All(command.Requested.IsVoter))
 				{
@@ -151,7 +151,7 @@ namespace Raven.Tests.Raft
 				if (n == leader)
 					continue;
 
-				Assert.True(leader.Options.ClusterManager.Engine.AddToClusterAsync(new NodeConnectionInfo
+				Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(new NodeConnectionInfo
 				{
 					Name = RaftHelper.GetNodeName(n.SystemDatabase.TransactionalStorage.Id),
 					Uri = RaftHelper.GetNodeUrl(n.SystemDatabase.Configuration.ServerUrl)
@@ -167,23 +167,23 @@ namespace Raven.Tests.Raft
 
 		public void RemoveFromCluster(RavenDbServer serverToRemove)
 		{
-			var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.IsLeader());
+			var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
 			if (leader == null)
 				throw new InvalidOperationException("Leader is currently not present, thus can't remove node from cluster");
 			if (leader == serverToRemove)
 			{
-				leader.Options.ClusterManager.Engine.StepDownAsync().Wait();
+				leader.Options.ClusterManager.Value.Engine.StepDownAsync().Wait();
 			}
 			else
 			{
-				leader.Options.ClusterManager.Engine.RemoveFromClusterAsync(serverToRemove.Options.ClusterManager.Engine.Options.SelfConnection).Wait(10000);
+				leader.Options.ClusterManager.Value.Engine.RemoveFromClusterAsync(serverToRemove.Options.ClusterManager.Value.Engine.Options.SelfConnection).Wait(10000);
 			}
 		}
 
 		private void WaitForClusterToBecomeNonStale(IReadOnlyCollection<RavenDbServer> nodes)
 		{
 			var numberOfNodes = nodes.Count;
-			var result = SpinWait.SpinUntil(() => nodes.All(x => x.Options.ClusterManager.Engine.CurrentTopology.AllVotingNodes.Count() == numberOfNodes), TimeSpan.FromSeconds(10));
+			var result = SpinWait.SpinUntil(() => nodes.All(x => x.Options.ClusterManager.Value.Engine.CurrentTopology.AllVotingNodes.Count() == numberOfNodes), TimeSpan.FromSeconds(10));
 
 			if (result == false)
 				throw new InvalidOperationException("Cluster is stale.");
@@ -193,7 +193,7 @@ namespace Raven.Tests.Raft
 		{
 			servers.ForEach(server => Assert.True(SpinWait.SpinUntil(() =>
 			{
-				var topology = server.Options.ClusterManager.Engine.CurrentTopology;
+				var topology = server.Options.ClusterManager.Value.Engine.CurrentTopology;
 				return topology.AllVotingNodes.Count() == numberOfNodes;
 			}, TimeSpan.FromSeconds(15))));
 		}

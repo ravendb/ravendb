@@ -6,11 +6,9 @@
 
 using System;
 using System.Linq;
-using System.Net;
 using Rachis;
 using Rachis.Commands;
 using Rachis.Transport;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Util;
@@ -21,6 +19,9 @@ namespace Raven.Database.Raft.Util
 	{
 		public static bool IsActive(this ClusterManager engine)
 		{
+			if (engine == null) 
+				return false;
+
 			return engine.Engine.CurrentTopology.AllNodes.Any();
 		}
 
