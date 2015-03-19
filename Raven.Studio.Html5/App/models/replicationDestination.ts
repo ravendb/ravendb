@@ -17,7 +17,7 @@ class replicationDestination {
     globalConfiguration = ko.observable<replicationDestination>();
 
     sourceCollections = ko.observableArray<string>().extend({required: false});
-    enableReplicateOnlyFromCollections : boolean;
+    enableReplicateOnlyFromCollections = ko.observable<boolean>();
 
     name = ko.computed(() => {
         var prefix = this.disabled() ? "[disabled]" : null;
@@ -81,7 +81,7 @@ class replicationDestination {
         this.skipIndexReplication(dto.SkipIndexReplication);
         this.sourceCollections(dto.SourceCollections);
 
-        this.enableReplicateOnlyFromCollections = typeof dto.SourceCollections !== 'undefined' && dto.SourceCollections.length > 0;
+        this.enableReplicateOnlyFromCollections = ko.observable<boolean>(typeof dto.SourceCollections !== 'undefined' && dto.SourceCollections.length > 0);
 
         if (this.username()) {
             this.isUserCredentials(true);

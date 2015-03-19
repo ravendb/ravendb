@@ -20,37 +20,19 @@ namespace Raven.Database.Bundles.Replication.Triggers
 	[InheritedExport(typeof (AbstractPutTrigger))]
 	public class ReplicationDestinationPutTrigger : AbstractPutTrigger
 	{
-
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
-
 		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
-		{
-//			ReplicationDocument replicationDestination;
-//			try
+		{		
+//			Database.Patches.ApplyPatch(key, null, new ScriptedPatchRequest
 //			{
-//				replicationDestination = document.JsonDeserialization<ReplicationDocument>();
-//			}
-//			catch (InvalidOperationException e)
-//			{
-//				log.Error("Failed to deserialize replication destination key. This should not happen, this is probably a bug. Exception thrown: " + e);
-//				return;
-//			}
-//			catch (InvalidDataException e)
-//			{
-//				log.Error("Failed to deserialize replication destination key. This should not happen, this is probably a bug. Exception thrown: " + e);
-//				return;
-//			}
-//
-//			var shouldUpdate = false;
-//			foreach (var dest in replicationDestination.Destinations
-//													   .Where(dest => dest.ShouldReplicateFromSpecificCollections))
-//			{
-//				dest.IgnoredClient = true;
-//				shouldUpdate = true;
-//			}
-//
-//			if (shouldUpdate)
-//				Database.Documents.Put(key, null, RavenJObject.FromObject(replicationDestination), metadata, transactionInformation);			
+//				Script = @"
+//							_.forEach(this.Destinations, function(destination){
+//								if(typeof destination.SourceCollections !== 'undefined' && destination.SourceCollections.length > 0)
+//									this.IgnoredClient = true;
+//								else
+//									this.IgnoredClient = false;
+//							})
+//						  "
+//			}, transactionInformation);
 		}
 	}
 }
