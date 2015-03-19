@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Specialized;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +9,8 @@ namespace Raven.Client.Connection.Request
 {
 	public interface IRequestExecuter
 	{
+		int GetReadStripingBase(bool increment);
+
 		ReplicationDestination[] FailoverServers { get; set; }
 
 		Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, string method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token);

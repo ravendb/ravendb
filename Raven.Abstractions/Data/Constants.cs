@@ -277,6 +277,8 @@ namespace Raven.Abstractions.Data
 		    public const string NonClusterDatabaseMarker = "Raven-Non-Cluster-Database";
 
 			public const string ClusterAwareHeader = "Raven-Cluster-Aware";
+
+			public const string ClusterReadBehaviorHeader = "Raven-Cluster-Read-Behavior";
 	    }
 	}
 }

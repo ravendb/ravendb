@@ -47,8 +47,6 @@ namespace Raven.Client.Connection.Async
 		private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
 
-		private readonly ClusterBehavior clusterBehavior;
-
 		private readonly string url;
 		private readonly string rootUrl;
 		private readonly OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
@@ -81,6 +79,8 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
+		public ClusterBehavior ClusterBehavior { get; private set; }
+
 		public AsyncServerClient(
 			string url,
 			DocumentConvention convention,
@@ -109,7 +109,7 @@ namespace Raven.Client.Connection.Async
 			this.credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
 			this.databaseName = databaseName;
 			this.conflictListeners = conflictListeners;
-			this.clusterBehavior = clusterBehavior;
+			ClusterBehavior = clusterBehavior;
 
 			this.requestExecuterGetter = requestExecuterGetter;
 			this.requestExecuter = requestExecuterGetter(this, databaseName, clusterBehavior, incrementReadStripe);
@@ -524,7 +524,7 @@ namespace Raven.Client.Connection.Async
 			var requestedClusterBehavior = clusterBehavior ?? convention.ClusterBehavior;
 
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url).ForDatabase(database);
-			if (databaseUrl == url && this.clusterBehavior == requestedClusterBehavior)
+			if (databaseUrl == url && ClusterBehavior == requestedClusterBehavior)
 				return this;
 
 			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, database, conflictListeners, false, requestedClusterBehavior) { operationsHeaders = operationsHeaders };

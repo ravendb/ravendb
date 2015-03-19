@@ -669,9 +669,11 @@ namespace Raven.Client.Document
 
 			IRequestExecuter requestExecuter;
 			if (clusterBehavior == ClusterBehavior.None)
-				requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)), incrementStrippingBase);
+				requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)));
 			else
 				requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter());
+
+			requestExecuter.GetReadStripingBase(incrementStrippingBase);
 
 			if (FailoverServers == null)
 				return requestExecuter;

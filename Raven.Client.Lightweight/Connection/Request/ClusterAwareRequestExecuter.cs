@@ -21,7 +21,6 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Request
 {
@@ -40,6 +39,8 @@ namespace Raven.Client.Connection.Request
 		private DateTime lastUpdate = DateTime.MinValue;
 
 		private bool firstTime = true;
+
+		private int readStripingBase;
 
 		public OperationMetadata LeaderNode
 		{
@@ -62,13 +63,13 @@ namespace Raven.Client.Connection.Request
 			}
 		}
 
-		public HashSet<OperationMetadata> NodeUrls
+		public List<OperationMetadata> NodeUrls
 		{
 			get
 			{
 				return Nodes
 					.Select(x => new OperationMetadata(x))
-					.ToHashSet();
+					.ToList();
 			}
 		}
 
@@ -77,6 +78,11 @@ namespace Raven.Client.Connection.Request
 		public ClusterAwareRequestExecuter()
 		{
 			Nodes = new List<OperationMetadata>();
+		}
+
+		public int GetReadStripingBase(bool increment)
+		{
+			return increment ? Interlocked.Increment(ref readStripingBase) : readStripingBase;
 		}
 
 		public ReplicationDestination[] FailoverServers { get; set; }
@@ -107,6 +113,9 @@ namespace Raven.Client.Connection.Request
 		public void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl)
 		{
 			httpJsonRequest.AddHeader(Constants.Cluster.ClusterAwareHeader, "true");
+
+			if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeader)
+				httpJsonRequest.AddHeader(Constants.Cluster.ClusterReadBehaviorHeader, "All");
 		}
 
 		private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, string method, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries = 2)
@@ -116,18 +125,25 @@ namespace Raven.Client.Connection.Request
 			if (numberOfRetries < 0)
 				throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.");
 
-			var localLeaderNode = LeaderNode;
-			if (localLeaderNode == null)
+			var node = LeaderNode;
+			if (node == null)
 			{
 				UpdateReplicationInformationIfNeeded(serverClient); // maybe start refresh task
 
 				if (leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds)) == false)
 					throw new InvalidOperationException("Cluster is not reachable. No leader was selected, aborting.");
 
-				localLeaderNode = LeaderNode;
+				node = LeaderNode;
 			}
 
-			return await TryClusterOperationAsync(serverClient, method, localLeaderNode, operation, token, numberOfRetries).ConfigureAwait(false);
+			if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeader && method == "GET")
+			{
+				var nodes = NodeUrls;
+				var nodeIndex = readStripingBase % nodes.Count;
+				node = nodes[nodeIndex];
+			}
+
+			return await TryClusterOperationAsync(serverClient, method, node, operation, token, numberOfRetries).ConfigureAwait(false);
 		}
 
 		private async Task<T> TryClusterOperationAsync<T>(AsyncServerClient serverClient, string method, OperationMetadata localLeaderNode, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries)
@@ -201,7 +217,7 @@ namespace Raven.Client.Connection.Request
 					var triedFailoverServers = FailoverServers == null || FailoverServers.Length == 0;
 					for (; ; )
 					{
-						var nodes = NodeUrls;
+						var nodes = NodeUrls.ToHashSet();
 
 						if (tryFailoverServers == false)
 						{

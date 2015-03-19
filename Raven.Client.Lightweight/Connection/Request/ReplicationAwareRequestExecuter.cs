@@ -21,15 +21,19 @@ namespace Raven.Client.Connection.Request
 
 		private int readStripingBase;
 
-		public ReplicationAwareRequestExecuter(IDocumentStoreReplicationInformer replicationInformer, bool incrementReadStripe)
+		public ReplicationAwareRequestExecuter(IDocumentStoreReplicationInformer replicationInformer)
 		{
 			this.replicationInformer = replicationInformer;
-			this.readStripingBase = replicationInformer.GetReadStripingBase(incrementReadStripe);
 		}
 
 		public IDocumentStoreReplicationInformer ReplicationInformer
 		{
 			get { return replicationInformer; }
+		}
+
+		public int GetReadStripingBase(bool increment)
+		{
+			return replicationInformer.GetReadStripingBase(increment);
 		}
 
 		public ReplicationDestination[] FailoverServers

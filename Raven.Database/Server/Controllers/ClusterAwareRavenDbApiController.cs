@@ -31,11 +31,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			if (ForceClusterAwareness == false)
 			{
-				IEnumerable<string> values;
-				if (controllerContext.Request.Headers.TryGetValues(Constants.Cluster.ClusterAwareHeader, out values) == false)
-					return await base.ExecuteAsync(controllerContext, cancellationToken);
-
-				var clusterAwareHeader = values.FirstOrDefault();
+				var clusterAwareHeader = GetClusterHeader(controllerContext, Constants.Cluster.ClusterAwareHeader);
 				bool clusterAware;
 				if (clusterAwareHeader == null || bool.TryParse(clusterAwareHeader, out clusterAware) == false || clusterAware == false)
 					return await base.ExecuteAsync(controllerContext, cancellationToken);
@@ -58,7 +54,25 @@ namespace Raven.Database.Server.Controllers
 			if (ClusterManager.IsLeader())
 				return await base.ExecuteAsync(controllerContext, cancellationToken);
 
+			if (IsReadRequest(controllerContext))
+			{
+				var clusterReadBehaviorHeader = GetClusterHeader(controllerContext, Constants.Cluster.ClusterReadBehaviorHeader);
+				if (string.Equals(clusterReadBehaviorHeader, "All", StringComparison.OrdinalIgnoreCase))
+					return await base.ExecuteAsync(controllerContext, cancellationToken);
+			}
+
 			return RedirectToLeader(controllerContext.Request);
+		}
+
+		private static bool IsReadRequest(HttpControllerContext controllerContext)
+		{
+			return controllerContext.Request.Method == HttpMethod.Get || controllerContext.Request.Method == HttpMethod.Head;
+		}
+
+		private static string GetClusterHeader(HttpControllerContext controllerContext, string key)
+		{
+			IEnumerable<string> values;
+			return controllerContext.Request.Headers.TryGetValues(key, out values) == false ? null : values.FirstOrDefault();
 		}
 
 		private HttpResponseMessage RedirectToLeader(HttpRequestMessage request)
