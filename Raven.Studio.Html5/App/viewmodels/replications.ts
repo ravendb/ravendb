@@ -79,7 +79,17 @@ class replications extends viewModelBase {
 
         var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour,this.usingGlobal];
 
-        $.each(this.replicationsSetup().destinations(), (i, dest) => replicationSetupDirtyFlagItems.push(dest.sourceCollections));
+        $.each(this.replicationsSetup().destinations(), (i, dest) =>
+        {
+            replicationSetupDirtyFlagItems.push(dest.sourceCollections);
+            dest.sourceCollections.subscribe(array => {
+                if (array.length > 0)
+                    dest.ignoredClient(true);
+                else {
+                    dest.ignoredClient(false);
+                }
+            });
+        });
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
         
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
