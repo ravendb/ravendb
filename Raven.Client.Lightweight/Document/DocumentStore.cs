@@ -810,7 +810,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Max number of cached requests (default: 2048)
 		/// </summary>
-		public new int MaxNumberOfCachedRequests
+		public int MaxNumberOfCachedRequests
 		{
 			get { return maxNumberOfCachedRequests; }
 			set

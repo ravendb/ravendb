@@ -321,12 +321,6 @@ namespace Raven.Client
 			return profilingContext.TryGet(id);
 		}
 
-	    public int MaxNumberOfCachedRequests
-	    {
-	        get { throw new NotImplementedException(); }
-	        set { throw new NotImplementedException(); }
-	    }
-
 	    /// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>

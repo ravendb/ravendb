@@ -197,7 +197,5 @@ namespace Raven.Client
 		void InitializeProfiling();
 
 		ProfilingInformation GetProfilingInformationFor(Guid id);
-
-        int MaxNumberOfCachedRequests { get; set; }
 	}
 }

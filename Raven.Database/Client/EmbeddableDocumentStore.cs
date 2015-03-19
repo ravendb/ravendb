@@ -415,11 +415,5 @@ namespace Raven.Client.Embedded
 	    {
 		    return _inner.GetProfilingInformationFor(id);
 	    }
-
-        public int MaxNumberOfCachedRequests
-        {
-            get { return _inner.MaxNumberOfCachedRequests; }
-            set { _inner.MaxNumberOfCachedRequests = value; }
-        }
     }
 }
