@@ -530,7 +530,7 @@ namespace Raven.Client.Document
             return this;
         }
 
-        private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
+        private static JsonConverterCollection CreateDefaultConverters()
         {
             var converters = new JsonConverterCollection(Default.Converters);
             converters.Add(new JsonLuceneDateTimeConverter());
@@ -542,8 +542,15 @@ namespace Raven.Client.Document
             converters.Add(new JsonMultiDimensionalArrayConverter());
             converters.Add(new JsonDynamicConverter());
             converters.Add(new JsonLinqEnumerableConverter());
-            converters.Freeze();
 
+            return converters;
+        }
+
+        private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
+        {
+            var converters = CreateDefaultConverters();
+            converters.Freeze();
+            
             return converters;
         }, true);
 
@@ -565,10 +572,47 @@ namespace Raven.Client.Document
         {
             get { return defaultConverters.Value; }
         }
-        
+
         private static JsonConverterCollection DefaultConvertersEnumsAsIntegers
         {
             get { return defaultConvertersEnumsAsIntegers.Value; }
+        }
+
+        private class JsonConverterTrackingCollection : JsonConverterCollection
+        {
+
+            public JsonConverterTrackingCollection ( JsonConverterCollection collection ) : base ( collection )
+            {}
+
+            public bool IsModified { get; private set; }
+
+            protected override void ClearItems()
+            {
+                IsModified = true;
+
+                base.ClearItems();
+            }
+
+            protected override void InsertItem(int index, JsonConverter item)
+            {
+                IsModified = true;
+
+                base.InsertItem(index, item);
+            }
+
+            protected override void RemoveItem(int index)
+            {
+                IsModified = true;
+
+                base.RemoveItem(index);
+            }
+
+            protected override void SetItem(int index, JsonConverter item)
+            {
+                IsModified = true;
+
+                base.SetItem(index, item);
+            }
         }
         
 		/// <summary>
@@ -577,6 +621,16 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public JsonSerializer CreateSerializer()
 		{
+            var converters = CreateDefaultConverters();
+            if ( SaveEnumsAsIntegers )
+            {
+                var converter = converters.FirstOrDefault(x => x is JsonEnumConverter);
+                if (converter != null)
+                    converters.Remove(converter);
+            }
+
+            var trackingConverters = new JsonConverterTrackingCollection(converters);
+
 			var jsonSerializer = new JsonSerializer
 			{
 				DateParseHandling = DateParseHandling.None,
@@ -586,10 +640,23 @@ namespace Raven.Client.Document
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 FloatParseHandling = FloatParseHandling.PreferDecimalFallbackToDouble,
-                Converters = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters
+                Converters = trackingConverters
 			};
 
-			CustomizeJsonSerializer(jsonSerializer);
+            CustomizeJsonSerializer(jsonSerializer);
+
+            if (!trackingConverters.IsModified)
+            {
+                if ( SaveEnumsAsIntegers )
+                {
+                    jsonSerializer.Converters = DefaultConvertersEnumsAsIntegers;
+                }
+                else
+                {
+                    jsonSerializer.Converters = DefaultConverters;
+                }
+            }
+
 			return jsonSerializer;
 		}
 
