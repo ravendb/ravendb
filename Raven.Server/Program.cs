@@ -807,7 +807,10 @@ Configuration databaseOptions:
 
 				Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
 				Console.WriteLine("Server started in {0:#,#;;0} ms", sp.ElapsedMilliseconds);
-				Console.WriteLine("Data directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.DataDirectory);
+				ConsoleWriteLineWithColor(ConsoleColor.Green, "Working directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.WorkingDirectory);
+				ConsoleWriteLineWithColor(ConsoleColor.Green, "Data directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.DataDirectory);
+				ConsoleWriteLineWithColor(ConsoleColor.Green, "Index cache directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.CompiledIndexCacheDirectory);
+				ConsoleWriteLineWithColor(ConsoleColor.Green, "Plugins directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.PluginsDirectory);
 				Console.WriteLine("HostName: {0} Port: {1}, Storage: {2}", ravenConfiguration.HostName ?? "<any>",
 					ravenConfiguration.Port,
 					server.SystemDatabase.TransactionalStorage.FriendlyName);
