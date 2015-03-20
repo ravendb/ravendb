@@ -81,6 +81,7 @@ namespace Raven.Database.Server.Controllers
             var timeout = tre.TimeoutAfter(currentDatabase.Configuration.BulkImportBatchTimeout);
             var user = CurrentOperationContext.User.Value;
             var headers = CurrentOperationContext.Headers.Value;
+            Exception error = null;
             var task = Task.Factory.StartNew(() =>
             {
                 try
@@ -100,6 +101,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     status.Faulted = true;
                     status.State = RavenJObject.FromObject(new { Error = e.SimplifyException().Message });
+                    error = e;
                 }
                 finally
                 {
@@ -120,6 +122,14 @@ namespace Raven.Database.Server.Controllers
 
             await task;
 
+            if (error != null)
+            {
+                return GetMessageWithObject(new
+                {
+                    error.Message,
+                    Error = error.ToString()
+                }, HttpStatusCode.InternalServerError);
+            }
             if (status.IsTimedOut)
                 throw new TimeoutException("Bulk insert operation did not receive new data longer than configured treshold");
 
