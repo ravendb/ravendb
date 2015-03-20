@@ -1909,9 +1909,9 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName)
+            public async Task StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName)
             {
-                var requestUrlString = string.Format("{0}/fs/{1}/admin/fs/backup?incremental={2}", client.ServerUrl, filesystemName, incremental);
+                var requestUrlString = string.Format("{0}/fs/{1}/admin/fs/backup?incremental={2}", client.ServerUrl, fileSystemName, incremental);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, "POST", client.PrimaryCredentials, convention)))
 	            {
@@ -1920,7 +1920,7 @@ namespace Raven.Client.FileSystem
 						await request.WriteWithObjectAsync(new FilesystemBackupRequest
 						{
 							BackupLocation = backupLocation,
-							FileSystemDocument = databaseDocument
+							FileSystemDocument = fileSystemDocument
 						}).ConfigureAwait(false);
 					}
 					catch (Exception e)
