@@ -284,6 +284,7 @@ namespace Raven.Database.Config
 
 			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
 			Replication.ReplicationRequestTimeoutInMilliseconds = ravenSettings.Replication.ReplicationRequestTimeoutInMilliseconds.Value;
+            Replication.ForceReplicationRequestBuffering = ravenSettings.Replication.ForceReplicationRequestBuffering.Value;
 			Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
@@ -1273,6 +1274,11 @@ namespace Raven.Database.Config
 			/// Number of milliseconds before replication requests will timeout. Default: 60 * 1000.
 			/// </summary>
 			public int ReplicationRequestTimeoutInMilliseconds { get; set; }
+
+            /// <summary>
+            /// Force us to buffer replication requests (useful if using windows auth under certain scenarios).
+            /// </summary>
+            public bool ForceReplicationRequestBuffering { get; set; }
 
 			/// <summary>
 			/// Maximum number of items replication will receive in single batch. Min: 512. Default: null (let source server decide).
