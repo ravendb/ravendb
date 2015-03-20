@@ -235,6 +235,7 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\Triggers\ReplicationDestinationPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\Data\FileVersioningConfiguration.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\GlobalSettingsDocument.cs" />

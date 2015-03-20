@@ -98,7 +98,7 @@ namespace Raven.Client.Connection.Async
 			this.replicationInformer = replicationInformerGetter(databaseName);
 			this.readStripingBase = replicationInformer.GetReadStripingBase(incrementReadStripe);
 
-			this.replicationInformer.UpdateReplicationInformationIfNeeded(this);
+			this.replicationInformer.UpdateReplicationInformationIfNeededAsync(this);
 		}
 
 		public void Dispose()

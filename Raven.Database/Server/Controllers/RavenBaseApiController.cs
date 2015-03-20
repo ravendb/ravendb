@@ -149,11 +149,13 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		public async Task<RavenJArray> ReadJsonArrayAsync()
-		{
+		{			
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
+			{
 				return RavenJArray.Load(jsonReader);
+			}
 		}
 
 		public async Task<string> ReadStringAsync()

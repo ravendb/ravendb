@@ -120,7 +120,7 @@ namespace Raven.Abstractions.Util
 				afterCollect();
 
 			if (waitForPendingFinalizers)
-				GC.WaitForPendingFinalizers();
+			GC.WaitForPendingFinalizers();
 
 			memoryAfterLastForcedGC = GC.GetTotalMemory(false);
 			memoryDifferenceLastGc = DifferenceAsDecimalPercents(MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
@@ -140,7 +140,7 @@ namespace Raven.Abstractions.Util
 				{
 					log.Debug("Increasing delay for forced GC (not enough memory released, so we need to back off). " +
 					          "New interval between GCs will be {0} minutes", delayBetweenGCInMinutes);
-				}
+		}
 			}
 			else
 			{

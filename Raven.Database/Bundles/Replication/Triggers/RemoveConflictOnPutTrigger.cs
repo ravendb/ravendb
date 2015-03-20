@@ -18,7 +18,7 @@ namespace Raven.Bundles.Replication.Triggers
 	[InheritedExport(typeof(AbstractPutTrigger))]
 	public class RemoveConflictOnPutTrigger : AbstractPutTrigger
 	{
-		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{

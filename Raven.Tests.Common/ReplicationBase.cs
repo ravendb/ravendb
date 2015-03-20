@@ -81,7 +81,7 @@ namespace Raven.Tests.Common
 
         protected virtual void ConfigureServer(RavenDBOptions options)
         {
-            
+			   
         }
 
         protected virtual void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
@@ -176,7 +176,8 @@ namespace Raven.Tests.Common
 			string username = null,
 			string password = null,
 			string domain = null,
-			ReplicationClientConfiguration clientConfiguration = null)
+			ReplicationClientConfiguration clientConfiguration = null,
+			string[] replicationSourceCollections = null)
         {
             db = db ?? (destination is DocumentStore ? ((DocumentStore)destination).DefaultDatabase : null);
 
@@ -190,7 +191,8 @@ namespace Raven.Tests.Common
                             destination.Url.Replace("localhost", "ipv4.fiddler"),
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
-					IgnoredClient = ignoredClient
+					IgnoredClient = ignoredClient,
+					SourceCollections = replicationSourceCollections
                 };
                 if (db != null)
                     replicationDestination.Database = db;
@@ -234,15 +236,62 @@ namespace Raven.Tests.Common
 
         }
 
-        protected void SetupReplication(IDatabaseCommands source, params DocumentStore[] destinations)
+		protected void SetupReplication(IDatabaseCommands source, Dictionary<DocumentStore, string[]> destinations)
+		{
+			
+			var destinationDocs = destinations.Select(destination => new RavenJObject
+	            {
+		            { "Url", destination.Key.Url },
+		            { "Database", destination.Key.DefaultDatabase },
+					{ "SourceCollections", RavenJToken.FromObject(destination.Value ?? (object)"[]") }
+	            }).ToList();			
+
+			SetupReplication(source, destinationDocs);
+		}
+
+		protected void SetupReplication(IDatabaseCommands source, string[] sourceCollections, params DocumentStore[] destinations)
+		{
+			Assert.NotEmpty(destinations);
+
+			var destinationDocs = destinations.Select(destination => new RavenJObject
+	            {
+		            { "Url", destination.Url },
+		            { "Database", destination.DefaultDatabase },
+					{ "SourceCollections", new RavenJArray(sourceCollections.Cast<Object>()) }
+	            }).ToList();			
+
+			SetupReplication(source, destinationDocs);
+		}
+
+
+		protected void SetupReplication(IDatabaseCommands source, params DocumentStore[] destinations)
         {
             Assert.NotEmpty(destinations);
-            SetupReplication(source, destinations.Select(destination => new RavenJObject
-                                                                        {
-                                                                            { "Url", destination.Url },
-                                                                            { "Database", destination.DefaultDatabase }
-                                                                        }));
+
+
+			var destinationDocs = destinations.Select(destination => new RavenJObject
+	            {
+		            { "Url", destination.Url },
+		            { "Database", destination.DefaultDatabase }
+	            }).ToList();
+
+			SetupReplication(source, destinationDocs);
         }
+
+		protected void UpdateReplication(IDatabaseCommands source, params DocumentStore[] destinations)
+		{
+			Assert.NotEmpty(destinations);
+
+
+			var destinationDocs = destinations.Select(destination => new RavenJObject
+	            {
+		            { "Url", destination.Url },
+		            { "Database", destination.DefaultDatabase }
+	            }).ToList();
+
+			UpdateReplication(source, destinationDocs);
+		}
+
 
         protected void SetupReplication(IDatabaseCommands source, params string[] urls)
         {
@@ -261,6 +310,22 @@ namespace Raven.Tests.Common
                            }
                        }, new RavenJObject());
         }
+
+		protected void UpdateReplication(IDatabaseCommands source, IEnumerable<RavenJObject> destinations)
+		{
+			Assert.NotEmpty(destinations);
+			var patches = new List<PatchRequest>();
+			foreach (var dest in destinations)
+			{
+				patches.Add(new PatchRequest
+				{
+					Type = PatchCommandType.Insert,
+					Name = "Destinations",
+					Value = dest
+				});
+			}
+			source.Patch(Constants.RavenReplicationDestinations, patches.ToArray());
+		}
 
         protected void RemoveReplication(IDatabaseCommands source)
         {
@@ -339,10 +404,13 @@ namespace Raven.Tests.Common
             return attachment;
         }
 
-        protected override void WaitForDocument(IDatabaseCommands commands, string expectedId)
+        protected override void WaitForDocument(IDatabaseCommands commands, string expectedId, CancellationToken? token = null)
         {
             for (int i = 0; i < RetriesCount; i++)
             {
+				if (token.HasValue)
+					token.Value.ThrowIfCancellationRequested();
+
                 if (commands.Head(expectedId) != null)
                     break;
                 Thread.Sleep(100);
@@ -352,6 +420,18 @@ namespace Raven.Tests.Common
 
             Assert.NotNull(jsonDocumentMetadata);
         }
+
+		protected bool WaitForDocument(IDatabaseCommands commands, string expectedId, int timeoutInMs)
+		{
+			var cts = new CancellationTokenSource();
+			var waitingTask = Task.Run(() => WaitForDocument(commands, expectedId, cts.Token), cts.Token);
+
+			Task.WaitAny(waitingTask, Task.Delay(timeoutInMs, cts.Token));
+
+			cts.Cancel();
+			return commands.Head(expectedId) != null;
+		}
+
 
         protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)
         {

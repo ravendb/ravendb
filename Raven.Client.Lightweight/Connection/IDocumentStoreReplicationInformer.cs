@@ -15,6 +15,6 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Updates replication information if needed
 		/// </summary>
-		Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient);
+		Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient);
 	}
 }
