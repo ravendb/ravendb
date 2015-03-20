@@ -89,36 +89,17 @@ namespace Raven.Database.Server.Controllers
                     CurrentOperationContext.Headers.Value = headers;
                     currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token);
                 }
-				catch (InvalidOperationException e)
-				{
-					Log.Debug("Failed to deserialize document from incoming stream. Error: " + e);
-					return GetMessageWithObject(new
-					{
-						Message = "Could not understand json, please check its validity."
-					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-
-				}
-				catch (InvalidDataException e)
-				{
-					Log.Debug("Failed to deserialize document from incoming stream. Error: " + e);
-					return GetMessageWithObject(new
-					{
-						e.Message
-					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-				}
                 catch (OperationCanceledException)
                 {
                     // happens on timeout
                     currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
                     status.IsTimedOut = true;
                     status.Faulted = true;
-                    throw;
                 }
                 catch (Exception e)
                 {
                     status.Faulted = true;
                     status.State = RavenJObject.FromObject(new { Error = e.SimplifyException().Message });
-                    throw;
                 }
                 finally
                 {
@@ -137,7 +118,8 @@ namespace Raven.Database.Server.Controllers
                                                      Payload = operationId.ToString()
                                                  }, out id, tre);
 
-            task.Wait(Database.WorkContext.CancellationToken);
+            await task;
+
             if (status.IsTimedOut)
                 throw new TimeoutException("Bulk insert operation did not receive new data longer than configured treshold");
 
