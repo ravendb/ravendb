@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -41,11 +43,31 @@ namespace Raven.Database.Raft.Controllers
 			}
 		}
 
+
+		[HttpGet]
+		[RavenRoute("cluster/status")]
+		public HttpResponseMessage Status()
+		{
+			var allNodes = ClusterManager.Engine.CurrentTopology.AllNodes.ToList();
+			var tasks = allNodes.Select(x => 
+				new
+				{
+					Uri = x.Uri.AbsoluteUri, 
+					Task = FetchNodeStatus(x)
+				}).ToArray();
+			return GetMessageWithObject(tasks.Select(x => new { Uri = x.Uri, Status = x.Task.Result }).ToList());
+		}
+
+		private Task<ConnectivityStatus> FetchNodeStatus(NodeConnectionInfo nci)
+		{
+			return ClusterManager.Client.CheckConnectivity(nci);
+		}
+
 		[HttpGet]
 		[RavenRoute("cluster/topology")]
 		public HttpResponseMessage Topology()
 		{
-			return Request.CreateResponse(HttpStatusCode.OK, new
+			return GetMessageWithObject(new
 			{
 				ClusterManager.Engine.CurrentLeader,
 				ClusterManager.Engine.PersistentState.CurrentTerm,

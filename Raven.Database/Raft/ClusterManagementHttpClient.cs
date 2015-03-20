@@ -209,6 +209,27 @@ namespace Raven.Database.Raft
 			}
 		}
 
+		public async Task<ConnectivityStatus> CheckConnectivity(NodeConnectionInfo node)
+		{
+			try
+			{
+				var url = node.Uri.AbsoluteUri + "stats";
+				using (var request = CreateRequest(node, url, "GET"))
+				{
+					var response = await request.ExecuteAsync().ConfigureAwait(false);
+					return response.IsSuccessStatusCode ? ConnectivityStatus.Online : ConnectivityStatus.Offline;
+				}
+			}
+			catch (ErrorResponseException e) 
+			{
+				return e.StatusCode == HttpStatusCode.Unauthorized ? ConnectivityStatus.WrongCredentials : ConnectivityStatus.Offline;
+			}
+			catch (Exception)
+			{
+				return ConnectivityStatus.Offline;
+			}
+		}
+
 		private async Task SendDatabaseDeleteInternalAsync(NodeConnectionInfo node, string databaseName, bool hardDelete)
 		{
 			var url = node.Uri.AbsoluteUri + "admin/cluster/commands/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;

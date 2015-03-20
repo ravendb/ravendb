@@ -15,6 +15,7 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import clusterConfiguration = require("models/clusterConfiguration");
 import saveClusterConfigurationCommand = require("commands/saveClusterConfigurationCommand");
 import updateRaftClusterCommand = require("commands/updateRaftClusterCommand");
+import getClusterNodesStatusCommand = require("commands/getClusterNodesStatusCommand");
 
 class cluster extends viewModelBase {
 
@@ -27,15 +28,19 @@ class cluster extends viewModelBase {
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var db = appUrl.getSystemDatabase();
+		var db = appUrl.getSystemDatabase();
         $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db), this.fetchClusterConfiguration(db))
-            .done(() => deferred.resolve({ can: true }))
+            .done(() => {
+				deferred.resolve({ can: true });
+		        this.fetchStatus(db);
+	        })
             .fail(() => deferred.resolve({ redirect: appUrl.forAdminSettings() }));
         return deferred;
 	}
 
 	refresh() {
-		this.fetchClusterTopology(appUrl.getSystemDatabase());
+		this.fetchClusterTopology(appUrl.getSystemDatabase())
+			.done(() => this.fetchStatus(appUrl.getSystemDatabase()));
 	}
 
 	activate(args) {
@@ -54,7 +59,9 @@ class cluster extends viewModelBase {
     fetchClusterTopology(db: database): JQueryPromise<any> {
         return new getClusterTopologyCommand(db)
             .execute()
-            .done(topo => this.topology(topo))
+			.done(topo => {
+		        this.topology(topo);
+	        })
             .fail(() => messagePublisher.reportError("Unable to fetch cluster topology"));
     }
 
@@ -70,7 +77,22 @@ class cluster extends viewModelBase {
         return new getStatusDebugConfigCommand(db)
             .execute()
             .done(config => this.serverUrl(config.ServerUrl));
-    }
+	}
+
+	fetchStatus(db: database): JQueryPromise<any> {
+		return new getClusterNodesStatusCommand(db)
+			.execute()
+			.done((status) => this.updateNodesStatus(status));
+	}
+
+	updateNodesStatus(status: Array<clusterNodeStatusDto>) {
+		status.forEach(nodeStatus => {
+			var nci = this.topology().allNodes().first(n => n.uri() === nodeStatus.Uri);
+			if (nci) {
+				nci.status(nodeStatus.Status);
+			}
+		});
+	}
 
     addAnotherServerToCluster() {
         var newNode = nodeConnectionInfo.empty();
@@ -80,7 +102,7 @@ class cluster extends viewModelBase {
             .done(nci => {
                 new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), false)
                     .execute()
-                    .done(() => setTimeout(() => this.fetchClusterTopology(appUrl.getSystemDatabase()), 500));
+                    .done(() => setTimeout(() => this.refresh(), 500));
         });
         app.showDialog(dialog);
     }
@@ -95,7 +117,7 @@ class cluster extends viewModelBase {
             .done(nci => {
             new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), true)
                 .execute()
-                .done(() => setTimeout(() => this.fetchClusterTopology(appUrl.getSystemDatabase()), 500));
+                .done(() => setTimeout(() => this.refresh(), 500));
 
         });
         app.showDialog(dialog);
@@ -107,7 +129,7 @@ class cluster extends viewModelBase {
 			.done(nci => {
 				new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci)
 					.execute()
-					.done(() => setTimeout(() => this.fetchClusterTopology(appUrl.getSystemDatabase()), 500));
+					.done(() => setTimeout(() => this.refresh(), 500));
 			});
 
 		app.showDialog(dialog);
@@ -118,7 +140,7 @@ class cluster extends viewModelBase {
             .done(() => {
                 new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
                     .execute()
-                    .done(() => setTimeout(() => this.fetchClusterTopology(appUrl.getSystemDatabase()), 500));
+                    .done(() => setTimeout(() => this.refresh(), 500));
         });
 	}
 

@@ -1266,3 +1266,8 @@ interface nodeConnectionInfoDto {
 interface clusterConfigurationDto {
 	EnableReplication: boolean;
 }
+
+interface clusterNodeStatusDto {
+	Uri: string;
+	Status: string;
+}

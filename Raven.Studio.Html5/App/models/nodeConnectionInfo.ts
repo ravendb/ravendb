@@ -6,7 +6,8 @@ class nodeConnectionInfo {
     password = ko.observable<string>();
     domain = ko.observable<string>();
     apiKey = ko.observable<string>();
-    status = ko.observable<string>(); // used to store owning collection name (voting, non-voting, promotable)
+	state = ko.observable<string>(); // used to store owning collection name (voting, non-voting, promotable)
+	status = ko.observable<string>("Loading");
 
     constructor(dto: nodeConnectionInfoDto) {
         this.uri(dto.Uri);

@@ -29,21 +29,21 @@ class topology {
 
         dto.AllVotingNodes.map(n => {
             var nci = new nodeConnectionInfo(n);
-            nci.status("voting");
+            nci.state("voting");
             this.allVotingNodes.push(nci);
             this.allNodes.push(nci);
         });
 
         dto.PromotableNodes.map(n => {
             var nci = new nodeConnectionInfo(n);
-            nci.status("promotable");
+            nci.state("promotable");
             this.promotableNodes.push(nci);
             this.allNodes.push(nci);
         });
 
         dto.NonVotingNodes.map(n => {
             var nci = new nodeConnectionInfo(n);
-            nci.status("non-voting");
+            nci.state("non-voting");
             this.nonVotingNodes.push(nci);
             this.allNodes.push(nci);
         });
@@ -52,7 +52,7 @@ class topology {
         if (leader) {
             var leaderNode = this.allNodes.first(n => n.name() === leader);
             if (leaderNode) {
-                leaderNode.status("leader");
+                leaderNode.state("leader");
             }
         }
         
