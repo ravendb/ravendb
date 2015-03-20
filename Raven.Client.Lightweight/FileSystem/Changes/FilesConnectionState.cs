@@ -71,14 +71,6 @@ namespace Raven.Client.FileSystem.Changes
                 onFileChangeNotification(fileChangeNotification);
         }
 
-        public event Action<CancellationNotification> OnCancellationNotification = (x) => { };
-        public void Send(CancellationNotification cancellationNotification)
-        {
-            var onCancellationNotification = OnCancellationNotification;
-            if (onCancellationNotification != null)
-                onCancellationNotification(cancellationNotification);
-        }
-
         public event Action<Exception> OnError;
 
         public void Error(Exception e)
