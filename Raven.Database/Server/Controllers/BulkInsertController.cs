@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -13,9 +13,9 @@ using System.Web.Http;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util.Streams;
@@ -89,6 +89,23 @@ namespace Raven.Database.Server.Controllers
                     CurrentOperationContext.Headers.Value = headers;
                     currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token);
                 }
+				catch (InvalidOperationException e)
+				{
+					Log.Debug("Failed to deserialize document from incoming stream. Error: " + e);
+					return GetMessageWithObject(new
+					{
+						Message = "Could not understand json, please check its validity."
+					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+
+				}
+				catch (InvalidDataException e)
+				{
+					Log.Debug("Failed to deserialize document from incoming stream. Error: " + e);
+					return GetMessageWithObject(new
+					{
+						e.Message
+					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+				}
                 catch (OperationCanceledException)
                 {
                     // happens on timeout
