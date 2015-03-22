@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -13,9 +13,9 @@ using System.Web.Http;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util.Streams;
@@ -81,6 +81,7 @@ namespace Raven.Database.Server.Controllers
             var timeout = tre.TimeoutAfter(currentDatabase.Configuration.BulkImportBatchTimeout);
             var user = CurrentOperationContext.User.Value;
             var headers = CurrentOperationContext.Headers.Value;
+            Exception error = null;
             var task = Task.Factory.StartNew(() =>
             {
                 try
@@ -95,13 +96,12 @@ namespace Raven.Database.Server.Controllers
                     currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
                     status.IsTimedOut = true;
                     status.Faulted = true;
-                    throw;
                 }
                 catch (Exception e)
                 {
                     status.Faulted = true;
                     status.State = RavenJObject.FromObject(new { Error = e.SimplifyException().Message });
-                    throw;
+                    error = e;
                 }
                 finally
                 {
@@ -120,7 +120,16 @@ namespace Raven.Database.Server.Controllers
                                                      Payload = operationId.ToString()
                                                  }, out id, tre);
 
-            task.Wait(Database.WorkContext.CancellationToken);
+            await task;
+
+            if (error != null)
+            {
+                return GetMessageWithObject(new
+                {
+                    error.Message,
+                    Error = error.ToString()
+                }, HttpStatusCode.InternalServerError);
+            }
             if (status.IsTimedOut)
                 throw new TimeoutException("Bulk insert operation did not receive new data longer than configured treshold");
 

@@ -512,6 +512,9 @@ namespace Raven.Client.Connection
 		/// <param name="name">name of an index to reset</param>
 		void ResetIndex(string name);
 
+
+	    void SetIndexLock(string name, IndexLockMode unlock);
+
 		/// <summary>
 		///     Rollbacks the specified tx id
 		/// </summary>
