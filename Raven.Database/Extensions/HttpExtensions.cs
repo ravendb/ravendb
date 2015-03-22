@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
@@ -318,6 +319,25 @@ namespace Raven.Database.Extensions
 		{
 			context.Response.StatusCode = 401;
 			context.Response.StatusDescription = "Unauthorized";
+		}
+
+
+		public static void SetSerializationException(this IHttpContext context, Exception e)
+		{
+			context.SetStatusToUnprocessableEntity();
+			const string errorMessage = "Could not understand json that was sent.";
+			context.WriteJson(new
+			{
+				Message = errorMessage
+			});
+
+			context.Log(log => log.Error(errorMessage + " Exception that was thrown: " + e));
+		}
+
+		public static void SetStatusToUnprocessableEntity(this IHttpContext context)
+		{
+			context.Response.StatusCode = 422;
+			context.Response.StatusDescription = "Unprocessable Entity";
 		}
 
 		public static void SetStatusToNotAvailable(this IHttpContext context)

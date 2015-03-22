@@ -195,6 +195,8 @@ namespace Raven.Json.Linq
 						break;
 					case JsonToken.PropertyName:
 						propName = reader.Value.ToString();
+						if(String.IsNullOrEmpty(propName))
+							throw new InvalidDataException("Invalid json. Property name in a json document must have value.");
 						break;
 					case JsonToken.EndObject:
 						return o;

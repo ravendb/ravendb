@@ -6,10 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.WindowsAzure.Storage.Queue.Protocol;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
@@ -39,6 +41,7 @@ namespace Raven.Database.Server.Responders
 			{
 				var timeout = cts.TimeoutAfter(Settings.DatbaseOperationTimeout);
 				var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(context), cts.Token, timeout);
+				
 				switch (context.Request.HttpMethod)
 				{
 					case "POST":
@@ -48,13 +51,44 @@ namespace Raven.Database.Server.Responders
 						OnBulkOperation(context, databaseBulkOperations.DeleteByIndex);
 						break;
 					case "PATCH":
-						var patchRequestJson = context.ReadJsonArray();
+
+						RavenJArray patchRequestJson;
+						try
+						{
+							patchRequestJson = context.ReadJsonArray();
+						}
+						catch (InvalidOperationException e)
+						{
+							context.SetSerializationException(e);
+							return;
+						}
+						catch (InvalidDataException e)
+						{
+							context.SetSerializationException(e);
+							return;
+						}
+
 						var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 						OnBulkOperation(context, (index, query, allowStale) =>
 							databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
 						break;
 					case "EVAL":
-						var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
+						RavenJObject advPatchRequestJson;
+						try
+						{
+							advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
+						}
+						catch (InvalidOperationException e)
+						{
+							context.SetSerializationException(e);
+							return;
+						}
+						catch (InvalidDataException e)
+						{
+							context.SetSerializationException(e);
+							return;
+						}
+
 						var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
 						OnBulkOperation(context, (index, query, allowStale) =>
 							databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale));
@@ -104,9 +138,24 @@ namespace Raven.Database.Server.Responders
 
 	    private void Batch(IHttpContext context)
 		{
-			var jsonCommandArray = context.ReadJsonArray();
+			RavenJArray jsonCommandArray;
 
-			var transactionInformation = GetRequestTransaction(context);
+		    try
+		    {
+			    jsonCommandArray = context.ReadJsonArray();
+		    }
+		    catch (InvalidOperationException e)
+		    {
+				context.SetSerializationException(e);
+				return;			    
+		    }
+			catch (InvalidDataException e)
+			{
+				context.SetSerializationException(e);
+				return;
+			}
+
+		    var transactionInformation = GetRequestTransaction(context);
 			var commands = (from RavenJObject jsonCommand in jsonCommandArray
 			                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
 				.ToArray();

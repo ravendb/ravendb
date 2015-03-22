@@ -68,6 +68,13 @@ namespace Raven.Database.Server.Responders
 
 			context.Log(log => log.Debug("\tBulk inserted received {0:#,#;;0} documents in {1}, task #: {2}", documents, sp.Elapsed, id));
 
+			if (task.IsFaulted && task.Exception != null)
+			{
+				var exception = task.Exception.InnerException;
+				if (exception is InvalidDataException)
+					context.SetSerializationException(exception);
+			}
+
 			context.WriteJson(new
 			{
 				OperationId = id
