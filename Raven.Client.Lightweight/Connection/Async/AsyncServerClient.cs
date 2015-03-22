@@ -168,7 +168,21 @@ namespace Raven.Client.Connection.Async
 			}, token);
 		}
 
-		public Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, CancellationToken token = default(CancellationToken))
+         public Task SetIndexLockAsync(string name, IndexLockMode unLockMode , CancellationToken token = default(CancellationToken))
+         {
+             return ExecuteWithReplication("lockModeChange", async operationMetadata =>
+             {
+                 var operationUrl = operationMetadata.Url + "/indexes/" + name + "?op=" + "lockModeChange" + "&mode=" + unLockMode;
+                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, "POST", operationMetadata.Credentials, convention)))
+                 {
+                     request.AddOperationHeaders(OperationsHeaders);
+                     request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+                     return await request.ReadResponseJsonAsync().WithCancellation(token);
+                 }
+             }, token);
+         }
+        public Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, CancellationToken token = default(CancellationToken))
 		{
 			return PutIndexAsync(name, indexDef, false, token);
 		}
