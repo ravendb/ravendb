@@ -163,7 +163,7 @@ namespace Raven.Client.Connection.Async
 					request.AddOperationHeaders(OperationsHeaders);
 					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-					return await request.ReadResponseJsonAsync().WithCancellation(token);
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
 			}, token);
 		}
@@ -178,7 +178,7 @@ namespace Raven.Client.Connection.Async
                      request.AddOperationHeaders(OperationsHeaders);
                      request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-                     return await request.ReadResponseJsonAsync().WithCancellation(token);
+                     return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                  }
              }, token);
          }
