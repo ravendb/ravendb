@@ -71,9 +71,10 @@ namespace Raven.Database.Server.Responders
 			if (task.IsFaulted && task.Exception != null)
 			{
 				var exception = task.Exception.InnerException;
-				if (exception is InvalidDataException)
+				if (exception.Data.Contains("serializationError"))
 					context.SetSerializationException(exception);
 			}
+
 
 			context.WriteJson(new
 			{
@@ -128,7 +129,22 @@ namespace Raven.Database.Server.Responders
 
 				for (int i = 0; i < count; i++)
 				{
-					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader));
+					RavenJObject doc;
+
+					try
+					{
+						doc = (RavenJObject) RavenJToken.ReadFrom(new BsonReader(reader));
+					}
+					catch (InvalidDataException e)
+					{
+						e.Data.Add("serializationError", true);
+						throw e;
+					}
+					catch (InvalidOperationException e)
+					{
+						e.Data.Add("serializationError",true);
+						throw e;
+					}
 
 					var metadata = doc.Value<RavenJObject>("@metadata");
 
