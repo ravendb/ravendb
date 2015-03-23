@@ -864,7 +864,7 @@ class shell extends viewModelBase {
     
     static fetchDbStats(db: database) {
         if (db && !db.disabled() && db.isLicensed()) {
-            new getDatabaseStatsCommand(db)
+            new getDatabaseStatsCommand(db, true)
                 .execute()
                 .done((result: databaseStatisticsDto) => db.saveStatistics(result));
         }

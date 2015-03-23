@@ -95,7 +95,7 @@ namespace Raven.Bundles.Replication.Tasks
 			nonBufferedHttpRavenRequestFactory = new HttpRavenRequestFactory
 			{
 				RequestTimeoutInMs = replicationRequestTimeoutInMs,
-				AllowWriteStreamBuffering = false
+                AllowWriteStreamBuffering = docDb.Configuration.Replication.ForceReplicationRequestBuffering
 			};
 
 			var task = new Task(Execute, TaskCreationOptions.LongRunning);

@@ -368,9 +368,9 @@ namespace Raven.Client.Document
 
 			AssertValidConfiguration();
 
-			jsonRequestFactory = InitializeJsonRequestFactory();
+		    jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler, Conventions.AcceptGzipContent);
 
-			try
+		    try
 			{
 				InitializeSecurity();
 
@@ -410,12 +410,7 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		private HttpJsonRequestFactory InitializeJsonRequestFactory()
-		{
-			return new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler, Conventions.AcceptGzipContent);
-		}
-
-		public override void InitializeProfiling()
+	    public override void InitializeProfiling()
 		{
 			if (jsonRequestFactory == null)
 				throw new InvalidOperationException("Cannot call InitializeProfiling() before Initialize() was called.");
@@ -821,11 +816,10 @@ namespace Raven.Client.Document
 			set
 			{
 				maxNumberOfCachedRequests = value;
-				if (jsonRequestFactory != null)
-					jsonRequestFactory.Dispose();
-				jsonRequestFactory = InitializeJsonRequestFactory();
+                jsonRequestFactory.ResetCache(maxNumberOfCachedRequests);
 			}
 		}
+
 		public HttpMessageHandler HttpMessageHandler { get; set; }
 
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
