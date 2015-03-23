@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
+using Raven.Database.Client;
 using Raven.Database.Client.Aws;
 using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
@@ -35,6 +36,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 		private volatile PeriodicExportStatus exportStatus;
 		private volatile PeriodicExportSetup exportConfigs;
+		private long backupLimit = 100;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -160,15 +162,19 @@ namespace Raven.Database.Bundles.PeriodicExports
 						return;
 					using (LogContext.WithDatabase(documentDatabase.Name))
 					{
+						bool operationSucceeded = true;
 						try
 						{
-							var dataDumper = new DatabaseDataDumper(documentDatabase);
+							var dataDumper = new DatabaseDataDumper(documentDatabase, new SmugglerDatabaseOptions()
+							{
+								Limit = (int)backupLimit
+							});
 							var localBackupConfigs = exportConfigs;
 							var localBackupStatus = exportStatus;
 							if (localBackupConfigs == null)
 								return;
 
-							if (localBackupConfigs.Disabled) 
+							if (localBackupConfigs.Disabled)
 								return;
 
 							if (fullBackup == false)
@@ -176,16 +182,16 @@ namespace Raven.Database.Bundles.PeriodicExports
 								var currentEtags = dataDumper.Operations.FetchCurrentMaxEtags();
 								// No-op if nothing has changed
 								if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-									currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
-									currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
-									currentEtags.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
+								    currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+								    currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+								    currentEtags.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
 								{
 									return;
 								}
 							}
 
 							var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
-							if (Directory.Exists(backupPath) == false) 
+							if (Directory.Exists(backupPath) == false)
 								Directory.CreateDirectory(backupPath);
 
 							if (fullBackup)
@@ -206,7 +212,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								}
 							}
 
-                            var smugglerOptions = dataDumper.Options;
+							var smugglerOptions = dataDumper.Options;
 							if (fullBackup == false)
 							{
 								smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
@@ -217,15 +223,15 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.ExportDeletions = true;
 							}
 
-                            var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+							var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath});
 
 							if (fullBackup == false)
 							{
 								// No-op if nothing has changed
 								if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-									exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
-									exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
-									exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
+								    exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+								    exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+								    exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
 								{
 									logger.Info("Periodic export returned prematurely, nothing has changed since last export");
 									return;
@@ -278,6 +284,8 @@ namespace Raven.Database.Bundles.PeriodicExports
 						}
 						catch (Exception e)
 						{
+							backupLimit  =  Math.Max(100, backupLimit/100);
+							operationSucceeded = false;
 							logger.ErrorException("Error when performing periodic export", e);
 							Database.AddAlert(new Alert
 							{
@@ -288,6 +296,13 @@ namespace Raven.Database.Bundles.PeriodicExports
 								Exception = e.ToString(),
 								UniqueKey = "Periodic Export Error",
 							});
+						}
+						finally
+						{
+							if (operationSucceeded && backupLimit < int.MaxValue && backupLimit < int.MaxValue/100)
+							{
+								backupLimit = Math.Min(int.MaxValue, backupLimit *100);
+							}
 						}
 					}
 				})
