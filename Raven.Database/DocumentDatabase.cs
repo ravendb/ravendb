@@ -509,10 +509,14 @@ namespace Raven.Database
 							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
 							index.IsTestIndex = indexDefinition.IsTestIndex;
 							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
-							if (indexDefinition != null)
-								index.LockMode = indexDefinition.LockMode;
+						    if (indexDefinition != null)
+						    {
+						        index.LockMode = indexDefinition.LockMode;
+                                if (indexDefinition.Priority != null)
+						            index.Priority = indexDefinition.Priority.Value;
+						    }
 
-							index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
+						    index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
 							IndexSearcher searcher;
 							using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
 								index.DocsCount = searcher.IndexReader.NumDocs();

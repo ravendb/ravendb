@@ -515,6 +515,8 @@ namespace Raven.Client.Connection
 
 	    void SetIndexLock(string name, IndexLockMode unlock);
 
+        void SetIndexPriority(string name, IndexingPriority normalPriority);
+
 		/// <summary>
 		///     Rollbacks the specified tx id
 		/// </summary>
