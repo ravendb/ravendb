@@ -44,6 +44,33 @@ namespace Raven.Tests.Shard
 		}
 
 		[Fact]
+		public void CanIgnoreParallel()
+		{
+			using (GetNewServer())
+			{
+				var shardingStrategy = new ShardStrategy(new Dictionary<string, IDocumentStore>
+				{
+					{"one", new DocumentStore {Url = "http://localhost:8079"}},
+					{"two", new DocumentStore {Url = "http://localhost:8078"}},
+				})
+				{
+					ShardAccessStrategy = new ParallelShardAccessStrategy()
+				};
+				shardingStrategy.ShardAccessStrategy.OnError += (commands, request, exception) => request.Query != null;
+
+				using (var docStore = new ShardedDocumentStore(shardingStrategy).Initialize())
+				{
+					using (var session = docStore.OpenSession())
+					{
+						session.Query<AccurateCount.User>()
+							.ToList();
+					}
+				}
+
+			}
+		}
+
+		[Fact]
 		public void CanIgnore_Lazy()
 		{
 			using (GetNewServer())
