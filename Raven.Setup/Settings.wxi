@@ -9,8 +9,10 @@
   <Property Id="RAVEN_TARGET_ENVIRONMENT" Value="PRODUCTION" /> <!-- default value is PRODUCTION [available options: PRODUCTION, DEVELOPMENT] -->
   <Property Id="RAVEN_LICENSE_FILE_PATH" />
   <Property Id="RAVEN_LICENSE_ERROR" />
-  <Property Id="RAVEN_DATA_DIR" Value="~\Data" />
+  <Property Id="RAVEN_DATA_DIR" Value="~\Databases" />
   <Property Id="RAVEN_INDEX_DIR" />
 	<Property Id="RAVEN_STORAGE_LOGS_DIR" />
+	<Property Id="RAVEN_WORKING_DIR" Value="C:\Raven" />
+	<Property Id="RAVENFS_DATA_DIR" Value="~\FileSystems" />
 	
 </Include>
