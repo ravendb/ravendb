@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
-
+using Mono.Unix.Native;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -90,7 +90,14 @@ namespace Raven.Database.Server.Controllers
                     CurrentOperationContext.Headers.Value = headers;
                     currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token);
                 }
-                catch (OperationCanceledException)
+				catch (InvalidDataException e)
+				{
+					status.Faulted = true;
+					status.State = RavenJObject.FromObject(new { Error = "Could not understand json.", InnerError = e.SimplifyException().Message });
+					status.IsSerializationError = true;
+					error = e;
+				}
+				catch (OperationCanceledException)
                 {
                     // happens on timeout
                     currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
@@ -124,13 +131,14 @@ namespace Raven.Database.Server.Controllers
 
             if (error != null)
             {
-                return GetMessageWithObject(new
+				var httpStatusCode = status.IsSerializationError ? (HttpStatusCode)422 : HttpStatusCode.InternalServerError;
+	            return GetMessageWithObject(new
                 {
                     error.Message,
                     Error = error.ToString()
-                }, HttpStatusCode.InternalServerError);
+				}, httpStatusCode);
             }
-            if (status.IsTimedOut)
+	        if (status.IsTimedOut)
                 throw new TimeoutException("Bulk insert operation did not receive new data longer than configured treshold");
 
             sp.Stop();
@@ -232,6 +240,8 @@ namespace Raven.Database.Server.Controllers
             public RavenJToken State { get; set; } 
 
             public bool IsTimedOut { get; set; }
+
+			public bool IsSerializationError { get; set; }
         }
     }
 }
