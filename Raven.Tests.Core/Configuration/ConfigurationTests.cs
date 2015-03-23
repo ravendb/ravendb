@@ -11,7 +11,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -85,6 +85,47 @@ namespace Raven.Tests.Core.Configuration
 			Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
+		}
+
+		[Fact]
+		public void ChangingWorkingDirectoryShouldImpactRelativePaths()
+		{
+			const string WorkingDirectoryValue = "C:\\Raven\\";
+			var inMemoryConfiguration = new InMemoryRavenConfiguration();
+			inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
+			inMemoryConfiguration.Settings["Raven/AssembliesDirectory"] = "./my-assemblies";
+			inMemoryConfiguration.Settings[Constants.FileSystem.DataDirectory] = "my-files";
+			inMemoryConfiguration.Initialize();
+
+			var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
+			var workingDirectory = inMemoryConfiguration.WorkingDirectory;
+
+			Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
+			Assert.NotEqual(basePath, workingDirectory);
+			Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
+		}
+
+		[Fact]
+		public void ChangingWorkingDirectoryShouldNotImpactUNCPaths()
+		{
+			const string WorkingDirectoryValue = "C:\\Raven\\";
+			var inMemoryConfiguration = new InMemoryRavenConfiguration();
+			inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
+			inMemoryConfiguration.Settings["Raven/DataDir"] = @"\\server1\ravendb\data";
+			inMemoryConfiguration.Settings[Constants.FileSystem.DataDirectory] = @"\\server1\ravenfs\data";
+			inMemoryConfiguration.Initialize();
+
+			var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
+			var workingDirectory = inMemoryConfiguration.WorkingDirectory;
+
+			Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
+			Assert.NotEqual(basePath, workingDirectory);
+			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
+			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
 		}
 
 		[Fact]
