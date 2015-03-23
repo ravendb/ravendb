@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
@@ -22,14 +24,16 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var dc = new DocumentConvention();
-			dc.CustomizeJsonSerializer += serializer =>
+			var ds = new DocumentStore
 			{
-				serializer.Converters.Add(new AttributesTableConverter());
+				Url = "http://live-test.ravendb.net",
+				DefaultDatabase = "repl1"
 			};
 
-			var jsonSerializer = dc.CreateSerializer();
-			Console.WriteLine(jsonSerializer.Converters.Count);
+			ds.Initialize();
+
+			ds.GetReplicationInformerForDatabase().UpdateReplicationInformationIfNeeded((AsyncServerClient) ds.AsyncDatabaseCommands).Wait();
+			ds.Replication.WaitAsync(Etag.Parse("01000000-0000-0001-0000-00000000000E"),timeout: TimeSpan.FromSeconds(1)).Wait();
 		}
 	}
 
