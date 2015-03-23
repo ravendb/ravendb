@@ -366,7 +366,7 @@ class resources extends viewModelBase {
                         "Raven/ActiveBundles": bundles.join(";")
                     }
 
-                    settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(filesystemPath)) ? filesystemPath : "~\\Filesystems\\" + filesystemName;
+                    settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(filesystemPath)) ? filesystemPath : "~\\FileSystems\\" + filesystemName;
                     if (storageEngine) {
                         settings["Raven/FileSystem/Storage"] = storageEngine;
                     }

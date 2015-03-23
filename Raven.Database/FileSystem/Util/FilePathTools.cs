@@ -1,4 +1,5 @@
-﻿using Raven.Database.Extensions;
+﻿using System.IO;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.FileSystem.Util
 {
@@ -14,10 +15,21 @@ namespace Raven.Database.FileSystem.Util
 			if (string.IsNullOrEmpty(workingDirectory) || string.IsNullOrEmpty(path))
 				return path;
 
-			if (path.StartsWith(@"~/") || path.StartsWith(@"~\"))
-				path = path
-					.Replace(@"~/", workingDirectory)
-					.Replace(@"~\", workingDirectory);
+			if (Path.IsPathRooted(path) == false)
+			{
+				if (path.StartsWith(@"~/") || path.StartsWith(@"~\"))
+				{
+					path = path
+						.Replace(@"~/", workingDirectory)
+						.Replace(@"~\", workingDirectory);
+				}
+				else
+				{
+					path = Path.Combine(workingDirectory, path);
+				}
+			}
+
+			
 
 			return MakeSureEndsWithSlash(path.ToFullPath());
 		}

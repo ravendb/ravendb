@@ -13,6 +13,7 @@
   <CustomAction Id="DeleteRavenService" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="deferred" Return="ignore" Impersonate="no"/>
 
   <CustomAction Id="SetInstallationTypeToService" Property="RAVEN_INSTALLATION_TYPE" Value="SERVICE" />
+	<CustomAction Id="SetDefaultWorkingDirForService" Property="RAVEN_WORKING_DIR" Value="~\" />
 
   <Property Id="RAVEN_SERVER_FILE_EXISTS">
     <DirectorySearch Id="CheckFileDir" Path="[INSTALLFOLDER]" Depth="0">
