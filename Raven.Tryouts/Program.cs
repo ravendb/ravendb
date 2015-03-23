@@ -14,6 +14,7 @@ using Raven.Tests.Common;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Querying;
 using Raven.Tests.Issues;
+using Raven.Tests.Spatial.JsonConverters.GeoJson;
 
 namespace Raven.Tryouts
 {
@@ -21,28 +22,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var store = new DocumentStore
+			var dc = new DocumentConvention();
+			dc.CustomizeJsonSerializer += serializer =>
 			{
-				Url = "http://live-test.ravendb.net",
-				DefaultDatabase = "Northwind"
+				serializer.Converters.Add(new AttributesTableConverter());
 			};
 
-			store.Initialize();
-
-			var patchExisting = new ScriptedPatchRequest
-			{
-				Script = "this.Counter++;",
-			};
-			var patchDefault = new ScriptedPatchRequest
-			{
-				Script = "this.Counter=100;",
-			};
-
-			var docId = "TestDocs/1";
-
-			store.DatabaseCommands.Patch(docId, patchExisting, patchDefault, new RavenJObject());
-			var results = store.DatabaseCommands.Get("TestDocs/1").DataAsJson;
-
+			var jsonSerializer = dc.CreateSerializer();
+			Console.WriteLine(jsonSerializer.Converters.Count);
 		}
 	}
 
