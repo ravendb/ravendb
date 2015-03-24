@@ -155,6 +155,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 				log.Debug("Replicating deleted item {0} from {1} that does not exist, ignoring.", id, Src);
 				return;
 			}
+
 			RavenJObject currentReplicationEntry = null;
 			if (newMetadata.ContainsKey(Constants.RavenReplicationVersion) &&
 			    newMetadata.ContainsKey(Constants.RavenReplicationSource))

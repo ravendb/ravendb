@@ -6,12 +6,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Lucene.Net.Index;
-using Lucene.Net.Search;
 using Lucene.Net.Util;
 using Raven.Database.Config;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -48,10 +44,10 @@ namespace Raven.Database.Indexing
         {
             var termsCachePerField = _termsCachePerReader.GetOrCreateValue(reader);
             FieldCacheInfo info;
-            /*if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
+            if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
             {
                 return info.Results;
-            }*/
+            }
             info = termsCachePerField.Results.GetOrAdd(field, new FieldCacheInfo());
             lock (info)
             {
