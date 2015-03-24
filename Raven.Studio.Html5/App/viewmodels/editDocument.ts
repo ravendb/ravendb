@@ -316,6 +316,7 @@ class editDocument extends viewModelBase {
         }
 
         $("#docEditor").on('DynamicHeightSet', () => this.docEditor.resize());
+        $("#docEditor").bind("paste", function () { this.text.valueHasMutated() });
         this.focusOnEditor();
     }
 
