@@ -167,7 +167,11 @@ class appUrl {
 
     static forGlobalConfig(): string {
         return '#admin/settings/globalConfig';
-    }
+	}
+
+	static forServerMigration(): string {
+		return "#admin/settings/serverMigration";
+	}
 
     static forGlobalConfigPeriodicExport(): string {
         return '#admin/settings/globalConfig';

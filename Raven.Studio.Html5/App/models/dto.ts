@@ -1251,3 +1251,20 @@ interface synchronizationConfigDto {
 interface copyFromParentDto<T> {
     copyFromParent(parent: T);
 }
+
+interface serverMigrationItemDto {
+	Name: string;
+}
+
+interface serverConnectionInfoDto {
+	Url: string;
+	Username: string;
+	Password: string;
+	Domain: string;
+	ApiKey: string;
+}
+
+interface serverMigrationDto {
+	TargetServer: serverConnectionInfoDto;
+	Config: Array<serverMigrationItemDto>;
+}

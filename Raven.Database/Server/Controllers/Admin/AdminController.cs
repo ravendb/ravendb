@@ -24,6 +24,7 @@ using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
+using Raven.Abstractions.Smuggler;
 using Raven.Database.DiskIO;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
@@ -41,7 +42,7 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
-
+using Raven.Database.Smuggler;
 using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 
 namespace Raven.Database.Server.Controllers.Admin
@@ -56,6 +57,33 @@ namespace Raven.Database.Server.Controllers.Admin
 																	  typeof(CreateFolderIcon).FullName,
 																	  typeof(DeleteRemovedIndexes).FullName
 		                                                           };
+
+		[HttpPost]
+		[RavenRoute("admin/serverMigration")]
+		public async Task<HttpResponseMessage> Migrate()
+		{
+			var request = await ReadJsonObjectAsync<ServerMigrationRequest>();
+
+			var smugglerOptions = new SmugglerDatabaseOptions();
+
+			//TODO: convert to task and return id
+
+			foreach (var serverMigrationItem in request.Config)
+			{
+				var source = await DatabasesLandlord.GetDatabaseInternal(serverMigrationItem.Name);
+				var dataDumper = new DatabaseDataDumper(source, smugglerOptions);
+				await dataDumper.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+				{
+				
+					To = new RavenConnectionStringOptions
+					{
+
+					}
+				});
+			}
+
+			return null; //TODO: change me!
+		}
 
 		[HttpPost]
 		[RavenRoute("admin/backup")]

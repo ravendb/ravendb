@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -16,10 +15,11 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Smuggler;
 
-namespace Raven.Smuggler
+namespace Raven.Client.Smuggler
 {
-    internal static class SmugglerDatabaseBetweenOperation
+    public static class SmugglerDatabaseBetweenOperation
 	{
 		const int RetriesCount = 5;
 
@@ -31,8 +31,8 @@ namespace Raven.Smuggler
 			using (var exportStore = CreateStore(betweenOptions.From))
 			using (var importStore = CreateStore(betweenOptions.To))
 			{
-				SmugglerDatabaseApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.From, exportStore);
-				SmugglerDatabaseApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.To, importStore);
+				ServerValidation.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.From, exportStore);
+				ServerValidation.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.To, importStore);
 
 				var exportBatchSize = GetBatchSize(exportStore, databaseOptions);
 				var importBatchSize = GetBatchSize(importStore, databaseOptions);
