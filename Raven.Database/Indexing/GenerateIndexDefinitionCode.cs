@@ -83,6 +83,11 @@ namespace Raven.Database.Indexing
                 objectCreateExpression.Initializer.Elements.Add(new NamedExpression("MaxIndexOutputsPerDocument", new PrimitiveExpression(_indexDefinition.MaxIndexOutputsPerDocument)));
             }
 
+            if (_indexDefinition.Priority != null)
+            {
+                objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Priority", new PrimitiveExpression(_indexDefinition.Priority)));
+            }
+
             if (_indexDefinition.Indexes.Count > 0)
             {
                 objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Indexes", CreateExpressionFromStringToEnumDictionary(_indexDefinition.Indexes)));

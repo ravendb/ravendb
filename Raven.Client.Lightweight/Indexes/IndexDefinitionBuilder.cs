@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
@@ -121,7 +122,12 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
-		/// <summary>
+        /// <summary>
+        /// Gets or sets the index priority 
+        /// </summary>
+	    public IndexingPriority? Priority { get; set; }
+
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
 		public IndexDefinitionBuilder()
@@ -168,6 +174,7 @@ namespace Raven.Client.Indexes
 				DisableInMemoryIndexing = DisableInMemoryIndexing,
 				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
                 LockMode = LockMode,
+                Priority = Priority 
 			};
 
 			if (convention.PrettifyGeneratedLinqExpressions)
