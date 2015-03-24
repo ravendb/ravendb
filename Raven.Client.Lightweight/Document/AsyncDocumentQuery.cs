@@ -808,7 +808,7 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation();
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes,DatabaseCommands.OperationsHeaders);
 
 			return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation,token);
 		}

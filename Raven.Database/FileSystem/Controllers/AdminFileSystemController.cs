@@ -270,8 +270,8 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [RavenRoute("admin/fs/backup")]
-        [RavenRoute("fs/{fileSystemName}/admin/fs/backup")]
+        [RavenRoute("fs/admin/backup")]
+        [RavenRoute("fs/{fileSystemName}/admin/backup")]
         public async Task<HttpResponseMessage> Backup()
         {
             var backupRequest = await ReadJsonObjectAsync<FilesystemBackupRequest>();
@@ -402,7 +402,7 @@ namespace Raven.Database.FileSystem.Controllers
 
         [HttpPost]
         [RavenRoute("admin/fs/restore")]
-        [RavenRoute("fs/{fileSystemName}/admin/fs/restore")]
+        [RavenRoute("fs/{fileSystemName}/admin/restore")]
         public async Task<HttpResponseMessage> Restore()
         {
             if (EnsureSystemDatabase() == false)

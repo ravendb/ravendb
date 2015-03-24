@@ -35,7 +35,6 @@ namespace Raven.Client.FileSystem
 
     public class AsyncFilesServerClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, IAsyncFilesCommandsImpl
     {
-        private readonly Lazy<FilesChangesClient> notifications;
         private readonly IFilesConflictListener[] conflictListeners;
 
 
@@ -64,8 +63,6 @@ namespace Raven.Client.FileSystem
                 this.FileSystem = fileSystemName;
                 this.ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
-
-                notifications = new Lazy<FilesChangesClient>( () => new FilesChangesClient(BaseUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, TryResolveConflictByUsingRegisteredListenersAsync, () => { }));
 
                 InitializeSecurity();
             }
@@ -1856,7 +1853,7 @@ namespace Raven.Client.FileSystem
 
             public async Task StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName)
             {
-                var requestUrlString = string.Format("{0}/fs/{1}/admin/fs/backup?incremental={2}", client.ServerUrl, fileSystemName, incremental);
+                var requestUrlString = string.Format("{0}/fs/{1}/admin/backup?incremental={2}", client.ServerUrl, fileSystemName, incremental);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, "POST", client.PrimaryCredentials, convention)))
 	            {
@@ -1899,14 +1896,6 @@ namespace Raven.Client.FileSystem
             }
 
 
-        }
-
-        public override void Dispose()
-        {            
-            if (notifications.IsValueCreated)
-                notifications.Value.Dispose();
-
-            base.Dispose();
         }
 
         public ProfilingInformation ProfilingInformation { get; private set; }
