@@ -4,8 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Threading.Tasks;
 
+using Rachis.Transport;
+
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Json.Linq;
+using Raven.Tests.Common;
 
 using Xunit;
 using Xunit.Extensions;
@@ -14,6 +21,32 @@ namespace Raven.Tests.Raft
 {
 	public class ClusterDatabases : RaftTestBase
 	{
+		[Fact]
+		public async Task CanCreateClusterWhenThereAreNoDatabasesOnServer()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				var databases = store.DatabaseCommands.ForSystemDatabase().StartsWith(Constants.RavenDatabasesPrefix, null, 0, 1024);
+				foreach (var database in databases)
+					store.DatabaseCommands.GlobalAdmin.DeleteDatabase(database.Key.Substring(Constants.RavenDatabasesPrefix.Length));
+
+				var request = store.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/create", "POST");
+				await request.WriteAsync(RavenJObject.FromObject(new NodeConnectionInfo()));
+			}
+		}
+
+		[Fact]
+		public async Task CannotCreateClusterWhenThereAreAnyDatabasesOnServer()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				var request = store.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/create", "POST");
+				var e = await AssertAsync.Throws<ErrorResponseException>(() => request.WriteAsync(RavenJObject.FromObject(new NodeConnectionInfo())));
+
+				Assert.Equal("To create a cluster server must not contain any databases.", e.Message);
+			}
+		}
+
 		[Theory]
 		[PropertyData("Nodes")]
 		public void DatabaseShouldBeCreatedOnAllNodes(int numberOfNodes)
