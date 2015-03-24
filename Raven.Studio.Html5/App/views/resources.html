@@ -1,6 +1,13 @@
 ﻿<section id="resources-page">
     <div class="text-center" data-bind="visible: resources().length == 1">
-        <h2 class="page-header text-info">No databases and no filesystems are available. <small>Go ahead and <a href="#" data-bind="click: newResource">create a database or distributed file system</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a> </small></h2>
+        <h2 class="page-header text-info">
+            No databases and no filesystems are available.
+            <small>
+                Go ahead and
+                <span data-bind="visible: isGlobalAdmin"><a href="#" data-bind="click: newResource">create a database or distributed file system</a> or</span>
+                <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a>
+            </small>
+        </h2>
     </div>
     <ul class="breadcrumb" data-bind="visible: resources().length > 1">
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>

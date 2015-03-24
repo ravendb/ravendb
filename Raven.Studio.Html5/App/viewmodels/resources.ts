@@ -138,7 +138,7 @@ class resources extends viewModelBase {
 
     private resourcesLoaded() {
         // If we have no databases (except system db), show the "create a new database" screen.
-        if (this.resources().length === 1) {
+        if (this.resources().length === 1 && this.isGlobalAdmin()) {
             this.newResource();
         }
     }
