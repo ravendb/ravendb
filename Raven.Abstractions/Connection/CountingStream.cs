@@ -76,9 +76,9 @@ namespace Raven.Abstractions.Connection
 		/// <param name="buffer">An array of bytes. This method copies <paramref name="count"/> bytes from <paramref name="buffer"/> to the current stream. </param><param name="offset">The zero-based byte offset in <paramref name="buffer"/> at which to begin copying bytes to the current stream. </param><param name="count">The number of bytes to be written to the current stream. </param><exception cref="T:System.ArgumentException">The sum of <paramref name="offset"/> and <paramref name="count"/> is greater than the buffer length. </exception><exception cref="T:System.ArgumentNullException"><paramref name="buffer"/> is null. </exception><exception cref="T:System.ArgumentOutOfRangeException"><paramref name="offset"/> or <paramref name="count"/> is negative. </exception><exception cref="T:System.IO.IOException">An I/O error occurs. </exception><exception cref="T:System.NotSupportedException">The stream does not support writing. </exception><exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception><filterpriority>1</filterpriority>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
-			numberOfWrittenBytes += count;
+			numberOfWrittenBytes = NumberOfWrittenBytes + count;
 			inner.Write(buffer, offset, count);
-			updateNumberOfWrittenBytes(numberOfWrittenBytes);
+			updateNumberOfWrittenBytes(NumberOfWrittenBytes);
 		}
 
 		/// <summary>
@@ -138,6 +138,10 @@ namespace Raven.Abstractions.Connection
 		{
 			get { return position; }
 			set { throw new NotSupportedException(); }
+		}
+		public long NumberOfWrittenBytes
+		{
+			get { return numberOfWrittenBytes; }
 		}
 	}
 }

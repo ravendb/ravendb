@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using Raven.Abstractions.Data;
@@ -60,7 +61,21 @@ namespace Raven.Database.Server.Responders.Admin
 				case "PUT":
 					if (!db.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
 					{
-						dbDoc = context.ReadJsonObject<DatabaseDocument>();
+						try
+						{
+							dbDoc = context.ReadJsonObject<DatabaseDocument>();
+						}
+						catch (InvalidOperationException e)
+						{
+							context.SetSerializationException(e);
+							return;
+						}
+						catch (InvalidDataException e)
+						{
+							context.SetSerializationException(e);
+							return;
+						}
+
 						server.Protect(dbDoc);
 						var json = RavenJObject.FromObject(dbDoc);
 						json.Remove("Id");

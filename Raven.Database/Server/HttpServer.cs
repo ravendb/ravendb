@@ -838,7 +838,8 @@ namespace Raven.Database.Server
 						sp.Stop();
 						if (ctx.Response.BufferOutput)
 						{
-							ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture));
+							ctx.Response.AddHeader("Temp-Request-Time",
+								sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture));
 						}
 						return requestResponder.IsUserInterfaceRequest;
 					}
