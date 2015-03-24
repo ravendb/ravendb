@@ -469,6 +469,10 @@ namespace Raven.Client.Connection.Async
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, CancellationToken token = default(CancellationToken));
 
+		Task SetIndexLockAsync(string name, IndexLockMode unLockMode, CancellationToken token = default(CancellationToken));
+
+		Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken));
+
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition that is created by the supplied
 		///     IndexDefinitionBuilder

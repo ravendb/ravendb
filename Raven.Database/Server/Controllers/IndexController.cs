@@ -140,9 +140,6 @@ namespace Raven.Database.Server.Controllers
 			if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
 				data.MaxIndexOutputsPerDocument = 16*1024;
 
-            if (jsonIndex.ContainsKey("Priority")== false)
-                data.Priority = IndexingPriority.Normal;
-
 			try
 			{
 				Database.Indexes.PutIndex(index, data);

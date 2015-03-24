@@ -208,9 +208,9 @@ namespace Raven.Client.Connection
         {
             asyncServerClient.SetIndexLockAsync(name, unLockMode).WaitUnwrap();
         }
-        public void SetIndexPriority(string name, IndexingPriority normalPriority )
+        public void SetIndexPriority(string name, IndexingPriority priority )
         {
-            asyncServerClient.SetIndexPriorityAsync(name, normalPriority).WaitUnwrap();
+            asyncServerClient.SetIndexPriorityAsync(name, priority).WaitUnwrap();
         }
 
 		public IndexDefinition GetIndex(string name)

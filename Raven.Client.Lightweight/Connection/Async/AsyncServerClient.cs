@@ -182,11 +182,11 @@ namespace Raven.Client.Connection.Async
                  }
              }, token);
          }
-         public Task SetIndexPriorityAsync(string name, IndexingPriority normalPriority, CancellationToken token = default(CancellationToken))
+         public Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken))
          {
              return ExecuteWithReplication("POST", async operationMetadata =>
              {
-                 var operationUrl = operationMetadata.Url + "/indexes/set-priority/" + name + "?priority=" + normalPriority;
+                 var operationUrl = operationMetadata.Url + "/indexes/set-priority/" + name + "?priority=" + priority;
                  using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, "POST", operationMetadata.Credentials, convention)))
                  {
                      request.AddOperationHeaders(OperationsHeaders);
