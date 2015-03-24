@@ -108,6 +108,7 @@
     <Compile Include="MailingList\Jalchr.cs" />
     <Compile Include="MailingList\Jalchr2.cs" />
     <Compile Include="MailingList\Jalchr3.cs" />
+    <Compile Include="MailingList\StressTestIssue.cs" />
     <Compile Include="Migration\MigrationTests.cs" />
     <Compile Include="Migration\Northwind.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
