@@ -18,7 +18,7 @@ class backupFilesystemCommand extends commandBase {
                     BackupLocation: this.backupLocation,
                     DatabaseDocument: null
                 };
-        this.post('/admin/fs/backup?incremental=' + this.incremental, JSON.stringify(args), this.fs, { dataType: 'text' })
+        this.post('/admin/backup?incremental=' + this.incremental, JSON.stringify(args), this.fs, { dataType: 'text' })
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to create backup!", response.responseText, response.statusText);
                 result.reject();
