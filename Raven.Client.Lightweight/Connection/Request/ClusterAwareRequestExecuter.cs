@@ -94,8 +94,14 @@ namespace Raven.Client.Connection.Request
 
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient, bool force = false)
 		{
-			if (force == false && lastUpdate.AddMinutes(5) > SystemTime.UtcNow && LeaderNode != null)
-				return new CompletedTask();
+			if (force == false)
+			{
+				if (LeaderNode != null)
+					return new CompletedTask();
+
+				if (lastUpdate.AddMinutes(5) > SystemTime.UtcNow)
+					return new CompletedTask();
+			}
 
 			LeaderNode = null;
 			return UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
@@ -116,6 +122,9 @@ namespace Raven.Client.Connection.Request
 
 			if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeader)
 				httpJsonRequest.AddHeader(Constants.Cluster.ClusterReadBehaviorHeader, "All");
+
+			if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers || serverClient.ClusterBehavior == ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers)
+				httpJsonRequest.AddHeader(Constants.Cluster.ClusterFailoverBehaviorHeader, "true");
 		}
 
 		private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, string method, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries = 2)
@@ -130,10 +139,32 @@ namespace Raven.Client.Connection.Request
 			{
 				UpdateReplicationInformationIfNeeded(serverClient); // maybe start refresh task
 
-				if (leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds)) == false)
-					throw new InvalidOperationException("Cluster is not reachable. No leader was selected, aborting.");
+				switch (serverClient.ClusterBehavior)
+				{
+					case ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers:
+					case ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
+						if (lastUpdate.AddMinutes(5) > SystemTime.UtcNow) 
+							leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds));
 
-				node = LeaderNode;
+						node = LeaderNode;
+						if (node == null)
+						{
+							foreach (var n in NodeUrls)
+							{
+								var result = await TryClusterOperationAsync(n, operation, token).ConfigureAwait(false);
+								if (result.Success) 
+									return result.Result;
+							}
+
+							throw new InvalidOperationException("Cluster is not reachable. Executing operation on any of the nodes failed, aborting.");
+						}
+						break;
+					default:
+						if (leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds)) == false)
+							throw new InvalidOperationException("Cluster is not reachable. No leader was selected, aborting.");
+						node = LeaderNode;
+						break;
+				}
 			}
 
 			if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeader && method == "GET")
@@ -143,34 +174,46 @@ namespace Raven.Client.Connection.Request
 				node = nodes[nodeIndex];
 			}
 
-			return await TryClusterOperationAsync(serverClient, method, node, operation, token, numberOfRetries).ConfigureAwait(false);
+			var operationResult = await TryClusterOperationAsync(node, operation, token).ConfigureAwait(false);
+			if (operationResult.Success)
+				return operationResult.Result;
+
+			LeaderNode = null;
+			return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1).ConfigureAwait(false);
 		}
 
-		private async Task<T> TryClusterOperationAsync<T>(AsyncServerClient serverClient, string method, OperationMetadata localLeaderNode, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries)
+		private static async Task<AsyncOperationResult<T>> TryClusterOperationAsync<T>(OperationMetadata localLeaderNode, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
 		{
 			Debug.Assert(localLeaderNode != null);
 
 			token.ThrowIfCancellationRequested();
-
 			var shouldRetry = false;
+
+			var operationResult = new AsyncOperationResult<T>();
 			try
 			{
-				return await operation(localLeaderNode).ConfigureAwait(false);
+				operationResult.Result = await operation(localLeaderNode).ConfigureAwait(false);
+				operationResult.Success = true;
 			}
 			catch (Exception e)
 			{
-				var ae = e as AggregateException;
-				ErrorResponseException errorResponseException;
-				if (ae != null)
-					errorResponseException = ae.ExtractSingleInnerException() as ErrorResponseException;
-				else
-					errorResponseException = e as ErrorResponseException;
+				operationResult.Success = false;
 
 				bool wasTimeout;
 				if (HttpConnectionHelper.IsServerDown(e, out wasTimeout))
+				{
 					shouldRetry = true;
+					operationResult.WasTimeout = wasTimeout;
+				}
 				else
 				{
+					var ae = e as AggregateException;
+					ErrorResponseException errorResponseException;
+					if (ae != null)
+						errorResponseException = ae.ExtractSingleInnerException() as ErrorResponseException;
+					else
+						errorResponseException = e as ErrorResponseException;
+
 					if (errorResponseException == null)
 						throw;
 
@@ -182,8 +225,7 @@ namespace Raven.Client.Connection.Request
 					throw;
 			}
 
-			LeaderNode = null;
-			return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1).ConfigureAwait(false);
+			return operationResult;
 		}
 
 		private Task UpdateReplicationInformationForCluster(OperationMetadata primaryNode, Func<OperationMetadata, Task<ReplicationDocumentWithClusterInformation>> getReplicationDestinationsTask)
@@ -207,7 +249,10 @@ namespace Raven.Client.Connection.Request
 						LeaderNode = GetLeaderNode(Nodes);
 
 						if (LeaderNode != null)
+						{
+							lastUpdate = SystemTime.UtcNow;
 							return new CompletedTask();
+						}
 					}
 				}
 

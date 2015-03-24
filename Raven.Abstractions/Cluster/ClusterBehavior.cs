@@ -8,7 +8,9 @@ namespace Raven.Abstractions.Cluster
 	public enum ClusterBehavior
 	{
 		ReadFromLeaderWriteToLeader = 1,
-		ReadFromAllWriteToLeader = 2,
+		ReadFromLeaderWriteToLeaderWithFailovers = 2,
+		ReadFromAllWriteToLeader = 3,
+		ReadFromAllWriteToLeaderWithFailovers = 4,
 		None = 0
 	}
 }

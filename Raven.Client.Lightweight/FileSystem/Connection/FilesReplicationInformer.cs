@@ -1,20 +1,15 @@
-﻿using Raven.Abstractions;
-using Raven.Abstractions.Connection;
+﻿using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
-using Raven.Client.Document;
+using Raven.Client.Connection.Request;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Connection
 {
@@ -47,7 +42,7 @@ namespace Raven.Client.FileSystem.Connection
                 try
                 {
                     var config = serverClient.Configuration.GetKeyAsync<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
-                    failureCounts[urlForFilename] = new FailureCounter(); // we just hit the master, so we can reset its failure count
+                    FailureCounters.FailureCounts[urlForFilename] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
                     if (config != null)
                     {
@@ -55,29 +50,29 @@ namespace Raven.Client.FileSystem.Connection
                         var destinationsArray = config.Value<RavenJArray>("Destinations");
                         if (destinationsArray != null)
                         {
-                            document = new JsonDocument();
-                            document.DataAsJson = new RavenJObject() { { "Destinations", destinationsArray } };
+                            document = new JsonDocument
+                                       {
+	                                       DataAsJson = new RavenJObject
+	                                                    {
+		                                                    { "Destinations", destinationsArray }
+	                                                    }
+                                       };
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    log.ErrorException("Could not contact master for new replication information", e);
+                    Log.ErrorException("Could not contact master for new replication information", e);
                     document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
                 }
 
 
                 if (document == null)
-                {
-                    lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
                     return;
-                }
 
                 ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
 
                 UpdateReplicationInformationFromDocument(document);
-
-                lastReplicationUpdate = SystemTime.UtcNow;
             }
         }
 
@@ -113,9 +108,9 @@ namespace Raven.Client.FileSystem.Connection
             foreach (var replicationDestination in ReplicationDestinations)
             {
                 FailureCounter value;
-                if (failureCounts.TryGetValue(replicationDestination.Url, out value))
+				if (FailureCounters.FailureCounts.TryGetValue(replicationDestination.Url, out value))
                     continue;
-                failureCounts[replicationDestination.Url] = new FailureCounter();
+				FailureCounters.FailureCounts[replicationDestination.Url] = new FailureCounter();
             }
 
         }

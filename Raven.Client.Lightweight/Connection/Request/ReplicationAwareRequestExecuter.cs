@@ -65,10 +65,10 @@ namespace Raven.Client.Connection.Request
 		{
 			if (serverClient.Url.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return;
-			if (ReplicationInformer.GetFailureCount(serverClient.Url) <= 0)
+			if (ReplicationInformer.FailureCounters.GetFailureCount(serverClient.Url) <= 0)
 				return; // not because of failover, no need to do this.
 
-			var lastPrimaryCheck = ReplicationInformer.GetFailureLastCheck(serverClient.Url);
+			var lastPrimaryCheck = ReplicationInformer.FailureCounters.GetFailureLastCheck(serverClient.Url);
 			httpJsonRequest.AddHeader(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(serverClient.Url));
 			httpJsonRequest.AddHeader(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
 
@@ -100,7 +100,7 @@ namespace Raven.Client.Connection.Request
 			bool shouldForceCheck;
 			if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
 			{
-				replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
+				replicationInformer.FailureCounters.ForceCheck(primaryUrl, shouldForceCheck);
 			} 
 		}
 

@@ -279,6 +279,8 @@ namespace Raven.Abstractions.Data
 			public const string ClusterAwareHeader = "Raven-Cluster-Aware";
 
 			public const string ClusterReadBehaviorHeader = "Raven-Cluster-Read-Behavior";
+
+			public const string ClusterFailoverBehaviorHeader = "Raven-Cluster-Failover-Behavior";
 	    }
 	}
 }

@@ -14,7 +14,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
+using Raven.Client.Connection.Request;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -22,6 +22,14 @@ namespace Raven.Client.Connection
 {
 	public class ReplicationInformer : ReplicationInformerBase<ServerClient>, IDocumentStoreReplicationInformer
 	{
+		private readonly object replicationLock = new object();
+
+		private bool firstTime = true;
+
+		private DateTime lastReplicationUpdate = DateTime.MinValue;
+
+		private Task refreshReplicationInformationTask;
+
         public ReplicationInformer(Convention conventions, HttpJsonRequestFactory jsonRequestFactory)
             : base(conventions, jsonRequestFactory)
         {
@@ -39,7 +47,7 @@ namespace Raven.Client.Connection
 
 		private Task UpdateReplicationInformationIfNeededInternal(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
 		{
-			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
 			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
@@ -72,7 +80,7 @@ namespace Raven.Client.Connection
 					{
 						if (task.Exception != null)
 						{
-							log.ErrorException("Failed to refresh replication information", task.Exception);
+							Log.ErrorException("Failed to refresh replication information", task.Exception);
 						}
 						refreshReplicationInformationTask = null;
 					});
@@ -111,13 +119,13 @@ namespace Raven.Client.Connection
             foreach (var replicationDestination in ReplicationDestinations)
             {
                 FailureCounter value;
-                if (failureCounts.TryGetValue(replicationDestination.Url, out value))
+                if (FailureCounters.FailureCounts.TryGetValue(replicationDestination.Url, out value))
                     continue;
-                failureCounts[replicationDestination.Url] = new FailureCounter();
+				FailureCounters.FailureCounts[replicationDestination.Url] = new FailureCounter();
             }
 
 			if (replicationDocument.ClientConfiguration != null)
-				conventions.UpdateFrom(replicationDocument.ClientConfiguration);
+				Conventions.UpdateFrom(replicationDocument.ClientConfiguration);
         }
 
 	    protected override string GetServerCheckUrl(string baseUrl)
@@ -148,11 +156,11 @@ namespace Raven.Client.Connection
 				{
 					var replicationDestinations = getReplicationDestinations();
 					document = replicationDestinations == null ? null : RavenJObject.FromObject(replicationDestinations).ToJsonDocument();
-					failureCounts[url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
+					FailureCounters.FailureCounts[url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)
 				{
-					log.ErrorException("Could not contact master for new replication information", e);
+					Log.ErrorException("Could not contact master for new replication information", e);
 					document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 
 					if (document == null)
@@ -190,6 +198,15 @@ namespace Raven.Client.Connection
 
 				lastReplicationUpdate = SystemTime.UtcNow;
 			}
+		}
+
+		public override void Dispose()
+		{
+			base.Dispose();
+
+			var replicationInformationTaskCopy = refreshReplicationInformationTask;
+			if (replicationInformationTaskCopy != null)
+				replicationInformationTaskCopy.Wait();
 		}
     }
 }
