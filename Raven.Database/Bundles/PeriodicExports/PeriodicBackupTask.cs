@@ -38,7 +38,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 		private volatile PeriodicExportStatus exportStatus;
 		private volatile PeriodicExportSetup exportConfigs;
-		private long backupLimit = int.MaxValue;
+		private int backupLimit = int.MaxValue;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -172,7 +172,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 							{
 								var dataDumper = new DatabaseDataDumper(documentDatabase, new SmugglerDatabaseOptions()
 								{
-									Limit = (int) backupLimit
+									Limit = backupLimit
 								});
 								var localBackupConfigs = exportConfigs;
 								var localBackupStatus = exportStatus;
