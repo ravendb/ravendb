@@ -26,7 +26,7 @@ namespace Raven.Client.FileSystem
         NameValueCollection OperationsHeaders { get; set; }
 
         /// <summary>
-        /// Admin operations for current database
+        /// Admin operations
         /// </summary>
         IAsyncFilesAdminCommands Admin { get; }
 
@@ -103,7 +103,7 @@ namespace Raven.Client.FileSystem
 
         Task EnsureFileSystemExistsAsync(string fileSystem);        
         Task<long> StartRestore(FilesystemRestoreRequest restoreRequest);
-        Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName);
+        Task StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName);
         Task<long> StartCompact(string filesystemName);
         Task ResetIndexes(string filesystemName);
     }

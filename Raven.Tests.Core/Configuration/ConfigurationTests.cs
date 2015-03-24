@@ -6,11 +6,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -48,6 +49,100 @@ namespace Raven.Tests.Core.Configuration
 																	 "VirtualDirectory",
 																	 "OAuthTokenKey"
 		                                                         };
+
+		[Fact]
+		public void NotChangingWorkingDirectoryShouldNotImpactPaths()
+		{
+			var inMemoryConfiguration = new InMemoryRavenConfiguration();
+			inMemoryConfiguration.Initialize();
+
+			var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
+			var workingDirectory = inMemoryConfiguration.WorkingDirectory;
+
+			Assert.Equal(basePath, workingDirectory);
+			Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(basePath));
+			Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(basePath));
+			Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(basePath));
+			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(basePath));
+			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(basePath));
+		}
+
+		[Fact]
+		public void ChangingWorkingDirectoryShouldImpactPaths()
+		{
+			const string WorkingDirectoryValue = "C:\\Raven\\";
+			var inMemoryConfiguration = new InMemoryRavenConfiguration();
+			inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
+			inMemoryConfiguration.Initialize();
+
+			var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
+			var workingDirectory = inMemoryConfiguration.WorkingDirectory;
+
+			Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
+			Assert.NotEqual(basePath, workingDirectory);
+			Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
+		}
+
+		[Fact]
+		public void ChangingWorkingDirectoryShouldImpactRelativePaths()
+		{
+			const string WorkingDirectoryValue = "C:\\Raven\\";
+			var inMemoryConfiguration = new InMemoryRavenConfiguration();
+			inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
+			inMemoryConfiguration.Settings["Raven/AssembliesDirectory"] = "./my-assemblies";
+			inMemoryConfiguration.Settings[Constants.FileSystem.DataDirectory] = "my-files";
+			inMemoryConfiguration.Initialize();
+
+			var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
+			var workingDirectory = inMemoryConfiguration.WorkingDirectory;
+
+			Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
+			Assert.NotEqual(basePath, workingDirectory);
+			Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
+		}
+
+		[Fact]
+		public void ChangingWorkingDirectoryShouldNotImpactUNCPaths()
+		{
+			const string WorkingDirectoryValue = "C:\\Raven\\";
+			var inMemoryConfiguration = new InMemoryRavenConfiguration();
+			inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
+			inMemoryConfiguration.Settings["Raven/DataDir"] = @"\\server1\ravendb\data";
+			inMemoryConfiguration.Settings[Constants.FileSystem.DataDirectory] = @"\\server1\ravenfs\data";
+			inMemoryConfiguration.Initialize();
+
+			var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
+			var workingDirectory = inMemoryConfiguration.WorkingDirectory;
+
+			Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
+			Assert.NotEqual(basePath, workingDirectory);
+			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
+			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
+		}
+
+		[Fact]
+		public void CanUseAppDrivePrefixInWorkingDirectoryForAutoDriveLetterCalculations()
+		{
+			const string WorkingDirectoryValue = "appDrive:\\Raven\\";
+			var inMemoryConfiguration = new InMemoryRavenConfiguration();
+			inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
+			inMemoryConfiguration.Initialize();
+
+			var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
+			var rootPath = Path.GetPathRoot(basePath);
+			var workingDirectory = inMemoryConfiguration.WorkingDirectory;
+
+			Assert.NotEqual(basePath, workingDirectory);
+			Assert.True(workingDirectory.StartsWith(rootPath));
+		}
 
 		[Fact]
 		public void DefaultInMemoryRavenConfigurationShouldBeInitializedCorrectly()
@@ -129,8 +224,8 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.MaxNumberOfParallelProcessingTasks.Value, actual => actual.MaxNumberOfParallelProcessingTasks);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.DataDir.Value.ToFullPath(null)), actual => actual.DataDirectory);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.CountersDataDir.Value.ToFullPath(null)), actual => actual.CountersDataDirectory);
-			configurationComparer.Assert(expected => expected.PluginsDirectory.Value.ToFullPath(null), actual => actual.PluginsDirectory);
-            configurationComparer.Assert(expected => expected.AssembliesDirectory.Value.ToFullPath(null), actual => actual.AssembliesDirectory);
+			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.PluginsDirectory.Value.ToFullPath(null)), actual => actual.PluginsDirectory);
+            configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.AssembliesDirectory.Value.ToFullPath(null)), actual => actual.AssembliesDirectory);
             configurationComparer.Assert(expected => expected.EmbeddedFilesDirectory.Value.ToFullPath(null), actual => actual.EmbeddedFilesDirectory);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.FileSystem.DataDir.Value.ToFullPath(null)), actual => actual.FileSystem.DataDirectory);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.FileSystem.DataDir.Value.ToFullPath(null)) + @"Indexes", actual => actual.FileSystem.IndexStoragePath);
@@ -138,15 +233,17 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.MaxConcurrentMultiGetRequests.Value, actual => actual.MaxConcurrentMultiGetRequests);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.DataDir.Value.ToFullPath(null)) + @"Indexes", actual => actual.IndexStoragePath);
 			configurationComparer.Assert(expected => expected.DefaultStorageTypeName.Value, actual => actual.DefaultStorageTypeName);
-			configurationComparer.Assert(expected => expected.CompiledIndexCacheDirectory.Value.ToFullTempPath(), actual => actual.CompiledIndexCacheDirectory);
+			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.CompiledIndexCacheDirectory.Value.ToFullPath(null)), actual => actual.CompiledIndexCacheDirectory);
 			configurationComparer.Assert(expected => expected.FlushIndexToDiskSizeInMb.Value, actual => actual.FlushIndexToDiskSizeInMb);
 			configurationComparer.Assert(expected => expected.TombstoneRetentionTime.Value, actual => actual.TombstoneRetentionTime);
 			configurationComparer.Assert(expected => expected.Replication.ReplicationRequestTimeoutInMilliseconds.Value, actual => actual.Replication.ReplicationRequestTimeoutInMilliseconds);
+            configurationComparer.Assert(expected => expected.Replication.ForceReplicationRequestBuffering.Value, actual => actual.Replication.ForceReplicationRequestBuffering);
 			configurationComparer.Assert(expected => expected.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value, actual => actual.Indexing.MaxNumberOfItemsToProcessInTestIndexes);
 			configurationComparer.Assert(expected => expected.IndexAndTransformerReplicationLatencyInSec.Value, actual => actual.IndexAndTransformerReplicationLatencyInSec);
 			configurationComparer.Assert(expected => expected.MaxConcurrentRequestsForDatabaseDuringLoad.Value, actual => actual.MaxConcurrentRequestsForDatabaseDuringLoad);
 			configurationComparer.Assert(expected => expected.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value, actual => actual.Replication.MaxNumberOfItemsToReceiveInSingleBatch);
             configurationComparer.Assert(expected => expected.ImplicitFetchFieldsFromDocumentMode.Value, actual => actual.ImplicitFetchFieldsFromDocumentMode);
+			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.WorkingDir.Value.ToFullPath(null)), actual => actual.WorkingDirectory);
 			configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
 			configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
 			configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);

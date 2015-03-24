@@ -41,7 +41,11 @@ class commandBase {
         }
 
         return "?" + propNameAndValues.join("&");
-    }
+	}
+
+	getTimeToAlert(longWait: boolean) {
+		return longWait ? 60000 : 9000;
+	}
 
     query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, timeToAlert:number = 9000): JQueryPromise<T> {
         var ajax = this.ajax(relativeUrl, args, "GET", resource,null, timeToAlert);

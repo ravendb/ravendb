@@ -131,7 +131,7 @@ namespace Raven.Database.FileSystem.Controllers
         private void EnsureFileSystemHasRequiredSettings(string id, FileSystemDocument fsDoc)
         {
             if (!fsDoc.Settings.ContainsKey(Constants.FileSystem.DataDirectory))
-                fsDoc.Settings[Constants.FileSystem.DataDirectory] = "~/Filesystems/" + id;
+                fsDoc.Settings[Constants.FileSystem.DataDirectory] = "~/FileSystems/" + id;
         }
 
 		[HttpDelete]
@@ -270,8 +270,8 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [RavenRoute("admin/fs/backup")]
-        [RavenRoute("fs/{fileSystemName}/admin/fs/backup")]
+        [RavenRoute("fs/admin/backup")]
+        [RavenRoute("fs/{fileSystemName}/admin/backup")]
         public async Task<HttpResponseMessage> Backup()
         {
             var backupRequest = await ReadJsonObjectAsync<FilesystemBackupRequest>();
@@ -282,7 +282,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             if (backupRequest.FileSystemDocument == null && FileSystem.Name != null)
             {
-                var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/Filesystems/" + FileSystem.Name, null);
+                var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/FileSystems/" + FileSystem.Name, null);
                 if (jsonDocument != null)
                 {
                     backupRequest.FileSystemDocument = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
@@ -402,7 +402,7 @@ namespace Raven.Database.FileSystem.Controllers
 
         [HttpPost]
         [RavenRoute("admin/fs/restore")]
-        [RavenRoute("fs/{fileSystemName}/admin/fs/restore")]
+        [RavenRoute("fs/{fileSystemName}/admin/restore")]
         public async Task<HttpResponseMessage> Restore()
         {
             if (EnsureSystemDatabase() == false)

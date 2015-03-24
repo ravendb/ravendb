@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -13,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using Raven.Abstractions.Connection;
@@ -238,13 +240,28 @@ namespace Raven.Database.Server.Controllers
 			return GetQueryStringValue(InnerRequest, key);
 		}
 
-		public static string GetQueryStringValue(HttpRequestMessage req, string key)
+	/*	public static string GetQueryStringValue(HttpRequestMessage req, string key)
 		{
 			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
 			if (value != null)
 				value = Uri.UnescapeDataString(value);
 			return value;
-		}
+		}*/
+
+
+        public static string GetQueryStringValue(HttpRequestMessage req, string key)
+        {
+            NameValueCollection nvc;
+            object value;
+            if (req.Properties.TryGetValue("Raven.QueryString", out value))
+            {
+                nvc = (NameValueCollection) value;
+                return nvc[key];
+            }
+            nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
+            req.Properties["Raven.QueryString"] = nvc;
+            return nvc[key];
+        }
 
 		public string[] GetQueryStringValues(string key)
 		{

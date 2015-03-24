@@ -80,6 +80,43 @@
 						 SelectionLanguage="XSLPattern"
 						 Sequence="11" />
 
+				<util:XmlFile Id="SetWorkingDataDirIIS"
+											 Action="setValue"
+											 Permanent="yes"
+											 ElementPath="/configuration/appSettings/add[\[]@key='Raven/WorkingDir'[\]]"
+											 Name="value"
+											 File="[#web.config]"
+											 Value="[RAVEN_WORKING_DIR]"
+											 SelectionLanguage="XSLPattern"
+											 Sequence="12" />
+
+				<util:XmlFile Id="AddEmptyFileSystemDataDirPathSetting_IIS"
+											Action="createElement"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings"
+											Name="add"
+											File="[#web.config]"
+											SelectionLanguage="XSLPattern"
+											Sequence="13" />
+				<util:XmlFile Id="AddFileSystemDataDirPath_IIS"
+											Action="setValue"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings/add[\[]not(@key)[\]] "
+											Name="key"
+											Value="Raven/FileSystem/DataDir"
+											File="[#web.config]"
+											SelectionLanguage="XSLPattern"
+											Sequence="14" />
+				<util:XmlFile Id="SetFileSystemDataDirPath_IIS"
+											Action="setValue"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings/add[\[]@key='Raven/FileSystem/DataDir'[\]]"
+											Name="value"
+											File="[#web.config]"
+											Value="[RAVENFS_DATA_DIR]"
+											SelectionLanguage="XSLPattern"
+											Sequence="15" />
+
 			</Component>
 			<Component Id="Raven.Web.Config.IIS_6" Guid="{0D39076B-E488-44DD-9E07-57732A515601}" Permanent="yes" NeverOverwrite="yes">
 				<Condition><![CDATA[IISMAJORVERSION < "#7"]]></Condition>
@@ -147,6 +184,43 @@
 						 Value="[RAVEN_STORAGE_LOGS_DIR]"
 						 SelectionLanguage="XSLPattern"
 						 Sequence="11" />
+
+				<util:XmlFile Id="SetWorkingDataDirIIS6"
+						 Action="setValue"
+						 Permanent="yes"
+						 ElementPath="/configuration/appSettings/add[\[]@key='Raven/WorkingDir'[\]]"
+						 Name="value"
+						 File="[#web_iis6.config]"
+						 Value="[RAVEN_WORKING_DIR]"
+						 SelectionLanguage="XSLPattern"
+						 Sequence="12" />
+
+				<util:XmlFile Id="AddEmptyFileSystemDataDirPathSetting_IIS6"
+											Action="createElement"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings"
+											Name="add"
+											File="[#web_iis6.config]"
+											SelectionLanguage="XSLPattern"
+											Sequence="13" />
+				<util:XmlFile Id="AddFileSystemDataDirPath_IIS6"
+											Action="setValue"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings/add[\[]not(@key)[\]] "
+											Name="key"
+											Value="Raven/FileSystem/DataDir"
+											File="[#web_iis6.config]"
+											SelectionLanguage="XSLPattern"
+											Sequence="14" />
+				<util:XmlFile Id="SetFileSystemDataDirPath_IIS6"
+											Action="setValue"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings/add[\[]@key='Raven/FileSystem/DataDir'[\]]"
+											Name="value"
+											File="[#web_iis6.config]"
+											Value="[RAVENFS_DATA_DIR]"
+											SelectionLanguage="XSLPattern"
+											Sequence="15" />
 
 			</Component>
 			<Component Id="PersistWebSiteValues" Guid="{BA5C1D27-7DD0-4521-BE13-4BC0A57D9D1D}">
