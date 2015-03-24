@@ -78,6 +78,8 @@
       <Publish Dialog="LicenseFileChooser" Control="Cancel" Event="SpawnDialog" Value="CancelDlg" Order="1">1</Publish>
 
       <Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="SetInstallationTypeToService" Order="1"><![CDATA[NOT IISMAJORVERSION OR IISMAJORVERSION <= "#5"]]></Publish>
+			<Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="SetDefaultWorkingDirForIIS" Order="1"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Publish>
+			<Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="SetDefaultWorkingDirForService" Order="1"><![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
       <Publish Dialog="InstallationType" Control="Next" Event="AddLocal" Value="All" Order="2">1</Publish>
       <Publish Dialog="InstallationType" Control="Next" Event="Remove" Value="Service" Order="3"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Publish>
       <Publish Dialog="InstallationType" Control="Next" Event="Remove" Value="IIS" Order="4"> <![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
