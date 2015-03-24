@@ -111,7 +111,6 @@ namespace Raven.Bundles.Replication.Tasks
 			_indexReplicationTaskTimer = database.TimerManager.NewTimer(ReplicateIndexesAndTransformersTask, TimeSpan.Zero, _replicationFrequency);
 			_lastQueriedTaskTimer = database.TimerManager.NewTimer(SendLastQueriedTask, TimeSpan.Zero, _lastQueriedFrequency);
 
-
 			task.Start();
 		}
 
@@ -417,6 +416,9 @@ namespace Raven.Bundles.Replication.Tasks
 							destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
 							if (destinationsReplicationInformationForSource == null)
 									return false;
+
+							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty && destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.Empty) 
+								_indexReplicationTaskTimer.Change(TimeSpan.Zero, _replicationFrequency);
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 
