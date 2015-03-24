@@ -75,9 +75,12 @@ namespace Raven.Client.Connection.Request
 
 		public List<OperationMetadata> Nodes { get; private set; }
 
+		public FailureCounters FailureCounters { get; private set; }
+
 		public ClusterAwareRequestExecuter()
 		{
 			Nodes = new List<OperationMetadata>();
+			FailureCounters = new FailureCounters();
 		}
 
 		public int GetReadStripingBase(bool increment)
@@ -94,14 +97,8 @@ namespace Raven.Client.Connection.Request
 
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient, bool force = false)
 		{
-			if (force == false)
-			{
-				if (LeaderNode != null)
-					return new CompletedTask();
-
-				if (lastUpdate.AddMinutes(5) > SystemTime.UtcNow)
-					return new CompletedTask();
-			}
+			if (force == false && lastUpdate.AddMinutes(5) > SystemTime.UtcNow && LeaderNode != null)
+				return new CompletedTask();
 
 			LeaderNode = null;
 			return UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
@@ -143,17 +140,25 @@ namespace Raven.Client.Connection.Request
 				{
 					case ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers:
 					case ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
-						if (lastUpdate.AddMinutes(5) > SystemTime.UtcNow) 
+						if (lastUpdate.AddMinutes(5) < SystemTime.UtcNow)
 							leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds));
 
 						node = LeaderNode;
 						if (node == null)
 						{
-							foreach (var n in NodeUrls)
+							var nodes = NodeUrls;
+							for (var i = 0; i < nodes.Count; i++)
 							{
-								var result = await TryClusterOperationAsync(n, operation, token).ConfigureAwait(false);
-								if (result.Success) 
+								var n = nodes[i];
+								if (ShouldExecuteUsing(n) == false)
+									continue;
+
+								var hasMoreNodes = nodes.Count > i + 1;
+								var result = await TryClusterOperationAsync(n, operation, hasMoreNodes, token).ConfigureAwait(false);
+								if (result.Success)
 									return result.Result;
+
+								FailureCounters.IncrementFailureCount(n.Url);
 							}
 
 							throw new InvalidOperationException("Cluster is not reachable. Executing operation on any of the nodes failed, aborting.");
@@ -171,20 +176,32 @@ namespace Raven.Client.Connection.Request
 			{
 				var nodes = NodeUrls;
 				var nodeIndex = readStripingBase % nodes.Count;
-				node = nodes[nodeIndex];
+				var readNode = nodes[nodeIndex];
+				if (ShouldExecuteUsing(readNode))
+					node = readNode;
 			}
 
-			var operationResult = await TryClusterOperationAsync(node, operation, token).ConfigureAwait(false);
+			var operationResult = await TryClusterOperationAsync(node, operation, false, token).ConfigureAwait(false);
 			if (operationResult.Success)
 				return operationResult.Result;
 
 			LeaderNode = null;
+			FailureCounters.IncrementFailureCount(node.Url);
 			return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1).ConfigureAwait(false);
 		}
 
-		private static async Task<AsyncOperationResult<T>> TryClusterOperationAsync<T>(OperationMetadata localLeaderNode, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
+		private bool ShouldExecuteUsing(OperationMetadata operationMetadata)
 		{
-			Debug.Assert(localLeaderNode != null);
+			var failureCounter = FailureCounters.GetHolder(operationMetadata.Url);
+			if (failureCounter.Value <= 1) // can fail once
+				return true;
+
+			return false;
+		}
+
+		private async Task<AsyncOperationResult<T>> TryClusterOperationAsync<T>(OperationMetadata node, Func<OperationMetadata, Task<T>> operation, bool avoidThrowing, CancellationToken token)
+		{
+			Debug.Assert(node != null);
 
 			token.ThrowIfCancellationRequested();
 			var shouldRetry = false;
@@ -192,13 +209,11 @@ namespace Raven.Client.Connection.Request
 			var operationResult = new AsyncOperationResult<T>();
 			try
 			{
-				operationResult.Result = await operation(localLeaderNode).ConfigureAwait(false);
+				operationResult.Result = await operation(node).ConfigureAwait(false);
 				operationResult.Success = true;
 			}
 			catch (Exception e)
 			{
-				operationResult.Success = false;
-
 				bool wasTimeout;
 				if (HttpConnectionHelper.IsServerDown(e, out wasTimeout))
 				{
@@ -214,16 +229,16 @@ namespace Raven.Client.Connection.Request
 					else
 						errorResponseException = e as ErrorResponseException;
 
-					if (errorResponseException == null)
-						throw;
-
-					if (errorResponseException.StatusCode == HttpStatusCode.Redirect || errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed)
+					if (errorResponseException != null && (errorResponseException.StatusCode == HttpStatusCode.Redirect || errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed))
 						shouldRetry = true;
 				}
 
-				if (shouldRetry == false)
+				if (shouldRetry == false && avoidThrowing == false)
 					throw;
 			}
+
+			if (operationResult.Success)
+				FailureCounters.ResetFailureCount(node.Url);
 
 			return operationResult;
 		}
@@ -249,10 +264,7 @@ namespace Raven.Client.Connection.Request
 						LeaderNode = GetLeaderNode(Nodes);
 
 						if (LeaderNode != null)
-						{
-							lastUpdate = SystemTime.UtcNow;
 							return new CompletedTask();
-						}
 					}
 				}
 
@@ -296,6 +308,14 @@ namespace Raven.Client.Connection.Request
 							.ToArray();
 
 						Task.WaitAll(tasks);
+
+						replicationDocuments.ForEach(x =>
+						{
+							if (x.Task.Result == null)
+								return;
+
+							FailureCounters.ResetFailureCount(x.Node.Url);
+						});
 
 						var newestTopology = replicationDocuments
 							.Where(x => x.Task.Result != null)

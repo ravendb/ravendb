@@ -59,7 +59,7 @@ namespace Raven.Tests.Raft
 			});
 		}
 
-		[Fact]
+		[Fact(Skip = "Windows credentials required.")]
 		public async Task CanCreateClusterWithWindowsAuthAndSendCommandToLeader()
 		{
 			const string username = "";
@@ -136,7 +136,7 @@ namespace Raven.Tests.Raft
 			});
 		}
 
-		[Fact]
+		[Fact(Skip = "Windows credentials required.")]
 		public async Task CanCreateClusterWithWindowsAuthAndSendCommandToNonLeader()
 		{
 			const string username = "";

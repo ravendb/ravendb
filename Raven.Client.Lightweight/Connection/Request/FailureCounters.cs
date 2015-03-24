@@ -15,7 +15,7 @@ namespace Raven.Client.Connection.Request
 {
 	public class FailureCounters
 	{
-		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
+		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };
 
 		public readonly ConcurrentDictionary<string, FailureCounter> FailureCounts = new ConcurrentDictionary<string, FailureCounter>();
 
