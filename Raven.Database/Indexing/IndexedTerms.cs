@@ -48,10 +48,10 @@ namespace Raven.Database.Indexing
         {
             var termsCachePerField = _termsCachePerReader.GetOrCreateValue(reader);
             FieldCacheInfo info;
-            if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
+            /*if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
             {
                 return info.Results;
-            }
+            }*/
             info = termsCachePerField.Results.GetOrAdd(field, new FieldCacheInfo());
             lock (info)
             {

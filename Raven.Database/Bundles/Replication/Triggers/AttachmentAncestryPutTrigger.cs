@@ -25,6 +25,7 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			if (key.StartsWith("Raven/")) // we don't deal with system attachment
 				return;
+
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
 				var attachmentMetadata = GetAttachmentMetadata(key);
