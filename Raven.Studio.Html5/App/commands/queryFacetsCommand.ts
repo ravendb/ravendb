@@ -5,7 +5,7 @@ import facet = require("models/facet");
 import document = require("models/document");
 
 class queryFacetsCommand extends commandBase {
-    constructor(private indexName: string, private queryText: string, private skip: number, private take: number, private facets: facetDto[], private db: database) {
+	constructor(private indexName: string, private queryText: string, private skip: number, private take: number, private facets: facetDto[], private db: database, private disableCache: boolean = false) {
         super();
     }
 
@@ -14,7 +14,8 @@ class queryFacetsCommand extends commandBase {
         var argsUrl = this.urlEncodeArgs({
             query: this.queryText ? this.queryText : undefined,
             facetStart: this.skip,
-            facetPageSize: this.take,
+			facetPageSize: this.take,
+			disableCache: this.disableCache ? Date.now() : undefined,
             facets: JSON.stringify(this.facets)
         });
         var url = "/facets/" + this.indexName + argsUrl;
