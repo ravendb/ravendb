@@ -5,6 +5,7 @@ import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import getClusterTopologyCommand = require("commands/getClusterTopologyCommand");
 import topology = require("models/topology");
+import shell = require("viewmodels/shell");
 
 class createDatabase extends viewModelBase {
 
@@ -40,6 +41,8 @@ class createDatabase extends viewModelBase {
     alertTimeout = ko.observable("");
     alertRecurringTimeout = ko.observable("");
 
+	clusterMode = ko.computed(() => shell.clusterMode());
+
     constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();
 
@@ -47,6 +50,10 @@ class createDatabase extends viewModelBase {
         if (!!this.licenseStatus() && this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
             this.isPeriodicExportBundleEnabled(false);
         }
+
+		if (shell.clusterMode()) {
+			this.isReplicationBundleEnabled(true);
+		}
 
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string;
@@ -109,7 +116,7 @@ class createDatabase extends viewModelBase {
     isBundleActive(name: string): boolean {
         var licenseStatus: licenseStatusDto = this.licenseStatus();
 
-        if (licenseStatus == null || licenseStatus.IsCommercial == false) {
+        if (licenseStatus == null || !licenseStatus.IsCommercial) {
             return true;
         }
         else {

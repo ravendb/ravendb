@@ -16,6 +16,7 @@ import clusterConfiguration = require("models/clusterConfiguration");
 import saveClusterConfigurationCommand = require("commands/saveClusterConfigurationCommand");
 import updateRaftClusterCommand = require("commands/updateRaftClusterCommand");
 import getClusterNodesStatusCommand = require("commands/getClusterNodesStatusCommand");
+import shell = require("viewmodels/shell");
 
 class cluster extends viewModelBase {
 
@@ -117,7 +118,10 @@ class cluster extends viewModelBase {
             .done(nci => {
             new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), true)
                 .execute()
-                .done(() => setTimeout(() => this.refresh(), 500));
+                .done(() => {
+					shell.clusterMode(true);
+					setTimeout(() => this.refresh(), 500);
+				});
 
         });
         app.showDialog(dialog);

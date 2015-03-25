@@ -6,6 +6,7 @@ using System.Threading;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Raft.Util;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
@@ -120,6 +121,7 @@ namespace Raven.Database.Server.Controllers
 						Disabled = database.Value<bool>("Disabled"),
 						IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.IndexingDisabled),
 						RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.RejectClientsModeEnabled),
+						ClusterWide = ClusterManager.IsActive() && !GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.Cluster.NonClusterDatabaseMarker),
 						Bundles = bundles,
 						IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
 					};
@@ -130,6 +132,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			public bool IndexingDisabled { get; set; }
 			public bool RejectClientsEnabled { get; set; }
+			public bool ClusterWide { get; set; }
 		}
 
         /// <summary>

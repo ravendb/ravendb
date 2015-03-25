@@ -54,6 +54,9 @@ import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
+import getClusterTopologyCommand = require("commands/getClusterTopologyCommand");
+import topology = require("models/topology");
+
 class shell extends viewModelBase {
     private router = router;
 
@@ -113,6 +116,8 @@ class shell extends viewModelBase {
     currentConnectedResource: resource;
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
+	static clusterMode = ko.observable<boolean>(false);
+	isInCluster = ko.computed(() => shell.clusterMode());
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
     localLicenseStatus: KnockoutObservable<licenseStatusDto> = license.licenseStatus;
@@ -605,6 +610,7 @@ class shell extends viewModelBase {
             .done((results: database[]) => {
                 this.databasesLoaded(results);
                 this.fetchStudioConfig();
+		        this.fetchClusterTopology();
                 this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
@@ -939,6 +945,14 @@ class shell extends viewModelBase {
             .done((result: clientBuildVersionDto) => { this.clientBuildVersion(result); });
     }
 
+	fetchClusterTopology() {
+		new getClusterTopologyCommand(appUrl.getSystemDatabase())
+			.execute()
+			.done((topology: topology) => {
+				shell.clusterMode(topology.allNodes().length > 0);
+			});
+	}
+
     fetchLicenseStatus() {
         new getLicenseStatusCommand()
             .execute()
@@ -1015,6 +1029,10 @@ class shell extends viewModelBase {
         window.location.hash = this.appUrls.hasApiKey();
         window.location.reload();
     }
+
+	navigateToClusterSettings() {
+		this.navigate(this.appUrls.adminSettingsCluster());
+	}
 }
 
 export = shell;

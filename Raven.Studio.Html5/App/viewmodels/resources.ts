@@ -30,6 +30,7 @@ class resources extends viewModelBase {
     appUrls: computedAppUrls;
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
+	clusterMode = ko.computed(() => shell.clusterMode());
 
     constructor() {
         super();
@@ -367,7 +368,7 @@ class resources extends viewModelBase {
                         settings["Raven/IndexStoragePath"] = databaseIndexes;
                     }
 
-                    this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings);
+                    this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings, clusterWide);
                 });
 
             createResourceViewModel.createFilesystemPart
@@ -391,7 +392,7 @@ class resources extends viewModelBase {
         });
     }
 
-    showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}) {
+    showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}, clusterWide: boolean) {
         var securedSettings = {};
         var savedKey;
 
@@ -423,7 +424,7 @@ class resources extends viewModelBase {
                 new createDatabaseCommand(databaseName, settings, securedSettings)
                     .execute()
                     .done(() => {
-                        var newDatabase = this.addNewDatabase(databaseName, bundles);
+                        var newDatabase = this.addNewDatabase(databaseName, bundles, clusterWide);
                         this.selectResource(newDatabase);
 
                         var encryptionConfirmationDialogPromise = $.Deferred();
@@ -453,11 +454,11 @@ class resources extends viewModelBase {
         });
     }
 
-    private addNewDatabase(databaseName: string, bundles: string[]): database {
+    private addNewDatabase(databaseName: string, bundles: string[], clusterWide: boolean): database {
         var foundDatabase = this.databases.first((db: database) => db.name == databaseName);
 
         if (!foundDatabase) {
-            var newDatabase = new database(databaseName, true, false, bundles);
+            var newDatabase = new database(databaseName, true, false, bundles, undefined, undefined, clusterWide);
             this.databases.unshift(newDatabase);
             this.filterResources();
             return newDatabase;

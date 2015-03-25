@@ -1021,7 +1021,8 @@ interface changesApiEventDto {
 
 interface databaseDto extends tenantDto {
     IndexingDisabled: boolean;
-    RejectClientsEnabled: boolean;
+	RejectClientsEnabled: boolean;
+	ClusterWide: boolean;
 }
 
 interface tenantDto {
