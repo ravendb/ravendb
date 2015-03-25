@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.VisualBasic;
 using Raven.Client.Indexes;
 using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -35,6 +36,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Listeners;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Client.Connection.Async
 {
@@ -949,21 +951,41 @@ namespace Raven.Client.Connection.Async
             var multiGetReuestItems = facetedQueries.Select(x =>
             {
                 string addition;
-                if (x.FacetSetupDoc != null)
-                    addition = "facetDoc=" + x.FacetSetupDoc;
-                else
-                    addition = "facets=" + Uri.EscapeDataString(JsonConvert.SerializeObject(x.Facets));
+	            if (x.FacetSetupDoc != null)
+	            {
+		            addition = "facetDoc=" + x.FacetSetupDoc;
+					return new GetRequest()
+					{
+						Url = "/facets/" + x.IndexName,
+						Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
+							x.Query.GetQueryString(),
+							x.Query.Start,
+							x.Query.PageSize,
+							addition)
+					};
+	            }
+	            
+		        var serializedFacets = JsonConvert.SerializeObject(x.Facets, Default.Converters);
+		        if (serializedFacets.Length < 65519)
+		        {
+			        addition = "facets=" + Uri.EscapeDataString(serializedFacets);
+			        return new GetRequest()
+			        {
+				        Url = "/facets/" + x.IndexName,
+				        Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
+					        x.Query.GetQueryString(),
+					        x.Query.Start,
+					        x.Query.PageSize,
+					        addition)
+			        };
+		        }
 
-                return new GetRequest()
-                {
-
-                    Url = "/facets/" + x.IndexName,
-                    Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
-                        x.Query.GetQueryString(),
-                        x.Query.Start,
-                        x.Query.PageSize,
-                        addition)
-                };
+		        return new GetRequest()
+		        {
+			        Url = "/facets/" + x.IndexName,
+			        Method = "POST",
+			        Content = serializedFacets
+		        };
             }).ToArray();
 
 		    var results =  MultiGetAsync(multiGetReuestItems, token).ContinueWith(x =>
