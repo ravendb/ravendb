@@ -32,7 +32,7 @@ namespace Raven.Tryouts
 
 			ds.Initialize();
 
-			ds.GetReplicationInformerForDatabase().UpdateReplicationInformationIfNeeded((AsyncServerClient) ds.AsyncDatabaseCommands).Wait();
+			ds.GetReplicationInformerForDatabase().UpdateReplicationInformationIfNeededAsync((AsyncServerClient) ds.AsyncDatabaseCommands).Wait();
 			ds.Replication.WaitAsync(Etag.Parse("01000000-0000-0001-0000-00000000000E"),timeout: TimeSpan.FromSeconds(1)).Wait();
 		}
 	}

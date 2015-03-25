@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -210,28 +211,28 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-        private IEnumerable<JsonDocument> YieldDocumentsInBatch(CancellationTimeout timeout, Stream partialStream, BulkInsertOptions options, Action<int> increaseDocumentsCount)
-        {
-            using ( var reader = new BinaryReader(partialStream) )
-            {
-                switch (options.Format)
-                {
-                    case BulkInsertFormat.Bson:
-                        {
-                var count = reader.ReadInt32();
+		private IEnumerable<JsonDocument> YieldDocumentsInBatch(CancellationTimeout timeout, Stream partialStream, BulkInsertOptions options, Action<int> increaseDocumentsCount)
+		{
+			using (var reader = new BinaryReader(partialStream))
+			{
+				switch (options.Format)
+				{
+					case BulkInsertFormat.Bson:
+						{
+							var count = reader.ReadInt32();
 
-                            return YieldBsonDocumentsInBatch(timeout, reader, count, increaseDocumentsCount).ToArray();
-                        }
-                    case BulkInsertFormat.Json:
-                        {
-                            var count = reader.ReadInt32();
+							return YieldBsonDocumentsInBatch(timeout, reader, count, increaseDocumentsCount).ToArray();
+						}
+					case BulkInsertFormat.Json:
+						{
+							var count = reader.ReadInt32();
 
-                            return YieldJsonDocumentsInBatch(timeout, partialStream, count, increaseDocumentsCount).ToArray();
-                        }
-                    default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", options.Format.ToString()));
-                }
-            }
-        }
+							return YieldJsonDocumentsInBatch(timeout, partialStream, count, increaseDocumentsCount).ToArray();
+						}
+					default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", options.Format.ToString()));
+				}
+			}
+		}
 
         private IEnumerable<JsonDocument> YieldBsonDocumentsInBatch(CancellationTimeout timeout, BinaryReader reader, int count, Action<int> increaseDocumentsCount)
         {

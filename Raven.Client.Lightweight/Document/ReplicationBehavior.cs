@@ -4,13 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -75,7 +74,7 @@ namespace Raven.Client.Document
 			var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token);
 			var sourceDbId = sourceStatistics.DatabaseId.ToString();
 
-			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, actions,destination.SourceCollections, cts.Token)).ToArray();
+			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, destination.SourceCollections, cts.Token)).ToArray();
 
 		    try
 		    {
@@ -112,7 +111,7 @@ namespace Raven.Client.Document
 		    }
 		}
 
-		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, ConcurrentQueue<ReplicatedEtagInfo> actions , string[] sourceCollections, CancellationToken cancellationToken)
+		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, string[] sourceCollections, CancellationToken cancellationToken)
 		{
 		    while (true)
 		    {
