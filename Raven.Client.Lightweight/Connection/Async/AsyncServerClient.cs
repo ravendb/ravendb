@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Indexes;
 using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;

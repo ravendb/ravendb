@@ -8,6 +8,7 @@ using Raven.Abstractions.OAuth;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
 using Raven.Client.FileSystem.Changes;
