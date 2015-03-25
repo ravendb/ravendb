@@ -34,6 +34,11 @@ namespace Raven.Client.FileSystem
         public int MaxNumberOfRequestsPerSession { get; set; }
 
 		/// <summary>
+		/// Whether UseOptimisticConcurrency is set to true by default for all opened sessions
+		/// </summary>
+		public bool DefaultUseOptimisticConcurrency { get; set; }
+
+		/// <summary>
 		/// Clone the current conventions to a new instance
 		/// </summary>
         public FilesConvention Clone()

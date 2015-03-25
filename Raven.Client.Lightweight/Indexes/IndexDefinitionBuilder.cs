@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
@@ -121,7 +122,7 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
-		/// <summary>
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
 		public IndexDefinitionBuilder()

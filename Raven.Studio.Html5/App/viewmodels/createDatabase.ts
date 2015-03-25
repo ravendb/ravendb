@@ -5,7 +5,6 @@ import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/database");
-import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class createDatabase extends viewModelBase {

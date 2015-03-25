@@ -284,11 +284,6 @@ namespace Raven.Database.Server.Connections
 				return true;
 			}
 
-			if (notification is CancellationNotification && watchCancellations > 0)
-			{
-				return true;
-			}
-
 			return false;
 		}
 

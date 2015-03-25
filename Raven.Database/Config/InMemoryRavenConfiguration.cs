@@ -11,6 +11,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -95,6 +96,9 @@ namespace Raven.Database.Config
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
+
+			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
+			FileSystem.InitializeFrom(this);
 
 			IndexAndTransformerReplicationLatencyInSec = ravenSettings.IndexAndTransformerReplicationLatencyInSec.Value;
 			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
@@ -252,13 +256,11 @@ namespace Raven.Database.Config
 			// Misc settings
 			WebDir = ravenSettings.WebDir.Value;
 
-			PluginsDirectory = ravenSettings.PluginsDirectory.Value.ToFullPath();
+			PluginsDirectory = ravenSettings.PluginsDirectory.Value;
+			AssembliesDirectory = ravenSettings.AssembliesDirectory.Value;
+			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value;
 
-		    AssembliesDirectory = ravenSettings.AssembliesDirectory.Value.ToFullPath();
-
-		    EmbeddedFilesDirectory = ravenSettings.EmbeddedFilesDirectory.Value.ToFullPath();
-
-			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullTempPath();
+			EmbeddedFilesDirectory = ravenSettings.EmbeddedFilesDirectory.Value.ToFullPath();
 
 			var taskSchedulerType = ravenSettings.TaskScheduler.Value;
 			if (taskSchedulerType != null)
@@ -284,6 +286,7 @@ namespace Raven.Database.Config
 
 			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
 			Replication.ReplicationRequestTimeoutInMilliseconds = ravenSettings.Replication.ReplicationRequestTimeoutInMilliseconds.Value;
+            Replication.ForceReplicationRequestBuffering = ravenSettings.Replication.ForceReplicationRequestBuffering.Value;
 			Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
@@ -308,7 +311,23 @@ namespace Raven.Database.Config
 			return this;
 		}
 
-	    public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
+		private static string CalculateWorkingDirectory(string workingDirectory)
+		{
+			if (string.IsNullOrEmpty(workingDirectory)) 
+				workingDirectory = @"~\";
+
+			if (workingDirectory.StartsWith("APPDRIVE:", StringComparison.OrdinalIgnoreCase))
+			{
+				var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+				var rootPath = Path.GetPathRoot(baseDirectory);
+				if (string.IsNullOrEmpty(rootPath) == false)
+					workingDirectory = Regex.Replace(workingDirectory, "APPDRIVE:", rootPath.TrimEnd('\\'), RegexOptions.IgnoreCase);
+			}
+
+			return FilePathTools.MakeSureEndsWithSlash(workingDirectory.ToFullPath());
+		}
+
+		public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
 
 	    public int IndexAndTransformerReplicationLatencyInSec { get; internal set; }
 
@@ -709,6 +728,8 @@ namespace Raven.Database.Config
 
 		#region Data settings
 
+		public string WorkingDirectory { get; private set; }
+
 		/// <summary>
 		/// The directory for the RavenDB database. 
 		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
@@ -717,7 +738,7 @@ namespace Raven.Database.Config
 		public string DataDirectory
 		{
 			get { return dataDirectory; }
-			set { dataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
+			set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
 		}
 
 		/// <summary>
@@ -727,7 +748,7 @@ namespace Raven.Database.Config
 		public string CountersDataDirectory
 		{
 			get { return countersDataDirectory; }
-			set { countersDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
+			set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
 		}
 
 		/// <summary>
@@ -808,7 +829,7 @@ namespace Raven.Database.Config
 					Catalog.Catalogs.Remove(cat);
 				}
 
-				pluginsDirectory = value.ToFullPath();
+				pluginsDirectory = FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value);
 
 				// add new one
 				if (Directory.Exists(pluginsDirectory))
@@ -822,11 +843,23 @@ namespace Raven.Database.Config
 			}
 		}
 
+		private string assembliesDirectory;
+
         /// <summary>
         /// Where the internal assemblies will be extracted to.
         /// Default: ~\Assemblies
         /// </summary>
-        public string AssembliesDirectory { get; set; }
+        public string AssembliesDirectory 
+		{
+	        get
+	        {
+		        return assembliesDirectory;
+	        }
+	        set
+	        {
+				assembliesDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value);
+	        } 
+		}
 
         /// <summary>
         /// Where we search for embedded files.
@@ -837,11 +870,23 @@ namespace Raven.Database.Config
 		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
 		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
 
+		private string compiledIndexCacheDirectory;
+
 		/// <summary>
 		/// Where to cache the compiled indexes. Absolute path or relative to TEMP directory.
-		/// Default: ~\Raven\CompiledIndexCache
+		/// Default: ~\CompiledIndexCache
 		/// </summary>
-		public string CompiledIndexCacheDirectory { get; set; }
+		public string CompiledIndexCacheDirectory
+		{
+			get
+			{
+				return compiledIndexCacheDirectory;
+			}
+			set
+			{
+				compiledIndexCacheDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value);
+			}
+		}
 
 		public string OAuthTokenServer { get; set; }
 
@@ -1274,6 +1319,11 @@ namespace Raven.Database.Config
 			/// </summary>
 			public int ReplicationRequestTimeoutInMilliseconds { get; set; }
 
+            /// <summary>
+            /// Force us to buffer replication requests (useful if using windows auth under certain scenarios).
+            /// </summary>
+            public bool ForceReplicationRequestBuffering { get; set; }
+
 			/// <summary>
 			/// Maximum number of items replication will receive in single batch. Min: 512. Default: null (let source server decide).
 			/// </summary>
@@ -1282,13 +1332,20 @@ namespace Raven.Database.Config
 
         public class FileSystemConfiguration
         {
+	        public void InitializeFrom(InMemoryRavenConfiguration configuration)
+	        {
+		        workingDirectory = configuration.WorkingDirectory;
+	        }
+
 			private string fileSystemDataDirectory;
 
 			private string fileSystemIndexStoragePath;
 
 			private string defaultFileSystemStorageTypeName;
 
-            public TimeSpan MaximumSynchronizationInterval { get; set; }
+	        private string workingDirectory;
+
+	        public TimeSpan MaximumSynchronizationInterval { get; set; }
 
 			/// <summary>
 			/// The directory for the RavenDB file system. 
@@ -1297,7 +1354,7 @@ namespace Raven.Database.Config
 			public string DataDirectory
 			{
 				get { return fileSystemDataDirectory; }
-				set { fileSystemDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
+				set { fileSystemDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
 			}
 
 			public string IndexStoragePath

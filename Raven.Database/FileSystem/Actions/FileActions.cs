@@ -156,9 +156,6 @@ namespace Raven.Database.FileSystem.Actions
 			}
 			catch (Exception ex)
 			{
-				if (options.UploadId.HasValue)
-					Publisher.Publish(new CancellationNotification { UploadId = options.UploadId.Value, File = name });
-
 				Log.WarnException(string.Format("Failed to upload a file '{0}'", name), ex);
 
 				throw;
@@ -583,8 +580,6 @@ namespace Raven.Database.FileSystem.Actions
 
 		public class PutOperationOptions
 		{
-			public Guid? UploadId { get; set; }
-			
 			public bool PreserveTimestamps { get; set; }
 
 			public DateTimeOffset? LastModified { get; set; }

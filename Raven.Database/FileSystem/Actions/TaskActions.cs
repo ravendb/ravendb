@@ -176,7 +176,8 @@ namespace Raven.Database.FileSystem.Actions
 		public enum PendingTaskType
 		{
 			ExportFileSystem,
-			ImportFileSystem
+			ImportFileSystem,
+			DeleteFilesByQuery
 		}
 	}
 }
