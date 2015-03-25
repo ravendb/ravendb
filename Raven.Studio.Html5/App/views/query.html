@@ -48,7 +48,6 @@
         <div class="btn-group">
             <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
             <button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
-                <!--Cache <i class="fa" data-bind="css: { 'fa-lock': !isCacheDisable(), 'fa-unlock': isCacheDisable() }, title: { }"></i>-->
                 <span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
             </button>
             <div class="btn-group">
