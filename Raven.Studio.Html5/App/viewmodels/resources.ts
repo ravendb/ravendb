@@ -136,11 +136,14 @@ class resources extends viewModelBase {
         this.resourcesLoaded();
     }
 
-    private resourcesLoaded() {
+	private resourcesLoaded() {
+		/*
+
+		Show it only when cluster bundle is not present
         // If we have no databases (except system db), show the "create a new database" screen.
         if (this.resources().length === 1) {
             this.newResource();
-        }
+        } */
     }
 
     filterResources() {
@@ -309,6 +312,11 @@ class resources extends viewModelBase {
         this.navigate(this.appUrls.adminSettings());
         shell.disconnectFromResourceChangesApi();
     }
+
+	navigateToCreateCluster() {
+		this.navigate(this.appUrls.adminSettingsCluster());
+		shell.disconnectFromResourceChangesApi();
+	}
 
     dismissAlert(uniqueKey: string) {
         new dismissAlertCommand(appUrl.getSystemDatabase(), uniqueKey).execute();

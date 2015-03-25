@@ -26,7 +26,8 @@ class appUrl {
     
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
-        adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+		adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+		adminSettingsCluster: ko.computed(() => appUrl.forCluster()),
 
         hasApiKey: ko.computed(() => appUrl.forHasApiKey()),
 

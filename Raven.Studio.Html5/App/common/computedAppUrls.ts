@@ -1,6 +1,7 @@
 // Interface
 interface computedAppUrls {
-    adminSettings: KnockoutComputed<string>;
+	adminSettings: KnockoutComputed<string>;
+	adminSettingsCluster: KnockoutComputed<string>;
 
     hasApiKey: KnockoutComputed<string>;
 
