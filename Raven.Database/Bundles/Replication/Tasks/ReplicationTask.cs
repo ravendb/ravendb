@@ -1118,13 +1118,13 @@ namespace Raven.Bundles.Replication.Tasks
 			var tombstones = actions
 				.Lists
 				.Read(Constants.RavenReplicationDocsTombstones, result.LastEtag, lastEtag, maxNumberOfTombstones + 1)
-							.Select(x => new JsonDocument
-							{
-								Etag = x.Etag,
-								Key = x.Key,
-								Metadata = x.Data,
-								DataAsJson = new RavenJObject()
-							})
+				.Select(x => new JsonDocument
+				{
+					Etag = x.Etag,
+					Key = x.Key,
+					Metadata = x.Data,
+					DataAsJson = new RavenJObject()
+				})
 				.ToList();
 
 			var results = docsToReplicate.Concat(tombstones);

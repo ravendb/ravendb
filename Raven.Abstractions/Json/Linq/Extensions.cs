@@ -6,6 +6,7 @@ using System.Linq;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Abstractions.Data;
