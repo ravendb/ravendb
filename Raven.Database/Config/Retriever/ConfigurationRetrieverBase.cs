@@ -41,6 +41,11 @@ namespace Raven.Database.Config.Retriever
 
 		protected abstract TClass ConvertGlobalDocumentToLocal(TClass global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 
+		protected virtual TClass PostProcessLocalOnly(TClass local)
+		{
+			return local;
+		}
+
 		public ConfigurationDocument<TClass> GetConfigurationDocument(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			JsonDocument global = null;
@@ -66,7 +71,7 @@ namespace Raven.Database.Config.Retriever
 
 			if (global == null)
 			{
-				configurationDocument.MergedDocument = local.DataAsJson.JsonDeserialization<TClass>();
+				configurationDocument.MergedDocument = PostProcessLocalOnly(local.DataAsJson.JsonDeserialization<TClass>());
 				return configurationDocument;
 			}
 

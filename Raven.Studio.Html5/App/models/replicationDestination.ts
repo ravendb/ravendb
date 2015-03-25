@@ -48,19 +48,33 @@ class replicationDestination {
         }
     });
 
+	clearApiKeyCredentials() {
+		this.apiKey(null);
+	}
+
+	clearUserCredentials() {
+		this.username(null);
+		this.password(null);
+		this.domain(null);
+	}
+
     useUserCredentials() {
         this.isUserCredentials(true);
-        this.isApiKeyCredentials(false);
+		this.isApiKeyCredentials(false);
+	    this.clearApiKeyCredentials();
     }
 
     useApiKeyCredentials() {
         this.isApiKeyCredentials(true);
-        this.isUserCredentials(false);
+		this.isUserCredentials(false);
+	    this.clearUserCredentials();
     }
 
     useNoCredentials() {
         this.isUserCredentials(false);
-        this.isApiKeyCredentials(false);
+		this.isApiKeyCredentials(false);
+		this.clearUserCredentials();
+	    this.clearApiKeyCredentials();
     }
 
     toggleIsAdvancedShows(item, event) {
@@ -141,7 +155,7 @@ class replicationDestination {
             Disabled: this.disabled(),
             ClientVisibleUrl: this.clientVisibleUrl(),
             SkipIndexReplication: this.skipIndexReplication(),
-            SourceCollections: this.sourceCollections()
+			SourceCollections: this.enableReplicateOnlyFromCollections()? this.sourceCollections(): []
         };
     }
 

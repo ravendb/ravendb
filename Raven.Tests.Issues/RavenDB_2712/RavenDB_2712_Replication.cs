@@ -181,6 +181,70 @@ namespace Raven.Tests.Issues.RavenDB_2712
 		}
 
 		[Fact]
+		public void LocalConfigurationShouldBeProperlyFilledWhenNoGlobal()
+		{
+			using (NewRemoteDocumentStore(databaseName: "Northwind"))
+			{
+				var server = servers[0];
+				var systemDatabase = server.SystemDatabase;
+				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
+				var retriever = database.ConfigurationRetriever;
+
+				database
+					.Documents
+					.Put(
+						Constants.RavenReplicationDestinations,
+						null,
+						RavenJObject.FromObject(new ReplicationDocument
+						{
+							Id = Constants.RavenReplicationDestinations,
+							Destinations = {
+								                                       new ReplicationDestination
+								                                       {
+									                                       ApiKey = "key2", 
+									                                       Database = "Northwind", 
+									                                       ClientVisibleUrl = "curl2", 
+									                                       Disabled = false, 
+									                                       Domain = "d2", 
+									                                       IgnoredClient = false, 
+									                                       Password = "p2", 
+									                                       SkipIndexReplication = true, 
+									                                       TransitiveReplicationBehavior = TransitiveReplicationOptions.None, 
+									                                       Url = "http://localhost:8080", 
+									                                       Username = "u2"
+								                                       }
+							                                       },
+							Source = database.TransactionalStorage.Id.ToString()
+						}), new RavenJObject(), null);
+
+				var document = retriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
+
+				Assert.NotNull(document);
+				Assert.False(document.GlobalExists);
+				Assert.True(document.LocalExists);
+				Assert.Equal(Constants.RavenReplicationDestinations, document.MergedDocument.Id);
+				Assert.Equal(database.TransactionalStorage.Id.ToString(), document.MergedDocument.Source);
+				Assert.Equal(1, document.MergedDocument.Destinations.Count);
+
+				var destination = document.MergedDocument.Destinations[0];
+
+				Assert.False(destination.HasGlobal);
+				Assert.True(destination.HasLocal);
+				Assert.Equal("key2", destination.ApiKey);
+				Assert.Equal("Northwind", destination.Database);
+				Assert.Equal("curl2", destination.ClientVisibleUrl);
+				Assert.False(destination.Disabled);
+				Assert.Equal("d2", destination.Domain);
+				Assert.False(destination.IgnoredClient);
+				Assert.Equal("p2", destination.Password);
+				Assert.True(destination.SkipIndexReplication);
+				Assert.Equal(TransitiveReplicationOptions.None, destination.TransitiveReplicationBehavior);
+				Assert.Equal("http://localhost:8080", destination.Url);
+				Assert.Equal("u2", destination.Username);
+			}
+		}
+
+		[Fact]
 		public void GlobalConfigurationWillBeAppliedToLocalButWithoutOverwrites()
 		{
 			using (NewRemoteDocumentStore(databaseName: "Northwind"))
