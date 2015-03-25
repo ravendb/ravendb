@@ -5,13 +5,13 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Database;
+using Raven.Abstractions.Json.Linq;
+using Raven.Bundles.Encryption.Settings;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
-using Constants = Raven.Abstractions.Data.Constants;
 
-namespace Raven.Bundles.Encryption.Settings
+namespace Raven.Database.Bundles.Encryption.Settings
 {
 	internal static class EncryptionSettingsManager
 	{
@@ -108,8 +108,7 @@ namespace Raven.Bundles.Encryption.Settings
 
 			if (config != null)
 			{
-				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
-				if (!ravenJTokenEqualityComparer.Equals(config, Constants.InResourceKeyVerificationDocumentContents))
+				if (!RavenJTokenEqualityComparer.Default.Equals(config, Constants.InResourceKeyVerificationDocumentContents))
 					throw new ConfigurationErrorsException("The file system is encrypted with a different key and/or algorithm than the ones is currently configured");
 			}
 			else
@@ -141,8 +140,7 @@ namespace Raven.Bundles.Encryption.Settings
 
 			if (doc != null)
 			{
-				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
-				if (!ravenJTokenEqualityComparer.Equals(doc.DataAsJson, Constants.InResourceKeyVerificationDocumentContents))
+				if (!RavenJTokenEqualityComparer.Default.Equals(doc.DataAsJson, Constants.InResourceKeyVerificationDocumentContents))
 					throw new ConfigurationErrorsException("The database is encrypted with a different key and/or algorithm than the ones "
 						+ "currently in the configuration file.");
 			}

@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Json.Linq;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -23,8 +24,7 @@ namespace Raven.Tests.MailingList
 			obj2["Raven-Replication-Version"] = null;
 			obj2["Raven-Replication-Source"] = "http://someserver";
 
-			Assert.False(new RavenJTokenEqualityComparer().Equals(obj1, obj2));
-
+			Assert.False(RavenJTokenEqualityComparer.Default.Equals(obj1, obj2));
 		} 
 	}
 }

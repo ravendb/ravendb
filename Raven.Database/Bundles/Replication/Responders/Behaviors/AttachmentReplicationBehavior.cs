@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Plugins;
+using Raven.Database.Bundles.Replication.Responders.Behaviors;
 using Raven.Database.Impl;
 using Raven.Json.Linq;
 
