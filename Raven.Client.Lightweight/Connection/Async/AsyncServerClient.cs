@@ -1200,7 +1200,7 @@ namespace Raven.Client.Connection.Async
 			
 		    if (method == "POST")
 		    {
-                return QueryAsyncAsPost(index, query, includes, token);
+				return QueryAsyncAsPost(index, query, includes, metadataOnly, indexEntriesOnly, token);
 		    }
 
 				
@@ -1262,7 +1262,7 @@ namespace Raven.Client.Connection.Async
 	        }, token);
 	    }
 
-		private Task<QueryResult> QueryAsyncAsPost(string index, IndexQuery query, IEnumerable<string> includes, CancellationToken token = default(CancellationToken))
+		private Task<QueryResult> QueryAsyncAsPost(string index, IndexQuery query, string[] includes, bool metadataOnly, bool indexEntriesOnly, CancellationToken token = default(CancellationToken))
 	    {
 	        var stringBuilder = new StringBuilder();
 	        query.AppendQueryString(stringBuilder);
@@ -1272,6 +1272,11 @@ namespace Raven.Client.Connection.Async
 	            stringBuilder.Append("&include=").Append(include);
 	        }
 
+			if (metadataOnly)
+				stringBuilder.Append("&metadata-only=true");
+			if (indexEntriesOnly)
+				stringBuilder.Append("&debug=entries");
+
 	        var result = MultiGetAsync(new[]
 	        {
 	            new GetRequest
@@ -1279,7 +1284,7 @@ namespace Raven.Client.Connection.Async
 	                Query = stringBuilder.ToString(),
 	                Url = "/indexes/" + index
 	            }
-	        }, token).ContinueWith(x =>
+	        }, token).ContinueWith( x =>
 	        {
 	            if (x.IsFaulted || x.IsCanceled)
 	            {
@@ -1307,7 +1312,7 @@ namespace Raven.Client.Connection.Async
 	            var getResponse = x.Result.FirstOrDefault();
 	            var json = (RavenJObject) getResponse.Result;
 	            var queryResult = SerializationHelper.ToQueryResult(json, getResponse.GetEtagHeader(), getResponse.Headers["Temp-Request-Time"], -1);
-	            return queryResult;
+		        return queryResult;
 	        }, token);
 	        return result;
 	    }
