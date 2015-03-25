@@ -404,7 +404,7 @@ namespace Raven.Tests.Common
             return attachment;
         }
 
-        protected override void WaitForDocument(IDatabaseCommands commands, string expectedId, Etag afterEtag = null, CancellationToken? token = null)
+        protected void WaitForDocument(IDatabaseCommands commands, string expectedId, Etag afterEtag = null, CancellationToken? token = null)
         {
 			if (afterEtag != null)
 				throw new NotImplementedException();
@@ -427,14 +427,13 @@ namespace Raven.Tests.Common
 		protected bool WaitForDocument(IDatabaseCommands commands, string expectedId, int timeoutInMs)
 		{
 			var cts = new CancellationTokenSource();
-			var waitingTask = Task.Run(() => WaitForDocument(commands, expectedId, cts.Token), cts.Token);
+			var waitingTask = Task.Run(() => WaitForDocument(commands, expectedId, null, cts.Token), cts.Token);
 
 			Task.WaitAny(waitingTask, Task.Delay(timeoutInMs, cts.Token));
 
 			cts.Cancel();
 			return commands.Head(expectedId) != null;
 		}
-
 
         protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)
         {

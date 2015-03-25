@@ -1,4 +1,6 @@
-﻿using Raven.Abstractions;
+﻿using System.IO;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;

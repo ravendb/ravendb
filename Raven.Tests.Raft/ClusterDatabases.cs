@@ -26,9 +26,9 @@ namespace Raven.Tests.Raft
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				var databases = store.DatabaseCommands.ForSystemDatabase().StartsWith(Constants.RavenDatabasesPrefix, null, 0, 1024);
+				var databases = store.DatabaseCommands.ForSystemDatabase().StartsWith(Constants.Database.Prefix, null, 0, 1024);
 				foreach (var database in databases)
-					store.DatabaseCommands.GlobalAdmin.DeleteDatabase(database.Key.Substring(Constants.RavenDatabasesPrefix.Length));
+					store.DatabaseCommands.GlobalAdmin.DeleteDatabase(database.Key.Substring(Constants.Database.Prefix.Length));
 
 				var request = store.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/create", "POST");
 				await request.WriteAsync(RavenJObject.FromObject(new NodeConnectionInfo()));
@@ -64,7 +64,7 @@ namespace Raven.Tests.Raft
 					                                                   }
 																   });
 
-				var key = Constants.RavenDatabasesPrefix + "Northwind";
+				var key = Constants.Database.Prefix + "Northwind";
 
 				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), key));
 			}
@@ -88,7 +88,7 @@ namespace Raven.Tests.Raft
 					}
 				});
 
-				var key = Constants.RavenDatabasesPrefix + "Northwind";
+				var key = Constants.Database.Prefix + "Northwind";
 
 				clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), key));
 
@@ -117,7 +117,7 @@ namespace Raven.Tests.Raft
 					}
 				});
 
-				var key = Constants.RavenDatabasesPrefix + "Northwind";
+				var key = Constants.Database.Prefix + "Northwind";
 
 				Assert.NotNull(store1.DatabaseCommands.ForSystemDatabase().Get(key));
 

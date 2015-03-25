@@ -42,10 +42,10 @@ namespace Raven.Client.Connection
 
 		public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
 		{
-			return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
+			return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)).ResultUnwrap());
 		}
 
-		private Task UpdateReplicationInformationIfNeededInternal(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
+		private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
 		{
 			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();

@@ -29,10 +29,10 @@ namespace Raven.Database.Util
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			if (key.StartsWith(Constants.RavenDatabasesPrefix, StringComparison.OrdinalIgnoreCase))
+			if (key.StartsWith(Constants.Database.Prefix, StringComparison.OrdinalIgnoreCase))
 				return key;
 
-			return Constants.RavenDatabasesPrefix + key;
+			return Constants.Database.Prefix + key;
 		}
 
 		public static string GetDatabaseName(string key)
@@ -40,8 +40,8 @@ namespace Raven.Database.Util
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			if (key.StartsWith(Constants.RavenDatabasesPrefix, StringComparison.OrdinalIgnoreCase))
-				return key.Substring(Constants.RavenDatabasesPrefix.Length);
+			if (key.StartsWith(Constants.Database.Prefix, StringComparison.OrdinalIgnoreCase))
+				return key.Substring(Constants.Database.Prefix.Length);
 
 			return key;
 		}

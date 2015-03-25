@@ -89,7 +89,7 @@ namespace Raven.Database.Raft.Controllers
 			int nextStart = 0;
 			var databases = Database
 				.Documents
-				.GetDocumentsWithIdStartingWith(Constants.RavenDatabasesPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
+				.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
 			
 			if (databases.Length > 0)
 				return GetMessageWithString("To create a cluster server must not contain any databases.", HttpStatusCode.NotAcceptable);

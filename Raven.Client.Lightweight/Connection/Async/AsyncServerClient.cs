@@ -112,8 +112,8 @@ namespace Raven.Client.Connection.Async
 			ClusterBehavior = clusterBehavior;
 
 			this.requestExecuterGetter = requestExecuterGetter;
-			this.requestExecuter = requestExecuterGetter(this, databaseName, clusterBehavior, incrementReadStripe);
-			this.requestExecuter.UpdateReplicationInformationIfNeeded(this);
+			requestExecuter = requestExecuterGetter(this, databaseName, clusterBehavior, incrementReadStripe);
+			requestExecuter.UpdateReplicationInformationIfNeeded(this);
 		}
 
 		public void Dispose()
@@ -191,7 +191,7 @@ namespace Raven.Client.Connection.Async
                  using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, "POST", operationMetadata.Credentials, convention)))
                  {
                      request.AddOperationHeaders(OperationsHeaders);
-                     request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+					 request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
                      return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
@@ -205,7 +205,7 @@ namespace Raven.Client.Connection.Async
                  using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, "POST", operationMetadata.Credentials, convention)))
                  {
                      request.AddOperationHeaders(OperationsHeaders);
-                     request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+					 request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
                      return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                  }
