@@ -474,23 +474,21 @@ namespace Raven.Database.Queries
 					result.Count++;
 					if (needToApplyAggregation)
 						result.Documents.Add(docId);
+					return;
 				}
-				else
+				
+				if (GetDistinctCountValue(docId, alreadySeen))
 				{
-					if (GetDistinctCountValue(docId, alreadySeen) == 1)
-					{
-						if (needToApplyAggregation)
-							result.Documents.Add(docId);
-						else
-							result.Count++;
-					}
+					result.Count++;
+					if (needToApplyAggregation)
+						result.Documents.Add(docId);
 				}
 			}
 
-			private int GetDistinctCountValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
+			private bool GetDistinctCountValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
 		    {
                 var fields = _currentState.GetFieldsValues(docId, _fieldsCrc, IndexQuery.FieldsToFetch);
-		        return alreadySeen.Add(fields) ? 1 : 0;
+		        return alreadySeen.Add(fields);
 		    }
 
 		    private void ValidateFacets()
