@@ -61,8 +61,8 @@ namespace Raven.Client.FileSystem
             private set;
         }
 
-        private int pageSize = 1024;
-        private int start = 0;
+	    protected int pageSize = 1024;
+	    protected int start = 0;
 
         public AbstractFilesQuery(InMemoryFilesSessionOperations theSession, IAsyncFilesCommands commands)
         {
@@ -78,7 +78,7 @@ namespace Raven.Client.FileSystem
         /// </summary>
         protected string[] orderByFields = new string[0];
 
-        /// <summary>
+	    /// <summary>
         ///   Simplified method for opening a new clause within the query
         /// </summary>
         /// <returns></returns>
@@ -137,10 +137,15 @@ namespace Raven.Client.FileSystem
 
             if (fieldName.EndsWith("_numeric"))
             {
+	            var transformToRangeValue = TransformToRangeValue(new WhereParams
+	            {
+		            Value = whereParams.Value, FieldName = whereParams.FieldName
+	            });
+
                 queryText.Append("[");
-                queryText.Append(transformToEqualValue);
+                queryText.Append(transformToRangeValue);
                 queryText.Append(" TO ");
-                queryText.Append(transformToEqualValue);
+				queryText.Append(transformToRangeValue);
                 queryText.Append("]");
             }
             else
@@ -445,9 +450,9 @@ namespace Raven.Client.FileSystem
 
             var queryString = queryText.ToString().Trim();
 
-            if ( queryString.EndsWith("OR") )
+            if (queryString.EndsWith("OR"))
                 queryString = queryString.Substring(0, queryString.Length - 2);
-            else if ( queryString.EndsWith("AND"))
+            else if (queryString.EndsWith("AND"))
                 queryString = queryString.Substring(0, queryString.Length - 3);
             
             return queryString;
@@ -683,19 +688,16 @@ namespace Raven.Client.FileSystem
             if (whereParams.Value is TimeSpan)
                 return NumberUtil.NumberToString(((TimeSpan)whereParams.Value).Ticks);
 
-
-            if (whereParams.Value is float)
-                return NumberUtil.NumberToString((float)whereParams.Value);
-            if (whereParams.Value is double)
-                return NumberUtil.NumberToString((double)whereParams.Value);
-            
-            //TODO Change the server to recognize the different types.
-            if (whereParams.Value is int)
-                return whereParams.Value.ToString();
-            if (whereParams.Value is long)
-                return whereParams.Value.ToString();
-            if (whereParams.Value is decimal)
-                return whereParams.Value.ToString();
+			if (whereParams.Value is int)
+				return NumberUtil.NumberToString((int) whereParams.Value);
+			if (whereParams.Value is long)
+				return NumberUtil.NumberToString((long) whereParams.Value);
+			if (whereParams.Value is decimal)
+				return NumberUtil.NumberToString((double) (decimal) whereParams.Value);
+			if (whereParams.Value is double)
+				return NumberUtil.NumberToString((double) whereParams.Value);
+			if (whereParams.Value is float)
+				return NumberUtil.NumberToString((float) whereParams.Value);
 
             if (whereParams.Value is string)
                 return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
@@ -756,7 +758,6 @@ namespace Raven.Client.FileSystem
         {
             start = count;
         }
-
 
         public async Task<T> FirstOrDefaultAsync()
         {

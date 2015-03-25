@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import replicationsSetup = require("models/replicationsSetup");
 import replicationConfig = require("models/replicationConfig")
 import replicationDestination = require("models/replicationDestination");
+import collection = require("models/collection");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/getReplicationsCommand");
 import updateServerPrefixHiLoCommand = require("commands/updateServerPrefixHiLoCommand");
@@ -13,8 +14,9 @@ import replicateAllTransformersCommand = require("commands/replicateAllTransform
 import deleteLocalReplicationsSetupCommand = require("commands/deleteLocalReplicationsSetupCommand");
 import replicateIndexesCommand = require("commands/replicateIndexesCommand");
 import replicateTransformersCommand = require("commands/replicateTransformersCommand");
-import getEffectiveConflictResolutionCommand = require("commands/getEffectiveConflictResolutionCommand");
+import getEffectiveConflictResolutionCommand = require("commands/getEffectiveConflictResolutionCommand");import getCollectionsCommand = require("commands/getCollectionsCommand");
 import appUrl = require("common/appUrl");
+import database = require("models/database");
 
 class replications extends viewModelBase {
 
@@ -23,6 +25,7 @@ class replications extends viewModelBase {
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null } }));
     globalClientFailoverBehaviour = ko.observable<string>(null);
     globalReplicationConfig = ko.observable<replicationConfig>();
+    collections = ko.observableArray<collection>();    
 
     serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
@@ -73,7 +76,22 @@ class replications extends viewModelBase {
         this.isServerPrefixForHiLoSaveEnabled = ko.computed(() => this.serverPrefixForHiLoDirtyFlag().isDirty());
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
-        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.usingGlobal]);
+
+        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour,this.usingGlobal];
+
+        $.each(this.replicationsSetup().destinations(), (i, dest) =>
+        {
+            replicationSetupDirtyFlagItems.push(dest.sourceCollections);
+            dest.sourceCollections.subscribe(array => {
+                if (array.length > 0)
+                    dest.ignoredClient(true);
+                else {
+                    dest.ignoredClient(false);
+                }
+            });
+        });
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
+        
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
         this.isReplicateIndexesToAllEnabled = ko.computed(() => this.replicationsSetup().destinations().length > 0);
@@ -84,6 +102,11 @@ class replications extends viewModelBase {
             return rc || rs || sp;
         });
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag, this.usingGlobal]);
+
+        var db = this.activeDatabase();
+        this.fetchCollections(db).done(results => {
+            this.collections(results);
+        });
     }
 
     private fetchServerPrefixForHiLoCommand(db): JQueryPromise<any> {
@@ -125,6 +148,14 @@ class replications extends viewModelBase {
         return deferred;
     }
 
+    public onReplicateToCollectionClick(destination: replicationDestination, collectionName: string) {
+        if (destination.sourceCollections.indexOf(collectionName) < 0) {
+            destination.sourceCollections.push(collectionName);
+        } else {
+            destination.sourceCollections.remove(collectionName);
+        }
+    }
+
     createNewDestination() {
         var db = this.activeDatabase();
         this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
@@ -139,23 +170,23 @@ class replications extends viewModelBase {
             new deleteLocalReplicationsSetupCommand(this.activeDatabase())
                 .execute();
         } else {
-            if (this.isConfigSaveEnabled())
-                this.saveAutomaticConflictResolutionSettings();
-            if (this.isSetupSaveEnabled()) {
-                if (this.replicationsSetup().source()) {
-                    this.saveReplicationSetup();
-                } else {
-                    var db = this.activeDatabase();
-                    if (db) {
-                        new getDatabaseStatsCommand(db)
-                            .execute()
-                            .done(result=> {
-                                this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                            });
-                    }
+        if (this.isConfigSaveEnabled())
+            this.saveAutomaticConflictResolutionSettings();
+        if (this.isSetupSaveEnabled()) {
+            if (this.replicationsSetup().source()) {
+                this.saveReplicationSetup();
+            } else {
+                var db = this.activeDatabase();
+                if (db) {
+                    new getDatabaseStatsCommand(db)
+                        .execute()
+                        .done(result=> {
+                            this.prepareAndSaveReplicationSetup(result.DatabaseId);
+                        });
                 }
             }
         }
+    }
     }
 
     private prepareAndSaveReplicationSetup(source: string) {
@@ -172,14 +203,18 @@ class replications extends viewModelBase {
         }
     }
 
-    sendReplicateCommand(destination: replicationDestination, parentClass: replications) {
+    private fetchCollections(db: database): JQueryPromise<Array<collection>> {
+        return new getCollectionsCommand(db, this.collections()).execute();
+    }
+
+    sendReplicateCommand(destination: replicationDestination,parentClass: replications) {        
         var db = parentClass.activeDatabase();
         if (db) {
             new replicateIndexesCommand(db, destination).execute();
             new replicateTransformersCommand(db, destination).execute();
         } else {
             alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
-        }
+    }
     }
 
     sendReplicateAllCommand() {

@@ -178,9 +178,9 @@ namespace Raven.Tests.FileSystem.Auth
                 {
                     await anotherClient.UploadAsync("def.bin", new RandomStream(1)); // should throw because a file system ShouldThrow_ApiKeyDoesnContainsThisFS isn't added to ApiKeyDefinition
                 }
-                catch (InvalidOperationException ex)
+                catch (ErrorResponseException ex)
                 {
-                    errorResponse = ex.InnerException as ErrorResponseException;
+	                errorResponse = ex;
                 }
                 
                 Assert.NotNull(errorResponse);

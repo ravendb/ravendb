@@ -6,7 +6,7 @@
 					<i class="fa fa-database fa-5x"></i>
 					<br/>
 					<br/>
-					No databases and no filesystems are available. <br/><small>Go ahead and <a href="#" data-bind="click: newResource">create a database or distributed file system</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a> </small>
+					No databases and no filesystems are available. <br/><small>Go ahead and <span data-bind="visible: isGlobalAdmin">><a href="#" data-bind="click: newResource">create a database or distributed file system</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a> </small></span>
 				</h2>
 			</div>
 			<div class="col-md-2">

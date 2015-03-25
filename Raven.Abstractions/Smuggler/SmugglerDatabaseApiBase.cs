@@ -35,7 +35,7 @@ namespace Raven.Abstractions.Smuggler
 
         protected SmugglerDatabaseApiBase(SmugglerDatabaseOptions options)
 		{
-			this.Options = options;
+			Options = options;
 		}
 
         public virtual async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
@@ -104,8 +104,7 @@ namespace Raven.Abstractions.Smuggler
 
 			try
 			{
-				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
- leaveOpen: true))
+				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
 				using (var streamWriter = new StreamWriter(gZipStream))
 				{
 					var jsonWriter = new JsonTextWriter(streamWriter)
@@ -614,7 +613,7 @@ namespace Raven.Abstractions.Smuggler
             Operations.Configure(Options);
             Operations.Initialize(Options);
 			await DetectServerSupportedFeatures(importOptions.To);
-
+			
 			Stream sizeStream;
 
             var sw = Stopwatch.StartNew();
@@ -626,7 +625,7 @@ namespace Raven.Abstractions.Smuggler
 				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
 				var streamReader = new StreamReader(sizeStream);
 
-				jsonReader = new JsonTextReader(streamReader);
+				jsonReader = new RavenJsonTextReader(streamReader);
 
 				if (jsonReader.Read() == false)
 					return;
@@ -780,15 +779,8 @@ namespace Raven.Abstractions.Smuggler
 
 				var item = RavenJToken.ReadFrom(jsonReader);
 
-				var deletedDocumentInfo =
-					new JsonSerializer
-					{
-						Converters =
-							{
-								new JsonToJsonConverter(),
-                                new StreamFromJsonConverter()
-							}
-					}.Deserialize<Tombstone>(new RavenJTokenReader(item));
+				var deletedDocumentInfo = new JsonSerializer { Converters = DefaultConverters }
+                                                    .Deserialize<Tombstone>(new RavenJTokenReader(item));
 
 				Operations.ShowProgress("Importing deleted documents {0}", deletedDocumentInfo.Key);
 
@@ -811,15 +803,8 @@ namespace Raven.Abstractions.Smuggler
 
 				var item = RavenJToken.ReadFrom(jsonReader);
 
-				var deletedAttachmentInfo =
-					new JsonSerializer
-					{
-						Converters =
-							{
-								new JsonToJsonConverter(),
-                                new StreamFromJsonConverter()
-					}
-					}.Deserialize<Tombstone>(new RavenJTokenReader(item));
+				var deletedAttachmentInfo = new JsonSerializer { Converters = DefaultConverters }
+                                                    .Deserialize<Tombstone>(new RavenJTokenReader(item));
 
 				Operations.ShowProgress("Importing deleted attachments {0}", deletedAttachmentInfo.Key);
 
@@ -855,6 +840,23 @@ namespace Raven.Abstractions.Smuggler
 				return count;
 		}
 
+        private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
+        {
+            var converters = new JsonConverterCollection()
+            {
+                new JsonToJsonConverter(),
+                new StreamFromJsonConverter()
+            };
+            converters.Freeze();
+
+            return converters;
+        }, true);
+
+        private static JsonConverterCollection DefaultConverters 
+        {
+            get { return defaultConverters.Value; }
+        }
+
         [Obsolete("Use RavenFS instead.")]
 		private async Task<int> ImportAttachments(RavenConnectionStringOptions dst, JsonTextReader jsonReader)
 		{
@@ -868,15 +870,8 @@ namespace Raven.Abstractions.Smuggler
                 if ((Options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
 					continue;
 
-				var attachmentExportInfo =
-					new JsonSerializer
-					{
-						Converters =
-							{
-								new JsonToJsonConverter(),
-                                new StreamFromJsonConverter()
-							}
-					}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
+				var attachmentExportInfo = new JsonSerializer { Converters = DefaultConverters }
+                                                    .Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
 
 				Operations.ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
 
@@ -911,7 +906,7 @@ namespace Raven.Abstractions.Smuggler
                 lastEtagsDocument = Operations.GetDocument(continuationDocId);
                 if ( lastEtagsDocument == null )
                 {
-                    lastEtagsDocument = new JsonDocument()
+                    lastEtagsDocument = new JsonDocument
                     {
                         Key = continuationDocId,                        
                         Etag = Etag.Empty,

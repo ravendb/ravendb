@@ -153,5 +153,50 @@ namespace Raven.Tests.DistinctFacets
 				}
 			}
 		}
+
+		[Fact]
+		public void CanGetDistinctResult_WithFacets_LazyAndCached()
+		{
+			using (var store = NewDocumentStore())
+			{
+				SetupData(store);
+
+				using(store.AggressivelyCache())
+				using (var session = store.OpenSession())
+				{
+					var results = session.Advanced.DocumentQuery<Book, Books_Search>()
+						.WhereEquals("PrimaryTag", "RavenDB").Boost(4)
+						.OrElse()
+						.WhereEquals("SecondayTag", "RavenDB").Boost(4)
+						.Distinct()
+						.SelectFields<Books_Search.Result>("Author")
+						.ToFacetsLazy(new[]
+						{
+							new Facet
+							{
+								Name = "Category"
+							},
+						}).Value;
+					Assert.Equal("databases", results.Results["Category"].Values[0].Range);
+					Assert.Equal(1, results.Results["Category"].Values[0].Hits);
+
+					results = session.Advanced.DocumentQuery<Book, Books_Search>()
+						.WhereEquals("PrimaryTag", "RavenDB").Boost(4)
+						.OrElse()
+						.WhereEquals("SecondayTag", "RavenDB").Boost(4)
+						.Distinct()
+						.SelectFields<Books_Search.Result>("Author")
+						.ToFacetsLazy(new[]
+						{
+							new Facet
+							{
+								Name = "Category"
+							},
+						}).Value;
+					Assert.Equal("databases", results.Results["Category"].Values[0].Range);
+					Assert.Equal(1, results.Results["Category"].Values[0].Hits);
+				}
+			}
+		}
 	}
 }

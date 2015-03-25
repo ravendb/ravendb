@@ -84,5 +84,57 @@
 				return ActionResult.Failure;
 			}
 		}
+
+		[CustomAction]
+		public static ActionResult OpenFsDataDirDirectoryChooser(Session session)
+		{
+			try
+			{
+				var task = new Thread(() =>
+				{
+					var fileDialog = new FolderBrowserDialog { ShowNewFolderButton = true };
+					if (fileDialog.ShowDialog() == DialogResult.OK)
+					{
+						session["RAVENFS_DATA_DIR"] = fileDialog.SelectedPath;
+					}
+				});
+				task.SetApartmentState(ApartmentState.STA);
+				task.Start();
+				task.Join();
+
+				return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(session, "Error occurred during OpenDataDirDirectoryChooser. Exception: " + ex);
+				return ActionResult.Failure;
+			}
+		}
+
+		[CustomAction]
+		public static ActionResult OpenWorkingDirDirectoryChooser(Session session)
+		{
+			try
+			{
+				var task = new Thread(() =>
+				{
+					var fileDialog = new FolderBrowserDialog { ShowNewFolderButton = true };
+					if (fileDialog.ShowDialog() == DialogResult.OK)
+					{
+						session["RAVEN_WORKING_DIR"] = fileDialog.SelectedPath;
+					}
+				});
+				task.SetApartmentState(ApartmentState.STA);
+				task.Start();
+				task.Join();
+
+				return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(session, "Error occurred during OpenDataDirDirectoryChooser. Exception: " + ex);
+				return ActionResult.Failure;
+			}
+		}
 	}
 }

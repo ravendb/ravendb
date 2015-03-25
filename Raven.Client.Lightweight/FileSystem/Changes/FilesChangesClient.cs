@@ -139,36 +139,6 @@ namespace Raven.Client.FileSystem.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<CancellationNotification> ForCancellations()
-        {
-            // watch-cancellations, unwatch-cancellations
-            var counter = Counters.GetOrAdd("all-fs-cancellations", s =>
-            {
-                var cancellationsSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllCancellations = true;
-                    return Send("watch-cancellations", null);
-                });
-                return new FilesConnectionState(
-                    () =>
-                    {
-                        watchAllCancellations = false;
-                        Send("unwatch-cancellations", null);
-                        Counters.Remove("all-fs-cancellations");
-                    },
-                    cancellationsSubscriptionTask);
-            });
-            var taskedObservable = new TaskedObservable<CancellationNotification, FilesConnectionState>(
-                counter,
-                notification => true);
-
-            counter.OnCancellationNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
-
-            return taskedObservable;
-        }
-
-
         public IObservableWithTask<SynchronizationUpdateNotification> ForSynchronization()
         {
             var counter = Counters.GetOrAdd("all-fs-sync", s =>
@@ -242,13 +212,6 @@ namespace Raven.Client.FileSystem.Changes
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(synchronizationUpdateNotification);
-                    }
-                    break;
-                case "CancellationNotification":
-                    var uploadFailedNotification = value.JsonDeserialization<CancellationNotification>();
-                    foreach (var counter in connections)
-                    {
-                        counter.Value.Send(uploadFailedNotification);
                     }
                     break;
 

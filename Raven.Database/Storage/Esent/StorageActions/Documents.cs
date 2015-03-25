@@ -3,15 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
@@ -20,11 +19,11 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Database.Impl;
-using Raven.Database.Storage;
+using Raven.Bundles.Compression.Plugin;
 using Raven.Json.Linq;
+using Raven.Storage.Esent.StorageActions;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IDocumentStorageActions
 	{
@@ -39,7 +38,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			return DocumentByKeyInternal(key, (metadata, createDocument) =>
 			{
-				Debug.Assert(metadata.Etag != null);
+				System.Diagnostics.Debug.Assert(metadata.Etag != null);
 				return new JsonDocument
 				{
 					DataAsJson = createDocument(metadata.Key, metadata.Etag, metadata.Metadata),
@@ -111,29 +110,53 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata)
 		{
-			try
-			{
-				var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
-				if (existingCachedDocument != null)
-					return existingCachedDocument.Document;
+		    try
+		    {
+		        var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+		        if (existingCachedDocument != null)
+		            return existingCachedDocument.Document;
 
 
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				{
-					var size = stream.Length;
-					using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
-					{
-						var data = columnStream.ToJObject();
+		        using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+		        {
 
-						cacher.SetCachedDocument(key, existingEtag, data, metadata, (int)size);
+		            var size = stream.Length;
 
-						return data;
-					}
-				}
-			}
+		            using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+		            {
+		                var data = columnStream.ToJObject();
+
+
+		                cacher.SetCachedDocument(key, existingEtag, data, metadata, (int) size);
+
+		                return data;
+		            }
+		        }
+		    }
 			catch (Exception e)
 			{
-				throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
+
+			    InvalidDataException invalidDataException = null;
+                try
+			    {
+			        using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+			        using(var reader = new BinaryReader(stream))
+			        {
+			            if (reader.ReadUInt32() == DocumentCompression.CompressFileMagic)
+			            {
+			                invalidDataException = new InvalidDataException(string.Format("Document '{0}' is compressed, but the compression bundle is not enabled.\r\n" +
+			                                                                              "You have to enable the compression bundle when dealing with compressed documents.", key), e);
+			            }
+			        }
+			    }
+			    catch (Exception )
+			    {
+			        // we are already in error handling mode, just ignore this
+			    }
+                if(invalidDataException != null)
+                    throw invalidDataException;
+
+			    throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
 			}
 		}
 

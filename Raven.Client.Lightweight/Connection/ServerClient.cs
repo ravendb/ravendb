@@ -206,6 +206,14 @@ namespace Raven.Client.Connection
 		{
 			asyncServerClient.ResetIndexAsync(name).WaitUnwrap();
 		}
+        public void SetIndexLock(string name, IndexLockMode unLockMode) 
+        {
+            asyncServerClient.SetIndexLockAsync(name, unLockMode).WaitUnwrap();
+        }
+        public void SetIndexPriority(string name, IndexingPriority priority )
+        {
+            asyncServerClient.SetIndexPriorityAsync(name, priority).WaitUnwrap();
+        }
 
 		public IndexDefinition GetIndex(string name)
 		{

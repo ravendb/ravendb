@@ -36,7 +36,7 @@ namespace Raven.Tests.FileSystem
                 int count = 0;
                 using (var session = store.OpenAsyncSession())
                 {
-                    using (var reader = await session.Commands.StreamFilesAsync(fromEtag: fromEtag))
+                    using (var reader = await session.Commands.StreamFileHeadersAsync(fromEtag: fromEtag))
                     {
                         while (await reader.MoveNextAsync())
                         {
@@ -69,7 +69,7 @@ namespace Raven.Tests.FileSystem
                 int count = 0;
                 using (var session = store.OpenAsyncSession())
                 {
-                    using (var reader = await session.Commands.StreamFilesAsync(fromEtag: fromEtag, pageSize: 10))
+                    using (var reader = await session.Commands.StreamFileHeadersAsync(fromEtag: fromEtag, pageSize: 10))
                     {
                         while (await reader.MoveNextAsync())
                         {

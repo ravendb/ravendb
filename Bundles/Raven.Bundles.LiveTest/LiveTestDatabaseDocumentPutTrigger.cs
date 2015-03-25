@@ -21,18 +21,18 @@ namespace Raven.Bundles.LiveTest
 
 		private const int QuotasSoftMarginInKb = (int)(0.75 * QuotasHardLimitInKb);
 
-		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			if (string.IsNullOrEmpty(Database.Name) == false && Database.Name != Constants.SystemDatabase)
 				return;
 
-			if (key.StartsWith(Constants.RavenDatabasesPrefix, StringComparison.OrdinalIgnoreCase) == false)
+			if (key.StartsWith(Constants.Database.Prefix, StringComparison.OrdinalIgnoreCase) == false)
 				return;
 
 			RavenJObject settings;
 			RavenJToken value;
-			if (document.TryGetValue("Settings", out value) == false)
-				document["Settings"] = settings = new RavenJObject();
+			if (jsonReplicationDocument.TryGetValue("Settings", out value) == false)
+				jsonReplicationDocument["Settings"] = settings = new RavenJObject();
 			else
 				settings = (RavenJObject)value;
 

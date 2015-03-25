@@ -55,12 +55,12 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filename))
                 throw new ArgumentNullException("filename", "The filename cannot be null, empty or whitespace.");
 
-            object existingEntity;
+			FileHeader existingEntity;
             if (entitiesByKey.TryGetValue(filename, out existingEntity))
             {
                 // Check if the file is not currently been scheduled for deletion or known to be non-existent.
                 if (!this.IsDeleted(filename))
-                    return existingEntity as FileHeader;
+                    return existingEntity;
                 else
                     return null;
             }
@@ -104,7 +104,7 @@ namespace Raven.Client.FileSystem
             var result = new List<FileHeader>();
             foreach ( var file in filenames )
             {
-                object obj = null;
+				FileHeader obj = null;
                 entitiesByKey.TryGetValue(file, out obj);
                 result.Add( obj as FileHeader );
             }

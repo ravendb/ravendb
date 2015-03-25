@@ -108,6 +108,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
     </Reference>
+    <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Auth\Authentication.cs" />
@@ -123,9 +127,11 @@
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
+    <Compile Include="RavenGCTests.cs" />
     <Compile Include="Replication\IndexReplication.cs" />
     <Compile Include="Replication\ManualConflictResolution.cs" />
     <Compile Include="Replication\TransformerReplication.cs" />
+    <Compile Include="ScriptedPatching\ScriptedPatchTests.cs" />
     <Compile Include="Session\Advanced.cs" />
     <Compile Include="Shard\Sharding.cs" />
     <Compile Include="Smuggler\SmugglerApiTests.cs" />

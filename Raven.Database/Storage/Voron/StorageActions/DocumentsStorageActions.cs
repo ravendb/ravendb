@@ -18,6 +18,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Raven.Bundles.Compression.Plugin;
 using Voron;
 using Voron.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -240,8 +241,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return null;
 			}
 
-			var lowerKey = CreateKey(key);
-			var metadataDocument = ReadDocumentMetadata(key);
+            var loweredKey = CreateKey(key);
+            var metadataDocument = ReadDocumentMetadata(loweredKey);
 			if (metadataDocument == null)
 			{
 				logger.Debug("Document with key='{0}' was not found", key);
@@ -249,17 +250,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
 			int sizeOnDisk;
-			var documentData = ReadDocumentData(key, metadataDocument.Etag, metadataDocument.Metadata, out sizeOnDisk);
-
+            var documentData = ReadDocumentData(loweredKey, metadataDocument.Etag, metadataDocument.Metadata, out sizeOnDisk);
 			if (documentData == null)
 			{
 				logger.Warn("Could not find data for {0}, but found the metadata", key);
 				return null;
 			}
 
-			logger.Debug("DocumentByKey() by key ='{0}'", key);
-
-			var metadataSize = metadataIndex.GetDataSize(Snapshot, lowerKey);
+			var metadataSize = metadataIndex.GetDataSize(Snapshot, loweredKey);
 
 			return new JsonDocument
 			{
@@ -277,10 +275,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = CreateKey(key);
+            var lowerKey = CreateKey(key);
 
 			if (tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
-				return ReadDocumentMetadata(key);
+                return ReadDocumentMetadata(lowerKey);
 
 			logger.Debug("Document with key='{0}' was not found", key);
 			return null;
@@ -291,7 +289,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var loweredKey = CreateKey(key);
+            var loweredKey = CreateKey(key);
 
 			if (etag != null)
 				EnsureDocumentEtagMatch(loweredKey, etag, "DELETE");
@@ -311,8 +309,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new InvalidDataException(errorString);
 			}
 
-			var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
-			var documentMetadata = ReadDocumentMetadata(key);
+            var existingEtag = EnsureDocumentEtagMatch(loweredKey, etag, "DELETE");
+            var documentMetadata = ReadDocumentMetadata(loweredKey);
 			metadata = documentMetadata.Metadata;
 
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
@@ -389,7 +387,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = CreateKey(key);
+            var lowerKey = CreateKey(key);
 
 			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
 			{
@@ -399,7 +397,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return;
 			}
 
-			var metadata = ReadDocumentMetadata(key);
+            var metadata = ReadDocumentMetadata(lowerKey);
 
 			var newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			afterTouchEtag = newEtag;
@@ -443,7 +441,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private Etag EnsureDocumentEtagMatch(string key, Etag etag, string method)
 		{
 			var metadata = ReadDocumentMetadata(key);
-
 			if (metadata == null)
 				return Etag.InvalidEtag;
 
@@ -507,11 +504,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return isUpdate;
 		}
 
-		private JsonDocumentMetadata ReadDocumentMetadata(string key)
+        private JsonDocumentMetadata ReadDocumentMetadata(string loweredKey)
 		{
 			try
 			{
-				var loweredKey = CreateKey(key);
+                //var loweredKey = CreateKey(key);
 
 				var metadataReadResult = metadataIndex.Read(Snapshot, loweredKey, writeBatch.Value);
 				if (metadataReadResult == null)
@@ -525,7 +522,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var lastModifiedDateTimeBinary = stream.ReadInt64();
 
 					var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
-
 
 					var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
 					var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
@@ -541,7 +537,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 			catch (Exception e)
 			{
-				throw new InvalidDataException("Failed to de-serialize metadata of document " + key, e);
+
+                throw new InvalidDataException("Failed to de-serialize metadata of document " + loweredKey, e);
 			}
 		}
 
@@ -590,11 +587,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return isUpdated;
 		}
 
-		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata, out int size)
+        private RavenJObject ReadDocumentData(string loweredKey, Etag existingEtag, RavenJObject metadata, out int size)
 		{
 			try
 			{
-				var loweredKey = CreateKey(key);
+                //var loweredKey = CreateKey(key);
 
 				size = -1;
 
@@ -628,8 +625,38 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				}
 			}
 			catch (Exception e)
-			{
-				throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
+			{ 
+                InvalidDataException invalidDataException = null;
+			    try
+			    {
+                    // var loweredKey = CreateKey(key);
+                    size = -1;
+                    var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
+                    if (documentReadResult == null) //non existing document
+                        return null;
+
+                    using (var stream = documentReadResult.Reader.AsStream())
+                    {
+			            using (var reader = new BinaryReader(stream))
+			            {
+			                if (reader.ReadUInt32() == DocumentCompression.CompressFileMagic)
+			                {
+			                    invalidDataException = new InvalidDataException(string.Format("Document '{0}' is compressed, but the compression bundle is not enabled.\r\n" +
+                                                                                              "You have to enable the compression bundle when dealing with compressed documents.", loweredKey), e);
+			                }
+			            }
+			        }
+
+			
+			    }
+			    catch (Exception)
+			    {
+			        // we are already in error handling mode, just ignore this
+			    }
+			    if(invalidDataException != null)
+                    throw invalidDataException;
+
+                throw new InvalidDataException("Failed to de-serialize a document: " + loweredKey, e);
 			}
 		}
 
@@ -658,7 +685,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						stat.System.Update(size, doc.Key);
 					}
 
-					var metadata = ReadDocumentMetadata(key);
+                    var loweredKey = CreateKey(key);
+                    var metadata = ReadDocumentMetadata(loweredKey);
 
 					var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
 					if (string.IsNullOrEmpty(entityName))

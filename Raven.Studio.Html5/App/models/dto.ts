@@ -432,6 +432,8 @@ interface versioningEntryDto extends documentDto {
   Id: string;
   MaxRevisions: number;
   Exclude: boolean;
+  ExcludeUnlessExplicit: boolean;
+  PurgeOnDelete: boolean;
 }
 
 interface versioningDto {
@@ -450,6 +452,7 @@ interface replicationDestinationDto {
     Disabled: boolean;
     ClientVisibleUrl: string;
     SkipIndexReplication: boolean;
+    SourceCollections: string[];
     HasGlobal?: boolean;
     HasLocal?: boolean;
 }
@@ -1237,6 +1240,12 @@ enum ResponseCodes {
     NotFound = 404,
     PreconditionFailed = 412,
     InternalServerError = 500
+}
+
+interface synchronizationConfigDto {
+    FileConflictResolution: string;
+    MaxNumberOfSynchronizationsPerDestination: number;
+    SynchronizationLockTimeoutMiliseconds: number;
 }
 
 interface copyFromParentDto<T> {

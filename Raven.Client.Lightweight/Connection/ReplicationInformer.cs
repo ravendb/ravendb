@@ -40,9 +40,9 @@ namespace Raven.Client.Connection
         /// </summary>
         public ReplicationDestination[] FailoverServers { get; set; }
 
-		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
+		public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
 		{
-			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)).ResultUnwrap());
+			return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
 		}
 
 		private Task UpdateReplicationInformationIfNeededInternal(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
@@ -207,6 +207,5 @@ namespace Raven.Client.Connection
 			var replicationInformationTaskCopy = refreshReplicationInformationTask;
 			if (replicationInformationTaskCopy != null)
 				replicationInformationTaskCopy.Wait();
-		}
     }
-}
+}}

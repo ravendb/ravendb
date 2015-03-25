@@ -29,24 +29,24 @@ namespace Raven.Database.FileSystem.Plugins
 		{
 		}
 
-		public virtual VetoResult AllowPut(string name, RavenJObject headers)
+		public virtual VetoResult AllowPut(string name, RavenJObject metadata)
 		{
 			return VetoResult.Allowed;
 		}
 
-		public virtual void OnPut(string name, RavenJObject headers)
+		public virtual void OnPut(string name, RavenJObject metadata)
 		{
 		}
 
-		public virtual void AfterPut(string name, long? size, RavenJObject headers)
+		public virtual void AfterPut(string name, long? size, RavenJObject metadata)
 		{
 		}
 
-		public virtual void OnUpload(string name, RavenJObject headers, int pageId, int pagePositionInFile, int pageSize)
+		public virtual void OnUpload(string name, RavenJObject metadata, int pageId, int pagePositionInFile, int pageSize)
 		{
 		}
 
-		public virtual void AfterUpload(string name, RavenJObject headers)
+		public virtual void AfterUpload(string name, RavenJObject metadata)
 		{
 		}
 	}

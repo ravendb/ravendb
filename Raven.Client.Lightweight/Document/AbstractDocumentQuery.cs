@@ -723,8 +723,7 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation();
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
-
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, DatabaseCommands.OperationsHeaders);
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
 
@@ -740,7 +739,7 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation();
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes,DatabaseCommands.OperationsHeaders);
 
 			return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
@@ -759,7 +758,7 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation();
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes,DatabaseCommands.OperationsHeaders);
 
 			return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
 		}
@@ -1922,7 +1921,7 @@ If you really want to do in memory filtering on the data returned from the query
 			return indexQuery;
 		}
 
-		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
+		private static readonly Regex escapePostfixWildcard = new Regex(@"\\\*(\s|$)",
 			RegexOptions.Compiled
 			);
 		protected QueryOperator defaultOperator;
@@ -1945,7 +1944,7 @@ If you really want to do in memory filtering on the data returned from the query
 					break;
 				case EscapeQueryOptions.AllowPostfixWildcard:
 					searchTerms = RavenQuery.Escape(searchTerms, false, false);
-					searchTerms = espacePostfixWildcard.Replace(searchTerms, "*");
+                    searchTerms = escapePostfixWildcard.Replace(searchTerms, "*${1}");
 					break;
 				case EscapeQueryOptions.AllowAllWildcards:
 					searchTerms = RavenQuery.Escape(searchTerms, false, false);

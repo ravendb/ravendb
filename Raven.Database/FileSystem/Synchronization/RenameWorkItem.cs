@@ -25,7 +25,7 @@ namespace Raven.Database.FileSystem.Synchronization
 			FileAndPagesInformation fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
 
-            return destination.RenameAsync(FileName, rename, fileAndPages.Metadata, ServerInfo);
+            return destination.RenameAsync(FileName, rename, fileAndPages.Metadata, FileSystemInfo);
 		}
 
 		public override bool Equals(object obj)

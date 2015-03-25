@@ -16,6 +16,9 @@ class replicationDestination {
 
     globalConfiguration = ko.observable<replicationDestination>();
 
+    sourceCollections = ko.observableArray<string>().extend({required: false});
+    enableReplicateOnlyFromCollections = ko.observable<boolean>();
+
     name = ko.computed(() => {
         var prefix = this.disabled() ? "[disabled]" : null;
         var database = this.database();
@@ -45,19 +48,33 @@ class replicationDestination {
         }
     });
 
+	clearApiKeyCredentials() {
+		this.apiKey(null);
+	}
+
+	clearUserCredentials() {
+		this.username(null);
+		this.password(null);
+		this.domain(null);
+	}
+
     useUserCredentials() {
         this.isUserCredentials(true);
-        this.isApiKeyCredentials(false);
+		this.isApiKeyCredentials(false);
+	    this.clearApiKeyCredentials();
     }
 
     useApiKeyCredentials() {
         this.isApiKeyCredentials(true);
-        this.isUserCredentials(false);
+		this.isUserCredentials(false);
+	    this.clearUserCredentials();
     }
 
     useNoCredentials() {
         this.isUserCredentials(false);
-        this.isApiKeyCredentials(false);
+		this.isApiKeyCredentials(false);
+		this.clearUserCredentials();
+	    this.clearApiKeyCredentials();
     }
 
     toggleIsAdvancedShows(item, event) {
@@ -76,6 +93,9 @@ class replicationDestination {
         this.disabled(dto.Disabled);
         this.clientVisibleUrl(dto.ClientVisibleUrl);
         this.skipIndexReplication(dto.SkipIndexReplication);
+        this.sourceCollections(dto.SourceCollections);
+
+        this.enableReplicateOnlyFromCollections = ko.observable<boolean>(typeof dto.SourceCollections !== 'undefined' && dto.SourceCollections.length > 0);
 
         if (this.username()) {
             this.isUserCredentials(true);
@@ -100,6 +120,7 @@ class replicationDestination {
             Disabled: false,
             ClientVisibleUrl: null,
             SkipIndexReplication: false,
+            SourceCollections: [],
             HasGlobal: false,
             HasLocal: true
         });
@@ -133,7 +154,8 @@ class replicationDestination {
             IgnoredClient: this.ignoredClient(),
             Disabled: this.disabled(),
             ClientVisibleUrl: this.clientVisibleUrl(),
-            SkipIndexReplication: this.skipIndexReplication()
+            SkipIndexReplication: this.skipIndexReplication(),
+			SourceCollections: this.enableReplicateOnlyFromCollections()? this.sourceCollections(): []
         };
     }
 

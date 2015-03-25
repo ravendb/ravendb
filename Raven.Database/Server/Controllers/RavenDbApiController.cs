@@ -468,12 +468,41 @@ namespace Raven.Database.Server.Controllers
 			return stale;
 		}
 
-		protected bool GetSkipOverwriteIfUnchanged()
+        protected bool GetSkipOverwriteIfUnchanged()
 		{
 			bool result;
 			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
 			return result;
 		}
+
+        protected BulkInsertCompression GetCompression()
+        {
+            var compression = GetQueryStringValue("compression");
+            if (string.IsNullOrWhiteSpace(compression))
+                return BulkInsertCompression.GZip;
+
+            switch (compression.ToLowerInvariant())
+            {
+                case "none": return BulkInsertCompression.None;
+                case "gzip": return BulkInsertCompression.GZip;
+                default: throw new NotSupportedException(string.Format("The compression algorithm '{0}' is not supported.", compression));
+            }
+        }
+
+        protected BulkInsertFormat GetFormat()
+        {
+            var format = GetQueryStringValue("format");
+            if (string.IsNullOrWhiteSpace(format))
+                return BulkInsertFormat.Bson;
+
+            switch (format.ToLowerInvariant())
+            {
+                case "bson": return BulkInsertFormat.Bson;
+                case "json": return BulkInsertFormat.Json;
+                default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", format.ToString()));
+            }
+        }
+
 
         protected int? GetMaxOpsPerSec()
         {
@@ -502,6 +531,13 @@ namespace Raven.Database.Server.Controllers
 
 		protected void HandleReplication(HttpResponseMessage msg)
 		{
+
+            if (msg.StatusCode == HttpStatusCode.BadRequest ||
+                msg.StatusCode == HttpStatusCode.ServiceUnavailable ||
+                msg.StatusCode == HttpStatusCode.InternalServerError
+                )
+                return;
+
 			var clientPrimaryServerUrl = GetHeader(Constants.RavenClientPrimaryServerUrl);
 			var clientPrimaryServerLastCheck = GetHeader(Constants.RavenClientPrimaryServerLastCheck);
 			if (string.IsNullOrEmpty(clientPrimaryServerUrl) || string.IsNullOrEmpty(clientPrimaryServerLastCheck))
@@ -528,7 +564,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 
-        public override bool SetupRequestToProperDatabase(RequestManager rm)
+        public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
         {
             var tenantId = this.DatabaseName;
             var landlord = this.DatabasesLandlord;
@@ -579,7 +615,7 @@ namespace Raven.Database.Server.Controllers
 
 						try
 						{
-							if (resourceStoreTask.Wait(TimeSpan.FromSeconds(TimeToWaitForDatabaseToLoad)) == false)
+                            if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(TimeToWaitForDatabaseToLoad))) != resourceStoreTask)
 							{
 								var msg = string.Format("The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.", tenantId, TimeToWaitForDatabaseToLoad);
 								Logger.Warn(msg);
@@ -675,7 +711,8 @@ namespace Raven.Database.Server.Controllers
 				{
 					Remark = "Using windows auth",
 					User = windowsPrincipal.Identity.Name,
-					IsAdminGlobal = windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+					IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
+									windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
 				};
 
 				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
@@ -690,7 +727,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					Remark = "Using windows auth",
 					User = principalWithDatabaseAccess.Identity.Name,
-					IsAdminGlobal =
+					IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
 						principalWithDatabaseAccess.IsAdministrator(
 							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
 					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),

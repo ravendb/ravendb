@@ -38,7 +38,9 @@ namespace Raven.Database.Counters
 
         public int ReplicationTimeoutInMs { get; private set; }
 
-	    public readonly string Name;
+		public string Name { get; private set; }
+
+		public string ResourceName { get; private set; }
 
 		private const int ServerId = 0; // local is always 0
 
@@ -50,6 +52,7 @@ namespace Raven.Database.Counters
 		{
             CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, storageName);
             Name = storageName;
+			ResourceName = string.Concat(Constants.Counter.UrlPrefix, "/", storageName);
                 
 			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);

@@ -6,6 +6,7 @@
 
 using System;
 using System.ComponentModel;
+using Raven.Imports.Newtonsoft.Json;
 
 using Raven.Abstractions.Cluster;
 
@@ -23,6 +24,7 @@ namespace Raven.Abstractions.Replication
 		/// </summary>
 
 		private string url;
+		private string[] _sourceCollections;
 
 		/// <summary>
 		/// Gets or sets the URL of the replication destination
@@ -34,6 +36,29 @@ namespace Raven.Abstractions.Replication
 			set
 			{
 				url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+			}
+		}
+
+		[JsonIgnore]
+		public bool ShouldReplicateFromSpecificCollections
+		{
+			get
+			{
+				return SourceCollections != null &&
+				       SourceCollections.Length > 0;
+			}
+		}
+
+		/// <summary>
+		/// If an option to replicate only from specific collections is selected, 
+		/// replicate documents only from the specified collections
+		/// </summary>
+		public string[] SourceCollections
+		{
+			get { return _sourceCollections ?? (_sourceCollections = new string[0]); }
+			set
+			{
+				_sourceCollections = value;
 			}
 		}
 

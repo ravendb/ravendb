@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -1590,6 +1590,7 @@ Global
 		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Azure-Release|x64.ActiveCfg = Release|x86
 		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Azure-Release|x86.ActiveCfg = Release|x86
 		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Any CPU.Build.0 = Debug|x86
 		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|ARM.ActiveCfg = Debug|x86
 		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
 		{DBB6561C-6264-430D-8F3C-E11C6268981E}.Debug|Mixed Platforms.Build.0 = Debug|x86

@@ -48,6 +48,7 @@ class globalConfigPeriodicExport extends viewModelBase {
 
     attached() {
         this.bindPopover();
+        this.bindHintWatchers();
     }
 
     bindPopover() {
@@ -57,6 +58,12 @@ class globalConfigPeriodicExport extends viewModelBase {
             trigger: "hover",
             content: "Database name will be appended to path in target configuration. <br /><br />" +
             "For value: <code>C:\\exports\\</code> target path will be: <code>C:\\exports\\{databaseName}</code>"
+        });
+        $(".folderHint").popover({
+            html: true,
+            container: $("body"),
+            trigger: "hover",
+            content: "Folder name will be replaced with database name being exported in local configuration."
         });
     }
 
@@ -107,6 +114,11 @@ class globalConfigPeriodicExport extends viewModelBase {
         }
     }
 
+    private bindHintWatchers() {
+        this.backupSetup().remoteUploadEnabled.subscribe(() => this.bindPopover());
+        this.backupSetup().type.subscribe(() => this.bindPopover());
+    }
+
     private deleteSettings(db: database) {
         var settingsDocument = this.settingsDocument();
         settingsDocument["@metadata"] = this.settingsDocument().__metadata;
@@ -121,6 +133,7 @@ class globalConfigPeriodicExport extends viewModelBase {
         var doc = new document(copyOfSettings);
 
         this.backupSetup(new periodicExportSetup());
+        this.bindHintWatchers();
         this.backupSetup().fromDatabaseSettingsDto(copyOfSettings);
         
         var saveTask = new saveGlobalSettingsCommand(db, doc).execute();

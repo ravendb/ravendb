@@ -29,10 +29,10 @@ namespace Raven.Database.FileSystem.Synchronization
 			FileAndPagesInformation fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(fileName, 0, 0));
 			FileMetadata = fileAndPages.Metadata;
-			ServerInfo = new ServerInfo
+			FileSystemInfo = new FileSystemInfo
 			{
 				Id = Storage.Id,
-				FileSystemUrl = sourceServerUrl
+				Url = sourceServerUrl
 			};
 
 			conflictDetector = new ConflictDetector();
@@ -43,9 +43,9 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		public string FileName { get; private set; }
 
-		public Guid FileETag
+		public Etag FileETag
 		{
-            get { return FileMetadata.Value<Guid>(Constants.MetadataEtagField); }
+            get { return Etag.Parse(FileMetadata.Value<string>(Constants.MetadataEtagField)); }
 		}
 
 		public bool IsCancelled
@@ -55,7 +55,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
         protected RavenJObject FileMetadata { get; set; }
 
-		protected ServerInfo ServerInfo { get; private set; }
+		protected FileSystemInfo FileSystemInfo { get; private set; }
 
 		public abstract SynchronizationType SynchronizationType { get; }
 
@@ -120,9 +120,9 @@ namespace Raven.Database.FileSystem.Synchronization
 			switch (conflictResolutionStrategy)
 			{
 				case ConflictResolutionStrategy.NoResolution:
-					return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
+					return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, FileSystemInfo.Url, log);
 				case ConflictResolutionStrategy.CurrentVersion:
-					await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, ServerInfo.FileSystemUrl, log);
+					await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, FileSystemInfo.Url, log);
 					await destination.Commands.Synchronization.ResolveConflictAsync(FileName, conflictResolutionStrategy);
 					return new SynchronizationReport(FileName, FileETag, SynchronizationType);
 				case ConflictResolutionStrategy.RemoteVersion:
@@ -131,7 +131,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				default:
 					return new SynchronizationReport(FileName, FileETag, SynchronizationType)
 					{
-						Exception = new SynchronizationException(string.Format("Unknown resulution stragegy: {0}", conflictResolutionStrategy)),
+						Exception = new SynchronizationException(string.Format("Unknown resolution strategy: {0}", conflictResolutionStrategy)),
 					};
 			}
 		}

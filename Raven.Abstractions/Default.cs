@@ -30,7 +30,7 @@ namespace Raven.Abstractions
 		public static readonly string DateTimeOffsetFormatsToWrite = "o";
 		public static readonly string DateTimeFormatsToWrite = "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff";
 
-		public static readonly JsonConverter[] Converters = new JsonConverter[]
+        public static readonly JsonConverterCollection Converters = new JsonConverterCollection
 		{
 			new JsonEnumConverter(),
 			new JsonToJsonConverter(),
@@ -39,5 +39,10 @@ namespace Raven.Abstractions
 			new EtagJsonConverter(), 
 			new JsonDictionaryDateTimeKeysConverter(),
 		};
+
+        static Default ()
+        {
+            //Converters.Freeze();
+        }
 	}
 }

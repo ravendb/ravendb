@@ -19,7 +19,7 @@ class autoCompleterSupport {
     }
   }
 
-  completeTheWord(input: JQuery, selectedCompletion: string) {
+  completeTheWord(input: JQuery, selectedCompletion: string, updateObservableClouse: (newValue: string) => void = null) {
     if (input.length > 0) {
       var inputValue: string = input.val();
       var typedWord = this.getWordUserIsTyping(input);
@@ -27,11 +27,15 @@ class autoCompleterSupport {
       var cursorPosition = inputCursor.getPosition(input);
       var beginIndex = this.findWordStartWithEndPosition(inputValue, cursorPosition - 1) + 1;
 
-      input.val(
-        inputValue.substring(0, beginIndex) +
-        selectedCompletion +
-        inputValue.substring(cursorPosition)
-        );
+      // update observable here as input has on key up update
+      var newValue = inputValue.substring(0, beginIndex) +
+            selectedCompletion +
+            inputValue.substring(cursorPosition);
+
+      input.val(newValue);
+      if (updateObservableClouse) {
+          updateObservableClouse(newValue);
+      }
 
       var positionCorrection = 0;
       if (selectedCompletion[selectedCompletion.length-1] === ")" ) {

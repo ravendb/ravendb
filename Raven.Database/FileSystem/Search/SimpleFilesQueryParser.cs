@@ -1,42 +1,88 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.Text.RegularExpressions;
 using Lucene.Net.Analysis;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
-using Lucene.Net.Util;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.FileSystem.Search
 {
 	public class SimpleFilesQueryParser : QueryParser
 	{
-		private readonly HashSet<string> numericFields;
+		public static readonly Regex NumericRangeValue = new Regex(@"^[\w\d]x[-\w\d.]+$", RegexOptions.Compiled);
+		public static readonly Regex DateTimeValue = new Regex(@"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 
-		public SimpleFilesQueryParser(Analyzer analyzer, IEnumerable<string> numericFields)
+        private readonly RavenPerFieldAnalyzerWrapper fieldAnalyzer;
+
+		public SimpleFilesQueryParser(Analyzer analyzer)
             : base(Version.LUCENE_29, string.Empty, analyzer)
 		{
-			this.numericFields = new HashSet<string>(numericFields);
+            fieldAnalyzer = new RavenPerFieldAnalyzerWrapper(fieldAnalyzer);
 		}
 
-		protected override Query NewRangeQuery(string field, string part1, string part2, bool inclusive)
+		protected override Query GetRangeQuery(string field, string lower, string upper, bool inclusive)
 		{
-			if (numericFields.Contains(field))
+			bool minInclusive = inclusive;
+			bool maxInclusive = inclusive;
+			if (lower == "NULL" || lower == "*")
 			{
-				long lower;
-				long upper;
-
-				if (!long.TryParse(part1, out lower))
-					lower = long.MinValue;
-
-				if (!long.TryParse(part2, out upper))
-					upper = long.MaxValue;
-
-				var rangeQuery = NumericRangeQuery.NewLongRange(field, lower, upper, inclusive, inclusive);
-
-				return rangeQuery;
+				lower = null;
+				minInclusive = true;
+			}
+			if (upper == "NULL" || upper == "*")
+			{
+				upper = null;
+				maxInclusive = true;
 			}
 
-			return base.NewRangeQuery(field, part1, part2, inclusive);
+			if ((lower == null || !NumericRangeValue.IsMatch(lower)) && (upper == null || !NumericRangeValue.IsMatch(upper)))
+			{
+				return NewRangeQuery(field, lower, upper, inclusive);
+			}
+
+			var from = NumberUtil.StringToNumber(lower);
+			var to = NumberUtil.StringToNumber(upper);
+
+			TypeCode numericType;
+
+			if (from != null)
+				numericType = Type.GetTypeCode(from.GetType());
+			else if (to != null)
+				numericType = Type.GetTypeCode(to.GetType());
+			else
+				numericType = TypeCode.Empty;
+
+			switch (numericType)
+			{
+				case TypeCode.Int64:
+				case TypeCode.Int32:
+				{
+					var fromLong = from as long?;
+					var fromInt = from as int?;
+
+					var toLong = to as long?;
+					var toInt = to as int?;
+
+					return NumericRangeQuery.NewLongRange(field, fromLong ?? fromInt ?? Int64.MinValue, toLong ?? toInt ?? Int64.MaxValue, minInclusive, maxInclusive);
+				}
+				case TypeCode.Single:
+				case TypeCode.Double:
+				{
+					var fromDouble = from as double?;
+					var fromFloat = from as float?;
+
+					var toDouble = to as double?;
+					var toFloat = to as float?;
+
+					return NumericRangeQuery.NewDoubleRange(field, fromDouble ?? fromFloat ?? Double.MinValue, toDouble ?? toFloat ?? Double.MaxValue, minInclusive, maxInclusive);
+				}
+				default:
+				{
+					return NewRangeQuery(field, lower, upper, inclusive);
+				}
+			}
 		}
 
         public override Query Parse(string originalQuery)
@@ -47,34 +93,9 @@ namespace Raven.Database.FileSystem.Search
             query = QueryBuilder.PreProcessSearchTerms(query);
 
             var generatedQuery = base.Parse(query);
-            generatedQuery = HandleMethods(generatedQuery);
+            generatedQuery = QueryBuilder.HandleMethods(generatedQuery, fieldAnalyzer);
 
             return generatedQuery;
-        }
-
-        private static Query HandleMethods(Query query)
-        {
-            var termQuery = query as TermQuery;
-            if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
-            {
-                return QueryBuilder.HandleMethodsForQueryAndTerm(query, termQuery.Term);
-            }
-            var pharseQuery = query as PhraseQuery;
-            if (pharseQuery != null)
-            {
-                var terms = pharseQuery.GetTerms();
-                if (terms.All(x => x.Field.StartsWith("@")) == false ||
-                    terms.Select(x => x.Field).Distinct().Count() != 1)
-                    return query;
-                return QueryBuilder.HandleMethodsForQueryAndTerm(query, terms);
-            }
-            var wildcardQuery = query as WildcardQuery;
-            if (wildcardQuery != null)
-            {
-                return QueryBuilder.HandleMethodsForQueryAndTerm(query, wildcardQuery.Term);
-            }
-           
-            return query;
-        }
+        }   
 	}
 }

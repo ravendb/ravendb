@@ -530,6 +530,50 @@ namespace Raven.Client.Document
             return this;
         }
 
+
+        private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
+        {
+            var converters = new JsonConverterCollection(Default.Converters);
+            converters.Add(new JsonLuceneDateTimeConverter());
+            converters.Add(new JsonNumericConverter<int>(int.TryParse));
+            converters.Add(new JsonNumericConverter<long>(long.TryParse));
+            converters.Add(new JsonNumericConverter<decimal>(decimal.TryParse));
+            converters.Add(new JsonNumericConverter<double>(double.TryParse));
+            converters.Add(new JsonNumericConverter<short>(short.TryParse));
+            converters.Add(new JsonMultiDimensionalArrayConverter());
+            converters.Add(new JsonDynamicConverter());
+            converters.Add(new JsonLinqEnumerableConverter());
+            converters.Freeze();
+
+            return converters;
+        }, true);
+
+        private static Lazy<JsonConverterCollection> defaultConvertersEnumsAsIntegers = new Lazy<JsonConverterCollection>(() =>
+        {
+            var converters = new JsonConverterCollection(DefaultConverters);
+
+            var converter = converters.FirstOrDefault(x => x is JsonEnumConverter);
+            if (converter != null)
+                converters.Remove(converter);
+
+            converters.Freeze();
+
+            return converters;
+
+        }, true);
+
+        private static JsonConverterCollection DefaultConverters
+        {
+            get { return defaultConverters.Value; }
+        }
+        
+        private static JsonConverterCollection DefaultConvertersEnumsAsIntegers
+        {
+            get { return defaultConvertersEnumsAsIntegers.Value; }
+        }
+        
+
+
 		/// <summary>
 		/// Creates the serializer.
 		/// </summary>
@@ -545,33 +589,24 @@ namespace Raven.Client.Document
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 FloatParseHandling = FloatParseHandling.Double,
-				Converters =
-					{
-						new JsonLuceneDateTimeConverter(),
-						new JsonNumericConverter<int>(int.TryParse),
-						new JsonNumericConverter<long>(long.TryParse),
-						new JsonNumericConverter<decimal>(decimal.TryParse),
-						new JsonNumericConverter<double>(double.TryParse),
-						new JsonNumericConverter<short>(short.TryParse),
-						new JsonMultiDimensionalArrayConverter(),
-						new JsonDynamicConverter(),
-						new JsonLinqEnumerableConverter()
-					}
+                Converters = new JsonConverterCollection()
 			};
 
-			for (var i = Default.Converters.Length - 1; i >= 0; i--)
-			{
-				jsonSerializer.Converters.Insert(0, Default.Converters[i]);
-			}
-
-			if (SaveEnumsAsIntegers)
-			{
-				var converter = jsonSerializer.Converters.FirstOrDefault(x => x is JsonEnumConverter);
-				if (converter != null)
-					jsonSerializer.Converters.Remove(converter);
-			}
-
 			CustomizeJsonSerializer(jsonSerializer);
+			if (jsonSerializer.Converters.IsFrozen)  // if the user froze the collection, we don't need to do anything
+			return jsonSerializer;
+			var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
+			if (jsonSerializer.Converters.Count == 0)
+			{
+				jsonSerializer.Converters = convertersToUse;
+		}
+			else
+			{
+				for (int i = convertersToUse.Count - 1; i >= 0; i--)
+				{
+					jsonSerializer.Converters.Insert(0, convertersToUse[i]);
+				}
+			}
 			return jsonSerializer;
 		}
 

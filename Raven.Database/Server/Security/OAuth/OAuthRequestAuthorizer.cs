@@ -82,7 +82,6 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 
             controller.User = new OAuthPrincipal(tokenBody, controller.TenantName);
-			CurrentOperationContext.RavenAuthenticatedUser.Value = tokenBody.UserId;
 			CurrentOperationContext.User.Value = controller.User;
 			msg = controller.GetEmptyMessage();
 

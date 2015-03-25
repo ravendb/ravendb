@@ -41,6 +41,18 @@ namespace Raven.Database.Indexing
 	{
 		readonly JsonSerializer jsonSerializer;
 
+        private static readonly JsonConverterCollection MapReduceConverters;
+
+        static MapReduceIndex()
+        {
+            MapReduceConverters = new JsonConverterCollection(Default.Converters)
+            {
+                new IgnoreFieldable()
+            };
+
+            MapReduceConverters.Freeze();
+        }
+
 		private class IgnoreFieldable : JsonConverter
 		{
 			public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
@@ -64,12 +76,8 @@ namespace Raven.Database.Indexing
 							  AbstractViewGenerator viewGenerator, WorkContext context)
 			: base(directory, id, indexDefinition, viewGenerator, context)
 		{
-			jsonSerializer = new JsonSerializer();
-			foreach (var jsonConverter in Default.Converters)
-			{
-				jsonSerializer.Converters.Add(jsonConverter);
-			}
-			jsonSerializer.Converters.Add(new IgnoreFieldable());
+			jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+            jsonSerializer.Converters = MapReduceConverters;
 		}
 
 		public override bool IsMapReduce

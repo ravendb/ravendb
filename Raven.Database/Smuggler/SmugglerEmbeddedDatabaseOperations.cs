@@ -29,7 +29,7 @@ namespace Raven.Database.Smuggler
 
 		private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
-		private SmugglerJintHelper scriptedJsonPatcher = new SmugglerJintHelper();
+		private readonly SmugglerJintHelper scriptedJsonPatcher = new SmugglerJintHelper();
 
 		public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
 		{

@@ -592,7 +592,7 @@ namespace Raven.Tests.Helpers
 				// We expect to get the doc from the <system> database
 				var doc = databaseCommands.Get(id);
 				if (afterEtag == null)
-					return doc != null;
+				return doc != null;
 				return EtagUtil.IsGreaterThan(doc.Etag, afterEtag);
 			}, timeout);
 
@@ -876,6 +876,16 @@ namespace Raven.Tests.Helpers
 			request.ExecuteRequest();
 		}
 
+
+        public static IEnumerable<object[]> InsertOptions
+        {
+            get
+            {
+                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
+                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
+                yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
+}
+}
 		protected RavenDbServer CreateServerWithWindowsCredentials(int port, string username, string password, string domain, out NodeConnectionInfo nodeConnectionInfo)
 		{
 			var server = GetNewServer(port, enableAuthentication: true);
@@ -887,7 +897,7 @@ namespace Raven.Tests.Helpers
 			EnableAuthentication(server.SystemDatabase);
 			NewRemoteDocumentStore(ravenDbServer: server);
 			return server;
-		}
+	}
 
 		protected RavenDbServer CreateServerWithOAuth(int port, string apiKey, out NodeConnectionInfo nodeConnectionInfo)
 		{
@@ -914,6 +924,5 @@ namespace Raven.Tests.Helpers
 			NewRemoteDocumentStore(ravenDbServer: server);
 
 			return server;
-		}
-	}
 }
+

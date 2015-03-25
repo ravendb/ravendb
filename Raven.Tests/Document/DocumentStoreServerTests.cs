@@ -100,7 +100,7 @@ namespace Raven.Tests.Document
 			var operation = documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
 			{
 				Query = "Tag:[[Companies]]"
-            }, options: null);
+            });
 
 			operation.WaitForCompletion();
 

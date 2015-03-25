@@ -49,7 +49,7 @@
             <div class="col-md-7">
                 <div class="row" data-bind="with: metadata">
                     <div class="col-md-12">
-                        <input id="documentName" type="text" class="form-control" data-placement="top" accesskey="i" placeholder="document id" data-bind="value: $root.userSpecifiedId, valueUpdate: 'afterkeyup', attr: { disabled: $root.isBusy }" />
+                        <input id="documentName" type="text" class="form-control" data-placement="top" accesskey="i" placeholder="document id" data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }" />
                     </div>
                 </div>
                 <br />

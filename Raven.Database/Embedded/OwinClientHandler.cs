@@ -94,6 +94,7 @@ namespace Raven.Database.Embedded
             private Action _sendingHeaders;
             private TaskCompletionSource<HttpResponseMessage> _responseTcs;
             private ResponseStream _responseStream;
+			private volatile bool _responseCompletionTaskRunning;
 
             internal RequestState(HttpRequestMessage request, CancellationToken cancellationToken, bool enableLogging)
             {
@@ -162,12 +163,22 @@ namespace Raven.Database.Embedded
 
             internal void CompleteResponse()
             {
-                if (!_responseTcs.Task.IsCompleted)
-                {
-                    HttpResponseMessage response = GenerateResponse();
-                    // Dispatch, as TrySetResult will synchronously execute the waiters callback and block our Write.
-                    Task.Factory.StartNew(() => _responseTcs.TrySetResult(response));
-                }
+				lock (this)
+				{
+					if (_responseCompletionTaskRunning)
+						return;
+
+					if (_responseTcs.Task.IsCompleted)
+						return;
+
+					HttpResponseMessage response = GenerateResponse();
+
+					// Dispatch, as TrySetResult will synchronously execute the waiters callback and block our Write.
+					_responseCompletionTaskRunning = true;
+					Task.Factory
+						.StartNew(() => _responseTcs.TrySetResult(response))
+						.ContinueWith(t => _responseCompletionTaskRunning = false);
+				}
             }
 
             internal HttpResponseMessage GenerateResponse()

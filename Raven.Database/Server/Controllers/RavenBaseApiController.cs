@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 
@@ -154,7 +155,9 @@ namespace Raven.Database.Server.Controllers
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
+			{
 				return RavenJArray.Load(jsonReader);
+		}
 		}
 
 		public async Task<string> ReadStringAsync()
@@ -241,13 +244,28 @@ namespace Raven.Database.Server.Controllers
 			return GetQueryStringValue(InnerRequest, key);
 		}
 
-		public static string GetQueryStringValue(HttpRequestMessage req, string key)
+	/*	public static string GetQueryStringValue(HttpRequestMessage req, string key)
 		{
 			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
 			if (value != null)
 				value = Uri.UnescapeDataString(value);
 			return value;
+		}*/
+
+
+        public static string GetQueryStringValue(HttpRequestMessage req, string key)
+        {
+            NameValueCollection nvc;
+            object value;
+            if (req.Properties.TryGetValue("Raven.QueryString", out value))
+            {
+                nvc = (NameValueCollection) value;
+                return nvc[key];
 		}
+            nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
+            req.Properties["Raven.QueryString"] = nvc;
+            return nvc[key];
+        }
 
 		public string[] GetQueryStringValues(string key)
 		{
@@ -706,7 +724,7 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-	    public abstract bool SetupRequestToProperDatabase(RequestManager requestManager);
+	    public abstract Task<bool> SetupRequestToProperDatabase(RequestManager requestManager);
 
         public abstract string TenantName { get; }
 

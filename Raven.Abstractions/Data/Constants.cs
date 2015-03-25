@@ -19,8 +19,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
 		public const string RavenShardId = "Raven-Shard-Id";
-        // turned into CurrentOperationContext.RavenAuthenticatedUser.Value
-        //public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
+        
+		
 		public const string LastModified = "Last-Modified";
         public const string CreationDate = "Creation-Date";
         public const string RavenCreationDate = "Raven-Creation-Date";
@@ -168,9 +168,18 @@ namespace Raven.Abstractions.Data
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
 		//Counters
+		public static partial class Counter
+		{
+			public const string Prefix = "Raven/Counters/";
+			public const string DataDirectory = "Raven/Counters/DataDir";
+			public const string UrlPrefix = "counters";
+		}
+
 		public const byte GroupSeperator = 29;
 		public const char GroupSeperatorChar = (char)GroupSeperator;
 		public const string GroupSeperatorString = "\u001D";
+
+
 
         public const string MetadataEtagField = "ETag";
 
@@ -188,7 +197,12 @@ namespace Raven.Abstractions.Data
 
 
 		// General
-		public const string RavenDatabasesPrefix = "Raven/Databases/";
+		public static partial class Database
+		{
+			public const string Prefix = "Raven/Databases/";
+			public const string DataDirectory = "Raven/Databases/DataDir";
+			public const string UrlPrefix = "databases";
+		}
 
         public static partial class FileSystem
         {
@@ -197,6 +211,8 @@ namespace Raven.Abstractions.Data
             public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
             public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
             public const string Storage = "Raven/FileSystem/Storage";
+	        public const string UrlPrefix = "fs";
+	        public const string RavenFsSize = "RavenFS-Size";
 
 	        public static class Versioning
 	        {
@@ -219,7 +235,7 @@ namespace Raven.Abstractions.Data
             public const string DbExtensionSize = "Raven/Esent/DbExtensionSize";
         }
 
-        public static partial class Voron
+        public static class Voron
         {
             public const string AllowIncrementalBackups = "Raven/Voron/AllowIncrementalBackups";
             public const string InitialFileSize = "Raven/Voron/InitialFileSize";
@@ -281,6 +297,11 @@ namespace Raven.Abstractions.Data
 			public const string ClusterReadBehaviorHeader = "Raven-Cluster-Read-Behavior";
 
 			public const string ClusterFailoverBehaviorHeader = "Raven-Cluster-Failover-Behavior";
-	    }
+}
+		public class Authorization
+		{
+			public const string RavenAuthorizationUser = "Raven-Authorization-User";
+			public const string RavenAuthorizationOperation = "Raven-Authorization-Operation";
+			public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
 	}
 }

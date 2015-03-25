@@ -94,6 +94,7 @@ namespace Raven.Database
 			TimerManager = new ResourceTimerManager();
 			DocumentLock = new PutSerialLock();
 			Name = configuration.DatabaseName;
+			ResourceName = Name;
 			Configuration = configuration;
 			transportState = recievedTransportState ?? new TransportState();
 			ExtensionsState = new AtomicDictionary<object>();
@@ -135,10 +136,24 @@ namespace Raven.Database
 					initializer.InitializeTransactionalStorage(uuidGenerator);
 					lastCollectionEtags = new LastCollectionEtags(WorkContext);
 				}
-				catch (Exception)
+				catch (Exception ex)
 				{
-					if (TransactionalStorage != null)
-						TransactionalStorage.Dispose();
+					Log.ErrorException("Could not initialize transactional storage, not creating database", ex);
+					try
+					{
+						if (TransactionalStorage != null)
+							TransactionalStorage.Dispose();
+						if (initializer != null)
+						{
+							initializer.UnsubscribeToDomainUnloadOrProcessExit();
+							initializer.Dispose();
+						}
+					}
+					catch (Exception e)
+					{
+						Log.ErrorException("Could not dispose on initialized DocumentDatabase members", e);
+					}
+
 					throw;
 				}
 
@@ -339,6 +354,8 @@ namespace Raven.Database
 		/// </summary>
 		public string Name { get; private set; }
 
+		public string ResourceName { get; private set; }
+
 		public NotificationActions Notifications { get; private set; }
 
 		public SubscriptionActions Subscriptions { get; private set; }
@@ -497,8 +514,7 @@ namespace Raven.Database
 							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
 							index.IsTestIndex = indexDefinition.IsTestIndex;
 							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
-							if (indexDefinition != null)
-								index.LockMode = indexDefinition.LockMode;
+							index.LockMode = indexDefinition.LockMode;
 
 							index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
 							IndexSearcher searcher;
@@ -863,7 +879,7 @@ namespace Raven.Database
 			{
 				if (tryEnter == false)
 					return;
-
+				WorkContext.LastIdleTime = SystemTime.UtcNow;
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
 				IndexReplacer.ReplaceIndexes(IndexDefinitionStorage.Indexes);

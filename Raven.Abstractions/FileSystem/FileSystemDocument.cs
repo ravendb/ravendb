@@ -9,7 +9,7 @@ namespace Raven.Abstractions.FileSystem
     public class FileSystemDocument
     {
         /// <summary>
-        /// The ID can be either the file system name ("FilesystemName") or the full document name ("Raven/Filesystems/FilesystemName").
+        /// The ID can be either the file system name ("FilesystemName") or the full document name ("Raven/FileSystems/FilesystemName").
         /// </summary>
         public string Id { get; set; }
         public Dictionary<string, string> Settings { get; set; }

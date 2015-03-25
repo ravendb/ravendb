@@ -42,6 +42,10 @@ namespace Raven.Tests.Issues
 				Map = orders =>
 					  from order in orders
 					  select new { order.Currency, order.Product, order.Total, order.Quantity };
+
+				Sort(x=>x.Currency, SortOptions.None);
+				Sort(x => x.Total, SortOptions.None);
+				Sort(x => x.Quantity, SortOptions.None);
 			}
 		}
 

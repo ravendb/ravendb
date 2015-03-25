@@ -11,6 +11,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Smuggler.Data;
+using Raven.Client.Linq;
+using Raven.Database.Client;
 using Raven.Database.Client.Aws;
 using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
@@ -35,6 +38,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 		private volatile PeriodicExportStatus exportStatus;
 		private volatile PeriodicExportSetup exportConfigs;
+		private int backupLimit = int.MaxValue;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -63,7 +67,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 				{
 					try
 					{
-						Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
+					Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
 					}
 					finally
 					{
@@ -75,7 +79,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 				{
 					try
 					{
-						Database.TimerManager.ReleaseTimer(fullBackupTimer);
+					Database.TimerManager.ReleaseTimer(fullBackupTimer);
 					}
 					finally
 					{
@@ -84,7 +88,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 				}
 
 				ReadSetupValuesFromDocument();
-			}
+		}
 		}
 
 		private void ReadSetupValuesFromDocument()
@@ -166,14 +170,14 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 		private void TimerCallback(bool fullBackup)
 		{
-			if (currentTask != null)
+		    if (currentTask != null)
 				return;
 
-			if (Database.Disposed)
-			{
-				Dispose();
-				return;
-			}
+            if (Database.Disposed)
+            {
+                Dispose();
+                return;
+            }
 
 			// we have shared lock for both incremental and full backup.
 			lock (this)
@@ -189,13 +193,20 @@ namespace Raven.Database.Bundles.PeriodicExports
 					{
 						try
 						{
-							var dataDumper = new DatabaseDataDumper(documentDatabase);
+							OperationState exportResult;
+							bool performAnotherRun = false;
+							do
+							{
+								var dataDumper = new DatabaseDataDumper(documentDatabase, new SmugglerDatabaseOptions()
+								{
+									Limit = backupLimit
+								});
 							var localBackupConfigs = exportConfigs;
 							var localBackupStatus = exportStatus;
 							if (localBackupConfigs == null)
 								return;
 
-							if (localBackupConfigs.Disabled)
+							if (localBackupConfigs.Disabled) 
 								return;
 
 							if (fullBackup == false)
@@ -212,7 +223,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 							}
 
 							var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
-							if (Directory.Exists(backupPath) == false)
+							if (Directory.Exists(backupPath) == false) 
 								Directory.CreateDirectory(backupPath);
 
 							if (fullBackup)
@@ -233,7 +244,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								}
 							}
 
-							var smugglerOptions = dataDumper.Options;
+                            var smugglerOptions = dataDumper.Options;
 							if (fullBackup == false)
 							{
 								smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
@@ -243,7 +254,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
-							var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+								exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath});
 
 							if (fullBackup == false)
 							{
@@ -297,6 +308,17 @@ namespace Raven.Database.Bundles.PeriodicExports
 								if (localBackupStatus.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
 									localBackupStatus.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
 							}
+								
+								if (backupLimit != int.MaxValue)
+								{
+									backupLimit = int.MaxValue;
+									performAnotherRun = true;
+						}
+								else
+								{
+									performAnotherRun = false;
+								}
+							} while (performAnotherRun);
 						}
 						catch (ObjectDisposedException)
 						{
@@ -304,6 +326,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 						}
 						catch (Exception e)
 						{
+							backupLimit  =  100;
 							logger.ErrorException("Error when performing periodic export", e);
 							Database.AddAlert(new Alert
 							{
@@ -366,14 +389,15 @@ namespace Raven.Database.Bundles.PeriodicExports
 		private void UploadToGlacier(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
 		{
 			if (awsAccessKey == Constants.DataCouldNotBeDecrypted ||
-				awsSecretKey == Constants.DataCouldNotBeDecrypted)
+			    awsSecretKey == Constants.DataCouldNotBeDecrypted)
 			{
 				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
 			}
 			using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
 			using (var fileStream = File.OpenRead(backupPath))
 			{
-				var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
+				var key = Path.GetFileName(backupPath);
+				var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, fileStream, key, 60 * 60);
 				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath), archiveId));
 			}
 		}
