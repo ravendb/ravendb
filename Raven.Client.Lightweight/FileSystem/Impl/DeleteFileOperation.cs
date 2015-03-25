@@ -1,20 +1,17 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Impl
 {
     internal class DeleteFileOperation : IFilesOperation
     {
-        protected readonly InMemoryFilesSessionOperations sessionOperations;
+	    private readonly InMemoryFilesSessionOperations sessionOperations;
 
-        public string Filename { get; set; }
+        public string FileName { get; private set; }
 
-        public Etag Etag { get; private set; }
+	    private Etag Etag { get; set; }
 
         public DeleteFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, Etag etag)
         {
@@ -22,7 +19,7 @@ namespace Raven.Client.FileSystem.Impl
                 throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace.");
 
             this.sessionOperations = sessionOperations;
-            this.Filename = path;
+            this.FileName = path;
             this.Etag = etag;
         }
 
@@ -33,8 +30,8 @@ namespace Raven.Client.FileSystem.Impl
             bool delete = true;
             
             FileHeader fileHeader = null;
-            if (!sessionOperations.TryGetFromCache(Filename, out fileHeader))
-                fileHeader = await session.LoadFileAsync(Filename);
+            if (!sessionOperations.TryGetFromCache(FileName, out fileHeader))
+                fileHeader = await session.LoadFileAsync(FileName);
 
             foreach (var deleteListener in sessionOperations.Listeners.DeleteListeners)
             {
@@ -44,14 +41,14 @@ namespace Raven.Client.FileSystem.Impl
 
             if (delete)
             {
-                await commands.DeleteAsync(Filename, Etag)
+                await commands.DeleteAsync(FileName, Etag)
                               .ConfigureAwait(false);
 
-                sessionOperations.RegisterMissing(Filename);
+                sessionOperations.RegisterMissing(FileName);
 
                 foreach (var deleteListener in sessionOperations.Listeners.DeleteListeners)
                 {
-                    deleteListener.AfterDelete(Filename);
+                    deleteListener.AfterDelete(FileName);
                 }
             }
 

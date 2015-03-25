@@ -381,7 +381,6 @@
     <Compile Include="FileSystem\SynchronizationType.cs" />
     <Compile Include="FileSystem\Notifications\SynchronizationUpdateNotification.cs" />
     <Compile Include="FileSystem\SyncingMultipartConstants.cs" />
-    <Compile Include="FileSystem\Notifications\UploadFailedNotification.cs" />
     <Compile Include="Replication\FailoverBehavior.cs" />
     <Compile Include="Replication\ReplicatedEtagInfo.cs" />
     <Compile Include="Replication\ReplicationClientConfiguration.cs" />

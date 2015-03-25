@@ -56,7 +56,7 @@ namespace Raven.Backup
 
             var json = RavenJObject.FromObject(backupRequest).ToString();
 
-            var url = "/admin/fs/backup";
+            var url = "/admin/backup";
             if (parameters.Incremental)
                 url += "?incremental=true";
             try

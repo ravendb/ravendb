@@ -4,13 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -36,8 +35,7 @@ namespace Raven.Client.Document
 		/// <param name="database">The database from which to check, if null, the default database for the document store connection string</param>
 		/// <param name="replicas">The min number of replicas that must have the value before we can return (or the number of destinations, if higher)</param>
 		/// <returns>Task which will have the number of nodes that the caught up to the specified etag</returns>
-		public async Task<int> WaitAsync(Etag etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2,
-			ConcurrentQueue<ReplicatedEtagInfo> actions = null)
+		public async Task<int> WaitAsync(Etag etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2)
 		{
 			etag = etag ?? documentStore.LastEtagHolder.GetLastWrittenEtag();
 			if (etag == Etag.Empty || etag == null)
@@ -76,7 +74,7 @@ namespace Raven.Client.Document
 			var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token);
 			var sourceDbId = sourceStatistics.DatabaseId.ToString();
 
-			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, actions,destination.SourceCollections, cts.Token)).ToArray();
+			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, destination.SourceCollections, cts.Token)).ToArray();
 
 		    try
 		    {
@@ -85,25 +83,14 @@ namespace Raven.Client.Document
 		    }
 		    catch (Exception e)
 		    {
-		        var successCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false);
+		        var successCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false && x.IsCanceled == false);
 		        if (successCount >= toCheck)
 		        {
 		            // we have nothing to do here, we replicated to at least the 
                     // number we had to check, so that is good
 			        return successCount;
 		        }
-			    if (actions != null)
-			    {
-				    foreach (var task in tasks)
-				    {
-					    if(task.IsFaulted == false)
-							continue;
-						actions.Enqueue(new ReplicatedEtagInfo
-						{
-							Error = task.Exception
-						});
-				    }
-			    }
+			   
 			    if (tasks.Any(x => x.IsFaulted) && successCount == 0)
 			    {
 				    // there was an error here, not just cancellation, let us just let it bubble up.
@@ -117,20 +104,20 @@ namespace Raven.Client.Document
                     destinationsToCheck.Count,
                     sp.Elapsed);
 
+				if(e is OperationCanceledException)
+					throw new TimeoutException(message);
+
 			    throw new TimeoutException(message, e);
 		    }
 		}
 
-		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, ConcurrentQueue<ReplicatedEtagInfo> actions , string[] sourceCollections, CancellationToken cancellationToken)
+		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, string[] sourceCollections, CancellationToken cancellationToken)
 		{
 		    while (true)
 		    {
 		        cancellationToken.ThrowIfCancellationRequested();
 
 				var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId, sourceCollections);
-
-			    if (actions != null)
-				    actions.Enqueue(etags);
 
 		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
 

@@ -269,7 +269,7 @@ class indexes extends viewModelBase {
     }
 
     deleteAllIndexes() {
-        this.promptDeleteIndexes(this.getAllIndexes());
+		this.promptDeleteIndexes(this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName"));
     }
 
     deleteIndex(i: index) {

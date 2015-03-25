@@ -26,7 +26,7 @@ namespace Raven.Client.FileSystem
         NameValueCollection OperationsHeaders { get; set; }
 
         /// <summary>
-        /// Admin operations for current database
+        /// Admin operations
         /// </summary>
         IAsyncFilesAdminCommands Admin { get; }
 
@@ -60,14 +60,12 @@ namespace Raven.Client.FileSystem
         IAsyncFilesCommands With(ICredentials credentials);
         IAsyncFilesCommands With(OperationCredentials credentials);
 
-
         Task<Guid> GetServerIdAsync();
         Task<FileSystemStats> GetStatisticsAsync();
 
-
         Task DeleteAsync(string filename, Etag etag = null);
         Task RenameAsync(string currentName, string newName, Etag etag = null);
-
+	    
         Task<RavenJObject> GetMetadataForAsync(string filename);
 
         Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null);
@@ -81,16 +79,15 @@ namespace Raven.Client.FileSystem
 
         Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 1024);
         Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 1024);
+		Task DeleteByQueryAsync(string query);
         Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 1024);
-
+	    
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 1024);
 
         Task<FileHeader[]> GetAsync(string[] filename);
 		Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize);
 
         Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue);
-
-        
     }
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation
@@ -106,7 +103,7 @@ namespace Raven.Client.FileSystem
 
         Task EnsureFileSystemExistsAsync(string fileSystem);        
         Task<long> StartRestore(FilesystemRestoreRequest restoreRequest);
-        Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName);
+        Task StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName);
         Task<long> StartCompact(string filesystemName);
         Task ResetIndexes(string filesystemName);
     }
@@ -134,16 +131,16 @@ namespace Raven.Client.FileSystem
         Task<SynchronizationReport> GetSynchronizationStatusForAsync(string filename);
         Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId);
         
-        Task<ItemsPage<ConflictItem>> GetConflictsAsync(int page = 0, int pageSize = 25);
+        Task<ItemsPage<ConflictItem>> GetConflictsAsync(int start = 0, int pageSize = 25);
         Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
         Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
 		Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
 
         Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);
 
-        Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25);
-        Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int page = 0, int pageSize = 25);
-        Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int page = 0, int pageSize = 25);
+        Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int start = 0, int pageSize = 25);
+        Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int start = 0, int pageSize = 25);
+        Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int start = 0, int pageSize = 25);
 
 
         Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null);
@@ -155,7 +152,7 @@ namespace Raven.Client.FileSystem
         Task<RdcStats> GetRdcStatsAsync();
 
 
-        Task<DestinationSyncResult[]> SynchronizeAsync(bool forceSyncingAll = false);
+        Task<DestinationSyncResult[]> StartAsync(bool forceSyncingAll = false);
         Task<SynchronizationReport> StartAsync(string filename, IAsyncFilesCommands destination);
         Task<SynchronizationReport> StartAsync(string filename, SynchronizationDestination destination);
 
