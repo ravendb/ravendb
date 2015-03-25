@@ -140,7 +140,7 @@ namespace Raven.Client.Connection.Request
 				{
 					case ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers:
 					case ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
-						if (lastUpdate.AddMinutes(5) < SystemTime.UtcNow)
+						if (Nodes.Count == 0)
 							leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds));
 						break;
 					default:
@@ -156,35 +156,18 @@ namespace Raven.Client.Connection.Request
 			{
 				case ClusterBehavior.ReadFromAllWriteToLeader:
 					if (method == "GET")
-					{
-						var nodes = NodeUrls;
-						var nodeIndex = readStripingBase % nodes.Count;
-						var readNode = nodes[nodeIndex];
-						if (ShouldExecuteUsing(readNode))
-							node = readNode;
-					}
+						node = GetNodeForReadOperation(node);
 					break;
 				case ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers:
+					if (node == null)
+						return await HandleWithFailovers(operation, token).ConfigureAwait(false);
+
+					if (method == "GET")
+						node = GetNodeForReadOperation(node);
+					break;
 				case ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
 					if (node == null)
-					{
-						var nodes = NodeUrls;
-						for (var i = 0; i < nodes.Count; i++)
-						{
-							var n = nodes[i];
-							if (ShouldExecuteUsing(n) == false)
-								continue;
-
-							var hasMoreNodes = nodes.Count > i + 1;
-							var result = await TryClusterOperationAsync(n, operation, hasMoreNodes, token).ConfigureAwait(false);
-							if (result.Success)
-								return result.Result;
-
-							FailureCounters.IncrementFailureCount(n.Url);
-						}
-
-						throw new InvalidOperationException("Cluster is not reachable. Executing operation on any of the nodes failed, aborting.");
-					}
+						return await HandleWithFailovers(operation, token).ConfigureAwait(false);
 					break;
 			}
 
@@ -195,6 +178,39 @@ namespace Raven.Client.Connection.Request
 			LeaderNode = null;
 			FailureCounters.IncrementFailureCount(node.Url);
 			return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1).ConfigureAwait(false);
+		}
+
+		private OperationMetadata GetNodeForReadOperation(OperationMetadata node)
+		{
+			Debug.Assert(node != null);
+
+			var nodes = NodeUrls;
+			var nodeIndex = readStripingBase % nodes.Count;
+			var readNode = nodes[nodeIndex];
+			if (ShouldExecuteUsing(readNode))
+				return readNode;
+
+			return node;
+		}
+
+		private async Task<T> HandleWithFailovers<T>(Func<OperationMetadata, Task<T>> operation, CancellationToken token)
+		{
+			var nodes = NodeUrls;
+			for (var i = 0; i < nodes.Count; i++)
+			{
+				var n = nodes[i];
+				if (ShouldExecuteUsing(n) == false)
+					continue;
+
+				var hasMoreNodes = nodes.Count > i + 1;
+				var result = await TryClusterOperationAsync(n, operation, hasMoreNodes, token).ConfigureAwait(false);
+				if (result.Success)
+					return result.Result;
+
+				FailureCounters.IncrementFailureCount(n.Url);
+			}
+
+			throw new InvalidOperationException("Cluster is not reachable. Executing operation on any of the nodes failed, aborting.");
 		}
 
 		private bool ShouldExecuteUsing(OperationMetadata operationMetadata)

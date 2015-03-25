@@ -15,17 +15,27 @@ using Raven.Json.Linq;
 using Xunit;
 using Xunit.Extensions;
 
-using ListExtensions = Raven.Abstractions.Extensions.ListExtensions;
-
 namespace Raven.Tests.Raft.Client
 {
 	public class Documents : RaftTestBase
 	{
 		[Theory]
 		[PropertyData("Nodes")]
-		public void CanReadFromMultipleServers(int numberOfNodes)
+		public void CanReadFromMultipleServers1(int numberOfNodes)
 		{
-			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromAllWriteToLeader);
+			CanReadFromMultipleServersInternal(numberOfNodes, ClusterBehavior.ReadFromAllWriteToLeader);
+		}
+
+		[Theory]
+		[PropertyData("Nodes")]
+		public void CanReadFromMultipleServers2(int numberOfNodes)
+		{
+			CanReadFromMultipleServersInternal(numberOfNodes, ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers);
+		}
+
+		private void CanReadFromMultipleServersInternal(int numberOfNodes, ClusterBehavior clusterBehavior)
+		{
+			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = clusterBehavior);
 
 			SetupClusterConfiguration(clusterStores);
 
@@ -46,8 +56,7 @@ namespace Raven.Tests.Raft.Client
 				SpinWait.SpinUntil(() => task.IsRunning == false, TimeSpan.FromSeconds(3));
 			}
 
-			servers
-				.ForEach(server => server.Options.RequestManager.ResetNumberOfRequests());
+			servers.ForEach(server => server.Options.RequestManager.ResetNumberOfRequests());
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
@@ -57,8 +66,7 @@ namespace Raven.Tests.Raft.Client
 				store.DatabaseCommands.Get("keys/2");
 			}
 
-			servers
-				.ForEach(server => Assert.True(server.Options.RequestManager.NumberOfRequests > 0));
+			servers.ForEach(server => Assert.True(server.Options.RequestManager.NumberOfRequests > 0));
 		}
 
 		[Theory]
