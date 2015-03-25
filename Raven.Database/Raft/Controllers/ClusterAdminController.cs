@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -85,7 +86,16 @@ namespace Raven.Database.Raft.Controllers
 			if (topology.AllNodes.Any())
 				return GetMessageWithString("Server is already in cluster.", HttpStatusCode.NotAcceptable);
 
+			int nextStart = 0;
+			var databases = Database
+				.Documents
+				.GetDocumentsWithIdStartingWith(Constants.RavenDatabasesPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
+			
+			if (databases.Length > 0)
+				return GetMessageWithString("To create a cluster server must not contain any databases.", HttpStatusCode.NotAcceptable);
+
 			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
+			nodeConnectionInfo.Name = ClusterManager.Engine.Name;
 
 			ClusterManagerFactory.InitializeTopology(nodeConnectionInfo, ClusterManager);
 
