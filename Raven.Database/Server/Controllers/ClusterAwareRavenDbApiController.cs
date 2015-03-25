@@ -12,8 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http.Controllers;
 
-using Rachis.Transport;
-
 using Raven.Abstractions.Data;
 using Raven.Database.Raft.Util;
 
@@ -63,16 +61,12 @@ namespace Raven.Database.Server.Controllers
 					return await base.ExecuteAsync(controllerContext, cancellationToken);
 			}
 
-			var leaderNode = ClusterManager.Engine.GetLeaderNode();
-			if (leaderNode == null)
-			{
-				var clusterFailoverBehaviorHeader = GetClusterHeader(controllerContext, Constants.Cluster.ClusterFailoverBehaviorHeader);
-				bool clusterFailoverBehavior;
-				if (bool.TryParse(clusterFailoverBehaviorHeader, out clusterFailoverBehavior) && clusterFailoverBehavior)
-					return await base.ExecuteAsync(controllerContext, cancellationToken);
-			}
+			var clusterFailoverBehaviorHeader = GetClusterHeader(controllerContext, Constants.Cluster.ClusterFailoverBehaviorHeader);
+			bool clusterFailoverBehavior;
+			if (bool.TryParse(clusterFailoverBehaviorHeader, out clusterFailoverBehavior) && clusterFailoverBehavior)
+				return await base.ExecuteAsync(controllerContext, cancellationToken);
 
-			return RedirectToLeader(controllerContext.Request, leaderNode);
+			return RedirectToLeader(controllerContext.Request);
 		}
 
 		private static bool IsReadRequest(HttpControllerContext controllerContext)
@@ -86,8 +80,9 @@ namespace Raven.Database.Server.Controllers
 			return controllerContext.Request.Headers.TryGetValues(key, out values) == false ? null : values.FirstOrDefault();
 		}
 
-		private HttpResponseMessage RedirectToLeader(HttpRequestMessage request, NodeConnectionInfo leaderNode)
+		private HttpResponseMessage RedirectToLeader(HttpRequestMessage request)
 		{
+			var leaderNode = ClusterManager.Engine.GetLeaderNode();
 			if (leaderNode == null)
 			{
 				return request.CreateResponse(HttpStatusCode.ExpectationFailed, new
