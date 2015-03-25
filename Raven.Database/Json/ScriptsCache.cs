@@ -7,6 +7,7 @@ using Jint;
 using Jint.Parser;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Json

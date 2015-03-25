@@ -4,9 +4,9 @@
 	using System.ComponentModel.Composition;
 	using System.Linq;
 
-	using Raven.Abstractions.Data;
+	using Abstractions.Data;
 	using Raven.Bundles.Replication.Plugins;
-	using Raven.Database.Bundles.Replication.Impl;
+	using Impl;
 	using Raven.Json.Linq;
 
 	[ExportMetadata("Bundle", "Replication")]
@@ -31,12 +31,13 @@
 					           .Select(x => x.Value<string>())
 					           .ToArray();
 
-				if (conflictIds.Length == 0) return false;
+				if (conflictIds.Length == 0)
+					return false;
 
 				if (conflictIds
 					    .Select(getDocument)
 					    .Where(x => x != null)
-					    .All(doc => Historian.IsDirectChildOfCurrent(metadata, doc.Metadata)) == false)
+						.All(doc => Historian.IsDirectChildOfCurrent(metadata, doc.Metadata)) == false)
 					return false;
 
 				metadataToSave = metadata;
