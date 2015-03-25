@@ -81,7 +81,7 @@ class replications extends viewModelBase {
 
         $.each(this.replicationsSetup().destinations(), (i, dest) =>
         {
-            replicationSetupDirtyFlagItems.push(dest.sourceCollections);
+            replicationSetupDirtyFlagItems.push(<any>dest.sourceCollections);
             dest.sourceCollections.subscribe(array => {
                 if (array.length > 0)
                     dest.ignoredClient(true);
