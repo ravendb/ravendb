@@ -63,67 +63,64 @@
 			<div class="form-group">
 				<label class="col-sm-4 control-label">
 					Select databases to migrate <br />
-					<button type="button" class="btn btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
-						<img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : hasAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
-					</button> <span style="font-weight: normal">Toggle section</span>
 				</label>
 				<div class="col-sm-7">
-					<div data-bind="foreach: resources">
-						<div class="panel panel-default">
-							<div class="panel-heading panel-info">
-								<label><input type="checkbox" data-bind="checked: $root.selectedResources, value: $data, disable: $root.inProgress()"> <span style="font-weight: normal" data-bind="text:resource.name"></span></label>
-							</div>
-							<div class="panel-body" data-bind="visible: $root.isSelected($data)">
-								<div class="form-group">
-									<label class="col-sm-4 control-label">Incremental</label>
-									<div class="col-sm-7">
+					<div>
+						<table class="table table-condensed table-striped">
+							<thead> 
+							<tr>
+								<th class="text-center">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+										<img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : hasAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</button>
+								</th>
+								<th>Name</th>
+								<th class="text-center">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAllIncremental, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+										<img data-bind="attr: { src: hasAllIncremental() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</button>
+									Incremental
+								</th>
+								<th class="text-center">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAllStripReplication, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+										<img data-bind="attr: { src: hasAllStripReplication() ? 'content/images/checked.png':'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</button>
+									Strip replication information
+								</th>
+								<th class="text-center">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAllDisableVersioning, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+										<img data-bind="attr: { src: hasAllDisableVersioning() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</button>
+									Disable versioning bundle
+								</th>
+							</tr>
+							</thead>
+							<tbody data-bind="foreach: resources">
+								<tr>
+									<td class="text-center">
+										<img data-bind="click: $root.toggleSelection.bind($root), attr: { src: $root.selectedResources.indexOf($data) >=0 ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</td>
+									<td>
+										<span style="font-weight: normal" data-bind="text:resource.name"></span>
+									</td>
+									<td class="text-center">
 										<div class="btn-group">
-											<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
-												<span data-bind="visible: incremental()">Yes</span>
-												<span data-bind="visible: !incremental()">No</span>
-												<span class="caret"></span>
-											</button>
-											<ul class="dropdown-menu" role="menu">
-												<li><a href="#" data-bind="click: incremental.bind($root,true)">Yes</a></li>
-												<li><a href="#" data-bind="click: incremental.bind($root,false)">No</a></li>
-											</ul>
+											<img data-bind="click: $root.toggleIncremental.bind($root), style: { opacity:  $root.selectedResources.indexOf($data) >=0 ?1:0.25 }, attr: { src: incremental() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
 										</div>
-									</div>
-								</div>
-								<div class="form-group" data-bind="visible: hasReplicationBundle()">
-									<label class="col-sm-4 control-label">Strip replication information</label>
-									<div class="col-sm-7">
-										<div class="btn-group">
-											<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
-												<span data-bind="visible: stripReplicationInformation()">Yes</span>
-												<span data-bind="visible: !stripReplicationInformation()">No</span>
-												<span class="caret"></span>
-											</button>
-											<ul class="dropdown-menu" role="menu">
-												<li><a href="#" data-bind="click: stripReplicationInformation.bind($root,true)">Yes</a></li>
-												<li><a href="#" data-bind="click: stripReplicationInformation.bind($root,false)">No</a></li>
-											</ul>
+									</td>
+									<td class="text-center">
+										<div class="btn-group" data-bind="visible: hasReplicationBundle()">
+											<img data-bind="click: $root.toggleStripReplicationInformation.bind($root), style: { opacity:  $root.selectedResources.indexOf($data) >=0 ?1:0.25 }, attr: { src: stripReplicationInformation() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
 										</div>
-									</div>
-								</div>
-								<div class="form-group" data-bind="visible: hasVersioningBundle()">
-									<label class="col-sm-4 control-label">Should disable versioning bundle</label>
-									<div class="col-sm-7">
-										<div class="btn-group">
-											<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
-												<span data-bind="visible: shouldDisableVersioningBundle()">Yes</span>
-												<span data-bind="visible: !shouldDisableVersioningBundle()">No</span>
-												<span class="caret"></span>
-											</button>
-											<ul class="dropdown-menu" role="menu">
-												<li><a href="#" data-bind="click: shouldDisableVersioningBundle.bind($root,true)">Yes</a></li>
-												<li><a href="#" data-bind="click: shouldDisableVersioningBundle.bind($root,false)">No</a></li>
-											</ul>
+									</td>
+									<td class="text-center">
+										<div class="btn-group" data-bind="visible: hasVersioningBundle()">
+											<img data-bind="click: $root.toggleDisableVersioningBundle.bind($root), style: { opacity:  $root.selectedResources.indexOf($data) >=0 ?1:0.25 }, attr: { src: shouldDisableVersioningBundle() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
 										</div>
-									</div>
-								</div>
-							</div>
-						</div>
+									</td>
+								</tr>
+							</tbody>
+						</table>
 					</div>
 				</div>
 
@@ -151,9 +148,13 @@
 
 
 				<hr/>
-				<pre data-bind="visible: resultsVisible">
+				<div class="row">
+					<div class="col-sm-offset-1 col-sm-10">
+						<pre data-bind="visible: resultsVisible">
 <!-- ko foreach: $root.messages --><div data-bind="text: $data"></div><!-- /ko -->
-</pre>
+</pre>		
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>

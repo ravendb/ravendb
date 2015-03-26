@@ -12,29 +12,64 @@ class serverSmuggling extends viewModelBase {
 	resources = ko.observableArray<serverSmugglingItem>();
 	selectedResources = ko.observableArray<serverSmugglingItem>();
 
-	inProgress = ko.observable<boolean>(false);
-	resultsVisible = ko.observable<boolean>(false);
-
 	targetServer = ko.observable<serverConnectionInfo>(new serverConnectionInfo());
-
-	incremental = ko.observable<boolean>(false);
-	messages = ko.observableArray<string>([]);
 
 	hasAnyResourceSelected: KnockoutComputed<boolean>;
 	hasAllResourcesSelected: KnockoutComputed<boolean>;
 	hasResources: KnockoutComputed<boolean>;
-	submitEnabled: KnockoutComputed<boolean>;
+	
+	hasAllIncremental: KnockoutComputed<boolean>;
+	hasAllStripReplication: KnockoutComputed<boolean>;
+	hasAllDisableVersioning: KnockoutComputed<boolean>;
 
 	showJsonRequest = ko.observable<boolean>(false);
 	jsonRequest: KnockoutComputed<string>;
 
+	submitEnabled: KnockoutComputed<boolean>;
+	inProgress = ko.observable<boolean>(false);
+	resultsVisible = ko.observable<boolean>(false);
+	messages = ko.observableArray<string>([]);
+
     constructor() {
 		super();
-		this.hasAllResourcesSelected = ko.computed(() => this.selectedResources().length === this.resources().length);
+		this.hasAllResourcesSelected = ko.computed(() =>  this.selectedResources().length === this.resources().length);
 		this.hasAnyResourceSelected = ko.computed(() => this.selectedResources().length > 0); 
 		this.hasResources = ko.computed(() => {
 			return this.resources().count() > 0;
 		});
+	    this.hasAllIncremental = ko.computed(() => {
+		    var resources = this.resources();
+		    if (resources.length === 0)
+			    return false;
+
+		    for (var i = 0; i < resources.length; i++) {
+			    if (!resources[i].incremental())
+				    return false;
+		    }
+		    return true;
+		});
+	    this.hasAllStripReplication = ko.computed(() => {
+			var resources = this.resources();
+			if (resources.length === 0)
+				return false;
+
+			for (var i = 0; i < resources.length; i++) {
+				if (resources[i].hasReplicationBundle() && !resources[i].stripReplicationInformation())
+					return false;
+			}
+			return true;
+		});
+	    this.hasAllDisableVersioning = ko.computed(() => {
+			var resources = this.resources();
+			if (resources.length === 0)
+				return false;
+
+			for (var i = 0; i < resources.length; i++) {
+				if (resources[i].hasVersioningBundle() && !resources[i].shouldDisableVersioningBundle())
+					return false;
+			}
+			return true;
+	    });
 		this.submitEnabled = ko.computed(() => {
 			var progress = this.inProgress();
 			var selection = this.hasAnyResourceSelected();
@@ -74,7 +109,35 @@ class serverSmuggling extends viewModelBase {
 		if (this.hasAnyResourceSelected()) {
 			this.selectedResources([]);
 		} else {
-			this.selectedResources(this.resources());
+			this.selectedResources(this.resources().slice(0));
+		}
+	}
+
+	toggleSelectAllIncremental() {
+		var resources = this.resources();
+		var hasAll = this.hasAllIncremental();
+		for (var i = 0; i < resources.length; i++) {
+			resources[i].incremental(!hasAll);
+		}
+	}
+
+	toggleSelectAllStripReplication() {
+		var resources = this.resources();
+		var hasAll = this.hasAllStripReplication();
+		for (var i = 0; i < resources.length; i++) {
+			if (resources[i].hasReplicationBundle()) {
+				resources[i].stripReplicationInformation(!hasAll);
+			}
+		}
+	}
+
+	toggleSelectAllDisableVersioning() {
+		var resources = this.resources();
+		var hasAll = this.hasAllDisableVersioning();
+		for (var i = 0; i < resources.length; i++) {
+			if (resources[i].hasVersioningBundle()) {
+				resources[i].shouldDisableVersioningBundle(!hasAll);
+			}
 		}
 	}
 
@@ -96,7 +159,7 @@ class serverSmuggling extends viewModelBase {
 		this.inProgress(true);
 		this.resultsVisible(true);
 
-		new performSmugglingCommand(request, appUrl.getSystemDatabase(), (status) => this.updateProgress(status), this.incremental())
+		new performSmugglingCommand(request, appUrl.getSystemDatabase(), (status) => this.updateProgress(status))
 			.execute()
 			.always(() => this.inProgress(false));
 	}
@@ -116,6 +179,24 @@ class serverSmuggling extends viewModelBase {
 
 	toggleJson() {
 		this.showJsonRequest(!this.showJsonRequest());
+	}
+
+	toggleIncremental(item: serverSmugglingItem) {
+		if (this.isSelected(item)) {
+			item.incremental(!item.incremental());
+		}
+	}
+
+	toggleStripReplicationInformation(item: serverSmugglingItem) {
+		if (this.isSelected(item)) {
+			item.stripReplicationInformation(!item.stripReplicationInformation());
+		}
+	}
+
+	toggleDisableVersioningBundle(item: serverSmugglingItem) {
+		if (this.isSelected(item)) {
+			item.shouldDisableVersioningBundle(!item.shouldDisableVersioningBundle());
+		}
 	}
 }
 

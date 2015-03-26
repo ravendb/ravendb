@@ -7,7 +7,7 @@ import getOperationStatusCommand = require("commands/getOperationStatusCommand")
  
 class performSmugglingCommand extends commandBase {
 
-	constructor(private migration: serverSmugglingDto, private db: database, private updateMigrationStatus: (serverSmugglingOperationStateDto) => void, private incremental: boolean) { //TODO: pass on progess callback
+	constructor(private migration: serverSmugglingDto, private db: database, private updateMigrationStatus: (serverSmugglingOperationStateDto) => void) { 
         super();
     }
 
