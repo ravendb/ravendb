@@ -1193,7 +1193,8 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication<GetResponse[]>("GET", async operationMetadata => // logical GET even though the actual request is a POST
 			{
-				operationMetadataRef.Value = operationMetadata;
+				if (operationMetadataRef != null)
+					operationMetadataRef.Value = operationMetadata;
 				var multiGetOperation = new MultiGetOperation(this, convention, operationMetadata.Url, requests);
 
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, "POST", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
