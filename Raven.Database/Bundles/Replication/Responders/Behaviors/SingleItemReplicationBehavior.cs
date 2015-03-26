@@ -167,9 +167,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 				};
 			}
 			var existingHistory = ReplicationData.GetHistory(existingMetadata);
-			var existingHistoryArray = existingHistory.Value<RavenJArray>() ?? new RavenJArray();
 			if (currentReplicationEntry != null &&
-				existingHistoryArray.Contains(currentReplicationEntry, RavenJTokenEqualityComparer.Default))
+				existingHistory.Contains(currentReplicationEntry, RavenJTokenEqualityComparer.Default))
 			{
 				log.Debug("Replicated delete for {0} already exist in item history, ignoring", id);
 				return;
@@ -186,7 +185,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 				//Merge histories
 				foreach (var historyEntry in newHistory)
 				{
-					if (existingHistoryArray.Contains(historyEntry, RavenJTokenEqualityComparer.Default))
+					if (existingHistory.Contains(historyEntry, RavenJTokenEqualityComparer.Default))
 						continue;
 
 					existingHistory.Add(historyEntry);
