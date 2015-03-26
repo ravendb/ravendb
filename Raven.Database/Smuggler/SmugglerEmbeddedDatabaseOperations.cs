@@ -38,7 +38,7 @@ namespace Raven.Database.Smuggler
 
 		public Action<string> Progress { get; set; }
 
-		public Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
+		public Task<RavenJArray> GetIndexes(int totalCount)
 		{
 			return new CompletedTask<RavenJArray>(database.Indexes.GetIndexes(totalCount, 128));
 		}
@@ -48,7 +48,7 @@ namespace Raven.Database.Smuggler
 			return database.Documents.Get(key, null);
 		}
 
-		public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
+		public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)
 		{
 			const int dummy = 0;
 			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(Options.BatchSize, take), lastEtag, CancellationToken.None)
@@ -78,7 +78,7 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<Etag>(lastEtag);
 		}
 
-		public Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
+		public Task<RavenJArray> GetTransformers(int start)
 		{
 			return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, Options.BatchSize));
 		}
@@ -139,7 +139,7 @@ namespace Raven.Database.Smuggler
 		}
 
         [Obsolete("Use RavenFS instead.")]
-		public Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo)
+		public Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
 			if (attachmentExportInfo != null)
 			{
@@ -332,6 +332,11 @@ namespace Raven.Database.Smuggler
 			};
 
 			return new CompletedTask<byte[]>(attachment.Data().ReadData());
+		}
+
+		public string GetIdentifier()
+		{
+			return string.Format("embedded: {0}/{1}", database.Name ?? Constants.SystemDatabase, database.TransactionalStorage.Id);
 		}
 	}
 }
