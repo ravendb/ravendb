@@ -81,10 +81,10 @@ namespace Raven.Database.Indexing
         private static bool MightMatchComments(string query)
         {
             //return query.Contains("//");
-            int len = query.Length;
+            int len = query.Length-1;
             for (int i = 0; i < len; i++)
             {
-                if (query[i] == '/' && i + 1 < len && query[i + 1] == '/') return true;
+                if (query[i] == '/' &&  query[i + 1] == '/') return true;
             }
             return false;
         }
@@ -215,10 +215,10 @@ namespace Raven.Database.Indexing
         {
             //d{4}-\d{2}-\d{2}T
             //return query.Contains("//");
-            int len = query.Length;
+            int len = query.Length-6;
             for (int i = 0; i < len; i++)
             {
-                if (query[i] == '-' && i + 6 < len && query[i + 3] == '-' && query[i + 6] == 'T') return true;
+                if (query[i] == '-' && query[i + 3] == '-' && query[i + 6] == 'T') return true;
             }
             return false;
         }
@@ -260,10 +260,10 @@ namespace Raven.Database.Indexing
 	    private static bool MightMatchSearchTerms(string query)
 	    {
             //return query.Contains("<<");
-	        int len = query.Length;
+	        int len = query.Length-1;
             for (int i=0; i<len; i++)
             {
-                if (query[i] == '<' && i + 1 < len && query[i + 1] == '<') return true;
+                if (query[i] == '<' && query[i + 1] == '<') return true;
             }
 	        return false;	        
 	    }
@@ -315,10 +315,10 @@ namespace Raven.Database.Indexing
 	    private static bool MightMatchUntokenizedTerms(string query)
 	    {
             //return query.Contains("[[");
-            int len = query.Length;
+            int len = query.Length-1;
             for (int i = 0; i < len; i++)
             {
-                if (query[i] == '[' && i + 1 < len && query[i + 1] == '[') return true;
+                if (query[i] == '[' && query[i + 1] == '[') return true;
             }
             return false;	
 	    }
@@ -478,6 +478,7 @@ namespace Raven.Database.Indexing
 			// Lucene 4 will have a built-in support for this
 
 			StringBuilder queryStringBuilder = null;
+			var tempSb = new StringBuilder();
 
 			var rightOpenRanges = rightOpenRangeQuery.Matches(query);
 			if (rightOpenRanges.Count > 0) // // field:[x, y} - right-open interval convert to (field: [x, y] AND NOT field:y)
@@ -490,23 +491,12 @@ namespace Raven.Database.Indexing
 					var field = range.Groups[1].Value;
 					var rangeStart = range.Groups[2].Value;
 					var rangeEnd = range.Groups[3].Value;
-				    var sb = new StringBuilder();
+					tempSb.Clear();
                     //string.Format("({0}:[{1} TO {2}] AND NOT {0}:{2})",field,rangeStart,rangeEnd)
-				    sb.Append('(').Append(field).Append(":[").Append(rangeStart).Append(" TO ").Append(rangeEnd).Append("] AND NOT ").Append(field)
+				    tempSb.Append('(').Append(field).Append(":[").Append(rangeStart).Append(" TO ").Append(rangeEnd).Append("] AND NOT ").Append(field)
 				        .Append(':').Append(rangeEnd).Append(')');
 					queryStringBuilder.Remove(range.Index, range.Length)
-                        .Insert(range.Index,sb.ToString());
-					                 /* .Insert(range.Index, "(")
-					                  .Insert(range.Index + 1, field)
-					                  .Insert(range.Index + 1 + field.Length, ":[")
-					                  .Insert(range.Index + 1 + field.Length + 2, rangeStart)
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length, " TO ")
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4, rangeEnd)
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length, "] AND NOT ")
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10, field)
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length, ":")
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1, rangeEnd)
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1 + rangeEnd.Length, ")");*/
+                        .Insert(range.Index,tempSb.ToString());
 				}
 			}
 
@@ -523,23 +513,12 @@ namespace Raven.Database.Indexing
 					var field = range.Groups[1].Value;
 					var rangeStart = range.Groups[2].Value;
 					var rangeEnd = range.Groups[3].Value;
-                    var sb = new StringBuilder();
+					tempSb.Clear();
                     //string.Format("({0}:[{1} TO {2}] AND NOT {0}:{2})",field,rangeStart,rangeStart)
-				    sb.Append('(').Append(field).Append(":[").Append(rangeStart).Append(" TO ").Append(rangeEnd).Append("] AND NOT ").Append(field)
+					tempSb.Append('(').Append(field).Append(":[").Append(rangeStart).Append(" TO ").Append(rangeEnd).Append("] AND NOT ").Append(field)
 				        .Append(':').Append(rangeStart).Append(')');
 					queryStringBuilder.Remove(range.Index, range.Length)
-                        .Insert(range.Index, sb.ToString());
-									 /* .Insert(range.Index, "(")
-									  .Insert(range.Index + 1, field)
-									  .Insert(range.Index + 1 + field.Length, ":[")
-									  .Insert(range.Index + 1 + field.Length + 2, rangeStart)
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length, " TO ")
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4, rangeEnd)
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length, "] AND NOT ")
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10, field)
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length, ":")
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1, rangeStart)
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1 + rangeStart.Length, ")");*/
+						.Insert(range.Index, tempSb.ToString());
 				}
 			}
 
