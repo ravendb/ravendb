@@ -88,10 +88,15 @@ namespace Raven.Bundles.Replication.Tasks
 		private IndependentBatchSizeAutoTuner autoTuner;
 		internal readonly ConcurrentDictionary<string, PrefetchingBehavior> prefetchingBehaviors = new ConcurrentDictionary<string, PrefetchingBehavior>();
 
+		public ReplicationTask()
+		{
+			TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromMinutes(1);
+		}
+
 		public void Execute(DocumentDatabase database)
 		{
 			docDb = database;
-
+			
 
 			docDb.Notifications.OnIndexChange += OnIndexChange;
 			docDb.Notifications.OnTransformerChange += OnTransformerChange;
@@ -1125,10 +1130,10 @@ namespace Raven.Bundles.Replication.Tasks
 				tombstones = actions
 					.Lists
 					.Read(tombstoneListName, start, take)
-					// we don't send out deletions immediately, we wait for 1 minute
+					// we don't send out deletions immediately, we wait for a bit
 					// to make sure that the user didn't reset the index or delete / create
 					// things manually
-					.Where(x => (now - x.CreatedAt).TotalMinutes > 1)
+					.Where(x => (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfIndexesToSiblings )
 					.Select(x => new JsonDocument
 					{
 						Etag = x.Etag,
@@ -1140,6 +1145,8 @@ namespace Raven.Bundles.Replication.Tasks
 			});
 			return tombstones ?? new List<JsonDocument>();
 		}
+
+		public TimeSpan TimeToWaitBeforeSendingDeletesOfIndexesToSiblings { get; set; }
 
 
 		private class JsonDocumentsToReplicate

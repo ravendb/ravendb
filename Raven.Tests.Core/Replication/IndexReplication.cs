@@ -528,6 +528,8 @@ namespace Raven.Tests.Core.Replication
 			using (var destinationServer3 = GetNewServer(8081))
 			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3))
 			{
+		
+
 				CreateDatabaseWithReplication(source, "testDB");
 				CreateDatabaseWithReplication(destination1, "testDB");
 				CreateDatabaseWithReplication(destination2, "testDB");
@@ -544,6 +546,7 @@ namespace Raven.Tests.Core.Replication
 
 				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
+				replicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings= TimeSpan.Zero;
 				replicationTask.ReplicateIndexesAndTransformersTask(null);
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName };
