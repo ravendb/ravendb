@@ -22,12 +22,19 @@ namespace Raven.Tests.Common
 {
     public class RavenTest : RavenTestBase
     {
-        
+	    public class TestMemoryTarget : DatabaseMemoryTarget
+	    {
+		    public override bool ShouldLog(ILog logger, LogLevel level)
+		    {
+			    return true;
+		    }
+	    }
+
 		protected bool ShowLogs { get; set; }
 
         static RavenTest()
         {
-            LogManager.RegisterTarget<DatabaseMemoryTarget>();
+			LogManager.RegisterTarget<TestMemoryTarget>();
         }
 
         public RavenTest()
@@ -50,7 +57,7 @@ namespace Raven.Tests.Common
 
 		    foreach (var databaseName in DatabaseNames)
 		    {
-			    var target = LogManager.GetTarget<DatabaseMemoryTarget>()[databaseName];
+				var target = LogManager.GetTarget<TestMemoryTarget>()[databaseName];
 			    if (target == null)
 				    continue;
 
