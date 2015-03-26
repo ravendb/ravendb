@@ -236,7 +236,7 @@ namespace Raven.Database.Server.Controllers
 					Host = "multi.get",
 					Path = request.Url
 				}.Uri);
-				msg.Content = new CompressedStringContent(request.Content, false);
+				msg.Content = new StringContent(request.Content);
 				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 				
 			}

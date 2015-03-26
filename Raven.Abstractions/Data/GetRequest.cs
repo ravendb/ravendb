@@ -31,9 +31,6 @@ namespace Raven.Abstractions.Data
 		{
 			get
 			{
-				if (Method != null && Method != "Get")
-					return Url;
-
 				if (Query == null)
 					return Url;
 				
