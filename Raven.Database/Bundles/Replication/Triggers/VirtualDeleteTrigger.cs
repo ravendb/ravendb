@@ -28,11 +28,6 @@ namespace Raven.Bundles.Replication.Triggers
 	{
 		readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
 
-		public override void Initialize()
-		{
-			Database.Notifications.OnIndexChange += OnIndexChange;
-		}
-
 		public override void OnDelete(string key, TransactionInformation transactionInformation)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
@@ -110,22 +105,6 @@ namespace Raven.Bundles.Replication.Triggers
 			var conflict = document.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
 
 			return conflict != null && conflict.Value<bool>() && document.DataAsJson.Value<RavenJArray>("Conflicts") != null;
-		}
-
-		private void OnIndexChange(Database.DocumentDatabase database, IndexChangeNotification eventArgs)
-		{
-			if (eventArgs.Type == IndexChangeTypes.IndexRemoved)
-			{
-				var metadata = new RavenJObject
-				{
-					{ Constants.RavenIndexDeleteMarker, true },
-					{ Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString() },
-					{ Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database) }
-				};
-
-				Database.TransactionalStorage.Batch(accessor =>
-					accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, eventArgs.Name, metadata, UuidType.Indexing));
-			}
 		}
 	}
 }

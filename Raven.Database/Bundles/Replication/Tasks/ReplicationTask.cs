@@ -11,6 +11,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
+using Raven.Bundles.Replication.Impl;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -90,6 +91,22 @@ namespace Raven.Bundles.Replication.Tasks
 		public void Execute(DocumentDatabase database)
 		{
 			docDb = database;
+
+			docDb.Notifications.OnIndexChange += (documentDatabase, eventArgs) =>
+			{
+				if (eventArgs.Type != IndexChangeTypes.IndexRemoved) 
+					return;
+
+				var metadata = new RavenJObject
+				{
+					{Constants.RavenIndexDeleteMarker, true},
+					{Constants.RavenReplicationSource, docDb.TransactionalStorage.Id.ToString()},
+					{Constants.RavenReplicationVersion, ReplicationHiLo.NextId(docDb)}
+				};
+
+				docDb.TransactionalStorage.Batch(accessor =>
+					accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, eventArgs.Name, metadata, UuidType.Indexing));
+			};
 			var replicationRequestTimeoutInMs = docDb.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
 			autoTuner = new IndependentBatchSizeAutoTuner(docDb.WorkContext, PrefetchingUser.Replicator);
