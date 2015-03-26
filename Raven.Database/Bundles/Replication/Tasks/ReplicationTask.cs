@@ -68,7 +68,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private object _indexReplicationTaskLock = new object();
 		private object _lastQueriedTaskLock = new object();
 
-		private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>(); 
+		private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>();
 
 		public ConcurrentDictionary<string, DestinationStats> DestinationStats
 		{
@@ -91,7 +91,7 @@ namespace Raven.Bundles.Replication.Tasks
 		public void Execute(DocumentDatabase database)
 		{
 			docDb = database;
-			
+
 
 			docDb.Notifications.OnIndexChange += OnIndexChange;
 			docDb.Notifications.OnTransformerChange += OnTransformerChange;
@@ -103,7 +103,7 @@ namespace Raven.Bundles.Replication.Tasks
 			nonBufferedHttpRavenRequestFactory = new HttpRavenRequestFactory
 			{
 				RequestTimeoutInMs = replicationRequestTimeoutInMs,
-                AllowWriteStreamBuffering = docDb.Configuration.Replication.ForceReplicationRequestBuffering
+				AllowWriteStreamBuffering = docDb.Configuration.Replication.ForceReplicationRequestBuffering
 			};
 
 			var task = new Task(Execute, TaskCreationOptions.LongRunning);
@@ -122,50 +122,44 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void OnTransformerChange(DocumentDatabase documentDatabase, TransformerChangeNotification eventArgs)
 		{
-			lock (_indexReplicationTaskLock)
+			switch (eventArgs.Type)
 			{
-				//if created transformer with the same name as deleted one, we should prevent its deletion replication
-				if (eventArgs.Type == TransformerChangeTypes.TransformerAdded)
-				{
+				case TransformerChangeTypes.TransformerAdded:
+					//if created transformer with the same name as deleted one, we should prevent its deletion replication
 					docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenReplicationTransformerTombstones, eventArgs.Name));
-					return;
-				}
+					break;
+				case TransformerChangeTypes.TransformerRemoved:
+					var metadata = new RavenJObject
+					{
+						{Constants.RavenTransformerDeleteMarker, true},
+						{Constants.RavenReplicationSource, docDb.TransactionalStorage.Id.ToString()},
+						{Constants.RavenReplicationVersion, ReplicationHiLo.NextId(docDb)}
+					};
 
-				if (eventArgs.Type != TransformerChangeTypes.TransformerRemoved)
-					return;
-
-				var metadata = new RavenJObject
-				{
-					{Constants.RavenTransformerDeleteMarker, true},
-					{Constants.RavenReplicationSource, docDb.TransactionalStorage.Id.ToString()},
-					{Constants.RavenReplicationVersion, ReplicationHiLo.NextId(docDb)}
-				};
-
-				docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationTransformerTombstones, eventArgs.Name, metadata, UuidType.Transformers));
+					docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationTransformerTombstones, eventArgs.Name, metadata, UuidType.Transformers));
+					break;
 			}
 		}
 
 		private void OnIndexChange(DocumentDatabase documentDatabase, IndexChangeNotification eventArgs)
 		{
-			lock (_indexReplicationTaskLock)
+			switch (eventArgs.Type)
 			{
-
-				//if created index with the same name as deleted one, we should prevent its deletion replication
-				if (eventArgs.Type == IndexChangeTypes.IndexAdded)
-				{
+				case IndexChangeTypes.IndexAdded:
+					//if created index with the same name as deleted one, we should prevent its deletion replication
 					docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, eventArgs.Name));
-					return;
-				}
+					break;
+				case IndexChangeTypes.IndexRemoved:
+					var metadata = new RavenJObject
+					{
+						{Constants.RavenIndexDeleteMarker, true},
+						{Constants.RavenReplicationSource, docDb.TransactionalStorage.Id.ToString()},
+						{Constants.RavenReplicationVersion, ReplicationHiLo.NextId(docDb)}
+					};
 
-				if (eventArgs.Type != IndexChangeTypes.IndexRemoved)
-					return;
+					docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, eventArgs.Name, metadata, UuidType.Indexing));
 
-				var metadata = new RavenJObject
-				{
-					{Constants.RavenIndexDeleteMarker, true}, {Constants.RavenReplicationSource, docDb.TransactionalStorage.Id.ToString()}, {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(docDb)}
-				};
-
-				docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, eventArgs.Name, metadata, UuidType.Indexing));
+					break;
 			}
 		}
 
@@ -984,12 +978,12 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					try
 					{
-						var indexTombstones = GetTombstones(Constants.RavenReplicationIndexesTombstones,0,64);
+						var indexTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationIndexesTombstones, 0, 64);
 						var replicatedIndexTombstones = new Dictionary<string, int>();
-					
+
 						ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
 
-						var transformerTombstones = GetTombstones(Constants.RavenReplicationTransformerTombstones,0,64);
+						var transformerTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationTransformerTombstones, 0, 64);
 						var replicatedTransformerTombstones = new Dictionary<string, int>();
 
 						ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
@@ -1000,7 +994,7 @@ namespace Raven.Bundles.Replication.Tasks
 							{
 								try
 								{
-									var url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name) + "?"+  GetDebugInfomration();
+									var url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
 									var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
 									replicationRequest.Write(RavenJObject.FromObject(definition));
 									replicationRequest.ExecuteRequest();
@@ -1073,7 +1067,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, ReplicationStrategy destination, Dictionary<string, int> replicatedIndexTombstones)
 		{
-			if (indexTombstones.Count == 0) 
+			if (indexTombstones.Count == 0)
 				return;
 
 			foreach (var tombstone in indexTombstones)
@@ -1118,14 +1112,19 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 
-		private List<JsonDocument> GetTombstones(string tombstoneListName, int start, int take)
+		private List<JsonDocument> GetIndexAndTransformersTombstones(string tombstoneListName, int start, int take)
 		{
-			List<JsonDocument> indexTombstones = null;
+			var now = SystemTime.UtcNow;
+			List<JsonDocument> tombstones = null;
 			docDb.TransactionalStorage.Batch(actions =>
 			{
-				indexTombstones = actions
+				tombstones = actions
 					.Lists
 					.Read(tombstoneListName, start, take)
+					// we don't send out deletions immediately, we wait for 1 minute
+					// to make sure that the user didn't reset the index or delete / create
+					// things manually
+					.Where(x => (now - x.CreatedAt).TotalMinutes > 1)
 					.Select(x => new JsonDocument
 					{
 						Etag = x.Etag,
@@ -1135,7 +1134,7 @@ namespace Raven.Bundles.Replication.Tasks
 					})
 					.ToList();
 			});
-			return indexTombstones ?? new List<JsonDocument>();
+			return tombstones ?? new List<JsonDocument>();
 		}
 
 
@@ -1308,7 +1307,7 @@ namespace Raven.Bundles.Replication.Tasks
 			results = results.OrderBy(x => x.Etag);
 
 			// can't return earlier, because we need to know if there are tombstones that need to be send
-			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue) 
+			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
 				results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
 
 			return results.ToList();
@@ -1424,7 +1423,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag, int? maxNumberOfItemsToReceiveInSingleBatch)
 		{
 			var maxNumberOfAttachments = 100;
-			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue) 
+			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
 				maxNumberOfAttachments = Math.Min(maxNumberOfAttachments, maxNumberOfItemsToReceiveInSingleBatch.Value);
 
 			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, maxNumberOfAttachments, 1024 * 1024 * 10).ToList();
