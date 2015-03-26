@@ -12,12 +12,17 @@ class serverMigration extends viewModelBase {
 	selectedResources = ko.observableArray<serverMigrationItem>();
 
 	inProgress = ko.observable<boolean>(false);
+	resultsVisible = ko.observable<boolean>(false);
 
 	targetServer = ko.observable<serverConnectionInfo>(new serverConnectionInfo());
+
+	incremental = ko.observable<boolean>(false);
+	messages = ko.observableArray<string>([]);
 
 	hasAnyResourceSelected: KnockoutComputed<boolean>;
 	hasAllResourcesSelected: KnockoutComputed<boolean>;
 	hasResources: KnockoutComputed<boolean>;
+	submitEnabled: KnockoutComputed<boolean>;
 
     constructor() {
 		super();
@@ -25,6 +30,12 @@ class serverMigration extends viewModelBase {
 		this.hasAnyResourceSelected = ko.computed(() => this.selectedResources().length > 0); 
 		this.hasResources = ko.computed(() => {
 			return this.resources().count() > 0;
+		});
+		this.submitEnabled = ko.computed(() => {
+			var progress = this.inProgress();
+			var selection = this.hasAnyResourceSelected();
+			var url = this.targetServer().url();
+			return !progress && selection && !!url;
 		});
     }
 
@@ -74,19 +85,23 @@ class serverMigration extends viewModelBase {
 	performMigration() {
 		var targetServer = this.targetServer().toDto();
 		var config = this.selectedResources().map(r => r.toDto());
+		this.messages([]);
 
 		var request: serverMigrationDto = {
 			TargetServer: targetServer,
 			Config: config
 		};
 
-		this.inProgress(true);	
+		this.inProgress(true);
+		this.resultsVisible(true);
 
-		new performMigrationCommand(request, appUrl.getSystemDatabase())
-			.execute();
-		//TODO: done get operation id and watch for status + update operation log
+		new performMigrationCommand(request, appUrl.getSystemDatabase(), (status) => this.updateProgress(status), this.incremental())
+			.execute()
+			.always(() => this.inProgress(false));
+	}
 
-
+	updateProgress(progress: serverMigrationOperationStateDto) {
+		this.messages(progress.Messages);
 	}
 }
 

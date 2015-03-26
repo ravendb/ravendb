@@ -9,7 +9,7 @@
 				<div class="form-group">
 					<label class="col-sm-4 control-label">Target server Url</label>
 					<div class="col-sm-7">
-						<input required type="text" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
+						<input required type="text" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
 					</div>
 				</div>
 				<div class="form-group">
@@ -35,19 +35,19 @@
 					<div class="form-group">
 						<label class="col-sm-4 control-label">User Name</label>
 						<div class="col-sm-7">
-							<input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
+							<input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
 						</div>
 					</div>
 					<div class="form-group">
 						<label class="col-sm-4 control-label">Password</label>
 						<div class="col-sm-7">
-							<input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
+							<input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
 						</div>
 					</div>
 					<div class="form-group">
 						<label class="col-sm-4 control-label">Domain</label>
 						<div class="col-sm-7">
-							<input type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
+							<input type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
 						</div>
 					</div>
 				</div>
@@ -55,15 +55,27 @@
 					<div class="form-group">
 						<label class="col-sm-4 control-label">API Key</label>
 						<div class="col-sm-7">
-							<input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
+							<input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
 						</div>
 					</div>
 				</div>
 			</div>
-
-			<hr />
-
-			<div class="clearfix"></div>
+			<div class="form-group">
+				<label class="col-sm-4 control-label">Incremental</label>
+				<div class="col-sm-7">
+					<div class="btn-group">
+						<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
+							<span data-bind="visible: $root.incremental()">Yes</span>
+							<span data-bind="visible: !$root.incremental()">No</span>
+							<span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu" role="menu">
+							<li><a href="#" data-bind="click: $root.incremental.bind($root,true)">Yes</a></li>
+							<li><a href="#" data-bind="click: $root.incremental.bind($root,false)">No</a></li>
+						</ul>
+					</div>
+				</div>
+			</div>
 
 			<div class="form-group">
 				<label class="col-sm-4 control-label">
@@ -82,13 +94,15 @@
 
 				<div class="form-group">
 					<div class="col-sm-offset-4 col-sm-7">
-						<button type="submit" class="btn btn-warning" data-bind="enable: hasAnyResourceSelected() && !$root.inProgress()"><span data-bind="visible: $root.inProgress()" class="fa fa-spinner fa-spin"></span> Run migration</button>
+						<button type="submit" class="btn btn-warning" data-bind="enable: submitEnabled"><span data-bind="visible: $root.inProgress()" class="fa fa-spinner fa-spin"></span> Run migration</button>
 					</div>
 				</div>
 
 
 				<hr />
-				<pre>Here goes log</pre>
+				<pre data-bind="visible: resultsVisible">
+<!-- ko foreach: $root.messages --><div data-bind="text: $data"></div><!-- /ko -->
+</pre>
 			</div>
 		</div>
 	</div>

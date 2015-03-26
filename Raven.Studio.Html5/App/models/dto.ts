@@ -1268,3 +1268,7 @@ interface serverMigrationDto {
 	TargetServer: serverConnectionInfoDto;
 	Config: Array<serverMigrationItemDto>;
 }
+
+interface serverMigrationOperationStateDto extends operationStatusDto {
+	Messages: Array<string>;
+}

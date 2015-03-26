@@ -71,15 +71,22 @@ namespace Raven.Database.Server.Controllers.Admin
 			var cts = new CancellationTokenSource();
 			var task = Task.Run(async () =>
 			{
-
 				try
 				{
 					foreach (var serverMigrationItem in request.Config)
 					{
-						var databaseJson = Database.Documents.Get(Constants.Database.Prefix + serverMigrationItem.Name, null);
-						var metadata = databaseJson.Metadata;
-						metadata.Remove("@id");
-						targetStore.DatabaseCommands.Put(Constants.Database.Prefix + serverMigrationItem.Name, null, databaseJson.DataAsJson, metadata);
+						status.Messages.Add("Migrating database " + serverMigrationItem.Name);
+						var documentKey = Constants.Database.Prefix + serverMigrationItem.Name;
+						if (targetStore.DatabaseCommands.Head(documentKey) == null)
+						{
+							var databaseJson = Database.Documents.Get(documentKey, null);
+							var metadata = databaseJson.Metadata;
+							metadata.Remove("@id");
+							targetStore.DatabaseCommands.Put(documentKey, null, databaseJson.DataAsJson, metadata);
+						}
+
+						Thread.Sleep(20000); //TODO: remove me!
+						
 
 						var source = await DatabasesLandlord.GetDatabaseInternal(serverMigrationItem.Name);
 						//TODO: copy database document
@@ -94,9 +101,13 @@ namespace Raven.Database.Server.Controllers.Admin
 					}
 				});*/
 					}
+
+					status.Messages.Add("Server migration completed successfully.");
 				}
 				catch (Exception e)
 				{
+					status.Messages.Add("Error: " + e.Message);
+					status.State = RavenJObject.FromObject(new {Error = e.Message});
 					status.Faulted = true;
 					throw;
 				}
@@ -123,9 +134,14 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		private class ServerMigrationOperationState : IOperationState
 		{
+			public ServerMigrationOperationState()
+			{
+				Messages = new List<string>();
+			}
+
 			public bool Completed { get; set; }
 			public bool Faulted { get; set; }
-			public string LastProgress { get; set; }
+			public List<string> Messages { get; private set; }
 			public RavenJToken State { get; set; }
 		}
 
