@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Threading;
 
+using Raven.Abstractions.Replication;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -16,7 +17,11 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void T1()
 		{
-			using (var store = NewRemoteDocumentStore())
+			using (var store = NewRemoteDocumentStore(configureStore: s =>
+			{
+				s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed;
+				s.Conventions.RequestTimeThresholdInMilliseconds = 10;
+			}))
 			{
 				while (true)
 				{

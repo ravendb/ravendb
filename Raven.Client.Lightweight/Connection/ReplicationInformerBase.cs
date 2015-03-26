@@ -10,6 +10,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Request;
+using Raven.Client.Metrics;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
 using System;
@@ -74,12 +75,12 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		protected ReplicationInformerBase(Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime=1000)
+		protected ReplicationInformerBase(Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000)
 		{
 			Conventions = conventions;
-		    this.requestFactory = requestFactory;
-		    ReplicationDestinations = new List<OperationMetadata>();
-		    DelayTimeInMiliSec = delayTime;
+			this.requestFactory = requestFactory;
+			ReplicationDestinations = new List<OperationMetadata>();
+			DelayTimeInMiliSec = delayTime;
 			FailureCounters = new FailureCounters();
 		}
 
@@ -189,26 +190,28 @@ namespace Raven.Client.Connection
             return increment ? Interlocked.Increment(ref readStripingBase) : readStripingBase;
 		}
 
-		public async Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method, 
-			string primaryUrl, 
-			OperationCredentials primaryCredentials, 
-			int currentRequest, 
-			int currentReadStripingBase, 
-			Func<OperationMetadata, Task<T>> operation, 
+		public async Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method,
+			string primaryUrl,
+			OperationCredentials primaryCredentials,
+			RequestTimeMetric primaryRequestTimeMetric,
+			int currentRequest,
+			int currentReadStripingBase,
+			Func<OperationMetadata, Task<T>> operation,
 			CancellationToken token = default (CancellationToken))
-        {
-            var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
-            var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials, null);
+		{
+			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
+			var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials, null);
 
 			var operationResult = new AsyncOperationResult<T>();
+			var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 
-			var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsPassed);
-			if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && method == HttpMethod.Get)
+			var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
+			if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && method == HttpMethod.Get && primaryRequestTimeMetric != null)
 			{
-				
+				var rate = primaryRequestTimeMetric.Rate();
+				shouldReadFromAllServers = rate > Conventions.RequestTimeThresholdInMilliseconds;
 			}
-
-            var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
+           
             if (shouldReadFromAllServers && method == HttpMethod.Get)
             {
                 var replicationIndex = currentReadStripingBase%(localReplicationDestinations.Count + 1);

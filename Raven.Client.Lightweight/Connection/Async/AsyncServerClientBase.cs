@@ -109,7 +109,7 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
-                return await ReplicationInformer.ExecuteWithReplicationAsync(method, BaseUrl, CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStrippingBase.Value, operation)
+                return await ReplicationInformer.ExecuteWithReplicationAsync(method, BaseUrl, CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null, currentRequest, readStrippingBase.Value, operation)
                                                 .ConfigureAwait(false);
             }
             catch (AggregateException e)

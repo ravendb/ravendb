@@ -13,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
+using Raven.Client.Metrics;
 
 namespace Raven.Client.Connection.Request
 {
@@ -20,11 +21,14 @@ namespace Raven.Client.Connection.Request
 	{
 		private readonly IDocumentStoreReplicationInformer replicationInformer;
 
+		private readonly RequestTimeMetric requestTimeMetric;
+
 		private int readStripingBase;
 
-		public ReplicationAwareRequestExecuter(IDocumentStoreReplicationInformer replicationInformer)
+		public ReplicationAwareRequestExecuter(IDocumentStoreReplicationInformer replicationInformer, RequestTimeMetric requestTimeMetric)
 		{
 			this.replicationInformer = replicationInformer;
+			this.requestTimeMetric = requestTimeMetric;
 		}
 
 		public IDocumentStoreReplicationInformer ReplicationInformer
@@ -51,7 +55,7 @@ namespace Raven.Client.Connection.Request
 
 		public Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, HttpMethod method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
 		{
-			return replicationInformer.ExecuteWithReplicationAsync(method, serverClient.Url, serverClient.PrimaryCredentials, currentRequest, readStripingBase, operation, token);
+			return replicationInformer.ExecuteWithReplicationAsync(method, serverClient.Url, serverClient.PrimaryCredentials, requestTimeMetric, currentRequest, readStripingBase, operation, token);
 		}
 
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient, bool force = false)

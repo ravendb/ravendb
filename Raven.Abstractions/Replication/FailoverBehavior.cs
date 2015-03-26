@@ -54,6 +54,6 @@ namespace Raven.Abstractions.Replication
 		/// </remarks>
 		ReadFromAllServers = 1024,
 
-		AllowReadFromSecondariesWhenRequestTimeThresholdIsPassed = 2048,
+		AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed = 2048,
 	}
 }

@@ -11,7 +11,7 @@ namespace Raven.Client.Metrics
 
 		public RequestTimeMetric()
 		{
-			ewma = new EWMA(EWMA.M1Alpha, 1, TimeUnit.Seconds);
+			ewma = new EWMA(EWMA.M1Alpha, 1, TimeUnit.Milliseconds);
 		}
 
 		public void Update(long requestTimeInMilliseconds)
