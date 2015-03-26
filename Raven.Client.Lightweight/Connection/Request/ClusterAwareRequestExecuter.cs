@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -90,7 +91,7 @@ namespace Raven.Client.Connection.Request
 
 		public ReplicationDestination[] FailoverServers { get; set; }
 
-		public Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, string method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
+		public Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, HttpMethod method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
 		{
 			return ExecuteWithinClusterInternalAsync(serverClient, method, operation, token);
 		}
@@ -124,7 +125,7 @@ namespace Raven.Client.Connection.Request
 				httpJsonRequest.AddHeader(Constants.Cluster.ClusterFailoverBehaviorHeader, "true");
 		}
 
-		private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, string method, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries = 2)
+		private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries = 2)
 		{
 			token.ThrowIfCancellationRequested();
 
@@ -155,14 +156,14 @@ namespace Raven.Client.Connection.Request
 			switch (serverClient.ClusterBehavior)
 			{
 				case ClusterBehavior.ReadFromAllWriteToLeader:
-					if (method == "GET")
+					if (method == HttpMethod.Get)
 						node = GetNodeForReadOperation(node);
 					break;
 				case ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers:
 					if (node == null)
 						return await HandleWithFailovers(operation, token).ConfigureAwait(false);
 
-					if (method == "GET")
+					if (method == HttpMethod.Get)
 						node = GetNodeForReadOperation(node);
 					break;
 				case ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers:

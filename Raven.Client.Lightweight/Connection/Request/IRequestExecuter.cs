@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,7 +14,7 @@ namespace Raven.Client.Connection.Request
 
 		ReplicationDestination[] FailoverServers { get; set; }
 
-		Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, string method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token);
+		Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, HttpMethod method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token);
 
 		Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient, bool force = false);
 

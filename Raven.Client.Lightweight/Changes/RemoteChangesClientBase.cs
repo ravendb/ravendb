@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -101,7 +102,7 @@ namespace Raven.Client.Changes
                 clientSideHeartbeatTimer = null;
             }
 
-            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
+			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethod.Get, credentials, conventions)
             {
                 AvoidCachingRequest = true,
                 DisableRequestCompression = true
@@ -190,7 +191,7 @@ namespace Raven.Client.Changes
                     if (string.IsNullOrEmpty(value) == false)
                         sendUrl += "&value=" + Uri.EscapeUriString(value);
 
-                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions)
+					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethod.Get, credentials, conventions)
                     {
                         AvoidCachingRequest = true
                     };

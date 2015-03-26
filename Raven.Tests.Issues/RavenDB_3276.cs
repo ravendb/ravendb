@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Abstractions.Connection;
@@ -27,7 +28,7 @@ namespace Raven.Tests.Issues
 		    using (var store = NewRemoteDocumentStore())
 		    {
 			    var url = String.Format("{0}/databases/{1}/bulk_docs", store.Url, store.DefaultDatabase);
-			    var request = httpRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "POST", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), new DocumentConvention()));
+				var request = httpRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethod.Post, new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), new DocumentConvention()));
 
 				var exception = Assert.Throws<AggregateException>(() => request.WriteAsync(body).Wait());
 								
@@ -47,7 +48,7 @@ namespace Raven.Tests.Issues
 			    using (ConnectionOptions.Expect100Continue(url))
 			    {
 				    var operationUrl = "/bulkInsert?&operationId=" + Guid.NewGuid();
-				    var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null, url + operationUrl, "POST", new OperationCredentials(String.Empty, CredentialCache.DefaultNetworkCredentials), new DocumentConvention());
+					var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null, url + operationUrl, HttpMethod.Post, new OperationCredentials(String.Empty, CredentialCache.DefaultNetworkCredentials), new DocumentConvention());
 					var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 					
 					var response = await request.ExecuteRawRequestAsync((requestStream, tcs) => 

@@ -1,4 +1,6 @@
-﻿using Raven.Abstractions.Connection;
+﻿using System.Net.Http;
+
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using System;
 using System.Collections.Specialized;
@@ -98,7 +100,7 @@ namespace Raven.Client.Connection.Async
         private int requestCount;
         private volatile bool currentlyExecuting;
 
-        internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation)
+        internal async Task<T> ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, Task<T>> operation)
         {
             var currentRequest = Interlocked.Increment(ref requestCount);
             if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
@@ -124,7 +126,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        internal Task ExecuteWithReplication(string method, Func<OperationMetadata, Task> operation)
+        internal Task ExecuteWithReplication(HttpMethod method, Func<OperationMetadata, Task> operation)
         {
 			// Convert the Func<string, Task> to a Func<string, Task<object>>
 			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t =>

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -292,7 +293,7 @@ namespace Raven.Smuggler
 			var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/config";
 			try
 			{
-				using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
+				using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
 				{
 					var configuration = (RavenJObject)request.ReadResponseJson();
 
@@ -326,7 +327,7 @@ namespace Raven.Smuggler
 			do
 			{
 				var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + pageSize;
-				using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
+				using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
 				{
 					var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
 					totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");

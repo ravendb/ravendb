@@ -53,5 +53,7 @@ namespace Raven.Abstractions.Replication
 		/// If you want to use that, you have to open the session with ForceReadFromMaster set to true.
 		/// </remarks>
 		ReadFromAllServers = 1024,
+
+		AllowReadFromSecondariesWhenRequestTimeThresholdIsPassed = 2048,
 	}
 }

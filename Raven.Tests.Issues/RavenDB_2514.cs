@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,7 +39,7 @@ namespace Raven.Tests.Issues
                     while (true)
                     {
                         var response = (RavenJArray)store.JsonRequestFactory.CreateHttpJsonRequest(
-                            new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operations", "GET",
+                            new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operations", HttpMethod.Get,
                                 store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ReadResponseJson();
                         var taskList = response.Select(
                             t => ((RavenJObject)t).Deserialize<TaskActions.PendingTaskDescriptionAndStatus>(store.Conventions)).ToList();
@@ -47,7 +48,7 @@ namespace Raven.Tests.Issues
                             var operationId = taskList.First().Id;
                             store.JsonRequestFactory.CreateHttpJsonRequest(
                                 new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operation/kill?id=" + operationId,
-                                    "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ExecuteRequest();
+                                    HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ExecuteRequest();
                             break;
                         }
                     }
