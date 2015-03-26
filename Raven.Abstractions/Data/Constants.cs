@@ -47,6 +47,7 @@ namespace Raven.Abstractions.Data
 		public const string NotForReplication = "Raven-Not-For-Replication";
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
 		public const string RavenIndexDeleteMarker = "Raven-Index-Delete-Marker";
+		public const string RavenTransformerDeleteMarker = "Raven-Transformer-Delete-Marker";
 		public const string ActiveBundles = "Raven/ActiveBundles";
 		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 		public const string RavenAlerts = "Raven/Alerts";
@@ -129,6 +130,7 @@ namespace Raven.Abstractions.Data
 
 		public const string RavenReplicationDocsTombstones = "Raven/Replication/Docs/Tombstones";
 		public const string RavenReplicationIndexesTombstones = "Raven/Replication/Indexes/Tombstones";
+		public const string RavenReplicationTransformerTombstones = "Raven/Replication/Transformers/Tombstones";
 
         [Obsolete("Use RavenFS instead.")]
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";

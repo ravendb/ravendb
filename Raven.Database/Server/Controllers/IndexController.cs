@@ -199,7 +199,6 @@ namespace Raven.Database.Server.Controllers
 				var postedQuery = await ReadStringAsync();
 				
 				SetPostRequestQuery(postedQuery);
-
 				return IndexGet(id);
 			}
 
@@ -228,7 +227,9 @@ namespace Raven.Database.Server.Controllers
 			if (Database.Indexes.DeleteIndex(index) &&
 				!String.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
 			{
-				Log.Info("received index deletion from replication (replicating index tombstone)");
+				const string emptyFrom = "<no hostname>";
+				var from = Uri.UnescapeDataString(GetQueryStringValue("from") ?? emptyFrom);
+				Log.Info("received index deletion from replication (replicating index tombstone, received from = {0})", from);
 			}
 
 			return GetEmptyMessage(HttpStatusCode.NoContent);

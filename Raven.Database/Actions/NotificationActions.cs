@@ -23,15 +23,15 @@ namespace Raven.Database.Actions
 
         public event Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> OnDocumentChange;
 		public event Action<DocumentDatabase, IndexChangeNotification> OnIndexChange;
+	    public event Action<DocumentDatabase, TransformerChangeNotification> OnTransformerChange;
 
-        public void RaiseNotifications(DocumentChangeNotification obj, RavenJObject metadata)
+	    public void RaiseNotifications(DocumentChangeNotification obj, RavenJObject metadata)
         {
             Database.TransportState.Send(obj);
             var onDocumentChange = OnDocumentChange;
             if (onDocumentChange != null)
                 onDocumentChange(Database, obj, metadata);
         }
-
 
         public void RaiseNotifications(IndexChangeNotification obj)
         {
@@ -44,6 +44,8 @@ namespace Raven.Database.Actions
         public void RaiseNotifications(TransformerChangeNotification obj)
         {
             Database.TransportState.Send(obj);
+			var handler = OnTransformerChange;
+			if (handler != null) handler(Database, obj);
         }
 
         public void RaiseNotifications(ReplicationConflictNotification obj)
