@@ -90,7 +90,7 @@
 										</div>
 									</div>
 								</div>
-								<div class="form-group">
+								<div class="form-group" data-bind="visible: hasReplicationBundle()">
 									<label class="col-sm-4 control-label">Strip replication information</label>
 									<div class="col-sm-7">
 										<div class="btn-group">
@@ -106,7 +106,7 @@
 										</div>
 									</div>
 								</div>
-								<div class="form-group">
+								<div class="form-group" data-bind="visible: hasVersioningBundle()">
 									<label class="col-sm-4 control-label">Should disable versioning bundle</label>
 									<div class="col-sm-7">
 										<div class="btn-group">
@@ -130,11 +130,27 @@
 				<div class="form-group">
 					<div class="col-sm-offset-4 col-sm-7">
 						<button type="submit" class="btn btn-warning" data-bind="enable: submitEnabled"><span data-bind="visible: $root.inProgress()" class="fa fa-spinner fa-spin"></span> Run migration</button>
+						<button type="button" class="btn btn-default" data-bind="click: toggleJson, text: (showJsonRequest()?'Hide JSON':'Show JSON')"></button>
+					</div>
+				</div>
+
+				<div data-bind="visible: showJsonRequest()">
+					<div class="form-group">
+						<label class="col-sm-4 control-label">Method</label>
+						<div class="col-sm-7">
+							<input type="text" class="form-control" readonly="readonly" value="POST" />
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-4 control-label">Payload</label>
+						<div class="col-sm-7">
+							<pre class="jsContent" data-bind="html: jsonRequest"></pre>
+						</div>
 					</div>
 				</div>
 
 
-				<hr />
+				<hr/>
 				<pre data-bind="visible: resultsVisible">
 <!-- ko foreach: $root.messages --><div data-bind="text: $data"></div><!-- /ko -->
 </pre>

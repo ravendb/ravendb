@@ -5,6 +5,7 @@ import database = require("models/database");
 import serverConnectionInfo = require("models/serverConnectionInfo");
 import performMigrationCommand = require("commands/performMigrationCommand");
 import appUrl = require("common/appUrl");
+import jsonUtil = require("common/jsonUtil");
 
 class serverMigration extends viewModelBase {
 
@@ -24,6 +25,9 @@ class serverMigration extends viewModelBase {
 	hasResources: KnockoutComputed<boolean>;
 	submitEnabled: KnockoutComputed<boolean>;
 
+	showJsonRequest = ko.observable<boolean>(false);
+	jsonRequest: KnockoutComputed<string>;
+
     constructor() {
 		super();
 		this.hasAllResourcesSelected = ko.computed(() => this.selectedResources().length === this.resources().length);
@@ -37,6 +41,10 @@ class serverMigration extends viewModelBase {
 			var url = this.targetServer().url();
 			return !progress && selection && !!url;
 		});
+	    this.jsonRequest = ko.computed(() => {
+			var request = this.getJson();
+		    return jsonUtil.syntaxHighlight(request);
+	    });
     }
 
     canActivate(args): any {
@@ -83,15 +91,8 @@ class serverMigration extends viewModelBase {
 	}
 
 	performMigration() {
-		var targetServer = this.targetServer().toDto();
-		var config = this.selectedResources().map(r => r.toDto());
+		var request = this.getJson();
 		this.messages([]);
-
-		var request: serverMigrationDto = {
-			TargetServer: targetServer,
-			Config: config
-		};
-
 		this.inProgress(true);
 		this.resultsVisible(true);
 
@@ -100,8 +101,21 @@ class serverMigration extends viewModelBase {
 			.always(() => this.inProgress(false));
 	}
 
+	private getJson(): serverMigrationDto {
+		var targetServer = this.targetServer().toDto();
+		var config = this.selectedResources().map(r => r.toDto());
+		return {
+			TargetServer: targetServer,
+			Config: config
+		};
+	}
+
 	updateProgress(progress: serverMigrationOperationStateDto) {
 		this.messages(progress.Messages);
+	}
+
+	toggleJson() {
+		this.showJsonRequest(!this.showJsonRequest());
 	}
 }
 
