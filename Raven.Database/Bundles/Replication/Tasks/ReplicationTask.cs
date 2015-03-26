@@ -942,62 +942,67 @@ namespace Raven.Bundles.Replication.Tasks
 				return;
 			try
 			{
-				var indexTombstones = GetIndexTombstones();				
-				var replicatedIndexTombstones = new Dictionary<string, int>();
-
 				var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
 				foreach (var destination in replicationDestinations)
 				{
-					ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);	
-
-					if (docDb.Indexes.Definitions.Length > 0)
+					try
 					{
-						foreach (var definition in docDb.Indexes.Definitions)
+						var indexTombstones = GetIndexTombstones();
+						var replicatedIndexTombstones = new Dictionary<string, int>();
+						ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
+
+						if (docDb.Indexes.Definitions.Length > 0)
 						{
-							try
+							foreach (var definition in docDb.Indexes.Definitions)
 							{
-								var url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name);
-								var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
-								replicationRequest.Write(RavenJObject.FromObject(definition));
-								replicationRequest.ExecuteRequest();
-							}
-							catch (Exception e)
-							{
-								log.WarnException("Could not replicate index " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
+								try
+								{
+									var url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name) + "?"+  GetDebugInfomration();
+									var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
+									replicationRequest.Write(RavenJObject.FromObject(definition));
+									replicationRequest.ExecuteRequest();
+								}
+								catch (Exception e)
+								{
+									log.WarnException("Could not replicate index " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
+								}
 							}
 						}
+
+						if (docDb.Transformers.Definitions.Length > 0)
+						{
+							foreach (var definition in docDb.Transformers.Definitions)
+							{
+								try
+								{
+									var clonedTransformer = definition.Clone();
+									clonedTransformer.TransfomerId = 0;
+
+									string url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
+									var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
+									replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
+									replicationRequest.ExecuteRequest();
+								}
+								catch (Exception e)
+								{
+									log.WarnException("Could not replicate transformer " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
+								}
+							}
+						}
+						docDb.TransactionalStorage.Batch(actions =>
+						{
+							foreach (var replicatedIndexTombstone in replicatedIndexTombstones)
+							{
+								if (replicatedIndexTombstone.Value != replicationDestinations.Length)
+									continue;
+								actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, replicatedIndexTombstone.Key);
+							}
+						});
 					}
-
-					if (docDb.Transformers.Definitions.Length > 0)
+					catch (Exception e)
 					{
-						foreach (var definition in docDb.Transformers.Definitions)
-						{
-							try
-							{
-								var clonedTransformer = definition.Clone();
-								clonedTransformer.TransfomerId = 0;
-
-								string url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name);
-								var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
-								replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
-								replicationRequest.ExecuteRequest();
-							}
-							catch (Exception e)
-							{
-								log.WarnException("Could not replicate transformer " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
-
-							}
-						}
+						log.ErrorException("Failed to replicate indexes and transformers to " + destination, e);
 					}
-					docDb.TransactionalStorage.Batch(actions =>
-					{
-						foreach (var replicatedIndexTombstone in replicatedIndexTombstones)
-						{
-							if (replicatedIndexTombstone.Value != replicationDestinations.Length)
-								continue;
-							actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, replicatedIndexTombstone.Key);
-						}
-					});
 				}
 			}
 			catch (Exception e)
@@ -1010,6 +1015,11 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
+		private string GetDebugInfomration()
+		{
+			return "is-replicated=true&from=" + Uri.EscapeDataString(docDb.ServerUrl);
+		}
+
 		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, ReplicationStrategy destination, Dictionary<string, int> replicatedIndexTombstones)
 		{
 			if (indexTombstones.Count == 0) 
@@ -1019,7 +1029,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				try
 				{
-					var url = string.Format("{0}/indexes/{1}?is-replication=true", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key));
+					var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInfomration());
 					var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions);
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
