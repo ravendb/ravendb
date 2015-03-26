@@ -25,6 +25,7 @@ using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
 using Raven.Abstractions.Smuggler;
+using Raven.Client.Document;
 using Raven.Database.DiskIO;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
@@ -63,15 +64,24 @@ namespace Raven.Database.Server.Controllers.Admin
 		public async Task<HttpResponseMessage> Migrate()
 		{
 			var request = await ReadJsonObjectAsync<ServerMigrationRequest>();
-
 			var smugglerOptions = new SmugglerDatabaseOptions();
-
-			//TODO: convert to task and return id
-
-			foreach (var serverMigrationItem in request.Config)
+			var targetStore = CreateStore(request.TargetServer);
+			
+			var status = new ServerMigrationOperationState();
+			var cts = new CancellationTokenSource();
+			var task = Task.Run(async () =>
 			{
-				var source = await DatabasesLandlord.GetDatabaseInternal(serverMigrationItem.Name);
-				var dataDumper = new DatabaseDataDumper(source, smugglerOptions);
+
+				foreach (var serverMigrationItem in request.Config)
+				{
+					var databaseJson = Database.Documents.Get(Constants.Database.Prefix + serverMigrationItem.Name, null);
+
+					targetStore.DatabaseCommands.Put(Constants.Database.Prefix + serverMigrationItem.Name, null, databaseJson.DataAsJson, databaseJson.Metadata);
+
+					var source = await DatabasesLandlord.GetDatabaseInternal(serverMigrationItem.Name);
+					//TODO: copy database document
+
+					/*var dataDumper = new DatabaseDataDumper(source, smugglerOptions);
 				await dataDumper.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 				{
 				
@@ -79,10 +89,50 @@ namespace Raven.Database.Server.Controllers.Admin
 					{
 
 					}
-				});
-			}
+				});*/
+				}
+			}, cts.Token);
 
-			return null; //TODO: change me!
+			long id;
+			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+			{
+				StartTime = SystemTime.UtcNow,
+				TaskType = TaskActions.PendingTaskType.ServerMigration,
+				Payload = "Server migration"
+
+			}, out id, cts);
+
+			return GetMessageWithObject(new
+			{
+				OperationId = id
+			});
+		}
+
+		private class ServerMigrationOperationState : IOperationState
+		{
+			public bool Completed { get; set; }
+			public bool Faulted { get; set; }
+			public RavenJToken State { get; set; }
+		}
+
+		private static DocumentStore CreateStore(ServerConnectionInfo connection)
+		{
+			var store = new DocumentStore
+			{
+				Url = connection.Url,
+				ApiKey = connection.ApiKey,
+				Credentials = connection.Credentials,
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately,
+					ShouldCacheRequest = s => false,
+					ShouldAggressiveCacheTrackChanges = false,
+					ShouldSaveChangesForceAggressiveCacheCheck = false,
+				}
+			};
+			store.Initialize(ensureDatabaseExists: false);
+			store.JsonRequestFactory.DisableAllCaching();
+			return store;
 		}
 
 		[HttpPost]

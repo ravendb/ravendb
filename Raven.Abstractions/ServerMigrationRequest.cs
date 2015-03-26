@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Net;
 
 namespace Raven.Abstractions
 {
@@ -20,6 +21,14 @@ namespace Raven.Abstractions
 		public string Password { get; set; }
 		public string Domain { get; set; }
 		public string ApiKey { get; set; }
+
+		public ICredentials Credentials
+		{
+			get
+			{
+				return string.IsNullOrEmpty(Username) == false ? new NetworkCredential(Username, Password, Domain ?? string.Empty) : null;
+			}
+		}
 	}
 
 	public class ServerMigrationItem

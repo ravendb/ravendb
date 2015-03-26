@@ -185,7 +185,9 @@ namespace Raven.Database.Actions
 
             IoTest,
 
-	        NewIndexPrecomputedBatch
+	        NewIndexPrecomputedBatch,
+
+			ServerMigration
         }
     }
 }
