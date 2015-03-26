@@ -5,15 +5,15 @@ import database = require("models/database");
 import appUrl = require("common/appUrl");
 import getOperationStatusCommand = require("commands/getOperationStatusCommand");
  
-class performMigrationCommand extends commandBase {
+class performSmugglingCommand extends commandBase {
 
-	constructor(private migration: serverMigrationDto, private db: database, private updateMigrationStatus: (serverMigrationOperationStateDto) => void, private incremental: boolean) { //TODO: pass on progess callback
+	constructor(private migration: serverSmugglingDto, private db: database, private updateMigrationStatus: (serverSmugglingOperationStateDto) => void, private incremental: boolean) { //TODO: pass on progess callback
         super();
     }
 
     execute(): JQueryPromise<any> {
 	    var result = $.Deferred();
-	    this.post("/admin/serverMigration", JSON.stringify(this.migration), this.db)
+		this.post("/admin/serverSmuggling", JSON.stringify(this.migration), this.db)
 		    .fail((response: JQueryXHR) => {
 			    this.reportError("Failed to perform server migration!", response.responseText, response.statusText);
 			    result.reject();
@@ -46,4 +46,4 @@ class performMigrationCommand extends commandBase {
 
 }
 
-export = performMigrationCommand;
+export = performSmugglingCommand;

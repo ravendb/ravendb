@@ -1,16 +1,16 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import serverMigrationItem = require("models/serverMigrationItem");
+import serverSmugglingItem = require("models/serverSmugglingItem");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import database = require("models/database");
 import serverConnectionInfo = require("models/serverConnectionInfo");
-import performMigrationCommand = require("commands/performMigrationCommand");
+import performSmugglingCommand = require("commands/performSmugglingCommand");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 
-class serverMigration extends viewModelBase {
+class serverSmuggling extends viewModelBase {
 
-	resources = ko.observableArray<serverMigrationItem>();
-	selectedResources = ko.observableArray<serverMigrationItem>();
+	resources = ko.observableArray<serverSmugglingItem>();
+	selectedResources = ko.observableArray<serverSmugglingItem>();
 
 	inProgress = ko.observable<boolean>(false);
 	resultsVisible = ko.observable<boolean>(false);
@@ -61,7 +61,7 @@ class serverMigration extends viewModelBase {
 		return new getDatabasesCommand()
 			.execute()
 			.done((databases: database[]) => {
-				var smi = databases.map(d => new serverMigrationItem(d));
+				var smi = databases.map(d => new serverSmugglingItem(d));
 				this.resources(smi);
 		});
 	}
@@ -78,7 +78,7 @@ class serverMigration extends viewModelBase {
 		}
 	}
 
-	toggleSelection(item: serverMigrationItem) {
+	toggleSelection(item: serverSmugglingItem) {
 		if (this.isSelected(item)) {
 			this.selectedResources.remove(item);
 		} else {
@@ -86,7 +86,7 @@ class serverMigration extends viewModelBase {
 		}
 	}
 
-	isSelected(item: serverMigrationItem) {
+	isSelected(item: serverSmugglingItem) {
 		return this.selectedResources().indexOf(item) >= 0;
 	}
 
@@ -96,12 +96,12 @@ class serverMigration extends viewModelBase {
 		this.inProgress(true);
 		this.resultsVisible(true);
 
-		new performMigrationCommand(request, appUrl.getSystemDatabase(), (status) => this.updateProgress(status), this.incremental())
+		new performSmugglingCommand(request, appUrl.getSystemDatabase(), (status) => this.updateProgress(status), this.incremental())
 			.execute()
 			.always(() => this.inProgress(false));
 	}
 
-	private getJson(): serverMigrationDto {
+	private getJson(): serverSmugglingDto {
 		var targetServer = this.targetServer().toDto();
 		var config = this.selectedResources().map(r => r.toDto());
 		return {
@@ -110,7 +110,7 @@ class serverMigration extends viewModelBase {
 		};
 	}
 
-	updateProgress(progress: serverMigrationOperationStateDto) {
+	updateProgress(progress: serverSmugglingOperationStateDto) {
 		this.messages(progress.Messages);
 	}
 
@@ -119,4 +119,4 @@ class serverMigration extends viewModelBase {
 	}
 }
 
-export = serverMigration;  
+export = serverSmuggling;  

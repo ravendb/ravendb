@@ -1,6 +1,6 @@
 import database = require("models/database");
 
-class serverMigrationItem {
+class serverSmugglingItem {
 
 	resource: database;
 	incremental = ko.observable<boolean>(true);
@@ -15,7 +15,7 @@ class serverMigrationItem {
 		this.hasVersioningBundle = ko.computed(() => this.resource.isBundleActive("versioning"));
 	}
 
-	toDto(): serverMigrationItemDto {
+	toDto(): serverSmugglingItemDto {
 		return {
 			Name: this.resource.name,
 			Incremental: this.incremental(),
@@ -26,4 +26,4 @@ class serverMigrationItem {
     
 }
 
-export = serverMigrationItem;
+export = serverSmugglingItem;

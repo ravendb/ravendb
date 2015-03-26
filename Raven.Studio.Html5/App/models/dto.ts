@@ -1252,7 +1252,7 @@ interface copyFromParentDto<T> {
     copyFromParent(parent: T);
 }
 
-interface serverMigrationItemDto {
+interface serverSmugglingItemDto {
 	Name: string;
 	Incremental: boolean;
 	StripReplicationInformation: boolean;
@@ -1267,11 +1267,11 @@ interface serverConnectionInfoDto {
 	ApiKey: string;
 }
 
-interface serverMigrationDto {
+interface serverSmugglingDto {
 	TargetServer: serverConnectionInfoDto;
-	Config: Array<serverMigrationItemDto>;
+	Config: Array<serverSmugglingItemDto>;
 }
 
-interface serverMigrationOperationStateDto extends operationStatusDto {
+interface serverSmugglingOperationStateDto extends operationStatusDto {
 	Messages: Array<string>;
 }
