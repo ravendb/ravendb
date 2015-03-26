@@ -35,6 +35,10 @@
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getClusterNodesStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\updateRaftClusterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveClusterConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\leaveRaftClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
@@ -62,6 +66,8 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getClientBuildVersionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\extendRaftClusterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getClusterTopologyCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCSharpIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
@@ -148,6 +154,9 @@
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
+    <TypeScriptCompile Include="App\models\nodeConnectionInfo.ts" />
+    <TypeScriptCompile Include="App\models\clusterConfiguration.ts" />
+    <TypeScriptCompile Include="App\models\topology.ts" />
     <TypeScriptCompile Include="App\models\configurationDocument.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
@@ -207,6 +216,8 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\cluster.ts" />
+    <TypeScriptCompile Include="App\viewmodels\editNodeConnectionInfoDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\exportFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\fileRenameDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\importFilesystem.ts" />
@@ -486,6 +497,8 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings.ts" />
     <Content Include="App\views\adminSettings.html" />
+    <Content Include="App\views\editNodeConnectionInfoDialog.html" />
+    <Content Include="App\views\cluster.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
@@ -940,6 +953,9 @@
     <Content Include="Scripts\durandal\system.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
+    <None Include="Scripts\jquery-2.1.3.intellisense.js" />
+    <Content Include="Scripts\jquery-2.1.3.js" />
+    <Content Include="Scripts\jquery-2.1.3.min.js" />
     <Content Include="Scripts\jquery.blockUI.js" />
     <Content Include="Scripts\jquery.fullscreen.js" />
     <Content Include="Scripts\jszip\jszip-utils.min.js" />
@@ -962,7 +978,6 @@
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Scripts\forge\forge_custom.min.js" />
-    <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
     <Content Include="Scripts\jquery.dynatree.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
@@ -983,16 +998,14 @@
     <Content Include="Scripts\knockout-postbox.js" />
     <Content Include="Scripts\knockout-postbox.min.js" />
     <Content Include="Scripts\knockout.dirtyFlag.js" />
-    <Content Include="Scripts\moment-with-langs.js" />
-    <Content Include="Scripts\moment-with-langs.min.js" />
+    <Content Include="Scripts\moment-with-locales.js" />
+    <Content Include="Scripts\moment-with-locales.min.js" />
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
     <Content Include="Scripts\d3\models\timelines.js" />
     <Content Include="Scripts\d3\models\timelinesChart.js" />
     <Content Include="Scripts\d3\nv.js" />
-    <Content Include="Scripts\r.js" />
-    <Content Include="Scripts\require.js" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\d3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
@@ -1001,6 +1014,8 @@
     <TypeScriptCompile Include="Scripts\typings\d3\nvd3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jszip\jszip.d.ts" />
+    <Content Include="Scripts\r.js" />
+    <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
@@ -1009,6 +1024,7 @@
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
+    <Content Include="Scripts\jquery-2.1.3.min.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>

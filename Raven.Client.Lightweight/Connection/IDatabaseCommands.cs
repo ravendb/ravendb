@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -118,7 +119,7 @@ namespace Raven.Client.Connection
 		///     Create a new instance of <see cref="IDatabaseCommands" /> that will interact
 		///     with the specified database
 		/// </summary>
-		IDatabaseCommands ForDatabase(string database);
+		IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
 		/// <summary>
 		///     Create a new instance of <see cref="IDatabaseCommands" /> that will interact

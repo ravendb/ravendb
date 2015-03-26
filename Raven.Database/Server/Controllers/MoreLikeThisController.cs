@@ -10,7 +10,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class MoreLikeThisController : RavenDbApiController
+	public class MoreLikeThisController : ClusterAwareRavenDbApiController
 	{
 		[HttpGet]
 		[RavenRoute("morelikethis/{*id}")]

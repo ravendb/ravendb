@@ -416,12 +416,10 @@ namespace Raven.Bundles.Replication.Tasks
 						{
 							destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
 							if (destinationsReplicationInformationForSource == null)
-							{
-								destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
-
-								if (destinationsReplicationInformationForSource == null)
 									return false;
-							}
+
+							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty && destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.Empty) 
+								_indexReplicationTaskTimer.Change(TimeSpan.Zero, _replicationFrequency);
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 

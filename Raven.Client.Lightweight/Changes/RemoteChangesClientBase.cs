@@ -28,7 +28,6 @@ namespace Raven.Client.Changes
         private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
         private readonly Convention conventions;
-        private readonly IReplicationInformerBase replicationInformer;
 
         private readonly Action onDispose;                
 
@@ -46,7 +45,6 @@ namespace Raven.Client.Changes
             ICredentials credentials,
             HttpJsonRequestFactory jsonRequestFactory,
             Convention conventions,
-            IReplicationInformerBase replicationInformer,
             Action onDispose )
         {
             // Precondition
@@ -62,7 +60,6 @@ namespace Raven.Client.Changes
             this.credentials = new OperationCredentials(apiKey, credentials);
             this.jsonRequestFactory = jsonRequestFactory;
             this.conventions = conventions;
-            this.replicationInformer = replicationInformer;
             this.onDispose = onDispose;            
 
             this.Task = EstablishConnection()
@@ -129,10 +126,10 @@ namespace Raven.Client.Changes
                     throw;
 
                 bool timeout;
-                if (replicationInformer.IsServerDown(e, out timeout) == false)
+                if (HttpConnectionHelper.IsServerDown(e, out timeout) == false)
                     throw;
 
-                if (replicationInformer.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.ServiceUnavailable))
+				if (HttpConnectionHelper.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.ServiceUnavailable))
                     throw;
 
                 logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);

@@ -1021,7 +1021,8 @@ interface changesApiEventDto {
 
 interface databaseDto extends tenantDto {
     IndexingDisabled: boolean;
-    RejectClientsEnabled: boolean;
+	RejectClientsEnabled: boolean;
+	ClusterWide: boolean;
 }
 
 interface tenantDto {
@@ -1250,4 +1251,33 @@ interface synchronizationConfigDto {
 
 interface copyFromParentDto<T> {
     copyFromParent(parent: T);
+}
+
+interface topologyDto {
+    CurrentLeader: string;
+    CurrentTerm: number;
+    State: string;
+    CommitIndex: number;
+    AllVotingNodes: Array<nodeConnectionInfoDto>;
+    PromotableNodes: Array<nodeConnectionInfoDto>;
+    NonVotingNodes: Array<nodeConnectionInfoDto>;
+    TopologyId: string;
+}
+
+interface nodeConnectionInfoDto {
+    Uri: string;
+    Name: string;
+    Username?: string;
+    Password?: string;
+    Domain?: string;
+    ApiKey?: string;
+}
+
+interface clusterConfigurationDto {
+	EnableReplication: boolean;
+}
+
+interface clusterNodeStatusDto {
+	Uri: string;
+	Status: string;
 }

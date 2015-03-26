@@ -100,8 +100,14 @@
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />
     <Compile Include="Connection\AdminRequestCreator.cs" />
     <Compile Include="Connection\AdminServerClient.cs" />
+    <Compile Include="Connection\Request\AsyncOperationResult.cs" />
     <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
     <Compile Include="Connection\Async\AsyncServerClientBase.cs" />
+    <Compile Include="Connection\HttpConnectionHelper.cs" />
+    <Compile Include="Connection\Request\ClusterAwareRequestExecuter.cs" />
+    <Compile Include="Connection\Request\FailureCounters.cs" />
+    <Compile Include="Connection\Request\ReplicationAwareRequestExecuter.cs" />
+    <Compile Include="Connection\Request\IRequestExecuter.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\CompressedStreamContent.cs" />
     <Compile Include="Connection\HttpContentExtentions.cs" />

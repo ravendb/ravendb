@@ -8,17 +8,19 @@ class database extends resource {
     isImporting = ko.observable<boolean>(false);
     importStatus = ko.observable<string>('');
     indexingDisabled = ko.observable<boolean>(false);
-    rejectClientsMode = ko.observable<boolean>(false);
+	rejectClientsMode = ko.observable<boolean>(false);
+	clusterWide = ko.observable<boolean>(false);
     recentQueriesLocalStorageName: string;
     mergedIndexLocalStoragePrefix: string;
     static type = 'database';
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: Array<string> = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: Array<string> = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, clusterWide = false) {
         super(name, database.type, isAdminCurrentTenant);
         this.disabled(isDisabled);
         this.activeBundles(bundles);
         this.indexingDisabled(isIndexingDisabled);
-        this.rejectClientsMode(isRejectClientsMode);
+		this.rejectClientsMode(isRejectClientsMode);
+	    this.clusterWide(clusterWide);
         this.itemCount = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocuments() : 0);
         this.itemCountText = ko.computed(() => {
             var itemCount = this.itemCount();

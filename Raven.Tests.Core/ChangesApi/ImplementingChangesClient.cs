@@ -23,7 +23,7 @@ namespace Raven.Tests.Core.ChangesApi
         private class NoInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>
         {
             public NoInterfaceInheritanceChangesClient() :
-                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
+                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
             {
             }
 
@@ -49,7 +49,7 @@ namespace Raven.Tests.Core.ChangesApi
         private class UntypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>, IUntypedConnectable
         {
             public UntypedInterfaceInheritanceChangesClient() :
-                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
+                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
             {
             }
 
@@ -88,7 +88,7 @@ namespace Raven.Tests.Core.ChangesApi
         class TypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<ITypedConnectable, MockConnectionState>, ITypedConnectable
         {
             public TypedInterfaceInheritanceChangesClient() :
-                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
+                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
             {
             }
 
@@ -114,9 +114,6 @@ namespace Raven.Tests.Core.ChangesApi
             new TypedInterfaceInheritanceChangesClient();
         }
 
-
-        #region Mocks
-
         private class MockConnectionState : IChangesConnectionState
         {
             public Task Task
@@ -139,76 +136,5 @@ namespace Raven.Tests.Core.ChangesApi
                 throw new NotImplementedException();
             }
         }
-
-        private class MockReplicationInformerBase : IReplicationInformerBase
-		{
-#pragma warning disable 67
-			public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
-#pragma warning restore 67
-
-			public int DelayTimeInMiliSec
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
-
-            public List<OperationMetadata> ReplicationDestinations
-            {
-                get { throw new NotImplementedException(); }
-            }
-
-            public List<OperationMetadata> ReplicationDestinationsUrls
-            {
-                get { throw new NotImplementedException(); }
-            }
-
-            public long GetFailureCount(string operationUrl)
-            {
-                throw new NotImplementedException();
-            }
-
-            public DateTime GetFailureLastCheck(string operationUrl)
-            {
-                throw new NotImplementedException();
-            }
-
-            public int GetReadStripingBase(bool increment)
-            {
-                throw new NotImplementedException();
-            }
-
-            public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void ForceCheck(string primaryUrl, bool shouldForceCheck)
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool IsServerDown(Exception exception, out bool timeout)
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void Dispose()
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        #endregion Mocks
     }
 }

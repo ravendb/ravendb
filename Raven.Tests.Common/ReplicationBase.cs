@@ -81,7 +81,7 @@ namespace Raven.Tests.Common
 
         protected virtual void ConfigureServer(RavenDBOptions options)
         {
-			   
+            
         }
 
         protected virtual void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
@@ -264,7 +264,7 @@ namespace Raven.Tests.Common
 		}
 
 
-		protected void SetupReplication(IDatabaseCommands source, params DocumentStore[] destinations)
+        protected void SetupReplication(IDatabaseCommands source, params DocumentStore[] destinations)
         {
             Assert.NotEmpty(destinations);
 
@@ -279,18 +279,18 @@ namespace Raven.Tests.Common
         }
 
 		protected void UpdateReplication(IDatabaseCommands source, params DocumentStore[] destinations)
-		{
+                                                                        {
 			Assert.NotEmpty(destinations);
 
 
 			var destinationDocs = destinations.Select(destination => new RavenJObject
 	            {
-		            { "Url", destination.Url },
-		            { "Database", destination.DefaultDatabase }
+                                                                            { "Url", destination.Url },
+                                                                            { "Database", destination.DefaultDatabase }
 	            }).ToList();
 
 			UpdateReplication(source, destinationDocs);
-		}
+        }
 
 
         protected void SetupReplication(IDatabaseCommands source, params string[] urls)
@@ -404,8 +404,11 @@ namespace Raven.Tests.Common
             return attachment;
         }
 
-        protected override void WaitForDocument(IDatabaseCommands commands, string expectedId, CancellationToken? token = null)
+        protected void WaitForDocument(IDatabaseCommands commands, string expectedId, Etag afterEtag = null, CancellationToken? token = null)
         {
+			if (afterEtag != null)
+				throw new NotImplementedException();
+
             for (int i = 0; i < RetriesCount; i++)
             {
 				if (token.HasValue)
@@ -424,14 +427,13 @@ namespace Raven.Tests.Common
 		protected bool WaitForDocument(IDatabaseCommands commands, string expectedId, int timeoutInMs)
 		{
 			var cts = new CancellationTokenSource();
-			var waitingTask = Task.Run(() => WaitForDocument(commands, expectedId, cts.Token), cts.Token);
+			var waitingTask = Task.Run(() => WaitForDocument(commands, expectedId, null, cts.Token), cts.Token);
 
 			Task.WaitAny(waitingTask, Task.Delay(timeoutInMs, cts.Token));
 
 			cts.Cancel();
 			return commands.Head(expectedId) != null;
 		}
-
 
         protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)
         {

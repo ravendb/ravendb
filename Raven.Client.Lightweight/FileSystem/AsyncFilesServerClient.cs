@@ -283,7 +283,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-	    public Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25)
+        public Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -302,7 +302,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-	    public Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25)
+        public Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -371,7 +371,7 @@ namespace Raven.Client.FileSystem
 						var operationId = json.Value<long>("OperationId");
 						var op = new Operation(GetOperationStatusAsync, operationId);
 						await op.WaitForCompletionAsync();
-					}
+        }
 					catch (Exception e)
 					{
 						throw e.SimplifyException();
@@ -400,7 +400,7 @@ namespace Raven.Client.FileSystem
             if (fromEtag == null)
                 throw new ArgumentException("fromEtag");
 
-            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
 
             if ( pageSize != int.MaxValue )
             {
@@ -409,10 +409,10 @@ namespace Raven.Client.FileSystem
             else
             {
                 var sb = new StringBuilder(operationMetadata.Url)
-					.Append("/streams/files?etag=")
-					.Append(fromEtag)
-					.Append("&pageSize=")
-					.Append(pageSize);
+                .Append("/streams/files?etag=")
+                .Append(fromEtag)
+                .Append("&pageSize=")
+                .Append(pageSize);
 
                 var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions)
                                             .AddOperationHeaders(OperationsHeaders));
@@ -453,7 +453,7 @@ namespace Raven.Client.FileSystem
                 this.pageSize = pageSize;
 
                 this.requestFactory = client.RequestFactory;
-                this.operationMetadata = new OperationMetadata(client.BaseUrl, client.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+                this.operationMetadata = new OperationMetadata(client.BaseUrl, client.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
                 this.headers = client.OperationsHeaders;
                 this.conventions = client.Conventions;
             }
@@ -710,9 +710,9 @@ namespace Raven.Client.FileSystem
 					catch (FileNotFoundException)
 					{
 						return null;
-					}
 				}
 	        }
+        }
         }
 
         public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadataRef = null, long? from = null, long? to = null)
@@ -784,7 +784,7 @@ namespace Raven.Client.FileSystem
 
         public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, Etag etag = null)
         {
-            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
             return UploadAsyncImpl(operationMetadata, filename, source, metadata, true, size, etag);
         }
 
@@ -813,8 +813,8 @@ namespace Raven.Client.FileSystem
 		        {
 			        throw e.SimplifyException();
 		        }
+		        }
 	        }
-        }
 
         internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string filename, FileHeader remote, string sourceServerUri, Action beforeConflictResolution)
         {
@@ -920,8 +920,8 @@ namespace Raven.Client.FileSystem
         {
             foreach( var item in metadata )
             {
-				var value = item.Value is RavenJValue ? item.Value.ToString() : item.Value.ToString(Formatting.None);
-				request.AddHeader(item.Key, value);     
+	            var value = item.Value is RavenJValue ? item.Value.ToString() : item.Value.ToString(Formatting.None);
+				request.AddHeader(item.Key, value); 
             }
         }
 
@@ -1204,9 +1204,14 @@ namespace Raven.Client.FileSystem
                 this.client = client;
             }
 
+            public Task<RavenJObject> GetMetadataForAsync(string filename)
+            {
+                return client.GetMetadataForAsyncImpl(filename, new OperationMetadata(client.BaseUrl, credentials, null));
+            }
+
             public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
             {                
-                var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials));
+                var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials, null));
                 await stream.CopyToAsync(destination);
             }
 

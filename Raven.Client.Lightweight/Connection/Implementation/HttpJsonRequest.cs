@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -15,17 +16,19 @@ using System.Net.Http.Headers;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Replication;
+using Raven.Client.Connection.Request;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
-using System.Collections;
 
 namespace Raven.Client.Connection
 {
@@ -112,6 +115,7 @@ namespace Raven.Client.Connection
 			{
 				recreateHandler = () => new WebRequestHandler
 				{
+					AllowAutoRedirect = false,
 					UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
 					Credentials = _credentials != null ? _credentials.Credentials : null,
 				};
@@ -508,31 +512,19 @@ namespace Raven.Client.Connection
 			return this;
 		}
 
-		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, IDocumentStoreReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
+		public HttpJsonRequest AddRequestExecuterAndReplicationHeaders(
+			AsyncServerClient serverClient,
+			string currentUrl)
 		{
-			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
-				return this;
-			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0)
-				return this; // not because of failover, no need to do this.
-
-			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
-			headers.Set(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(thePrimaryUrl));
-			headers.Set(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
-
-			primaryUrl = thePrimaryUrl;
-			operationUrl = currentUrl;
-
-			HandleReplicationStatusChanges = handleReplicationStatusChanges;
-
+			serverClient.RequestExecuter.AddHeaders(this, serverClient, currentUrl);
 			return this;
 		}
 
-		private static string ToRemoteUrl(string primaryUrl)
+		internal void AddReplicationStatusChangeBehavior(string thePrimaryUrl, string currentUrl, Action<NameValueCollection, string, string> handler)
 		{
-			var uriBuilder = new UriBuilder(primaryUrl);
-			if (uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
-				uriBuilder.Host = Environment.MachineName;
-			return uriBuilder.Uri.ToString();
+			primaryUrl = thePrimaryUrl;
+			operationUrl = currentUrl;
+			HandleReplicationStatusChanges = handler;
 		}
 
 		/// <summary>
