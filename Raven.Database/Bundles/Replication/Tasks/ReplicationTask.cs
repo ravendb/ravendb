@@ -685,7 +685,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private void RecordFailure(string url, string lastError)
 		{
 			var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
-			Interlocked.Increment(ref stats.FailureCountInternal);
+			var failureCount = Interlocked.Increment(ref stats.FailureCountInternal);
 			stats.LastFailureTimestamp = SystemTime.UtcNow;
 
 			if (stats.FirstFailureInCycleTimestamp == null)
@@ -699,8 +699,14 @@ namespace Raven.Bundles.Replication.Tasks
 			if (jsonDocument != null)
 			{
 				failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
+				// we only want to update this once a minute, otherwise we have churn with starting replication
+				// because we are writing a failure document
+				if ((SystemTime.UtcNow - jsonDocument.LastModified.GetValueOrDefault()).TotalMinutes < 1)
+				{
+					return;
+				}
 			}
-			failureInformation.FailureCount += 1;
+			failureInformation.FailureCount = failureCount;
 			docDb.Documents.Put(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
 					  RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
 		}
