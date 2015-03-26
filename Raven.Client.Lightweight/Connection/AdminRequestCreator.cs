@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
