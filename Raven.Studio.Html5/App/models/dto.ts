@@ -1254,6 +1254,9 @@ interface copyFromParentDto<T> {
 
 interface serverMigrationItemDto {
 	Name: string;
+	Incremental: boolean;
+	StripReplicationInformation: boolean;
+	ShouldDisableVersioningBundle: boolean;
 }
 
 interface serverConnectionInfoDto {

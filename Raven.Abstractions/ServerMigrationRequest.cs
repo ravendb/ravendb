@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Net;
 
@@ -34,6 +35,9 @@ namespace Raven.Abstractions
 	public class ServerMigrationItem
 	{
 		public string Name { get; set; }
+		public bool Incremental { get; set; }
+		public bool StripReplicationInformation { get; set; }
+		public bool ShouldDisableVersioningBundle { get; set; }
 	}
 
 }

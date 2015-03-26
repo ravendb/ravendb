@@ -64,7 +64,6 @@ namespace Raven.Database.Server.Controllers.Admin
 		public async Task<HttpResponseMessage> Migrate()
 		{
 			var request = await ReadJsonObjectAsync<ServerMigrationRequest>();
-			var smugglerOptions = new SmugglerDatabaseOptions();
 			var targetStore = CreateStore(request.TargetServer);
 
 			var status = new ServerMigrationOperationState();
@@ -80,13 +79,11 @@ namespace Raven.Database.Server.Controllers.Admin
 						if (targetStore.DatabaseCommands.Head(documentKey) == null)
 						{
 							var databaseJson = Database.Documents.Get(documentKey, null);
-							var metadata = databaseJson.Metadata;
-							metadata.Remove("@id");
-							targetStore.DatabaseCommands.Put(documentKey, null, databaseJson.DataAsJson, metadata);
+							var databaseDocument = databaseJson.ToJson().JsonDeserialization<DatabaseDocument>();
+							databaseDocument.Id = documentKey;
+							DatabasesLandlord.Unprotect(databaseDocument);
+							targetStore.DatabaseCommands.GlobalAdmin.CreateDatabase(databaseDocument);
 						}
-
-						Thread.Sleep(20000); //TODO: remove me!
-						
 
 						var source = await DatabasesLandlord.GetDatabaseInternal(serverMigrationItem.Name);
 						//TODO: copy database document

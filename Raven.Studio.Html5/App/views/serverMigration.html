@@ -61,23 +61,6 @@
 				</div>
 			</div>
 			<div class="form-group">
-				<label class="col-sm-4 control-label">Incremental</label>
-				<div class="col-sm-7">
-					<div class="btn-group">
-						<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
-							<span data-bind="visible: $root.incremental()">Yes</span>
-							<span data-bind="visible: !$root.incremental()">No</span>
-							<span class="caret"></span>
-						</button>
-						<ul class="dropdown-menu" role="menu">
-							<li><a href="#" data-bind="click: $root.incremental.bind($root,true)">Yes</a></li>
-							<li><a href="#" data-bind="click: $root.incremental.bind($root,false)">No</a></li>
-						</ul>
-					</div>
-				</div>
-			</div>
-
-			<div class="form-group">
 				<label class="col-sm-4 control-label">
 					Select databases to migrate <br />
 					<button type="button" class="btn btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
@@ -86,9 +69,61 @@
 				</label>
 				<div class="col-sm-7">
 					<div data-bind="foreach: resources">
-						<button type="button" class="btn btn-default" data-bind="click: $root.toggleSelection.bind($root), disable: $root.inProgress()">
-							<i data-bind="css: {'fa-check': $root.selectedResources.indexOf($data) >= 0 }" class="fa fa-fw"></i> <span style="font-weight: normal" data-bind="text:resource.name"></span>
-						</button>
+						<div class="panel panel-default">
+							<div class="panel-heading panel-info">
+								<label><input type="checkbox" data-bind="checked: $root.selectedResources, value: $data, disable: $root.inProgress()"> <span style="font-weight: normal" data-bind="text:resource.name"></span></label>
+							</div>
+							<div class="panel-body" data-bind="visible: $root.isSelected($data)">
+								<div class="form-group">
+									<label class="col-sm-4 control-label">Incremental</label>
+									<div class="col-sm-7">
+										<div class="btn-group">
+											<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
+												<span data-bind="visible: incremental()">Yes</span>
+												<span data-bind="visible: !incremental()">No</span>
+												<span class="caret"></span>
+											</button>
+											<ul class="dropdown-menu" role="menu">
+												<li><a href="#" data-bind="click: incremental.bind($root,true)">Yes</a></li>
+												<li><a href="#" data-bind="click: incremental.bind($root,false)">No</a></li>
+											</ul>
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
+									<label class="col-sm-4 control-label">Strip replication information</label>
+									<div class="col-sm-7">
+										<div class="btn-group">
+											<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
+												<span data-bind="visible: stripReplicationInformation()">Yes</span>
+												<span data-bind="visible: !stripReplicationInformation()">No</span>
+												<span class="caret"></span>
+											</button>
+											<ul class="dropdown-menu" role="menu">
+												<li><a href="#" data-bind="click: stripReplicationInformation.bind($root,true)">Yes</a></li>
+												<li><a href="#" data-bind="click: stripReplicationInformation.bind($root,false)">No</a></li>
+											</ul>
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
+									<label class="col-sm-4 control-label">Should disable versioning bundle</label>
+									<div class="col-sm-7">
+										<div class="btn-group">
+											<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
+												<span data-bind="visible: shouldDisableVersioningBundle()">Yes</span>
+												<span data-bind="visible: !shouldDisableVersioningBundle()">No</span>
+												<span class="caret"></span>
+											</button>
+											<ul class="dropdown-menu" role="menu">
+												<li><a href="#" data-bind="click: shouldDisableVersioningBundle.bind($root,true)">Yes</a></li>
+												<li><a href="#" data-bind="click: shouldDisableVersioningBundle.bind($root,false)">No</a></li>
+											</ul>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 
