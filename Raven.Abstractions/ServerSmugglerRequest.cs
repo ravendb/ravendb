@@ -1,17 +1,18 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="ServerMigrationRequest.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ServerSmugglerRequest.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Net;
 
 namespace Raven.Abstractions
 {
-	public class ServerMigrationRequest
+	public class ServerSmugglerRequest
 	{
 		public ServerConnectionInfo TargetServer { get; set; }
-		public List<ServerMigrationItem> Config { get; set; }
+		public List<ServerSmugglingItem> Config { get; set; }
 	}
 
 	public class ServerConnectionInfo
@@ -31,9 +32,12 @@ namespace Raven.Abstractions
 		}
 	}
 
-	public class ServerMigrationItem
+	public class ServerSmugglingItem
 	{
 		public string Name { get; set; }
+		public bool Incremental { get; set; }
+		public bool StripReplicationInformation { get; set; }
+		public bool ShouldDisableVersioningBundle { get; set; }
 	}
 
 }

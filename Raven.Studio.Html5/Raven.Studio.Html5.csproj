@@ -33,7 +33,7 @@
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteLocalReplicationsSetupCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
-    <TypeScriptCompile Include="App\commands\performMigrationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\performSmugglingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
@@ -150,7 +150,7 @@
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\models\serverConnectionInfo.ts" />
-    <TypeScriptCompile Include="App\models\serverMigrationItem.ts" />
+    <TypeScriptCompile Include="App\models\serverSmugglingItem.ts" />
     <TypeScriptCompile Include="App\models\configurationDocument.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
@@ -253,7 +253,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConflicts.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationDestinations.ts" />
-    <TypeScriptCompile Include="App\viewmodels\serverMigration.ts" />
+    <TypeScriptCompile Include="App\viewmodels\serverSmuggling.ts" />
     <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
@@ -510,7 +510,7 @@
     <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
     <Content Include="App\views\filesystem\versioning.html" />
     <Content Include="App\views\globalConfigSqlReplication.html" />
-    <Content Include="App\views\serverMigration.html" />
+    <Content Include="App\views\serverSmuggling.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />

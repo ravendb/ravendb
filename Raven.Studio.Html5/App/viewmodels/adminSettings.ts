@@ -18,7 +18,7 @@ class adminSettings extends viewModelBase {
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
         var windowsAuthRoute = { route: 'admin/settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
 		var globalConfigRoute = { route: 'admin/settings/globalConfig*details', moduleId: 'viewmodels/globalConfig', title: 'Global configuration', nav: true, hash: appUrl.forGlobalConfig() };
-	    var serverMigration = { route: "admin/settings/serverMigration", moduleId: "viewmodels/serverMigration", title: "Server migration", nav: true, hash: appUrl.forServerMigration() };
+		var serverSmuggling = { route: "admin/settings/serverSmuggling", moduleId: "viewmodels/serverSmuggling", title: "Server smuggling", nav: true, hash: appUrl.forServerSmugging() };
         var backupRoute = { route: 'admin/settings/backup', moduleId: 'viewmodels/backup', title: 'Backup', nav: true, hash: appUrl.forBackup() };
         var compactRoute = { route: 'admin/settings/compact', moduleId: 'viewmodels/compact', title: 'Compact', nav: true, hash: appUrl.forCompact() };
         var restoreRoute = { route: 'admin/settings/restore', moduleId: 'viewmodels/restore', title: 'Restore', nav: true, hash: appUrl.forRestore() };
@@ -33,7 +33,7 @@ class adminSettings extends viewModelBase {
                 apiKeyRoute,
                 windowsAuthRoute,
 				globalConfigRoute,
-				serverMigration,
+				serverSmuggling,
                 backupRoute,
                 compactRoute,
                 restoreRoute,

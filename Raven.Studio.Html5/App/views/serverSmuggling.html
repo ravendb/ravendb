@@ -1,0 +1,161 @@
+﻿<form class="form-horizontal" role="form" data-bind="submit: performMigration">
+	<div class="panel panel-default">
+		<div class="panel-heading panel-info">
+			Server smuggling
+		</div>
+		<div class="panel-body">
+
+			<div data-bind="with: targetServer">
+				<div class="form-group">
+					<label class="col-sm-4 control-label">Target server Url</label>
+					<div class="col-sm-7">
+						<input required type="text" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-4 control-label">Credentials</label>
+					<div class="col-sm-7">
+						<div class="btn-group">
+							<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
+								<span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
+								<span data-bind="visible: isUserCredentials">User</span>
+								<span data-bind="visible: isApiKeyCredentials">API key</span>
+								<span class="caret"></span>
+							</button>
+							<ul class="dropdown-menu" role="menu">
+								<li><a href="#" data-bind="click: useNoCredentials">None</a></li>
+								<li class="divider"></li>
+								<li><a href="#" data-bind="click: useUserCredentials">User</a></li>
+								<li><a href="#" data-bind="click: useApiKeyCredentials">API key</a></li>
+							</ul>
+						</div>
+					</div>
+				</div>
+				<div data-bind="if: isUserCredentials, visible: isUserCredentials">
+					<div class="form-group">
+						<label class="col-sm-4 control-label">User Name</label>
+						<div class="col-sm-7">
+							<input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-4 control-label">Password</label>
+						<div class="col-sm-7">
+							<input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-4 control-label">Domain</label>
+						<div class="col-sm-7">
+							<input type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
+						</div>
+					</div>
+				</div>
+				<div data-bind="if: isApiKeyCredentials, visible: isApiKeyCredentials">
+					<div class="form-group">
+						<label class="col-sm-4 control-label">API Key</label>
+						<div class="col-sm-7">
+							<input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="form-group">
+				<label class="col-sm-4 control-label">
+					Select databases to migrate <br />
+				</label>
+				<div class="col-sm-7">
+					<div>
+						<table class="table table-condensed table-striped">
+							<thead> 
+							<tr>
+								<th class="text-center">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+										<img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : hasAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</button>
+								</th>
+								<th>Name</th>
+								<th class="text-center">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAllIncremental, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+										<img data-bind="attr: { src: hasAllIncremental() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</button>
+									Incremental
+								</th>
+								<th class="text-center">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAllStripReplication, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+										<img data-bind="attr: { src: hasAllStripReplication() ? 'content/images/checked.png':'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</button>
+									Strip replication information
+								</th>
+								<th class="text-center">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAllDisableVersioning, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+										<img data-bind="attr: { src: hasAllDisableVersioning() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</button>
+									Disable versioning bundle
+								</th>
+							</tr>
+							</thead>
+							<tbody data-bind="foreach: resources">
+								<tr>
+									<td class="text-center">
+										<img data-bind="click: $root.toggleSelection.bind($root), attr: { src: $root.selectedResources.indexOf($data) >=0 ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									</td>
+									<td>
+										<span style="font-weight: normal" data-bind="text:resource.name"></span>
+									</td>
+									<td class="text-center">
+										<div class="btn-group">
+											<img data-bind="click: $root.toggleIncremental.bind($root), style: { opacity:  $root.selectedResources.indexOf($data) >=0 ?1:0.25 }, attr: { src: incremental() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+										</div>
+									</td>
+									<td class="text-center">
+										<div class="btn-group" data-bind="visible: hasReplicationBundle()">
+											<img data-bind="click: $root.toggleStripReplicationInformation.bind($root), style: { opacity:  $root.selectedResources.indexOf($data) >=0 ?1:0.25 }, attr: { src: stripReplicationInformation() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+										</div>
+									</td>
+									<td class="text-center">
+										<div class="btn-group" data-bind="visible: hasVersioningBundle()">
+											<img data-bind="click: $root.toggleDisableVersioningBundle.bind($root), style: { opacity:  $root.selectedResources.indexOf($data) >=0 ?1:0.25 }, attr: { src: shouldDisableVersioningBundle() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+										</div>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<div class="col-sm-offset-4 col-sm-7">
+						<button type="submit" class="btn btn-warning" data-bind="enable: submitEnabled"><span data-bind="visible: $root.inProgress()" class="fa fa-spinner fa-spin"></span> Run migration</button>
+						<button type="button" class="btn btn-default" data-bind="click: toggleJson, text: (showJsonRequest()?'Hide JSON':'Show JSON')"></button>
+					</div>
+				</div>
+
+				<div data-bind="visible: showJsonRequest()">
+					<div class="form-group">
+						<label class="col-sm-4 control-label">Method</label>
+						<div class="col-sm-7">
+							<input type="text" class="form-control" readonly="readonly" value="POST" />
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-4 control-label">Payload</label>
+						<div class="col-sm-7">
+							<pre class="jsContent" data-bind="html: jsonRequest"></pre>
+						</div>
+					</div>
+				</div>
+
+
+				<hr/>
+				<div class="row">
+					<div class="col-sm-offset-1 col-sm-10">
+						<pre data-bind="visible: resultsVisible">
+<!-- ko foreach: $root.messages --><div data-bind="text: $data"></div><!-- /ko -->
+</pre>		
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</form>

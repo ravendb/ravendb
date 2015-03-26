@@ -60,28 +60,32 @@ namespace Raven.Database.Server.Controllers.Admin
 		                                                           };
 
 		[HttpPost]
-		[RavenRoute("admin/serverMigration")]
+		[RavenRoute("admin/serverSmuggling")]
 		public async Task<HttpResponseMessage> Migrate()
 		{
-			var request = await ReadJsonObjectAsync<ServerMigrationRequest>();
-			var smugglerOptions = new SmugglerDatabaseOptions();
+			var request = await ReadJsonObjectAsync<ServerSmugglerRequest>();
 			var targetStore = CreateStore(request.TargetServer);
 
-			var status = new ServerMigrationOperationState();
+			var status = new ServerSmugglingOperationState();
 			var cts = new CancellationTokenSource();
 			var task = Task.Run(async () =>
 			{
-
 				try
 				{
-					foreach (var serverMigrationItem in request.Config)
+					foreach (var serverSmugglingItem in request.Config)
 					{
-						var databaseJson = Database.Documents.Get(Constants.Database.Prefix + serverMigrationItem.Name, null);
-						var metadata = databaseJson.Metadata;
-						metadata.Remove("@id");
-						targetStore.DatabaseCommands.Put(Constants.Database.Prefix + serverMigrationItem.Name, null, databaseJson.DataAsJson, metadata);
+						status.Messages.Add("Migrating database " + serverSmugglingItem.Name);
+						var documentKey = Constants.Database.Prefix + serverSmugglingItem.Name;
+						if (targetStore.DatabaseCommands.Head(documentKey) == null)
+						{
+							var databaseJson = Database.Documents.Get(documentKey, null);
+							var databaseDocument = databaseJson.ToJson().JsonDeserialization<DatabaseDocument>();
+							databaseDocument.Id = documentKey;
+							DatabasesLandlord.Unprotect(databaseDocument);
+							targetStore.DatabaseCommands.GlobalAdmin.CreateDatabase(databaseDocument);
+						}
 
-						var source = await DatabasesLandlord.GetDatabaseInternal(serverMigrationItem.Name);
+						var source = await DatabasesLandlord.GetDatabaseInternal(serverSmugglingItem.Name);
 						//TODO: copy database document
 
 						/*var dataDumper = new DatabaseDataDumper(source, smugglerOptions);
@@ -94,9 +98,13 @@ namespace Raven.Database.Server.Controllers.Admin
 					}
 				});*/
 					}
+
+					status.Messages.Add("Server migration completed successfully.");
 				}
 				catch (Exception e)
 				{
+					status.Messages.Add("Error: " + e.Message);
+					status.State = RavenJObject.FromObject(new {Error = e.Message});
 					status.Faulted = true;
 					throw;
 				}
@@ -110,7 +118,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
 			{
 				StartTime = SystemTime.UtcNow,
-				TaskType = TaskActions.PendingTaskType.ServerMigration,
+				TaskType = TaskActions.PendingTaskType.ServerSmuggling,
 				Payload = "Server migration"
 
 			}, out id, cts);
@@ -121,11 +129,16 @@ namespace Raven.Database.Server.Controllers.Admin
 			});
 		}
 
-		private class ServerMigrationOperationState : IOperationState
+		private class ServerSmugglingOperationState : IOperationState
 		{
+			public ServerSmugglingOperationState()
+			{
+				Messages = new List<string>();
+			}
+
 			public bool Completed { get; set; }
 			public bool Faulted { get; set; }
-			public string LastProgress { get; set; }
+			public List<string> Messages { get; private set; }
 			public RavenJToken State { get; set; }
 		}
 

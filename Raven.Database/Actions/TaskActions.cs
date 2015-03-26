@@ -187,7 +187,7 @@ namespace Raven.Database.Actions
 
 	        NewIndexPrecomputedBatch,
 
-			ServerMigration
+			ServerSmuggling
         }
     }
 }
