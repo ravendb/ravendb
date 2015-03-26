@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
@@ -330,7 +331,9 @@ namespace Raven.Database.Queries
 				    foreach (var range in Ranges)
 				    {
 				        var facet = Facets[range.Key];
-                        Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
+						var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
+						
+						Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
                         HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
                         if (isDistinct)
                             distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
@@ -349,7 +352,7 @@ namespace Raven.Database.Queries
 
 				            var facetResult = Results.Results[range.Key];
 				            var ranges = range.Value;
-				            foreach (var kvp in termsForField)
+							foreach (var kvp in termsForField)
 				            {
 				                for (int i = 0; i < ranges.Count; i++)
 				                {
@@ -358,7 +361,6 @@ namespace Raven.Database.Queries
 				                    {
 				                        var facetValue = facetResult.Values[i];
 
-										var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
 										var intersectedDocuments = GetIntersectedDocuments(kvp.Value, readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
 					                    var intersectCount = intersectedDocuments.Count;
 				                        if (intersectCount == 0)
@@ -400,8 +402,16 @@ namespace Raven.Database.Queries
 
 			private class IntersectDocs
 			{
-				public int Count { get; set; }
-				public List<int> Documents { get; set; } 
+				public int Count;
+				public List<int> Documents;
+
+				[MethodImpl(MethodImplOptions.AggressiveInlining)]
+				public void AddIntersection(int docId)
+				{
+					Count++;
+					if (Documents != null)
+						Documents.Add(docId);
+				}
 			}
 
 		    /// <summary>
@@ -447,7 +457,11 @@ namespace Raven.Database.Queries
                         }
                         else
                         {
-							UpdateResult(alreadySeen, needToApplyAggregation, isDistinct, result, n[ni]);
+	                        int docId = n[ni];
+	                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
+	                        {
+		                        result.AddIntersection(docId);
+	                        }
 
 	                        ni++;
                             mi++;
@@ -460,32 +474,19 @@ namespace Raven.Database.Queries
                     {
                         if (Array.BinarySearch(n, m[i]) >= 0)
                         {
-	                        UpdateResult(alreadySeen, needToApplyAggregation, isDistinct, result, m[i]);
+	                        int docId = m[i];
+	                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
+	                        {
+		                        result.AddIntersection(docId);
+	                        }
                         }
                     }
                 }
                 return result;
             }
 
-			private void UpdateResult(HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, bool needToApplyAggregation, bool isDistinct, IntersectDocs result, int docId)
-			{
-				if (isDistinct == false)
-				{
-					result.Count++;
-					if (needToApplyAggregation)
-						result.Documents.Add(docId);
-					return;
-				}
-				
-				if (GetDistinctCountValue(docId, alreadySeen))
-				{
-					result.Count++;
-					if (needToApplyAggregation)
-						result.Documents.Add(docId);
-				}
-			}
-
-			private bool GetDistinctCountValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
 		    {
                 var fields = _currentState.GetFieldsValues(docId, _fieldsCrc, IndexQuery.FieldsToFetch);
 		        return alreadySeen.Add(fields);
