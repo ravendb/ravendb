@@ -1263,10 +1263,11 @@ namespace Raven.Client.Connection.Async
 						var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
 
 						var docResults = queryResult.Results.Concat(queryResult.Includes);
-						return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, () =>
-							QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token), conflictedResultId =>
-								new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
-									", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } }, token).ConfigureAwait(false);
+						return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, 
+							() => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token), 
+							conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+									", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } }, 
+							token).ConfigureAwait(false);
 					}
 					catch (ErrorResponseException e)
 					{
@@ -1284,7 +1285,7 @@ namespace Raven.Client.Connection.Async
 			}, token);
 		}
 
-		private Task<QueryResult> QueryAsyncAsPost(string index, IndexQuery query, string[] includes, bool metadataOnly, bool indexEntriesOnly, CancellationToken token = default(CancellationToken))
+		private async Task<QueryResult> QueryAsyncAsPost(string index, IndexQuery query, string[] includes, bool metadataOnly, bool indexEntriesOnly, CancellationToken token = default(CancellationToken))
 		{
 			var stringBuilder = new StringBuilder();
 			query.AppendQueryString(stringBuilder);
@@ -1299,44 +1300,43 @@ namespace Raven.Client.Connection.Async
 			if (indexEntriesOnly)
 				stringBuilder.Append("&debug=entries");
 
-			var result = MultiGetAsync(new[]
-	        {
-	            new GetRequest
-	            {
-	                Query = stringBuilder.ToString(),
-	                Url = "/indexes/" + index
-	            }
-	        }, token).ContinueWith(x =>
+			try
 			{
-				if (x.IsFaulted || x.IsCanceled)
+				var result = await MultiGetAsync(new[]
 				{
-					if (x.Exception == null)
-						throw new TaskCanceledException(string.Format("Canceled Index {0} Query", index));
-					AggregateException aggregateException = x.Exception;
-					var e = aggregateException.InnerException;
-					var errorResponseException = e as ErrorResponseException;
-
-					if (errorResponseException != null)
+					new GetRequest
 					{
-						if (errorResponseException.StatusCode == HttpStatusCode.NotFound)
-						{
-							var text = errorResponseException.ResponseString;
-							if (text.Contains("maxQueryString")) throw new ErrorResponseException(errorResponseException, text);
-							throw new ErrorResponseException(errorResponseException, "There is no index named: " + index);
-						}
+						Query = stringBuilder.ToString(),
+						Url = "/indexes/" + index
+					}
+				}, token).ConfigureAwait(false);
 
-						if (HandleException(errorResponseException)) return null;
+				var json = (RavenJObject) result[0].Result;
+				var queryResult = SerializationHelper.ToQueryResult(json, result[0].GetEtagHeader(), result[0].Headers["Temp-Request-Time"], -1);
+				return queryResult;
+			}
+			catch (OperationCanceledException oce)
+			{
+				throw new TaskCanceledException(string.Format("Canceled Index {0} Query", index), oce);
+			}
+			catch (Exception e)
+			{
+				var errorResponseException = e as ErrorResponseException;
+
+				if (errorResponseException != null)
+				{
+					if (errorResponseException.StatusCode == HttpStatusCode.NotFound)
+					{
+						var text = errorResponseException.ResponseString;
+						if (text.Contains("maxQueryString")) throw new ErrorResponseException(errorResponseException, text);
+						throw new ErrorResponseException(errorResponseException, "There is no index named: " + index);
 					}
 
-					throw e;
+					if (HandleException(errorResponseException)) return null;
 				}
 
-				var getResponse = x.Result.FirstOrDefault();
-				var json = (RavenJObject)getResponse.Result;
-				var queryResult = SerializationHelper.ToQueryResult(json, getResponse.GetEtagHeader(), getResponse.Headers["Temp-Request-Time"], -1);
-				return queryResult;
-			}, token);
-			return result;
+				throw;
+			}
 		}
 
 		/// <summary>

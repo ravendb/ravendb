@@ -56,7 +56,7 @@ namespace Raven.Client.Document.Batches
 				};
 			}
 			var unescapedFacetsJson = JsonConvert.SerializeObject(facets, Default.Converters);
-			if (unescapedFacetsJson.Length < 65519)
+			if (unescapedFacetsJson.Length < (32*1024)-1)
 			{
 				addition = "facets=" + Uri.EscapeDataString(unescapedFacetsJson);
 				return new GetRequest
