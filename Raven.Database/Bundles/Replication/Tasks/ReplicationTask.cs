@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Mono.CSharp;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -42,6 +43,7 @@ namespace Raven.Bundles.Replication.Tasks
 	{
 		public bool IsRunning { get; private set; }
 
+		private readonly object emptyRequestBody = new object();
 		private volatile bool shouldPause;
 
 		public const int SystemDocsLimitForRemoteEtagUpdate = 15;
@@ -923,15 +925,21 @@ namespace Raven.Bundles.Replication.Tasks
 				return;
 			try
 			{
-				foreach (var destination in GetReplicationDestinations(x => x.SkipIndexReplication == false))
+				var indexTombstones = GetIndexTombstonesIfAny();				
+				var replicatedIndexTombstones = new Dictionary<string, int>();
+
+				var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
+				foreach (var destination in replicationDestinations)
 				{
+					ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);	
+
 					if (docDb.Indexes.Definitions.Length > 0)
 					{
 						foreach (var definition in docDb.Indexes.Definitions)
 						{
 							try
 							{
-								string url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name);
+								var url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name);
 								var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions);
 								replicationRequest.Write(RavenJObject.FromObject(definition));
 								replicationRequest.ExecuteRequest();
@@ -964,6 +972,15 @@ namespace Raven.Bundles.Replication.Tasks
 							}
 						}
 					}
+
+					var indexTombstonesToPurge = replicatedIndexTombstones.Where(replCount => replCount.Value == replicationDestinations.Length)
+																		  .Select(replCount => replCount.Key)
+																		  .ToList();
+					if (indexTombstonesToPurge.Count > 0)
+					{
+						docDb.TransactionalStorage.Batch(actions =>
+							indexTombstonesToPurge.ForEach(key => actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, key)));
+					}
 				}
 			}
 			catch (Exception e)
@@ -974,6 +991,49 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				Monitor.Exit(_indexReplicationTaskLock);
 			}
+		}
+
+		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, ReplicationStrategy destination, Dictionary<string, int> replicatedIndexTombstones)
+		{			
+			if (indexTombstones != null && indexTombstones.Count > 0)
+			{
+				foreach (var tombstone in indexTombstones)
+				{
+					try
+					{
+						var url = string.Format("{0}/indexes/{1}?is-replication=true", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key));
+						var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions);
+						replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
+						replicationRequest.ExecuteRequest();
+						log.Info("Replicated index deletion (index name = {0})", tombstone.Key);
+						replicatedIndexTombstones[tombstone.Key]++;
+					}
+					catch (Exception e)
+					{
+						log.ErrorException(string.Format("Failed to replicate index deletion (index name = {0})", tombstone.Key), e);
+					}
+				}
+			}
+		}
+
+		private List<JsonDocument> GetIndexTombstonesIfAny()
+		{
+			List<JsonDocument> indexTombstones = null;
+			docDb.TransactionalStorage.Batch(actions =>
+			{
+				indexTombstones = actions
+					.Lists
+					.Read(Constants.RavenReplicationIndexesTombstones, 0, 64)
+					.Select(x => new JsonDocument
+					{
+						Etag = x.Etag,
+						Key = x.Key,
+						Metadata = x.Data,
+						DataAsJson = new RavenJObject()
+					})
+					.ToList();
+			});
+			return indexTombstones ?? new List<JsonDocument>();
 		}
 
 

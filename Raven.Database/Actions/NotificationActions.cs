@@ -22,6 +22,7 @@ namespace Raven.Database.Actions
         }
 
         public event Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> OnDocumentChange;
+		public event Action<DocumentDatabase, IndexChangeNotification> OnIndexChange;
 
         public void RaiseNotifications(DocumentChangeNotification obj, RavenJObject metadata)
         {
@@ -31,10 +32,14 @@ namespace Raven.Database.Actions
                 onDocumentChange(Database, obj, metadata);
         }
 
+
         public void RaiseNotifications(IndexChangeNotification obj)
         {
             Database.TransportState.Send(obj);
-        }
+			var onIndexChange = OnIndexChange;
+			if (onIndexChange != null)
+				onIndexChange(Database, obj);
+		}
 
         public void RaiseNotifications(TransformerChangeNotification obj)
         {
