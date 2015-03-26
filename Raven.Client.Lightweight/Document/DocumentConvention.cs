@@ -530,7 +530,7 @@ namespace Raven.Client.Document
             return this;
         }
 
-        private static JsonConverterCollection CreateDefaultConverters()
+        private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
         {
             var converters = new JsonConverterCollection(Default.Converters);
             converters.Add(new JsonLuceneDateTimeConverter());
@@ -542,15 +542,8 @@ namespace Raven.Client.Document
             converters.Add(new JsonMultiDimensionalArrayConverter());
             converters.Add(new JsonDynamicConverter());
             converters.Add(new JsonLinqEnumerableConverter());
-
-            return converters;
-        }
-
-        private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
-        {
-            var converters = CreateDefaultConverters();
             converters.Freeze();
-            
+
             return converters;
         }, true);
 
@@ -572,47 +565,10 @@ namespace Raven.Client.Document
         {
             get { return defaultConverters.Value; }
         }
-
+        
         private static JsonConverterCollection DefaultConvertersEnumsAsIntegers
         {
             get { return defaultConvertersEnumsAsIntegers.Value; }
-        }
-
-        private class JsonConverterTrackingCollection : JsonConverterCollection
-        {
-
-            public JsonConverterTrackingCollection ( JsonConverterCollection collection ) : base ( collection )
-            {}
-
-            public bool IsModified { get; private set; }
-
-            protected override void ClearItems()
-            {
-                IsModified = true;
-
-                base.ClearItems();
-            }
-
-            protected override void InsertItem(int index, JsonConverter item)
-            {
-                IsModified = true;
-
-                base.InsertItem(index, item);
-            }
-
-            protected override void RemoveItem(int index)
-            {
-                IsModified = true;
-
-                base.RemoveItem(index);
-            }
-
-            protected override void SetItem(int index, JsonConverter item)
-            {
-                IsModified = true;
-
-                base.SetItem(index, item);
-            }
         }
         
 		/// <summary>
@@ -621,16 +577,6 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public JsonSerializer CreateSerializer()
 		{
-            var converters = CreateDefaultConverters();
-            if ( SaveEnumsAsIntegers )
-            {
-                var converter = converters.FirstOrDefault(x => x is JsonEnumConverter);
-                if (converter != null)
-                    converters.Remove(converter);
-            }
-
-            var trackingConverters = new JsonConverterTrackingCollection(converters);
-
 			var jsonSerializer = new JsonSerializer
 			{
 				DateParseHandling = DateParseHandling.None,
@@ -640,23 +586,24 @@ namespace Raven.Client.Document
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 FloatParseHandling = FloatParseHandling.PreferDecimalFallbackToDouble,
-                Converters = trackingConverters
+                Converters = new JsonConverterCollection()
 			};
 
-            CustomizeJsonSerializer(jsonSerializer);
-
-            if (!trackingConverters.IsModified)
-            {
-                if ( SaveEnumsAsIntegers )
-                {
-                    jsonSerializer.Converters = DefaultConvertersEnumsAsIntegers;
-                }
-                else
-                {
-                    jsonSerializer.Converters = DefaultConverters;
-                }
-            }
-
+			CustomizeJsonSerializer(jsonSerializer);
+			if (jsonSerializer.Converters.IsFrozen)  // if the user froze the collection, we don't need to do anything
+				return jsonSerializer;
+			var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
+			if (jsonSerializer.Converters.Count == 0)
+			{
+				jsonSerializer.Converters = convertersToUse;
+			}
+			else
+			{
+				for (int i = convertersToUse.Count - 1; i >= 0; i--)
+				{
+					jsonSerializer.Converters.Insert(0, convertersToUse[i]);
+				}
+			}
 			return jsonSerializer;
 		}
 

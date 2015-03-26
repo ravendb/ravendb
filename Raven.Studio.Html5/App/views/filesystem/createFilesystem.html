@@ -16,11 +16,11 @@
                 <div class="panel-body">
                     <div class="form-group">
                         <label for="filesystemPath">Path</label>
-                        <input data-bind="value: fileSystemPath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Filesystems/' + fileSystemName() }" type="text" class="form-control" id="filesystemPath" autocomplete="off">
+                        <input data-bind="value: fileSystemPath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/FileSystems/' + fileSystemName() }" type="text" class="form-control" id="filesystemPath" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="filesystemLogs">Logs</label>
-                        <input data-bind="value: fileSystemLogsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: (fileSystemPath() || '~/Filesystems/' + fileSystemName()) }" type="text" class="form-control" id="filesystemLogs" autocomplete="off">
+                        <input data-bind="value: fileSystemLogsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: (fileSystemPath() || '~/FileSystems/' + fileSystemName()) }" type="text" class="form-control" id="filesystemLogs" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="storageEngine">Storage Engine</label>

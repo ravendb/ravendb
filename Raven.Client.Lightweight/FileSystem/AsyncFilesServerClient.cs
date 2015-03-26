@@ -35,20 +35,16 @@ namespace Raven.Client.FileSystem
 
     public class AsyncFilesServerClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, IAsyncFilesCommandsImpl
     {
-        private readonly Lazy<FilesChangesClient> notifications;
         private readonly IFilesConflictListener[] conflictListeners;
 
 
         private bool resolvingConflict = false;
-        private IDisposable failedUploadsObserver;
 
         private const int DefaultNumberOfCachedRequests = 2048;
         private static HttpJsonRequestFactory GetHttpJsonRequestFactory ()
         {
               return new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
         }
-
-        private readonly ConcurrentDictionary<Guid, CancellationTokenSource> uploadCancellationTokens = new ConcurrentDictionary<Guid, CancellationTokenSource>();
 
         /// <summary>
         /// Notify when the failover status changed
@@ -67,8 +63,6 @@ namespace Raven.Client.FileSystem
                 this.FileSystem = fileSystemName;
                 this.ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
-
-                notifications = new Lazy<FilesChangesClient>( () => new FilesChangesClient(BaseUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, TryResolveConflictByUsingRegisteredListenersAsync, () => { }));
 
                 InitializeSecurity();
             }
@@ -120,24 +114,6 @@ namespace Raven.Client.FileSystem
         }
 
         public string ApiKey { get; private set; }
-
-        public bool IsObservingFailedUploads
-        {
-            get { return failedUploadsObserver != null; }
-            set
-            {
-                if (value)
-                {
-                    failedUploadsObserver = notifications.Value.ForCancellations()
-                                                               .Subscribe(CancelFileUpload);
-                }
-                else
-                {
-                    failedUploadsObserver.Dispose();
-                    failedUploadsObserver = null;
-                }
-            }
-        }
 
         private void InitializeSecurity()
         {
@@ -817,9 +793,7 @@ namespace Raven.Client.FileSystem
             if (source.CanRead == false)
                 throw new Exception("Stream does not support reading");
 
-            var uploadIdentifier = Guid.NewGuid();
-
-            var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename) + "&uploadId=" + uploadIdentifier;
+	        var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename);
             if (preserveTimestamps)
                 operationUrl += "&preserveTimestamps=true";
 
@@ -830,10 +804,6 @@ namespace Raven.Client.FileSystem
 		        AddHeaders(metadata, request);
 				AddEtagHeader(request, etag);
 
-		        var cts = new CancellationTokenSource();
-
-		        RegisterUploadOperation(uploadIdentifier, cts);
-
 		        try
 		        {
 			        await request.WriteAsync(source).ConfigureAwait(false);
@@ -842,10 +812,6 @@ namespace Raven.Client.FileSystem
 		        catch (Exception e)
 		        {
 			        throw e.SimplifyException();
-		        }
-		        finally
-		        {
-			        UnregisterUploadOperation(uploadIdentifier);
 		        }
 	        }
         }
@@ -911,30 +877,6 @@ namespace Raven.Client.FileSystem
             }
 
             return false;
-        }
-
-        private void CancelFileUpload(CancellationNotification uploadFailed)
-        {
-            CancellationTokenSource cts;
-            if (uploadCancellationTokens.TryGetValue(uploadFailed.UploadId, out cts))
-            {
-                cts.Cancel();
-            }
-        }
-
-        private void RegisterUploadOperation(Guid uploadId, CancellationTokenSource cts)
-        {
-            if (IsObservingFailedUploads)
-                uploadCancellationTokens.TryAdd(uploadId, cts);
-        }
-
-        private void UnregisterUploadOperation(Guid uploadId)
-        {
-            if (IsObservingFailedUploads)
-            {
-                CancellationTokenSource cts;
-                uploadCancellationTokens.TryRemove(uploadId, out cts);
-            }
         }
 
         public IAsyncFilesSynchronizationCommands Synchronization
@@ -1909,9 +1851,9 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName)
+            public async Task StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName)
             {
-                var requestUrlString = string.Format("{0}/fs/{1}/admin/fs/backup?incremental={2}", client.ServerUrl, filesystemName, incremental);
+                var requestUrlString = string.Format("{0}/fs/{1}/admin/backup?incremental={2}", client.ServerUrl, fileSystemName, incremental);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, "POST", client.PrimaryCredentials, convention)))
 	            {
@@ -1920,7 +1862,7 @@ namespace Raven.Client.FileSystem
 						await request.WriteWithObjectAsync(new FilesystemBackupRequest
 						{
 							BackupLocation = backupLocation,
-							FileSystemDocument = databaseDocument
+							FileSystemDocument = fileSystemDocument
 						}).ConfigureAwait(false);
 					}
 					catch (Exception e)
@@ -1954,14 +1896,6 @@ namespace Raven.Client.FileSystem
             }
 
 
-        }
-
-        public override void Dispose()
-        {            
-            if (notifications.IsValueCreated)
-                notifications.Value.Dispose();
-
-            base.Dispose();
         }
 
         public ProfilingInformation ProfilingInformation { get; private set; }

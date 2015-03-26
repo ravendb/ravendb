@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
@@ -14,6 +16,7 @@ using Raven.Tests.Common;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Querying;
 using Raven.Tests.Issues;
+using Raven.Tests.Spatial.JsonConverters.GeoJson;
 
 namespace Raven.Tryouts
 {
@@ -21,28 +24,16 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var store = new DocumentStore
+			var ds = new DocumentStore
 			{
 				Url = "http://live-test.ravendb.net",
-				DefaultDatabase = "Northwind"
+				DefaultDatabase = "repl1"
 			};
 
-			store.Initialize();
+			ds.Initialize();
 
-			var patchExisting = new ScriptedPatchRequest
-			{
-				Script = "this.Counter++;",
-			};
-			var patchDefault = new ScriptedPatchRequest
-			{
-				Script = "this.Counter=100;",
-			};
-
-			var docId = "TestDocs/1";
-
-			store.DatabaseCommands.Patch(docId, patchExisting, patchDefault, new RavenJObject());
-			var results = store.DatabaseCommands.Get("TestDocs/1").DataAsJson;
-
+			ds.GetReplicationInformerForDatabase().UpdateReplicationInformationIfNeeded((AsyncServerClient) ds.AsyncDatabaseCommands).Wait();
+			ds.Replication.WaitAsync(Etag.Parse("01000000-0000-0001-0000-00000000000E"),timeout: TimeSpan.FromSeconds(1)).Wait();
 		}
 	}
 
