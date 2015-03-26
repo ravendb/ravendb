@@ -146,6 +146,8 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			using (LogContext.WithDatabase(docDb.Name))
 			{
+				log.Debug("Replication task started.");
+
 				var name = GetType().Name;
 
 				var timeToWaitInMinutes = TimeSpan.FromMinutes(5);
@@ -155,6 +157,8 @@ namespace Raven.Bundles.Replication.Tasks
 				while (context.DoWork)
 				{
 					IsRunning = !shouldPause;
+
+					log.Debug("Replication task found work. Running: " + IsRunning);
 
 					if (IsRunning)
 					{
