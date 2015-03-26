@@ -223,7 +223,14 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage IndexDelete(string id)
 		{
 			var index = id;
-			Database.Indexes.DeleteIndex(index);
+
+			var isReplication = GetQueryStringValue("is-replication");
+			if (Database.Indexes.DeleteIndex(index) &&
+				!String.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
+			{
+				Log.Info("received index deletion from replication (replicating index tombstone)");
+			}
+
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
