@@ -32,7 +32,6 @@ namespace Raven.Abstractions.Json
 					var dateTime = ((DateTime)key);
 					if (dateTime.Kind == DateTimeKind.Unspecified)
 						dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
-					var postFix = dateTime.Kind == DateTimeKind.Utc ? "Z" : "";
 					writer.WritePropertyName(dateTime.GetDefaultRavenFormat());
 				}
 				else if (key is DateTimeOffset)
@@ -40,11 +39,11 @@ namespace Raven.Abstractions.Json
 					var dateTimeOffset = ((DateTimeOffset)key);
 					if (dateTimeOffset.Offset == TimeSpan.Zero)
 					{
-						writer.WriteValue(dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true));
+						writer.WritePropertyName(dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true));
 					}
 					else
 					{
-						writer.WriteValue(dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+						writer.WritePropertyName(dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
 					}
 				}
 				else
