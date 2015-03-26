@@ -378,7 +378,9 @@ namespace Raven.Database.Indexing
 					performanceResult = IndexDocuments(actions, batchForIndex, token);
 				});
 
-				performanceResult.RunCompleted();
+                // This can be null if IndexDocument fails to execute and the exception is catched.
+                if ( performanceResult != null )
+                    performanceResult.RunCompleted();
 			}
 			catch (Exception e)
 			{
@@ -387,7 +389,9 @@ namespace Raven.Database.Indexing
 			finally
 			{
 				if (performanceResult != null)
-					performanceResult.OnCompleted = null;
+                {                    
+                    performanceResult.OnCompleted = null;
+                }				
 
 				if (Log.IsDebugEnabled)
 				{
