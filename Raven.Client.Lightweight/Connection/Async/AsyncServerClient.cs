@@ -1186,8 +1186,14 @@ namespace Raven.Client.Connection.Async
 
 		public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests, CancellationToken token = default (CancellationToken))
 		{
+			return MultiGetAsyncInternal(requests, token, null);
+		}
+
+		private Task<GetResponse[]> MultiGetAsyncInternal(GetRequest[] requests, CancellationToken token, Reference<OperationMetadata> operationMetadataRef)
+		{
 			return ExecuteWithReplication<GetResponse[]>("GET", async operationMetadata => // logical GET even though the actual request is a POST
 			{
+				operationMetadataRef.Value = operationMetadata;
 				var multiGetOperation = new MultiGetOperation(this, convention, operationMetadata.Url, requests);
 
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, "POST", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
@@ -1302,18 +1308,25 @@ namespace Raven.Client.Connection.Async
 
 			try
 			{
-				var result = await MultiGetAsync(new[]
+				var operationMetadataRef = new Reference<OperationMetadata>();
+				var result = await MultiGetAsyncInternal(new[]
 				{
 					new GetRequest
 					{
 						Query = stringBuilder.ToString(),
 						Url = "/indexes/" + index
 					}
-				}, token).ConfigureAwait(false);
+				}, token, operationMetadataRef).ConfigureAwait(false);
 
 				var json = (RavenJObject) result[0].Result;
 				var queryResult = SerializationHelper.ToQueryResult(json, result[0].GetEtagHeader(), result[0].Headers["Temp-Request-Time"], -1);
-				return queryResult;
+
+				var docResults = queryResult.Results.Concat(queryResult.Includes);
+				return await RetryOperationBecauseOfConflict(operationMetadataRef.Value, docResults, queryResult,
+					() => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token),
+					conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+							", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } },
+					token).ConfigureAwait(false);
 			}
 			catch (OperationCanceledException oce)
 			{
