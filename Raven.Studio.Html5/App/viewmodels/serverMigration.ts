@@ -11,6 +11,8 @@ class serverMigration extends viewModelBase {
 	resources = ko.observableArray<serverMigrationItem>();
 	selectedResources = ko.observableArray<serverMigrationItem>();
 
+	inProgress = ko.observable<boolean>(false);
+
 	targetServer = ko.observable<serverConnectionInfo>(new serverConnectionInfo());
 
 	hasAnyResourceSelected: KnockoutComputed<boolean>;
@@ -57,6 +59,14 @@ class serverMigration extends viewModelBase {
 		}
 	}
 
+	toggleSelection(item: serverMigrationItem) {
+		if (this.isSelected(item)) {
+			this.selectedResources.remove(item);
+		} else {
+			this.selectedResources.push(item);
+		}
+	}
+
 	isSelected(item: serverMigrationItem) {
 		return this.selectedResources().indexOf(item) >= 0;
 	}
@@ -69,6 +79,8 @@ class serverMigration extends viewModelBase {
 			TargetServer: targetServer,
 			Config: config
 		};
+
+		this.inProgress(true);	
 
 		new performMigrationCommand(request, appUrl.getSystemDatabase())
 			.execute();

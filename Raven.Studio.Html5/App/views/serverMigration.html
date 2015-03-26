@@ -9,14 +9,14 @@
 				<div class="form-group">
 					<label class="col-sm-4 control-label">Target server Url</label>
 					<div class="col-sm-7">
-						<input required type="text" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown'" />
+						<input required type="text" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
 					</div>
 				</div>
 				<div class="form-group">
 					<label class="col-sm-4 control-label">Credentials</label>
 					<div class="col-sm-7">
 						<div class="btn-group">
-							<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+							<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
 								<span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
 								<span data-bind="visible: isUserCredentials">User</span>
 								<span data-bind="visible: isApiKeyCredentials">API key</span>
@@ -35,19 +35,19 @@
 					<div class="form-group">
 						<label class="col-sm-4 control-label">User Name</label>
 						<div class="col-sm-7">
-							<input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown'" />
+							<input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
 						</div>
 					</div>
 					<div class="form-group">
 						<label class="col-sm-4 control-label">Password</label>
 						<div class="col-sm-7">
-							<input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown'" />
+							<input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
 						</div>
 					</div>
 					<div class="form-group">
 						<label class="col-sm-4 control-label">Domain</label>
 						<div class="col-sm-7">
-							<input type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown'" />
+							<input type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
 						</div>
 					</div>
 				</div>
@@ -55,7 +55,7 @@
 					<div class="form-group">
 						<label class="col-sm-4 control-label">API Key</label>
 						<div class="col-sm-7">
-							<input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown'" />
+							<input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown', disable: $root.inProgress()" />
 						</div>
 					</div>
 				</div>
@@ -63,32 +63,26 @@
 
 			<hr />
 
-
 			<div class="clearfix"></div>
 
 			<div class="form-group">
 				<label class="col-sm-4 control-label">
 					Select databases to migrate <br />
-					<button type="button" class="btn btn-link" data-bind="click: toggleSelectAll, visible: hasResources" title="Select all or none">
+					<button type="button" class="btn btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
 						<img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : hasAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
 					</button> <span style="font-weight: normal">Toggle section</span>
 				</label>
 				<div class="col-sm-7">
 					<div data-bind="foreach: resources">
-						<div class="panel panel-default">
-							<div class="panel-heading panel-info">
-								<label><input type="checkbox" data-bind="checked: $root.selectedResources, value: $data"> <span style="font-weight: normal" data-bind="text:resource.name"></span></label>
-							</div>
-							<div class="panel-body" data-bind="visible: $root.isSelected($data)">
-								Here goes migration customization settings
-							</div>
-						</div>
+						<button type="button" class="btn btn-default" data-bind="click: $root.toggleSelection.bind($root), disable: $root.inProgress()">
+							<i data-bind="css: {'fa-check': $root.selectedResources.indexOf($data) >= 0 }" class="fa fa-fw"></i> <span style="font-weight: normal" data-bind="text:resource.name"></span>
+						</button>
 					</div>
 				</div>
 
 				<div class="form-group">
 					<div class="col-sm-offset-4 col-sm-7">
-						<button type="submit" class="btn btn-warning" data-bind="enable: hasAnyResourceSelected()"><span class="fa fa-spinner fa-spin"></span> Run migration</button>
+						<button type="submit" class="btn btn-warning" data-bind="enable: hasAnyResourceSelected() && !$root.inProgress()"><span data-bind="visible: $root.inProgress()" class="fa fa-spinner fa-spin"></span> Run migration</button>
 					</div>
 				</div>
 

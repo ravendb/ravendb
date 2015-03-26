@@ -66,22 +66,25 @@ namespace Raven.Database.Server.Controllers.Admin
 			var request = await ReadJsonObjectAsync<ServerMigrationRequest>();
 			var smugglerOptions = new SmugglerDatabaseOptions();
 			var targetStore = CreateStore(request.TargetServer);
-			
+
 			var status = new ServerMigrationOperationState();
 			var cts = new CancellationTokenSource();
 			var task = Task.Run(async () =>
 			{
 
-				foreach (var serverMigrationItem in request.Config)
+				try
 				{
-					var databaseJson = Database.Documents.Get(Constants.Database.Prefix + serverMigrationItem.Name, null);
+					foreach (var serverMigrationItem in request.Config)
+					{
+						var databaseJson = Database.Documents.Get(Constants.Database.Prefix + serverMigrationItem.Name, null);
+						var metadata = databaseJson.Metadata;
+						metadata.Remove("@id");
+						targetStore.DatabaseCommands.Put(Constants.Database.Prefix + serverMigrationItem.Name, null, databaseJson.DataAsJson, metadata);
 
-					targetStore.DatabaseCommands.Put(Constants.Database.Prefix + serverMigrationItem.Name, null, databaseJson.DataAsJson, databaseJson.Metadata);
+						var source = await DatabasesLandlord.GetDatabaseInternal(serverMigrationItem.Name);
+						//TODO: copy database document
 
-					var source = await DatabasesLandlord.GetDatabaseInternal(serverMigrationItem.Name);
-					//TODO: copy database document
-
-					/*var dataDumper = new DatabaseDataDumper(source, smugglerOptions);
+						/*var dataDumper = new DatabaseDataDumper(source, smugglerOptions);
 				await dataDumper.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 				{
 				
@@ -90,6 +93,16 @@ namespace Raven.Database.Server.Controllers.Admin
 
 					}
 				});*/
+					}
+				}
+				catch (Exception e)
+				{
+					status.Faulted = true;
+					throw;
+				}
+				finally
+				{
+					status.Completed = true;
 				}
 			}, cts.Token);
 
@@ -112,6 +125,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			public bool Completed { get; set; }
 			public bool Faulted { get; set; }
+			public string LastProgress { get; set; }
 			public RavenJToken State { get; set; }
 		}
 
@@ -287,60 +301,60 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			var task = Task.Factory.StartNew(() =>
 			{
-                try
-                {
-				    MaintenanceActions.Restore(ravenConfiguration, restoreRequest,
-					    msg =>
-					    {
-						    restoreStatus.Messages.Add(msg);
-						    DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-							    RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-					    });
+				try
+				{
+					MaintenanceActions.Restore(ravenConfiguration, restoreRequest,
+						msg =>
+						{
+							restoreStatus.Messages.Add(msg);
+							DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+								RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+						});
 
-				    if (databaseDocument == null)
-					    return;
+					if (databaseDocument == null)
+						return;
 
-				    databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
-				    if (restoreRequest.IndexesLocation != null)
-					    databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
-				    if (restoreRequest.JournalsLocation != null)
-					    databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+					databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+					if (restoreRequest.IndexesLocation != null)
+						databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+					if (restoreRequest.JournalsLocation != null)
+						databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
 
-				    bool replicationBundleRemoved = false;
-				    if (restoreRequest.DisableReplicationDestinations)
-					    replicationBundleRemoved = TryRemoveReplicationBundle(databaseDocument);
+					bool replicationBundleRemoved = false;
+					if (restoreRequest.DisableReplicationDestinations)
+						replicationBundleRemoved = TryRemoveReplicationBundle(databaseDocument);
 
-				    databaseDocument.Id = databaseName;
-				    DatabasesLandlord.Protect(databaseDocument);
-				    DatabasesLandlord
-					    .SystemDatabase
-					    .Documents
-					    .Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument), new RavenJObject(), null);
+					databaseDocument.Id = databaseName;
+					DatabasesLandlord.Protect(databaseDocument);
+					DatabasesLandlord
+						.SystemDatabase
+						.Documents
+						.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument), new RavenJObject(), null);
 
-				    restoreStatus.Messages.Add("The new database was created");
-                    restoreStatus.State = RestoreStatusState.Completed;
-				    DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-					    RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+					restoreStatus.Messages.Add("The new database was created");
+					restoreStatus.State = RestoreStatusState.Completed;
+					DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+						RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
 
-				    if (restoreRequest.GenerateNewDatabaseId) 
-					    GenerateNewDatabaseId(databaseName);
+					if (restoreRequest.GenerateNewDatabaseId)
+						GenerateNewDatabaseId(databaseName);
 
-				    if (replicationBundleRemoved)
-					    AddReplicationBundleAndDisableReplicationDestinations(databaseName);
+					if (replicationBundleRemoved)
+						AddReplicationBundleAndDisableReplicationDestinations(databaseName);
 
-                }
-                catch (Exception e)
-                {
-                    restoreStatus.State = RestoreStatusState.Faulted;
-                    restoreStatus.Messages.Add("Unable to restore database " + e.Message);
-                    DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-                               RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-                    throw;
-                }
-                finally
-                {
-                    Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
-                }
+				}
+				catch (Exception e)
+				{
+					restoreStatus.State = RestoreStatusState.Faulted;
+					restoreStatus.Messages.Add("Unable to restore database " + e.Message);
+					DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+							   RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+					throw;
+				}
+				finally
+				{
+					Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
+				}
 			}, TaskCreationOptions.LongRunning);
 
 			long id;
@@ -486,35 +500,35 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			var task = Task.Factory.StartNew(() =>
 			{
-                var compactStatus = new CompactStatus { State = CompactStatusState.Running, Messages = new List<string>() };
-                DatabasesLandlord.SystemDatabase.Documents.Delete(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null, null);
+				var compactStatus = new CompactStatus { State = CompactStatusState.Running, Messages = new List<string>() };
+				DatabasesLandlord.SystemDatabase.Documents.Delete(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null, null);
 
-			    try
-			    {
+				try
+				{
 
-			        var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
+					var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
 
-			        DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
-			        {
-			            compactStatus.Messages.Add(msg);
-			            DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
-			                                                           RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+					DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
+					{
+						compactStatus.Messages.Add(msg);
+						DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
+																	   RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
 
-			        }));
-                    compactStatus.State = CompactStatusState.Completed;
-                    compactStatus.Messages.Add("Database compaction completed.");
-                    DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
-                                                                       RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
-			    }
-			    catch (Exception e)
-			    {
-                    compactStatus.Messages.Add("Unable to compact database " + e.Message);
-                    compactStatus.State = CompactStatusState.Faulted;
-                    DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
-                                                                       RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
-			        throw;
-			    }
-			    return GetEmptyMessage();
+					}));
+					compactStatus.State = CompactStatusState.Completed;
+					compactStatus.Messages.Add("Database compaction completed.");
+					DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
+																	   RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+				}
+				catch (Exception e)
+				{
+					compactStatus.Messages.Add("Unable to compact database " + e.Message);
+					compactStatus.State = CompactStatusState.Faulted;
+					DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
+																	   RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+					throw;
+				}
+				return GetEmptyMessage();
 			});
 			long id;
 			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
@@ -996,31 +1010,31 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				return GetMessageWithString("IO Test is only possible from the system database", HttpStatusCode.BadRequest);
 			}
-		    var json = await ReadJsonAsync();
-		    var testType = json.Value<string>("TestType");
+			var json = await ReadJsonAsync();
+			var testType = json.Value<string>("TestType");
 
-		    AbstractPerformanceTestRequest ioTestRequest;
-            switch (testType)
-            {
-                case GenericPerformanceTestRequest.Mode:
-                    ioTestRequest = json.JsonDeserialization<GenericPerformanceTestRequest>();
-                    break;
-                case BatchPerformanceTestRequest.Mode:
-                    ioTestRequest = json.JsonDeserialization<BatchPerformanceTestRequest>();
-                    break;
-                default: 
-                    return GetMessageWithObject(new
-                {
-                    Error = "test type is invalid: " + testType
-                }, HttpStatusCode.BadRequest);
-            }
+			AbstractPerformanceTestRequest ioTestRequest;
+			switch (testType)
+			{
+				case GenericPerformanceTestRequest.Mode:
+					ioTestRequest = json.JsonDeserialization<GenericPerformanceTestRequest>();
+					break;
+				case BatchPerformanceTestRequest.Mode:
+					ioTestRequest = json.JsonDeserialization<BatchPerformanceTestRequest>();
+					break;
+				default:
+					return GetMessageWithObject(new
+				{
+					Error = "test type is invalid: " + testType
+				}, HttpStatusCode.BadRequest);
+			}
 
 			if (Directory.Exists(ioTestRequest.Path) == false)
 			{
 				return GetMessageWithString(string.Format("Directory {0} doesn't exist.", ioTestRequest.Path), HttpStatusCode.BadRequest);
 			}
 
-            Database.Documents.Delete(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, null);
+			Database.Documents.Delete(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, null);
 
 			var killTaskCts = new CancellationTokenSource();
 
