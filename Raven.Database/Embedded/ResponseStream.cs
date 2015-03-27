@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 
 namespace Raven.Database.Embedded
 {
@@ -131,7 +132,7 @@ namespace Raven.Database.Embedded
 
 			// TODO: Wait for data to drain?
 
-			return Task.FromResult<object>(null);
+			return new CompletedTask();
 		}
 
 		public override int Read(byte[] buffer, int offset, int count)
@@ -180,9 +181,52 @@ namespace Raven.Database.Embedded
 			}
 		}
 
-		public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+		public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
 		{
-			throw new NotSupportedException();
+			VerifyBuffer(buffer, offset, count, allowEmpty: false);
+			CancellationTokenRegistration registration = cancellationToken.Register(Abort);
+			await _readLock.WaitAsync(cancellationToken);
+			try
+			{
+				int totalRead = 0;
+				do
+				{
+					// Don't drained buffered data on abort.
+					CheckAborted();
+					if (_topBufferCount <= 0)
+					{
+						byte[] topBuffer;
+						while (!_bufferedData.TryDequeue(out topBuffer))
+						{
+							if (_disposed)
+							{
+								CheckAborted();
+								// Graceful close
+								return totalRead;
+							}
+							await WaitForDataAsync();
+						}
+						_topBuffer = topBuffer;
+						_topBufferOffset = 0;
+						_topBufferCount = topBuffer.Length;
+					}
+					int actualCount = Math.Min(count, _topBufferCount);
+					Buffer.BlockCopy(_topBuffer, _topBufferOffset, buffer, offset, actualCount);
+					_topBufferOffset += actualCount;
+					_topBufferCount -= actualCount;
+					totalRead += actualCount;
+					offset += actualCount;
+					count -= actualCount;
+				}
+				while (count > 0 && (_topBufferCount > 0 || _bufferedData.Count > 0));
+				// Keep reading while there is more data available and we have more space to put it in.
+				return totalRead;
+			}
+			finally
+			{
+				registration.Dispose();
+				_readLock.Release();
+			}
 		}
 
 		// Called under write-lock.
@@ -260,7 +304,7 @@ namespace Raven.Database.Embedded
 			}
 
 			Write(buffer, offset, count);
-			return Task.FromResult<object>(null);
+			return new CompletedTask();
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
