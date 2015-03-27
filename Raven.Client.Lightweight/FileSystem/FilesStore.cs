@@ -89,7 +89,6 @@ namespace Raven.Client.FileSystem
                     Credentials,
                     jsonRequestFactory,
                     Conventions,
-                    commands.ReplicationInformer,
                     ((AsyncFilesServerClient) this.AsyncFilesCommands).TryResolveConflictByUsingRegisteredListenersAsync,
                     () =>
                     {

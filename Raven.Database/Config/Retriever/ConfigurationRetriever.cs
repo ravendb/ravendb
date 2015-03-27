@@ -11,6 +11,7 @@ using System.Diagnostics;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Commercial;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
 
@@ -58,7 +59,7 @@ namespace Raven.Database.Config.Retriever
 
 		public ConfigurationRetriever(DocumentDatabase systemDatabase, DocumentDatabase database)
 		{
-			Debug.Assert(systemDatabase.Name == null || systemDatabase.Name == Constants.SystemDatabase);
+			Debug.Assert(systemDatabase.IsSystemDatabase());
 
 			this.systemDatabase = systemDatabase;
 			this.database = database;
@@ -81,6 +82,11 @@ namespace Raven.Database.Config.Retriever
 		{
 			get
 			{
+				if (SystemTime.UtcNow > new DateTime(2015, 6, 1))
+					throw new NotImplementedException("Time bomb. Enabled global configuration for development.");
+
+				return true;
+
 				if (licenseEnabled != null)
 				{
 					if (SystemTime.UtcNow < licenseEnabled.Value)

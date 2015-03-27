@@ -290,7 +290,8 @@
             </ul>
 
             <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
-                <!-- ko with: $root -->
+	            <!-- ko with: $root -->
+				<li data-bind="visible: isInCluster()"><a class="navbar-link" href="#" data-bind="click: navigateToClusterSettings" title="This server is part of cluster"><span class="text-danger"><i class="fa fa-cubes"></i> Cluster</span></a></li>
                 <li class="licensing-status" data-bind="with: localLicenseStatus">
                     <a class="navbar-link" href="#" data-bind="css: { 'license-error': Error }, text: 'License Status: ' + Status, click: $root.showLicenseStatusDialog.bind($root)"></a>
                 </li>

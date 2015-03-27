@@ -61,8 +61,8 @@ namespace Raven.Client.FileSystem
             private set;
         }
 
-        private int pageSize = 1024;
-        private int start = 0;
+	    protected int pageSize = 1024;
+	    protected int start = 0;
 
         public AbstractFilesQuery(InMemoryFilesSessionOperations theSession, IAsyncFilesCommands commands)
         {
@@ -78,7 +78,7 @@ namespace Raven.Client.FileSystem
         /// </summary>
         protected string[] orderByFields = new string[0];
 
-        /// <summary>
+	    /// <summary>
         ///   Simplified method for opening a new clause within the query
         /// </summary>
         /// <returns></returns>
@@ -450,9 +450,9 @@ namespace Raven.Client.FileSystem
 
             var queryString = queryText.ToString().Trim();
 
-            if ( queryString.EndsWith("OR") )
+            if (queryString.EndsWith("OR"))
                 queryString = queryString.Substring(0, queryString.Length - 2);
-            else if ( queryString.EndsWith("AND"))
+            else if (queryString.EndsWith("AND"))
                 queryString = queryString.Substring(0, queryString.Length - 3);
             
             return queryString;
@@ -758,7 +758,6 @@ namespace Raven.Client.FileSystem
         {
             start = count;
         }
-
 
         public async Task<T> FirstOrDefaultAsync()
         {

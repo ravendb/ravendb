@@ -324,7 +324,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 				await source.AsyncFilesCommands.Synchronization.SetDestinationsAsync(destination.AsyncFilesCommands.ToSynchronizationDestination());
 
-				var results = await source.AsyncFilesCommands.Synchronization.SynchronizeAsync(true);
+				var results = await source.AsyncFilesCommands.Synchronization.StartAsync(true);
 			
 				Assert.Equal(1, results.Length);
 				Assert.Equal(1, results[0].Reports.Count());

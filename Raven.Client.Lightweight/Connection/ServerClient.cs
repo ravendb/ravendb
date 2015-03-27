@@ -13,6 +13,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client.Changes;
@@ -23,6 +24,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Connection.Request;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -38,8 +40,8 @@ namespace Raven.Client.Connection
 
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
 		{
-			add { asyncServerClient.ReplicationInformer.FailoverStatusChanged += value; }
-			remove { asyncServerClient.ReplicationInformer.FailoverStatusChanged -= value; }
+			add { asyncServerClient.RequestExecuter.FailoverStatusChanged += value; }
+			remove { asyncServerClient.RequestExecuter.FailoverStatusChanged -= value; }
 		}
 
 		public ServerClient(AsyncServerClient asyncServerClient)
@@ -65,9 +67,9 @@ namespace Raven.Client.Connection
 			get { return asyncServerClient.convention; }
 		}
 
-		public IDocumentStoreReplicationInformer ReplicationInformer
+		public IRequestExecuter RequestExecuter
 		{
-			get { return asyncServerClient.ReplicationInformer; }
+			get { return asyncServerClient.RequestExecuter; }
 		}
 
 		#region IDatabaseCommands Members
@@ -204,6 +206,14 @@ namespace Raven.Client.Connection
 		{
 			asyncServerClient.ResetIndexAsync(name).WaitUnwrap();
 		}
+        public void SetIndexLock(string name, IndexLockMode unLockMode) 
+        {
+            asyncServerClient.SetIndexLockAsync(name, unLockMode).WaitUnwrap();
+        }
+        public void SetIndexPriority(string name, IndexingPriority priority )
+        {
+            asyncServerClient.SetIndexPriorityAsync(name, priority).WaitUnwrap();
+        }
 
 		public IndexDefinition GetIndex(string name)
 		{
@@ -356,9 +366,13 @@ namespace Raven.Client.Connection
 			return asyncServerClient.ForceReadFromMaster();
 		}
 
-		public IDatabaseCommands ForDatabase(string database)
+		public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
 		{
-			return new ServerClient(asyncServerClient.ForDatabaseInternal(database));
+			var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database, clusterBehavior);
+			if (asyncServerClient == newAsyncServerClient) 
+				return this;
+
+			return new ServerClient(newAsyncServerClient);
 		}
 
 		public IDatabaseCommands ForSystemDatabase()
@@ -500,7 +514,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.DisableAllCaching();
 		}
 
-		internal ReplicationDocument DirectGetReplicationDestinations(OperationMetadata operationMetadata)
+		internal ReplicationDocumentWithClusterInformation DirectGetReplicationDestinations(OperationMetadata operationMetadata)
 		{
 			return asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap();
 		}

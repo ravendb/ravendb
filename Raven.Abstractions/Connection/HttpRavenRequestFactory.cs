@@ -8,6 +8,7 @@ using Raven.Abstractions.OAuth;
 
 namespace Raven.Abstractions.Connection
 {
+	[Obsolete]
 	public class HttpRavenRequestFactory
 	{
 		public int? RequestTimeoutInMs { get; set; }

@@ -566,12 +566,12 @@ namespace Raven.Client.Document
         {
             get { return defaultConverters.Value; }
         }
-
+        
         private static JsonConverterCollection DefaultConvertersEnumsAsIntegers
         {
             get { return defaultConvertersEnumsAsIntegers.Value; }
         }
-
+        
 
 
 		/// <summary>
@@ -589,10 +589,24 @@ namespace Raven.Client.Document
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 FloatParseHandling = FloatParseHandling.Double,
-                Converters = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters
+                Converters = new JsonConverterCollection()
 			};
 
 			CustomizeJsonSerializer(jsonSerializer);
+			if (jsonSerializer.Converters.IsFrozen)  // if the user froze the collection, we don't need to do anything
+			return jsonSerializer;
+			var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
+			if (jsonSerializer.Converters.Count == 0)
+			{
+				jsonSerializer.Converters = convertersToUse;
+		}
+			else
+			{
+				for (int i = convertersToUse.Count - 1; i >= 0; i--)
+				{
+					jsonSerializer.Converters.Insert(0, convertersToUse[i]);
+				}
+			}
 			return jsonSerializer;
 		}
 

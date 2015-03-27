@@ -99,7 +99,7 @@ namespace Raven.Bundles.Replication.Tasks
 			nonBufferedHttpRavenRequestFactory = new HttpRavenRequestFactory
 			{
 				RequestTimeoutInMs = replicationRequestTimeoutInMs,
-				AllowWriteStreamBuffering = false
+                AllowWriteStreamBuffering = docDb.Configuration.Replication.ForceReplicationRequestBuffering
 			};
 
 			var task = new Task(Execute, TaskCreationOptions.LongRunning);
@@ -416,12 +416,10 @@ namespace Raven.Bundles.Replication.Tasks
 						{
 							destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
 							if (destinationsReplicationInformationForSource == null)
-							{
-								destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
-
-								if (destinationsReplicationInformationForSource == null)
 									return false;
-							}
+
+							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty && destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.Empty) 
+								_indexReplicationTaskTimer.Change(TimeSpan.Zero, _replicationFrequency);
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 

@@ -9,7 +9,10 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 
+using Rachis.Storage;
+
 using Raven.Abstractions;
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -24,6 +27,7 @@ using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Config;
+using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
@@ -83,7 +87,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[RavenRoute("databases/{databaseName}/replication/explain/{*docId}")]
 		public HttpResponseMessage ExplainGet(string docId)
 		{
-			if (string.IsNullOrEmpty(docId)) 
+			if (string.IsNullOrEmpty(docId))
 				return GetMessageWithString("Document key is required.", HttpStatusCode.BadRequest);
 
 			var destinationUrl = GetQueryStringValue("destinationUrl");
@@ -157,9 +161,51 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[RavenRoute("databases/{databaseName}/replication/topology")]
 		public HttpResponseMessage TopologyGet()
 		{
-			var documentsController = new ConfigurationController();
-			documentsController.InitializeFrom(this);
-			return documentsController.ReplicationConfigurationGet();
+			if (Database == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
+			if (configurationDocument == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			var mergedDocument = configurationDocument.MergedDocument;
+
+			var isInCluster = ClusterManager.IsActive() && Database.IsClusterDatabase();
+			var commitIndex = isInCluster ? ClusterManager.Engine.CommitIndex : -1;
+			var currentTopology = isInCluster ? ClusterManager.Engine.CurrentTopology : null;
+			var currentLeader = ClusterManager.Engine.CurrentLeader;
+			var isLeader = currentLeader == ClusterManager.Engine.Options.SelfConnection.Name;
+
+			var configurationDocumentWithClusterInformation = new ReplicationDocumentWithClusterInformation
+			{
+				ClientConfiguration = mergedDocument.ClientConfiguration,
+				Id = mergedDocument.Id,
+				Source = mergedDocument.Source,
+				ClusterCommitIndex = commitIndex
+			};
+
+			if (isInCluster)
+				configurationDocumentWithClusterInformation.ClusterInformation = new ClusterInformation(true, isLeader);
+
+			foreach (var destination in mergedDocument.Destinations)
+			{
+				var destinationIsLeader = isInCluster && isLeader == false && currentTopology != null && currentLeader != null;
+				if (destinationIsLeader)
+				{
+					var destinationUrl = RaftHelper.GetNormalizedNodeUrl(destination.Url);
+					var node = currentTopology.AllVotingNodes.FirstOrDefault(x => x.Uri.AbsoluteUri.ToLowerInvariant() == destinationUrl);
+					if (node != null)
+						destinationIsLeader = node.Name == currentLeader;
+					else
+						destinationIsLeader = false;
+				}
+
+				configurationDocumentWithClusterInformation
+					.Destinations
+					.Add(ReplicationDestination.ReplicationDestinationWithClusterInformation.Create(destination, isInCluster, destinationIsLeader));
+			}
+
+			return GetMessageWithObject(configurationDocumentWithClusterInformation);
 		}
 
 		[Obsolete("Use RavenFS instead.")]
@@ -219,7 +265,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var conflictResolvers = DocsReplicationConflictResolvers; 
+				var conflictResolvers = DocsReplicationConflictResolvers;
 
 				string lastEtag = Etag.Empty.ToString();
 
@@ -233,7 +279,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						{
 							for (var j = 0; j < BatchSize && docIndex < array.Length; j++, docIndex++)
 							{
-								var document = (RavenJObject) array[docIndex];
+								var document = (RavenJObject)array[docIndex];
 								var metadata = document.Value<RavenJObject>("@metadata");
 								if (metadata[Constants.RavenReplicationSource] == null)
 								{
@@ -311,7 +357,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var array = await ReadBsonArrayAsync();
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var conflictResolvers = AttachmentReplicationConflictResolvers; 
+				var conflictResolvers = AttachmentReplicationConflictResolvers;
 
 				Database.TransactionalStorage.Batch(actions =>
 				{
@@ -423,7 +469,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							Database.Documents.Put(docKey, Etag.Empty, document.DataAsJson, document.Metadata, null);
 							Database.Documents.Delete(Constants.RavenReplicationSourcesBasePath + "/" + src, document.Etag, null);
 
-							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId) 
+							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId)
 								document = null;
 						}
 					}
@@ -443,8 +489,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					if (sourceReplicationInformation == null)
 						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 
-					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false 
-						&& sourceReplicationInformation.LastModified.HasValue 
+					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false
+						&& sourceReplicationInformation.LastModified.HasValue
 						&& (SystemTime.UtcNow - sourceReplicationInformation.LastModified.Value).TotalMinutes < 10)
 					{
 						log.Info(string.Format("Replication source mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.Source, src));
@@ -461,19 +507,19 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				var lowMemory = availableMemory < 0.2 * MemoryStatistics.TotalPhysicalMemory && availableMemory < Database.Configuration.AvailableMemoryForRaisingBatchSizeLimit * 2;
 				if (lowMemory)
 				{
-				    int size;
+					int size;
 					var lastBatchSize = sourceReplicationInformation.LastBatchSize;
 					if (lastBatchSize.HasValue && maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-                        size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
+						size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
 					else if (lastBatchSize.HasValue)
-                        size = lastBatchSize.Value;
+						size = lastBatchSize.Value;
 					else if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-					    size = maxNumberOfItemsToReceiveInSingleBatch.Value;
+						size = maxNumberOfItemsToReceiveInSingleBatch.Value;
 					else
-					    size = 128;
+						size = 128;
 
-				    sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
-                        Math.Max(size / 2, 64);
+					sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
+						Math.Max(size / 2, 64);
 				}
 				else
 				{
@@ -583,7 +629,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-		
+
 		[HttpPost]
 		[RavenRoute("replication/replicate-indexes")]
 		[RavenRoute("databases/{databaseName}/replication/replicate-indexes")]
@@ -598,7 +644,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				return ReplicateAllIndexes(dest => dest.IsEqualTo(replicationDestination));
 
 			var indexName = GetQueryStringValue("indexName");
-			if(indexName == null)
+			if (indexName == null)
 				throw new InvalidOperationException("indexName query string must be specified if op=replicate-all or op=replicate-all-to-destination isn't specified");
 
 			//check for replication document before doing work on getting index definitions.
@@ -802,7 +848,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				IndexesCount = indexDefinitions.Count,
 				EnabledDestinationsCount = enabledReplicationDestinations.Count,
 				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count * indexDefinitions.Count) - failedDestinations.Count),
-				FailedDestinationUrls = failedDestinations.Select(x=>new{ Server = x.Key, Error = x.Value.ToString()}).ToArray()
+				FailedDestinationUrls = failedDestinations.Select(x => new { Server = x.Key, Error = x.Value.ToString() }).ToArray()
 			});
 		}
 

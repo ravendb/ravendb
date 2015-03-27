@@ -40,6 +40,15 @@ namespace Raven.Database.Config.Retriever
 			return local;
 		}
 
+		protected override ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> PostProcessLocalOnly(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> local)
+		{
+			foreach (var destination in local.Destinations)
+			{
+				destination.HasLocal = true;
+			}
+			return local;
+		}
+
 		protected override ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> ConvertGlobalDocumentToLocal(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 

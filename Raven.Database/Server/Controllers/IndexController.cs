@@ -1,29 +1,11 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Http;
-using JetBrains.Annotations;
-using Lucene.Net.Search;
-using Mono.CSharp;
+﻿using System.IO;
+
 using Raven.Abstractions;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -31,11 +13,23 @@ using Raven.Database.Queries;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Enum = System.Enum;
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class IndexController : RavenDbApiController
+	public class IndexController : ClusterAwareRavenDbApiController
 	{
 		[HttpGet]
 		[RavenRoute("indexes")]
@@ -138,7 +132,7 @@ namespace Raven.Database.Server.Controllers
 			// in order to ensure that they don't reset the default value for old clients, we force the default
 			// value to maintain the existing behavior
 			if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
-				data.MaxIndexOutputsPerDocument = 16*1024;
+				data.MaxIndexOutputsPerDocument = 16 * 1024;
 
 			try
 			{
@@ -173,7 +167,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[RavenRoute("indexes/{*id}")]
 		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
-		public async Task<HttpResponseMessage >IndexPost(string id)
+		public async Task<HttpResponseMessage> IndexPost(string id)
 		{
 			var index = id;
 			if ("forceWriteToDisk".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
@@ -345,8 +339,8 @@ namespace Raven.Database.Server.Controllers
 						.ToList();
 				});
 
-				return GetMessageWithObject(new
-				{
+                    return GetMessageWithObject(new
+                    {
 					keys.Count,
 					Results = keys
 				});

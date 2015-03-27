@@ -12,6 +12,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -122,7 +123,7 @@ namespace Raven.Client.Connection.Async
 		///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
 		///     with the specified database
 		/// </summary>
-		IAsyncDatabaseCommands ForDatabase(string database);
+		IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
 		/// <summary>
 		///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
@@ -468,6 +469,10 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexDef">definition of an index</param>
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, CancellationToken token = default(CancellationToken));
+
+		Task SetIndexLockAsync(string name, IndexLockMode unLockMode, CancellationToken token = default(CancellationToken));
+
+		Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition that is created by the supplied

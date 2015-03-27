@@ -132,6 +132,8 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
       <Link>Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
     </Compile>
+    <Compile Include="Cluster\ClusterBehavior.cs" />
+    <Compile Include="Cluster\ClusterInformation.cs" />
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
@@ -381,7 +383,6 @@
     <Compile Include="FileSystem\SynchronizationType.cs" />
     <Compile Include="FileSystem\Notifications\SynchronizationUpdateNotification.cs" />
     <Compile Include="FileSystem\SyncingMultipartConstants.cs" />
-    <Compile Include="FileSystem\Notifications\UploadFailedNotification.cs" />
     <Compile Include="Replication\FailoverBehavior.cs" />
     <Compile Include="Replication\ReplicatedEtagInfo.cs" />
     <Compile Include="Replication\ReplicationClientConfiguration.cs" />

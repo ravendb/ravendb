@@ -30,6 +30,7 @@ class resources extends viewModelBase {
     appUrls: computedAppUrls;
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
+	clusterMode = ko.computed(() => shell.clusterMode());
 
     constructor() {
         super();
@@ -136,11 +137,14 @@ class resources extends viewModelBase {
         this.resourcesLoaded();
     }
 
-    private resourcesLoaded() {
+	private resourcesLoaded() {
+		/*
+
+		Show it only when cluster bundle is not present
         // If we have no databases (except system db), show the "create a new database" screen.
-        if (this.resources().length === 1) {
+        if (this.resources().length === 1 && this.isGlobalAdmin()) {
             this.newResource();
-        }
+        } */
     }
 
     filterResources() {
@@ -310,6 +314,11 @@ class resources extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
     }
 
+	navigateToCreateCluster() {
+		this.navigate(this.appUrls.adminSettingsCluster());
+		shell.disconnectFromResourceChangesApi();
+	}
+
     dismissAlert(uniqueKey: string) {
         new dismissAlertCommand(appUrl.getSystemDatabase(), uniqueKey).execute();
     }
@@ -325,18 +334,21 @@ class resources extends viewModelBase {
             createResourceViewModel.createDatabasePart
                 .creationTask
                 .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, databaseTemp: string, storageEngine: string, incrementalBackup: boolean
-                    , alertTimeout: string, alertRecurringTimeout: string) => {
+                    , alertTimeout: string, alertRecurringTimeout: string, clusterWide: boolean) => {
                     var settings = {
                         "Raven/ActiveBundles": bundles.join(";")
                     };
                     if (storageEngine) {
                         settings["Raven/StorageTypeName"] = storageEngine;
                     }
+                    if (!clusterWide) {
+                        settings["Raven-Non-Cluster-Database"] = "true";
+                    }
                     if (incrementalBackup) {
                         if (storageEngine === "esent") {
-                            settings["Raven/Esent/CircularLog"] = "false"
+                            settings["Raven/Esent/CircularLog"] = "false";
                         } else {
-                            settings["Raven/Voron/AllowIncrementalBackups"] = "true"
+                            settings["Raven/Voron/AllowIncrementalBackups"] = "true";
                         }
                     }
                     if (!this.isEmptyStringOrWhitespace(databaseTemp)) {
@@ -356,7 +368,7 @@ class resources extends viewModelBase {
                         settings["Raven/IndexStoragePath"] = databaseIndexes;
                     }
 
-                    this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings);
+                    this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings, clusterWide);
                 });
 
             createResourceViewModel.createFilesystemPart
@@ -366,7 +378,7 @@ class resources extends viewModelBase {
                         "Raven/ActiveBundles": bundles.join(";")
                     }
 
-                    settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(filesystemPath)) ? filesystemPath : "~\\Filesystems\\" + filesystemName;
+                    settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(filesystemPath)) ? filesystemPath : "~\\FileSystems\\" + filesystemName;
                     if (storageEngine) {
                         settings["Raven/FileSystem/Storage"] = storageEngine;
                     }
@@ -380,7 +392,7 @@ class resources extends viewModelBase {
         });
     }
 
-    showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}) {
+    showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}, clusterWide: boolean) {
         var securedSettings = {};
         var savedKey;
 
@@ -412,7 +424,7 @@ class resources extends viewModelBase {
                 new createDatabaseCommand(databaseName, settings, securedSettings)
                     .execute()
                     .done(() => {
-                        var newDatabase = this.addNewDatabase(databaseName, bundles);
+                        var newDatabase = this.addNewDatabase(databaseName, bundles, clusterWide);
                         this.selectResource(newDatabase);
 
                         var encryptionConfirmationDialogPromise = $.Deferred();
@@ -442,11 +454,11 @@ class resources extends viewModelBase {
         });
     }
 
-    private addNewDatabase(databaseName: string, bundles: string[]): database {
+    private addNewDatabase(databaseName: string, bundles: string[], clusterWide: boolean): database {
         var foundDatabase = this.databases.first((db: database) => db.name == databaseName);
 
         if (!foundDatabase) {
-            var newDatabase = new database(databaseName, true, false, bundles);
+            var newDatabase = new database(databaseName, true, false, bundles, undefined, undefined, clusterWide);
             this.databases.unshift(newDatabase);
             this.filterResources();
             return newDatabase;

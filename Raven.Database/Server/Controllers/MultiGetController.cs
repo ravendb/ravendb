@@ -22,19 +22,19 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class MultiGetController : RavenDbApiController
+	public class MultiGetController : ClusterAwareRavenDbApiController
 	{
-		private static ThreadLocal<bool> recursive = new ThreadLocal<bool>(() => false);
+		private static readonly ThreadLocal<bool> Recursive = new ThreadLocal<bool>(() => false);
 
 		[HttpPost]
 		[RavenRoute("multi_get")]
 		[RavenRoute("databases/{databaseName}/multi_get")]
 		public async Task<HttpResponseMessage> MultiGet()
 		{
-			if (recursive.Value)
+			if (Recursive.Value)
 				throw new InvalidOperationException("Nested requests to multi_get are not supported");
 
-			recursive.Value = true;
+			Recursive.Value = true;
 			try
 			{
 				var requests = await ReadJsonObjectAsync<GetRequest[]>();
@@ -99,7 +99,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			finally
 			{
-				recursive.Value = false;
+				Recursive.Value = false;
 			}
 		}
 

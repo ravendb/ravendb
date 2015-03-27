@@ -43,15 +43,6 @@ namespace Raven.Database.Server.Controllers
 			queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
 		}
 
-		public void InitializeFrom(RavenDbApiController other)
-		{
-			DatabaseName = other.DatabaseName;
-			queryFromPostRequest = other.queryFromPostRequest;
-			Configuration = other.Configuration;
-			ControllerContext = other.ControllerContext;
-			ActionContext = other.ActionContext;
-		}
-
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
@@ -141,7 +132,7 @@ namespace Raven.Database.Server.Controllers
 																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
 																Nothing to do in this case..."
 			},
-				HttpStatusCode.NoContent);
+				HttpStatusCode.NotFound);
 			return null;
 		}
 
@@ -720,7 +711,8 @@ namespace Raven.Database.Server.Controllers
 				{
 					Remark = "Using windows auth",
 					User = windowsPrincipal.Identity.Name,
-					IsAdminGlobal = windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+					IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
+									windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
 				};
 
 				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
@@ -735,7 +727,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					Remark = "Using windows auth",
 					User = principalWithDatabaseAccess.Identity.Name,
-					IsAdminGlobal =
+					IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
 						principalWithDatabaseAccess.IsAdministrator(
 							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
 					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),

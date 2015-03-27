@@ -6,7 +6,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class TermsController : RavenDbApiController
+	public class TermsController : ClusterAwareRavenDbApiController
 	{
 		[HttpGet]
 		[RavenRoute("terms/{*id}")]

@@ -283,16 +283,12 @@ namespace Raven.Database.FileSystem.Controllers
 
 		[HttpPut]
         [RavenRoute("fs/{fileSystemName}/files/{*name}")]
-		public async Task<HttpResponseMessage> Put(string name, string uploadId = null, bool preserveTimestamps = false)
+		public async Task<HttpResponseMessage> Put(string name, bool preserveTimestamps = false)
 		{
 			var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 			var etag = GetEtag();
 
 			var options = new FileActions.PutOperationOptions();
-
-			Guid uploadIdentifier;
-			if (Guid.TryParse(uploadId, out uploadIdentifier))
-				options.UploadId = uploadIdentifier;
 
 			long contentSize;
 			if (long.TryParse(GetHeader(Constants.FileSystem.RavenFsSize), out contentSize))

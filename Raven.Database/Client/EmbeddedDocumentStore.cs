@@ -457,5 +457,13 @@ namespace Raven.Database.Client
 	    {
 		    return server.DocumentStore.GetProfilingInformationFor(id);
 	    }
+
+        public DocumentStore DocumentStore { get { return server.DocumentStore; } }
+
+        public int MaxNumberOfCachedRequests
+        {
+            get { return DocumentStore.MaxNumberOfCachedRequests; }
+            set { DocumentStore.MaxNumberOfCachedRequests = value; }
+        }
     }
 }

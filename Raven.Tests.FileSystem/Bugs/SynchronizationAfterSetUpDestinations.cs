@@ -22,7 +22,7 @@ namespace Raven.Tests.FileSystem.Bugs
 
 			SyncTestUtils.TurnOnSynchronization(source, destination);
 
-			var destinationSyncResults = await source.Synchronization.SynchronizeAsync();
+			var destinationSyncResults = await source.Synchronization.StartAsync();
 			Assert.Equal(1, destinationSyncResults.Length);
 
 			var reports = destinationSyncResults[0].Reports.ToArray();

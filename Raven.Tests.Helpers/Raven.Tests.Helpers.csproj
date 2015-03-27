@@ -70,6 +70,10 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Rachis\Rachis\Rachis.csproj">
+      <Project>{F796F69F-D17B-4260-92D6-65CB94C0E05C}</Project>
+      <Name>Rachis</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

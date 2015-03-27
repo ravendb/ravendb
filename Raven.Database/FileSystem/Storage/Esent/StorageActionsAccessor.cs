@@ -465,6 +465,9 @@ namespace Raven.Database.FileSystem.Storage.Esent
 									 UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
 					             };
 
+					if (file.FullPath.StartsWith(namePrefix) == false)
+						continue;
+
 					fetchedCount++;
 
 					yield return file;

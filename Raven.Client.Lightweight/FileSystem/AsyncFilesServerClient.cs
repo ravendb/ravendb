@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Raven.Abstractions.Connection;
+﻿using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -36,20 +35,16 @@ namespace Raven.Client.FileSystem
 
     public class AsyncFilesServerClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, IAsyncFilesCommandsImpl
     {
-        private readonly Lazy<FilesChangesClient> notifications;
         private readonly IFilesConflictListener[] conflictListeners;
 
 
         private bool resolvingConflict = false;
-        private IDisposable failedUploadsObserver;
 
         private const int DefaultNumberOfCachedRequests = 2048;
         private static HttpJsonRequestFactory GetHttpJsonRequestFactory ()
         {
               return new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
         }
-
-        private readonly ConcurrentDictionary<Guid, CancellationTokenSource> uploadCancellationTokens = new ConcurrentDictionary<Guid, CancellationTokenSource>();
 
         /// <summary>
         /// Notify when the failover status changed
@@ -68,8 +63,6 @@ namespace Raven.Client.FileSystem
                 this.FileSystem = fileSystemName;
                 this.ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
-
-                notifications = new Lazy<FilesChangesClient>( () => new FilesChangesClient(BaseUrl, ApiKey, credentials.Credentials, RequestFactory, this.Conventions, this.ReplicationInformer, TryResolveConflictByUsingRegisteredListenersAsync, () => { }));
 
                 InitializeSecurity();
             }
@@ -121,24 +114,6 @@ namespace Raven.Client.FileSystem
         }
 
         public string ApiKey { get; private set; }
-
-        public bool IsObservingFailedUploads
-        {
-            get { return failedUploadsObserver != null; }
-            set
-            {
-                if (value)
-                {
-                    failedUploadsObserver = notifications.Value.ForCancellations()
-                                                               .Subscribe(CancelFileUpload);
-                }
-                else
-                {
-                    failedUploadsObserver.Dispose();
-                    failedUploadsObserver = null;
-                }
-            }
-        }
 
         private void InitializeSecurity()
         {
@@ -225,6 +200,22 @@ namespace Raven.Client.FileSystem
                     "If you are running inside IIS, make sure to enable Windows authentication.");
             }
         }
+
+		private async Task<RavenJToken> GetOperationStatusAsync(long id)
+		{
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, BaseUrl + "/operation/status?id=" + id, "GET", CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, Conventions).AddOperationHeaders(OperationsHeaders)))
+			{
+				try
+				{
+					return await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				}
+				catch (ErrorResponseException e)
+				{
+					if (e.StatusCode == HttpStatusCode.NotFound) return null;
+					throw;
+				}
+			}
+		}
 
         public Task<FileSystemStats> GetStatisticsAsync()
         {
@@ -364,8 +355,30 @@ namespace Raven.Client.FileSystem
 					}
 	            }
             });
-
         }
+
+		public Task DeleteByQueryAsync(string query)
+		{
+			return ExecuteWithReplication("DELETE", async operation =>
+			{
+				var requestUriString = string.Format("{0}/search?query={1}", operation.Url, query);
+
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "DELETE", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+				{
+					try
+					{
+						var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+						var operationId = json.Value<long>("OperationId");
+						var op = new Operation(GetOperationStatusAsync, operationId);
+						await op.WaitForCompletionAsync();
+        }
+					catch (Exception e)
+					{
+						throw e.SimplifyException();
+					}
+				}
+			});
+		}
 
         public Task<RavenJObject> GetMetadataForAsync(string filename)
         {
@@ -387,7 +400,7 @@ namespace Raven.Client.FileSystem
             if (fromEtag == null)
                 throw new ArgumentException("fromEtag");
 
-            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
 
             if ( pageSize != int.MaxValue )
             {
@@ -440,7 +453,7 @@ namespace Raven.Client.FileSystem
                 this.pageSize = pageSize;
 
                 this.requestFactory = client.RequestFactory;
-                this.operationMetadata = new OperationMetadata(client.BaseUrl, client.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+                this.operationMetadata = new OperationMetadata(client.BaseUrl, client.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
                 this.headers = client.OperationsHeaders;
                 this.conventions = client.Conventions;
             }
@@ -697,9 +710,9 @@ namespace Raven.Client.FileSystem
 					catch (FileNotFoundException)
 					{
 						return null;
-					}
 				}
 	        }
+        }
         }
 
         public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadataRef = null, long? from = null, long? to = null)
@@ -771,7 +784,7 @@ namespace Raven.Client.FileSystem
 
         public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, Etag etag = null)
         {
-            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
             return UploadAsyncImpl(operationMetadata, filename, source, metadata, true, size, etag);
         }
 
@@ -780,9 +793,7 @@ namespace Raven.Client.FileSystem
             if (source.CanRead == false)
                 throw new Exception("Stream does not support reading");
 
-            var uploadIdentifier = Guid.NewGuid();
-
-            var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename) + "&uploadId=" + uploadIdentifier;
+	        var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename);
             if (preserveTimestamps)
                 operationUrl += "&preserveTimestamps=true";
 
@@ -793,10 +804,6 @@ namespace Raven.Client.FileSystem
 		        AddHeaders(metadata, request);
 				AddEtagHeader(request, etag);
 
-		        var cts = new CancellationTokenSource();
-
-		        RegisterUploadOperation(uploadIdentifier, cts);
-
 		        try
 		        {
 			        await request.WriteAsync(source).ConfigureAwait(false);
@@ -806,12 +813,8 @@ namespace Raven.Client.FileSystem
 		        {
 			        throw e.SimplifyException();
 		        }
-		        finally
-		        {
-			        UnregisterUploadOperation(uploadIdentifier);
 		        }
 	        }
-        }
 
         internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string filename, FileHeader remote, string sourceServerUri, Action beforeConflictResolution)
         {
@@ -876,30 +879,6 @@ namespace Raven.Client.FileSystem
             return false;
         }
 
-        private void CancelFileUpload(CancellationNotification uploadFailed)
-        {
-            CancellationTokenSource cts;
-            if (uploadCancellationTokens.TryGetValue(uploadFailed.UploadId, out cts))
-            {
-                cts.Cancel();
-            }
-        }
-
-        private void RegisterUploadOperation(Guid uploadId, CancellationTokenSource cts)
-        {
-            if (IsObservingFailedUploads)
-                uploadCancellationTokens.TryAdd(uploadId, cts);
-        }
-
-        private void UnregisterUploadOperation(Guid uploadId)
-        {
-            if (IsObservingFailedUploads)
-            {
-                CancellationTokenSource cts;
-                uploadCancellationTokens.TryRemove(uploadId, out cts);
-            }
-        }
-
         public IAsyncFilesSynchronizationCommands Synchronization
         {
             get
@@ -941,8 +920,8 @@ namespace Raven.Client.FileSystem
         {
             foreach( var item in metadata )
             {
-				var value = item.Value is RavenJValue ? item.Value.ToString() : item.Value.ToString(Formatting.None);
-				request.AddHeader(item.Key, value);     
+	            var value = item.Value is RavenJValue ? item.Value.ToString() : item.Value.ToString(Formatting.None);
+				request.AddHeader(item.Key, value); 
             }
         }
 
@@ -1225,9 +1204,14 @@ namespace Raven.Client.FileSystem
                 this.client = client;
             }
 
+            public Task<RavenJObject> GetMetadataForAsync(string filename)
+            {
+                return client.GetMetadataForAsyncImpl(filename, new OperationMetadata(client.BaseUrl, credentials, null));
+            }
+
             public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
             {                
-                var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials));
+                var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials, null));
                 await stream.CopyToAsync(destination);
             }
 
@@ -1248,7 +1232,7 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<DestinationSyncResult[]> SynchronizeAsync(bool forceSyncingAll = false)
+            public async Task<DestinationSyncResult[]> StartAsync(bool forceSyncingAll = false)
             {
                 var requestUriString = String.Format("{0}/synchronization/ToDestinations?forceSyncingAll={1}", client.BaseUrl, forceSyncingAll);
 
@@ -1412,9 +1396,9 @@ namespace Raven.Client.FileSystem
 				}
 	        }
 
-            public async Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int start = 0, int pageSize = 25)
             {
-                var requestUriString = String.Format("{0}/synchronization/finished?start={1}&pageSize={2}", client.BaseUrl, page,
+                var requestUriString = String.Format("{0}/synchronization/finished?start={1}&pageSize={2}", client.BaseUrl, start,
                                                          pageSize);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
@@ -1431,10 +1415,10 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int start = 0, int pageSize = 25)
             {
                 var requestUriString = String.Format("{0}/synchronization/active?start={1}&pageSize={2}",
-                                                        client.BaseUrl, page, pageSize);
+                                                        client.BaseUrl, start, pageSize);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
@@ -1450,10 +1434,10 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int start = 0, int pageSize = 25)
             {
                 var requestUriString = String.Format("{0}/synchronization/pending?start={1}&pageSize={2}",
-                                                     client.BaseUrl, page, pageSize);
+                                                     client.BaseUrl, start, pageSize);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
@@ -1518,9 +1502,9 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<ItemsPage<ConflictItem>> GetConflictsAsync(int page = 0, int pageSize = 25)
+            public async Task<ItemsPage<ConflictItem>> GetConflictsAsync(int start = 0, int pageSize = 25)
             {
-                var requestUriString = String.Format("{0}/synchronization/conflicts?start={1}&pageSize={2}", client.BaseUrl, page,
+                var requestUriString = String.Format("{0}/synchronization/conflicts?start={1}&pageSize={2}", client.BaseUrl, start,
                                                          pageSize);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
@@ -1872,9 +1856,9 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName)
+            public async Task StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName)
             {
-                var requestUrlString = string.Format("{0}/fs/{1}/admin/fs/backup?incremental={2}", client.ServerUrl, filesystemName, incremental);
+                var requestUrlString = string.Format("{0}/fs/{1}/admin/backup?incremental={2}", client.ServerUrl, fileSystemName, incremental);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, "POST", client.PrimaryCredentials, convention)))
 	            {
@@ -1883,7 +1867,7 @@ namespace Raven.Client.FileSystem
 						await request.WriteWithObjectAsync(new FilesystemBackupRequest
 						{
 							BackupLocation = backupLocation,
-							FileSystemDocument = databaseDocument
+							FileSystemDocument = fileSystemDocument
 						}).ConfigureAwait(false);
 					}
 					catch (Exception e)
@@ -1917,14 +1901,6 @@ namespace Raven.Client.FileSystem
             }
 
 
-        }
-
-        public override void Dispose()
-        {            
-            if (notifications.IsValueCreated)
-                notifications.Value.Dispose();
-
-            base.Dispose();
         }
 
         public ProfilingInformation ProfilingInformation { get; private set; }

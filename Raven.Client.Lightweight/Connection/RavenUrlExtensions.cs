@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Specialized;
 
-using Raven.Abstractions.Connection;
-using Raven.Client.Connection.Async;
-using Raven.Client.Document;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
@@ -12,8 +8,13 @@ namespace Raven.Client.Connection
 	{
         public static string ForDatabase(this string url, string database)
         {
-            if (!string.IsNullOrEmpty(database) && !url.Contains("/databases/"))
-                return url + "/databases/" + database;
+	        if (!string.IsNullOrEmpty(database) && !url.Contains("/databases/"))
+	        {
+		        if (url.EndsWith("/"))
+					return url + "databases/" + database;
+
+				return url + "/databases/" + database;
+	        }
 
             return url;
         }

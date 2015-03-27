@@ -35,13 +35,12 @@
                 this.etag = this.etag.slice(1, this.etag.length - 1);
 
             // Effectively remove all the headers that are not useful as metadata.
-            var property: string;
             for (var property in dto) {
                 if (this.headerPropsToRemove.contains(property))
                     delete dto[property];
             }
                        
-            for (property in dto) {                                                
+            for (var property in dto) {                                                
                 if (!this.standardProps.contains(property.toLowerCase())) {
                     this.nonStandardProps = this.nonStandardProps || [];
                     var value = dto[property];

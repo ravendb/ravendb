@@ -129,7 +129,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 var syncDestinations = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinations);
-                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+                await sessionDestination1.Commands.Synchronization.StartAsync();
 
                 await notificationTask;
 
@@ -165,7 +165,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                 sessionDestination2.RegisterUpload(filename, CreateUniformFileStream(firstStreamSize));
                 await sessionDestination2.SaveChangesAsync();
 
-				await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+				await sessionDestination1.Commands.Synchronization.StartAsync();
 				
 				sessionDestination1.RegisterUpload(filename, CreateUniformFileStream(secondStreamSize));
                 await sessionDestination1.SaveChangesAsync();
@@ -179,10 +179,10 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 var syncDestinations = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinations);
-                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+                await sessionDestination1.Commands.Synchronization.StartAsync();
 
                 //We need to sync again after conflict resolution because strategy was to resolve with remote
-                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+                await sessionDestination1.Commands.Synchronization.StartAsync();
 
                 await notificationTask;
 
@@ -221,7 +221,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
-                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+                await sessionDestination1.Commands.Synchronization.StartAsync();
 
                 await notificationTask;
 
@@ -258,7 +258,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
-                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+                await sessionDestination1.Commands.Synchronization.StartAsync();
 
                 await notificationTask;
 
@@ -294,7 +294,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
-                await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+                await sessionDestination1.Commands.Synchronization.StartAsync();
 
                 await notificationTask;
                                

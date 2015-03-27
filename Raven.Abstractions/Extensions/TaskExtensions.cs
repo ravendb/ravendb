@@ -60,7 +60,7 @@ namespace Raven.Abstractions.Extensions
 			if (token == default (CancellationToken))
 				return task;
 
-			return task.ContinueWith(t => t.GetAwaiter().GetResult(), token);
+			return task.ContinueWith(t => t.ConfigureAwait(false).GetAwaiter().GetResult(), token);
 		}
 
 		public static void ThrowCancellationIfNotDefault(this CancellationToken token)

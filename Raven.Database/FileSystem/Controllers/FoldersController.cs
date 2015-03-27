@@ -37,7 +37,7 @@ namespace Raven.Database.FileSystem.Controllers
 			                                .Skip(Paging.Start)
 			                                .Take(Paging.PageSize);
 
-            return this.GetMessageWithObject(result)
+            return GetMessageWithObject(result)
                        .WithNoCache();
 		}
 	}

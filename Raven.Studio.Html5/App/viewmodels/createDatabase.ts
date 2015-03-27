@@ -1,12 +1,11 @@
-import app = require("durandal/app");
-import document = require("models/document");
+import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
-import createDatabaseCommand = require("commands/createDatabaseCommand");
-import collection = require("models/collection");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/database");
-import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import getClusterTopologyCommand = require("commands/getClusterTopologyCommand");
+import topology = require("models/topology");
+import shell = require("viewmodels/shell");
 
 class createDatabase extends viewModelBase {
 
@@ -37,8 +36,12 @@ class createDatabase extends viewModelBase {
     isPeriodicExportBundleEnabled = ko.observable(false); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
     isIncrementalBackupChecked = ko.observable(false);
+    isClusterWideVisible = ko.observable(false);
+    isClusterWideChecked = ko.observable(true);
     alertTimeout = ko.observable("");
     alertRecurringTimeout = ko.observable("");
+
+	clusterMode = ko.computed(() => shell.clusterMode());
 
     constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();
@@ -48,11 +51,15 @@ class createDatabase extends viewModelBase {
             this.isPeriodicExportBundleEnabled(false);
         }
 
+		if (shell.clusterMode()) {
+			this.isReplicationBundleEnabled(true);
+		}
+
         this.nameCustomValidityError = ko.computed(() => {
-            var errorMessage: string = '';
+            var errorMessage: string;
             var newDatabaseName = this.databaseName();
 
-            if (this.isDatabaseNameExists(newDatabaseName, this.databases()) == true) {
+            if (this.isDatabaseNameExists(newDatabaseName, this.databases())) {
                 errorMessage = "Database name already exists!";
             }
             else if ((errorMessage = this.checkName(newDatabaseName)) != '') { }
@@ -83,6 +90,16 @@ class createDatabase extends viewModelBase {
             var errorMessage: string = this.isPathLegal(newPath, "Temp");
             return errorMessage;
         });
+
+        this.fetchClusterWideConfig();
+    }
+
+    fetchClusterWideConfig() {
+        new getClusterTopologyCommand(appUrl.getSystemDatabase())
+            .execute()
+            .done((topology: topology) => {
+                this.isClusterWideVisible(topology.allNodes().length > 0);
+            });
     }
 
     attached() {
@@ -99,7 +116,7 @@ class createDatabase extends viewModelBase {
     isBundleActive(name: string): boolean {
         var licenseStatus: licenseStatusDto = this.licenseStatus();
 
-        if (licenseStatus == null || licenseStatus.IsCommercial == false) {
+        if (licenseStatus == null || !licenseStatus.IsCommercial) {
             return true;
         }
         else {
@@ -116,7 +133,7 @@ class createDatabase extends viewModelBase {
         this.creationTaskStarted = true;
         dialog.close(this.parent);
         this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath(), this.databaseTempPath(), this.storageEngine(),
-            this.isIncrementalBackupChecked(), this.alertTimeout(), this.alertRecurringTimeout());
+            this.isIncrementalBackupChecked(), this.alertTimeout(), this.alertRecurringTimeout(), this.isClusterWideChecked());
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {

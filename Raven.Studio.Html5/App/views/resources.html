@@ -1,7 +1,34 @@
 ﻿<section id="resources-page">
-    <div class="text-center" data-bind="visible: resources().length == 1">
-        <h2 class="page-header text-info">No databases and no filesystems are available. <small>Go ahead and <a href="#" data-bind="click: newResource">create a database or distributed file system</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a> </small></h2>
-    </div>
+	<div class="text-center" data-bind="visible: resources().length == 1">
+		<div class="row">
+			<div data-bind="css: { 'col-md-5' : !clusterMode(), 'col-md-12': clusterMode() }">
+				<h2 class="page-header text-info">
+					<i class="fa fa-database fa-5x"></i>
+					<br />
+					<br />
+					No databases and no filesystems are available. <br />
+					<small>
+						<span data-bind="visible: isGlobalAdmin">Go ahead and <a href="#" data-bind="click: newResource">create a database or distributed file system</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a></span>
+					</small>
+				</h2>
+			</div>
+			<div class="col-md-2" data-bind="visible: !clusterMode()">
+				<h2 class="page-header text-info" style="border-bottom: 0">
+					<i class="fa fa-5x">&nbsp;</i><br />
+					OR
+				</h2>
+			</div>
+			<div class="col-md-5" data-bind="visible: !clusterMode()">
+				<h2 class="page-header text-info">
+					<i class="fa fa-cubes fa-5x"></i>
+					<br />
+					<br />
+					Create cluster <br/>
+					<small>Go ahead and <a href="#" data-bind="click: navigateToCreateCluster">create cluster</a></small>
+				</h2>
+			</div>
+		</div>
+	</div>
     <ul class="breadcrumb" data-bind="visible: resources().length > 1">
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li>
@@ -65,7 +92,7 @@
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i class="fa fa-database"></i> db/<span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i data-bind="css: { 'fa-database': !clusterWide() , 'fa-cubes': clusterWide() }" class="fa"></i> db/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
                     <a class="resource-name"><i class="fa fa-database"></i> db/<span data-bind="text: name"></span></a>
