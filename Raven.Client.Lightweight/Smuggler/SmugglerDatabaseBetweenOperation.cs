@@ -28,9 +28,11 @@ namespace Raven.Client.Smuggler
 		public string IncrementalKey { get; set; }
 	}
 
-    public static class SmugglerDatabaseBetweenOperation
+    public class SmugglerDatabaseBetweenOperation
 	{
-        public static async Task Between(SmugglerBetweenOperations betweenOperations, SmugglerDatabaseOptions databaseOptions)
+		public Action<string> OnShowProgress { get; set; } 
+
+        public async Task Between(SmugglerBetweenOperations betweenOperations, SmugglerDatabaseOptions databaseOptions)
 		{
 	        var exportOperations = betweenOperations.From;
 	        var importOperations = betweenOperations.To;
@@ -108,7 +110,7 @@ namespace Raven.Client.Smuggler
 			}
 		}
 
-		private static async Task ExportIdentities(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, ItemType operateOnTypes)
+		private async Task ExportIdentities(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, ItemType operateOnTypes)
 		{
 			ShowProgress("Exporting Identities");
 
@@ -142,7 +144,7 @@ namespace Raven.Client.Smuggler
 			ShowProgress("Done with exporting identities");
 		}
 
-		private static async Task ExportIndexes(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations)
+		private async Task ExportIndexes(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations)
 		{
 			var totalCount = 0;
 			while (true)
@@ -166,7 +168,7 @@ namespace Raven.Client.Smuggler
 			}
 		}
 
-		private static async Task<Etag> ExportDocuments(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, SmugglerDatabaseOptions databaseOptions)
+		private async Task<Etag> ExportDocuments(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, SmugglerDatabaseOptions databaseOptions)
 		{
 			var now = SystemTime.UtcNow;
 
@@ -278,7 +280,7 @@ namespace Raven.Client.Smuggler
 		}
 
         [Obsolete("Use RavenFS instead.")]
-		private async static Task<Etag> ExportAttachments(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, SmugglerDatabaseOptions databaseOptions)
+		private async Task<Etag> ExportAttachments(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, SmugglerDatabaseOptions databaseOptions)
 		{
 			Etag lastEtag = databaseOptions.StartAttachmentsEtag;
 			int totalCount = 0;
@@ -347,7 +349,7 @@ namespace Raven.Client.Smuggler
 			}
 		}
 
-		private static async Task ExportTransformers(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations)
+		private async Task ExportTransformers(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations)
 		{
 			var totalCount = 0;
 			while (true)
@@ -373,12 +375,18 @@ namespace Raven.Client.Smuggler
 		
 
 		// [StringFormatMethod("format")]
-		private static void ShowProgress(string format, params object[] args)
+		private void ShowProgress(string format, params object[] args)
 		{
-			Console.WriteLine(format, args);
+			var message = string.Format(format, args);
+
+			Console.WriteLine(message);
+
+			var action = OnShowProgress;
+			if (action != null)
+				action(message);
 		}
 
-		public static RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+		public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
 		{
 			if (metadata != null)
 			{
@@ -390,7 +398,7 @@ namespace Raven.Client.Smuggler
 			return metadata;
 		}
 
-		public static RavenJToken DisableVersioning(RavenJObject metadata)
+		public RavenJToken DisableVersioning(RavenJObject metadata)
 		{
 			metadata.Add(Constants.RavenIgnoreVersioning, true);
 

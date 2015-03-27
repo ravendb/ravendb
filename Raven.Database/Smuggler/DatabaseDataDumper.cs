@@ -57,7 +57,11 @@ namespace Raven.Database.Smuggler
 
 				importStoreFeatures.Value = await DetectServerSupportedFeatures(importOperations, betweenOptions.To);
 
-				await SmugglerDatabaseBetweenOperation.Between(new SmugglerBetweenOperations()
+				await new SmugglerDatabaseBetweenOperation
+				{
+					OnShowProgress = betweenOptions.ReportProgress
+				}
+				.Between(new SmugglerBetweenOperations
 				{
 					From = Operations,
 					To = importOperations,

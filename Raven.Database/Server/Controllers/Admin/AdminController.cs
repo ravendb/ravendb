@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Runtime;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +18,6 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection;
 using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
@@ -34,8 +32,6 @@ using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
-using Raven.Database.Storage;
-using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -61,7 +57,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpPost]
 		[RavenRoute("admin/serverSmuggling")]
-		public async Task<HttpResponseMessage> Migrate()
+		public async Task<HttpResponseMessage> ServerSmuggling()
 		{
 			var request = await ReadJsonObjectAsync<ServerSmugglerRequest>();
 			var targetStore = CreateStore(request.TargetServer);
@@ -74,7 +70,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				{
 					foreach (var serverSmugglingItem in request.Config)
 					{
-						status.Messages.Add("Migrating database " + serverSmugglingItem.Name);
+						status.Messages.Add("Smuggling database " + serverSmugglingItem.Name);
 						var documentKey = Constants.Database.Prefix + serverSmugglingItem.Name;
 						if (targetStore.DatabaseCommands.Head(documentKey) == null)
 						{
@@ -86,20 +82,26 @@ namespace Raven.Database.Server.Controllers.Admin
 						}
 
 						var source = await DatabasesLandlord.GetDatabaseInternal(serverSmugglingItem.Name);
-						//TODO: copy database document
 
-						/*var dataDumper = new DatabaseDataDumper(source, smugglerOptions);
-				await dataDumper.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-				{
-				
-					To = new RavenConnectionStringOptions
-					{
+						var dataDumper = new DatabaseDataDumper(source, new SmugglerDatabaseOptions
+						{
+							Incremental = serverSmugglingItem.Incremental,
+							StripReplicationInformation = serverSmugglingItem.StripReplicationInformation,
+							ShouldDisableVersioningBundle = serverSmugglingItem.ShouldDisableVersioningBundle,
+						});
 
+						await dataDumper.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+						{
+							To = new RavenConnectionStringOptions
+							{
+								Url = request.TargetServer.Url,
+								DefaultDatabase = serverSmugglingItem.Name
+							},
+							ReportProgress = message => status.Messages.Add(message)
+						});
 					}
-				});*/
-					}
 
-					status.Messages.Add("Server migration completed successfully.");
+					status.Messages.Add("Server smuggling completed successfully. Selected databases have been smuggled.");
 				}
 				catch (Exception e)
 				{
@@ -119,7 +121,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				StartTime = SystemTime.UtcNow,
 				TaskType = TaskActions.PendingTaskType.ServerSmuggling,
-				Payload = "Server migration"
+				Payload = "Server smuggling"
 
 			}, out id, cts);
 
