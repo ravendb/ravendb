@@ -40,8 +40,13 @@ namespace Raven.Database.Smuggler
 			jsonWriter.WriteEndArray();
 		}
 
-        public override async Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
+		public override async Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
 		{
+	        if (betweenOptions.From != null)
+	        {
+		        throw new ArgumentException("Data dumper supports to smuggle data just from the related database. 'From' parameter has be 'null' because it's automatically set to the specified database.", "betweenOptions.From");
+	        }
+
 			SetDatabaseNameIfEmpty(betweenOptions.To);
 
 			using (var importStore = CreateStore(betweenOptions.To))

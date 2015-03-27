@@ -42,15 +42,14 @@ namespace Raven.Tests.Smuggler
 
 						await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 						{
-							From = new EmbeddedRavenConnectionStringOptions
-							{
-								DefaultDatabase = store.DefaultDatabase
-							},
 							To = new RavenConnectionStringOptions
 							{
 								Url = "http://localhost:8078", DefaultDatabase = "TargetDB"
 							}
 						});
+
+						await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
+						await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
 
 						using (var session = targetStore.OpenAsyncSession())
 						{
@@ -96,16 +95,15 @@ namespace Raven.Tests.Smuggler
 
 						await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 						{
-							From = new EmbeddedRavenConnectionStringOptions
-							{
-								DefaultDatabase = store.DefaultDatabase
-							},
 							To = new RavenConnectionStringOptions
 							{
 								Url = "http://localhost:8078",
 								DefaultDatabase = "TargetDB"
 							}
 						});
+
+						await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
+						await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
 
 						using (var session = store.OpenAsyncSession())
 						{
@@ -119,10 +117,6 @@ namespace Raven.Tests.Smuggler
 
 						await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 						{
-							From = new EmbeddedRavenConnectionStringOptions
-							{
-								DefaultDatabase = store.DefaultDatabase
-							},
 							To = new RavenConnectionStringOptions
 							{
 								Url = "http://localhost:8078",
