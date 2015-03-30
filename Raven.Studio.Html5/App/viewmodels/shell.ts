@@ -713,6 +713,14 @@ class shell extends viewModelBase {
 
     private handleRavenConnectionFailure(result) {
         NProgress.done();
+
+		if (result.status === 401) {
+			// Unauthorized might be caused by invalid credentials. 
+			// Remove them from both local storage and oauth context.
+			apiKeyLocalStorage.clean();
+			oauthContext.clean();
+		}
+
         sys.log("Unable to connect to Raven.", result);
         var tryAgain = 'Try again';
         var messageBoxResultPromise = this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain]);
