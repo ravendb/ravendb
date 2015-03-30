@@ -131,7 +131,7 @@
         </div>
 
         <div class="btn-group" title="Delete all documents matching the query (map index only)">
-            <button class=" btn btn-danger" data-bind="enable: hasSelectedIndex && isIndexMapReduce() == false, click: deleteDocsMatchingQuery">
+            <button class=" btn btn-danger" data-bind="enable: enableDeleteButton, click: deleteDocsMatchingQuery">
                 <i class="fa fa-trash-o"></i>
             </button>
         </div>
