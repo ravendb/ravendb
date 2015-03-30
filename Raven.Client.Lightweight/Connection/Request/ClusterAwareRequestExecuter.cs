@@ -96,7 +96,7 @@ namespace Raven.Client.Connection.Request
 			return ExecuteWithinClusterInternalAsync(serverClient, method, operation, token);
 		}
 
-		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient, bool force = false)
+		public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient, bool force = false)
 		{
 			if (force == false && lastUpdate.AddMinutes(5) > SystemTime.UtcNow && LeaderNode != null)
 				return new CompletedTask();
@@ -135,7 +135,7 @@ namespace Raven.Client.Connection.Request
 			var node = LeaderNode;
 			if (node == null)
 			{
-				UpdateReplicationInformationIfNeeded(serverClient); // maybe start refresh task
+				UpdateReplicationInformationIfNeededAsync(serverClient); // maybe start refresh task
 
 				switch (serverClient.ClusterBehavior)
 				{

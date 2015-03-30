@@ -26,7 +26,7 @@ namespace Raven.Tryouts
 		{
 			using (var x = new RavenDB_3286())
 			{
-				x.T1();
+				x.Basic();
 			}
 		}
 	}

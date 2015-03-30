@@ -161,6 +161,7 @@ namespace Raven.Client.Connection
 			switch (Conventions.FailoverBehaviorWithoutFlags)
 			{
 				case FailoverBehavior.AllowReadsFromSecondaries:
+				case FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed:
 					if (method == HttpMethod.Get)
 						return;
 					break;
@@ -208,8 +209,7 @@ namespace Raven.Client.Connection
 			var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
 			if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && method == HttpMethod.Get && primaryRequestTimeMetric != null)
 			{
-				var rate = primaryRequestTimeMetric.Rate();
-				shouldReadFromAllServers = rate > Conventions.RequestTimeThresholdInMilliseconds;
+				shouldReadFromAllServers = primaryRequestTimeMetric.RateSurpassed(Conventions);
 			}
            
             if (shouldReadFromAllServers && method == HttpMethod.Get)

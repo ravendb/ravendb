@@ -55,7 +55,7 @@ namespace Raven.Client.Connection.Async
 
 		private readonly Func<string, RequestTimeMetric> requestTimeMetricGetter;
 
-		private readonly RequestTimeMetric requestTimeMetric;
+		private readonly IRequestTimeMetric requestTimeMetric;
 
 		private readonly string databaseName;
 
@@ -121,15 +121,15 @@ namespace Raven.Client.Connection.Async
 
 			this.requestExecuterGetter = requestExecuterGetter;
 			requestExecuter = requestExecuterGetter(this, databaseName, clusterBehavior, incrementReadStripe);
-			requestExecuter.UpdateReplicationInformationIfNeeded(this);
+			requestExecuter.UpdateReplicationInformationIfNeededAsync(this);
 
 			this.requestTimeMetricGetter = requestTimeMetricGetter;
-			requestTimeMetric = requestTimeMetricGetter(Url);
+			requestTimeMetric = requestTimeMetricGetter(databaseName);
 		}
 
-		private RequestTimeMetric GetRequestTimeMetric(string operationUrl)
+		private IRequestTimeMetric GetRequestTimeMetric(string operationUrl)
 		{
-			return string.Equals(operationUrl, Url, StringComparison.OrdinalIgnoreCase) ? requestTimeMetric : null; //requestTimeMetricGetter(operationUrl);
+			return string.Equals(operationUrl, Url, StringComparison.OrdinalIgnoreCase) ? requestTimeMetric : new DecreasingTimeMetric(requestTimeMetric);
 		}
 
 		public void Dispose()

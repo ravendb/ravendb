@@ -16,7 +16,7 @@ namespace Raven.Client.Connection.Request
 
 		Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, HttpMethod method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token);
 
-		Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient, bool force = false);
+		Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient, bool force = false);
 
 		IDisposable ForceReadFromMaster();
 

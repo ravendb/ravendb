@@ -46,7 +46,7 @@ namespace Raven.Client.Document
 
 		private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 
-		private readonly ConcurrentDictionary<string, RequestTimeMetric> requestTimeMetrics = new ConcurrentDictionary<string, RequestTimeMetric>();
+		private readonly ConcurrentDictionary<string, RequestTimeMetric> requestTimeMetrics = new ConcurrentDictionary<string, RequestTimeMetric>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ConcurrentDictionary<string, bool> _dtcSupport = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
@@ -669,7 +669,7 @@ namespace Raven.Client.Document
 
 			IRequestExecuter requestExecuter;
 			if (clusterBehavior == ClusterBehavior.None)
-				requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)), GetRequestTimeMetricForDatabase(serverClient.Url));
+				requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)), GetRequestTimeMetricForDatabase(databaseName));
 			else
 				requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter());
 
@@ -692,9 +692,14 @@ namespace Raven.Client.Document
 			return requestExecuter;
 		}
 
-		internal RequestTimeMetric GetRequestTimeMetricForDatabase(string url)
+		public RequestTimeMetric GetRequestTimeMetricForDatabase(string databaseName)
 		{
-			return requestTimeMetrics.GetOrAdd(url, new RequestTimeMetric());
+			var key = Url;
+			databaseName = databaseName ?? DefaultDatabase;
+			if (string.IsNullOrEmpty(databaseName) == false)
+				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + databaseName;
+
+			return requestTimeMetrics.GetOrAdd(key, new RequestTimeMetric());
 		}
 
 		/// <summary>

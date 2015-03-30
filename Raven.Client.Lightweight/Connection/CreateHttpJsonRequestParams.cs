@@ -20,7 +20,7 @@ namespace Raven.Client.Connection
 
 		private string urlCached;
 
-		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, RavenJObject metadata, OperationCredentials credentials, Convention convention, RequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null)
+		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, RavenJObject metadata, OperationCredentials credentials, Convention convention, IRequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null)
 		{
 			Owner = self;
 			Url = url;
@@ -33,7 +33,7 @@ namespace Raven.Client.Connection
 			operationsHeadersCollection = new NameValueCollection();
 		}
 
-		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, OperationCredentials credentials, Convention convention, RequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null)
+		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, OperationCredentials credentials, Convention convention, IRequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null)
 			: this(self, url, method, new RavenJObject(), credentials, convention, requestTimeMetric, timeout)
 		{
 		}
@@ -42,7 +42,7 @@ namespace Raven.Client.Connection
 
 		public Convention Convention { get; set; }
 
-		public RequestTimeMetric RequestTimeMetric { get; set; }
+		public IRequestTimeMetric RequestTimeMetric { get; set; }
 
 		public OperationCredentials Credentials { get; set; }
 

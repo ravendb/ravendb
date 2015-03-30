@@ -59,7 +59,7 @@ namespace Raven.Client.Connection
 		private readonly IHoldProfilingInformation owner;
 		private readonly Convention conventions;
 		private readonly bool disabledAuthRetries;
-		private readonly RequestTimeMetric requestTimeMetric;
+		private readonly IRequestTimeMetric requestTimeMetric;
 
 		private string postedData;
 		private bool isRequestSentToServer;
