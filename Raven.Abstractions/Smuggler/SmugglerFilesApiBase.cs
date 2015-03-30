@@ -165,8 +165,8 @@ namespace Raven.Abstractions.Smuggler
 
 			// We use PositionWrapperStream due to:
 			// http://connect.microsoft.com/VisualStudio/feedbackdetail/view/816411/ziparchive-shouldnt-read-the-position-of-non-seekable-streams
-			using (var positionStream = new PositionWrapperStream(stream))
-			using (var archive = new ZipArchive(positionStream, ZipArchiveMode.Create, true))           
+			using (var positionStream = new PositionWrapperStream(stream, leaveOpen: true))
+			using (var archive = new ZipArchive(positionStream, ZipArchiveMode.Create, leaveOpen: true))           
             {
                 var metadataList = new List<FileContainer>();
 
@@ -311,14 +311,24 @@ namespace Raven.Abstractions.Smuggler
         {
 			Operations.ShowProgress("Importing filesystem");
 
-            Operations.Configure(Options);
-            Operations.Initialize(Options);
-
-            await DetectServerSupportedFeatures(importOptions.To);
-
             if (Options.Incremental == false)
             {
-                await ImportData(importOptions, importOptions.FromFile);
+				Stream stream = importOptions.FromStream;
+				bool ownStream = false;
+				try
+				{
+					if (stream == null)
+					{
+						stream = File.OpenRead(importOptions.FromFile);
+						ownStream = true;
+					}
+					await ImportData(importOptions, stream);
+				}
+				finally
+				{
+					if (stream != null && ownStream)
+						stream.Dispose();
+				}
                 return;
             }
 
@@ -334,20 +344,29 @@ namespace Raven.Abstractions.Smuggler
             if (files.Length == 0)
                 return;
 
-            foreach (string filename in files)
-                await ImportData(importOptions, filename);
+	        foreach (string filename in files)
+	        {
+		        using (var fileStream = File.OpenRead(filename))
+		        {
+			        await ImportData(importOptions, fileStream);
+		        }
+	        }
         }
 
-        private async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions, string filename)
+        private async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions, Stream stream)
         {
+			Operations.Configure(Options);
+			Operations.Initialize(Options);
+
+			await DetectServerSupportedFeatures(importOptions.To);
+
 	        var count = 0;
             var sw = Stopwatch.StartNew();
-            var directory = Path.GetDirectoryName(filename);
 
             var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 
             // We open the zip file. 
-            using (var archive = new ZipArchive(File.OpenRead(filename), ZipArchiveMode.Read))
+            using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
             {            
                 var filesLookup = archive.Entries.ToDictionary( x => x.FullName );
                 var metadataEntry = filesLookup[".metadata"];
