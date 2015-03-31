@@ -132,6 +132,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationIndexesTombstones = "Raven/Replication/Indexes/Tombstones";
 		public const string RavenReplicationTransformerTombstones = "Raven/Replication/Transformers/Tombstones";
 
+		public const string RavenSqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
+
         [Obsolete("Use RavenFS instead.")]
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 
