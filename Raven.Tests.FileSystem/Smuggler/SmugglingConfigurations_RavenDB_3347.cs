@@ -81,5 +81,58 @@ namespace Raven.Tests.FileSystem.Smuggler
 				}
 			}
 		}
+
+		[Fact, Trait("Category", "Smuggler")]
+		public async Task ShouldSmuggleConfigurationsInBetweenOperation()
+		{
+			using (var exportStore = NewStore())
+			using (var importStore = NewStore(1))
+			{
+				for (int i = 0; i < 100; i++)
+				{
+					await exportStore.AsyncFilesCommands.Configuration.SetKeyAsync("items/" + i, new RavenJObject
+						{
+							{
+								"test", "value"
+							},
+							{
+								"test-array", new RavenJArray
+								{
+									"item-1", "item-2", "item-3"
+								}
+							}
+						});
+				}
+
+				var countOfConfigurations = (await exportStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(0, 200)).Length;
+
+				var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>()
+				{
+					From = new FilesConnectionStringOptions()
+					{
+						Url = exportStore.Url,
+						DefaultFileSystem = exportStore.DefaultFileSystem
+					},
+					To = new FilesConnectionStringOptions()
+					{
+						Url = importStore.Url,
+						DefaultFileSystem = importStore.DefaultFileSystem
+					}
+				};
+
+				var smugglerFilesApi = new SmugglerFilesApi();
+
+				smugglerFilesApi.Options.BatchSize = 5;
+
+				await smugglerFilesApi.Between(options);
+
+				Assert.Equal(countOfConfigurations, (await importStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(0, 200)).Length);
+
+				for (int i = 0; i < 100; i++)
+				{
+					Assert.NotNull(await importStore.AsyncFilesCommands.Configuration.GetKeyAsync<RavenJObject>("items/" + i));
+				}
+			}
+		}
 	}
 }

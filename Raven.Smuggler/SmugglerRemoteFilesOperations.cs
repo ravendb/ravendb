@@ -86,7 +86,7 @@ namespace Raven.Smuggler
             return PrimaryStore.AsyncFilesCommands.UploadRawAsync(file.FullPath, data, file.Metadata, size);
         }
 
-	    public async Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take)
+	    public virtual async Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take)
 	    {
 		    var names = await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(start, take);
 
@@ -100,7 +100,7 @@ namespace Raven.Smuggler
 		    return results;
 	    }
 
-	    public Task PutConfig(string name, RavenJObject value)
+	    public virtual Task PutConfig(string name, RavenJObject value)
 	    {
 		    return PrimaryStore.AsyncFilesCommands.Configuration.SetKeyAsync(name, value);
 	    }
@@ -203,5 +203,10 @@ namespace Raven.Smuggler
         {
             return this.SecondaryStore.AsyncFilesCommands.Configuration.SetKeyAsync<ExportFilesDestinations>(ExportFilesDestinations.RavenDocumentKey, destinations);
         }
+
+	    public override Task PutConfig(string name, RavenJObject value)
+	    {
+			return SecondaryStore.AsyncFilesCommands.Configuration.SetKeyAsync(name, value);
+	    }
     }
 }

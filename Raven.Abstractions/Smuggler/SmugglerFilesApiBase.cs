@@ -3,7 +3,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
@@ -26,12 +25,7 @@ namespace Raven.Abstractions.Smuggler
 	    private const string MetadataEntry = ".metadata";
 	    private const string ConfigurationsEntry = ".configurations";
 
-	    private enum CompressionEncoding
-        {
-            None,
-            GZip,
-            Defrate,
-        };
+		private readonly Regex internalConfigs = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
 
         private class FileContainer
         {
@@ -271,12 +265,10 @@ namespace Raven.Abstractions.Smuggler
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
 			var reportInterval = TimeSpan.FromSeconds(2);
-			var internalConfigs = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
 
 			Operations.ShowProgress("Exporting Configurations");
 
 			var configurations = archive.CreateEntry(ConfigurationsEntry);
-
 
 			using (var zipStream = configurations.Open())
 			using (var streamWriter = new StreamWriter(zipStream))
@@ -434,26 +426,28 @@ namespace Raven.Abstractions.Smuggler
 
 	            var configurationsCount = 0;
 
-	            var configurationsEntry = filesLookup[ConfigurationsEntry];
+	            ZipArchiveEntry configurationsEntry;
+	            if (filesLookup.TryGetValue(ConfigurationsEntry, out configurationsEntry)) // older exports can not have it
+	            {
+		            using (var streamReader = new StreamReader(configurationsEntry.Open()))
+		            {
+			            foreach (var json in streamReader.EnumerateJsonObjects())
+			            {
+				            var config = serializer.Deserialize<ConfigContainer>(new StringReader(json));
 
-				using (var streamReader = new StreamReader(configurationsEntry.Open()))
-				{
-					foreach (var json in streamReader.EnumerateJsonObjects())
-					{                    
-						var config = serializer.Deserialize<ConfigContainer>(new StringReader(json));
+				            await Operations.PutConfig(config.Name, config.Value);
 
-						await Operations.PutConfig(config.Name, config.Value);
+				            configurationsCount++;
 
-						configurationsCount++;
-
-						if (configurationsCount % 100 == 0)
-						{
-							Operations.ShowProgress("Read {0:#,#;;0} configurations", configurationsCount);
-						}
-					}
+				            if (configurationsCount%100 == 0)
+				            {
+					            Operations.ShowProgress("Read {0:#,#;;0} configurations", configurationsCount);
+				            }
+			            }
+		            }
 	            }
 
-				var filesCount = 0;
+	            var filesCount = 0;
 
 	            var metadataEntry = filesLookup[MetadataEntry];
                 using ( var streamReader = new StreamReader(metadataEntry.Open()) )
@@ -540,7 +534,7 @@ namespace Raven.Abstractions.Smuggler
             // used to synchronize max returned values for put/delete operations
             var maxEtags = Operations.FetchCurrentMaxEtags();
 
-            incremental.LastEtag = await CopyBetweenStores(betweenOptions, result.LastFileEtag, maxEtags.LastFileEtag);
+            incremental.LastEtag = await CopyBetweenStores(result.LastFileEtag, maxEtags.LastFileEtag);
 
             if (this.Options.Incremental)
             {
@@ -551,9 +545,10 @@ namespace Raven.Abstractions.Smuggler
             }   
         }
 
-        private async Task<Etag> CopyBetweenStores(SmugglerBetweenOptions<FilesConnectionStringOptions> options, Etag lastEtag, Etag maxEtag)
+        private async Task<Etag> CopyBetweenStores(Etag lastEtag, Etag maxEtag)
         {
-            var totalCount = 0;
+            var totalFiles = 0;
+	        var totalConfigurations = 0;
             var lastReport = SystemTime.UtcNow;
             var reportInterval = TimeSpan.FromSeconds(10);
             Operations.ShowProgress("Exporting Files");
@@ -561,6 +556,34 @@ namespace Raven.Abstractions.Smuggler
             Exception exceptionHappened = null;
             try
             {
+				while (true)
+				{
+					bool hasConfigs = false;
+
+					foreach (var config in await Operations.GetConfigurations(totalConfigurations, Math.Min(Options.BatchSize, int.MaxValue)))
+					{
+						if (internalConfigs.IsMatch(config.Key))
+							continue;
+
+						hasConfigs = true;
+
+						await Operations.PutConfig(config.Key, config.Value);
+
+						totalConfigurations++;
+
+						if (totalConfigurations % 100 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+						{
+							Operations.ShowProgress("Exported {0} configurations. ", totalConfigurations);
+							lastReport = SystemTime.UtcNow;
+						}
+					}
+
+					if (hasConfigs == false)
+						break;
+				}
+
+				Operations.ShowProgress("Done with reading configurations, total: {0}", totalConfigurations);
+
                 using (var files = await Operations.GetFiles(lastEtag, Math.Min(Options.BatchSize, int.MaxValue)))
                 {
                     while (await files.MoveNextAsync())
@@ -584,11 +607,11 @@ namespace Raven.Abstractions.Smuggler
 
                         lastEtag = tempLastEtag;
 
-                        totalCount++;
-                        if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                        totalFiles++;
+                        if (totalFiles % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
                         {
                             //TODO: Show also the MB/sec and total GB exported.
-                            Operations.ShowProgress("Exported {0} files. ", totalCount);
+                            Operations.ShowProgress("Exported {0} files. ", totalFiles);
                             lastReport = SystemTime.UtcNow;
                         }
                     }
@@ -597,7 +620,7 @@ namespace Raven.Abstractions.Smuggler
             catch (Exception e)
             {
                 Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-                Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+                Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalFiles, lastEtag);
 
                 exceptionHappened = new SmugglerExportException(e.Message, e)
                 {
@@ -608,7 +631,7 @@ namespace Raven.Abstractions.Smuggler
             if (exceptionHappened != null)
                 throw exceptionHappened;
 
-            Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+            Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalFiles, lastEtag);
             return lastEtag;
         }
     }
