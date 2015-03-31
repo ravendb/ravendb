@@ -6,6 +6,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Smuggler;
 using Raven.Json.Linq;
 using Raven.Smuggler;
@@ -132,6 +133,93 @@ namespace Raven.Tests.FileSystem.Smuggler
 				{
 					Assert.NotNull(await importStore.AsyncFilesCommands.Configuration.GetKeyAsync<RavenJObject>("items/" + i));
 				}
+			}
+		}
+
+		[Fact, Trait("Category", "Smuggler")]
+		public async Task ExportShouldDisableSynchronizationDestinations()
+		{
+			using (var exportStream = new MemoryStream())
+			using (var exportStore = NewStore())
+			using (var importStore = NewStore(1))
+			{
+				await exportStore.AsyncFilesCommands.Synchronization.SetDestinationsAsync(new SynchronizationDestination()
+				{
+					ServerUrl = "http://sample.com",
+					FileSystem = "Sample",
+					Enabled = true
+				});
+
+				var exportOptions = new SmugglerExportOptions<FilesConnectionStringOptions>
+				{
+					From = new FilesConnectionStringOptions
+					{
+						Url = exportStore.Url,
+						DefaultFileSystem = exportStore.DefaultFileSystem
+					},
+					ToStream = exportStream
+				};
+
+				await new SmugglerFilesApi().ExportData(exportOptions);
+
+				exportStream.Position = 0;
+
+				var importOptions = new SmugglerImportOptions<FilesConnectionStringOptions>
+				{
+					FromStream = exportStream,
+					To = new FilesConnectionStringOptions()
+					{
+						Url = importStore.Url,
+						DefaultFileSystem = importStore.DefaultFileSystem
+					}
+				};
+
+				await new SmugglerFilesApi().ImportData(importOptions);
+
+				var destinations = await importStore.AsyncFilesCommands.Synchronization.GetDestinationsAsync();
+
+				Assert.Equal(1, destinations.Length);
+				Assert.Equal("http://sample.com/fs/Sample", destinations[0].Url);
+				Assert.Equal("Sample", destinations[0].FileSystem);
+				Assert.False(destinations[0].Enabled);
+			}
+		}
+
+		[Fact, Trait("Category", "Smuggler")]
+		public async Task BetweenExportShouldDisableSynchronizationDestinations()
+		{
+			using (var exportStore = NewStore())
+			using (var importStore = NewStore(1))
+			{
+				await exportStore.AsyncFilesCommands.Synchronization.SetDestinationsAsync(new SynchronizationDestination()
+				{
+					ServerUrl = "http://sample.com",
+					FileSystem = "Sample",
+					Enabled = true
+				});
+
+				var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>()
+				{
+					From = new FilesConnectionStringOptions()
+					{
+						Url = exportStore.Url,
+						DefaultFileSystem = exportStore.DefaultFileSystem
+					},
+					To = new FilesConnectionStringOptions()
+					{
+						Url = importStore.Url,
+						DefaultFileSystem = importStore.DefaultFileSystem
+					}
+				};
+
+				await new SmugglerFilesApi().Between(options);
+
+				var destinations = await importStore.AsyncFilesCommands.Synchronization.GetDestinationsAsync();
+
+				Assert.Equal(1, destinations.Length);
+				Assert.Equal("http://sample.com/fs/Sample", destinations[0].Url);
+				Assert.Equal("Sample", destinations[0].FileSystem);
+				Assert.False(destinations[0].Enabled);
 			}
 		}
 	}

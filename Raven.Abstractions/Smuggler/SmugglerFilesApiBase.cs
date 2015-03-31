@@ -287,7 +287,7 @@ namespace Raven.Abstractions.Smuggler
 						streamWriter.WriteLine(RavenJObject.FromObject(new ConfigContainer()
 						{
 							Name = config.Key,
-							Value = config.Value
+							Value = EnsureValidExportConfig(config)
 						}));
 
 						totalCount++;
@@ -308,7 +308,24 @@ namespace Raven.Abstractions.Smuggler
 		    
 	    }
 
-        private async Task DetectServerSupportedFeatures(FilesConnectionStringOptions filesConnectionStringOptions)
+	    private static RavenJObject EnsureValidExportConfig(KeyValuePair<string, RavenJObject> config)
+	    {
+		    if (string.Equals(config.Key, SynchronizationConstants.RavenSynchronizationDestinations, StringComparison.OrdinalIgnoreCase))
+		    {
+			    var destinationsConfig = config.Value.JsonDeserialization<SynchronizationDestinationsConfig>();
+
+			    foreach (var destination in destinationsConfig.Destinations)
+			    {
+				    destination.Enabled = false;
+			    }
+
+			    return RavenJObject.FromObject(destinationsConfig);
+		    }
+
+		    return config.Value;
+	    }
+
+	    private async Task DetectServerSupportedFeatures(FilesConnectionStringOptions filesConnectionStringOptions)
         {
             var serverVersion = await this.Operations.GetVersion(filesConnectionStringOptions);
             if (string.IsNullOrEmpty(serverVersion))
@@ -573,7 +590,7 @@ namespace Raven.Abstractions.Smuggler
 
 						hasConfigs = true;
 
-						await Operations.PutConfig(config.Key, config.Value);
+						await Operations.PutConfig(config.Key, EnsureValidExportConfig(config));
 
 						totalConfigurations++;
 
