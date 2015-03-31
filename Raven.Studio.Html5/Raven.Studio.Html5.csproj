@@ -285,11 +285,11 @@
     <TypeScriptCompile Include="App\viewmodels\indexes.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexTerms.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\logs.ts" />
-    <TypeScriptCompile Include="App\viewmodels\query.ts" />
-    <TypeScriptCompile Include="App\viewmodels\queryShell.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\query\query.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\query\queryShell.ts" />
     <TypeScriptCompile Include="App\viewmodels\recentErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\replicationStats.ts" />
-    <TypeScriptCompile Include="App\viewmodels\reporting.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\reporting\reporting.ts" />
     <TypeScriptCompile Include="App\viewmodels\saveTransformerWithNewNameConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
@@ -670,9 +670,9 @@
     <Content Include="App\views\indexTerms.html" />
     <Content Include="App\views\database\status\logs.html" />
     <Content Include="App\views\database\settings\periodicExport.html" />
-    <Content Include="App\views\query.html" />
+    <Content Include="App\views\database\query\query.html" />
     <Content Include="App\views\database\status\replicationStats.html" />
-    <Content Include="App\views\reporting.html" />
+    <Content Include="App\views\database\reporting\reporting.html" />
     <Content Include="App\views\database\settings\settings.html" />
     <Content Include="App\views\database\tasks\toggleIndexing.html" />
     <Content Include="App\views\transformers.html" />
@@ -1062,7 +1062,7 @@
     <Content Include="App\views\documents.html" />
     <Content Include="App\views\editDocument.html" />
     <Content Include="App\views\indexes.html" />
-    <Content Include="App\views\queryShell.html" />
+    <Content Include="App\views\database\query\queryShell.html" />
     <Content Include="App\views\database\status\statistics.html" />
     <Content Include="App\views\database\status\status.html" />
     <Content Include="App\views\database\tasks\tasks.html" />

@@ -68,6 +68,10 @@ Raven.Studio.Html5/App/viewmodels/database/*.js
 Raven.Studio.Html5/App/viewmodels/database/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/settings/*.js
 Raven.Studio.Html5/App/viewmodels/database/settings/*.js.map
+Raven.Studio.Html5/App/viewmodels/database/reporting/*.js
+Raven.Studio.Html5/App/viewmodels/database/reporting/*.js.map
+Raven.Studio.Html5/App/viewmodels/database/query/*.js
+Raven.Studio.Html5/App/viewmodels/database/query/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/status/*.js
 Raven.Studio.Html5/App/viewmodels/database/status/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/status/debug/*.js
