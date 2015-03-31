@@ -212,9 +212,9 @@
     <TypeScriptCompile Include="App\models\transformer.ts" />
     <TypeScriptCompile Include="App\models\uploadItem.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
-    <TypeScriptCompile Include="App\viewmodels\adminSettings.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\adminSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
-    <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\cluster.ts" />
     <TypeScriptCompile Include="App\viewmodels\editNodeConnectionInfoDialog.ts" />
@@ -301,7 +301,7 @@
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationSimulationDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationConnectionStringsManagement.ts" />
-    <TypeScriptCompile Include="App\viewmodels\studioConfig.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\studioConfig.ts" />
     <TypeScriptCompile Include="App\viewmodels\toggleIndexing.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformers.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformersShell.ts" />
@@ -454,19 +454,19 @@
     <TypeScriptCompile Include="App\viewmodels\visualizerKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizerImport.ts" />
     <TypeScriptCompile Include="App\viewmodels\runningTasks.ts" />
-    <TypeScriptCompile Include="App\viewmodels\infoPackage.ts" />
-    <TypeScriptCompile Include="App\viewmodels\infoPackageImport.ts" />
-    <TypeScriptCompile Include="App\viewmodels\adminLogsConfigureDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\infoPackage.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\infoPackageImport.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\adminLogsConfigureDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\upgrade.ts" />
-    <TypeScriptCompile Include="App\viewmodels\adminLogs.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\adminLogs.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexStats.ts" />
-    <TypeScriptCompile Include="App\viewmodels\ioTest.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\ioTest.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationPerfStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugWebSocket.ts" />
     <TypeScriptCompile Include="App\viewmodels\createResource.ts" />
-    <TypeScriptCompile Include="App\viewmodels\backup.ts" />
-    <TypeScriptCompile Include="App\viewmodels\compact.ts" />
-    <TypeScriptCompile Include="App\viewmodels\restore.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\backup.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\compact.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\restore.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusStorageOnDisk.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusStorageBreakdown.ts" />
@@ -501,9 +501,10 @@
     <Content Include="App\views\cluster.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\manage\adminSettings.html" />
     <Content Include="App\views\confirmationDialog.html" />
-    <Content Include="App\views\backup.html" />
-    <Content Include="App\views\compact.html" />
+    <Content Include="App\views\manage\backup.html" />
+    <Content Include="App\views\manage\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
     <Content Include="App\views\globalConfigCustomFunctions.html" />
     <Content Include="App\views\globalConfigQuotas.html" />
@@ -528,25 +529,26 @@
     <Content Include="App\views\statusStorageBreakdown.html" />
     <Content Include="App\views\statusStorageOnDisk.html" />
     <Content Include="App\views\statusStorage.html" />
-    <Content Include="App\views\restore.html" />
+    <Content Include="App\views\manage\restore.html" />
     <Content Include="App\views\createResource.html" />
     <Content Include="App\views\statusDebugWebSocket.html" />
     <Content Include="App\views\sqlReplicationPerfStats.html" />
     <Content Include="App\views\indexesAndTransformersClipboardDialog.html" />
-    <Content Include="App\views\ioTest.html" />
+    <Content Include="App\views\manage\ioTest.html" />
     <Content Include="App\views\indexStats.html" />
     <Content Include="App\views\copyTransformerDialog.html" />
     <Content Include="App\views\indexMergeSuggestions.html" />
-    <Content Include="App\views\adminLogs.html" />
+    <Content Include="App\views\manage\adminLogs.html" />
     <Content Include="App\views\upgrade.html" />
-    <Content Include="App\views\adminLogsConfigureDialog.html" />
-    <Content Include="App\views\infoPackageImport.html" />
-    <Content Include="App\views\infoPackage.html" />
+    <Content Include="App\views\manage\adminLogsConfigureDialog.html" />
+    <Content Include="App\views\manage\infoPackageImport.html" />
+    <Content Include="App\views\manage\infoPackage.html" />
     <Content Include="App\views\deleteResourceConfirm.html" />
     <Content Include="App\views\disableResourceToggleConfirm.html" />
     <Content Include="App\views\runningTasks.html" />
     <Content Include="App\views\studioConfig.html" />
     <Content Include="App\views\globalConfigVersioning.html" />
+    <Content Include="App\views\manage\studioConfig.html" />
     <Content Include="App\views\visualizerImport.html" />
     <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />
@@ -616,7 +618,7 @@
     <Content Include="App\views\statusDebug.html" />
     <TypeScriptCompile Include="App\common\datePickerBindingHandler.ts" />
     <Content Include="App\views\alerts.html" />
-    <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\manage\apiKeys.html" />
     <Content Include="App\views\counter\counterStorageCounters.html" />
     <Content Include="App\views\deleteDocuments.html" />
     <Content Include="App\views\filesystem\deleteFiles.html" />
@@ -673,17 +675,17 @@
     <Content Include="App\views\userInfo.html" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewSystemDatabaseConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\trafficWatch.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\trafficWatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\watchTrafficConfigDialog.ts" />
-    <TypeScriptCompile Include="App\viewmodels\windowsAuth.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\windowsAuth.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <Content Include="App\views\versioning.html" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
-    <Content Include="App\views\trafficWatch.html" />
+    <Content Include="App\views\manage\trafficWatch.html" />
     <Content Include="App\views\watchTrafficConfigDialog.html" />
-    <Content Include="App\views\windowsAuth.html" />
+    <Content Include="App\views\manage\windowsAuth.html" />
     <Content Include="Content\app.css">
       <DependentUpon>app.less</DependentUpon>
     </Content>
@@ -1097,7 +1099,10 @@
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="App\viewmodels\database\" />
+    <Folder Include="App\views\database\" />
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

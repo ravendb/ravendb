@@ -62,6 +62,8 @@ Raven.Studio.Html5/App/models/counter/*.js
 Raven.Studio.Html5/App/models/counter/*.js.map
 Raven.Studio.Html5/App/viewmodels/*.js
 Raven.Studio.Html5/App/viewmodels/*.js.map
+Raven.Studio.Html5/App/viewmodels/manage/*.js
+Raven.Studio.Html5/App/viewmodels/manage/*.js.map
 Raven.Studio.Html5/App/viewmodels/filesystem/*.js
 Raven.Studio.Html5/App/viewmodels/filesystem/*.js.map
 Raven.Studio.Html5/App/viewmodels/counter/*.js

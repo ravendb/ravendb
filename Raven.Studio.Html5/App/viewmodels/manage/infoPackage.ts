@@ -1,4 +1,4 @@
-/// <reference path="../../Scripts/typings/jszip/jszip.d.ts" />
+/// <reference path="../../../Scripts/typings/jszip/jszip.d.ts" />
 
 import app = require("durandal/app");
 import d3 = require('d3/d3');
@@ -12,7 +12,7 @@ import fileDownloader = require("common/fileDownloader");
 import getInfoPackage = require('commands/getInfoPackage');
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import infoPackageImport = require("viewmodels/infoPackageImport");
+import infoPackageImport = require("viewmodels/manage/infoPackageImport");
 
 enum parserState {
   pid,

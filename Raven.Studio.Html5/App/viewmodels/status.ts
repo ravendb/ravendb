@@ -36,7 +36,7 @@ class status extends viewModelBase {
                 { route: 'databases/status/visualizer', moduleId: 'viewmodels/visualizer', title: 'Map/Reduce Visualizer', nav: true, hash: appUrl.forCurrentDatabase().visualizer },
                 { route: 'databases/status/debug*details', moduleId: 'viewmodels/statusDebug', title: 'Debug', nav: true, hash: appUrl.forCurrentDatabase().statusDebug },
                 { route: 'databases/status/storage*details', moduleId: 'viewmodels/statusStorage', title: 'Storage', nav: true, hash: appUrl.forCurrentDatabase().statusStorageOnDisk },
-                { route: 'databases/status/infoPackage', moduleId: 'viewmodels/infoPackage', title: 'Gather Debug Info', nav: shell.canExposeConfigOverTheWire(), hash: appUrl.forCurrentDatabase().infoPackage }
+                { route: 'databases/status/infoPackage', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: shell.canExposeConfigOverTheWire(), hash: appUrl.forCurrentDatabase().infoPackage }
 			])
             .buildNavigationModel();
 

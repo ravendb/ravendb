@@ -212,7 +212,7 @@ class shell extends viewModelBase {
 
         NProgress.set(.7);
         router.map([
-            { route: "admin/settings*details", title: "Admin Settings", moduleId: "viewmodels/adminSettings", nav: true, hash: this.appUrls.adminSettings },
+            { route: "admin/settings*details", title: "Admin Settings", moduleId: "viewmodels/manage/adminSettings", nav: true, hash: this.appUrls.adminSettings },
             { route: ["", "resources"], title: "Resources", moduleId: "viewmodels/resources", nav: true, hash: this.appUrls.resourcesManagement },
             { route: "databases/documents", title: "Documents", moduleId: "viewmodels/documents", nav: true, hash: this.appUrls.documents },
             { route: "databases/conflicts", title: "Conflicts", moduleId: "viewmodels/conflicts", nav: true, hash: this.appUrls.conflicts },
