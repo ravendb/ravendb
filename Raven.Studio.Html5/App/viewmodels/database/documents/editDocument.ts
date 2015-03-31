@@ -21,7 +21,7 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
 import pagedResultSet = require("common/pagedResultSet");
 

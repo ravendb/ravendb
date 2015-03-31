@@ -1,4 +1,4 @@
-﻿import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+﻿import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/database");
 import getOperationStatusCommand = require('commands/getOperationStatusCommand');

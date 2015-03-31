@@ -4,7 +4,7 @@ import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import facet = require("models/facet");
 import queryFacetsCommand = require("commands/queryFacetsCommand");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 

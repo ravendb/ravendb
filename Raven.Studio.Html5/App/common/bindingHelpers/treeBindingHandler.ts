@@ -1,4 +1,4 @@
-﻿/// <reference path="../../Scripts/typings/jquery.dynatree/jquery.dynatree.d.ts" />
+﻿/// <reference path="../../../Scripts/typings/jquery.dynatree/jquery.dynatree.d.ts" />
 
 import composition = require("durandal/composition");
 import appUrl = require("common/appUrl");

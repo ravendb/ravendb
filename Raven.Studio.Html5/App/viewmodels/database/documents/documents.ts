@@ -23,7 +23,7 @@ import dismissAlertCommand = require("commands/dismissAlertCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
+import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 
 class documents extends viewModelBase {
 

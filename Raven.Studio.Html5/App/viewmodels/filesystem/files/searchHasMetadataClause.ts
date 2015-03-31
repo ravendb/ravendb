@@ -2,7 +2,7 @@
 import dialog = require("plugins/dialog");
 import searchByTermCommand = require("commands/filesystem/searchByTermCommand");
 import filesystem = require("models/filesystem/filesystem");
-import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
+import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 
 
 class searchHasMetadataClause extends searchDialogViewModel {

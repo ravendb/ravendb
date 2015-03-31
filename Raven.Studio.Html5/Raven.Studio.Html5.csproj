@@ -149,9 +149,9 @@
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\testSqlConnectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\verifyDocumentsIDsCommand.ts" />
-    <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
-    <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\models\nodeConnectionInfo.ts" />
@@ -163,10 +163,10 @@
     <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
     <TypeScriptCompile Include="App\models\license.ts" />
     <TypeScriptCompile Include="App\models\databaseCollectionStyleMap.ts" />
-    <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\idGenerator.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
-    <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\fileUploadBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
     <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
     <TypeScriptCompile Include="App\common\messagePublisher.ts" />
@@ -174,7 +174,7 @@
     <TypeScriptCompile Include="App\common\serverBuildReminder.ts" />
     <TypeScriptCompile Include="App\common\pair.ts" />
     <TypeScriptCompile Include="App\common\sqlReplicationStats.ts" />
-    <TypeScriptCompile Include="App\common\treeBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\treeBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\generalUtils.ts" />
     <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
@@ -439,7 +439,7 @@
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\models\adminLogsConfigEntry.ts" />
-    <TypeScriptCompile Include="App\common\helpBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\helpBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
@@ -607,7 +607,7 @@
     <Content Include="App\views\database\status\debug\statusDebugMetrics.html" />
     <Content Include="App\views\database\status\debug\statusDebugChanges.html" />
     <Content Include="App\views\database\status\debug\statusDebug.html" />
-    <TypeScriptCompile Include="App\common\datePickerBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\datePickerBindingHandler.ts" />
     <Content Include="App\views\database\status\alerts.html" />
     <Content Include="App\views\manage\apiKeys.html" />
     <Content Include="App\views\counter\counterStorageCounters.html" />

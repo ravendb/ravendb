@@ -1,7 +1,7 @@
 import sqlReplicationTable = require("models/sqlReplicationTable");
 import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class sqlReplication extends document {
 

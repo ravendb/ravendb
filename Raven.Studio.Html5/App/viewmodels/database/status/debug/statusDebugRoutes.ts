@@ -2,7 +2,7 @@ import getStatusDebugRoutesCommand = require("commands/getStatusDebugRoutesComma
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import shell = require('viewmodels/shell');
 
 class statusDebugRoutes extends viewModelBase {

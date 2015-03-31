@@ -1,6 +1,6 @@
 import getStatusDebugIndexFieldsCommand = require("commands/getStatusDebugIndexFieldsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 
 

@@ -2,7 +2,7 @@ import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigComma
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class statusDebugConfig extends viewModelBase {
     data = ko.observable<string>("");

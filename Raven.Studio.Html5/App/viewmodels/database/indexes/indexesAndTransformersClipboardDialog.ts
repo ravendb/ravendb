@@ -11,7 +11,7 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import indexPriority = require("models/indexPriority");
 import messagePublisher = require("common/messagePublisher");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
 

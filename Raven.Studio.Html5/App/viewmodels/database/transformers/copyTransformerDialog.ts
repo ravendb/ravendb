@@ -7,7 +7,7 @@ import saveTransformerCommand = require("commands/saveTransformerCommand");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class copyTransformerDialog extends dialogViewModelBase {
 

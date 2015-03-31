@@ -12,7 +12,7 @@ import getConfigurationCommand = require("commands/filesystem/getConfigurationCo
 import filesystem = require("models/filesystem/filesystem");
 import configurationKey = require("models/filesystem/configurationKey");
 import changeSubscription = require('models/changeSubscription');
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import Pair = require("common/pair");
 

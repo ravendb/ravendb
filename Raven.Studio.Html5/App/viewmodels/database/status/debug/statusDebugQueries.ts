@@ -3,7 +3,7 @@ import getKillQueryCommand = require("commands/getKillQueryCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import statusDebugQueriesGroup = require("models/statusDebugQueriesGroup");
 import statusDebugQueriesQuery = require("models/statusDebugQueriesQuery");
 

@@ -8,14 +8,14 @@ import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
 import getFilesystemRevisionsCommand = require('commands/filesystem/getFilesystemRevisionsCommand');
 import createFolderInFilesystem = require("viewmodels/filesystem/files/createFolderInFilesystem");
-import treeBindingHandler = require("common/treeBindingHandler");
+import treeBindingHandler = require("common/bindingHelpers/treeBindingHandler");
 import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import file = require("models/filesystem/file");
 import folder = require("models/filesystem/folder");
 import uploadItem = require("models/uploadItem");
-import fileUploadBindingHandler = require("common/fileUploadBindingHandler");
+import fileUploadBindingHandler = require("common/bindingHelpers/fileUploadBindingHandler");
 import uploadQueueHelper = require("common/uploadQueueHelper");
 
 class filesystemFiles extends viewModelBase {

@@ -52,6 +52,8 @@ Raven.Studio.Html5/App/commands/filesystem/*.js
 Raven.Studio.Html5/App/commands/filesystem/*.js.map
 Raven.Studio.Html5/App/commands/counter/*.js
 Raven.Studio.Html5/App/commands/counter/*.js.map
+Raven.Studio.Html5/App/common/bindingHelpers/*.js
+Raven.Studio.Html5/App/common/bindingHelpers/*.js.map
 Raven.Studio.Html5/App/common/*.js
 Raven.Studio.Html5/App/common/*.js.map
 Raven.Studio.Html5/App/models/*.js

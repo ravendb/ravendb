@@ -1,4 +1,4 @@
-﻿import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+﻿import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 import deleteDocumentCommand = require("commands/deleteDocumentCommand");
