@@ -64,7 +64,7 @@ namespace Raven.Tests.Storage.Voron
     }
 
     [Trait("VoronTest", "StorageActionsTests")]
-    public class StorageActionsTests
+    public class StorageActionsTests : NoDisposalNeeded
     {
         [Fact]
         public void CreateKey()
