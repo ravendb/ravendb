@@ -7,10 +7,10 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import pagedList = require("common/pagedList");
-import searchSingleInputClause = require("viewmodels/filesystem/searchSingleInputClause");
-import searchFileSizeRangeClause = require("viewmodels/filesystem/searchFileSizeRangeClause");
-import searchHasMetadataClause = require("viewmodels/filesystem/searchHasMetadataClause");
-import searchLastModifiedBetweenClause = require("viewmodels/filesystem/searchLastModifiedBetweenClause");
+import searchSingleInputClause = require("viewmodels/filesystem/files/searchSingleInputClause");
+import searchFileSizeRangeClause = require("viewmodels/filesystem/files/searchFileSizeRangeClause");
+import searchHasMetadataClause = require("viewmodels/filesystem/files/searchHasMetadataClause");
+import searchLastModifiedBetweenClause = require("viewmodels/filesystem/files/searchLastModifiedBetweenClause");
 
 class search extends viewModelBase {
 

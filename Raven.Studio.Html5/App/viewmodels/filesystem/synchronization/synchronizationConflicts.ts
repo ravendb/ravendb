@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
-import resolveConflict = require("viewmodels/filesystem/resolveConflict");
+import resolveConflict = require("viewmodels/filesystem/synchronization/resolveConflict");
 
 import conflictItem = require("models/filesystem/conflictItem");
 import filesystem = require("models/filesystem/filesystem");

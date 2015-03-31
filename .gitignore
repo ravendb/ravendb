@@ -64,6 +64,8 @@ Raven.Studio.Html5/App/viewmodels/*.js
 Raven.Studio.Html5/App/viewmodels/*.js.map
 Raven.Studio.Html5/App/viewmodels/manage/*.js
 Raven.Studio.Html5/App/viewmodels/manage/*.js.map
+Raven.Studio.Html5/App/viewmodels/manage/globalConfig/*.js
+Raven.Studio.Html5/App/viewmodels/manage/globalConfig/*.js.map
 Raven.Studio.Html5/App/viewmodels/common/*.js
 Raven.Studio.Html5/App/viewmodels/common/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/*.js

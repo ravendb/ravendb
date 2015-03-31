@@ -1,7 +1,7 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import createDatabase = require("viewmodels/resources/createDatabase");
-import createFilesystem = require("viewmodels/filesystem/createFilesystem");
+import createFilesystem = require("viewmodels/resources/createFilesystem");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 

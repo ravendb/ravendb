@@ -14,7 +14,7 @@ import changeSubscription = require('models/changeSubscription');
 import getSyncOutgoingActivitiesCommand = require("commands/filesystem/getSyncOutgoingActivitiesCommand");
 import getSyncIncomingActivitiesCommand = require("commands/filesystem/getSyncIncomingActivitiesCommand");
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
-import resetIndexConfirm = require("viewmodels/filesystem/resetIndexConfirm");
+import resetIndexConfirm = require("viewmodels/filesystem/status/resetIndexConfirm");
 
 class status extends viewModelBase {
 
