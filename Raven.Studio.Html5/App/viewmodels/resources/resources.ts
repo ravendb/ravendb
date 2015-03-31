@@ -556,7 +556,7 @@ class resources extends viewModelBase {
                         this.createDefaultFilesystemSettings(newFileSystem, bundles).always(() => {
                             if (bundles.contains("Versioning")) {
                                 encryptionConfirmationDialogPromise.always(() => {
-                                    require(['viewmodels/filesystem/filesystemSettingsDialog'], filesystemSettingsDialog => {
+                                    require(['viewmodels/resources/filesystemSettingsDialog'], filesystemSettingsDialog => {
                                         var settingsDialog = new filesystemSettingsDialog(bundles);
                                         app.showDialog(settingsDialog);
                                     });

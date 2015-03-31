@@ -14,10 +14,10 @@
             </div>
             
             <div id="dbContainer" class="row" style="min-height: 478px;" data-bind="with: createDatabasePart, visible: resourceType() == 'db'">
-                <div data-bind="compose: 'createDatabase.html'"></div>
+                <div data-bind="compose: 'resources/createDatabase.html'"></div>
             </div>
             <div id="fsContainer" class="row" style="min-height: 478px;" data-bind="with: createFilesystemPart, visible: resourceType() == 'fs'">
-                <div data-bind="compose: 'filesystem/createFilesystem.html'"></div>
+                <div data-bind="compose: 'resources/createFilesystem.html'"></div>
             </div>
         </div>
         <div class="modal-footer">

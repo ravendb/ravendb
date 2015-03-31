@@ -17,7 +17,7 @@ class filesystemSettingsDialog extends dialogViewModelBase {
 
         this.content = activator.create();
 
-        var versioningRoute = { moduleId: 'viewmodels/filesystem/versioning', title: 'Versioning', activate: true };
+        var versioningRoute = { moduleId: 'viewmodels/filesystem/settings/versioning', title: 'Versioning', activate: true };
 
         // when the activeScreen name changes - load the viewmodel
         this.activeScreen.subscribe((newValue) =>

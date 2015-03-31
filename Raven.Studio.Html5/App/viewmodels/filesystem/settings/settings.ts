@@ -17,7 +17,7 @@ class settings extends viewModelBase {
 
         this.appUrls = appUrl.forCurrentDatabase();
 
-        var versioningRoute = { route: 'filesystems/settings', moduleId: 'viewmodels/filesystem/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentFilesystem().filesystemVersioning };
+        var versioningRoute = { route: 'filesystems/settings', moduleId: 'viewmodels/filesystem/settings/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentFilesystem().filesystemVersioning };
 
         this.router = durandalRouter.createChildRouter()
             .map([
