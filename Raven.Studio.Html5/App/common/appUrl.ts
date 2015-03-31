@@ -171,7 +171,11 @@ class appUrl {
 
     static forGlobalConfig(): string {
         return '#admin/settings/globalConfig';
-    }
+	}
+
+	static forServerSmugging(): string {
+		return "#admin/settings/serverSmuggling";
+	}
 
     static forGlobalConfigPeriodicExport(): string {
         return '#admin/settings/globalConfig';

@@ -3,19 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Abstractions.Connection;
+using System.Net;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Smuggler.Client;
 
 using System;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Smuggler;
+using Raven.Smuggler.Client;
 
 namespace Raven.Smuggler
 {
@@ -24,16 +24,46 @@ namespace Raven.Smuggler
 		public SmugglerDatabaseApi(SmugglerDatabaseOptions options = null)
 			: base(options ?? new SmugglerDatabaseOptions())
 		{
-			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported, () => IsIdentitiesSmugglingSupported);
+			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => SupportedFeatures.IsDocsStreamingSupported, () => SupportedFeatures.IsTransformersSupported, () => SupportedFeatures.IsIdentitiesSmugglingSupported);
 		}
 
 		private BulkInsertOperation operation;
 
 		private DocumentStore store;
 
-        public override Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
+        public override async Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
 		{
-            return SmugglerDatabaseBetweenOperation.Between(betweenOptions, Options);
+			SetDatabaseNameIfEmpty(betweenOptions.From);
+			SetDatabaseNameIfEmpty(betweenOptions.To);
+
+	        using (var exportStore = CreateStore(betweenOptions.From))
+	        using (var exportBulkOperation = CreateBulkInsertOperation(exportStore))
+	        {
+		        var exportStoreFeatures = new Reference<ServerSupportedFeatures>();
+		        var exportOperations = new SmugglerRemoteDatabaseOperations(() => exportStore, () => exportBulkOperation, () => exportStoreFeatures.Value.IsDocsStreamingSupported, () => exportStoreFeatures.Value.IsTransformersSupported, () => exportStoreFeatures.Value.IsIdentitiesSmugglingSupported);
+
+		        exportStoreFeatures.Value = await DetectServerSupportedFeatures(exportOperations, betweenOptions.From);
+
+		        using (var importStore = CreateStore(betweenOptions.To))
+				using (var importBulkOperation = CreateBulkInsertOperation(importStore))
+		        {
+					var importStoreFeatures = new Reference<ServerSupportedFeatures>();
+					var importOperations = new SmugglerRemoteDatabaseOperations(() => importStore, () => importBulkOperation, () => importStoreFeatures.Value.IsDocsStreamingSupported, () => importStoreFeatures.Value.IsTransformersSupported, () => importStoreFeatures.Value.IsIdentitiesSmugglingSupported);
+
+			        importStoreFeatures.Value = await DetectServerSupportedFeatures(importOperations, betweenOptions.To);
+
+					await new SmugglerDatabaseBetweenOperation
+					{
+						OnShowProgress = betweenOptions.ReportProgress
+					}
+					.Between(new SmugglerBetweenOperations
+					{
+						From = exportOperations,
+						To = importOperations,
+						IncrementalKey = betweenOptions.IncrementalKey
+					}, Options);
+		        }
+	        }
 		}
 
         [Obsolete("Use RavenFS instead.")]
@@ -54,16 +84,19 @@ namespace Raven.Smuggler
 		{
             using (store = CreateStore(importOptions.To))
             {
-				Task disposeTask;
+				Task disposeTask = null;
 
 				try
 				{
-					await CreateBulkInsertOperation();
+					if (operation != null)
+						await operation.DisposeAsync();
+					operation = CreateBulkInsertOperation(store);
 					await base.ImportData(importOptions, stream);
 				}
 				finally
 				{
-				    disposeTask = operation.DisposeAsync();
+					if (operation != null) 
+						disposeTask = operation.DisposeAsync();
 				}
 
 				if (disposeTask != null)
@@ -73,31 +106,22 @@ namespace Raven.Smuggler
 			}
 		}
 
-        public override async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
+		private BulkInsertOperation CreateBulkInsertOperation(DocumentStore documentStore)
 		{
-            using (store = CreateStore(exportOptions.From))
-            {
-                return await base.ExportData(exportOptions);
-            }
-		}
-
-		private async Task CreateBulkInsertOperation()
-		{
-			if (operation != null)
-				await operation.DisposeAsync();
-
-			operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
+			var result = new ChunkedBulkInsertOperation(documentStore.DefaultDatabase, documentStore, documentStore.Listeners, new BulkInsertOptions
 			{
-                BatchSize = Options.BatchSize,
+				BatchSize = Options.BatchSize,
 				OverwriteExisting = true,
 				Compression = Options.DisableCompressionOnImport ? BulkInsertCompression.None : BulkInsertCompression.GZip
-				
-            }, store.Changes(), Options.ChunkSize, Options.TotalDocumentSizeInChunkLimitInBytes);
 
-			operation.Report += text => Operations.ShowProgress(text);
+			}, documentStore.Changes(), Options.ChunkSize, Options.TotalDocumentSizeInChunkLimitInBytes);
+
+			result.Report += text => Operations.ShowProgress(text);
+
+			return result;
 		}
 
-		private static DocumentStore CreateStore(RavenConnectionStringOptions connectionStringOptions)
+		protected static DocumentStore CreateStore(RavenConnectionStringOptions connectionStringOptions)
 		{
 			var credentials = connectionStringOptions.Credentials as NetworkCredential;
 			if (credentials != null && //precaution
@@ -116,52 +140,19 @@ namespace Raven.Smuggler
 
 			s.Initialize();
 
-			ValidateThatServerIsUpAndDatabaseExists(connectionStringOptions, s);
+			ServerValidation.ValidateThatServerIsUpAndDatabaseExists(connectionStringOptions, s);
 
 			s.DefaultDatabase = connectionStringOptions.DefaultDatabase;
 
 			return s;
 		}
 
-		internal static void ValidateThatServerIsUpAndDatabaseExists(RavenConnectionStringOptions server, DocumentStore s)
+        public override async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
 		{
-			var shouldDispose = false;
-
-			try
-			{
-				var commands = !string.IsNullOrEmpty(server.DefaultDatabase)
-								   ? s.DatabaseCommands.ForDatabase(server.DefaultDatabase)
-								   : s.DatabaseCommands;
-
-				commands.GetStatistics(); // check if database exist
-			}
-			catch (Exception e)
-			{
-				shouldDispose = true;
-
-				var responseException = e as ErrorResponseException;
-				if (responseException != null && responseException.StatusCode == HttpStatusCode.ServiceUnavailable && responseException.Message.StartsWith("Could not find a database named"))
-					throw new SmugglerException(
-						string.Format(
-							"Smuggler does not support database creation (database '{0}' on server '{1}' must exist before running Smuggler).",
-							server.DefaultDatabase,
-							s.Url), e);
-
-
-				if (e.InnerException != null)
-				{
-					var webException = e.InnerException as WebException;
-					if (webException != null)
-					{
-						throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
-					}
-				} throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
-			}
-			finally
-			{
-				if (shouldDispose)
-					s.Dispose();
-			}
+            using (store = CreateStore(exportOptions.From))
+            {
+                return await base.ExportData(exportOptions);
+            }
 		}
 	}
 }

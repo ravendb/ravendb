@@ -17,6 +17,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Database.Data;
 using Raven.Database.Smuggler;
@@ -121,7 +122,7 @@ namespace Raven.Smuggler
 			return Store.DatabaseCommands.Get(key);
 		}
 
-		public async Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
+		public async Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)
 		{
 			if (isDocsStreamingSupported())
 			{
@@ -130,23 +131,38 @@ namespace Raven.Smuggler
 			}
 
 			int retries = RetriesCount;
-			while (true)
+			var originalRequestTimeout = Store.JsonRequestFactory.RequestTimeout;
+			var timeout = Options.Timeout.Seconds;
+			if (timeout < 30)
+				timeout = 30;
+
+			try
 			{
-				try
+				while (true)
 				{
-					return await Store.AsyncDatabaseCommands.StreamDocsAsync(lastEtag, pageSize: Math.Min(Options.BatchSize, take));
+					try
+					{
+						await ((AsyncServerClient)Store.AsyncDatabaseCommands).GetDocumentsAsync(lastEtag, Math.Min(Options.BatchSize, take));
+						
+					}
+					catch (Exception e)
+					{
+						if (retries-- == 0)
+							throw;
+
+						Store.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(timeout *= 2);
+						LastRequestErrored = true;
+						ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
+					}
 				}
-				catch (Exception e)
-				{
-					if (retries-- == 0)
-						throw;
-					LastRequestErrored = true;
-					ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
-				}
+			}
+			finally
+			{
+				Store.JsonRequestFactory.RequestTimeout = originalRequestTimeout;
 			}
 		}
 
-		public async Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
+		public async Task<RavenJArray> GetIndexes(int totalCount)
 		{
 			var indexes = await Store.AsyncDatabaseCommands.GetIndexesAsync(totalCount, Options.BatchSize);
 			var result = new RavenJArray();
@@ -168,7 +184,7 @@ namespace Raven.Smuggler
 			return Store.AsyncDatabaseCommands.GetStatisticsAsync();
 		}
 
-		public async Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
+		public async Task<RavenJArray> GetTransformers(int start)
 		{
 			if (isTransformersSupported() == false)
 				return new RavenJArray();
@@ -200,7 +216,7 @@ namespace Raven.Smuggler
 		}
 
         [Obsolete("Use RavenFS instead.")]
-		public async Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo)
+		public async Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
 			if (attachmentExportInfo != null)
 			{
@@ -362,6 +378,11 @@ namespace Raven.Smuggler
 		    }
 
 		    return metadata;
+	    }
+
+	    public string GetIdentifier()
+	    {
+		    return ((AsyncServerClient) Store.AsyncDatabaseCommands).Url;
 	    }
 	}
 }

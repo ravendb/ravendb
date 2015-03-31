@@ -1021,7 +1021,7 @@ interface changesApiEventDto {
 
 interface databaseDto extends tenantDto {
     IndexingDisabled: boolean;
-	RejectClientsEnabled: boolean;
+    RejectClientsEnabled: boolean;
 	ClusterWide: boolean;
 }
 
@@ -1252,7 +1252,6 @@ interface synchronizationConfigDto {
 interface copyFromParentDto<T> {
     copyFromParent(parent: T);
 }
-
 interface topologyDto {
     CurrentLeader: string;
     CurrentTerm: number;
@@ -1280,4 +1279,28 @@ interface clusterConfigurationDto {
 interface clusterNodeStatusDto {
 	Uri: string;
 	Status: string;
+}
+
+interface serverSmugglingItemDto {
+	Name: string;
+	Incremental: boolean;
+	StripReplicationInformation: boolean;
+	ShouldDisableVersioningBundle: boolean;
+}
+
+interface serverConnectionInfoDto {
+	Url: string;
+	Username: string;
+	Password: string;
+	Domain: string;
+	ApiKey: string;
+}
+
+interface serverSmugglingDto {
+	TargetServer: serverConnectionInfoDto;
+	Config: Array<serverSmugglingItemDto>;
+}
+
+interface serverSmugglingOperationStateDto extends operationStatusDto {
+	Messages: Array<string>;
 }

@@ -625,6 +625,7 @@
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
+    <Compile Include="Smuggler\SmugglerBetweenFromEmbeddedTests_RavenDB_3318.cs" />
     <Compile Include="Smuggler\SmugglerBetweenTests.cs" />
     <Compile Include="Security\ReplicationWithMixedSecurity.cs" />
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />

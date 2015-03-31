@@ -79,16 +79,13 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
-    <Compile Include="SmugglerAbstractOperation.cs" />
     <Compile Include="Client\ChunkedBulkInsertOperation.cs" />
     <Compile Include="Client\ChunkedRemoteBulkInsertOperation.cs" />
+    <Compile Include="SmugglerAbstractOperation.cs" />
     <Compile Include="SmugglerDatabaseOperationDispatcher.cs" />
     <Compile Include="SmugglerFilesOperationDispatcher.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="SmugglerDatabaseBetweenOperation.cs" />
-    <Compile Include="ServerSupportedFeatures.cs" />
     <Compile Include="SmugglerDatabaseApi.cs" />
-    <Compile Include="SmugglerExportIncremental.cs" />
     <Compile Include="SmugglerRemoteDatabaseOperations.cs" />
     <Compile Include="SmugglerFilesApi.cs" />
     <Compile Include="SmugglerOperationDispatcher.cs" />
@@ -115,6 +112,10 @@
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4e087ecb-e7ca-4891-ac3c-3c76702715b6}</Project>
       <Name>Raven.Client.Lightweight</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Name>Raven.Database</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
