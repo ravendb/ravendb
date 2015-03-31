@@ -435,6 +435,12 @@ namespace Raven.Abstractions.Smuggler
 			            {
 				            var config = serializer.Deserialize<ConfigContainer>(new StringReader(json));
 
+							if (Options.StripReplicationInformation)
+							{
+								if (config.Name.Equals(SynchronizationConstants.RavenSynchronizationVersionHiLo, StringComparison.OrdinalIgnoreCase))
+									continue;
+							}
+
 				            await Operations.PutConfig(config.Name, config.Value);
 
 				            configurationsCount++;
