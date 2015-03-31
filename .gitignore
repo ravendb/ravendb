@@ -78,6 +78,8 @@ Raven.Studio.Html5/App/viewmodels/database/status/requests/*.js
 Raven.Studio.Html5/App/viewmodels/database/status/requests/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/status/storage/*.js
 Raven.Studio.Html5/App/viewmodels/database/status/storage/*.js.map
+Raven.Studio.Html5/App/viewmodels/database/tasks/*.js
+Raven.Studio.Html5/App/viewmodels/database/tasks/*.js.map
 Raven.Studio.Html5/App/viewmodels/filesystem/*.js
 Raven.Studio.Html5/App/viewmodels/filesystem/*.js.map
 Raven.Studio.Html5/App/viewmodels/counter/*.js

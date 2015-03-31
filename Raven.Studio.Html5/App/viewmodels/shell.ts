@@ -221,7 +221,7 @@ class shell extends viewModelBase {
             { route: "databases/indexes*details", title: "Indexes", moduleId: "viewmodels/indexesShell", nav: true, hash: this.appUrls.indexes },
             { route: "databases/transformers*details", title: "Transformers", moduleId: "viewmodels/transformersShell", nav: false, hash: this.appUrls.transformers },
             { route: "databases/query*details", title: "Query", moduleId: "viewmodels/queryShell", nav: true, hash: this.appUrls.query(null) },
-            { route: "databases/tasks*details", title: "Tasks", moduleId: "viewmodels/tasks", nav: true, hash: this.appUrls.tasks, },
+            { route: "databases/tasks*details", title: "Tasks", moduleId: "viewmodels/database/tasks/tasks", nav: true, hash: this.appUrls.tasks, },
             { route: "databases/settings*details", title: "Settings", moduleId: "viewmodels/database/settings/settings", nav: true, hash: this.appUrls.settings },
             { route: "databases/status*details", title: "Status", moduleId: "viewmodels/database/status/status", nav: true, hash: this.appUrls.status },
             { route: "databases/edit", title: "Edit Document", moduleId: "viewmodels/editDocument", nav: false },

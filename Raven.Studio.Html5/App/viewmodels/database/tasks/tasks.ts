@@ -25,11 +25,11 @@ class tasks extends viewModelBase {
         var csvImportUrl = ko.computed(() => appUrl.forCsvImport(this.activeDatabase()));
 
         var routeArray: DurandalRouteConfiguration[] = [
-            { route: ['databases/tasks', 'databases/tasks/importDatabase'], moduleId: 'viewmodels/importDatabase', title: 'Import Database', nav: true, hash: importDatabaseUrl },
-            { route: 'databases/tasks/exportDatabase', moduleId: 'viewmodels/exportDatabase', title: 'Export Database', nav: true, hash: exportDatabaseUrl },
-            { route: 'databases/tasks/toggleIndexing', moduleId: 'viewmodels/toggleIndexing', title: 'Toggle Indexing', nav: this.activeDatabase().isAdminCurrentTenant(), hash: toggleIndexingUrl },
-            { route: 'databases/tasks/sampleData', moduleId: 'viewmodels/createSampleData', title: 'Create Sample Data', nav: true, hash: sampleDataUrl },
-            { route: 'databases/tasks/csvImport', moduleId: 'viewmodels/csvImport', title: 'CSV Import', nav: true, hash: csvImportUrl }
+            { route: ['databases/tasks', 'databases/tasks/importDatabase'], moduleId: 'viewmodels/database/tasks/importDatabase', title: 'Import Database', nav: true, hash: importDatabaseUrl },
+            { route: 'databases/tasks/exportDatabase', moduleId: 'viewmodels/database/tasks/exportDatabase', title: 'Export Database', nav: true, hash: exportDatabaseUrl },
+            { route: 'databases/tasks/toggleIndexing', moduleId: 'viewmodels/database/tasks/toggleIndexing', title: 'Toggle Indexing', nav: this.activeDatabase().isAdminCurrentTenant(), hash: toggleIndexingUrl },
+            { route: 'databases/tasks/sampleData', moduleId: 'viewmodels/database/tasks/createSampleData', title: 'Create Sample Data', nav: true, hash: sampleDataUrl },
+            { route: 'databases/tasks/csvImport', moduleId: 'viewmodels/database/tasks/csvImport', title: 'CSV Import', nav: true, hash: csvImportUrl }
         ];
 
         this.router = durandalRouter.createChildRouter()
