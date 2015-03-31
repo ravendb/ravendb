@@ -186,6 +186,7 @@
     <Compile Include="DecimalQueries.cs" />
     <Compile Include="DeserializationToObjectTests.cs" />
     <Compile Include="DictionaryOfEnum.cs" />
+    <Compile Include="DicWithDateTimeKeys.cs" />
     <Compile Include="DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
     <Compile Include="DistinctWithPaging.cs" />
     <Compile Include="Dmitry.cs" />

@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Bundles.Encryption.Settings;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Abstractions;
@@ -16,6 +17,7 @@ namespace Raven.Database.Bundles.Encryption.Settings
 	internal static class EncryptionSettingsManager
 	{
 		private static readonly string EncryptionSettingsKeyInExtensionsState = Guid.NewGuid().ToString();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		public static EncryptionSettings GetEncryptionSettingsForResource(IResourceStore resource)
 		{
@@ -132,10 +134,20 @@ namespace Raven.Database.Bundles.Encryption.Settings
 			{
 				doc = database.Documents.Get(Constants.InResourceKeyVerificationDocumentName, null);
 			}
-			catch (CryptographicException e)
+			catch (Exception e)
 			{
-				throw new ConfigurationErrorsException("The database is encrypted with a different key and/or algorithm than the ones "
-					+ "currently in the configuration file.", e);
+				if (e is CryptographicException)
+				{
+					throw new ConfigurationErrorsException("The database is encrypted with a different key and/or algorithm than the ones "
+													   + "currently in the configuration file.", e);
+				}
+				if (settings.Codec.UsingSha1)
+					throw;
+				
+				log.Debug("Couldn't decrypt the database using MD5. Trying with SHA1.");
+				settings.Codec.UseSha1();
+				VerifyEncryptionKey(database, settings);
+				return;
 			}
 
 			if (doc != null)

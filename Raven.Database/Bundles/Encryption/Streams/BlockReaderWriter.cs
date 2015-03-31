@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Encryption.Settings;
+using Raven.Database.Bundles.Encryption;
 
 namespace Raven.Bundles.Encryption.Streams
 {

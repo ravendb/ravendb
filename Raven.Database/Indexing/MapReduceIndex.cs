@@ -288,6 +288,7 @@ namespace Raven.Database.Indexing
 					while (enumerator.MoveNext())
 					{
 						accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
+						actions.General.MaybePulseTransaction();
 					}
 				}
 

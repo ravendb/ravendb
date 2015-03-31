@@ -11,6 +11,11 @@ namespace Raven.Abstractions.Json.Linq
 	{
 		public readonly static RavenJTokenEqualityComparer Default = new RavenJTokenEqualityComparer();
 
+		private RavenJTokenEqualityComparer()
+		{
+			
+		}
+
 	    /// <summary>
 	    /// Determines whether the specified objects are equal.
 	    /// </summary>
