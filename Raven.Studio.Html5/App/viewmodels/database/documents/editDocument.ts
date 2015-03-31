@@ -1,4 +1,4 @@
-﻿/// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
+﻿/// <reference path="../../../../Scripts/typings/ace/ace.amd.d.ts" />
 
 import app = require("durandal/app");
 import sys = require("durandal/system");
@@ -25,7 +25,7 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
 import pagedResultSet = require("common/pagedResultSet");
 
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class editDocument extends viewModelBase {

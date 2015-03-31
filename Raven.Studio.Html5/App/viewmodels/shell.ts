@@ -20,7 +20,7 @@ import license = require("models/license");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import dialogResult = require("common/dialogResult");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
@@ -47,9 +47,9 @@ import getCounterStoragesCommand = require("commands/counter/getCounterStoragesC
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 import getServerConfigsCommand = require("commands/getServerConfigsCommand");
 
-import recentErrors = require("viewmodels/recentErrors");
-import enterApiKey = require("viewmodels/enterApiKey");
-import latestBuildReminder = require("viewmodels/latestBuildReminder");
+import recentErrors = require("viewmodels/common/recentErrors");
+import enterApiKey = require("viewmodels/common/enterApiKey");
+import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
@@ -213,18 +213,18 @@ class shell extends viewModelBase {
         NProgress.set(.7);
         router.map([
             { route: "admin/settings*details", title: "Admin Settings", moduleId: "viewmodels/manage/adminSettings", nav: true, hash: this.appUrls.adminSettings },
-            { route: ["", "resources"], title: "Resources", moduleId: "viewmodels/resources", nav: true, hash: this.appUrls.resourcesManagement },
-            { route: "databases/documents", title: "Documents", moduleId: "viewmodels/documents", nav: true, hash: this.appUrls.documents },
-            { route: "databases/conflicts", title: "Conflicts", moduleId: "viewmodels/conflicts", nav: true, hash: this.appUrls.conflicts },
-            { route: "databases/patch", title: "Patch", moduleId: "viewmodels/patch", nav: true, hash: this.appUrls.patch },
-            { route: "databases/upgrade", title: "Upgrade in progress", moduleId: "viewmodels/upgrade", nav: false, hash: this.appUrls.upgrade },
+            { route: ["", "resources"], title: "Resources", moduleId: "viewmodels/resources/resources", nav: true, hash: this.appUrls.resourcesManagement },
+            { route: "databases/documents", title: "Documents", moduleId: "viewmodels/database/documents/documents", nav: true, hash: this.appUrls.documents },
+            { route: "databases/conflicts", title: "Conflicts", moduleId: "viewmodels/database/conflicts/conflicts", nav: true, hash: this.appUrls.conflicts },
+            { route: "databases/patch", title: "Patch", moduleId: "viewmodels/database/patch/patch", nav: true, hash: this.appUrls.patch },
+            { route: "databases/upgrade", title: "Upgrade in progress", moduleId: "viewmodels/common/upgrade", nav: false, hash: this.appUrls.upgrade },
             { route: "databases/indexes*details", title: "Indexes", moduleId: "viewmodels/database/indexes/indexesShell", nav: true, hash: this.appUrls.indexes },
             { route: "databases/transformers*details", title: "Transformers", moduleId: "viewmodels/database/transformers/transformersShell", nav: false, hash: this.appUrls.transformers },
             { route: "databases/query*details", title: "Query", moduleId: "viewmodels/database/query/queryShell", nav: true, hash: this.appUrls.query(null) },
             { route: "databases/tasks*details", title: "Tasks", moduleId: "viewmodels/database/tasks/tasks", nav: true, hash: this.appUrls.tasks, },
             { route: "databases/settings*details", title: "Settings", moduleId: "viewmodels/database/settings/settings", nav: true, hash: this.appUrls.settings },
             { route: "databases/status*details", title: "Status", moduleId: "viewmodels/database/status/status", nav: true, hash: this.appUrls.status },
-            { route: "databases/edit", title: "Edit Document", moduleId: "viewmodels/editDocument", nav: false },
+            { route: "databases/edit", title: "Edit Document", moduleId: "viewmodels/database/documents/editDocument", nav: false },
             { route: "filesystems/files", title: "Files", moduleId: "viewmodels/filesystem/filesystemFiles", nav: true, hash: this.appUrls.filesystemFiles },
             { route: "filesystems/search", title: "Search", moduleId: "viewmodels/filesystem/search", nav: true, hash: this.appUrls.filesystemSearch },
             { route: "filesystems/synchronization*details", title: "Synchronization", moduleId: "viewmodels/filesystem/synchronization", nav: true, hash: this.appUrls.filesystemSynchronization },
@@ -995,7 +995,7 @@ class shell extends viewModelBase {
     }
 
     showLicenseStatusDialog() {
-        require(["viewmodels/licensingStatus"], licensingStatus => {
+        require(["viewmodels/common/licensingStatus"], licensingStatus => {
             var dialog = new licensingStatus(license.licenseStatus());
             app.showDialog(dialog);
         });

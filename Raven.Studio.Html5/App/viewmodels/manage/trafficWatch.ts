@@ -1,6 +1,6 @@
 ﻿import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import watchTrafficConfigDialog = require("viewmodels/watchTrafficConfigDialog");
+import watchTrafficConfigDialog = require("viewmodels/manage/watchTrafficConfigDialog");
 import trafficWatchClient = require("common/trafficWatchClient");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import moment = require("moment");

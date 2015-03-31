@@ -9,7 +9,7 @@ import document = require("models/document");
 import database = require("models/database");
 import jsonUtil = require("common/jsonUtil");
 import viewModelBase = require("viewmodels/viewModelBase");
-import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
 import messagePublisher = require("common/messagePublisher");
 import shell = require('viewmodels/shell');
 

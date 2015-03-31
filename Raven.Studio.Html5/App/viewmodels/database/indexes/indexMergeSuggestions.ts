@@ -120,7 +120,7 @@ class indexMergeSuggestions extends viewModelBase {
     deleteIndexes(index: number) {
         var mergeSuggestion = this.suggestions()[index];
         var indexesToDelete = mergeSuggestion.canDelete;
-        require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+        require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
             var db = this.activeDatabase();
             var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db);
             deleteViewModel.deleteTask.always(() => this.reload());
@@ -130,7 +130,7 @@ class indexMergeSuggestions extends viewModelBase {
 
 
     deleteIndex(name: string) {
-        require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+        require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
             var db = this.activeDatabase();
             var deleteViewModel = new deleteIndexesConfirm([name], db);
             deleteViewModel.deleteTask.always(() => this.reload());
@@ -139,7 +139,7 @@ class indexMergeSuggestions extends viewModelBase {
     }
 
     deleteAllIdleOrAbandoned () {
-        require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+        require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
             var db = this.activeDatabase();
             var deleteViewModel = new deleteIndexesConfirm(this.idleOrAbandonedIndexes().map(index => index.Name), db, "Delete all idle or abandoned indexes?");
             deleteViewModel.deleteTask.always(() => this.reload());
@@ -148,7 +148,7 @@ class indexMergeSuggestions extends viewModelBase {
     }
 
     deleteAllNotUsedForWeek() {
-        require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+        require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
             var db = this.activeDatabase();
             var deleteViewModel = new deleteIndexesConfirm(this.notUsedForLastWeek().map(index => index.Name), db, "Delete all indexes not used within last week?");
             deleteViewModel.deleteTask.always(() => this.reload());

@@ -6,7 +6,7 @@ import appUrl = require("common/appUrl");
 import sqlReplicationStatsDialog = require("viewmodels/database/status/sqlReplicationStatsDialog");
 import app = require("durandal/app");
 import document = require("models/document");
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import messagePublisher = require("common/messagePublisher");
 import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand");
 

@@ -64,10 +64,18 @@ Raven.Studio.Html5/App/viewmodels/*.js
 Raven.Studio.Html5/App/viewmodels/*.js.map
 Raven.Studio.Html5/App/viewmodels/manage/*.js
 Raven.Studio.Html5/App/viewmodels/manage/*.js.map
+Raven.Studio.Html5/App/viewmodels/common/*.js
+Raven.Studio.Html5/App/viewmodels/common/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/*.js
 Raven.Studio.Html5/App/viewmodels/database/*.js.map
+Raven.Studio.Html5/App/viewmodels/database/conflicts/*.js
+Raven.Studio.Html5/App/viewmodels/database/conflicts/*.js.map
+Raven.Studio.Html5/App/viewmodels/database/documents/*.js
+Raven.Studio.Html5/App/viewmodels/database/documents/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/indexes/*.js
 Raven.Studio.Html5/App/viewmodels/database/indexes/*.js.map
+Raven.Studio.Html5/App/viewmodels/database/patch/*.js
+Raven.Studio.Html5/App/viewmodels/database/patch/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/transformers/*.js
 Raven.Studio.Html5/App/viewmodels/database/transformers/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/settings/*.js
@@ -88,6 +96,8 @@ Raven.Studio.Html5/App/viewmodels/database/status/storage/*.js
 Raven.Studio.Html5/App/viewmodels/database/status/storage/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/tasks/*.js
 Raven.Studio.Html5/App/viewmodels/database/tasks/*.js.map
+Raven.Studio.Html5/App/viewmodels/resources/*.js
+Raven.Studio.Html5/App/viewmodels/resources/*.js.map
 Raven.Studio.Html5/App/viewmodels/filesystem/*.js
 Raven.Studio.Html5/App/viewmodels/filesystem/*.js.map
 Raven.Studio.Html5/App/viewmodels/counter/*.js

@@ -20,14 +20,14 @@ import scriptedIndexModel = require("models/scriptedIndex");
 import autoCompleterSupport = require("common/autoCompleterSupport");
 import mergedIndexesStorage = require("common/mergedIndexesStorage");
 import indexMergeSuggestion = require("models/indexMergeSuggestion");
-import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
-import replaceIndexDialog = require("viewmodels/replaceIndexDialog");
+import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
+import replaceIndexDialog = require("viewmodels/database/indexes/replaceIndexDialog");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import indexReplaceDocument = require("models/indexReplaceDocument");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 import saveScriptedIndexesCommand = require("commands/saveScriptedIndexesCommand");
 import deleteIndexCommand = require("commands/deleteIndexCommand");
-import cancelSideBySizeConfirm = require("viewmodels/cancelSideBySizeConfirm");
+import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 
 class editIndex extends viewModelBase { 
 
@@ -386,7 +386,7 @@ class editIndex extends viewModelBase {
     }
 
     copyIndex() {
-        require(["viewmodels/copyIndexDialog"], copyIndexDialog => {
+        require(["viewmodels/database/indxes/copyIndexDialog"], copyIndexDialog => {
             app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
         });   
     }
@@ -396,7 +396,7 @@ class editIndex extends viewModelBase {
             new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
                 .execute()
                 .done((data: string) => {
-                    require(["viewmodels/showDataDialog"], showDataDialog => {
+                    require(["viewmodels/common/showDataDialog"], showDataDialog => {
                         app.showDialog(new showDataDialog("C# Index Definition", data));
                     });
                 });

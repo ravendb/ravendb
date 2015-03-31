@@ -4,7 +4,7 @@ import virtualTable = require("widgets/virtualTable/viewModel");
 
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
-import deleteCollection = require("viewmodels/deleteCollection");
+import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 
 import collection = require("models/collection");
 import database = require("models/database");
@@ -340,7 +340,7 @@ class documents extends viewModelBase {
     }
 
     selectColumns() {
-        require(["viewmodels/selectColumns"], selectColumns => {
+        require(["viewmodels/common/selectColumns"], selectColumns => {
 
             // Fetch column widths from virtual table
             var virtualTable = this.getDocumentsGrid();

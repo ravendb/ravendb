@@ -6,14 +6,14 @@ import counterStorage = require("models/counter/counterStorage");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import changesApi = require("common/changesApi");
-import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
 import shell = require("viewmodels/shell");
 import changesCallback = require("common/changesCallback");
 import changeSubscription = require("models/changeSubscription");
 import uploadItem = require("models/uploadItem");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
-import confirmationDialog = require("viewmodels/confirmationDialog");
+import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import document = require("models/document");
 

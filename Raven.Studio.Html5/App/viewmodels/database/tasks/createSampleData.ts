@@ -32,7 +32,7 @@ class createSampleData extends viewModelBase{
                     this.isVisible(true);
                     var data = results.replace("\r\n", "");
 
-                    require(["viewmodels/showDataDialog"], showDataDialog => {
+                    require(["viewmodels/common/showDataDialog"], showDataDialog => {
                         app.showDialog(new showDataDialog("Sample Data Classes", data));
                     });
                 })

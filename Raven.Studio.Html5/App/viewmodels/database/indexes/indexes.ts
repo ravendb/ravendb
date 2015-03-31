@@ -6,15 +6,15 @@ import saveIndexLockModeCommand = require("commands/saveIndexLockModeCommand");
 import saveIndexAsPersistentCommand = require("commands/saveIndexAsPersistentCommand");
 import querySort = require("models/querySort");
 import app = require("durandal/app");
-import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
+import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
 import router = require("plugins/router"); 
 import shell = require("viewmodels/shell");
 import changeSubscription = require("models/changeSubscription");
 import indexesShell = require("viewmodels/database/indexes/indexesShell");
 import recentQueriesStorage = require("common/recentQueriesStorage");
-import copyIndexDialog = require("viewmodels/copyIndexDialog");
-import replaceIndexDialog = require("viewmodels/replaceIndexDialog");
-import indexesAndTransformersClipboardDialog = require("viewmodels/indexesAndTransformersClipboardDialog");
+import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
+import replaceIndexDialog = require("viewmodels/database/indexes/replaceIndexDialog");
+import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/getPendingIndexReplacementsCommand");
 import d3 = require('d3/d3');
@@ -281,7 +281,7 @@ class indexes extends viewModelBase {
     }
 
     cancelIndex(i: index) {
-        require(["viewmodels/cancelSideBySizeConfirm"], cancelSideBySizeConfirm => {
+        require(["viewmodels/database/indexes/cancelSideBySizeConfirm"], cancelSideBySizeConfirm => {
             var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
             app.showDialog(cancelSideBySideIndexViewModel);
             cancelSideBySideIndexViewModel.cancelTask
@@ -299,7 +299,7 @@ class indexes extends viewModelBase {
 
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
-            require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+            require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
                 var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
                 app.showDialog(deleteIndexesVm);
                 deleteIndexesVm.deleteTask

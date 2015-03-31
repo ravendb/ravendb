@@ -9,7 +9,7 @@ import updateFileMetadataCommand = require("commands/filesystem/updateFileMetada
 import viewModelBase = require("viewmodels/viewModelBase");
 import file = require("models/filesystem/file");
 import fileMetadata = require("models/filesystem/fileMetadata");
-import deleteItems = require("viewmodels/deleteItems");
+import deleteItems = require("viewmodels/common/deleteItems");
 import fileRenameDialog = require("viewmodels/filesystem/fileRenameDialog");
 
 class filesystemEditFile extends viewModelBase {

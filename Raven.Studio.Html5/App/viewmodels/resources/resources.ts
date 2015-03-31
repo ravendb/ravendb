@@ -187,7 +187,7 @@ class resources extends viewModelBase {
 
     deleteSelectedResources(resources: Array<resource>) {
         if (resources.length > 0) {
-            require(["viewmodels/deleteResourceConfirm"], deleteResourceConfirm => {
+            require(["viewmodels/resources/deleteResourceConfirm"], deleteResourceConfirm => {
                 var confirmDeleteViewModel = new deleteResourceConfirm(resources);
 
                 confirmDeleteViewModel.deleteTask.done((deletedResources: Array<resource>) => {
@@ -258,7 +258,7 @@ class resources extends viewModelBase {
         if (resources.length > 0) {
             var action = !resources[0].disabled();
 
-            require(["viewmodels/disableResourceToggleConfirm"], disableResourceToggleConfirm => {
+            require(["viewmodels/resources/disableResourceToggleConfirm"], disableResourceToggleConfirm => {
                 var disableDatabaseToggleViewModel = new disableResourceToggleConfirm(resources);
 
                 disableDatabaseToggleViewModel.disableToggleTask
@@ -329,7 +329,7 @@ class resources extends viewModelBase {
 	}
 
     newResource() {
-        require(["viewmodels/createResource"], createResource => {
+        require(["viewmodels/resources/createResource"], createResource => {
             var createResourceViewModel = new createResource(this.databases, this.fileSystems, license.licenseStatus);
             createResourceViewModel.createDatabasePart
                 .creationTask
@@ -399,7 +399,7 @@ class resources extends viewModelBase {
         var encryptionDeferred = $.Deferred();
 
         if (bundles.contains("Encryption")) {
-            require(["viewmodels/createEncryption"], createEncryption => {
+            require(["viewmodels/resources/createEncryption"], createEncryption => {
                 var createEncryptionViewModel = new createEncryption();
                 createEncryptionViewModel
                     .creationEncryption
@@ -429,7 +429,7 @@ class resources extends viewModelBase {
 
                         var encryptionConfirmationDialogPromise = $.Deferred();
                         if (!jQuery.isEmptyObject(securedSettings)) {
-                            require(["viewmodels/createEncryptionConfirmation"], createEncryptionConfirmation => {
+                            require(["viewmodels/resources/createEncryptionConfirmation"], createEncryptionConfirmation => {
                                 var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
                                 createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
                                 createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
@@ -442,7 +442,7 @@ class resources extends viewModelBase {
                         this.createDefaultDatabaseSettings(newDatabase, bundles).always(() => {
                             if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                                 encryptionConfirmationDialogPromise.always(() => {
-                                    require(["viewmodels/databaseSettingsDialog"], databaseSettingsDialog => {
+                                    require(["viewmodels/resources/databaseSettingsDialog"], databaseSettingsDialog => {
                                         var settingsDialog = new databaseSettingsDialog(bundles);
                                         app.showDialog(settingsDialog);
                                     });
@@ -513,7 +513,7 @@ class resources extends viewModelBase {
         var encryptionDeferred = $.Deferred();
 
         if (bundles.contains("Encryption")) {
-            require(["viewmodels/createEncryption"], createEncryption => {
+            require(["viewmodels/resources/createEncryption"], createEncryption => {
                 var createEncryptionViewModel = new createEncryption();
                 createEncryptionViewModel
                     .creationEncryption
@@ -543,7 +543,7 @@ class resources extends viewModelBase {
 
                         var encryptionConfirmationDialogPromise = $.Deferred();
                         if (!jQuery.isEmptyObject(securedSettings)) {
-                            require(["viewmodels/createEncryptionConfirmation"], createEncryptionConfirmation => {
+                            require(["viewmodels/resources/createEncryptionConfirmation"], createEncryptionConfirmation => {
                                 var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
                                 createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
                                 createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());

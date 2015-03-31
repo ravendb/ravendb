@@ -6,7 +6,7 @@ import database = require("models/database");
 import moment = require("moment");
 import appUrl = require("common/appUrl");
 import changeSubscription = require('models/changeSubscription');
-import copyDocuments = require("viewmodels/copyDocuments");
+import copyDocuments = require("viewmodels/database/documents/copyDocuments");
 import document = require("models/document");
 
 class logs extends viewModelBase {
