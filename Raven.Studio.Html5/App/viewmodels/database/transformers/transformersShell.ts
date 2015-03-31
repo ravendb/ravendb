@@ -2,7 +2,7 @@
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
-import editTransformer = require("viewmodels/editTransformer");
+import editTransformer = require("viewmodels/database/transformers/editTransformer");
 
 class transformerShell extends viewModelBase {
     router: DurandalRootRouter;
@@ -17,8 +17,8 @@ class transformerShell extends viewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'databases/transformers', moduleId: 'viewmodels/transformers', title: 'Transformers', nav: true },
-                { route: 'databases/transformers/edit(/:transformerName)', moduleId: 'viewmodels/editTransformer', title: 'Edit Transformer', nav: true }
+                { route: 'databases/transformers', moduleId: 'viewmodels/database/transformers/transformers', title: 'Transformers', nav: true },
+                { route: 'databases/transformers/edit(/:transformerName)', moduleId: 'viewmodels/database/transformers/editTransformer', title: 'Edit Transformer', nav: true }
                 
             ])
             .buildNavigationModel();
