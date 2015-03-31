@@ -1,7 +1,7 @@
-/// <reference path="../../Scripts/typings/d3/nvd3.d.ts" />
-/// <reference path="../../Scripts/typings/d3/d3.d.ts" />
-/// <reference path="../../Scripts/typings/d3/timelinesChart.d.ts" />
-/// <reference path="../../Scripts/typings/d3/timelines.d.ts" />
+/// <reference path="../../../../../Scripts/typings/d3/nvd3.d.ts" />
+/// <reference path="../../../../../Scripts/typings/d3/d3.d.ts" />
+/// <reference path="../../../../../Scripts/typings/d3/timelinesChart.d.ts" />
+/// <reference path="../../../../../Scripts/typings/d3/timelines.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");

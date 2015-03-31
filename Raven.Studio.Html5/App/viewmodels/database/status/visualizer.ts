@@ -1,4 +1,4 @@
-﻿/// <reference path="../../Scripts/typings/jquery.fullscreen/jquery.fullscreen.d.ts"/>
+﻿/// <reference path="../../../../Scripts/typings/jquery.fullscreen/jquery.fullscreen.d.ts"/>
 
 import app = require("durandal/app");
 
@@ -15,8 +15,8 @@ import router = require("plugins/router");
 
 import database = require("models/database");
 
-import visualizerKeys = require("viewmodels/visualizerKeys");
-import visualizerImport = require("viewmodels/visualizerImport");
+import visualizerKeys = require("viewmodels/database/status/visualizerKeys");
+import visualizerImport = require("viewmodels/database/status/visualizerImport");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import queryIndexDebugDocsCommand = require("commands/queryIndexDebugDocsCommand");

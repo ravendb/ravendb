@@ -1,4 +1,4 @@
-/// <reference path="../../Scripts/typings/bootstrap.multiselect/bootstrap.multiselect.d.ts" />
+/// <reference path="../../../../../Scripts/typings/bootstrap.multiselect/bootstrap.multiselect.d.ts" />
 
 
 import shell = require("viewmodels/shell");

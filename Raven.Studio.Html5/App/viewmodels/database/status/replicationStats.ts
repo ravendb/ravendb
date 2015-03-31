@@ -1,4 +1,4 @@
-/// <reference path="../../Scripts/typings/d3/dagre.d.ts" />
+/// <reference path="../../../../Scripts/typings/d3/dagre.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import getReplicationStatsCommand = require("commands/getReplicationStatsCommand");

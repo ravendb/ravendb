@@ -17,9 +17,9 @@ class databaseSettingsDialog extends dialogViewModelBase {
 
         this.content = activator.create();
 
-        var quotasRoute = { moduleId: 'viewmodels/quotas', title: 'Quotas', activate: true };
-        var versioningRoute = { moduleId: 'viewmodels/versioning', title: 'Versioning', activate: true };
-        var sqlReplicationConnectionRoute = { moduleId: 'viewmodels/sqlReplicationConnectionStringsManagement', title: 'SQL Replication Connection Strings', activate: true };
+        var quotasRoute = { moduleId: 'viewmodels/database/settings/quotas', title: 'Quotas', activate: true };
+        var versioningRoute = { moduleId: 'viewmodels/database/settings/versioning', title: 'Versioning', activate: true };
+        var sqlReplicationConnectionRoute = { moduleId: 'viewmodels/database/settings/sqlReplicationConnectionStringsManagement', title: 'SQL Replication Connection Strings', activate: true };
 
         // when the activeScreen name changes - load the viewmodel
         this.activeScreen.subscribe((newValue) =>

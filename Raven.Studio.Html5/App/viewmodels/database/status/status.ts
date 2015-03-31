@@ -23,19 +23,19 @@ class status extends viewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'databases/status', moduleId: 'viewmodels/statistics', title: 'Stats', nav: true, hash: appUrl.forCurrentDatabase().status },
-                { route: 'databases/status/indexing*details', moduleId: 'viewmodels/indexing', title: 'Indexing', nav: true, hash: appUrl.forCurrentDatabase().indexPerformance },
-                { route: 'databases/status/requests*details', moduleId: 'viewmodels/requests', title: 'Request Tracking', nav: true, hash: appUrl.forCurrentDatabase().requestsCount },
-                { route: 'databases/status/logs', moduleId: 'viewmodels/logs', title: 'Logs', nav: true, hash: appUrl.forCurrentDatabase().logs },
-                { route: 'databases/status/runningTasks', moduleId: 'viewmodels/runningTasks', title: 'Running Tasks', nav: true, hash: appUrl.forCurrentDatabase().runningTasks },
-                { route: 'databases/status/alerts', moduleId: 'viewmodels/alerts', title: 'Alerts', nav: true, hash: appUrl.forCurrentDatabase().alerts },
-                { route: 'databases/status/indexErrors', moduleId: 'viewmodels/indexErrors', title: 'Index Errors', nav: true, hash: appUrl.forCurrentDatabase().indexErrors },
-                { route: 'databases/status/replicationStats', moduleId: 'viewmodels/replicationStats', title: 'Replication Stats', nav: true, hash: appUrl.forCurrentDatabase().replicationStats },
-                { route: 'databases/status/sqlReplicationPerfStats', moduleId: 'viewmodels/sqlReplicationPerfStats', title: 'SQL Replication Stats', nav: true, hash: appUrl.forCurrentDatabase().sqlReplicationPerfStats },
-                { route: 'databases/status/userInfo', moduleId: 'viewmodels/userInfo', title: 'User Info', nav: true, hash: appUrl.forCurrentDatabase().userInfo },
-                { route: 'databases/status/visualizer', moduleId: 'viewmodels/visualizer', title: 'Map/Reduce Visualizer', nav: true, hash: appUrl.forCurrentDatabase().visualizer },
-                { route: 'databases/status/debug*details', moduleId: 'viewmodels/statusDebug', title: 'Debug', nav: true, hash: appUrl.forCurrentDatabase().statusDebug },
-                { route: 'databases/status/storage*details', moduleId: 'viewmodels/statusStorage', title: 'Storage', nav: true, hash: appUrl.forCurrentDatabase().statusStorageOnDisk },
+                { route: 'databases/status', moduleId: 'viewmodels/database/status/statistics', title: 'Stats', nav: true, hash: appUrl.forCurrentDatabase().status },
+                { route: 'databases/status/indexing*details', moduleId: 'viewmodels/database/status/indexing/indexing', title: 'Indexing', nav: true, hash: appUrl.forCurrentDatabase().indexPerformance },
+                { route: 'databases/status/requests*details', moduleId: 'viewmodels/database/status/requests/requests', title: 'Request Tracking', nav: true, hash: appUrl.forCurrentDatabase().requestsCount },
+                { route: 'databases/status/logs', moduleId: 'viewmodels/database/status/logs', title: 'Logs', nav: true, hash: appUrl.forCurrentDatabase().logs },
+                { route: 'databases/status/runningTasks', moduleId: 'viewmodels/database/status/runningTasks', title: 'Running Tasks', nav: true, hash: appUrl.forCurrentDatabase().runningTasks },
+                { route: 'databases/status/alerts', moduleId: 'viewmodels/database/status/alerts', title: 'Alerts', nav: true, hash: appUrl.forCurrentDatabase().alerts },
+                { route: 'databases/status/indexErrors', moduleId: 'viewmodels/database/status/indexErrors', title: 'Index Errors', nav: true, hash: appUrl.forCurrentDatabase().indexErrors },
+                { route: 'databases/status/replicationStats', moduleId: 'viewmodels/database/status/replicationStats', title: 'Replication Stats', nav: true, hash: appUrl.forCurrentDatabase().replicationStats },
+                { route: 'databases/status/sqlReplicationPerfStats', moduleId: 'viewmodels/database/status/sqlReplicationPerfStats', title: 'SQL Replication Stats', nav: true, hash: appUrl.forCurrentDatabase().sqlReplicationPerfStats },
+                { route: 'databases/status/userInfo', moduleId: 'viewmodels/database/status/userInfo', title: 'User Info', nav: true, hash: appUrl.forCurrentDatabase().userInfo },
+                { route: 'databases/status/visualizer', moduleId: 'viewmodels/database/status/visualizer', title: 'Map/Reduce Visualizer', nav: true, hash: appUrl.forCurrentDatabase().visualizer },
+                { route: 'databases/status/debug*details', moduleId: 'viewmodels/database/status/debug/statusDebug', title: 'Debug', nav: true, hash: appUrl.forCurrentDatabase().statusDebug },
+                { route: 'databases/status/storage*details', moduleId: 'viewmodels/database/status/storage/statusStorage', title: 'Storage', nav: true, hash: appUrl.forCurrentDatabase().statusStorageOnDisk },
                 { route: 'databases/status/infoPackage', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: shell.canExposeConfigOverTheWire(), hash: appUrl.forCurrentDatabase().infoPackage }
 			])
             .buildNavigationModel();
