@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 using Rachis.Transport;
@@ -30,7 +31,7 @@ namespace Raven.Tests.Raft
 				foreach (var database in databases)
 					store.DatabaseCommands.GlobalAdmin.DeleteDatabase(database.Key.Substring(Constants.Database.Prefix.Length));
 
-				var request = store.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/create", "POST");
+				var request = store.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/create", HttpMethod.Post);
 				await request.WriteAsync(RavenJObject.FromObject(new NodeConnectionInfo()));
 			}
 		}
@@ -40,7 +41,7 @@ namespace Raven.Tests.Raft
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				var request = store.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/create", "POST");
+				var request = store.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/create", HttpMethod.Post);
 				var e = await AssertAsync.Throws<ErrorResponseException>(() => request.WriteAsync(RavenJObject.FromObject(new NodeConnectionInfo())));
 
 				Assert.Equal("To create a cluster server must not contain any databases.", e.Message);

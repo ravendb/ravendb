@@ -175,6 +175,11 @@
     <Compile Include="FileSystem\Shard\IShardResolutionStrategy.cs" />
     <Compile Include="Smuggler\ServerValidation.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseBetweenOperation.cs" />
+    <Compile Include="Metrics\AtomicLong.cs" />
+    <Compile Include="Metrics\EWMA.cs" />
+    <Compile Include="Metrics\RequestTimeMetric.cs" />
+    <Compile Include="Metrics\TimeUnit.cs" />
+    <Compile Include="Metrics\VolatileDouble.cs" />
     <Compile Include="Util\HttpClientCache.cs" />
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />

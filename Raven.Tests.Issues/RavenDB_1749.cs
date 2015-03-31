@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Net;
+using System.Net.Http;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -34,7 +35,7 @@ namespace Raven.Tests.Issues
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                               servers[0].SystemDatabase.ServerUrl +
                                                                               string.Format("admin/replication/purge-tombstones?docEtag={0}&attachmentEtag={1}", null, lastAttachmentEtag),
-                                                                              "POST",
+                                                                              HttpMethod.Post,
                                                                               new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                               store1.Conventions);
             store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();

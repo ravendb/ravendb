@@ -3,11 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Net.Http;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Request;
+using Raven.Client.Metrics;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
 using System;
@@ -72,12 +75,12 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		protected ReplicationInformerBase(Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime=1000)
+		protected ReplicationInformerBase(Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000)
 		{
 			Conventions = conventions;
-		    this.requestFactory = requestFactory;
-		    ReplicationDestinations = new List<OperationMetadata>();
-		    DelayTimeInMiliSec = delayTime;
+			this.requestFactory = requestFactory;
+			ReplicationDestinations = new List<OperationMetadata>();
+			DelayTimeInMiliSec = delayTime;
 			FailureCounters = new FailureCounters();
 		}
 
@@ -96,7 +99,7 @@ namespace Raven.Client.Connection
 	    /// <summary>
 	    /// Should execute the operation using the specified operation URL
 	    /// </summary>
-	    private bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, int currentRequest, string method, bool primary, Exception error, CancellationToken token)
+	    private bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, HttpMethod method, bool primary, Exception error, CancellationToken token)
 	    {
 	        if (primary == false)
 	            AssertValidOperation(method, error);
@@ -120,7 +123,7 @@ namespace Raven.Client.Connection
 	                    {
 	                        var r = await TryOperationAsync<object>(async metadata =>
 	                        {
-	                            var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, Conventions);
+								var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), HttpMethod.Get, metadata.Credentials, Conventions);
 		                        using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 		                        {
 			                        await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -153,19 +156,20 @@ namespace Raven.Client.Connection
 
 	    protected abstract string GetServerCheckUrl(string baseUrl);
 
-	    protected void AssertValidOperation(string method, Exception e)
+	    protected void AssertValidOperation(HttpMethod method, Exception e)
 		{
 			switch (Conventions.FailoverBehaviorWithoutFlags)
 			{
 				case FailoverBehavior.AllowReadsFromSecondaries:
-					if (method == "GET")
+				case FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed:
+					if (method == HttpMethod.Get)
 						return;
 					break;
 				case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
 					return;
 				case FailoverBehavior.FailImmediately:
 					var allowReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
-					if (allowReadFromAllServers && method == "GET")
+					if (allowReadFromAllServers && method == HttpMethod.Get)
 						return;
 					break;
 			}
@@ -187,21 +191,28 @@ namespace Raven.Client.Connection
             return increment ? Interlocked.Increment(ref readStripingBase) : readStripingBase;
 		}
 
-		public async Task<T> ExecuteWithReplicationAsync<T>(string method, 
-			string primaryUrl, 
-			OperationCredentials primaryCredentials, 
-			int currentRequest, 
-			int currentReadStripingBase, 
-			Func<OperationMetadata, Task<T>> operation, 
+		public async Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method,
+			string primaryUrl,
+			OperationCredentials primaryCredentials,
+			RequestTimeMetric primaryRequestTimeMetric,
+			int currentRequest,
+			int currentReadStripingBase,
+			Func<OperationMetadata, Task<T>> operation,
 			CancellationToken token = default (CancellationToken))
-        {
-            var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
-            var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials, null);
+		{
+			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
+			var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials, null);
 
-            var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
-            var operationResult = new AsyncOperationResult<T>();
+			var operationResult = new AsyncOperationResult<T>();
+			var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 
-            if (shouldReadFromAllServers && method == "GET")
+			var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
+			if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && method == HttpMethod.Get && primaryRequestTimeMetric != null)
+			{
+				shouldReadFromAllServers = primaryRequestTimeMetric.RateSurpassed(Conventions);
+			}
+           
+            if (shouldReadFromAllServers && method == HttpMethod.Get)
             {
                 var replicationIndex = currentReadStripingBase%(localReplicationDestinations.Count + 1);
                 // if replicationIndex == destinations count, then we want to use the master
@@ -209,7 +220,7 @@ namespace Raven.Client.Connection
                 if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
                 {
                     // if it is failing, ignore that, and move to the master or any of the replicas
-                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, currentRequest, method, false, null,token))
+                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, method, false, null,token))
                     {
                         operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
                         if (operationResult.Success)
@@ -218,7 +229,7 @@ namespace Raven.Client.Connection
                 }
             }
 
-            if (ShouldExecuteUsing(primaryOperation,primaryOperation, currentRequest, method, true, null,token))
+            if (ShouldExecuteUsing(primaryOperation,primaryOperation, method, true, null,token))
             {
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
                     .ConfigureAwait(false);
@@ -242,7 +253,7 @@ namespace Raven.Client.Connection
 				token.ThrowCancellationIfNotDefault();
 
                 var replicationDestination = localReplicationDestinations[i];
-                if (ShouldExecuteUsing(replicationDestination, primaryOperation, currentRequest, method, false, operationResult.Error,token) == false)
+                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, false, operationResult.Error,token) == false)
                     continue;
 
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;

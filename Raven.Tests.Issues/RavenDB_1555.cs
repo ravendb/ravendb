@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Net.Http;
 using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -97,7 +98,7 @@ namespace Raven.Tests.Issues
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
                 sourceUrl.LastReplicatedEtagFor(destinationUrl, destinationStatistics.DatabaseId.ToString()),
-				"GET",
+				HttpMethod.Get,
 				new OperationCredentials(source.ApiKey, source.Credentials),
 				source.Conventions);
 			var httpJsonRequest = source.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);

@@ -24,16 +24,10 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var ds = new DocumentStore
+			using (var x = new RavenDB_3286())
 			{
-				Url = "http://live-test.ravendb.net",
-				DefaultDatabase = "repl1"
-			};
-
-			ds.Initialize();
-
-			ds.GetReplicationInformerForDatabase().UpdateReplicationInformationIfNeededAsync((AsyncServerClient) ds.AsyncDatabaseCommands).Wait();
-			ds.Replication.WaitAsync(Etag.Parse("01000000-0000-0001-0000-00000000000E"),timeout: TimeSpan.FromSeconds(1)).Wait();
+				x.Basic();
+			}
 		}
 	}
 

@@ -249,7 +249,7 @@ namespace Raven.Client.Counters
             {
                 var requestUriString = string.Format("{0}/stats", counterStorageUrl);
 
-	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)))
 	            {
 		            try
 		            {
@@ -268,7 +268,7 @@ namespace Raven.Client.Counters
             {
                 var requestUriString = string.Format("{0}/metrics", counterStorageUrl);
 
-	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)))
 	            {
 		            try
 		            {
@@ -287,7 +287,7 @@ namespace Raven.Client.Counters
             {
                 var requestUriString = string.Format("{0}/replications/stats", counterStorageUrl);
 
-	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)))
 	            {
 		            try
 		            {
@@ -326,7 +326,7 @@ namespace Raven.Client.Counters
 			{
 				var requestUriString = String.Format("{0}/replications/get", counterStorageUrl);
 
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)))
 				{
 					try
 					{
@@ -345,7 +345,7 @@ namespace Raven.Client.Counters
 			{
 				var requestUriString = String.Format("{0}/replications/save", counterStorageUrl);
 
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, credentials, convention)))
 				{
 					try
 					{
@@ -385,7 +385,7 @@ namespace Raven.Client.Counters
 				var requestUriString = String.Format("{0}/change?group={1}&counterName={2}&delta={3}",
 					counterStorageUrl, group, counterName, delta);
 
-				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)))
+				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, credentials, convention)))
 				{
 					try
 					{
@@ -404,7 +404,7 @@ namespace Raven.Client.Counters
 				var requestUriString = String.Format("{0}/change?group={1}&counterName={2}",
 					counterStorageUrl, group, counterName);
 
-				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)))
+				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, credentials, convention)))
 				{
 					try
 					{
@@ -433,7 +433,7 @@ namespace Raven.Client.Counters
 				var requestUriString = String.Format("{0}/getCounterOverallTotal?group={1}&counterName={2}",
 					counterStorageUrl, group, counterName);
 
-				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)))
 				{
 					try
 					{
@@ -453,7 +453,7 @@ namespace Raven.Client.Counters
 				var requestUriString = String.Format("{0}/getCounterServersValues?group={1}&counterName={2}",
 					counterStorageUrl, group, counterName);
 
-				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)))
 				{
 					try
 					{
@@ -525,7 +525,7 @@ namespace Raven.Client.Counters
 
 					var requestUriString = String.Format("{0}/batch", counterStorageUrl);
 
-				    using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)))
+					using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, credentials, convention)))
 				    {
 					    try
 					    {
@@ -565,7 +565,7 @@ namespace Raven.Client.Counters
             {
 				var requestUriString = string.Format("{0}/counterStorage/conterStorages", serverUrl);
 
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)))
 				{
 					try
 					{
@@ -584,7 +584,7 @@ namespace Raven.Client.Counters
             {
 				var requestUriString = string.Format("{0}/counterStorage/stats", serverUrl);
 
-	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)))
 	            {
 		            try
 		            {
@@ -604,7 +604,7 @@ namespace Raven.Client.Counters
 				var requestUriString = string.Format("{0}/counterstorage/admin/{1}", serverUrl,
 													 newCounterStorageName ?? counterStorageName);
 
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", credentials, convention)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Put, credentials, convention)))
 				{
 					try
 					{
@@ -631,7 +631,7 @@ namespace Raven.Client.Counters
 				var requestUriString = string.Format("{0}/counterstorage/admin/{1}?update=true", serverUrl,
 													 newCounterStorageName ?? counterStorageName);
 
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", credentials, convention)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Put, credentials, convention)))
 				{
 					try
 					{
@@ -650,7 +650,7 @@ namespace Raven.Client.Counters
 				var requestUriString = string.Format("{0}/counterstorage/admin/{1}?hard-delete={2}", serverUrl,
 														counterStorageNameToDelete ?? counterStorageName, hardDelete);
 
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "DELETE", credentials, convention)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Delete, credentials, convention)))
 				{
 					try
 					{

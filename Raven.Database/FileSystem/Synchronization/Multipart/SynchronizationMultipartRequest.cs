@@ -58,7 +58,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
             var credentials = commands.PrimaryCredentials;
             var conventions = commands.Conventions;
 
-			using (var request = commands.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", "POST", credentials, conventions)))
+			using (var request = commands.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions)))
 			{
 				request.AddHeaders(sourceMetadata);
 				request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);

@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Net.Http;
+
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 
@@ -18,7 +20,7 @@ namespace Raven.Backup
 
         public abstract bool InitBackup();
 
-        protected abstract HttpJsonRequest CreateRequest(string url, string method);
+        protected abstract HttpJsonRequest CreateRequest(string url, HttpMethod method);
 
         public void WaitForBackup()
         {

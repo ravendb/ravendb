@@ -46,7 +46,7 @@ namespace Raven.Database.Client.Aws
 			var headers = ConvertToHeaders(glacierVaultName, content.Headers);
 
 			var client = GetClient(TimeSpan.FromSeconds(timeoutInSeconds));
-			var authorizationHeaderValue = CalculateAuthorizationHeaderValue("POST", url, now, headers);
+			var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethod.Post, url, now, headers);
 			client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
 			var response = client.PostAsync(url, content).ResultUnwrap();
