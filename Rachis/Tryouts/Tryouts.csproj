@@ -85,7 +85,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\ravendb\Raven.Voron\Voron\Voron.csproj">
+    <ProjectReference Include="..\..\Raven.Voron\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
     </ProjectReference>
@@ -96,10 +96,6 @@
     <ProjectReference Include="..\Rachis\Rachis.csproj">
       <Project>{F796F69F-D17B-4260-92D6-65CB94C0E05C}</Project>
       <Name>Rachis</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\TailFeather.Client\TailFeather.Client.csproj">
-      <Project>{1E267CF9-EAE8-4F87-BE37-BB1E7C9E86D6}</Project>
-      <Name>TailFeather.Client</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
