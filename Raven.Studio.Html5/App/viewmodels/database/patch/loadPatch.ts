@@ -1,9 +1,7 @@
 import patchDocument = require("models/patchDocument");
 import dialog = require("plugins/dialog");
 import database = require("models/database");
-import document = require("models/document");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import commandBase = require('commands/commandBase');
 import getPatchesCommand = require('commands/getPatchesCommand');
 
 class loadPatch extends dialogViewModelBase {

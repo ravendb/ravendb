@@ -1,12 +1,10 @@
 ﻿import router = require("plugins/router");
-import widget = require("plugins/widget");
 import app = require("durandal/app");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import document = require("models/document");
 import collection = require("models/collection");
-import database = require("models/database");
 import pagedResultSet = require("common/pagedResultSet");
 import deleteItems = require("viewmodels/common/deleteItems");
 import copyDocuments = require("viewmodels/database/documents/copyDocuments");

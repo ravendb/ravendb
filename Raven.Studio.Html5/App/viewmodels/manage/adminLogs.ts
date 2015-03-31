@@ -1,6 +1,5 @@
 ﻿import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import adminLogsConfigureCommand = require("commands/adminLogsConfigureCommand");
 import adminLogsClient = require("common/adminLogsClient");
 import fileDownloader = require("common/fileDownloader");
 import adminLogsConfigureDialog = require("viewmodels/manage/adminLogsConfigureDialog");

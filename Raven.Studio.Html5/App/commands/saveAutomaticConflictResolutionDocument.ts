@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import document = require("models/document");
 import database = require("models/database");
 
 class saveAutomaticConflictResolutionDocument extends commandBase {

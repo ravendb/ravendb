@@ -1,6 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import index = require("models/index");
 
 class resetIndexCommand extends commandBase {
 

@@ -1,5 +1,4 @@
 ﻿import commandBase = require("commands/commandBase");
-import filesystem = require("models/filesystem/filesystem");
 
 class getFileSystemsStatusCommand extends commandBase {
 

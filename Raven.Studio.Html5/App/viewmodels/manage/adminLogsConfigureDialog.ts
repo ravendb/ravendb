@@ -1,10 +1,7 @@
 
 import app = require("durandal/app");
-import document = require("models/document");
 import dialog = require("plugins/dialog");
-import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import messagePublisher = require("common/messagePublisher");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import adminLogsConfig = require("models/adminLogsConfig");
 import adminLogsConfigEntry = require("models/adminLogsConfigEntry");

@@ -1,7 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import index = require("models/index");
-import indexPriority = require("models/indexPriority");
 
 class persistIndexCommand extends commandBase {
 

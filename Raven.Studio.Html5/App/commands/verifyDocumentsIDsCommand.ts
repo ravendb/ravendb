@@ -1,6 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import document = require("models/document");
 
 class verifyDocumentsIDsCommand extends commandBase {
 

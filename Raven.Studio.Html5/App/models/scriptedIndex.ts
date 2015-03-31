@@ -1,5 +1,4 @@
 import document = require("models/document");
-import documentMetadata = require("models/documentMetadata");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class scriptedIndex extends document {

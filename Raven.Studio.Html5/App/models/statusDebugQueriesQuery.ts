@@ -1,6 +1,3 @@
-import document = require("models/document");
-import conflictVersion = require("models/conflictVersion");
-
 class statusDebugQueriesQuery {
     startTime: string;
     queryInfo = ko.observable<any>();

@@ -1,5 +1,4 @@
 ﻿import durandalRouter = require("plugins/router");
-import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 

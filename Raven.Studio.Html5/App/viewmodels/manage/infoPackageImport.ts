@@ -1,8 +1,5 @@
 /// <reference path="../../../Scripts/typings/jszip/jszip.d.ts" />
-
-import app = require("durandal/app");
 import dialog = require("plugins/dialog");
-import infoPackage = require("viewmodels/manage/infoPackage");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import jszip = require('jszip/jszip');
 

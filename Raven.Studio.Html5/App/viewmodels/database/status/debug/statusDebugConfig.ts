@@ -1,6 +1,4 @@
 import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
-import appUrl = require("common/appUrl");
-import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 

@@ -1,8 +1,5 @@
-﻿import filesystem = require("models/filesystem/filesystem");
-import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
+﻿import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
-import dialog = require("plugins/dialog");
-import moment = require("moment");
 
 class searchLastModifiedBetweenClause extends searchDialogViewModel {
 

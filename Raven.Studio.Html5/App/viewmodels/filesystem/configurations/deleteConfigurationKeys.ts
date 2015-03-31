@@ -2,7 +2,6 @@
 import filesystem = require("models/filesystem/filesystem");
 import dialog = require("plugins/dialog");
 import deleteConfigurationKeyCommand = require("commands/filesystem/deleteConfigurationKeyCommand");
-import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class deleteConfigurationKeys extends dialogViewModelBase {

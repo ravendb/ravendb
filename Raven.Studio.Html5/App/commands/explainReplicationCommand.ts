@@ -1,8 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import collection = require("models/collection");
-import getIndexTermsCommand = require("commands/getIndexTermsCommand");
-import getCollectionsCountCommand = require("commands/getCollectionsCountCommand");
 
 class explainReplicationCommand extends commandBase {
 

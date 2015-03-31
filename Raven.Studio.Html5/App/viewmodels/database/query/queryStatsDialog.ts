@@ -1,6 +1,4 @@
-﻿import database = require("models/database");
-import dialog = require("plugins/dialog");
-import appUrl = require("common/appUrl");
+﻿import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import router = require("plugins/router");
 

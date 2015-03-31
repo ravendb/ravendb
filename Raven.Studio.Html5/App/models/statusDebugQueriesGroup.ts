@@ -1,5 +1,3 @@
-import document = require("models/document");
-import conflictVersion = require("models/conflictVersion");
 import statusDebugQueriesQuery = require("models/statusDebugQueriesQuery");
 
 class statusDebugQueriesGroup {

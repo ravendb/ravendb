@@ -1,10 +1,6 @@
-﻿import app = require("durandal/app");
-import collection = require("models/collection");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+﻿import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 import messagePublisher = require("common/messagePublisher");
-import filesystem = require("models/filesystem/filesystem");
-import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 
 class createFolderInFilesystem extends dialogViewModelBase {
 

@@ -1,8 +1,6 @@
-﻿import app = require("durandal/app");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+﻿import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 import configurationKey = require("models/filesystem/configurationKey");
-import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 import messagePublisher = require("common/messagePublisher");
 
 class createConfigurationKey extends dialogViewModelBase {

@@ -2,8 +2,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require('viewmodels/shell');
 import counterStorage = require("models/counter/counterStorage");
-import changeSubscription = require("models/changeSubscription");
-import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import createCounterStorageCommand = require("commands/counter/createCounterStorageCommand");
 import appUrl = require("common/appUrl");
 

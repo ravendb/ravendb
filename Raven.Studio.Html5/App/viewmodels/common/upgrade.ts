@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import router = require("plugins/router");

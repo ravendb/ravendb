@@ -1,6 +1,4 @@
 import getSlowDocCountsCommand = require("commands/getSlowDocCountsCommand");
-import appUrl = require("common/appUrl");
-import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import debugDocumentStats = require("models/debugDocumentStats");
 import genUtils = require("common/generalUtils");

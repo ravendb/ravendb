@@ -4,13 +4,11 @@ import app = require("durandal/app");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 import jszip = require('jszip/jszip');
-import zipUtils = require('jszip/jszip-utils.min');
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
 import getInfoPackage = require('commands/getInfoPackage');
-import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import infoPackageImport = require("viewmodels/manage/infoPackageImport");
 

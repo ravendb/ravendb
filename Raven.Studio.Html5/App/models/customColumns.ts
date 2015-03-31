@@ -1,5 +1,4 @@
 import customColumnParams = require("models/customColumnParams");
-import document = require("models/document");
 
 class customColumns {
 

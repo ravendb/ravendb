@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import document = require("models/document");
 
 class queryIndexDebugAfterReduceCommand extends commandBase {
     constructor(private indexName: string, private db: database, private reduceKeys:string[]) {

@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import statusDebugQueriesGroup = require("models/statusDebugQueriesGroup");
 
 class getStatusDebugQueriesCommand extends commandBase {
 

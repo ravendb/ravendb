@@ -4,7 +4,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/transformer");
 import saveTransformerCommand = require("commands/saveTransformerCommand");
 import getSingleTransformerCommand = require("commands/getSingleTransformerCommand");
-import deleteTransformerCommand = require("commands/deleteTransformerCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import deleteTransformerConfirm = require("viewmodels/database/transformers/deleteTransformerConfirm");
 import saveTransformerWithNewNameConfirm = require("viewmodels/database/transformers/saveTransformerWithNewNameConfirm");

@@ -1,7 +1,5 @@
-import document = require("models/document");
 import cell = require("widgets/virtualTable/cell");
 import viewModel = require("widgets/virtualTable/viewModel");
-import customColumns = require('models/customColumns');
 import customFunctions = require("models/customFunctions");
 import execJs = require('common/execJs');
 import collection = require("models/collection");

@@ -1,5 +1,3 @@
-import ace = require("ace/ace");
-import router = require("plugins/router"); 
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");

@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import collection = require("models/collection");
 
 class getCachedCollectionsCount extends commandBase {
 

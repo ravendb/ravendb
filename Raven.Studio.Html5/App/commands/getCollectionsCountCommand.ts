@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import collection = require("models/collection");
-import getIndexTermsCommand = require("commands/getIndexTermsCommand");
 
 class getCollectionsCountCommand extends commandBase {
 

@@ -1,6 +1,4 @@
-﻿import app = require("durandal/app");
-import dialog = require("plugins/dialog");
-import viewModelBase = require("viewmodels/viewModelBase");
+﻿import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import serverBuildReminder = require("common/serverBuildReminder");
 

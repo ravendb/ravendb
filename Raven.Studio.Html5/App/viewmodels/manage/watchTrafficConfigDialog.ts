@@ -2,14 +2,11 @@
 import dialog = require("plugins/dialog");
 import resource = require("models/resource");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import messagePublisher = require("common/messagePublisher");
-import adminLogsConfig = require("models/adminLogsConfig");
 import shell = require("viewmodels/shell");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
-import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import appUrl = require('common/appUrl');
 

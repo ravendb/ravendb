@@ -4,8 +4,6 @@
 import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
-
-import forge = require("forge/forge_custom.min");
 import viewModelBase = require("viewmodels/viewModelBase");
 import viewLocator = require("durandal/viewLocator");
 import resource = require("models/resource");
@@ -20,8 +18,6 @@ import license = require("models/license");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
-import deleteDocuments = require("viewmodels/common/deleteDocuments");
-import dialogResult = require("common/dialogResult");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");

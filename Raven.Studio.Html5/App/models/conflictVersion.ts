@@ -1,7 +1,3 @@
-import document = require("models/document");
-import appUrl = require("common/appUrl");
-import database = require("models/database");
-
 class conflictVersion {
     id: string;
     sourceId: string;

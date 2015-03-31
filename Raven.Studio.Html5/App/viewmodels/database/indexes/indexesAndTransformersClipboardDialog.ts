@@ -1,5 +1,4 @@
-﻿import indexDefinition = require("models/indexDefinition");
-import transformerDefinition = require("models/transformer");
+﻿import transformerDefinition = require("models/transformer");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/database");
@@ -7,8 +6,6 @@ import getIndexesDefinitionsCommand = require("commands/getIndexesDefinitionsCom
 import getTransformersCommand = require("commands/getTransformersCommand");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 import saveTransformerCommand = require("commands/saveTransformerCommand");
-import router = require("plugins/router");
-import appUrl = require("common/appUrl");
 import indexPriority = require("models/indexPriority");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");

@@ -1,6 +1,4 @@
-﻿import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import dialog = require("plugins/dialog");
-import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
+﻿import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
 
 class searchFileSizeRangeClause extends searchDialogViewModel {
 

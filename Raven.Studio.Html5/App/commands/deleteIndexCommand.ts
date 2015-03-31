@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import index = require("models/index");
 import database = require("models/database");
 
 class deleteIndexCommand extends commandBase {

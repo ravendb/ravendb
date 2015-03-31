@@ -2,8 +2,7 @@
 
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import transformer = require("models/transformer");
- 
+
 class deleteTransformerCommand extends commandBase {
 
     constructor(private transName: string, private db:database) {

@@ -1,10 +1,7 @@
 ﻿/// <reference path="../../../../Scripts/typings/ace/ace.amd.d.ts" />
 
 import app = require("durandal/app");
-import sys = require("durandal/system");
-import router = require("plugins/router"); 
-import ace = require("ace/ace");
-
+import router = require("plugins/router");
 import document = require("models/document");
 import database = require("models/database");
 import documentMetadata = require("models/documentMetadata");
@@ -23,8 +20,6 @@ import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
-import pagedResultSet = require("common/pagedResultSet");
-
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
 

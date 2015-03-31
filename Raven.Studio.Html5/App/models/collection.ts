@@ -1,9 +1,7 @@
 import pagedList = require("common/pagedList");
-import getCollectionInfoCommand = require("commands/getCollectionInfoCommand");
 import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
 import getSystemDocumentsCommand = require("commands/getSystemDocumentsCommand");
 import getAllDocumentsCommand = require("commands/getAllDocumentsCommand");
-import collectionInfo = require("models/collectionInfo");
 import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/database");
 

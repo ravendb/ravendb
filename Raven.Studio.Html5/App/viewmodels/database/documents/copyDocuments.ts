@@ -1,7 +1,5 @@
 import document = require("models/document");
 import dialog = require("plugins/dialog");
-import createDatabaseCommand = require("commands/createDatabaseCommand");
-import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class copyDocuments extends dialogViewModelBase {

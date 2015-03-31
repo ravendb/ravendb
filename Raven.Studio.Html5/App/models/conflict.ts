@@ -1,4 +1,3 @@
-import document = require("models/document");
 import conflictVersion = require("models/conflictVersion");
 
 class conflict {

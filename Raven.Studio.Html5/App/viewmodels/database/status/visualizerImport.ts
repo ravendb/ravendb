@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 

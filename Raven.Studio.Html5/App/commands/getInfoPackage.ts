@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import zip = require('jszip/jszip');
 import zipUtils = require('jszip/jszip-utils.min');
 import appUrl = require('common/appUrl');
 import d3 = require("d3/d3");

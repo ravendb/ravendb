@@ -1,11 +1,6 @@
-import app = require("durandal/app");
 import router = require("plugins/router");
-
-import pagedResultSet = require("common/pagedResultSet");
 import appUrl = require("common/appUrl");
 import pagedList = require("common/pagedList");
-
-import conflict = require("models/conflict");
 import indexPriority = require("models/indexPriority");
 import database = require("models/database");
 import conflictVersion = require("models/conflictVersion");

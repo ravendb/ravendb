@@ -26,7 +26,6 @@ import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMet
 import getIndexTermsCommand = require("commands/getIndexTermsCommand");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
 import customFunctions = require("models/customFunctions");
-import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 import transformerType = require("models/transformer");
 import transformerQueryType = require("models/transformerQuery");
 import getIndexSuggestionsCommand = require("commands/getIndexSuggestionsCommand");

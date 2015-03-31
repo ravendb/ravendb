@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import filesystem = require("models/filesystem/filesystem");
 import appUrl = require("common/appUrl");
 import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import monitorCompactCommand = require("commands/filesystem/monitorCompactCommand");

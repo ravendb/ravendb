@@ -1,10 +1,5 @@
 import getStatusDebugCurrentlyIndexingCommand = require("commands/getStatusDebugCurrentlyIndexingCommand");
-import appUrl = require("common/appUrl");
-import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import changeSubscription = require("models/changeSubscription");
-import shell = require("viewmodels/shell");
-
 
 class statusDebugCurrentlyIndexing extends viewModelBase {
     data = ko.observable<statusDebugCurrentlyIndexingDto>();

@@ -12,9 +12,6 @@ import messagePublisher = require("common/messagePublisher");
 import chunkFetcher = require("common/chunkFetcher");
 
 import router = require("plugins/router");
-
-import database = require("models/database");
-
 import visualizerKeys = require("viewmodels/database/status/visualizerKeys");
 import visualizerImport = require("viewmodels/database/status/visualizerImport");
 import viewModelBase = require("viewmodels/viewModelBase");

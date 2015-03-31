@@ -1,8 +1,4 @@
 ﻿import app = require("durandal/app");
-import system = require("durandal/system");
-import router = require("plugins/router");
-import appUrl = require("common/appUrl");
-
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import resolveConflict = require("viewmodels/filesystem/synchronization/resolveConflict");

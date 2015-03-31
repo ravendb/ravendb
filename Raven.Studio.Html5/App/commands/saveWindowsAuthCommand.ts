@@ -1,7 +1,5 @@
 import commandBase = require("commands/commandBase");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
-import document = require("models/document");
-import database = require("models/database");
 
 class saveWindowsAuthCommand extends commandBase {
 

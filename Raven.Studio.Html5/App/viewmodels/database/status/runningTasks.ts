@@ -1,11 +1,7 @@
-﻿import app = require("durandal/app");
-import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+﻿import viewModelBase = require("viewmodels/viewModelBase");
 import killRunningTaskCommand = require("commands/killRunningTaskCommand");
 import getRunningTasksCommand = require("commands/getRunningTasksCommand");
-import database = require("models/database");
 import moment = require("moment");
-import copyDocuments = require("viewmodels/database/documents/copyDocuments");
 import document = require("models/document");
 
 class runningTasks extends viewModelBase {

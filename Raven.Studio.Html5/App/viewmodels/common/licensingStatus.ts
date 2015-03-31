@@ -1,5 +1,4 @@
 import dialog = require("plugins/dialog");
-import createDatabaseCommand = require("commands/createDatabaseCommand");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class licensingStatus extends dialogViewModelBase {

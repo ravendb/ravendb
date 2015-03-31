@@ -1,9 +1,5 @@
-﻿import app = require("durandal/app");
-import viewModelBase = require("viewmodels/viewModelBase");
+﻿import viewModelBase = require("viewmodels/viewModelBase");
 import getRequestTracingCommand = require("commands/getRequestTracingCommand");
-import database = require("models/database");
-import moment = require("moment");
-import document = require("models/document");
 
 class requestTracing extends viewModelBase {
     

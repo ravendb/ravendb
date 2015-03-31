@@ -1,4 +1,3 @@
-import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
 import database = require("models/database");
 import commandBase = require("commands/commandBase");
 

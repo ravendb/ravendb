@@ -1,5 +1,3 @@
-import appUrl = require("common/appUrl");
-import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getStatusStorageBreakdownCommand = require("commands/getStatusStorageBreakdownCommand");
 import shell = require('viewmodels/shell');

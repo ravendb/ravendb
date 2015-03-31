@@ -1,6 +1,4 @@
-﻿import getStatusDebugSqlReplicationCommand = require("commands/getStatusDebugSqlReplicationCommand");
-import appUrl = require("common/appUrl");
-import database = require("models/database");
+﻿import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 import getSqlReplicationStatsCommand = require("commands/getSqlReplicationStatsCommand");

@@ -1,6 +1,4 @@
 import getUserInfoCommand = require("commands/getUserInfoCommand");
-import appUrl = require("common/appUrl");
-import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class userInfo extends viewModelBase {

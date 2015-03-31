@@ -3,7 +3,6 @@ import transformer = require("models/transformer");
 import getTransformersCommand = require("commands/getTransformersCommand");
 import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/database/transformers/deleteTransformerConfirm");
-import dialog = require("plugins/dialog");
 import app = require("durandal/app");
 import changeSubscription = require("models/changeSubscription");
 import shell = require("viewmodels/shell");

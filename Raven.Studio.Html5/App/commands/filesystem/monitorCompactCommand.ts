@@ -1,4 +1,3 @@
-import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");

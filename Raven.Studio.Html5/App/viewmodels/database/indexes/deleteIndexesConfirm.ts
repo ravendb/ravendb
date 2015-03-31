@@ -1,4 +1,3 @@
-import index = require("models/index");
 import deleteIndexCommand = require("commands/deleteIndexCommand");
 import dialog = require("plugins/dialog");
 import database = require("models/database");

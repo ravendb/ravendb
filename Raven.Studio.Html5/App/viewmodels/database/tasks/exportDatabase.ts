@@ -1,5 +1,4 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import exportDatabaseCommand = require("commands/exportDatabaseCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import collection = require("models/collection");

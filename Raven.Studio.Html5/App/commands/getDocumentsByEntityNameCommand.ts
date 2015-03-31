@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/database");
 import collectionInfo = require("models/collectionInfo");
 import collection = require("models/collection");
 import pagedResultSet = require("common/pagedResultSet");
