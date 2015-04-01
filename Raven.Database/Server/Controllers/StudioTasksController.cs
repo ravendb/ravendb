@@ -407,6 +407,7 @@ for(var customFunction in customFunctions) {{
 			var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?stableOnly=" + stableOnly);
 			try
 			{
+			    request.Timeout = 5000;
 				using (var response = request.GetResponse())
 				using (var stream = response.GetResponseStream())
 				{
