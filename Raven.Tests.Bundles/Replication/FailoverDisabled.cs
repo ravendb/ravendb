@@ -19,11 +19,11 @@ namespace Raven.Tests.Bundles.Replication
 			RunReplication(store1, store3, disabled: false);
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
-			Assert.Equal(1, serverClient.ReplicationInformer.ReplicationDestinationsUrls.Count());
-			
-			var expectedDestinationUrl = serverClient.ReplicationInformer.ReplicationDestinationsUrls[0].Url;
+			Assert.Equal(1, GetReplicationInformer(serverClient).ReplicationDestinationsUrls.Count());
+
+			var expectedDestinationUrl = GetReplicationInformer(serverClient).ReplicationDestinationsUrls[0].Url;
 			Assert.Equal(store3.Url + "/databases/" + store3.DefaultDatabase + "/", expectedDestinationUrl);
 		}
 
@@ -38,10 +38,10 @@ namespace Raven.Tests.Bundles.Replication
 			RunReplication(store1, store3, ignoredClient: false);
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
-			Assert.Equal(1, serverClient.ReplicationInformer.ReplicationDestinationsUrls.Count());
-			Assert.Equal(store3.Url + "/databases/" + store3.DefaultDatabase + "/", serverClient.ReplicationInformer.ReplicationDestinationsUrls[0].Url);
+			Assert.Equal(1, GetReplicationInformer(serverClient).ReplicationDestinationsUrls.Count());
+			Assert.Equal(store3.Url + "/databases/" + store3.DefaultDatabase + "/", GetReplicationInformer(serverClient).ReplicationDestinationsUrls[0].Url);
 		}
 	}
 }

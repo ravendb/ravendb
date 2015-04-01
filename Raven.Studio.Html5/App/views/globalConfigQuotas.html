@@ -1,0 +1,61 @@
+﻿<section>
+    <form class="quotas-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root)">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled(), visible: activated()" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: activated()==false">
+                    <i class="fa fa-plus"></i> Create global configuration for Quotas
+                </button>
+                <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated()">
+                    <i class="fa fa-trash"></i> Remove global configuration for Quotas
+                </button>
+            </div>
+            <div class="panel-body">
+                <p data-bind="visible: activated()==false">
+                    <i class="fa fa-info-circle text-info"></i> Global configuration for Quotas is not currently defined.
+                </p>
+                <div data-bind="if: activated()">
+                    <div class="form-group">
+                        <div class="col-md-4 control-label">Maximum size:</div>
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <input required type="number" min="0" class="form-control" data-bind="numericValue: maximumSize,valueUpdate: 'afterkeydown'" />
+                                <span class="input-group-addon">MB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-md-4 control-label">Warning limit threshold:</div>
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <input required type="number" min="0" class="form-control" data-bind="numericValue: warningLimitThreshold, valueUpdate: 'afterkeydown'" />
+                                <span class="input-group-addon">MB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-md-4 control-label">Maximum number of docs:</div>
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <input required type="number" min="0" class="form-control" data-bind="numericValue: maxNumberOfDocs,valueUpdate: 'afterkeydown'" />
+                                <span class="input-group-addon">docs</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-md-4 control-label">Warning threshold for docs:</div>
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <input required type="number" min="0" class="form-control" data-bind="numericValue: warningThresholdForDocs,valueUpdate: 'afterkeydown'" />
+                                <span class="input-group-addon">docs</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>

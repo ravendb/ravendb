@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Raft;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -19,7 +21,7 @@ namespace Raven.Database.Server
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
 
-		private bool preventDisposing = false;
+		private bool preventDisposing;
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
 		{
@@ -33,7 +35,7 @@ namespace Raven.Database.Server
 				if (db == null)
 				{
 					configuration.UpdateDataDirForLegacySystemDb();
-					systemDatabase = new DocumentDatabase(configuration);
+					systemDatabase = new DocumentDatabase(configuration, null);
 					systemDatabase.SpinBackgroundWorkers();
 				}
 				else
@@ -44,6 +46,7 @@ namespace Raven.Database.Server
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
+				ClusterManager = new Reference<ClusterManager>();
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}
@@ -84,6 +87,8 @@ namespace Raven.Database.Server
 			get { return requestManager; }
 		}
 
+		public Reference<ClusterManager> ClusterManager { get; private set; }
+
 		public void Dispose()
 		{
 			if(preventDisposing)
@@ -97,7 +102,8 @@ namespace Raven.Database.Server
                                 systemDatabase, 
                                 LogManager.GetTarget<AdminLogsTarget>(),
                                 requestManager,
-                                countersLandlord
+                                countersLandlord,
+								ClusterManager.Value
 		                    };
 
             var errors = new List<Exception>();

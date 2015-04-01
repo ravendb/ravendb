@@ -87,7 +87,7 @@ namespace Raven.SlowTests.Issues
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind1");
 				replicationInformerForDatabase.DelayTimeInMiliSec = 0;
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
 
@@ -99,7 +99,7 @@ namespace Raven.SlowTests.Issues
 
 				WaitForDocument(store2.DatabaseCommands, "items/1");
 
-				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
+				Assert.Equal(0, replicationInformerForDatabase.FailureCounters.GetFailureCount(db1Url));
 
 				StopServer(server1);
 
@@ -109,7 +109,7 @@ namespace Raven.SlowTests.Issues
 					Assert.NotNull(store.DatabaseCommands.Get("items/1"));
 				}
 
-				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+				Assert.True(replicationInformerForDatabase.FailureCounters.GetFailureCount(db1Url) > 0);
 
 				var replicationTask = (await server2.Server.GetDatabaseInternal("Northwind2")).StartupTasks.OfType<ReplicationTask>().First();
 				replicationTask.Heartbeats.Clear();
@@ -130,15 +130,15 @@ namespace Raven.SlowTests.Issues
 					Thread.Sleep(100);
 				}
 
-				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+				Assert.True(replicationInformerForDatabase.FailureCounters.GetFailureCount(db1Url) > 0);
 
 				Assert.NotNull(store.DatabaseCommands.Get("items/1"));
 
-				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+				Assert.True(replicationInformerForDatabase.FailureCounters.GetFailureCount(db1Url) > 0);
 
 				Assert.NotNull(store.DatabaseCommands.Get("items/1"));
 
-				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
+				Assert.Equal(0, replicationInformerForDatabase.FailureCounters.GetFailureCount(db1Url));
 			}
 		}
 
@@ -164,7 +164,7 @@ namespace Raven.SlowTests.Issues
 
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind1");
 				replicationInformerForDatabase.DelayTimeInMiliSec = 0;
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
 
@@ -176,7 +176,7 @@ namespace Raven.SlowTests.Issues
 
 				WaitForDocument(store2.DatabaseCommands, "items/1");
 
-				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
+				Assert.Equal(0, replicationInformerForDatabase.FailureCounters.GetFailureCount(db1Url));
 
 				StopServer(server1);
 
@@ -185,7 +185,7 @@ namespace Raven.SlowTests.Issues
 				{
 					Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("items/1"));
 				}
-				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+				Assert.True(replicationInformerForDatabase.FailureCounters.GetFailureCount(db1Url) > 0);
 
 				var database = await server2.Server.GetDatabaseInternal("Northwind2");
 				var replicationTask = database.StartupTasks.OfType<ReplicationTask>().First();
@@ -208,10 +208,10 @@ namespace Raven.SlowTests.Issues
 				}
 
 				Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("items/1"));
-				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
+				Assert.True(replicationInformerForDatabase.FailureCounters.GetFailureCount(db1Url) > 0);
 
 				Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("items/1"));
-				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
+				Assert.Equal(0, replicationInformerForDatabase.FailureCounters.GetFailureCount(db1Url));
 			}
 		}
 

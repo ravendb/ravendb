@@ -2,7 +2,6 @@ import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import resource = require("models/resource");
-import pagedList = require("common/pagedList");
 import router = require("plugins/router");
 import collection = require("models/collection");
 import messagePublisher = require("common/messagePublisher");
@@ -27,7 +26,8 @@ class appUrl {
     
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
-        adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+		adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+		adminSettingsCluster: ko.computed(() => appUrl.forCluster()),
 
         hasApiKey: ko.computed(() => appUrl.forHasApiKey()),
 
@@ -161,8 +161,44 @@ class appUrl {
         return "#admin/settings/apiKeys";
     }
 
+    static forCluster(): string {
+        return "#admin/settings/cluster";
+    }
+
     static forWindowsAuth(): string {
         return "#admin/settings/windowsAuth";
+    }
+
+    static forGlobalConfig(): string {
+        return '#admin/settings/globalConfig';
+	}
+
+	static forServerSmugging(): string {
+		return "#admin/settings/serverSmuggling";
+	}
+
+    static forGlobalConfigPeriodicExport(): string {
+        return '#admin/settings/globalConfig';
+    }
+
+    static forGlobalConfigReplication(): string {
+        return '#admin/settings/globalConfigReplication';
+    }
+
+    static forGlobalConfigSqlReplication(): string {
+        return "#admin/settings/globalConfigSqlReplication";
+    }
+
+    static forGlobalConfigQuotas(): string {
+        return '#admin/settings/globalConfigQuotas';
+    }
+
+    static forGlobalConfigCustomFunctions(): string {
+        return '#admin/settings/globalConfigCustomFunctions';
+    }
+
+    static forGlobalConfigVersioning(): string {
+        return "#admin/settings/globalConfigVersioning";
     }
 
     static forBackup(): string {

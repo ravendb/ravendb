@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Runtime.Caching;
+using Rachis;
 using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
 
@@ -31,6 +32,8 @@ namespace Raven.Database.Config
 
 		public IndexingConfiguration Indexing { get; set; }
 
+        public ClusterConfiguration Cluster { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
 			Replication = new ReplicationConfiguration();
@@ -40,6 +43,7 @@ namespace Raven.Database.Config
 			FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
+            Cluster = new ClusterConfiguration();
 
 			this.settings = settings;
 		}
@@ -231,6 +235,12 @@ namespace Raven.Database.Config
 			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
+
+            Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 5);		// 6000ms
+            Cluster.HeartbeatTimeout = new IntegerSetting(settings["Raven/Cluster/HeartbeatTimeout"], RaftEngineOptions.DefaultHeartbeatTimeout * 5);	// 1500ms
+            Cluster.MaxLogLengthBeforeCompaction = new IntegerSetting(settings["Raven/Cluster/MaxLogLengthBeforeCompaction"], RaftEngineOptions.DefaultMaxLogLengthBeforeCompaction);
+            Cluster.MaxEntriesPerRequest = new IntegerSetting(settings["Raven/Cluster/MaxEntriesPerRequest"], RaftEngineOptions.DefaultMaxEntiresPerRequest);
+            Cluster.MaxStepDownDrainTime = new TimeSpanSetting(settings["Raven/Cluster/MaxStepDownDrainTime"], RaftEngineOptions.DefaultMaxStepDownDrainTime, TimeSpanArgumentType.FromParse);
 
 			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], string.Empty);
 
@@ -428,6 +438,15 @@ namespace Raven.Database.Config
 		{
 			public IntegerSetting MaxNumberOfItemsToProcessInTestIndexes { get; set; }
 		}
+
+	    public class ClusterConfiguration
+	    {
+            public IntegerSetting ElectionTimeout { get; set; }
+            public IntegerSetting HeartbeatTimeout { get; set; }
+            public IntegerSetting MaxLogLengthBeforeCompaction { get; set; }
+            public TimeSpanSetting MaxStepDownDrainTime { get; set; }
+            public IntegerSetting MaxEntriesPerRequest { get; set; }
+	    }
 
 		public class PrefetcherConfiguration
 		{

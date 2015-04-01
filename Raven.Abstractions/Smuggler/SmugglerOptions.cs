@@ -48,7 +48,8 @@ namespace Raven.Abstractions.Smuggler
         public override string SourceUrl { get { return Source.Url; } }
         public override string DestinationUrl { get { return Destination.Url; } }
 
-        public int Limit { get; set; }        
+        public int Limit { get; set; }
+
 
         /// <summary>
         /// The number of entities to load in each call to the server.
@@ -84,6 +85,8 @@ namespace Raven.Abstractions.Smuggler
         /// You can give a key to the incremental last etag, in order to make incremental imports from a few export sources.
         /// </summary>
         public string IncrementalKey { get; set; }
+
+		public Action<string> ReportProgress { get; set; } 
     }
 
     public class SmugglerExportOptions<T> where T : ConnectionStringOptions

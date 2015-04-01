@@ -21,6 +21,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -53,7 +54,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			public string Key;
 		}
 
-		public const string RavenSqlReplicationStatus = "Raven/SqlReplication/Status";		
+		public const string RavenSqlReplicationStatus = "Raven/SqlReplication/Status";
+
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
 		public event Action<int> AfterReplicationCompleted = delegate { };
@@ -651,10 +653,9 @@ namespace Raven.Database.Bundles.SqlReplication
                            };
 				var scriptResult = ApplyConversionScript(sqlReplication, docs, stats);
 
-				var connectionsDoc = Database.Documents.Get(Constants.RavenSqlReplicationConnectionsDocumentName, null);
-				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections();
+				var sqlReplicationConnections = Database.ConfigurationRetriever.GetConfigurationDocument<SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>>(Constants.SqlReplication.SqlReplicationConnectionsDocumentName);
 
-				if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections, false, false))
+				if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections.MergedDocument, false, false))
 				{
 					if (performRolledbackTransaction)
 					{
@@ -710,8 +711,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				const string prefix = "Raven/SqlReplication/Configuration/";
 
-				var connectionsDoc = accessor.Documents.DocumentByKey(Constants.RavenSqlReplicationConnectionsDocumentName);
-				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections(); // backward compatibility
+				var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>>(Constants.SqlReplication.SqlReplicationConnectionsDocumentName);
+				var sqlReplicationConnections = configurationDocument != null ? configurationDocument.MergedDocument : new SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>(); // backward compatibility
 
 				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))
 				{
@@ -725,7 +726,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			return sqlReplicationConfigs;
 		}
 
-		private bool PrepareSqlReplicationConfig(SqlReplicationConfig cfg, string sqlReplicationConfigDocumentKey, SqlReplicationStatistics replicationStats, SqlReplicationConnections sqlReplicationConnections, bool writeToLog = true, bool validateSqlReplicationName = true)
+		private bool PrepareSqlReplicationConfig(SqlReplicationConfig cfg, string sqlReplicationConfigDocumentKey, SqlReplicationStatistics replicationStats, SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> sqlReplicationConnections, bool writeToLog = true, bool validateSqlReplicationName = true)
 		{
 			if (validateSqlReplicationName && string.IsNullOrWhiteSpace(cfg.Name))
 			{

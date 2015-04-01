@@ -14,7 +14,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
+using Raven.Client.Connection.Request;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -22,6 +22,14 @@ namespace Raven.Client.Connection
 {
 	public class ReplicationInformer : ReplicationInformerBase<ServerClient>, IDocumentStoreReplicationInformer
 	{
+		private readonly object replicationLock = new object();
+
+		private bool firstTime = true;
+
+		private DateTime lastReplicationUpdate = DateTime.MinValue;
+
+		private Task refreshReplicationInformationTask;
+
         public ReplicationInformer(Convention conventions, HttpJsonRequestFactory jsonRequestFactory)
             : base(conventions, jsonRequestFactory)
         {
@@ -32,14 +40,14 @@ namespace Raven.Client.Connection
         /// </summary>
         public ReplicationDestination[] FailoverServers { get; set; }
 
-		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
+		public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
 		{
-			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
+			return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)).ResultUnwrap());
 		}
 
-        private Task UpdateReplicationInformationIfNeededInternal(string url, Func<ReplicationDocument> getReplicationDestinations)
+		private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
 		{
-			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
 			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
@@ -72,7 +80,7 @@ namespace Raven.Client.Connection
 					{
 						if (task.Exception != null)
 						{
-							log.ErrorException("Failed to refresh replication information", task.Exception);
+							Log.ErrorException("Failed to refresh replication information", task.Exception);
 						}
 						refreshReplicationInformationTask = null;
 					});
@@ -87,21 +95,22 @@ namespace Raven.Client.Connection
 
 		protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {
-            var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+			var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>();
             ReplicationDestinations = replicationDocument.Destinations.Select(x =>
             {
                 var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url : x.ClientVisibleUrl;
                 if (string.IsNullOrEmpty(url) || x.Disabled || x.IgnoredClient)
                     return null;
                 if (string.IsNullOrEmpty(x.Database))
-                    return new OperationMetadata(url, x.Username, x.Password, x.Domain, x.ApiKey);
+                    return new OperationMetadata(url, x.Username, x.Password, x.Domain, x.ApiKey, x.ClusterInformation);
 
                 return new OperationMetadata(
                     MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/",
                     x.Username,
                     x.Password,
                     x.Domain,
-                    x.ApiKey);
+                    x.ApiKey,
+					x.ClusterInformation);
             })
                 // filter out replication destination that don't have the url setup, we don't know how to reach them
                 // so we might as well ignore them. Probably private replication destination (using connection string names only)
@@ -110,13 +119,13 @@ namespace Raven.Client.Connection
             foreach (var replicationDestination in ReplicationDestinations)
             {
                 FailureCounter value;
-                if (failureCounts.TryGetValue(replicationDestination.Url, out value))
+                if (FailureCounters.FailureCounts.TryGetValue(replicationDestination.Url, out value))
                     continue;
-                failureCounts[replicationDestination.Url] = new FailureCounter();
+				FailureCounters.FailureCounts[replicationDestination.Url] = new FailureCounter();
             }
 
 			if (replicationDocument.ClientConfiguration != null)
-				conventions.UpdateFrom(replicationDocument.ClientConfiguration);
+				Conventions.UpdateFrom(replicationDocument.ClientConfiguration);
         }
 
 	    protected override string GetServerCheckUrl(string baseUrl)
@@ -126,15 +135,15 @@ namespace Raven.Client.Connection
 
 	    public void RefreshReplicationInformation(AsyncServerClient serverClient)
 		{
-			RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
+			RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)).ResultUnwrap());
 		}
 
         public override void RefreshReplicationInformation(ServerClient serverClient)
         {
-            RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)));
+            RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)));
         }
 
-		private void RefreshReplicationInformationInternal(string url, Func<ReplicationDocument> getReplicationDestinations)
+		private void RefreshReplicationInformationInternal(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
 		{
 			lock (this)
 			{
@@ -147,11 +156,11 @@ namespace Raven.Client.Connection
 				{
 					var replicationDestinations = getReplicationDestinations();
 					document = replicationDestinations == null ? null : RavenJObject.FromObject(replicationDestinations).ToJsonDocument();
-					failureCounts[url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
+					FailureCounters.FailureCounts[url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)
 				{
-					log.ErrorException("Could not contact master for new replication information", e);
+					Log.ErrorException("Could not contact master for new replication information", e);
 					document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 
 					if (document == null)
@@ -190,5 +199,13 @@ namespace Raven.Client.Connection
 				lastReplicationUpdate = SystemTime.UtcNow;
 			}
 		}
+
+		public override void Dispose()
+		{
+			base.Dispose();
+
+			var replicationInformationTaskCopy = refreshReplicationInformationTask;
+			if (replicationInformationTaskCopy != null)
+				replicationInformationTaskCopy.Wait();
     }
-}
+}}

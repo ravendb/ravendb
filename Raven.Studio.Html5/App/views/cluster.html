@@ -1,0 +1,72 @@
+﻿<section>
+	
+	<div data-bind="if: !topology().clusterMode()">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Cluster configuration
+			</div>
+			<div class="panel-body">
+				<div class="text-center">
+					<h3 class="text-info">
+						This server is not part of cluster. <small>Go ahead and <a href="#" data-bind="click: createCluster">create cluster</a>.</small>
+					</h3>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div data-bind="if: topology().clusterMode()">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<button data-bind="click: addAnotherServerToCluster" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
+				<button data-bind="click: refresh" class="btn btn-default"><i class="fa fa-refresh"></i> Refresh</button>
+			</div>
+			<div class="panel-body">
+				<table class="table table-condensed table-striped">
+					<thead>
+						<tr>
+							<th>State</th>
+							<th>Status</th>
+							<th>Server Url</th>
+							<th>Edit</th>
+							<th>Delete</th>
+						</tr>
+					</thead>
+					<tbody data-bind="foreach: topology().allNodes">
+						<tr>
+							<td data-bind="text: state"></td>
+							<td>
+								<div data-bind="visible: status() === 'Online'" class=" text-success"><span class="fa fa-check"></span> Online</div>
+								<div data-bind="visible: status() === 'Offline'" class=" text-danger"><span class="fa fa-times"></span> Offline</div>
+								<div data-bind="visible: status() === 'WrongCredentials'" class="text-danger"><span class="fa fa-exclamation-circle"></span> Wrong Credentials</div>
+								<div data-bind="visible: status() === 'Loading'"><span class="fa fa-spin fa-spinner"></span> Loading...</div>
+							</td>
+							<td data-bind="text: uri"></td>
+							<td><button data-bind="click: $root.editNode.bind($root)" class="btn btn-default"><i class="fa fa-edit"></i> Edit</button></td>
+							<td><button data-bind="click: $root.leaveCluster.bind($root)" class="btn btn-danger"><i class="fa fa-trash"></i> Leave cluster</button></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<form class="form-horizontal" role="form" data-bind="submit: saveClusterConfig">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i></button> Cluster configuration
+				</div>
+				<div class="panel-body" data-bind="with: clusterConfiguration">
+					<div class="form-group">
+						<div class="col-sm-offset-2 col-sm-5">
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" data-bind="checked: enableReplication">
+									Enable replication
+								</label>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</form>
+	</div>
+</section>

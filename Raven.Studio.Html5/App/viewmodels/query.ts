@@ -14,6 +14,7 @@ import database = require("models/database");
 import querySort = require("models/querySort");
 import collection = require("models/collection");
 import getTransformersCommand = require("commands/getTransformersCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/getEffectiveCustomFunctionsCommand");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocumentsMatchingQueryConfirm");
 import document = require("models/document");
 import customColumnParams = require("models/customColumnParams");
@@ -221,8 +222,10 @@ class query extends viewModelBase {
     private fetchCustomFunctions(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var task = new getCustomFunctionsCommand(db).execute();
-        task.done((cf: customFunctions) => this.currentCustomFunctions(cf))
+        var customFunctionsCommand = new getEffectiveCustomFunctionsCommand(db).execute();
+        customFunctionsCommand.done((cf: configurationDocumentDto<customFunctionsDto>) => {
+            this.currentCustomFunctions(new customFunctions(cf.MergedDocument));
+        })
             .always(() => deferred.resolve());
 
         return deferred;

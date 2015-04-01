@@ -117,7 +117,7 @@ namespace Raven.Bundles.UniqueConstraints
 			return VetoResult.Allowed;
 		}
 
-		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			if (key.StartsWith("Raven/"))
 			{
@@ -142,7 +142,7 @@ namespace Raven.Bundles.UniqueConstraints
 			{
 			    var constraint = Util.GetConstraint(property);
 
-                var newProp = document[constraint.PropName];
+                var newProp = jsonReplicationDocument[constraint.PropName];
 
                 // Handle Updates in the constraint since it changed
 			    var prefix = "UniqueConstraints/" + entityName + constraint.PropName + "/";

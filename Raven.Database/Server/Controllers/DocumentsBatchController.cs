@@ -22,7 +22,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class DocumentsBatchController : RavenDbApiController
+    public class DocumentsBatchController : ClusterAwareRavenDbApiController
     {
         [HttpPost]
         [RavenRoute("bulk_docs")]

@@ -244,8 +244,8 @@ namespace Raven.Database.Storage
             if (configuration.RunInMemory)
                 return;
             var indexName = Path.Combine(path, indexDefinition.IndexId + ".index");
-            File.WriteAllText(indexName,
-                              JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters));
+	        var serializedObject = JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters);
+	        File.WriteAllText(indexName, serializedObject);
         }
 
         private void WriteTransformerDefinition(TransformerDefinition transformerDefinition)

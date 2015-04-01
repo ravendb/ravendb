@@ -29,7 +29,6 @@ namespace Raven.Database.Server.Controllers.Admin
             return databaseId.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase);
         }
 
-
         public override async Task<HttpResponseMessage> ExecuteAsync(System.Web.Http.Controllers.HttpControllerContext controllerContext, System.Threading.CancellationToken cancellationToken)
         {
             InnerInitialization(controllerContext);

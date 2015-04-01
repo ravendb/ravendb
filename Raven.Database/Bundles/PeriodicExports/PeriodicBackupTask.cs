@@ -44,24 +44,51 @@ namespace Raven.Database.Bundles.PeriodicExports
 		{
 			Database = database;
 
+			Database.ConfigurationRetriever.SubscribeToConfigurationDocumentChanges(PeriodicExportSetup.RavenDocumentKey, ResetSetupValuesFromDocument);
+
 			Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
 			{
 				if (notification.Id == null)
 					return;
-				if (PeriodicExportSetup.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false &&
-					PeriodicExportStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (PeriodicExportStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
 					return;
 
-				if (incrementalBackupTimer != null)
-					Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
-
-				if (fullBackupTimer != null)
-					Database.TimerManager.ReleaseTimer(fullBackupTimer);
-
-				ReadSetupValuesFromDocument();
+				ResetSetupValuesFromDocument();
 			};
 
 			ReadSetupValuesFromDocument();
+		}
+
+		private void ResetSetupValuesFromDocument()
+		{
+			lock (this)
+			{
+				if (incrementalBackupTimer != null)
+				{
+					try
+					{
+					Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
+					}
+					finally
+					{
+						incrementalBackupTimer = null;
+					}
+				}
+
+				if (fullBackupTimer != null)
+				{
+					try
+					{
+					Database.TimerManager.ReleaseTimer(fullBackupTimer);
+					}
+					finally
+					{
+						fullBackupTimer = null;
+					}
+				}
+
+				ReadSetupValuesFromDocument();
+		}
 		}
 
 		private void ReadSetupValuesFromDocument()
@@ -71,8 +98,8 @@ namespace Raven.Database.Bundles.PeriodicExports
 				try
 				{
 					// Not having a setup doc means this DB isn't enabled for periodic exports
-					var document = Database.Documents.Get(PeriodicExportSetup.RavenDocumentKey, null);
-					if (document == null)
+					var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<PeriodicExportSetup>(PeriodicExportSetup.RavenDocumentKey);
+					if (configurationDocument == null)
 					{
 						exportConfigs = null;
 						exportStatus = null;
@@ -82,7 +109,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 					var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey, null);
 
 					exportStatus = status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
-					exportConfigs = document.DataAsJson.JsonDeserialization<PeriodicExportSetup>();
+					exportConfigs = configurationDocument.MergedDocument;
 
 					if (exportConfigs.Disabled)
 					{
@@ -90,10 +117,10 @@ namespace Raven.Database.Bundles.PeriodicExports
 						return;
 					}
 
-					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
-					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
-					azureStorageAccount = Database.Configuration.Settings["Raven/AzureStorageAccount"];
-					azureStorageKey = Database.Configuration.Settings["Raven/AzureStorageKey"];
+					awsAccessKey = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AwsAccessKey);
+					awsSecretKey = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AwsSecretKey);
+					azureStorageAccount = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AzureStorageAccount);
+					azureStorageKey = Database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.PeriodicExport.AzureStorageKey);
 
 					if (exportConfigs.IntervalMilliseconds.GetValueOrDefault() > 0)
 					{
@@ -140,7 +167,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 				}
 			}
 		}
-		
+
 		private void TimerCallback(bool fullBackup)
 		{
 		    if (currentTask != null)
@@ -174,120 +201,119 @@ namespace Raven.Database.Bundles.PeriodicExports
 								{
 									Limit = backupLimit
 								});
-								var localBackupConfigs = exportConfigs;
-								var localBackupStatus = exportStatus;
-								if (localBackupConfigs == null)
-									return;
+							var localBackupConfigs = exportConfigs;
+							var localBackupStatus = exportStatus;
+							if (localBackupConfigs == null)
+								return;
 
-								if (localBackupConfigs.Disabled)
-									return;
+							if (localBackupConfigs.Disabled) 
+								return;
 
-								if (fullBackup == false)
+							if (fullBackup == false)
+							{
+								var currentEtags = dataDumper.Operations.FetchCurrentMaxEtags();
+								// No-op if nothing has changed
+								if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+									currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+									currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+									currentEtags.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
 								{
-									var currentEtags = dataDumper.Operations.FetchCurrentMaxEtags();
-									// No-op if nothing has changed
-									if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-									    currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
-									    currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
-									    currentEtags.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
+									return;
+								}
+							}
+
+							var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							if (Directory.Exists(backupPath) == false) 
+								Directory.CreateDirectory(backupPath);
+
+							if (fullBackup)
+							{
+								// create filename for full dump
+								backupPath = Path.Combine(backupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-full-dump");
+								if (File.Exists(backupPath))
+								{
+									var counter = 1;
+									while (true)
 									{
-										return;
+										backupPath = Path.Combine(Path.GetDirectoryName(backupPath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-full-dump");
+
+										if (File.Exists(backupPath) == false)
+											break;
+										counter++;
 									}
 								}
+							}
 
-								var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
-								if (Directory.Exists(backupPath) == false)
-									Directory.CreateDirectory(backupPath);
-
-								if (fullBackup)
-								{
-									// create filename for full dump
-									backupPath = Path.Combine(backupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-full-dump");
-									if (File.Exists(backupPath))
-									{
-										var counter = 1;
-										while (true)
-										{
-											backupPath = Path.Combine(Path.GetDirectoryName(backupPath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-full-dump");
-
-											if (File.Exists(backupPath) == false)
-												break;
-											counter++;
-										}
-									}
-								}
-
-								var smugglerOptions = dataDumper.Options;
-								if (fullBackup == false)
-								{
-									smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
-									smugglerOptions.StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag;
-									smugglerOptions.StartDocsDeletionEtag = localBackupStatus.LastDocsDeletionEtag;
-									smugglerOptions.StartAttachmentsDeletionEtag = localBackupStatus.LastAttachmentDeletionEtag;
-									smugglerOptions.Incremental = true;
-									smugglerOptions.ExportDeletions = true;
-								}
-
+                            var smugglerOptions = dataDumper.Options;
+							if (fullBackup == false)
+							{
+								smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
+								smugglerOptions.StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag;
+								smugglerOptions.StartDocsDeletionEtag = localBackupStatus.LastDocsDeletionEtag;
+								smugglerOptions.StartAttachmentsDeletionEtag = localBackupStatus.LastAttachmentDeletionEtag;
+								smugglerOptions.Incremental = true;
+								smugglerOptions.ExportDeletions = true;
+							}
 								exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath});
 
-								if (fullBackup == false)
+							if (fullBackup == false)
+							{
+								// No-op if nothing has changed
+								if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+									exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+									exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+									exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
 								{
-									// No-op if nothing has changed
-									if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-									    exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
-									    exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
-									    exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
-									{
-										logger.Info("Periodic export returned prematurely, nothing has changed since last export");
-										return;
-									}
+									logger.Info("Periodic export returned prematurely, nothing has changed since last export");
+									return;
 								}
+							}
 
-								try
+							try
+							{
+								UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
+							}
+							finally
+							{
+								// if user did not specify local folder we delete temporary file.
+								if (String.IsNullOrEmpty(localBackupConfigs.LocalFolderName))
 								{
-									UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
+									IOExtensions.DeleteFile(exportResult.FilePath);
 								}
-								finally
-								{
-									// if user did not specify local folder we delete temporary file.
-									if (String.IsNullOrEmpty(localBackupConfigs.LocalFolderName))
-									{
-										IOExtensions.DeleteFile(exportResult.FilePath);
-									}
-								}
+							}
 
-								if (fullBackup)
-								{
-									localBackupStatus.LastFullBackup = SystemTime.UtcNow;
-								}
-								else
-								{
-									localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
-									localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
-									localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
-									localBackupStatus.LastAttachmentDeletionEtag = exportResult.LastAttachmentsDeleteEtag;
-									localBackupStatus.LastBackup = SystemTime.UtcNow;
-								}
+							if (fullBackup)
+							{
+								localBackupStatus.LastFullBackup = SystemTime.UtcNow;
+							}
+							else
+							{
+								localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
+								localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
+								localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
+								localBackupStatus.LastAttachmentDeletionEtag = exportResult.LastAttachmentsDeleteEtag;
+								localBackupStatus.LastBackup = SystemTime.UtcNow;
+							}
 
 
-								var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
-								ravenJObject.Remove("Id");
-								var putResult = documentDatabase.Documents.Put(PeriodicExportStatus.RavenDocumentKey, null, ravenJObject,
-									new RavenJObject(), null);
+							var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
+							ravenJObject.Remove("Id");
+							var putResult = documentDatabase.Documents.Put(PeriodicExportStatus.RavenDocumentKey, null, ravenJObject,
+								new RavenJObject(), null);
 
-								// this result in exportStatus being refreshed
-								localBackupStatus = exportStatus;
-								if (localBackupStatus != null)
-								{
-									if (localBackupStatus.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
-										localBackupStatus.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
-								}
+							// this result in exportStatus being refreshed
+							localBackupStatus = exportStatus;
+							if (localBackupStatus != null)
+							{
+								if (localBackupStatus.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
+									localBackupStatus.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
+							}
 								
 								if (backupLimit != int.MaxValue)
 								{
 									backupLimit = int.MaxValue;
 									performAnotherRun = true;
-								}
+						}
 								else
 								{
 									performAnotherRun = false;
@@ -370,7 +396,8 @@ namespace Raven.Database.Bundles.PeriodicExports
 			using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
 			using (var fileStream = File.OpenRead(backupPath))
 			{
-				var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
+				var key = Path.GetFileName(backupPath);
+				var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, fileStream, key, 60 * 60);
 				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath), archiveId));
 			}
 		}

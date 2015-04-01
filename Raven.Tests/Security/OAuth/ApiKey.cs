@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -120,10 +121,10 @@ namespace Raven.Tests.Security.OAuth
 					ApiKey = "dbadmin/ThisIsMySecret"
 				}.Initialize())
 				{
-					store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", "POST", new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions))
+					store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", HttpMethod.Post, new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions))
 						.ExecuteRequest();// can do admin stuff
 
-					var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/debug/user-info", "GET", new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions));
+					var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/debug/user-info", HttpMethod.Get, new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions));
 
 					var json = (RavenJObject)httpJsonRequest.ReadResponseJson();
 

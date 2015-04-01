@@ -15,12 +15,15 @@ class collection {
     isAllDocuments = false;
     isSystemDocuments = false;
 
+    public collectionName : string;
+
     private documentsList: pagedList;
     public static allDocsCollectionName = "All Documents";
     private static systemDocsCollectionName = "System Documents";
     private static collectionColorMaps: databaseCollectionStyleMap[] = [];
 
     constructor(public name: string, public ownerDatabase: database, docCount: number = 0) {
+        this.collectionName = name;
         this.isAllDocuments = name === collection.allDocsCollectionName;
         this.isSystemDocuments = name === collection.systemDocsCollectionName;
         this.colorClass = collection.getCollectionCssClass(name, ownerDatabase);

@@ -27,15 +27,15 @@ using System.ComponentModel;
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-#if !NETFX_CORE
-  [Description("DefaultValueAttributeTestClass description!")]
+#if !(NETFX_CORE || ASPNETCORE50)
+    [Description("DefaultValueAttributeTestClass description!")]
 #endif
-  public sealed class DefaultValueAttributeTestClass
-  {
-    [DefaultValue("TestProperty1Value")]
-    public string TestProperty1 { get; set; }
+    public sealed class DefaultValueAttributeTestClass
+    {
+        [DefaultValue("TestProperty1Value")]
+        public string TestProperty1 { get; set; }
 
-    [DefaultValue(21)]
-    public int TestField1;
-  }
+        [DefaultValue(21)]
+        public int TestField1;
+    }
 }

@@ -1,10 +1,9 @@
-﻿import ace = require("ace/ace");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-import viewModelBase = require('viewmodels/viewModelBase');
+﻿import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 import saveCustomFunctionsCommand = require("commands/saveCustomFunctionsCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/getEffectiveCustomFunctionsCommand");
 import customFunctions = require("models/customFunctions");
-import execJs = require("common/execJs");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 
@@ -14,6 +13,8 @@ class customFunctionsEditor extends viewModelBase {
     textarea: any;
     text: KnockoutComputed<string>;
     documentText: KnockoutObservable<string>;
+    globalDocumentText: KnockoutObservable<string>;
+    hasGlobal = ko.observable<boolean>(false);
 
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -21,7 +22,7 @@ class customFunctionsEditor extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
         this.documentText = ko.observable<string>("");
-        this.fetchCustomFunctions();
+        this.globalDocumentText = ko.observable<string>("");
 
         this.dirtyFlag = new ko.DirtyFlag([this.documentText], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.computed<boolean>(() => {
@@ -37,26 +38,26 @@ class customFunctionsEditor extends viewModelBase {
     attached() {
         $("#customFunctionsExample").popover({
             html: true,
-            trigger: 'hover',
-            content: 'Examples:<pre>exports.greet = <span class="code-keyword">function</span>(name) {<br/>    <span class="code-keyword">return</span> <span class="code-string">"Hello " + name + "!"</span>;<br/>}</pre>',
+            trigger: "hover",
+            content: "Examples:<pre>exports.greet = <span class=\"code-keyword\">function</span>(name) {<br/>    <span class=\"code-keyword\">return</span> <span class=\"code-string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
         });
     }
 
     compositionComplete() {
         super.compositionComplete();
 
-        var editorElement = $(".custom-functions-form .editor");
+        var editorElement = $("#customFunctionsEditor.editor");
         if (editorElement.length > 0) {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
 
-        $("#customFunctionsEditor").on('DynamicHeightSet', () => this.docEditor.resize());
+        $("#customFunctionsEditor").on("DynamicHeightSet", () => this.docEditor.resize());
         this.fetchCustomFunctions();
     }
 
     detached() {
         super.detached();
-        $("#customFunctionsEditor").off('DynamicHeightSet');
+        $("#customFunctionsEditor").off("DynamicHeightSet");
     }
 
     fetchCustomFunctions() {
@@ -64,6 +65,14 @@ class customFunctionsEditor extends viewModelBase {
         fetchTask.done((cf: customFunctions) => {
             this.documentText(cf.functions);
             this.dirtyFlag().reset();
+        });
+
+        var globalFetchTask = new getEffectiveCustomFunctionsCommand(this.activeDatabase()).execute();
+        globalFetchTask.done((result: configurationDocumentDto<customFunctionsDto>) => {
+            this.hasGlobal(result.GlobalExists);
+            if (result.GlobalExists) {
+                this.globalDocumentText(result.GlobalDocument.Functions);
+            }
         });
     }
 

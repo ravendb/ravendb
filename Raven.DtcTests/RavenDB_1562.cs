@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Net;
+using System.Net.Http;
+
 using Raven.Abstractions.Connection;
 using Raven.Tests.Common;
 
@@ -265,7 +267,7 @@ namespace Raven.Tests.Issues
             var doc = RavenJObject.FromObject(databaseDocument);
             doc.Remove("Id");
 
-			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
+			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), HttpMethod.Put);
             req.WriteAsync(doc.ToString(Formatting.Indented)).Wait();
             req.ExecuteRequest();
 

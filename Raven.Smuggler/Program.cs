@@ -34,12 +34,23 @@ namespace Raven.Smuggler
             var filesOptions = smugglerFilesApi.Options;
 
 	        selectionDispatching = new OptionSet();
+		    selectionDispatching.Add("nc|no-compression-on-import:", OptionCategory.None, "A flag that if set disables compression usage during import of documents.", value =>
+																		 {
+																			 bool disableCompression;
+																			 if (String.IsNullOrWhiteSpace(value) == false &&
+																			     Boolean.TryParse(value, out disableCompression))
+																				 databaseOptions.DisableCompressionOnImport = disableCompression;
+																			 else
+																				 PrintUsageAndExit(new ArgumentException("Invalid value for no-compression-on-import flag. Only 'true' and 'false' values should be used."));
+																		 });
+
 		    selectionDispatching.Add("d|d2|database|database2:", OptionCategory.None, string.Empty, value =>
 		    {
 			    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Database)
 				    mode = SmugglerMode.Database;
 			    else PrintUsageAndExit(new ArgumentException("Database and Filesystem parameters are mixed. You cannot use both in the same request."));
 		    });
+
 			selectionDispatching.Add("f|f2|filesystem|filesystem2:", OptionCategory.None, string.Empty, value =>
 		    {
 			    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Filesystem)
@@ -64,6 +75,7 @@ namespace Raven.Smuggler
 				                                               PrintUsageAndExit(e);
 			                                               }
 		                                               });
+
 			databaseOptionSet.Add("metadata-filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents by a metadata property." + Environment.NewLine +
 		                                                 "Usage example: Raven-Entity-Name=Posts, or Raven-Entity-Name=Posts,Persons for multiple document types", (key, val) => databaseOptions.Filters.Add(new FilterSetting
 		                                                                                                                                                                                                     {
@@ -71,6 +83,7 @@ namespace Raven.Smuggler
 			                                                                                                                                                                                                     ShouldMatch = true,
 			                                                                                                                                                                                                     Values = FilterSetting.ParseValues(val)
 		                                                                                                                                                                                                     }));
+
 			databaseOptionSet.Add("negative-metadata-filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents NOT matching a metadata property." + Environment.NewLine +
 		                                                          "Usage example: Raven-Entity-Name=Posts", (key, val) => databaseOptions.Filters.Add(
 			                                                          new FilterSetting
@@ -79,6 +92,7 @@ namespace Raven.Smuggler
 				                                                          ShouldMatch = false,
 				                                                          Values = FilterSetting.ParseValues(val)
 			                                                          }));
+
 			databaseOptionSet.Add("filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents by a document property" + Environment.NewLine +
 		                                        "Usage example: Property-Name=Value", (key, val) => databaseOptions.Filters.Add(
 			                                        new FilterSetting
@@ -87,6 +101,7 @@ namespace Raven.Smuggler
 				                                        ShouldMatch = true,
 				                                        Values = FilterSetting.ParseValues(val)
 			                                        }));
+
 			databaseOptionSet.Add("negative-filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents NOT matching a document property" + Environment.NewLine +
 		                                                 "Usage example: Property-Name=Value", (key, val) => databaseOptions.Filters.Add(
 			                                                 new FilterSetting
@@ -95,6 +110,7 @@ namespace Raven.Smuggler
 				                                                 ShouldMatch = false,
 				                                                 Values = FilterSetting.ParseValues(val)
 			                                                 }));
+
 			databaseOptionSet.Add("transform:", OptionCategory.SmugglerDatabase, "Transform documents using a given script (import only)", script => databaseOptions.TransformScript = script);
 			databaseOptionSet.Add("transform-file:", OptionCategory.SmugglerDatabase, "Transform documents using a given script file (import only)", script => databaseOptions.TransformScript = File.ReadAllText(script));
 			databaseOptionSet.Add("max-steps-for-transform-script:", OptionCategory.SmugglerDatabase, "Maximum number of steps that transform script can have (import only)", s => databaseOptions.MaxStepsForTransformScript = int.Parse(s));
@@ -157,7 +173,7 @@ namespace Raven.Smuggler
 
 		static void Main(string[] args)
 		{
-			var program = new Program();
+			var program = new Program();			
 			program.Parse(args).Wait();
 		}
 
@@ -206,7 +222,7 @@ namespace Raven.Smuggler
 
             try
             {
-                switch (this.mode)
+                switch (mode)
                 {
                     case SmugglerMode.Database:
                         {
@@ -226,6 +242,10 @@ namespace Raven.Smuggler
 
                             if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
                                 smugglerApi.Options.Incremental = true;
+
+							if (NetworkUtil.IsLocalhost(smugglerApi.Options.Destination.Url) ||
+								NetworkUtil.IsLocalhost(smugglerApi.Options.BackupPath))
+								smugglerApi.Options.DisableCompressionOnImport = true;
 
                             ValidateDatabaseParameters(smugglerApi, action);
                             var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);

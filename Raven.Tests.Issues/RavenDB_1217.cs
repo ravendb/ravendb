@@ -42,9 +42,9 @@ namespace Raven.Tests.Issues
 			{
 				// for default database
 				var serverClient = (ServerClient) store.DatabaseCommands;
-				
-				serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
-				var servers = serverClient.ReplicationInformer.ReplicationDestinations; 
+
+				GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+				var servers = GetReplicationInformer(serverClient).ReplicationDestinations; 
 
 				Assert.Equal(4, servers.Count);
 				Assert.Equal("http://localhost:8078", servers[0].Url);
@@ -57,9 +57,9 @@ namespace Raven.Tests.Issues
 
 				// for Northwind database configured in App.config
 				serverClient = (ServerClient) store.DatabaseCommands.ForDatabase("Northwind");
-				serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+				GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
-				servers = serverClient.ReplicationInformer.ReplicationDestinations;
+				servers = GetReplicationInformer(serverClient).ReplicationDestinations;
 
 				Assert.Equal(1, servers.Count);
 				Assert.Equal("http://localhost:8076", servers[0].Url);
@@ -93,8 +93,8 @@ namespace Raven.Tests.Issues
 				// for default database
 				var serverClient = (ServerClient)store.DatabaseCommands;
 
-				serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
-				var servers = serverClient.ReplicationInformer.ReplicationDestinations;
+				GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+				var servers = GetReplicationInformer(serverClient).ReplicationDestinations;
 
 				Assert.Equal(2, servers.Count);
 				Assert.Equal("http://localhost:8078", servers[0].Url);
@@ -105,9 +105,9 @@ namespace Raven.Tests.Issues
 
 				// for Northwind database
 				serverClient = (ServerClient)store.DatabaseCommands.ForDatabase("Northwind");
-				serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+				GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
-				servers = serverClient.ReplicationInformer.ReplicationDestinations;
+				servers = GetReplicationInformer(serverClient).ReplicationDestinations;
 
 				Assert.Equal(1, servers.Count);
 				Assert.Equal("http://localhost:8076", servers[0].Url);

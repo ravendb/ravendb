@@ -17,9 +17,9 @@ namespace Raven.Tests.Triggers
 			return VetoResult.Allowed;
 		}
 
-		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			document["created_at"] = new RavenJValue(new DateTime(2010, 2, 13, 18, 26, 48, 506, DateTimeKind.Utc));
+			jsonReplicationDocument["created_at"] = new RavenJValue(new DateTime(2010, 2, 13, 18, 26, 48, 506, DateTimeKind.Utc));
 		}
 	}
 }

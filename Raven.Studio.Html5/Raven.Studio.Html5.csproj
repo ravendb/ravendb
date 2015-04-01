@@ -9,7 +9,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>1.0</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>1.4</TypeScriptToolsVersion>
     <UseIISExpress>false</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
@@ -31,9 +31,15 @@
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteLocalReplicationsSetupCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
+    <TypeScriptCompile Include="App\commands\performSmugglingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getClusterNodesStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\updateRaftClusterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveClusterConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\leaveRaftClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
@@ -61,11 +67,16 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getClientBuildVersionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\extendRaftClusterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getClusterTopologyCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCSharpIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveConflictResolutionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveSqlReplicationConnectionStringsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveVersioningsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexesDefinitionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexMergeSuggestionsCommand.ts" />
@@ -88,8 +99,10 @@
     <TypeScriptCompile Include="App\commands\replicateTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveAutomaticConflictResolutionDocument.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteLocalPeriodicExportSetupCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
@@ -142,6 +155,12 @@
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
+    <TypeScriptCompile Include="App\models\serverConnectionInfo.ts" />
+    <TypeScriptCompile Include="App\models\serverSmugglingItem.ts" />
+    <TypeScriptCompile Include="App\models\nodeConnectionInfo.ts" />
+    <TypeScriptCompile Include="App\models\clusterConfiguration.ts" />
+    <TypeScriptCompile Include="App\models\topology.ts" />
+    <TypeScriptCompile Include="App\models\configurationDocument.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
@@ -200,10 +219,14 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\cluster.ts" />
+    <TypeScriptCompile Include="App\viewmodels\editNodeConnectionInfoDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\exportFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\fileRenameDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\importFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\tasks.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConfiguration.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigVersioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
@@ -241,6 +264,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConflicts.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationDestinations.ts" />
+    <TypeScriptCompile Include="App\viewmodels\serverSmuggling.ts" />
     <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
@@ -277,6 +301,7 @@
     <TypeScriptCompile Include="App\viewmodels\showDataDialog.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
+    <TypeScriptCompile Include="App\viewmodels\globalConfigSqlReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationSimulationDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationConnectionStringsManagement.ts" />
@@ -359,6 +384,12 @@
     <TypeScriptCompile Include="App\commands\explainReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCachedCollectionsCount.ts" />
+    <TypeScriptCompile Include="App\commands\getGlobalConfigReplicationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveGlobalSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getConfigurationSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectiveCustomFunctionsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getEffectivePeriodicExportCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
@@ -451,6 +482,14 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugExplainReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\cancelSideBySizeConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfig.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigPeriodicExport.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigReplications.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigQuotas.ts" />
+    <TypeScriptCompile Include="App\models\configurationSettings.ts" />
+    <TypeScriptCompile Include="App\models\configurationSetting.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigCustomFunctions.ts" />
+    <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
@@ -462,12 +501,19 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings.ts" />
     <Content Include="App\views\adminSettings.html" />
+    <Content Include="App\views\editNodeConnectionInfoDialog.html" />
+    <Content Include="App\views\cluster.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\globalConfigCustomFunctions.html" />
+    <Content Include="App\views\globalConfigQuotas.html" />
+    <Content Include="App\views\globalConfigReplications.html" />
+    <Content Include="App\views\globalConfigPeriodicExport.html" />
+    <Content Include="App\views\globalConfig.html" />
     <Content Include="App\views\filesystem\exportFilesystem.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
     <Content Include="App\views\filesystem\fileRenameDialog.html" />
@@ -476,6 +522,8 @@
     <Content Include="App\views\filesystem\tasks.html" />
     <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
     <Content Include="App\views\filesystem\versioning.html" />
+    <Content Include="App\views\globalConfigSqlReplication.html" />
+    <Content Include="App\views\serverSmuggling.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />
@@ -503,6 +551,7 @@
     <Content Include="App\views\disableResourceToggleConfirm.html" />
     <Content Include="App\views\runningTasks.html" />
     <Content Include="App\views\studioConfig.html" />
+    <Content Include="App\views\globalConfigVersioning.html" />
     <Content Include="App\views\visualizerImport.html" />
     <Content Include="App\views\visualizerKeys.html" />
     <Content Include="App\views\editSqlReplication.html" />
@@ -909,6 +958,9 @@
     <Content Include="Scripts\durandal\system.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
+    <None Include="Scripts\jquery-2.1.3.intellisense.js" />
+    <Content Include="Scripts\jquery-2.1.3.js" />
+    <Content Include="Scripts\jquery-2.1.3.min.js" />
     <Content Include="Scripts\jquery.blockUI.js" />
     <Content Include="Scripts\jquery.fullscreen.js" />
     <Content Include="Scripts\jszip\jszip-utils.min.js" />
@@ -931,7 +983,6 @@
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Scripts\forge\forge_custom.min.js" />
-    <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
     <Content Include="Scripts\jquery.dynatree.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
@@ -952,16 +1003,14 @@
     <Content Include="Scripts\knockout-postbox.js" />
     <Content Include="Scripts\knockout-postbox.min.js" />
     <Content Include="Scripts\knockout.dirtyFlag.js" />
-    <Content Include="Scripts\moment-with-langs.js" />
-    <Content Include="Scripts\moment-with-langs.min.js" />
+    <Content Include="Scripts\moment-with-locales.js" />
+    <Content Include="Scripts\moment-with-locales.min.js" />
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
     <Content Include="Scripts\d3\models\timelines.js" />
     <Content Include="Scripts\d3\models\timelinesChart.js" />
     <Content Include="Scripts\d3\nv.js" />
-    <Content Include="Scripts\r.js" />
-    <Content Include="Scripts\require.js" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\d3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
@@ -970,6 +1019,8 @@
     <TypeScriptCompile Include="Scripts\typings\d3\nvd3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jszip\jszip.d.ts" />
+    <Content Include="Scripts\r.js" />
+    <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
@@ -978,6 +1029,7 @@
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
+    <Content Include="Scripts\jquery-2.1.3.min.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>
@@ -1063,7 +1115,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>31052</DevelopmentServerPort>
+          <DevelopmentServerPort>50411</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

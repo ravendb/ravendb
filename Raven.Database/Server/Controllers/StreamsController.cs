@@ -26,7 +26,7 @@ using System.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class StreamsController : RavenDbApiController
+	public class StreamsController : ClusterAwareRavenDbApiController
 	{
 		[HttpGet]
 		[RavenRoute("streams/docs")]

@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -26,6 +27,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Database.Config;
+using Raven.Database.Raft;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.WebApi;
 using Raven.Imports.Newtonsoft.Json;
@@ -120,9 +122,9 @@ namespace Raven.Database.Server.Controllers
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
+			clusterManager = ((Reference<ClusterManager>)controllerContext.Configuration.Properties[typeof(ClusterManager)]).Value;
 			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
             maxSecondsForTaskToWaitForDatabaseToLoad = (int)controllerContext.Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
-            //MaxSecondsForTaskToWaitForDatabaseToLoad
 		}
 
 		public async Task<T> ReadJsonObjectAsync<T>()
@@ -153,7 +155,9 @@ namespace Raven.Database.Server.Controllers
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
+			{
 				return RavenJArray.Load(jsonReader);
+		}
 		}
 
 		public async Task<string> ReadStringAsync()
@@ -257,7 +261,7 @@ namespace Raven.Database.Server.Controllers
             {
                 nvc = (NameValueCollection) value;
                 return nvc[key];
-            }
+		}
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
             req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
@@ -720,7 +724,7 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-	    public abstract bool SetupRequestToProperDatabase(RequestManager requestManager);
+	    public abstract Task<bool> SetupRequestToProperDatabase(RequestManager requestManager);
 
         public abstract string TenantName { get; }
 
@@ -797,6 +801,18 @@ namespace Raven.Database.Server.Controllers
                 return (RequestManager)Configuration.Properties[typeof(RequestManager)];
             }
         }
+
+		private ClusterManager clusterManager;
+		public ClusterManager ClusterManager
+		{
+			get
+			{
+				if (Configuration == null)
+					return clusterManager;
+
+				return ((Reference<ClusterManager>)Configuration.Properties[typeof(ClusterManager)]).Value;
+			}
+		}
 
 		private SemaphoreSlim maxNumberOfThreadsForDatabaseToLoad;
         private int maxSecondsForTaskToWaitForDatabaseToLoad;

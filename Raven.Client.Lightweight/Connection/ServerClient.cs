@@ -10,9 +10,11 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client.Changes;
@@ -24,6 +26,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Connection.Request;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -39,8 +42,8 @@ namespace Raven.Client.Connection
 
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
 		{
-			add { asyncServerClient.ReplicationInformer.FailoverStatusChanged += value; }
-			remove { asyncServerClient.ReplicationInformer.FailoverStatusChanged -= value; }
+			add { asyncServerClient.RequestExecuter.FailoverStatusChanged += value; }
+			remove { asyncServerClient.RequestExecuter.FailoverStatusChanged -= value; }
 		}
 
 		public ServerClient(AsyncServerClient asyncServerClient)
@@ -66,9 +69,9 @@ namespace Raven.Client.Connection
 			get { return asyncServerClient.convention; }
 		}
 
-		public IDocumentStoreReplicationInformer ReplicationInformer
+		public IRequestExecuter RequestExecuter
 		{
-			get { return asyncServerClient.ReplicationInformer; }
+			get { return asyncServerClient.RequestExecuter; }
 		}
 
 		#region IDatabaseCommands Members
@@ -106,7 +109,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.ExecuteGetRequest(requestUrl).ResultUnwrap();
 		}
 
-		internal T ExecuteWithReplication<T>(string method, Func<OperationMetadata, T> operation)
+		internal T ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, T> operation)
 		{
 			return
 				asyncServerClient.ExecuteWithReplication(method,
@@ -344,7 +347,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.GetBulkInsertOperation(options, changes);
 		}
 
-		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
+		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
 		{
 			return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression, disableAuthentication, timeout);
 		}
@@ -365,9 +368,13 @@ namespace Raven.Client.Connection
 			return asyncServerClient.ForceReadFromMaster();
 		}
 
-		public IDatabaseCommands ForDatabase(string database)
+		public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
 		{
-			return new ServerClient(asyncServerClient.ForDatabaseInternal(database));
+			var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database, clusterBehavior);
+			if (asyncServerClient == newAsyncServerClient) 
+				return this;
+
+			return new ServerClient(newAsyncServerClient);
 		}
 
 		public IDatabaseCommands ForSystemDatabase()
@@ -499,7 +506,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).ResultUnwrap();
 		}
 
-		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
+		public HttpJsonRequest CreateRequest(string relativeUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
 		{
 			return asyncServerClient.CreateRequest(relativeUrl, method, disableRequestCompression, disableAuthentication, timeout);
 		}
@@ -509,7 +516,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.DisableAllCaching();
 		}
 
-		internal ReplicationDocument DirectGetReplicationDestinations(OperationMetadata operationMetadata)
+		internal ReplicationDocumentWithClusterInformation DirectGetReplicationDestinations(OperationMetadata operationMetadata)
 		{
 			return asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap();
 		}

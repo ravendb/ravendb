@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -26,7 +27,6 @@ namespace Raven.Client.Connection.Async
 			innerAsyncServerClient = asyncServerClient;
 			adminRequest =
 				new AdminRequestCreator((url, method) => innerAsyncServerClient.ForSystemDatabase().CreateRequest(url, method),
-										(url, method) => innerAsyncServerClient.CreateRequest(url, method),
 										(currentServerUrl, requestUrl, method) => innerAsyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method));
 		}
 
@@ -58,7 +58,7 @@ namespace Raven.Client.Connection.Async
 
 		public Task StopIndexingAsync(CancellationToken token = default (CancellationToken))
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("POST", async operationMetadata =>
+			return innerAsyncServerClient.ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
 			{
 				using (var req = adminRequest.StopIndexing(operationMetadata.Url))
 				{
@@ -69,7 +69,7 @@ namespace Raven.Client.Connection.Async
 
 		public Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null, CancellationToken token = default (CancellationToken))
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("POST", async operationMetadata =>
+			return innerAsyncServerClient.ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
 			{
 				using (var req = adminRequest.StartIndexing(operationMetadata.Url, maxNumberOfParallelIndexTasks))
 				{
@@ -123,7 +123,7 @@ namespace Raven.Client.Connection.Async
 
 		public Task<string> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken))
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("GET", async operationMetadata =>
+			return innerAsyncServerClient.ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
 			{
 				using (var request = adminRequest.IndexingStatus(operationMetadata.Url))
 				{
@@ -135,7 +135,7 @@ namespace Raven.Client.Connection.Async
 
 		public Task<RavenJObject> GetDatabaseConfigurationAsync(CancellationToken token = default (CancellationToken))
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("GET", async operationMetadata =>
+			return innerAsyncServerClient.ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
 			{
 				using (var request = adminRequest.GetDatabaseConfiguration(operationMetadata.Url))
 				{

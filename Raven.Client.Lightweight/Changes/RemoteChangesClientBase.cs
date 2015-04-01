@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -28,7 +29,6 @@ namespace Raven.Client.Changes
         private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
         private readonly Convention conventions;
-        private readonly IReplicationInformerBase replicationInformer;
 
         private readonly Action onDispose;                
 
@@ -46,7 +46,6 @@ namespace Raven.Client.Changes
             ICredentials credentials,
             HttpJsonRequestFactory jsonRequestFactory,
             Convention conventions,
-            IReplicationInformerBase replicationInformer,
             Action onDispose )
         {
             // Precondition
@@ -62,7 +61,6 @@ namespace Raven.Client.Changes
             this.credentials = new OperationCredentials(apiKey, credentials);
             this.jsonRequestFactory = jsonRequestFactory;
             this.conventions = conventions;
-            this.replicationInformer = replicationInformer;
             this.onDispose = onDispose;            
 
             this.Task = EstablishConnection()
@@ -104,7 +102,7 @@ namespace Raven.Client.Changes
                 clientSideHeartbeatTimer = null;
             }
 
-            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
+			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethod.Get, credentials, conventions)
             {
                 AvoidCachingRequest = true,
                 DisableRequestCompression = true
@@ -129,10 +127,10 @@ namespace Raven.Client.Changes
                     throw;
 
                 bool timeout;
-                if (replicationInformer.IsServerDown(e, out timeout) == false)
+                if (HttpConnectionHelper.IsServerDown(e, out timeout) == false)
                     throw;
 
-                if (replicationInformer.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.ServiceUnavailable))
+				if (HttpConnectionHelper.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.ServiceUnavailable))
                     throw;
 
                 logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
@@ -193,7 +191,7 @@ namespace Raven.Client.Changes
                     if (string.IsNullOrEmpty(value) == false)
                         sendUrl += "&value=" + Uri.EscapeUriString(value);
 
-                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions)
+					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethod.Get, credentials, conventions)
                     {
                         AvoidCachingRequest = true
                     };

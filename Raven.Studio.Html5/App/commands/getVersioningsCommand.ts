@@ -3,7 +3,7 @@ import database = require("models/database");
 import versioningEntry = require("models/versioningEntry");
 
 class getVersioningsCommand extends commandBase {
-    constructor(private db: database) {
+    constructor(private db: database, private getGlobalConfig = false) {
         super();
     }
 
@@ -13,7 +13,7 @@ class getVersioningsCommand extends commandBase {
             result.map((dto: versioningEntryDto) => new versioningEntry(dto, true));
         var url = "/docs";
         var args = {
-            startsWith: "Raven/Versioning",
+            startsWith: this.getGlobalConfig ? "Raven/Global/Versioning": "Raven/Versioning",
             start: 0,
             pageSize: 1024
         };

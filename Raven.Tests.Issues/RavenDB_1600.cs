@@ -53,7 +53,7 @@ namespace Raven.Tests.Issues
 			{
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
-			}))
+			}, null))
 			{
 				db.SpinBackgroundWorkers();
 				db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
@@ -93,7 +93,7 @@ namespace Raven.Tests.Issues
 			{
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-			}))
+			}, null))
 			{
 				db.SpinBackgroundWorkers();
 				db.RunIdleOperations();
