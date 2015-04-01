@@ -1,21 +1,17 @@
 import appUrl = require("common/appUrl");
-import database = require("models/database");
-import resource = require("models/resource");
+import database = require("models/resources/database");
+import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import router = require("plugins/router");
 import app = require("durandal/app");
-import changesApi = require("common/changesApi");
-import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
-import shell = require("viewmodels/shell");
-import changesCallback = require("common/changesCallback");
+import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
 import changeSubscription = require("models/changeSubscription");
-import uploadItem = require("models/uploadItem");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
-import confirmationDialog = require("viewmodels/confirmationDialog");
-import saveDocumentCommand = require("commands/saveDocumentCommand");
-import document = require("models/document");
+import confirmationDialog = require("viewmodels/common/confirmationDialog");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+import document = require("models/database/documents/document");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.

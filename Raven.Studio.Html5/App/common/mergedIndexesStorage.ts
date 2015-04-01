@@ -1,7 +1,7 @@
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
 
-import database = require("models/database");
-import indexMergeSuggestion = require("models/indexMergeSuggestion");
+import database = require("models/resources/database");
+import indexMergeSuggestion = require("models/database/index/indexMergeSuggestion");
 
 class mergedIndexesStorage {
     public static getMergedIndex(db: database, mergedIndexName: string): indexMergeSuggestion {

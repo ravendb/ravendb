@@ -1,5 +1,4 @@
 ﻿import commandBase = require("commands/commandBase");
-import database = require("models/database");
 
 class deleteCounterStorageCommand extends commandBase {
     constructor(private counterStorageName: string, private isHardDelete: boolean) {
