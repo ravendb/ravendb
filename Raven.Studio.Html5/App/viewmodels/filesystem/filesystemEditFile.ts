@@ -141,12 +141,22 @@ class filesystemEditFile extends viewModelBase {
     }
 
     renameFile() {
-        var dialog = new fileRenameDialog(this.fileName(), this.activeFilesystem());
+	    var currentFileName = this.fileName();
+        var dialog = new fileRenameDialog(currentFileName, this.activeFilesystem());
         dialog.onExit().done((newName: string) => {
+	        this.removeFromTopRecentFiles(currentFileName);
             router.navigate(appUrl.forEditFile(newName, this.activeFilesystem()));
         });
         app.showDialog(dialog);
     }
+
+	removeFromTopRecentFiles(fileName: string) {
+		var currentFilesystemName = this.activeFilesystem().name;
+        var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
+		if (recentFilesForCurFilesystem) {
+			recentFilesForCurFilesystem.recentFiles.remove(fileName);
+		}
+	}
 
     getTopRecentFiles() {
         var currentFilesystemName = this.activeFilesystem().name;
