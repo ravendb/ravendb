@@ -85,6 +85,8 @@ namespace Raven.Abstractions.Smuggler
         /// You can give a key to the incremental last etag, in order to make incremental imports from a few export sources.
         /// </summary>
         public string IncrementalKey { get; set; }
+
+		public Action<string> ReportProgress { get; set; } 
     }
 
     public class SmugglerExportOptions<T> where T : ConnectionStringOptions

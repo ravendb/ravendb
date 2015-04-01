@@ -5,10 +5,12 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Request;
+using Raven.Client.Metrics;
 
 namespace Raven.Client.Connection
 {
@@ -36,7 +38,7 @@ namespace Raven.Client.Connection
 
 		FailureCounters FailureCounters { get; }
 
-        Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token = default (CancellationToken));
+        Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method, string primaryUrl, OperationCredentials primaryCredentials, RequestTimeMetric primaryRequestTimeMetric, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token = default (CancellationToken));
     }
 
     public interface IReplicationInformerBase<in TClient> : IReplicationInformerBase

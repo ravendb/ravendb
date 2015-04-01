@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Smuggler
+namespace Raven.Abstractions.Smuggler
 {
 	public class ServerSupportedFeatures
     {

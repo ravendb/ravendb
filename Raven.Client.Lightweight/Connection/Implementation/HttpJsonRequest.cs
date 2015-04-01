@@ -17,11 +17,11 @@ using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Client.Connection.Request;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
+using Raven.Client.Metrics;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -41,7 +41,7 @@ namespace Raven.Client.Connection
 	    public const int CustomBuildVersion = 13;
 
 		internal readonly string Url;
-		internal readonly string Method;
+		internal readonly HttpMethod Method;
 
 		internal volatile HttpClient httpClient;
 
@@ -59,6 +59,8 @@ namespace Raven.Client.Connection
 		private readonly IHoldProfilingInformation owner;
 		private readonly Convention conventions;
 		private readonly bool disabledAuthRetries;
+		private readonly IRequestTimeMetric requestTimeMetric;
+
 		private string postedData;
 		private bool isRequestSentToServer;
 
@@ -72,7 +74,7 @@ namespace Raven.Client.Connection
 		private string operationUrl;
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
-        
+
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -88,7 +90,6 @@ namespace Raven.Client.Connection
 
 			Url = requestParams.Url;
 			Method = requestParams.Method;
-		    
 
 			if (requestParams.Timeout.HasValue)
 			{
@@ -108,6 +109,7 @@ namespace Raven.Client.Connection
 			this.factory = factory;
 			owner = requestParams.Owner;
 			conventions = requestParams.Convention;
+			requestTimeMetric = requestParams.RequestTimeMetric;
 
 			if (factory.httpMessageHandler != null) 
 				recreateHandler = () => factory.httpMessageHandler;
@@ -125,7 +127,7 @@ namespace Raven.Client.Connection
 
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
 			{
-				if (Method == "POST" || Method == "PUT" || Method == "PATCH" || Method == "EVAL")
+				if (Method == HttpMethod.Post || Method == HttpMethod.Put || Method == HttpMethods.Patch || Method == HttpMethods.Eval)
 				{
 					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
 					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
@@ -174,7 +176,7 @@ namespace Raven.Client.Connection
 			if (writeCalled)
                 return await ReadJsonInternalAsync().ConfigureAwait(false);
 
-            var result = await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)).ConfigureAwait(false);
+            var result = await SendRequestInternal(() => new HttpRequestMessage(Method, Url)).ConfigureAwait(false);
 			if (result != null)
 				return result;
             return await ReadJsonInternalAsync().ConfigureAwait(false); 
@@ -200,6 +202,8 @@ namespace Raven.Client.Connection
 				finally
 				{
 					sp.Stop();
+					if (requestTimeMetric != null)
+						requestTimeMetric.Update((int)sp.Elapsed.TotalMilliseconds);
 				}
 
 				// throw the conflict exception
@@ -401,7 +405,7 @@ namespace Raven.Client.Connection
 
 		public async Task<byte[]> ReadResponseBytesAsync()
 		{
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url), readErrorString: false).ConfigureAwait(false);
+			await SendRequestInternal(() => new HttpRequestMessage(Method, Url), readErrorString: false).ConfigureAwait(false);
 
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
@@ -473,7 +477,7 @@ namespace Raven.Client.Connection
 				var data = RavenJToken.TryLoad(countingStream);
 				Size = countingStream.NumberOfReadBytes;
 
-				if (Method == "GET" && ShouldCacheRequest)
+				if (Method == HttpMethod.Get && ShouldCacheRequest)
 				{
 					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
@@ -632,7 +636,7 @@ namespace Raven.Client.Connection
 		{
 			return await RunWithAuthRetry(async () =>
 			{
-				var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+				var httpRequestMessage = new HttpRequestMessage(Method, Url);
 				Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
 				SetResponseHeaders(Response);
                 AssertServerVersionSupported();
@@ -662,7 +666,7 @@ namespace Raven.Client.Connection
         public Task WriteAsync(RavenJToken tokenToWrite)
         {
             writeCalled = true;
-	        return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+	        return SendRequestInternal(() => new HttpRequestMessage(Method, Url)
 	        {
 		        Content = new JsonContent(tokenToWrite),
 		        Headers =
@@ -677,7 +681,7 @@ namespace Raven.Client.Connection
 			postedStream = streamToWrite;
 			writeCalled = true;
 
-			return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+			return SendRequestInternal(() => new HttpRequestMessage(Method, Url)
 			{
 				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression, disposeStream: false).SetContentType(headers)
 			});
@@ -687,7 +691,7 @@ namespace Raven.Client.Connection
 		{
 			writeCalled = true;
 
-			return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+			return SendRequestInternal(() => new HttpRequestMessage(Method, Url)
 			{
 				Content = content,
 				Headers =
@@ -704,7 +708,7 @@ namespace Raven.Client.Connection
 
 			return SendRequestInternal(() =>
 			{
-				var request = new HttpRequestMessage(new HttpMethod(Method), Url)
+				var request = new HttpRequestMessage(Method, Url)
 				{
 					Content = new CompressedStringContent(data, factory.DisableRequestCompression),
 				};
@@ -727,7 +731,7 @@ namespace Raven.Client.Connection
 		{
             Response = await RunWithAuthRetry(async () =>
 		    {
-                var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+                var rawRequestMessage = new HttpRequestMessage(Method, Url);
 
 			    if (content != null)
 			    {
@@ -760,7 +764,7 @@ namespace Raven.Client.Connection
 
             Response = await RunWithAuthRetry(async () =>
             {
-                var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
+                var rawRequestMessage = new HttpRequestMessage(Method, Url)
                 {
                     Content = new PushContent(action)
                 };

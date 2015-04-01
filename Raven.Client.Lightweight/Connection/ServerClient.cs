@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -107,7 +108,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.ExecuteGetRequest(requestUrl).ResultUnwrap();
 		}
 
-		internal T ExecuteWithReplication<T>(string method, Func<OperationMetadata, T> operation)
+		internal T ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, T> operation)
 		{
 			return
 				asyncServerClient.ExecuteWithReplication(method,
@@ -345,7 +346,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.GetBulkInsertOperation(options, changes);
 		}
 
-		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
+		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
 		{
 			return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression, disableAuthentication, timeout);
 		}
@@ -504,7 +505,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).ResultUnwrap();
 		}
 
-		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
+		public HttpJsonRequest CreateRequest(string relativeUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
 		{
 			return asyncServerClient.CreateRequest(relativeUrl, method, disableRequestCompression, disableAuthentication, timeout);
 		}

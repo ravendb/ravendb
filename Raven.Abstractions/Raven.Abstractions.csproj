@@ -390,6 +390,7 @@
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
+    <Compile Include="ServerSmugglerRequest.cs" />
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
     <Compile Include="Smuggler\Data\OperationState.cs" />
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
@@ -399,9 +400,11 @@
     <Compile Include="Smuggler\ISmugglerDatabaseOperations.cs" />
     <Compile Include="Smuggler\Data\LastEtagsInfo.cs" />
     <Compile Include="Smuggler\ISmugglerFilesOperations.cs" />
+    <Compile Include="Smuggler\ServerSupportedFeatures.cs" />
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseApiBase.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseOptions.cs" />
+    <Compile Include="Smuggler\SmugglerExportIncremental.cs" />
     <Compile Include="Smuggler\SmugglerFilesApiBase.cs" />
     <Compile Include="Smuggler\SmugglerFilesOptions.cs" />
     <Compile Include="Smuggler\SmugglerMode.cs" />
@@ -436,6 +439,7 @@
     <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\RavenQuery.cs" />
+    <Compile Include="Util\HttpMethods.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />

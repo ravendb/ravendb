@@ -39,6 +39,7 @@
     <TypeScriptCompile Include="App\commands\database\cluster\updateRaftClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\cluster\saveClusterConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\cluster\leaveRaftClusterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\operations\performSmugglingCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
@@ -159,6 +160,8 @@
     <TypeScriptCompile Include="App\models\database\replication\topology.ts" />
     <TypeScriptCompile Include="App\models\database\globalConfig\configurationDocument.ts" />
     <TypeScriptCompile Include="App\models\resources\databaseStatistics.ts" />
+    <TypeScriptCompile Include="App\models\database\cluster\serverConnectionInfo.ts" />
+    <TypeScriptCompile Include="App\models\resources\serverSmugglingItem.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
     <TypeScriptCompile Include="App\models\auth\license.ts" />
@@ -272,6 +275,7 @@
     <TypeScriptCompile Include="App\viewmodels\common\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\indexes\deleteIndexesConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\transformers\deleteTransformerConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\serverSmuggling.ts" />
     <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\documents\editDocument.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\indexes\editIndex.ts" />
@@ -554,6 +558,16 @@
     <Content Include="App\views\database\indexes\copyIndexDialog.html" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexPerformance.ts" />
     <Content Include="App\views\database\status\indexing\indexPerformance.html" />
+    <Content Include="App\views\filesystem\exportFilesystem.html" />
+    <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
+    <Content Include="App\views\filesystem\fileRenameDialog.html" />
+    <Content Include="App\views\filesystem\importFilesystem.html" />
+    <Content Include="App\views\filesystem\settings.html" />
+    <Content Include="App\views\filesystem\tasks.html" />
+    <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
+    <Content Include="App\views\filesystem\versioning.html" />
+    <Content Include="App\views\manage\serverSmuggling.html" />
+    <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\counter\counterStorageConfiguration.html" />
     <Content Include="App\views\counter\counterStorageStats.html" />
     <Content Include="App\views\counter\counterStorageReplication.html" />

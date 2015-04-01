@@ -26,6 +26,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Async;
+using Raven.Client.Metrics;
 using Raven.Client.Util;
 
 using Raven.Client.Document.DTC;
@@ -37,29 +38,33 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentStore : DocumentStoreBase
 	{
-		/// <summary>
-		/// The current session id - only used during construction
-		/// </summary>
-		[ThreadStatic]
-		protected static Guid? currentSessionId;
-		private const int DefaultNumberOfCachedRequests = 2048;
-		private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
-		private bool aggressiveCachingUsed;
-		private readonly ConcurrentDictionary<string, bool> _dtcSupport = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-		/// <summary>
-		/// Generate new instance of database commands
-		/// </summary>
-		protected Func<IDatabaseCommands> databaseCommandsGenerator;
-
 		private readonly ConcurrentDictionary<string, IDocumentStoreReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IDocumentStoreReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ConcurrentDictionary<string, ClusterAwareRequestExecuter> clusterAwareRequestExecuters = new ConcurrentDictionary<string, ClusterAwareRequestExecuter>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
-		private HttpJsonRequestFactory jsonRequestFactory;
-
 		private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
+
+		private readonly ConcurrentDictionary<string, RequestTimeMetric> requestTimeMetrics = new ConcurrentDictionary<string, RequestTimeMetric>(StringComparer.OrdinalIgnoreCase);
+
+		private readonly ConcurrentDictionary<string, bool> _dtcSupport = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+		/// <summary>
+		/// The current session id - only used during construction
+		/// </summary>
+		[ThreadStatic]
+		private static Guid? currentSessionId;
+		private const int DefaultNumberOfCachedRequests = 2048;
+		private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
+		private bool aggressiveCachingUsed;
+		
+		/// <summary>
+		/// Generate new instance of database commands
+		/// </summary>
+		protected Func<IDatabaseCommands> databaseCommandsGenerator;
+
+		private HttpJsonRequestFactory jsonRequestFactory;
 
 		/// <summary>
 		/// Whatever this instance has json request factory available
@@ -613,13 +618,13 @@ namespace Raven.Client.Document
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
 				return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-					currentSessionId, GetRequestExecuterForDatabase, null,
+					currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, null,
 					Listeners.ConflictListeners, true, Conventions.ClusterBehavior));
 			};
 
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetRequestExecuterForDatabase, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
@@ -655,16 +660,16 @@ namespace Raven.Client.Document
 			return result;
 		}
 
-		private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string dbName, ClusterBehavior clusterBehavior, bool incrementStrippingBase)
+		private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string databaseName, ClusterBehavior clusterBehavior, bool incrementStrippingBase)
 		{
 			var key = Url;
-			dbName = dbName ?? DefaultDatabase;
-			if (string.IsNullOrEmpty(dbName) == false)
-				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
+			databaseName = databaseName ?? DefaultDatabase;
+			if (string.IsNullOrEmpty(databaseName) == false)
+				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + databaseName;
 
 			IRequestExecuter requestExecuter;
 			if (clusterBehavior == ClusterBehavior.None)
-				requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)));
+				requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)), GetRequestTimeMetricForDatabase(databaseName));
 			else
 				requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter());
 
@@ -673,18 +678,28 @@ namespace Raven.Client.Document
 			if (FailoverServers == null)
 				return requestExecuter;
 
-			if (dbName == DefaultDatabase)
+			if (databaseName == DefaultDatabase)
 			{
 				if (FailoverServers.IsSetForDefaultDatabase && requestExecuter.FailoverServers == null)
 					requestExecuter.FailoverServers = FailoverServers.ForDefaultDatabase;
 			}
 			else
 			{
-				if (FailoverServers.IsSetForDatabase(dbName) && requestExecuter.FailoverServers == null)
-					requestExecuter.FailoverServers = FailoverServers.GetForDatabase(dbName);
+				if (FailoverServers.IsSetForDatabase(databaseName) && requestExecuter.FailoverServers == null)
+					requestExecuter.FailoverServers = FailoverServers.GetForDatabase(databaseName);
 			}
 
 			return requestExecuter;
+		}
+
+		public RequestTimeMetric GetRequestTimeMetricForDatabase(string databaseName)
+		{
+			var key = Url;
+			databaseName = databaseName ?? DefaultDatabase;
+			if (string.IsNullOrEmpty(databaseName) == false)
+				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + databaseName;
+
+			return requestTimeMetrics.GetOrAdd(key, new RequestTimeMetric());
 		}
 
 		/// <summary>

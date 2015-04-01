@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+
 using Raven.Abstractions;
 
 namespace Raven.Client.Connection.Profiling
@@ -43,7 +45,7 @@ namespace Raven.Client.Connection.Profiling
 		/// <summary>
 		/// The request method
 		/// </summary>
-		public string Method { get; set; }
+		public HttpMethod Method { get; set; }
 		/// <summary>
 		/// The data posted to the server
 		/// </summary>

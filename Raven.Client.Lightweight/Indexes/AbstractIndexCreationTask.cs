@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Net.Http;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
@@ -289,7 +291,7 @@ namespace Raven.Client.Indexes
             if (serverClient == null)
                 return;
             var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
-            using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
+			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, HttpMethod.Post))
             {
                 try
                 {
@@ -309,7 +311,7 @@ namespace Raven.Client.Indexes
             if (serverClient == null)
                 return;
             var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
-            using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
+			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, HttpMethod.Post))
             {
                 try
                 {

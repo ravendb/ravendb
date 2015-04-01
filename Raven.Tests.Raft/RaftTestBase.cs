@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Net.Http;
+
 using Rachis.Transport;
 
 using Raven.Abstractions.Cluster;
@@ -213,7 +215,7 @@ namespace Raven.Tests.Raft
 			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
 			clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands =>
 			{
-				using (var request = commands.CreateRequest("/configuration/replication", "GET"))
+				using (var request = commands.CreateRequest("/configuration/replication", HttpMethod.Get))
 				{
 					var replicationDocumentJson = request.ReadResponseJson() as RavenJObject;
 					if (replicationDocumentJson == null) 

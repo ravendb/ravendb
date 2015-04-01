@@ -157,6 +157,8 @@ namespace Raven.Client
         /// </summary>
         public bool SaveEnumsAsIntegers { get; set; }
 
+		public double RequestTimeThresholdInMilliseconds { get; set; }
+
 		internal void UpdateFrom(ReplicationClientConfiguration configuration)
 		{
 			if (configuration == null)

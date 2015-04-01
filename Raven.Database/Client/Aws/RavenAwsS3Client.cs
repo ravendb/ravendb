@@ -48,7 +48,7 @@ namespace Raven.Database.Client.Aws
 			var headers = ConvertToHeaders(bucketName, content.Headers);
 
 			var client = GetClient(TimeSpan.FromSeconds(timeoutInSeconds));
-			var authorizationHeaderValue = CalculateAuthorizationHeaderValue("PUT", url, now, headers);
+			var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethod.Put, url, now, headers);
 			client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
 			var response = client.PutAsync(url, content).ResultUnwrap();
@@ -78,7 +78,7 @@ namespace Raven.Database.Client.Aws
 			var headers = ConvertToHeaders(bucketName, requestMessage.Headers);
 
 			var client = GetClient();
-			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("GET", url, now, headers);
+			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethod.Get, url, now, headers);
 
 			var response = client.SendAsync(requestMessage).ResultUnwrap();
 			if (response.StatusCode == HttpStatusCode.NotFound)
