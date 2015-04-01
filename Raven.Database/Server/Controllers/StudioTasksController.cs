@@ -416,7 +416,7 @@ for(var customFunction in customFunctions) {{
 			}
 			catch (Exception e)
 			{
-				return GetMessageWithObject(new { Exception = e.Message });
+				return GetMessageWithObject(new {Exception = e.Message});
 			}
 		}
 

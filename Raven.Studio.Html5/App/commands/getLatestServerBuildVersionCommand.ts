@@ -11,7 +11,7 @@ class getLatestServerBuildVersionCommand extends commandBase {
             stableOnly: this.stableOnly
         }
 
-        return this.query("/studio-tasks/latest-server-build-version", args);
+        return this.query("/studio-tasks/latest-server-build-version", args, null, null, this.getTimeToAlert(true));
     }
 }
 
