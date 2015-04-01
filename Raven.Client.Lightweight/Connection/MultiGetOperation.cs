@@ -1,10 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Connection.Implementation;
 using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;

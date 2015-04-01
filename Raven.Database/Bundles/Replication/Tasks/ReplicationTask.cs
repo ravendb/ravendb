@@ -69,7 +69,14 @@ namespace Raven.Bundles.Replication.Tasks
 		private readonly object _indexReplicationTaskLock = new object();
 		private readonly object _lastQueriedTaskLock = new object();
 
-		private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>(); 
+		private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>();
+
+		public TimeSpan TimeToWaitBeforeSendingDeletesOfIndexesToSiblings;
+
+		public ReplicationTask()
+		{
+			TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromMinutes(1);
+		}
 
 		public ConcurrentDictionary<string, DestinationStats> DestinationStats
 		{

@@ -24,7 +24,6 @@ using Raven.Client.Connection;
 using Raven.Client.Document.DTC;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document

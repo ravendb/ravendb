@@ -10,14 +10,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
-using System.Threading.Tasks;
 
 namespace Raven.Client.Linq
 {

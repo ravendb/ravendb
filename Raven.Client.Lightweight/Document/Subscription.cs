@@ -17,7 +17,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
-using Raven.Client.Connection.Implementation;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Database.Util;

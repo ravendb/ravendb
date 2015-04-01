@@ -1,14 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Net.Http;
+﻿using System.Net.Http;
 
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Implementation;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using System;
 using System.Net;
-using System.Threading;
 
 namespace Raven.Backup
 {

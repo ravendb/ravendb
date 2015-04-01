@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Raven.Client.FileSystem
+﻿namespace Raven.Client.FileSystem
 {
     /// <summary>
     /// Statistics about a the files query.

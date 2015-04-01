@@ -6,7 +6,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -31,7 +30,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Spatial;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 using Raven.Client.Document.Async;
 

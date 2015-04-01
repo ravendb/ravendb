@@ -1,7 +1,4 @@
-﻿using System;
-
-using Raven.Abstractions.Replication;
-using Raven.Client.Document;
+﻿using Raven.Abstractions.Replication;
 
 namespace Raven.Client.Counters.Connections
 {

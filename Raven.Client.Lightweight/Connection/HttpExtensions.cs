@@ -8,7 +8,6 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection.Implementation;
 
 namespace Raven.Client.Connection
 {

@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Linq;
-using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;

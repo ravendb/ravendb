@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
