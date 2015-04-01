@@ -796,6 +796,7 @@
     <Compile Include="Storage\Voron\IndexingStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\MappedResultsStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\StalenessStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\StorageActionsTests.cs" />
     <Compile Include="Storage\Voron\StorageIntegrationTests.cs" />
     <Compile Include="Storage\Voron\ListStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
