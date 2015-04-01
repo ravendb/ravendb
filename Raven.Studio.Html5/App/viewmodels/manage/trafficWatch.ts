@@ -2,10 +2,10 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import watchTrafficConfigDialog = require("viewmodels/manage/watchTrafficConfigDialog");
 import trafficWatchClient = require("common/trafficWatchClient");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import moment = require("moment");
 import fileDownloader = require("common/fileDownloader");
-import resource = require("models/resource");
+import resource = require("models/resources/resource");
 
 class trafficWatch extends viewModelBase {
     logConfig = ko.observable<{ Resource: resource; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();

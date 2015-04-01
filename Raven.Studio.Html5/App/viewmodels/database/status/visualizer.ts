@@ -16,11 +16,11 @@ import visualizerKeys = require("viewmodels/database/status/visualizerKeys");
 import visualizerImport = require("viewmodels/database/status/visualizerImport");
 import viewModelBase = require("viewmodels/viewModelBase");
 
-import queryIndexDebugDocsCommand = require("commands/queryIndexDebugDocsCommand");
-import queryIndexDebugMapCommand = require("commands/queryIndexDebugMapCommand");
-import queryIndexDebugReduceCommand = require("commands/queryIndexDebugReduceCommand");
-import queryIndexDebugAfterReduceCommand = require("commands/queryIndexDebugAfterReduceCommand");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import queryIndexDebugDocsCommand = require("commands/database/debug/queryIndexDebugDocsCommand");
+import queryIndexDebugMapCommand = require("commands/database/debug/queryIndexDebugMapCommand");
+import queryIndexDebugReduceCommand = require("commands/database/debug/queryIndexDebugReduceCommand");
+import queryIndexDebugAfterReduceCommand = require("commands/database/debug/queryIndexDebugAfterReduceCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 
 import d3 = require('d3/d3');
 import nv = require('nvd3');

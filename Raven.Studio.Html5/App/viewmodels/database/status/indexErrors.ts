@@ -1,5 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import moment = require("moment");
 import changeSubscription = require("models/changeSubscription");
 import shell = require("viewmodels/shell");

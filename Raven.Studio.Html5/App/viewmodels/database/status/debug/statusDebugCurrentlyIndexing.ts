@@ -1,4 +1,4 @@
-import getStatusDebugCurrentlyIndexingCommand = require("commands/getStatusDebugCurrentlyIndexingCommand");
+import getStatusDebugCurrentlyIndexingCommand = require("commands/database/debug/getStatusDebugCurrentlyIndexingCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class statusDebugCurrentlyIndexing extends viewModelBase {

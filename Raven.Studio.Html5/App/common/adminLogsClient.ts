@@ -6,7 +6,7 @@ import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import changesApi = require("common/changesApi");
 import idGenerator = require("common/idGenerator");
-import adminLogsConfigureCommand = require("commands/adminLogsConfigureCommand");
+import adminLogsConfigureCommand = require("commands/database/debug/adminLogsConfigureCommand");
 
 class adminLogsClient {
 

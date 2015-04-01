@@ -1,10 +1,10 @@
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/database");
+import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import getClusterTopologyCommand = require("commands/getClusterTopologyCommand");
-import topology = require("models/topology");
+import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
+import topology = require("models/database/replication/topology");
 import shell = require("viewmodels/shell");
 
 class createDatabase extends viewModelBase {

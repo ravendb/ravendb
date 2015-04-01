@@ -1,5 +1,5 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import getRequestTracingCommand = require("commands/getRequestTracingCommand");
+import getRequestTracingCommand = require("commands/database/debug/getRequestTracingCommand");
 
 class requestTracing extends viewModelBase {
     

@@ -1,14 +1,14 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
-import savePeriodicExportSetupCommand = require("commands/savePeriodicExportSetupCommand");
-import document = require("models/document");
-import periodicExportSetup = require("models/periodicExportSetup");
-import getEffectivePeriodicExportCommand = require("commands/getEffectivePeriodicExportCommand");
+import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
+import savePeriodicExportSetupCommand = require("commands/maintenance/savePeriodicExportSetupCommand");
+import document = require("models/database/documents/document");
+import periodicExportSetup = require("models/database/documents/periodicExportSetup");
+import getEffectivePeriodicExportCommand = require("commands/database/globalConfig/getEffectivePeriodicExportCommand");
 import appUrl = require("common/appUrl");
-import configurationSettings = require("models/configurationSettings");
-import getConfigurationSettingsCommand = require("commands/getConfigurationSettingsCommand");
-import deleteLocalPeriodicExportSetupCommand = require("commands/deleteLocalPeriodicExportSetupCommand");
-import database = require("models/database");
+import configurationSettings = require("models/database/globalConfig/configurationSettings");
+import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
+import deleteLocalPeriodicExportSetupCommand = require("commands/database/globalConfig/deleteLocalPeriodicExportSetupCommand");
+import database = require("models/resources/database");
 
 class periodicExport extends viewModelBase {
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });

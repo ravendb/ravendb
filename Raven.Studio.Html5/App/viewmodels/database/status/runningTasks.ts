@@ -1,8 +1,8 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import killRunningTaskCommand = require("commands/killRunningTaskCommand");
-import getRunningTasksCommand = require("commands/getRunningTasksCommand");
+import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
+import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
 import moment = require("moment");
-import document = require("models/document");
+import document = require("models/database/documents/document");
 
 class runningTasks extends viewModelBase {
 

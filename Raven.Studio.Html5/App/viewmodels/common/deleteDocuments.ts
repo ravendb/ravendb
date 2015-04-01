@@ -1,5 +1,5 @@
 import dialog = require("plugins/dialog");
-import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
+import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 

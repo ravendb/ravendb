@@ -1,22 +1,22 @@
 import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import patchDocument = require("models/patchDocument");
+import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import getCollectionsCommand = require("commands/getCollectionsCommand");
-import collection = require("models/collection");
-import document = require("models/document");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import collection = require("models/database/documents/collection");
+import document = require("models/database/documents/document");
 import pagedList = require("common/pagedList");
 import jsonUtil = require("common/jsonUtil");
-import queryIndexCommand = require("commands/queryIndexCommand");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import queryIndexCommand = require("commands/database/query/queryIndexCommand");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import savePatch = require('viewmodels/database/patch/savePatch');
 import loadPatch = require('viewmodels/database/patch/loadPatch');
 import executePatchConfirm = require('viewmodels/database/patch/executePatchConfirm');
-import savePatchCommand = require('commands/savePatchCommand');
-import executePatchCommand = require("commands/executePatchCommand");
+import savePatchCommand = require('commands/database/patch/savePatchCommand');
+import executePatchCommand = require("commands/database/patch/executePatchCommand");
 import virtualTable = require("widgets/virtualTable/viewModel");
-import evalByQueryCommand = require("commands/evalByQueryCommand");
+import evalByQueryCommand = require("commands/database/patch/evalByQueryCommand");
 
 class patch extends viewModelBase {
 

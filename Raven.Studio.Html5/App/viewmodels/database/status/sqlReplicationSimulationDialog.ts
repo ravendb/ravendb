@@ -1,12 +1,12 @@
 ﻿/// <reference path="../../../models/dto.ts" />
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import simulateSqlReplicationCommand = require("commands/simulateSqlReplicationCommand");
-import database = require("models/database");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
+import simulateSqlReplicationCommand = require("commands/database/studio/simulateSqlReplicationCommand");
+import database = require("models/resources/database");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import dialog = require("plugins/dialog");
-import collection = require("models/collection");
-import sqlReplication = require("models/sqlReplication");
-import sqlReplicationSimulatedCommand = require ("models/sqlReplicationSimulatedCommand");
+import collection = require("models/database/documents/collection");
+import sqlReplication = require("models/database/sqlReplication/sqlReplication");
+import sqlReplicationSimulatedCommand = require ("models/database/sqlReplication/sqlReplicationSimulatedCommand");
 
 class sqlReplicationSimulationDialog extends dialogViewModelBase {
     simulationResults = ko.observableArray<sqlReplicationSimulatedCommand>([]);

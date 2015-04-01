@@ -1,13 +1,13 @@
 ﻿import app = require("durandal/app");
 import dialog = require("plugins/dialog");
-import resource = require("models/resource");
+import resource = require("models/resources/resource");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import shell = require("viewmodels/shell");
-import database = require("models/database");
+import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
-import getDatabasesCommand = require("commands/getDatabasesCommand");
+import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import appUrl = require('common/appUrl');
 
 class watchTrafficConfigDialog extends dialogViewModelBase {

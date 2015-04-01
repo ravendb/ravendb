@@ -1,4 +1,4 @@
-import getDebugMetricsCommand = require("commands/getDebugMetricsCommand");
+import getDebugMetricsCommand = require("commands/database/debug/getDebugMetricsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 

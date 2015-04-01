@@ -1,10 +1,10 @@
-﻿import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+﻿import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-import index = require("models/index");
+import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
-import saveIndexLockModeCommand = require("commands/saveIndexLockModeCommand");
-import saveIndexAsPersistentCommand = require("commands/saveIndexAsPersistentCommand");
-import querySort = require("models/querySort");
+import saveIndexLockModeCommand = require("commands/database/index/saveIndexLockModeCommand");
+import saveIndexAsPersistentCommand = require("commands/database/index/saveIndexAsPersistentCommand");
+import querySort = require("models/database/query/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
 import shell = require("viewmodels/shell");
@@ -12,8 +12,8 @@ import changeSubscription = require("models/changeSubscription");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
-import indexReplaceDocument = require("models/indexReplaceDocument");
-import getPendingIndexReplacementsCommand = require("commands/getPendingIndexReplacementsCommand");
+import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
+import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import d3 = require('d3/d3');
 
 class indexes extends viewModelBase {

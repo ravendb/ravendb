@@ -1,10 +1,10 @@
 import router = require("plugins/router"); 
-import getAlertsCommand = require("commands/getAlertsCommand");
+import getAlertsCommand = require("commands/operations/getAlertsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
-import alert = require("models/alert");
+import alert = require("models/database/debug/alert");
 import appUrl = require("common/appUrl");
-import saveAlertsCommand = require("commands/saveAlertsCommand");
+import saveAlertsCommand = require("commands/operations/saveAlertsCommand");
 
 class alerts extends viewModelBase {
 

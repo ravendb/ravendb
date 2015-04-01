@@ -1,9 +1,9 @@
-import database = require("models/database");
+import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import resource = require("models/resource");
+import resource = require("models/resources/resource");
 import router = require("plugins/router");
-import collection = require("models/collection");
+import collection = require("models/database/documents/collection");
 import messagePublisher = require("common/messagePublisher");
 
 // Helper class with static methods for generating app URLs.

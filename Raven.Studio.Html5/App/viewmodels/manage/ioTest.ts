@@ -1,11 +1,11 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import appUrl = require("common/appUrl");
-import performanceTestRequest = require("models/performanceTestRequest");
-import performanceTestResultWrapped = require("models/performanceTestResultWrapped");
-import ioTestCommand = require("commands/ioTestCommand");
-import killRunningTaskCommand = require("commands/killRunningTaskCommand");
+import performanceTestRequest = require("models/database/debug/performanceTestRequest");
+import performanceTestResultWrapped = require("models/database/debug/performanceTestResultWrapped");
+import ioTestCommand = require("commands/database/debug/ioTestCommand");
+import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 

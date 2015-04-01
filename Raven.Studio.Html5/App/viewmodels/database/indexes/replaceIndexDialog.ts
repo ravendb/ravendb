@@ -1,10 +1,10 @@
 ﻿import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import database = require("models/database");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import database = require("models/resources/database");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import moment = require("moment");
-import indexReplaceDocument = require("models/indexReplaceDocument");
+import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 
 class replaceIndexDialog extends dialogViewModelBase {
 

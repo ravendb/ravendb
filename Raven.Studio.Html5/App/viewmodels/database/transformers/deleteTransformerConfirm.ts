@@ -1,6 +1,6 @@
-﻿import deleteTransformerCommand = require("commands/deleteTransformerCommand");
+﻿import DeleteTransformerCommand = require("commands/database/transformers/deleteTransformerCommand");
 import dialog = require("plugins/dialog");
-import database = require("models/database");
+import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class deleteTransformerConfirm extends dialogViewModelBase {
@@ -20,7 +20,7 @@ class deleteTransformerConfirm extends dialogViewModelBase {
 
     deleteTransformers() {
         var deleteTasks = this.transformersNames
-            .map(name => new deleteTransformerCommand(name, this.db).execute());
+            .map(name => new DeleteTransformerCommand(name, this.db).execute());
 
         $.when.apply($, deleteTasks).done(() => this.deleteTask.resolve());
         dialog.close(this);

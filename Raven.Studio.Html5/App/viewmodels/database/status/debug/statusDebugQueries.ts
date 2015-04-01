@@ -1,9 +1,9 @@
-import getStatusDebugQueriesCommand = require("commands/getStatusDebugQueriesCommand");
-import getKillQueryCommand = require("commands/getKillQueryCommand");
+import getStatusDebugQueriesCommand = require("commands/database/debug/getStatusDebugQueriesCommand");
+import getKillQueryCommand = require("commands/database/query/getKillQueryCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import statusDebugQueriesGroup = require("models/statusDebugQueriesGroup");
-import statusDebugQueriesQuery = require("models/statusDebugQueriesQuery");
+import statusDebugQueriesGroup = require("models/database/debug/statusDebugQueriesGroup");
+import statusDebugQueriesQuery = require("models/database/debug/statusDebugQueriesQuery");
 
 
 class statusDebugQueries extends viewModelBase {

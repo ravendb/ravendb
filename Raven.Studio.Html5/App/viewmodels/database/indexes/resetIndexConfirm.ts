@@ -1,6 +1,6 @@
-﻿import resetIndexCommand = require("commands/resetIndexCommand");
+﻿import resetIndexCommand = require("commands/database/index/resetIndexCommand");
 import dialog = require("plugins/dialog");
-import database = require("models/database");
+import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class resetIndexConfirm extends dialogViewModelBase {

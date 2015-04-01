@@ -1,11 +1,11 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import database = require("models/database");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import database = require("models/resources/database");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
-import resource = require("models/resource");
+import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
-import monitorRestoreCommand = require("commands/monitorRestoreCommand");
+import monitorRestoreCommand = require("commands/maintenance/monitorRestoreCommand");
 
 class resourceRestore {
     defrag = ko.observable<boolean>(false);

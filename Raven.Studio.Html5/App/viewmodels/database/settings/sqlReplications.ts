@@ -1,14 +1,14 @@
-﻿import database = require("models/database");
-import sqlReplication = require("models/sqlReplication");
+﻿import database = require("models/resources/database");
+import sqlReplication = require("models/database/sqlReplication/sqlReplication");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
+import getSqlReplicationsCommand = require("commands/database/sqlReplication/getSqlReplicationsCommand");
 import appUrl = require("common/appUrl");
 import sqlReplicationStatsDialog = require("viewmodels/database/status/sqlReplicationStatsDialog");
 import app = require("durandal/app");
-import document = require("models/document");
+import document = require("models/database/documents/document");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import messagePublisher = require("common/messagePublisher");
-import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand");
+import resetSqlReplicationCommand = require("commands/database/sqlReplication/resetSqlReplicationCommand");
 
 class sqlReplications extends viewModelBase {
 

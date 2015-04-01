@@ -2,8 +2,8 @@
 
 import alertType = require("common/alertType");
 import messagePublisher = require("common/messagePublisher");
-import database = require("models/database");
-import resource = require("models/resource");
+import database = require("models/resources/database");
+import resource = require("models/resources/resource");
 import appUrl = require("common/appUrl");
 import oauthContext = require("common/oauthContext");
 import forge = require("forge/forge_custom.min");

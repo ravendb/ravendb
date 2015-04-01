@@ -1,6 +1,6 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
-import getIndexingPerfStatsCommand = require("commands/getIndexingPerfStatsCommand");
+import getIndexingPerfStatsCommand = require("commands/database/debug/getIndexingPerfStatsCommand");
 import d3 = require("d3/d3");
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");

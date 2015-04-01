@@ -1,4 +1,4 @@
-import getStatusDebugTasksCommand = require("commands/getStatusDebugTasksCommand");
+import getStatusDebugTasksCommand = require("commands/database/debug/getStatusDebugTasksCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class statusDebugTasks extends viewModelBase {

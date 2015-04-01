@@ -1,6 +1,6 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
 class statusDebugWebSocket extends viewModelBase {
 

@@ -1,6 +1,6 @@
-import deleteIndexCommand = require("commands/deleteIndexCommand");
+import deleteIndexCommand = require("commands/database/index/deleteIndexCommand");
 import dialog = require("plugins/dialog");
-import database = require("models/database");
+import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import messagePublisher = require("common/messagePublisher");
 

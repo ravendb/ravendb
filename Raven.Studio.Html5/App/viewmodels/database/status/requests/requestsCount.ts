@@ -2,7 +2,7 @@
 /// <reference path="../../../../../Scripts/typings/d3/d3.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDebugMetricsCommand = require("commands/getDebugMetricsCommand");
+import getDebugMetricsCommand = require("commands/database/debug/getDebugMetricsCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 

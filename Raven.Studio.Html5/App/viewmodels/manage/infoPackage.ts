@@ -8,7 +8,7 @@ import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
-import getInfoPackage = require('commands/getInfoPackage');
+import getInfoPackage = require('commands/database/debug/getInfoPackage');
 import viewModelBase = require("viewmodels/viewModelBase");
 import infoPackageImport = require("viewmodels/manage/infoPackageImport");
 

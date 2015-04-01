@@ -1,7 +1,7 @@
 ﻿import dialog = require("plugins/dialog");
-import disableResourceToggleCommand = require("commands/disableResourceToggleCommand");
+import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import resource = require("models/resource");
+import resource = require("models/resources/resource");
 
 class disableResourceToggleConfirm extends dialogViewModelBase {
 

@@ -1,6 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
-import getStatusStorageOnDiskCommand = require("commands/getStatusStorageOnDiskCommand");
+import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
+import getStatusStorageOnDiskCommand = require("commands/database/debug/getStatusStorageOnDiskCommand");
 
 class statusStorageOnDisk extends viewModelBase {
     onDiskStats = ko.observable<statusStorageOnDiskDto>();

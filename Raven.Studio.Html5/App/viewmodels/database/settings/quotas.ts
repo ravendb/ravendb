@@ -1,12 +1,12 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import saveDatabaseSettingsCommand = require("commands/saveDatabaseSettingsCommand");
-import getConfigurationSettingsCommand = require("commands/getConfigurationSettingsCommand");
-import document = require("models/document");
-import database = require("models/database");
+import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
+import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
+import document = require("models/database/documents/document");
+import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import configurationSetting = require("models/configurationSetting");
-import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
-import configurationSettings = require("models/configurationSettings");
+import configurationSetting = require("models/database/globalConfig/configurationSetting");
+import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
+import configurationSettings = require("models/database/globalConfig/configurationSettings");
 import shell = require('viewmodels/shell');
 
 class quotas extends viewModelBase {

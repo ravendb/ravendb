@@ -1,22 +1,23 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import replicationsSetup = require("models/replicationsSetup");
-import replicationConfig = require("models/replicationConfig")
-import replicationDestination = require("models/replicationDestination");
-import collection = require("models/collection");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import getReplicationsCommand = require("commands/getReplicationsCommand");
-import updateServerPrefixHiLoCommand = require("commands/updateServerPrefixHiLoCommand");
-import saveReplicationDocumentCommand = require("commands/saveReplicationDocumentCommand");
-import saveAutomaticConflictResolutionDocument = require("commands/saveAutomaticConflictResolutionDocument");
-import getServerPrefixForHiLoCommand = require("commands/getServerPrefixForHiLoCommand");
-import replicateAllIndexesCommand = require("commands/replicateAllIndexesCommand");
-import replicateAllTransformersCommand = require("commands/replicateAllTransformersCommand");
-import deleteLocalReplicationsSetupCommand = require("commands/deleteLocalReplicationsSetupCommand");
-import replicateIndexesCommand = require("commands/replicateIndexesCommand");
-import replicateTransformersCommand = require("commands/replicateTransformersCommand");
-import getEffectiveConflictResolutionCommand = require("commands/getEffectiveConflictResolutionCommand");import getCollectionsCommand = require("commands/getCollectionsCommand");
+import replicationsSetup = require("models/database/replication/replicationsSetup");
+import replicationConfig = require("models/database/replication/replicationConfig")
+import replicationDestination = require("models/database/replication/replicationDestination");
+import collection = require("models/database/documents/collection");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
+import updateServerPrefixHiLoCommand = require("commands/database/documents/updateServerPrefixHiLoCommand");
+import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
+import saveAutomaticConflictResolutionDocument = require("commands/database/replication/saveAutomaticConflictResolutionDocument");
+import getServerPrefixForHiLoCommand = require("commands/database/documents/getServerPrefixForHiLoCommand");
+import replicateAllIndexesCommand = require("commands/database/replication/replicateAllIndexesCommand");
+import replicateAllTransformersCommand = require("commands/database/replication/replicateAllTransformersCommand");
+import deleteLocalReplicationsSetupCommand = require("commands/database/globalConfig/deleteLocalReplicationsSetupCommand");
+import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
+import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
+import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
+import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import appUrl = require("common/appUrl");
-import database = require("models/database");
+import database = require("models/resources/database");
 
 class replications extends viewModelBase {
 

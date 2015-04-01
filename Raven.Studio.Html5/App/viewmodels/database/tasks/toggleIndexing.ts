@@ -1,6 +1,6 @@
-﻿import stopIndexingCommand = require("commands/stopIndexingCommand");
-import startIndexingCommand = require("commands/startIndexingCommand");
-import getIndexingStatusCommand = require("commands/getIndexingStatusCommand");
+﻿import stopIndexingCommand = require("commands/database/index/stopIndexingCommand");
+import startIndexingCommand = require("commands/database/index/startIndexingCommand");
+import getIndexingStatusCommand = require("commands/database/index/getIndexingStatusCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class toggleIndexing extends viewModelBase {

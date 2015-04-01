@@ -1,13 +1,13 @@
 /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
 
-import resource = require('models/resource');
+import resource = require('models/resources/resource');
 import appUrl = require('common/appUrl');
 import changeSubscription = require('models/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import idGenerator = require("common/idGenerator");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 import changesApiWarnStorage = require("common/changesApiWarnStorage");

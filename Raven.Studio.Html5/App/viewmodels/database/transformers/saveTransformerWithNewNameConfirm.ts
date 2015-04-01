@@ -1,8 +1,8 @@
-﻿import saveTransformerCommand = require("commands/saveTransformerCommand");
+﻿import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
 import dialog = require("plugins/dialog");
-import database = require("models/database");
+import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import transformer = require("models/transformer");
+import transformer = require("models/database/index/transformer");
 import messagePublisher = require("common/messagePublisher");
 
 class saveTransformerWithNewNameConfirm extends dialogViewModelBase {

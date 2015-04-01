@@ -3,9 +3,9 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import adminLogsClient = require("common/adminLogsClient");
 import fileDownloader = require("common/fileDownloader");
 import adminLogsConfigureDialog = require("viewmodels/manage/adminLogsConfigureDialog");
-import adminLogsConfig = require("models/adminLogsConfig");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
-import adminLogsConfigEntry = require("models/adminLogsConfigEntry");
+import adminLogsConfig = require("models/database/debug/adminLogsConfig");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
 import appUrl = require('common/appUrl');
 
 class adminLogs extends viewModelBase {

@@ -1,8 +1,8 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import versioningEntry = require("models/versioningEntry");
+import versioningEntry = require("models/database/documents/versioningEntry");
 import appUrl = require("common/appUrl");
-import getVersioningsCommand = require("commands/getVersioningsCommand");
-import saveVersioningCommand = require("commands/saveVersioningCommand");
+import getVersioningsCommand = require("commands/database/documents/getVersioningsCommand");
+import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
 
 class globalConfigVersioning extends viewModelBase {
     activated = ko.observable<boolean>(false);

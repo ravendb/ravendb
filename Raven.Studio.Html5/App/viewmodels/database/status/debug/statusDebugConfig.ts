@@ -1,4 +1,4 @@
-import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
+import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 

@@ -2,9 +2,9 @@
 import app = require("durandal/app");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
-import adminLogsConfig = require("models/adminLogsConfig");
-import adminLogsConfigEntry = require("models/adminLogsConfigEntry");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import adminLogsConfig = require("models/database/debug/adminLogsConfig");
+import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
 import appUrl = require('common/appUrl');
 
 class adminLogsConfigureDialog extends dialogViewModelBase {

@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/database");
+import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import deleteDocumentCommand = require("commands/deleteDocumentCommand");
+import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import monitorCompactCommand = require("commands/filesystem/monitorCompactCommand");
 
 class startCompactCommand extends commandBase {

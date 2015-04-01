@@ -3,8 +3,8 @@
 
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getIndexingBatchStatsCommand = require("commands/getIndexingBatchStatsCommand");
-import getReducingBatchStatsCommand = require("commands/getReducingBatchStatsCommand");
+import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexingBatchStatsCommand");
+import getReducingBatchStatsCommand = require("commands/database/debug/getReducingBatchStatsCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 import changeSubscription = require('models/changeSubscription');

@@ -1,9 +1,9 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import versioningEntry = require("models/versioningEntry");
+import versioningEntry = require("models/database/documents/versioningEntry");
 import appUrl = require("common/appUrl");
-import saveVersioningCommand = require("commands/saveVersioningCommand");
-import getEffectiveVersioningsCommand = require("commands/getEffectiveVersioningsCommand");
-import configurationDocument = require("models/configurationDocument");
+import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
+import getEffectiveVersioningsCommand = require("commands/database/globalConfig/getEffectiveVersioningsCommand");
+import configurationDocument = require("models/database/globalConfig/configurationDocument");
 
 class versioning extends viewModelBase {
     versionings = ko.observableArray<configurationDocument<versioningEntry>>().extend({ required: true });

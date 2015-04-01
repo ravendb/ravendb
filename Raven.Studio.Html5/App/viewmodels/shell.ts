@@ -6,15 +6,15 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 import viewModelBase = require("viewmodels/viewModelBase");
 import viewLocator = require("durandal/viewLocator");
-import resource = require("models/resource");
-import database = require("models/database");
+import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import documentClass = require("models/document");
-import collection = require("models/collection");
+import documentClass = require("models/database/documents/document");
+import collection = require("models/database/documents/collection");
 import uploadItem = require("models/uploadItem");
 import changeSubscription = require("models/changeSubscription");
-import license = require("models/license");
+import license = require("models/auth/license");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -29,19 +29,19 @@ import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
 
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import getDatabasesCommand = require("commands/getDatabasesCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getServerBuildVersionCommand = require("commands/getServerBuildVersionCommand");
-import getLatestServerBuildVersionCommand = require("commands/getLatestServerBuildVersionCommand");
-import getClientBuildVersionCommand = require("commands/getClientBuildVersionCommand");
-import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
+import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
+import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
-import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
-import getServerConfigsCommand = require("commands/getServerConfigsCommand");
+import getSystemDocumentCommand = require("commands/database/documents/getSystemDocumentCommand");
+import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
@@ -50,8 +50,8 @@ import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
-import getClusterTopologyCommand = require("commands/getClusterTopologyCommand");
-import topology = require("models/topology");
+import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
+import topology = require("models/database/replication/topology");
 
 class shell extends viewModelBase {
     private router = router;

@@ -5,22 +5,22 @@ import jsonUtil = require("common/jsonUtil");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import app = require("durandal/app");
-import database = require("models/database");
-import collection = require("models/collection");
-import sqlReplication = require("models/sqlReplication");
-import getCollectionsCommand = require("commands/getCollectionsCommand");
+import database = require("models/resources/database");
+import collection = require("models/database/documents/collection");
+import sqlReplication = require("models/database/sqlReplication/sqlReplication");
+import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import sqlReplicationStatsDialog = require("viewmodels/database/status/sqlReplicationStatsDialog");
-import document = require("models/document");
-import saveDocumentCommand = require("commands/saveDocumentCommand");
+import document = require("models/database/documents/document");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
-import documentMetadata = require("models/documentMetadata");
-import resetSqlReplicationCommand = require("commands/resetSqlReplicationCommand");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import documentMetadata = require("models/database/documents/documentMetadata");
+import resetSqlReplicationCommand = require("commands/database/sqlReplication/resetSqlReplicationCommand");
 import sqlReplicationSimulationDialog = require("viewmodels/database/status/sqlReplicationSimulationDialog");
-import sqlReplicationConnections = require("models/sqlReplicationConnections");
-import predefinedSqlConnection = require("models/predefinedSqlConnection");
-import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/getEffectiveSqlReplicationConnectionStringsCommand");
+import sqlReplicationConnections = require("models/database/sqlReplication/sqlReplicationConnections");
+import predefinedSqlConnection = require("models/database/sqlReplication/predefinedSqlConnection");
+import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/database/globalConfig/getEffectiveSqlReplicationConnectionStringsCommand");
 
 
 class editSqlReplication extends viewModelBase {

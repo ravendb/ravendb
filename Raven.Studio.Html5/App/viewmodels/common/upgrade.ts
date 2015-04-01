@@ -1,7 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import router = require("plugins/router");
-import database = require("models/database");
+import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 
 class upgrade extends viewModelBase {

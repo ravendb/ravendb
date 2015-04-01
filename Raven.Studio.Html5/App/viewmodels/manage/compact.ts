@@ -1,7 +1,7 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import database = require("models/database");
-import resource = require("models/resource");
+import database = require("models/resources/database");
+import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
 
 class resourceCompact {

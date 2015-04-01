@@ -1,8 +1,8 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import extensions = require("common/extensions");
-import getReplicationsCommand = require('commands/getReplicationsCommand');
-import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
-import explainReplicationCommand = require("commands/explainReplicationCommand");
+import getReplicationsCommand = require('commands/database/replication/getReplicationsCommand');
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import explainReplicationCommand = require("commands/database/replication/explainReplicationCommand");
 
 class statusDebugExplainReplication extends viewModelBase {
     destinations = ko.observable<replicationDestinationDto[]>([]);

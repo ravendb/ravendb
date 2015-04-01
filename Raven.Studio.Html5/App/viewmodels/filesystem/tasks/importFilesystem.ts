@@ -2,7 +2,7 @@
 import filesystem = require("models/filesystem/filesystem");
 import messagePublisher = require("common/messagePublisher");
 import importFilesystemCommand = require("commands/filesystem/importFilesystemCommand");
-import getOperationStatusCommand = require("commands/getOperationStatusCommand");
+import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 
 class importDatabase extends viewModelBase {
     batchSize = ko.observable(1024);

@@ -2,7 +2,7 @@ import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import createFilesystem = require("viewmodels/resources/createFilesystem");
-import database = require("models/database");
+import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
 
 class createResource extends dialogViewModelBase {

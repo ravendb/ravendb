@@ -6,20 +6,20 @@ import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 
-import collection = require("models/collection");
-import database = require("models/database");
-import alert = require("models/alert");
+import collection = require("models/database/documents/collection");
+import database = require("models/resources/database");
+import alert = require("models/database/debug/alert");
 import changeSubscription = require('models/changeSubscription');
-import customFunctions = require("models/customFunctions");
-import customColumns = require('models/customColumns');
-import customColumnParams = require('models/customColumnParams');
+import customFunctions = require("models/database/documents/customFunctions");
+import customColumns = require('models/database/documents/customColumns');
+import customColumnParams = require('models/database/documents/customColumnParams');
 
-import getCollectionsCommand = require("commands/getCollectionsCommand");
-import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
-import getEffectiveCustomFunctionsCommand = require("commands/getEffectiveCustomFunctionsCommand");
-import getOperationStatusCommand = require('commands/getOperationStatusCommand');
-import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
-import dismissAlertCommand = require("commands/dismissAlertCommand");
+import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCustomColumnsCommand = require('commands/database/documents/getCustomColumnsCommand');
+import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
+import getOperationStatusCommand = require('commands/operations/getOperationStatusCommand');
+import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
+import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");

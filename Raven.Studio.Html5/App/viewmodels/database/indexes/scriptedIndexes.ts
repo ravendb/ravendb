@@ -1,9 +1,9 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import scriptedIndex = require("models/scriptedIndex");
-import getScriptedIndexesCommand = require("commands/getScriptedIndexesCommand");
-import saveScriptedIndexesCommand = require("commands/saveScriptedIndexesCommand");
+import scriptedIndex = require("models/database/index/scriptedIndex");
+import getScriptedIndexesCommand = require("commands/database/index/getScriptedIndexesCommand");
+import saveScriptedIndexesCommand = require("commands/database/documents/saveScriptedIndexesCommand");
 import appUrl = require("common/appUrl");
 
 class scriptedIndexes extends viewModelBase {

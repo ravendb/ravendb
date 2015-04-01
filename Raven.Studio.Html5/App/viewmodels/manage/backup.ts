@@ -1,8 +1,8 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import database = require("models/database");
+import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
-import resource = require("models/resource");
+import resource = require("models/resources/resource");
 
 class resourceBackup {
     incremental = ko.observable<boolean>(false);

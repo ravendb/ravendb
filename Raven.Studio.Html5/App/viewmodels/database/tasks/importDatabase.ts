@@ -1,9 +1,9 @@
 ﻿import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/database");
-import getOperationStatusCommand = require('commands/getOperationStatusCommand');
+import database = require("models/resources/database");
+import getOperationStatusCommand = require('commands/operations/getOperationStatusCommand');
 import messagePublisher = require("common/messagePublisher");
-import importDatabaseCommand = require("commands/importDatabaseCommand");
+import importDatabaseCommand = require("commands/database/studio/importDatabaseCommand");
 
 class importDatabase extends viewModelBase {
     showAdvancedOptions = ko.observable(false);

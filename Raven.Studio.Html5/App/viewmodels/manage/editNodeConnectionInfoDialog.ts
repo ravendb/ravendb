@@ -1,7 +1,7 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-import nodeConnectionInfo = require("models/nodeConnectionInfo");
+import nodeConnectionInfo = require("models/database/cluster/nodeConnectionInfo");
 
 class editNodeConnectionInfoDialog extends dialogViewModelBase {
 

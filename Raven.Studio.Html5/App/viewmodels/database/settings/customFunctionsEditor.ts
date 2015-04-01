@@ -1,9 +1,9 @@
 ﻿import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
-import saveCustomFunctionsCommand = require("commands/saveCustomFunctionsCommand");
-import getEffectiveCustomFunctionsCommand = require("commands/getEffectiveCustomFunctionsCommand");
-import customFunctions = require("models/customFunctions");
+import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
+import saveCustomFunctionsCommand = require("commands/database/documents/saveCustomFunctionsCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
+import customFunctions = require("models/database/documents/customFunctions");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 

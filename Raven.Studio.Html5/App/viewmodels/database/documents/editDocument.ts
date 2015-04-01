@@ -2,17 +2,17 @@
 
 import app = require("durandal/app");
 import router = require("plugins/router");
-import document = require("models/document");
-import database = require("models/database");
-import documentMetadata = require("models/documentMetadata");
-import collection = require("models/collection");
-import querySort = require("models/querySort");
+import document = require("models/database/documents/document");
+import database = require("models/resources/database");
+import documentMetadata = require("models/database/documents/documentMetadata");
+import collection = require("models/database/documents/collection");
+import querySort = require("models/database/query/querySort");
 
-import saveDocumentCommand = require("commands/saveDocumentCommand");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
-import queryIndexCommand = require("commands/queryIndexCommand");
-import resolveMergeCommand = require("commands/resolveMergeCommand");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
+import queryIndexCommand = require("commands/database/query/queryIndexCommand");
+import resolveMergeCommand = require("commands/database/studio/resolveMergeCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");

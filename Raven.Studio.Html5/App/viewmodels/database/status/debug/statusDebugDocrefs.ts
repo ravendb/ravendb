@@ -1,9 +1,9 @@
-import database = require("models/database");
+import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import customColumns = require("models/customColumns");
-import customColumnParams = require('models/customColumnParams');
+import customColumns = require("models/database/documents/customColumns");
+import customColumnParams = require('models/database/documents/customColumnParams');
 import pagedList = require("common/pagedList");
-import getDocRefsCommand = require("commands/getDocRefsCommand");
+import getDocRefsCommand = require("commands/database/debug/getDocRefsCommand");
 
 
 class statusDebugDocrefs extends viewModelBase {

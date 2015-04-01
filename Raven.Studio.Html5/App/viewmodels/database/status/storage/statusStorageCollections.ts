@@ -1,6 +1,6 @@
-import getSlowDocCountsCommand = require("commands/getSlowDocCountsCommand");
+import getSlowDocCountsCommand = require("commands/database/debug/getSlowDocCountsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-import debugDocumentStats = require("models/debugDocumentStats");
+import debugDocumentStats = require("models/database/debug/debugDocumentStats");
 import genUtils = require("common/generalUtils");
 
 class statusStorageCollections extends viewModelBase {

@@ -1,13 +1,13 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import sqlReplicationConnections = require("models/sqlReplicationConnections");
-import predefinedSqlConnection = require("models/predefinedSqlConnection");
-import document = require("models/document");
-import documentMetadata = require("models/documentMetadata");
-import saveDocumentCommand = require("commands/saveDocumentCommand");
+import sqlReplicationConnections = require("models/database/sqlReplication/sqlReplicationConnections");
+import predefinedSqlConnection = require("models/database/sqlReplication/predefinedSqlConnection");
+import document = require("models/database/documents/document");
+import documentMetadata = require("models/database/documents/documentMetadata");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import appUrl = require("common/appUrl");
-import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/getEffectiveSqlReplicationConnectionStringsCommand");
+import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/database/globalConfig/getEffectiveSqlReplicationConnectionStringsCommand");
 import messagePublisher = require("common/messagePublisher");
-import deleteDocumentCommand = require("commands/deleteDocumentCommand");
+import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{
     

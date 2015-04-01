@@ -1,9 +1,9 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getCollectionsCommand = require("commands/getCollectionsCommand");
-import collection = require("models/collection");
+import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import collection = require("models/database/documents/collection");
 import appUrl = require("common/appUrl");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require('common/messagePublisher'); 
 
 class exportDatabase extends viewModelBase {

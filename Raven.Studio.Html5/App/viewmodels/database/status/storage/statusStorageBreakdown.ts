@@ -1,5 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getStatusStorageBreakdownCommand = require("commands/getStatusStorageBreakdownCommand");
+import getStatusStorageBreakdownCommand = require("commands/database/debug/getStatusStorageBreakdownCommand");
 import shell = require('viewmodels/shell');
 
 class statusStorageOnDisk extends viewModelBase {

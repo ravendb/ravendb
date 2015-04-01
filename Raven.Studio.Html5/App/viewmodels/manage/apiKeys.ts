@@ -1,5 +1,5 @@
-import getApiKeysCommand = require("commands/getApiKeysCommand");
-import apiKey = require("models/apiKey");
+import getApiKeysCommand = require("commands/auth/getApiKeysCommand");
+import apiKey = require("models/auth/apiKey");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require('viewmodels/shell');
 

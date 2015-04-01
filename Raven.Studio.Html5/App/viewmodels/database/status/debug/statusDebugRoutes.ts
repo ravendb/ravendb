@@ -1,4 +1,4 @@
-import getStatusDebugRoutesCommand = require("commands/getStatusDebugRoutesCommand");
+import getStatusDebugRoutesCommand = require("commands/database/debug/getStatusDebugRoutesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import shell = require('viewmodels/shell');

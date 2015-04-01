@@ -1,6 +1,6 @@
 import dialog = require("plugins/dialog");
-import deleteCollectionCommand = require("commands/deleteCollectionCommand");
-import collection = require("models/collection");
+import deleteCollectionCommand = require("commands/database/documents/deleteCollectionCommand");
+import collection = require("models/database/documents/collection");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 

@@ -1,8 +1,8 @@
 import cell = require("widgets/virtualTable/cell");
 import viewModel = require("widgets/virtualTable/viewModel");
-import customFunctions = require("models/customFunctions");
+import customFunctions = require("models/database/documents/customFunctions");
 import execJs = require('common/execJs');
-import collection = require("models/collection");
+import collection = require("models/database/documents/collection");
 
 class row {
     top = ko.observable(0);

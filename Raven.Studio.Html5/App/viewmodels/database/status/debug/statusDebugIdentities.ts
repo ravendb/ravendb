@@ -1,9 +1,9 @@
-import database = require("models/database");
+import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import pagedList = require("common/pagedList");
-import customColumns = require("models/customColumns");
-import customColumnParams = require('models/customColumnParams');
-import getIdentitiesCommand = require("commands/getIdentitiesCommand");
+import customColumns = require("models/database/documents/customColumns");
+import customColumnParams = require('models/database/documents/customColumnParams');
+import getIdentitiesCommand = require("commands/database/debug/getIdentitiesCommand");
 
 class statusDebugIdentities extends viewModelBase {
 

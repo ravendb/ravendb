@@ -1,8 +1,8 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import getEffectiveSettingsCommand = require("commands/getEffectiveSettingsCommand");
-import saveGlobalSettingsCommand = require("commands/saveGlobalSettingsCommand");
-import document = require("models/document");
-import database = require("models/database");
+import getEffectiveSettingsCommand = require("commands/database/globalConfig/getEffectiveSettingsCommand");
+import saveGlobalSettingsCommand = require("commands/database/globalConfig/saveGlobalSettingsCommand");
+import document = require("models/database/documents/document");
+import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 
 class globalConfigQuotas extends viewModelBase {

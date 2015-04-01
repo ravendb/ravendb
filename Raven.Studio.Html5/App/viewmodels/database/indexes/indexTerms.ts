@@ -1,6 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getIndexTermsCommand = require("commands/getIndexTermsCommand");
-import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
+import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
+import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import appUrl = require("common/appUrl");
 
 class indexTerms extends viewModelBase {

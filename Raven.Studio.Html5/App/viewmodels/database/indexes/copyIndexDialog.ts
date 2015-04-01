@@ -1,12 +1,12 @@
-﻿import indexDefinition = require("models/indexDefinition");
+﻿import indexDefinition = require("models/database/index/indexDefinition");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import database = require("models/database");
-import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
-import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
+import database = require("models/resources/database");
+import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
+import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import indexPriority = require("models/indexPriority");
+import indexPriority = require("models/database/index/indexPriority");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 

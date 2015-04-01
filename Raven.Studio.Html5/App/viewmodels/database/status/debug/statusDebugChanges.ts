@@ -1,4 +1,4 @@
-import getStatusDebugChangesCommand = require("commands/getStatusDebugChangesCommand");
+import getStatusDebugChangesCommand = require("commands/database/debug/getStatusDebugChangesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 

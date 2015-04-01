@@ -1,10 +1,10 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
-import getSqlReplicationPerfStatsCommand = require("commands/getSqlReplicationPerfStatsCommand");
+import getSqlReplicationPerfStatsCommand = require("commands/database/debug/getSqlReplicationPerfStatsCommand");
 import d3 = require("d3/d3");
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");
-import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
+import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import changeSubscription = require('models/changeSubscription');
 
 class sqlReplicationPerfStats extends viewModelBase {

@@ -1,13 +1,13 @@
 ﻿import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import database = require("models/database");
+import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require('viewmodels/shell');
-import license = require("models/license");
-import alert = require("models/alert");
-import resource = require("models/resource");
-import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
-import dismissAlertCommand = require("commands/dismissAlertCommand");
+import license = require("models/auth/license");
+import alert = require("models/database/debug/alert");
+import resource = require("models/resources/resource");
+import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
+import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
 import filesystem = require("models/filesystem/filesystem");
 
 class resources extends viewModelBase {

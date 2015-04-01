@@ -2,7 +2,7 @@
 /// <reference path="../../../../../Scripts/typings/d3/d3.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
-import getIndexingBatchStatsCommand = require("commands/getIndexingBatchStatsCommand");
+import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexingBatchStatsCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 

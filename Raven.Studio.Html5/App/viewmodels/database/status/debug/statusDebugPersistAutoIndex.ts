@@ -1,7 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import index = require("models/index");
-import persistIndexCommand = require("commands/persistIndexCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import index = require("models/database/index/index");
+import persistIndexCommand = require("commands/database/index/persistIndexCommand");
 
 class statusDebugPersistAutoIndex extends viewModelBase {
 

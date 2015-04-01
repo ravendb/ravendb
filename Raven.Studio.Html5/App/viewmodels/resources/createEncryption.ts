@@ -1,7 +1,7 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import getNewEncryptionKey = require("commands/getNewEncryptionKey");
-import checkEncryptionKey = require("commands/checkEncryptionKey");
+import getNewEncryptionKey = require("commands/database/studio/getNewEncryptionKey");
+import checkEncryptionKey = require("commands/database/studio/checkEncryptionKey");
 
 class createEncryption extends dialogViewModelBase {
 
