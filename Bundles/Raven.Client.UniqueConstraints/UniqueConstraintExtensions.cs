@@ -6,7 +6,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
-using Raven.Json.Linq;
 
 namespace Raven.Client.UniqueConstraints
 {
@@ -14,9 +13,32 @@ namespace Raven.Client.UniqueConstraints
 	{
 		public class ConstraintDocument
 		{
-			public string RelatedId { get; set; }
-		}
+			public ConstraintDocument()
+			{
+				Constraints = new Dictionary<string, Inner>();
+			}
 
+			public string RelatedId { get; set; }
+
+			public Dictionary<string, Inner> Constraints { get; set; }
+
+			public string GetRelatedIdFor(string key)
+			{
+				if (!string.IsNullOrEmpty(RelatedId))
+					return RelatedId;
+
+				Inner inner;
+				if (Constraints.TryGetValue(key, out inner))
+					return inner.RelatedId;
+
+				return null;
+			}
+
+			public class Inner
+			{
+				public string RelatedId { get; set; }
+			}
+		}
 
 		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
 		{
@@ -45,7 +67,7 @@ namespace Raven.Client.UniqueConstraints
 			return LoadByUniqueConstraintInternal<T>(session, keyName, values);
 		}
 
-
+		public const string DummyId = "E1972AA7-148D-4035-9779-0EDFB3A7DBFF";
 		private static T[] LoadByUniqueConstraintInternal<T>(this IDocumentSession session, string propertyName, params object[] values)
 		{
 			if (values == null) throw new ArgumentNullException("value", "The unique value cannot be null");
@@ -54,30 +76,50 @@ namespace Raven.Client.UniqueConstraints
 			if (values.Length == 0) { return new T[0]; }
 
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
-			
+
 			var constraintInfo = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T)).SingleOrDefault(ci => ci.Configuration.Name == propertyName);
 
 			if (constraintInfo != null)
 			{
-				var uniqueIds =
-					(from value in values
-					 where value != null
-					 select "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
-								Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive))
-					.ToArray();
-				var constraintDocs = session.Include("RelatedId").Load<RavenJObject>(uniqueIds);
-				if (constraintDocs != null)
+				var constraintsIds = (from value in values
+									  where value != null
+									  select
+										  new
+										  {
+											  Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive),
+											  Key = Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive)
+										  }).ToList();
+
+
+				var constraintDocs = session
+					.Include<ConstraintDocument>(x => x.RelatedId)
+					.Include("Constraints.$Values,RelatedId(ConstraintDocuments/)")
+					.Load(constraintsIds.Select(x => x.Id).ToArray());
+
+				var existingDocsIds = new List<string>();
+				for (var i = 0; i < constraintDocs.Length; i++)
 				{
-					string nullId = Guid.NewGuid().ToString(); // simple way to maintain parallel results array - this ID should never exist in the DB
-					var ids = constraintDocs.Select(d => d == null ? nullId : d.Value<string>("RelatedId")).ToArray();
-					return session.Load<T>(ids);
+					// simple way to maintain parallel results array - DummyId should never exist in the DB
+					var constraintDoc = constraintDocs[i];
+					if (constraintDoc == null)
+					{
+						existingDocsIds.Add(DummyId);
+						continue;
+					}
+
+					session.Advanced.Evict(constraintDoc);
+
+					var constraintId = constraintsIds[i];
+					var relatedId = constraintDoc.GetRelatedIdFor(constraintId.Key);
+
+					existingDocsIds.Add(!string.IsNullOrEmpty(relatedId) ? relatedId : DummyId);
 				}
+
+				return session.Load<T>(existingDocsIds);
 			}
 
 			return values.Select(v => default(T)).ToArray();
 		}
-
-
 
 		private static string GetPropropertyNameForKeySelector<T>(Expression<Func<T, object>> keySelector)
 		{
@@ -86,43 +128,56 @@ namespace Raven.Client.UniqueConstraints
 			return propertyName;
 		}
 
+		private static MemberExpression GetMemberExpression<T>(Expression<Func<T, object>> keySelector)
+		{
+			MemberExpression body;
+			if (keySelector.Body is MemberExpression)
+			{
+				body = ((MemberExpression)keySelector.Body);
+			}
+			else
+			{
+				var op = ((UnaryExpression)keySelector.Body).Operand;
+				body = ((MemberExpression)op);
+			}
+			return body;
+		}
 
-	    private static MemberExpression GetMemberExpression<T>(Expression<Func<T, object>> keySelector)
-	    {
-	        MemberExpression body;
-	        if (keySelector.Body is MemberExpression)
-	        {
-	            body = ((MemberExpression) keySelector.Body);
-	        }
-	        else
-	        {
-	            var op = ((UnaryExpression) keySelector.Body).Operand;
-	            body = ((MemberExpression) op);
-	        }
-	        return body;
-	    }
 
-
-	    public static UniqueConstraintCheckResult<T> CheckForUniqueConstraints<T>(this IDocumentSession session, T entity)
+		public static UniqueConstraintCheckResult<T> CheckForUniqueConstraints<T>(this IDocumentSession session, T entity)
 		{
 			var properties = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T));
 			T[] loadedDocs = null;
-			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
+			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
 
-			var constraintsIds = from property in properties
-			                     let propertyValue = property.GetValue(entity)
-			                     where propertyValue != null
-								 from item in typeof(IEnumerable).IsAssignableFrom(propertyValue.GetType()) && propertyValue.GetType() != typeof(string) ? ((IEnumerable)propertyValue).Cast<object>().Where(i => i != null) : new[] { propertyValue }
-			                     select 
-				                     "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() +
-				                     "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(),property.Configuration.CaseInsensitive);
+			var constraintsIds = (from property in properties
+								  let propertyValue = property.GetValue(entity)
+								  where propertyValue != null
+								  from item in propertyValue is IEnumerable && propertyValue.GetType() != typeof(string) ? ((IEnumerable)propertyValue).Cast<object>().Where(i => i != null) : new[] { propertyValue }
+								  select new
+								  {
+									  Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive),
+									  Key = Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive)
+								  }).ToList();
 
-			var constraintDocs = session.Include<ConstraintDocument>(x => x.RelatedId).Load(constraintsIds.ToArray());
+			var constraintDocs = session
+				.Include<ConstraintDocument>(x => x.RelatedId)
+				.Include("Constraints.$Values,RelatedId(ConstraintDocuments/)")
+				.Load(constraintsIds.Select(x => x.Id).ToArray());
 
-			var existingDocsIds = constraintDocs.Where(constraintDoc => constraintDoc != null)
-			                                    .Select(constraintDoc => constraintDoc.RelatedId)
-			                                    .Where(id => string.IsNullOrEmpty(id) == false)
-			                                    .ToArray();
+			var existingDocsIds = new List<string>();
+			for (var i = 0; i < constraintDocs.Length; i++)
+			{
+				var constraintDoc = constraintDocs[i];
+				if (constraintDoc == null)
+					continue;
+
+				var constraintId = constraintsIds[i];
+				var relatedId = constraintDoc.GetRelatedIdFor(constraintId.Key);
+
+				if (!string.IsNullOrEmpty(relatedId))
+					existingDocsIds.Add(relatedId);
+			}
 
 			if (existingDocsIds.Any())
 			{
@@ -135,21 +190,24 @@ namespace Raven.Client.UniqueConstraints
 		public static Task<T> LoadByUniqueConstraintAsync<T>(this IAsyncDocumentSession session, Expression<Func<T, object>> keySelector, object value)
 		{
 			if (value == null) throw new ArgumentNullException("value", "The unique value cannot be null");
-			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
-            var body = GetMemberExpression(keySelector);
+			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
+			var body = GetMemberExpression(keySelector);
 			var propertyName = body.Member.Name;
-		    var att = (UniqueConstraintAttribute) Attribute.GetCustomAttribute(body.Member, typeof (UniqueConstraintAttribute));
+			var att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(body.Member, typeof(UniqueConstraintAttribute));
 
-		    var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
-			               Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value,att.CaseInsensitive);
+			var escapedValue = Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, att.CaseInsensitive);
+			var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + escapedValue;
 
-			return session.Include<ConstraintDocument>(x => x.RelatedId).LoadAsync(uniqueId)
-			              .ContinueWith(x =>
-			              {
-				              if (x.Result == null)
-					              return new CompletedTask<T>(default(T));
-				              return session.LoadAsync<T>(x.Result.RelatedId);
-			              }).Unwrap();
+			return session
+				.Include<ConstraintDocument>(x => x.RelatedId)
+				.Include("Constraints.$Values,RelatedId(ConstraintDocuments/)")
+				.LoadAsync(uniqueId)
+						  .ContinueWith(x =>
+						  {
+							  if (x.Result == null)
+								  return new CompletedTask<T>(default(T));
+							  return session.LoadAsync<T>(x.Result.GetRelatedIdFor(escapedValue));
+						  }).Unwrap();
 		}
 
 
@@ -159,41 +217,57 @@ namespace Raven.Client.UniqueConstraints
 
 			if (properties != null)
 			{
-				var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
+				var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
 
-				var constraintsIds = from property in properties
-				                     let propertyValue = property.GetValue(entity)
-				                     where propertyValue != null
-				                     select "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString(), property.Configuration.CaseInsensitive);
+				var constraintsIds = (from property in properties
+									  let propertyValue = property.GetValue(entity)
+									  where propertyValue != null
+									  from item in propertyValue is IEnumerable && propertyValue.GetType() != typeof(string) ? ((IEnumerable)propertyValue).Cast<object>().Where(i => i != null) : new[] { propertyValue }
+									  select new
+									  {
+										  Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive),
+										  Key = Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive)
+									  }).ToList();
 
-				return session.Include<ConstraintDocument>(x => x.RelatedId).LoadAsync(constraintsIds.ToArray())
-				              .ContinueWith(task =>
-				              {
-					              var constraintDocs = task.Result;
-					              var existingDocsIds = (from constraintDoc in constraintDocs
-					                                     where constraintDoc != null
-					                                     select constraintDoc.RelatedId
-					                                     into id where !string.IsNullOrEmpty(id) select id).ToArray();
+				return session
+					.Include<ConstraintDocument>(x => x.RelatedId)
+					.Include("Constraints.$Values,RelatedId(ConstraintDocuments/)")
+					.LoadAsync(constraintsIds.Select(x => x.Id).ToArray())
+							  .ContinueWith(task =>
+							  {
+								  var constraintDocs = task.Result;
+								  var existingDocsIds = new List<string>();
+								  for (var i = 0; i < constraintDocs.Length; i++)
+								  {
+									  var constraintDoc = constraintDocs[i];
+									  if (constraintDoc == null)
+										  continue;
 
-					              if (existingDocsIds.Any() == false)
-					              {
-						              return new CompletedTask<UniqueConstraintCheckResult<T>>(new UniqueConstraintCheckResult<T>(entity, properties, null));
-					              }
+									  var constraintId = constraintsIds[i];
+									  var relatedId = constraintDoc.GetRelatedIdFor(constraintId.Key);
 
-					              return session.LoadAsync<T>(existingDocsIds.ToArray()).ContinueWith(loadTask =>
-					              {
-						              var completedTask = new CompletedTask<UniqueConstraintCheckResult<T>>(
-							              new UniqueConstraintCheckResult<T>(entity, properties, loadTask.Result)
-							              );
+									  if (!string.IsNullOrEmpty(relatedId))
+										  existingDocsIds.Add(relatedId);
+								  }
 
-						              return (Task<UniqueConstraintCheckResult<T>>) completedTask;
-					              }).Unwrap();
-				              }).Unwrap();
+								  if (existingDocsIds.Any() == false)
+								  {
+									  return new CompletedTask<UniqueConstraintCheckResult<T>>(new UniqueConstraintCheckResult<T>(entity, properties, null));
+								  }
+
+								  return session.LoadAsync<T>(existingDocsIds.ToArray()).ContinueWith(loadTask =>
+								  {
+									  var completedTask = new CompletedTask<UniqueConstraintCheckResult<T>>(
+										  new UniqueConstraintCheckResult<T>(entity, properties, loadTask.Result)
+										  );
+
+									  return (Task<UniqueConstraintCheckResult<T>>)completedTask;
+								  }).Unwrap();
+							  }).Unwrap();
 			}
 
 			return new CompletedTask<UniqueConstraintCheckResult<T>>(new UniqueConstraintCheckResult<T>(entity, properties, null));
 		}
-
 
 		internal static ConstraintInfo[] GetUniquePropertiesForType(this IDocumentStore store, Type type)
 		{
@@ -206,7 +280,6 @@ namespace Raven.Client.UniqueConstraints
 			return null;
 		}
 	}
-
 
 	public class UniqueConstraintCheckResult<T>
 	{
@@ -255,11 +328,11 @@ namespace Raven.Client.UniqueConstraints
 
 		public T DocumentForProperty(Expression<Func<T, object>> keySelector)
 		{
-			var body = (MemberExpression) keySelector.Body;
-			var prop = (PropertyInfo) body.Member;
+			var body = (MemberExpression)keySelector.Body;
+			var prop = (PropertyInfo)body.Member;
 			object doc;
 			propertyDocuments.TryGetValue(prop.Name, out doc);
-			return (T) doc;
+			return (T)doc;
 		}
 	}
 }
