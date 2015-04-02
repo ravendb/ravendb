@@ -434,7 +434,7 @@ interface versioningEntryDto extends documentDto {
   Exclude: boolean;
   ExcludeUnlessExplicit: boolean;
   PurgeOnDelete: boolean;
-  ResetOnRename: boolean;
+  ResetOnRename?: boolean;
 }
 
 interface versioningDto {
