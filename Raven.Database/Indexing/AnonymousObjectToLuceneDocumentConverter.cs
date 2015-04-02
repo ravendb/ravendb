@@ -47,11 +47,11 @@ namespace Raven.Database.Indexing
             this.log = log;
         }
 
-        public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, Field.Store defaultStorage)
+		public IEnumerable<AbstractField> Index(object val, PropertyAccessor accessor, Field.Store defaultStorage)
         {
-            return from property in properties.Cast<PropertyDescriptor>()
-                   where property.Name != Constants.DocumentIdFieldName
-                   from field in CreateFields(property.Name, property.GetValue(val), defaultStorage)
+            return from property in accessor.Properies
+                   where property.Key != Constants.DocumentIdFieldName
+                   from field in CreateFields(property.Key, property.Value(val), defaultStorage)
                    select field;
         }
 
