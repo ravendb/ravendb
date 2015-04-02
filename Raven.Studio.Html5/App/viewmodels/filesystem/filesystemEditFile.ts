@@ -11,9 +11,11 @@ import file = require("models/filesystem/file");
 import fileMetadata = require("models/filesystem/fileMetadata");
 import deleteItems = require("viewmodels/deleteItems");
 import fileRenameDialog = require("viewmodels/filesystem/fileRenameDialog");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class filesystemEditFile extends viewModelBase {
 
+	metadataEditor: AceAjax.Editor;
     fileName = ko.observable<string>();
     file = ko.observable<file>();
     filesystemForEditedFile: filesystem;
@@ -29,9 +31,7 @@ class filesystemEditFile extends viewModelBase {
 
     constructor() {
         super();
-
-        // When we programmatically change the document text or meta text, push it into the editor.
-        this.fileMetadataText.subscribe(() => this.updateFileEditorText());
+	    aceEditorBindingHandler.install();
         this.fileName.subscribe(x => this.loadFile(x));
     }
 
@@ -47,10 +47,18 @@ class filesystemEditFile extends viewModelBase {
         this.metadata.subscribe((meta: fileMetadata) => this.metadataChanged(meta));
     }
 
-    // Called when the view is attached to the DOM.
     attached() {
-        this.initializeFileEditor();
         this.setupKeyboardShortcuts();
+    }
+
+	compositionComplete() {
+        super.compositionComplete();
+
+        var editorElement = $("#fileMetadataEditor");
+        if (editorElement.length > 0) {
+            this.metadataEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
         this.focusOnEditor();
     }
 
@@ -58,32 +66,8 @@ class filesystemEditFile extends viewModelBase {
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteFile(), filesystemEditFile.editFileSelector);
     }
 
-    initializeFileEditor() {
-        // Startup the Ace editor with JSON syntax highlighting.
-        // TODO: Just use the simple binding handler instead.
-        this.fileMetadataEditor = ace.edit("fileMetadataEditor");
-        this.fileMetadataEditor.setTheme("ace/theme/xcode");
-        this.fileMetadataEditor.setFontSize("16px");
-        this.fileMetadataEditor.getSession().setMode("ace/mode/json");
-        $("#fileMetadataEditor").on('blur', ".ace_text-input", () => this.storeFileEditorTextIntoObservable());
-        this.updateFileEditorText();
-    }
-
     focusOnEditor() {
-        this.fileMetadataEditor.focus();
-    }
-
-    updateFileEditorText() {
-        if (this.fileMetadataEditor) {
-            this.fileMetadataEditor.getSession().setValue(this.fileMetadataText());
-        }
-    }
-
-    storeFileEditorTextIntoObservable() {
-        if (this.fileMetadataEditor) {
-            var editorText = this.fileMetadataEditor.getSession().getValue();
-            this.fileMetadataText(editorText);
-        }
+        this.metadataEditor.focus();
     }
 
     loadFile(fileName: string) {
@@ -120,10 +104,6 @@ class filesystemEditFile extends viewModelBase {
 
     refreshFile() {
         this.loadFile(this.fileName());
-    }
-
-    saveInObservable() { //TODO: remove this and use ace binding handler
-        this.storeFileEditorTextIntoObservable();
     }
 
     deleteFile() {
