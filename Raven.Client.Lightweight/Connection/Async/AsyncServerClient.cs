@@ -1232,7 +1232,6 @@ namespace Raven.Client.Connection.Async
 				return QueryAsyncAsPost(index, query, includes, metadataOnly, indexEntriesOnly, token);
 			}
 
-
 			return QueryAsyncAsGet(index, query, includes, metadataOnly, indexEntriesOnly, method, token);
 		}
 
@@ -1243,7 +1242,6 @@ namespace Raven.Client.Connection.Async
 				EnsureIsNotNullOrEmpty(index, "index");
 				string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "indexes", includeQuery: method == "GET");
 
-
 				if (metadataOnly)
 					path += "&metadata-only=true";
 				if (indexEntriesOnly)
@@ -1252,7 +1250,6 @@ namespace Raven.Client.Connection.Async
 				{
 					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 				}
-
 
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention) { AvoidCachingRequest = query.DisableCaching }.AddOperationHeaders(OperationsHeaders)))
 				{
@@ -1297,15 +1294,14 @@ namespace Raven.Client.Connection.Async
 			var stringBuilder = new StringBuilder();
 			query.AppendQueryString(stringBuilder);
 
-			foreach (var include in includes)
-			{
-				stringBuilder.Append("&include=").Append(include);
-			}
-
 			if (metadataOnly)
 				stringBuilder.Append("&metadata-only=true");
 			if (indexEntriesOnly)
 				stringBuilder.Append("&debug=entries");
+			if (includes != null && includes.Length > 0)
+			{
+				includes.ForEach(include => stringBuilder.Append("&include=").Append(include));
+			}
 
 			try
 			{
@@ -1319,7 +1315,7 @@ namespace Raven.Client.Connection.Async
 					}
 				}, token, operationMetadataRef).ConfigureAwait(false);
 
-				var json = (RavenJObject) result[0].Result;
+				var json = (RavenJObject)result[0].Result;
 				var queryResult = SerializationHelper.ToQueryResult(json, result[0].GetEtagHeader(), result[0].Headers["Temp-Request-Time"], -1);
 
 				var docResults = queryResult.Results.Concat(queryResult.Includes);
