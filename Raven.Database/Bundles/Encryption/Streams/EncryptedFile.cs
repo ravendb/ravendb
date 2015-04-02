@@ -34,7 +34,7 @@ namespace Raven.Bundles.Encryption.Streams
 				get { return EncryptedBlockSize + IVSize; }
 			}
 
-			public long GetBlockNumberFromPhysicalPosition(long position)
+		    public long GetBlockNumberFromPhysicalPosition(long position)
 			{
 				return (position - HeaderSize) / DiskBlockSize;
 			}

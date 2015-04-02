@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Embedded;
@@ -18,6 +19,8 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
+            Console.WriteLine(SystemParameters.BookmarkMost);
+		    return;
 			var filesStore = new FilesStore
 			{
 				Url = "http://localhost:8080",
