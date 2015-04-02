@@ -36,7 +36,7 @@
                     <ul class="nav nav-tabs">
                         <li accesskey="m" title="Edit file metadata (Alt+M)">File Metadata</li>
                     </ul>
-                    <pre id="fileMetadataEditor" class="form-control" data-bind="attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
+					<pre id="fileMetadataEditor" class="form-control" data-bind="aceEditor: { code: fileMetadataText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
                 </div>
             </div>
         </div>
