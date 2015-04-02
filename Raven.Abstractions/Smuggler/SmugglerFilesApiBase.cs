@@ -185,7 +185,7 @@ namespace Raven.Abstractions.Smuggler
 			    while (true)
 			    {
 				    bool hasDocs = false;
-				    using (var files = await Operations.GetFiles(lastEtag, Math.Min(Options.BatchSize, int.MaxValue)))
+				    using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize))
 				    {
 					    while (await files.MoveNextAsync())
 					    {
@@ -277,7 +277,7 @@ namespace Raven.Abstractions.Smuggler
 				{
 					bool hasConfigs = false;
 
-					foreach (var config in await Operations.GetConfigurations(totalCount, Math.Min(Options.BatchSize, int.MaxValue)))
+					foreach (var config in await Operations.GetConfigurations(totalCount, Options.BatchSize))
 					{
 						if (internalConfigs.IsMatch(config.Key))
 							continue;
@@ -583,7 +583,7 @@ namespace Raven.Abstractions.Smuggler
 				{
 					bool hasConfigs = false;
 
-					foreach (var config in await Operations.GetConfigurations(totalConfigurations, Math.Min(Options.BatchSize, int.MaxValue)))
+					foreach (var config in await Operations.GetConfigurations(totalConfigurations, Options.BatchSize))
 					{
 						if (internalConfigs.IsMatch(config.Key))
 							continue;
@@ -607,7 +607,7 @@ namespace Raven.Abstractions.Smuggler
 
 				Operations.ShowProgress("Done with reading configurations, total: {0}", totalConfigurations);
 
-                using (var files = await Operations.GetFiles(lastEtag, Math.Min(Options.BatchSize, int.MaxValue)))
+                using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize))
                 {
                     while (await files.MoveNextAsync())
                     {
