@@ -119,5 +119,6 @@ namespace Raven.Abstractions.Data
 	{
 		public List<ExtensionsLog> Extensions { get; set; }
 		public List<TriggerInfo> Triggers { get; set; }
+		public List<string> CustomBundles { get; set; }
 	}
 }

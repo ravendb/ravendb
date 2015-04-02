@@ -1223,3 +1223,24 @@ interface synchronizationConfigDto {
     MaxNumberOfSynchronizationsPerDestination: number;
     SynchronizationLockTimeoutMiliseconds: number;
 }
+
+interface pluginsInfoDto {
+	Extensions: Array<extensionsLogDto>;
+	Triggers: Array<triggerInfoDto>;
+	CustomBundles: Array<string>;
+}
+
+interface extensionsLogDto {
+	Name: string;
+	Installed: Array<extensionsLogDetailDto>;
+}
+
+interface extensionsLogDetailDto {
+	Name: string;
+	Assembly: string;
+}
+
+interface triggerInfoDto {
+	Type: string;
+	Name: string;
+}
