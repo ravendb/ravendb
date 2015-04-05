@@ -284,7 +284,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				long etag = 0;
 				var url = string.Format("{0}/lastEtag?serverUrl={1}", counterStorageUrl, storage.CounterStorageUrl);
-				var request = httpRavenRequestFactory.Create(url, HttpMethods.Get.Method, connectionStringOptions);
+				var request = httpRavenRequestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
 				request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));
 
 				lastEtag = etag;
@@ -325,12 +325,11 @@ namespace Raven.Database.Counters.Controllers
 			{
 				var url = string.Format("{0}/replication", counterStorageUrl);
 				lastError = string.Empty;
-				var request = httpRavenRequestFactory.Create(url, HttpMethods.Post.Method, connectionStringOptions);
+				var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
 				request.Write(RavenJObject.FromObject(message));
 				request.ExecuteRequest();
                 
                 return true;
-
 			}
 			catch (WebException e)
 			{
@@ -463,7 +462,7 @@ namespace Raven.Database.Counters.Controllers
 				try
 				{
 					var url = connectionStringOptions.Url + "/counters/" + storage.Name + "/replication/heartbeat?from=" + Uri.EscapeDataString(storage.CounterStorageUrl);
-					var request = httpRavenRequestFactory.Create(url, HttpMethods.Post.Method, connectionStringOptions);
+					var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
 					request.WebRequest.ContentLength = 0;
 					request.ExecuteRequest();
 				}

@@ -6,12 +6,12 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 
@@ -48,7 +48,7 @@ namespace Raven.Client.Document
 
 			asyncDatabaseCommands.ForceReadFromMaster();
 
-            var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethod.Get, operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata));
+            var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get, operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata));
             if (replicationDocument == null)
 				return -1;
 
@@ -134,7 +134,7 @@ namespace Raven.Client.Document
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
 				destinationUrl.LastReplicatedEtagFor(sourceUrl, sourceDbId, sourceCollections),
-				HttpMethod.Get,
+				HttpMethods.Get,
 				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);
 

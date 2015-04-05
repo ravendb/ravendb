@@ -228,7 +228,7 @@ namespace Raven.Database.Server.Controllers
 				query = modifiedQuery;
 			}
 
-			var msg = new HttpRequestMessage(HttpMethod.Get, new UriBuilder
+			var msg = new HttpRequestMessage(HttpMethods.Get, new UriBuilder
 			{
 				Host = "multi.get",
 				Query = query,

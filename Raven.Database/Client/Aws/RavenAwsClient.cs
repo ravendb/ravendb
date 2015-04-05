@@ -13,7 +13,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
-
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 
 namespace Raven.Database.Client.Aws
@@ -79,7 +79,7 @@ namespace Raven.Database.Client.Aws
 
 		private static string CalculateCanonicalRequestHash(HttpMethod httpMethod, string url, IDictionary<string, string> httpHeaders, out string signedHeaders)
 		{
-			var isGet = httpMethod == HttpMethod.Get;
+			var isGet = httpMethod == HttpMethods.Get;
 
 			var uri = new Uri(url);
 			var queryStringCollection = uri.ParseQueryString();

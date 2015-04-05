@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Net.Http;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Data;
@@ -198,7 +199,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 
             try
             {
-                var request = requestFactory.Create(url, "GET", connectionStringOptions);
+                var request = requestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
                 error = null;
                 var ravenConfig = request.ExecuteRequest<RavenJObject>();
                 var serverUrlFromTargetConfig = ravenConfig.Value<string>("ServerUrl");
@@ -221,7 +222,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 
 			try
 			{
-				var request = requestFactory.Create(url, "POST", connectionStringOptions);
+				var request = requestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
                 request.Write(from);
 
 				error = null;
@@ -274,7 +275,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 			try
 			{
 				var url = string.Format("{0}/replication/heartbeat?&from={1}", serverUrl, Uri.EscapeDataString(database.ServerUrl));
-				var request = requestFactory.Create(url, "POST", connectionStringOptions);
+				var request = requestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
 				request.ExecuteRequest();
 			}
 			catch (Exception e)

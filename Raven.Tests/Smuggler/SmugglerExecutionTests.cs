@@ -1,11 +1,10 @@
-﻿using System.Net.Http;
-
-using Raven.Abstractions.Connection;
+﻿using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Embedded;
@@ -16,7 +15,6 @@ using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 using Raven.Smuggler;
 using Raven.Tests.Common;
-using Raven.Tests.Common.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -596,7 +594,7 @@ namespace Raven.Tests.Smuggler
                 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                     servers[0].SystemDatabase.ServerUrl +
                                                                     "admin/periodicExport/purge-tombstones?docEtag=" + documentEtagAfterFirstDelete + "&attachmentEtag=" + attachmentEtagAfterFirstDelete,
-																	HttpMethod.Post,
+																	HttpMethods.Post,
                                                                     new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                     store.Conventions);
 

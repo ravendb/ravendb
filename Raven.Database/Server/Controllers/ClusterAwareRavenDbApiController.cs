@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Web.Http.Controllers;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Database.Raft.Util;
 
 namespace Raven.Database.Server.Controllers
@@ -71,7 +72,7 @@ namespace Raven.Database.Server.Controllers
 
 		private static bool IsReadRequest(HttpControllerContext controllerContext)
 		{
-			return controllerContext.Request.Method == HttpMethod.Get || controllerContext.Request.Method == HttpMethod.Head;
+			return controllerContext.Request.Method == HttpMethods.Get || controllerContext.Request.Method == HttpMethods.Head;
 		}
 
 		private static string GetClusterHeader(HttpControllerContext controllerContext, string key)

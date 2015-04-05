@@ -99,7 +99,7 @@ namespace Raven.Database.Client.Azure
 
 			var now = SystemTime.UtcNow;
 
-			var requestMessage = new HttpRequestMessage(HttpMethod.Get, url)
+			var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
 			                     {
 				                     Headers =
 				                     {
