@@ -14,7 +14,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanCreateAndDisposeUsingBulk2()
 		{
-			using (var store = NewRemoteDocumentStore())
+			using (var store = NewRemoteDocumentStore(fiddler:true))
 			{
 				using (var bulkInsert = store.BulkInsert())
 				{

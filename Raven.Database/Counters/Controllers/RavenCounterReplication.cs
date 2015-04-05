@@ -12,6 +12,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
@@ -283,7 +284,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				long etag = 0;
 				var url = string.Format("{0}/lastEtag?serverUrl={1}", counterStorageUrl, storage.CounterStorageUrl);
-				var request = httpRavenRequestFactory.Create(url, "GET", connectionStringOptions);
+				var request = httpRavenRequestFactory.Create(url, HttpMethods.Get.Method, connectionStringOptions);
 				request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));
 
 				lastEtag = etag;
@@ -324,7 +325,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				var url = string.Format("{0}/replication", counterStorageUrl);
 				lastError = string.Empty;
-				var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+				var request = httpRavenRequestFactory.Create(url, HttpMethods.Post.Method, connectionStringOptions);
 				request.Write(RavenJObject.FromObject(message));
 				request.ExecuteRequest();
                 
@@ -381,12 +382,12 @@ namespace Raven.Database.Counters.Controllers
 
 	    private ReplicationMessage GetCountersDataSinceEtag(long etag, out long lastEtagSent)
 	    {
-            var message = new ReplicationMessage { SendingServerName = storage.CounterStorageUrl };
+            var message = new ReplicationMessage { ServerId = storage.ServerId };
 
             using (var reader = storage.CreateReader())
             {
                 message.Counters = reader.GetCountersSinceEtag(etag + 1).Take(10240).ToList(); //TODO: Capped this...how to get remaining values?
-                lastEtagSent = message.Counters.Count > 0 ? message.Counters.Max(x=>x.Etag):etag; // change this once changed this function do a reall paging
+                lastEtagSent = message.Counters.Count > 0 ? message.Counters.Max(x => x.Etag) : etag; // change this once changed this function do a reall paging
             }
 
 	        return message;
@@ -462,7 +463,7 @@ namespace Raven.Database.Counters.Controllers
 				try
 				{
 					var url = connectionStringOptions.Url + "/counters/" + storage.Name + "/replication/heartbeat?from=" + Uri.EscapeDataString(storage.CounterStorageUrl);
-					var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+					var request = httpRavenRequestFactory.Create(url, HttpMethods.Post.Method, connectionStringOptions);
 					request.WebRequest.ContentLength = 0;
 					request.ExecuteRequest();
 				}
