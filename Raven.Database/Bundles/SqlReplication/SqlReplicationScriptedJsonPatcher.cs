@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Linq;
 using Jint;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Json;
@@ -49,6 +50,14 @@ namespace Raven.Database.Bundles.SqlReplication
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				var current = sqlReplicationTable;
+                var itemToReplicates = scriptResult.Data.GetOrAdd(current.TableName);
+                // adding the item to be replicateed across all tables for deletes.
+                itemToReplicates.Add(new ItemToReplicate
+                {
+                    DocumentId = docId,
+                    Columns = new RavenJObject(),
+                    DeleteMarker = true
+                });
 				engine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<object>)(cols =>
 				{
 					var tableName = current.TableName;
@@ -68,6 +77,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				throw new ArgumentException("cols parameter is mandatory");
 
 			var itemToReplicates = scriptResult.Data.GetOrAdd(tableName);
+            //removing items that were inserted at initialization
+            itemToReplicates.RemoveAll(x => x.DocumentId == docId && x.DeleteMarker == true);
 			itemToReplicates.Add(new ItemToReplicate
 			{
 				DocumentId = docId,
