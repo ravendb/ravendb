@@ -49,6 +49,27 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 	});
 }";
 
+        private const string replicateAllDocumentButOrder2 = @"
+if (if (documentId !== 'orders/2')
+    {
+    var orderData = {
+	    Id: documentId,
+	    OrderLinesCount: this.OrderLines.length,
+	    TotalCost: 0
+    };
+    replicateToOrders(orderData);
+    for (var i = 0; i < this.OrderLines.length; i++) {
+	    var line = this.OrderLines[i];
+	    orderData.TotalCost += line.Cost;
+	    replicateToOrderLines({
+		    OrderId: documentId,
+		    Qty: line.Quantity,
+		    Product: line.Product,
+		    Cost: line.Cost
+	    });
+    }
+}";
+
 		private void CreateRdbmsSchema(string tablePrefix = null)
 		{
 			var providerFactory = DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
@@ -288,6 +309,63 @@ CREATE TABLE [dbo].[Orders]
 
 			}
 		}
+
+        [FactIfSqlServerIsAvailable]
+        public void InnerDeletesOfReplicateItemsShouldBeReplicated( )
+        {
+            CreateRdbmsSchema();
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
+                store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                    .First().AfterReplicationCompleted += successCount =>
+                    {
+                        if (successCount != 0)
+                            eventSlim.Set();
+                    };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+						}
+                    });
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 7, Product = "Milki", Quantity = 7},
+							new OrderLine{Cost = 1, Product = "Bamba", Quantity = 3},
+						}
+                    });
+                    session.SaveChanges();
+                }
+
+                SetupSqlReplication(store, defaultScript);
+
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                    .First().AfterReplicationCompleted += successCount =>
+                    {
+                        if (successCount != 0)
+                            eventSlim.Set();
+                    };
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Query<Order>().FirstOrDefault(o => o.OrderLines.Any(ol => ol.Product.Equals("Milki")));
+                    order.OrderLines.RemoveAll(ol => ol.Product.Equals("Milki"));
+                    session.SaveChanges();
+                }
+                SetupSqlReplication(store, replicateAllDocumentButOrder2);
+                Assert.Equal(2, GetOrdersCount());
+                Assert.Equal(3, GetOrderLinesCount());
+
+            }
+        }
 
 		private static int GetOrdersCount(string tableSuffix = "")
 		{
