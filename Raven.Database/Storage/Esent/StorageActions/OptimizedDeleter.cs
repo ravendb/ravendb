@@ -15,6 +15,9 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public class OptimizedDeleter
 	{
+        private static Lazy<int> bookmarkMost = new Lazy<int>(() => SystemParameters.BookmarkMost, true);
+
+
 		private class Key : IComparable
 		{
 			public readonly byte[] Buffer;
@@ -69,13 +72,13 @@ namespace Raven.Storage.Esent.StorageActions
 			byte[] buffer;
 			int actualBookmarkSize;
 
-			var largeBuffer = IndexReaderBuffers.Buffers.TakeBuffer(SystemParameters.BookmarkMost);
+            var largeBuffer = IndexReaderBuffers.Buffers.TakeBuffer(bookmarkMost.Value);
 			try
 			{
 				Api.JetGetBookmark(session, table, largeBuffer,
 								   largeBuffer.Length, out actualBookmarkSize);
 
-				buffer = IndexReaderBuffers.Buffers.TakeBuffer(actualBookmarkSize);
+				buffer = new byte[actualBookmarkSize];
 				Buffer.BlockCopy(largeBuffer, 0, buffer, 0, actualBookmarkSize);
 			}
 			finally
