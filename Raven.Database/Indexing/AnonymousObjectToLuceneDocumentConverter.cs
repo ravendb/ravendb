@@ -24,6 +24,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Database.Indexing
 {
@@ -36,8 +37,8 @@ namespace Raven.Database.Indexing
         private readonly DocumentDatabase database;
         private readonly IndexDefinition indexDefinition;
         private readonly List<int> multipleItemsSameFieldCount = new List<int>();
-        private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>();
-        private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>();
+        private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>(Comparer);
+        private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>(Comparer);
 
         public AnonymousObjectToLuceneDocumentConverter(DocumentDatabase database, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, ILog log)
         {
@@ -519,16 +520,54 @@ namespace Raven.Database.Indexing
             return field;
         }
 
-        public class FieldCacheKey
+        private static FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
+
+        private class FieldCacheKeyEqualityComparer : IEqualityComparer<FieldCacheKey>
         {
-            private readonly string name;
-            private readonly Field.Index? index;
-            private readonly Field.Store store;
-            private readonly Field.TermVector termVector;
-            private readonly int[] multipleItemsSameField;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(FieldCacheKey x, FieldCacheKey y)
+            {
+                if (x.HashKey.Value != y.HashKey.Value)
+                    return false;
+                else // We are thinking it is possible to have collisions. This may not be true ever!
+                {
+                    if (string.Equals(x.name, y.name) &&
+                         Equals(x.index, y.index) &&
+                         Equals(x.store, y.store) &&
+                         Equals(x.termVector, y.termVector))
+                    {
+                        if (x.multipleItemsSameField.Length != y.multipleItemsSameField.Length)
+                            return false;
+
+                        int count = x.multipleItemsSameField.Length;
+                        for ( int i = 0; i < count; i++ )
+                        {
+                            if (x.multipleItemsSameField[i] != y.multipleItemsSameField[i])
+                                return false;
+                        }
+                        return true;
+                    }
+                    else return false;
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetHashCode(FieldCacheKey obj)
+            {
+                return obj.HashKey.Value;
+            }
+        }
+
+        private class FieldCacheKey
+        {
+            internal readonly string name;
+            internal readonly Field.Index? index;
+            internal readonly Field.Store store;
+            internal readonly Field.TermVector termVector;
+            internal readonly int[] multipleItemsSameField;
 
             // We can precalculate the hash code because all fields involved are readonly.
-            private readonly Lazy<int> precalculatedHashCode;
+            internal readonly Lazy<int> HashKey;
 
             public FieldCacheKey(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
             {
@@ -538,27 +577,10 @@ namespace Raven.Database.Indexing
                 this.termVector = termVector;
                 this.multipleItemsSameField = multipleItemsSameField;
 
-                this.precalculatedHashCode = new Lazy<int>(CalculateHashCode);
+                this.HashKey = new Lazy<int>(CalculateHashCode);
             }
 
-
-            protected bool Equals(FieldCacheKey other)
-            {
-                return string.Equals(name, other.name) &&
-                    Equals(index, other.index) &&
-                    Equals(store, other.store) &&
-                    Equals(termVector, other.termVector) &&
-                    multipleItemsSameField.SequenceEqual(other.multipleItemsSameField);
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != typeof(FieldCacheKey)) return false;
-                return Equals((FieldCacheKey)obj);
-            }
-
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private int CalculateHashCode ()
             {
                 unchecked
@@ -574,7 +596,7 @@ namespace Raven.Database.Indexing
 
             public override int GetHashCode()
             {
-                return precalculatedHashCode.Value;
+                return this.HashKey.Value;
             }
         }
 
