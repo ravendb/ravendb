@@ -110,12 +110,11 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public bool Execute(ConversionScriptResult scriptResult)
 		{
-			var identifiers = scriptResult.Data.SelectMany(x => x.Value).Select(x => x.DocumentId).Distinct().ToList();
 			foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
 			{
 				// first, delete all the rows that might already exist there
 				DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
-										identifiers);
+										scriptResult.Ids);
 			}
 
 			foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
