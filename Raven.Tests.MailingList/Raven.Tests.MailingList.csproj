@@ -215,6 +215,7 @@
     <Compile Include="FilteredIndexTest.cs" />
     <Compile Include="FirstOrDefaultNullableDate.cs" />
     <Compile Include="FormOpensByDateAndMediaSourceAndVersionTest.cs" />
+    <Compile Include="FragementFail.cs" />
     <Compile Include="Gal.cs" />
     <Compile Include="Garrett.cs" />
     <Compile Include="gaz.cs" />
