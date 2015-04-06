@@ -87,7 +87,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="NLog.config" />
     <None Include="packages.config" />
   </ItemGroup>
@@ -121,6 +123,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Transactions" />
     <Reference Include="xunit">
       <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>

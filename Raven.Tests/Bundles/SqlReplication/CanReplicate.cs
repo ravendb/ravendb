@@ -311,7 +311,7 @@ CREATE TABLE [dbo].[Orders]
 		}
 
         [FactIfSqlServerIsAvailable]
-        public void InnerDeletesOfReplicateItemsShouldBeReplicated( )
+        public void RavenDB_3341()
         {
             CreateRdbmsSchema();
             using (var store = NewDocumentStore())
@@ -330,40 +330,28 @@ CREATE TABLE [dbo].[Orders]
                     {
                         OrderLines = new List<OrderLine>
 						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
 							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
 						}
                     });
-                    session.Store(new Order
-                    {
-                        OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 7, Product = "Milki", Quantity = 7},
-							new OrderLine{Cost = 1, Product = "Bamba", Quantity = 3},
-						}
-                    });
+
                     session.SaveChanges();
                 }
 
-                SetupSqlReplication(store, defaultScript);
+                SetupSqlReplication(store, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
-                store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                    .First().AfterReplicationCompleted += successCount =>
-                    {
-                        if (successCount != 0)
-                            eventSlim.Set();
-                    };
+
+                AssertCounts(1, 1);
+
+                eventSlim.Reset();
                 using (var session = store.OpenSession())
                 {
-                    var order = session.Query<Order>().FirstOrDefault(o => o.OrderLines.Any(ol => ol.Product.Equals("Milki")));
-                    order.OrderLines.RemoveAll(ol => ol.Product.Equals("Milki"));
+                    var order = session.Load<Order>(1);
+                    order.OrderLines.Clear();
                     session.SaveChanges();
                 }
-                SetupSqlReplication(store, replicateAllDocumentButOrder2);
-                Assert.Equal(2, GetOrdersCount());
-                Assert.Equal(3, GetOrderLinesCount());
-
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                AssertCounts(0, 0);
             }
         }
 
