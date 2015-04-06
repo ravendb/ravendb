@@ -6,6 +6,5 @@ namespace Raven.Database.Bundles.SqlReplication
 	{
 		public string DocumentId { get; set; }
 		public RavenJObject Columns { get; set; }
-        public bool DeleteMarker { get; set; }
 	}
 }

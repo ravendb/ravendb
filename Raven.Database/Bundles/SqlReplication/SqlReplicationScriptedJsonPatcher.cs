@@ -47,17 +47,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 			engine.SetValue("documentId", docId);
 			engine.SetValue("replicateTo", new Action<string, object>(ReplicateToFunction));
-			foreach (var sqlReplicationTable in config.SqlReplicationTables)
+            scriptResult.Ids.Add(docId);
+            foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				var current = sqlReplicationTable;
-                var itemToReplicates = scriptResult.Data.GetOrAdd(current.TableName);
-                // adding the item to be replicateed across all tables for deletes.
-                itemToReplicates.Add(new ItemToReplicate
-                {
-                    DocumentId = docId,
-                    Columns = new RavenJObject(),
-                    DeleteMarker = true
-                });
 				engine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<object>)(cols =>
 				{
 					var tableName = current.TableName;
@@ -77,8 +70,6 @@ namespace Raven.Database.Bundles.SqlReplication
 				throw new ArgumentException("cols parameter is mandatory");
 
 			var itemToReplicates = scriptResult.Data.GetOrAdd(tableName);
-            //removing items that were inserted at initialization
-            itemToReplicates.RemoveAll(x => x.DocumentId == docId && x.DeleteMarker == true);
 			itemToReplicates.Add(new ItemToReplicate
 			{
 				DocumentId = docId,

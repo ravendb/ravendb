@@ -27,14 +27,14 @@ using Xunit.Sdk;
 
 namespace Raven.Tests.Bundles.SqlReplication
 {
-	public class CanReplicate : RavenTest
-	{
-		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
-		{
-			configuration.Settings["Raven/ActiveBundles"] = "sqlReplication";
-		}
+    public class CanReplicate : RavenTest
+    {
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        {
+            configuration.Settings["Raven/ActiveBundles"] = "sqlReplication";
+        }
 
-		private const string defaultScript = @"
+        private const string defaultScript = @"
 var orderData = {
 	Id: documentId,
 	OrderLinesCount: this.OrderLines.length,
@@ -75,25 +75,25 @@ if (if (documentId !== 'orders/2')
 	    });
     }
 }";
-		private void CreateRdbmsSchema()
-		{
-			var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
-			using (var con = providerFactory.CreateConnection())
-			{
-				con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
-				con.Open();
+        private void CreateRdbmsSchema()
+        {
+            var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+            using (var con = providerFactory.CreateConnection())
+            {
+                con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+                con.Open();
 
-				using (var dbCommand = con.CreateCommand())
-				{
-					dbCommand.CommandText = @"
+                using (var dbCommand = con.CreateCommand())
+                {
+                    dbCommand.CommandText = @"
 IF OBJECT_ID('Orders') is not null 
 	DROP TABLE [dbo].[Orders]
 IF OBJECT_ID('OrderLines') is not null 
 	DROP TABLE [dbo].[OrderLines]
 ";
-					dbCommand.ExecuteNonQuery();
+                    dbCommand.ExecuteNonQuery();
 
-					dbCommand.CommandText = @"
+                    dbCommand.CommandText = @"
 CREATE TABLE [dbo].[OrderLines]
 (
 	[Id] int identity primary key,
@@ -110,109 +110,16 @@ CREATE TABLE [dbo].[Orders]
 	[TotalCost] [int] NOT NULL
 )
 ";
-					dbCommand.ExecuteNonQuery();
-				}
-			}
-		}
+                    dbCommand.ExecuteNonQuery();
+                }
+            }
+        }
 
-		[Theory]
-		[PropertyData("Storages")]
-		public void SimpleTransformation(string requestedStorage)
-		{
-            CreateRdbmsSchema();
-			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
-			{
-				var eventSlim = new ManualResetEventSlim(false);
-				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					.First().AfterReplicationCompleted += successCount =>
-					{
-						if (successCount != 0)
-							eventSlim.Set();
-					};
-
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Order
-					{
-						OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
-					});
-					session.SaveChanges();
-				}
-
-				SetupSqlReplication(store, defaultScript);
-
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-				var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
-				using (var con = providerFactory.CreateConnection())
-				{
-					con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
-					con.Open();
-
-					using (var dbCommand = con.CreateCommand())
-					{
-						dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-						Assert.Equal(1, dbCommand.ExecuteScalar());
-						dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
-						Assert.Equal(2, dbCommand.ExecuteScalar());
-					}
-				}
-
-			}
-		}
-
-		[Theory]
-		[PropertyData("Storages")]
-		public void ReplicateMultipleBatches(string requestedStorage)
-		{
-            CreateRdbmsSchema();
-			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
-			{
-				var eventSlim = new ManualResetEventSlim(false);
-
-				int testCount = 5000;
-				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					.First().AfterReplicationCompleted += successCount =>
-					{
-						if (GetOrdersCount() == testCount)
-							eventSlim.Set();
-					};
-
-				using (var session = store.BulkInsert())
-				{
-					for (int i = 0; i < testCount; i++)
-					{
-						session.Store(new Order
-						              {
-							              OrderLines = new List<OrderLine>
-							                           {
-								                           new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
-								                           new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
-							                           }
-
-						              });
-					}
-				}
-
-				SetupSqlReplication(store, defaultScript);
-
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-				Assert.Equal(testCount, GetOrdersCount());
-
-			}
-		}
-
-        [Theory]
-        [PropertyData("Storages")]
-        public void InnerDeletesOfReplicateItemsShouldBeReplicated(string requestedStorage)
+        [Fact]
+        public void SimpleTransformation()
         {
             CreateRdbmsSchema();
-            using (var store = NewDocumentStore(requestedStorage: requestedStorage))
+            using (var store = NewDocumentStore())
             {
                 var eventSlim = new ManualResetEventSlim(false);
                 store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
@@ -232,33 +139,13 @@ CREATE TABLE [dbo].[Orders]
 							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
 						}
                     });
-                    session.Store(new Order
-                    {
-                        OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 7, Product = "Milki", Quantity = 7},
-							new OrderLine{Cost = 1, Product = "Bamba", Quantity = 3},
-						}
-                    });
                     session.SaveChanges();
                 }
 
                 SetupSqlReplication(store, defaultScript);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                    .First().AfterReplicationCompleted += successCount =>
-                    {
-                        if (successCount != 0)
-                            eventSlim.Set();
-                    };
-                using (var session = store.OpenSession())
-                {
-                    var order = session.Query<Order>().FirstOrDefault(o => o.OrderLines.Any(ol => ol.Product.Equals("Milki")));
-                    order.OrderLines.RemoveAll(ol => ol.Product.Equals("Milki"));
-                    session.SaveChanges();
-                }
-                SetupSqlReplication(store, replicateAllDocumentButOrder2);
+
                 var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
                 using (var con = providerFactory.CreateConnection())
                 {
@@ -268,386 +155,470 @@ CREATE TABLE [dbo].[Orders]
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(2, dbCommand.ExecuteScalar());
+                        Assert.Equal(1, dbCommand.ExecuteScalar());
                         dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
-                        Assert.Equal(3, dbCommand.ExecuteScalar());
+                        Assert.Equal(2, dbCommand.ExecuteScalar());
                     }
                 }
 
             }
         }
-		private static int GetOrdersCount()
-		{
-			var providerFactory =
-					DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
-			using (var con = providerFactory.CreateConnection())
-			{
-				con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
-				con.Open();
 
-				using (var dbCommand = con.CreateCommand())
-				{
-					dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-					return (int) dbCommand.ExecuteScalar();
-				}
-			}
-		}
-
-		protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
-		{
-
-		}
-
-		[Theory]
-		[PropertyData("Storages")]
-		public void CanUpdateToBeNoItemsInChildTable(string requestedStorage)
-		{
+        [Fact]
+        public void ReplicateMultipleBatches()
+        {
             CreateRdbmsSchema();
-			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
-			{
-				var eventSlim = new ManualResetEventSlim(false);
-				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					 .First().AfterReplicationCompleted += successCount =>
-					 {
-						 if (successCount != 0)
-							 eventSlim.Set();
-					 };
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Order
-					{
-						OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
-					});
-					session.SaveChanges();
-				}
+                int testCount = 5000;
+                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                    .First().AfterReplicationCompleted += successCount =>
+                    {
+                        if (GetOrdersCount() == testCount)
+                            eventSlim.Set();
+                    };
 
-				SetupSqlReplication(store, defaultScript);
+                using (var session = store.BulkInsert())
+                {
+                    for (int i = 0; i < testCount; i++)
+                    {
+                        session.Store(new Order
+                                      {
+                                          OrderLines = new List<OrderLine>
+							                           {
+								                           new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
+								                           new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+							                           }
 
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
+                                      });
+                    }
+                }
 
-				AssertCounts(1, 2);
+                SetupSqlReplication(store, defaultScript);
 
-				eventSlim.Reset();
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-				using (var session = store.OpenSession())
-				{
-					session.Load<Order>(1).OrderLines.Clear();
-					session.SaveChanges();
-				}
+                Assert.Equal(testCount, GetOrdersCount());
 
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
+            }
+        }
 
-				AssertCounts(1, 0);
-
-			}
-		}
-
-		[Theory]
-		[PropertyData("Storages")]
-		public void CanDelete(string requestedStorage)
-		{
+        [Fact]
+        public void RavenDB_3341()
+        {
             CreateRdbmsSchema();
-			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
-			{
-				var eventSlim = new ManualResetEventSlim(false);
-				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					 .First().AfterReplicationCompleted += successCount =>
-					 {
-						 if (successCount != 0)
-							 eventSlim.Set();
-					 };
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
+                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                    .First().AfterReplicationCompleted += successCount =>
+                    {
+                        if (successCount != 0)
+                            eventSlim.Set();
+                    };
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Order
-					{
-						OrderLines = new List<OrderLine>
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+						}
+                    });
+
+                    session.SaveChanges();
+                }
+
+                SetupSqlReplication(store, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
+
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                
+                AssertCounts(1, 1);
+
+                eventSlim.Reset();
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>(1);
+                    order.OrderLines.Clear();
+                    session.SaveChanges();
+                }
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                AssertCounts(0, 0);
+            }
+        }
+        private static int GetOrdersCount()
+        {
+            var providerFactory =
+                    DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+            using (var con = providerFactory.CreateConnection())
+            {
+                con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+                con.Open();
+
+                using (var dbCommand = con.CreateCommand())
+                {
+                    dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                    return (int)dbCommand.ExecuteScalar();
+                }
+            }
+        }
+
+        protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
+        {
+
+        }
+
+        [Fact]
+        public void CanUpdateToBeNoItemsInChildTable()
+        {
+            CreateRdbmsSchema();
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
+                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                     .First().AfterReplicationCompleted += successCount =>
+                     {
+                         if (successCount != 0)
+                             eventSlim.Set();
+                     };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>
 						{
 							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
 							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
 						}
-					});
-					session.SaveChanges();
-				}
+                    });
+                    session.SaveChanges();
+                }
 
-				SetupSqlReplication(store, defaultScript);
+                SetupSqlReplication(store, defaultScript);
 
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-				AssertCounts(1, 2);
+                AssertCounts(1, 2);
 
-				eventSlim.Reset();
+                eventSlim.Reset();
 
-				store.DatabaseCommands.Delete("orders/1", null);
+                using (var session = store.OpenSession())
+                {
+                    session.Load<Order>(1).OrderLines.Clear();
+                    session.SaveChanges();
+                }
 
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-				AssertCounts(0, 0);
+                AssertCounts(1, 0);
 
-			}
-		}
+            }
+        }
 
-		[Fact]
-		public void RavenDB_3172()
-		{
-			CreateRdbmsSchema();
-			using (var store = NewDocumentStore())
-			{
-				var eventSlim = new ManualResetEventSlim(false);
-				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					 .First().AfterReplicationCompleted += successCount =>
-					 {
-						 if (successCount != 0)
-							 eventSlim.Set();
-					 };
+        [Fact]
+        public void CanDelete()
+        {
+            CreateRdbmsSchema();
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
+                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                     .First().AfterReplicationCompleted += successCount =>
+                     {
+                         if (successCount != 0)
+                             eventSlim.Set();
+                     };
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Order
-					{
-						Id = "orders/1",
-						OrderLines = new List<OrderLine>
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>
 						{
 							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
 							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
 						}
-					});
-					session.SaveChanges();
-				}
+                    });
+                    session.SaveChanges();
+                }
 
-				SetupSqlReplication(store, defaultScript, insertOnly: true);
+                SetupSqlReplication(store, defaultScript);
 
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-				AssertCounts(1, 2);
+                AssertCounts(1, 2);
 
-				eventSlim.Reset();
+                eventSlim.Reset();
 
-				using (var session = store.OpenSession())
-				{
-					var order = session.Load<Order>("orders/1");
-					order.OrderLines.Add(new OrderLine
-					{
-						Cost = 5, Product = "Sugar", Quantity = 7
-					});
-					session.SaveChanges();
-				}
+                store.DatabaseCommands.Delete("orders/1", null);
 
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-				// we end up with duplicates
-				AssertCounts(2, 5);
-			}
-		}
+                AssertCounts(0, 0);
 
-		[Theory]
-		[PropertyData("Storages")]
-		public void WillLog(string requestedStorage)
-		{
+            }
+        }
+
+        [Fact]
+        public void RavenDB_3172()
+        {
+            CreateRdbmsSchema();
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
+                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                     .First().AfterReplicationCompleted += successCount =>
+                     {
+                         if (successCount != 0)
+                             eventSlim.Set();
+                     };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Id = "orders/1",
+                        OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+						}
+                    });
+                    session.SaveChanges();
+                }
+
+                SetupSqlReplication(store, defaultScript, insertOnly: true);
+
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+                AssertCounts(1, 2);
+
+                eventSlim.Reset();
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>("orders/1");
+                    order.OrderLines.Add(new OrderLine
+                    {
+                        Cost = 5,
+                        Product = "Sugar",
+                        Quantity = 7
+                    });
+                    session.SaveChanges();
+                }
+
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+                // we end up with duplicates
+                AssertCounts(2, 5);
+            }
+        }
+
+        [Fact]
+        public void WillLog()
+        {
             LogManager.RegisterTarget<DatabaseMemoryTarget>();
 
-			CreateRdbmsSchema();
-			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
-			{
-				var eventSlim = new ManualResetEventSlim(false);
-				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					 .First().AfterReplicationCompleted += successCount =>
-					 {
-						 if (successCount != 0)
-							 eventSlim.Set();
-					 };
+            CreateRdbmsSchema();
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
+                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                     .First().AfterReplicationCompleted += successCount =>
+                     {
+                         if (successCount != 0)
+                             eventSlim.Set();
+                     };
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Order());
-					session.SaveChanges();
-				}
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order());
+                    session.SaveChanges();
+                }
 
-				SetupSqlReplication(store, @"output ('Tralala');asdfsadf
+                SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
-				
-				var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
-				var foo = databaseMemoryTarget[Constants.SystemDatabase].WarnLog.First(x=>x.LoggerName == typeof(SqlReplicationTask).FullName);
-				Assert.Equal("Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1", foo.FormattedMessage);
-			}
-		}
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-		[Theory]
-		[PropertyData("Storages")]
-		public async Task RavenDB_3106(string requestedStorage)
-		{
-			CreateRdbmsSchema();
-			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
-			{
-				new RavenDocumentsByEntityName().Execute(store);
+                var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
+                var foo = databaseMemoryTarget[Constants.SystemDatabase].WarnLog.First(x => x.LoggerName == typeof(SqlReplicationTask).FullName);
+                Assert.Equal("Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1", foo.FormattedMessage);
+            }
+        }
 
-				var eventSlim = new ManualResetEventSlim(false);
-				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					 .First().AfterReplicationCompleted += successCount =>
-					 {
-						 if (successCount != 0)
-							 eventSlim.Set();
-					 };
+        [Fact]
+        public async Task RavenDB_3106()
+        {
+            CreateRdbmsSchema();
+            using (var store = NewDocumentStore())
+            {
+                new RavenDocumentsByEntityName().Execute(store);
 
-				using (var session = store.OpenSession())
-				{
-					for (var i = 0; i < 2048; i++)
-					{
-						session.Store(new Order
-						{
-							OrderLines = new List<OrderLine>
+                var eventSlim = new ManualResetEventSlim(false);
+                store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                     .First().AfterReplicationCompleted += successCount =>
+                     {
+                         if (successCount != 0)
+                             eventSlim.Set();
+                     };
+
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 2048; i++)
+                    {
+                        session.Store(new Order
+                        {
+                            OrderLines = new List<OrderLine>
 							{
 								new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
 								new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
 							}
-						});
-					}
+                        });
+                    }
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				SetupSqlReplication(store, defaultScript);
+                SetupSqlReplication(store, defaultScript);
 
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-				AssertCountsWithTimeout(2048, 4096, TimeSpan.FromMinutes(1));
+                AssertCountsWithTimeout(2048, 4096, TimeSpan.FromMinutes(1));
 
-				eventSlim.Reset();
+                eventSlim.Reset();
 
-				PauseReplication(0, store.DocumentDatabase);
+                PauseReplication(0, store.DocumentDatabase);
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				store
-					.DatabaseCommands
-					.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Orders OR Tag:OrderLines" })
-					.WaitForCompletion();
+                store
+                    .DatabaseCommands
+                    .DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Orders OR Tag:OrderLines" })
+                    .WaitForCompletion();
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Order
-					{
-						OrderLines = new List<OrderLine>
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>
 						{
 							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
 							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
 						}
-					});
+                    });
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				ContinueReplication(0, store.DocumentDatabase);
+                ContinueReplication(0, store.DocumentDatabase);
 
-				eventSlim.Wait(TimeSpan.FromMinutes(5));
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-				AssertCountsWithTimeout(1, 2, TimeSpan.FromMinutes(1));
-			}
-		}
+                AssertCountsWithTimeout(1, 2, TimeSpan.FromMinutes(1));
+            }
+        }
 
-		private static void AssertCountsWithTimeout(int ordersCount, int orderLineCounts, TimeSpan timeout)
-		{
-			Exception lastException = null;
+        private static void AssertCountsWithTimeout(int ordersCount, int orderLineCounts, TimeSpan timeout)
+        {
+            Exception lastException = null;
 
-			var stopWatch = Stopwatch.StartNew();
-			while (stopWatch.Elapsed <= timeout)
-			{
-				try
-				{
-					AssertCounts(ordersCount, orderLineCounts);
-					return;
-				}
-				catch (AssertException e)
-				{
-					lastException = e;
-				}
+            var stopWatch = Stopwatch.StartNew();
+            while (stopWatch.Elapsed <= timeout)
+            {
+                try
+                {
+                    AssertCounts(ordersCount, orderLineCounts);
+                    return;
+                }
+                catch (AssertException e)
+                {
+                    lastException = e;
+                }
 
-				Thread.Sleep(500);
-			}
+                Thread.Sleep(500);
+            }
 
-			throw lastException;
-		}
+            throw lastException;
+        }
 
-		private static void AssertCounts(int ordersCount, int orderLineCounts)
-		{
-			var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
-			using (var con = providerFactory.CreateConnection())
-			{
-				con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
-				con.Open();
+        private static void AssertCounts(int ordersCount, int orderLineCounts)
+        {
+            var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+            using (var con = providerFactory.CreateConnection())
+            {
+                con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+                con.Open();
 
-				using (var dbCommand = con.CreateCommand())
-				{
-					dbCommand.CommandText = "SELECT COUNT(*) FROM Orders";
-					Assert.Equal(ordersCount, dbCommand.ExecuteScalar());
-					dbCommand.CommandText = "SELECT COUNT(*) FROM OrderLines";
-					Assert.Equal(orderLineCounts, dbCommand.ExecuteScalar());
-				}
-			}
-		}
+                using (var dbCommand = con.CreateCommand())
+                {
+                    dbCommand.CommandText = "SELECT COUNT(*) FROM Orders";
+                    Assert.Equal(ordersCount, dbCommand.ExecuteScalar());
+                    dbCommand.CommandText = "SELECT COUNT(*) FROM OrderLines";
+                    Assert.Equal(orderLineCounts, dbCommand.ExecuteScalar());
+                }
+            }
+        }
 
-		private static void SetupSqlReplication(EmbeddableDocumentStore store, string script, bool insertOnly = false)
-		{
-			using (var session = store.OpenSession())
-			{
-				session.Store(new SqlReplicationConfig
-				{
-					Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
-					Name = "OrdersAndLines",
-					ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
-					FactoryName = MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
-					RavenEntityName = "Orders",
-					SqlReplicationTables =
+        private static void SetupSqlReplication(EmbeddableDocumentStore store, string script, bool insertOnly = false)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new SqlReplicationConfig
+                {
+                    Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
+                    Name = "OrdersAndLines",
+                    ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
+                    FactoryName = MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
+                    RavenEntityName = "Orders",
+                    SqlReplicationTables =
 					{
 						new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
 						new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
 					},
-					Script = script
-				});
-				session.SaveChanges();
-			}
-		}
+                    Script = script
+                });
+                session.SaveChanges();
+            }
+        }
 
-		protected void PauseReplication(int serverIndex, DocumentDatabase database, bool waitToStop = true)
-		{
-			var replicationTask = database.StartupTasks.OfType<SqlReplicationTask>().First();
+        protected void PauseReplication(int serverIndex, DocumentDatabase database, bool waitToStop = true)
+        {
+            var replicationTask = database.StartupTasks.OfType<SqlReplicationTask>().First();
 
-			replicationTask.Pause();
+            replicationTask.Pause();
 
-			if (waitToStop)
-				SpinWait.SpinUntil(() => replicationTask.IsRunning == false, TimeSpan.FromSeconds(10));
-		}
+            if (waitToStop)
+                SpinWait.SpinUntil(() => replicationTask.IsRunning == false, TimeSpan.FromSeconds(10));
+        }
 
-		protected void ContinueReplication(int serverIndex, DocumentDatabase database, bool waitToStart = true)
-		{
-			var replicationTask = database.StartupTasks.OfType<SqlReplicationTask>().First();
+        protected void ContinueReplication(int serverIndex, DocumentDatabase database, bool waitToStart = true)
+        {
+            var replicationTask = database.StartupTasks.OfType<SqlReplicationTask>().First();
 
-			replicationTask.Continue();
+            replicationTask.Continue();
 
-			if (waitToStart)
-				SpinWait.SpinUntil(() => replicationTask.IsRunning, TimeSpan.FromSeconds(10));
-		}
+            if (waitToStart)
+                SpinWait.SpinUntil(() => replicationTask.IsRunning, TimeSpan.FromSeconds(10));
+        }
 
-		public class Order
-		{
-			public string Id { get; set; }
-			public List<OrderLine> OrderLines { get; set; }
-		}
+        public class Order
+        {
+            public string Id { get; set; }
+            public List<OrderLine> OrderLines { get; set; }
+        }
 
-		public class OrderLine
-		{
-			public string Product { get; set; }
-			public int Quantity { get; set; }
-			public int Cost { get; set; }
-		}
-	}
+        public class OrderLine
+        {
+            public string Product { get; set; }
+            public int Quantity { get; set; }
+            public int Cost { get; set; }
+        }
+    }
 }

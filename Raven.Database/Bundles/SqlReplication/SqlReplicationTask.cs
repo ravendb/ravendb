@@ -521,7 +521,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			countOfReplicatedItems = 0;
             var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
 			var scriptResult = ApplyConversionScript(cfg, docs, replicationStats);
-			if (scriptResult.Data.Count == 0)
+			if (scriptResult.Ids.Count == 0)
 				return true;
 			
 			countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
