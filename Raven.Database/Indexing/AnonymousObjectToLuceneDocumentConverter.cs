@@ -527,6 +527,9 @@ namespace Raven.Database.Indexing
             private readonly Field.TermVector termVector;
             private readonly int[] multipleItemsSameField;
 
+            // We can precalculate the hash code because all fields involved are readonly.
+            private readonly Lazy<int> precalculatedHashCode;
+
             public FieldCacheKey(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
             {
                 this.name = name;
@@ -534,6 +537,8 @@ namespace Raven.Database.Indexing
                 this.store = store;
                 this.termVector = termVector;
                 this.multipleItemsSameField = multipleItemsSameField;
+
+                this.precalculatedHashCode = new Lazy<int>(CalculateHashCode);
             }
 
 
@@ -554,7 +559,7 @@ namespace Raven.Database.Indexing
                 return Equals((FieldCacheKey)obj);
             }
 
-            public override int GetHashCode()
+            private int CalculateHashCode ()
             {
                 unchecked
                 {
@@ -565,6 +570,11 @@ namespace Raven.Database.Indexing
                     hashCode = multipleItemsSameField.Aggregate(hashCode, (h, x) => h * 397 ^ x);
                     return hashCode;
                 }
+            }
+
+            public override int GetHashCode()
+            {
+                return precalculatedHashCode.Value;
             }
         }
 
