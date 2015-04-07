@@ -637,7 +637,8 @@ interface sqlReplicationDto extends documentDto {
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
-    PerformTableQuatation?:boolean;
+    QuoteTables?: boolean;
+	PerformTableQuatation?: boolean; //obsolate
 }
 
 interface commandData {
