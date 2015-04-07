@@ -418,7 +418,7 @@ class resources extends viewModelBase {
         }
 
         encryptionDeferred.done(() => {
-            require(["commands/createDatabaseCommand"], createDatabaseCommand => {
+            require(["commands/resources/createDatabaseCommand"], createDatabaseCommand => {
                 new createDatabaseCommand(databaseName, settings, securedSettings)
                     .execute()
                     .done(() => {
@@ -466,7 +466,7 @@ class resources extends viewModelBase {
 
     private createDefaultDatabaseSettings(db: database, bundles: Array<string>): JQueryPromise<any> {
         var deferred = $.Deferred();
-        require(["commands/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
+        require(["commands/resources/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
             new createDefaultSettingsCommand(db, bundles).execute()
                 .always(() => deferred.resolve());
         });

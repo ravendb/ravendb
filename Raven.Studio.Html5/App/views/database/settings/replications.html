@@ -33,7 +33,8 @@
                 <div class="btn-group" data-bind="with: replicationsSetup">
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
                         <span data-bind="visible: clientFailoverBehaviour() == null">Let client decide</span>
-                        <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
+	                    <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
+						<span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed'">Allow reads from secondaries when request time threshold is surpassed</span>
                         <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                         <span data-bind="visible: clientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                         <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
@@ -43,7 +44,8 @@
                     <ul class="dropdown-menu" role="menu">
                         <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, null)">Let client decide</a></li>
                         <li class="divider"></li>
-                        <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a></li>
+	                    <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a></li>
+						<li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed')">Allow reads from secondaries when request time threshold is surpassed</a></li>
                         <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries')">Allow reads from secondaries and writes to secondaries</a></li>
                         <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'FailImmediately')">Fail immediately</a></li>
                         <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllServers')">Read from all servers</a></li>
@@ -55,7 +57,8 @@
                 <div class="btn-group" data-bind="with: replicationsSetup">
                     <button disabled="disabled" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span data-bind="visible: $root.globalClientFailoverBehaviour() == null">Let client decide</span>
-                        <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
+	                    <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
+						<span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed'">Allow reads from secondaries when request time threshold is surpassed</span>
                         <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                         <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                         <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
