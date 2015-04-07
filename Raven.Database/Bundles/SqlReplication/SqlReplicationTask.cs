@@ -28,6 +28,7 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
 using System.Linq;
+using Lucene.Net.Support;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -199,15 +200,22 @@ namespace Raven.Database.Bundles.SqlReplication
 				Etag latestEtag = null, lastBatchEtag = null;
 
 			    var currentDeleteCounter = Thread.VolatileRead(ref _deleteCounter);
-			    if (documents.Count == 1 && documents[0].Etag == _lastStoredSqlReplicationStatusDocumentEtag &&
-                    lastDeleteCounter == currentDeleteCounter)
+			    if (documents.Count == 1 && documents[0].Etag == _lastStoredSqlReplicationStatusDocumentEtag)
 				{
-					log.Debug("No documents which Etag is greater then the Raven/SqlReplication/Status were found, waiting for work");
-					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
-					continue;
+				    if (lastDeleteCounter != currentDeleteCounter)
+				    {
+                        log.Debug("No documents which Etag is greater then the Raven/SqlReplication/Status were found, however, there has been deletes... will replicate just those now");
+				        lastDeleteCounter = currentDeleteCounter;
+				        documents = new List<JsonDocument>();
+				    }
+				    else
+				    {
+				        log.Debug("No documents which Etag is greater then the Raven/SqlReplication/Status were found, waiting for work");
+				        Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
+				        continue;
+				    }
 				}
 
-			    lastDeleteCounter = currentDeleteCounter;
 
 				if (documents.Count == 0)
 					log.Debug("No documents returned from prefetcher");
