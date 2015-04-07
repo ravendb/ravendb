@@ -13,8 +13,5 @@ namespace Raven.Abstractions.Replication
 	{
 		public string DestinationUrl { get; set; }
 		public Etag DocumentEtag { get; set; }
-
-        [Obsolete("Use RavenFS instead.")]
-		public Etag AttachmentEtag { get; set; } 
 	}
 }

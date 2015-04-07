@@ -96,6 +96,12 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public string IndexName { get; set; }
 
+        /// <summary>
+        /// An additional query that the matching documents need to also
+        /// match to be returned. 
+        /// </summary>
+        public string AdditionalQuery { get; set; }
+
 		/// <summary>
 		/// Values for the the mapping group fields to use as the basis for comparison
 		/// </summary>
@@ -150,6 +156,8 @@ namespace Raven.Abstractions.Data
 					uri.AppendFormat("fields={0}&", field);
 				}
 			}
+            if(string.IsNullOrWhiteSpace(AdditionalQuery) == false)
+                uri.Append("query=").Append(Uri.EscapeDataString(AdditionalQuery)).Append("&");
 			if (Boost != null && Boost != DefaultBoost)
 				uri.Append("boost=true&");
 			if (BoostFactor != null && BoostFactor != DefaultBoostFactor)

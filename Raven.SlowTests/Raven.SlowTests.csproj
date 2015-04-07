@@ -76,6 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bugs\AsyncSetBasedOps.cs" />
+    <Compile Include="Bugs\LandlordBug.cs" />
     <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
     <Compile Include="Bugs\TimeoutTester.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />
@@ -107,6 +108,7 @@
     <Compile Include="MailingList\Jalchr.cs" />
     <Compile Include="MailingList\Jalchr2.cs" />
     <Compile Include="MailingList\Jalchr3.cs" />
+    <Compile Include="MailingList\StressTestIssue.cs" />
     <Compile Include="Migration\MigrationTests.cs" />
     <Compile Include="Migration\Northwind.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

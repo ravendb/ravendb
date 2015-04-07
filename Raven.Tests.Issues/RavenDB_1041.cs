@@ -4,40 +4,40 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Raven.Client.Connection;
+using Newtonsoft.Json;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Common;
 
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_1041 : ReplicationBase
+	public class RavenDB_1041 : ReplicationBase
 	{
-	    public RavenDB_1041()
-	    {
+		public RavenDB_1041()
+		{
 			IOExtensions.DeleteDirectory("Database #0");
 			IOExtensions.DeleteDirectory("Database #1");
 			IOExtensions.DeleteDirectory("Database #2");
-	    }
+		}
 		class ReplicatedItem
 		{
 			public string Id { get; set; }
 		}
 
-        private const string DatabaseName = "RavenDB_1041";
+		private const string DatabaseName = "RavenDB_1041";
 
 		[Fact]
 		public async Task CanWaitForReplication()
 		{
 			var store1 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
-            var store2 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
-            var store3 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
+			var store2 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
+			var store3 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 
@@ -48,33 +48,41 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-		    await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName);
+			var i = await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName);
+			Assert.Equal(2, i);
+
 
 			Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+
 		}
 
 		[Fact]
 		public async Task CanWaitForReplicationOfParticularEtag()
 		{
-			var store1 = CreateStore(requestedStorageType:"esent");
-            var store2 = CreateStore(requestedStorageType: "esent");
-            var store3 = CreateStore(requestedStorageType: "esent");
+			ShowLogs = true;
+
+			var store1 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store1");
+			var store2 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store2");
+			var store3 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store3");
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
 			var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
 
-		    await ((DocumentStore)store1).Replication.WaitAsync(putResult.ETag);
+			var i = await ((DocumentStore)store1).Replication.WaitAsync(putResult.ETag);
+			Assert.Equal(2, i);
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
 
-			((DocumentStore)store1).Replication.WaitAsync(putResult2.ETag).Wait();
+			i = await ((DocumentStore)store1).Replication.WaitAsync(putResult2.ETag);
+			Assert.Equal(2, i);
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/2"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/2"));
+
 		}
 
 		[Fact]
@@ -93,7 +101,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-		    await store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10));
+			await store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10));
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -110,19 +118,18 @@ namespace Raven.Tests.Issues
 			using (var session = store1.OpenSession())
 			{
 				session.Store(new ReplicatedItem { Id = "Replicated/1" });
-
 				session.SaveChanges();
 			}
 
-			((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
+			store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}
 
 		[Fact]
 		public async Task ShouldThrowTimeoutException()
 		{
-            var store1 = CreateStore(requestedStorageType: "esent");
-            var store2 = CreateStore(requestedStorageType: "esent");
+			var store1 = CreateStore(requestedStorageType: "esent");
+			var store2 = CreateStore(requestedStorageType: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
@@ -136,7 +143,7 @@ namespace Raven.Tests.Issues
 
 			try
 			{
-				await ((DocumentStore) store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
+				await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
 			}
 			catch (TimeoutException ex)
 			{
@@ -172,7 +179,7 @@ namespace Raven.Tests.Issues
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-            SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
+			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
 			using (var session = store1.OpenSession())
 			{
@@ -181,7 +188,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			await ((DocumentStore) store1).Replication.WaitAsync(replicas: 1);
+			await ((DocumentStore)store1).Replication.WaitAsync(replicas: 1);
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}

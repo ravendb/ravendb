@@ -98,7 +98,6 @@ namespace Raven.Client.Connection.Async
         private int requestCount;
         private volatile bool currentlyExecuting;
 
-   
         internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation)
         {
             var currentRequest = Interlocked.Increment(ref requestCount);

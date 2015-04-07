@@ -11,6 +11,7 @@ using MiscellaneousUtils = Raven.Json.Utilities.MiscellaneousUtils;
 using StringUtils = Raven.Json.Utilities.StringUtils;
 using System.Collections.Concurrent;
 using Raven.Abstractions;
+using Raven.Abstractions.Json;
 
 namespace Raven.Json.Linq
 {
@@ -258,28 +259,83 @@ namespace Raven.Json.Linq
 			return v;
 		}
 
-		// Taken from Newtonsoft's Json.NET JsonSerializer
-		internal static JsonConverter GetMatchingConverter(IList<JsonConverter> converters, Type objectType)
-		{
-			if (objectType == null)
-				throw new ArgumentNullException("objectType");
+        public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+        {
+            switch (_valueType)
+            {
+                case JTokenType.Comment:
+                    writer.WriteComment(_value.ToString());
+                    return;
+                case JTokenType.Raw:
+                    writer.WriteRawValue((_value != null) ? _value.ToString() : null);
+                    return;
+                case JTokenType.Null:
+                    writer.WriteNull();
+                    return;
+                case JTokenType.Undefined:
+                    writer.WriteUndefined();
+                    return;
+            }
 
-			if (converters != null)
-			{
-                int count = converters.Count;
-                for (int i = 0; i < count; i++)
-				{
-					JsonConverter converter = converters[i];
+            if (_value != null)
+            {
+                Type typeToFind = _value.GetType();
 
-					if (converter.CanConvert(objectType))
-						return converter;
-				}
-			}
+                // If we are using the default converters we will try to avoid repeatedly check the same types as 
+                // GetMatchingConverter is a costly call with a very low probability to hit (less than 1% in real scenarios).
+                JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, typeToFind);                
+                if (matchingConverter != null)
+                {
+                    matchingConverter.WriteJson(writer, _value, JsonExtensions.CreateDefaultJsonSerializer());
+                    return;
+                }
+            }
 
-			return null;
-		}
+            switch (_valueType)
+            {
+                case JTokenType.Integer:
+                    writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.Float:
+                    if (_value is decimal)
+                    {
+                        writer.WriteValue((decimal)_value);
+                        return;
+                    }
+                    if (_value is float)
+                    {
+                        writer.WriteValue((float)_value);
+                        return;
+                    }
+                    writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.String:
+                    writer.WriteValue((_value != null) ? _value.ToString() : null);
+                    return;
+                case JTokenType.Boolean:
+                    writer.WriteValue(Convert.ToBoolean(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.Date:
+#if !PocketPC && !NET20
+                    if (_value is DateTimeOffset)
+                        writer.WriteValue((DateTimeOffset)_value);
+                    else
+#endif
+                        writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.Bytes:
+                    writer.WriteValue((byte[])_value);
+                    return;
+                case JTokenType.Guid:
+                case JTokenType.Uri:
+                case JTokenType.TimeSpan:
+                    writer.WriteValue((_value != null) ? _value.ToString() : null);
+                    return;
+            }
 
-        private static ConcurrentDictionary<Type, JsonConverter> defaultConvertersCache = new ConcurrentDictionary<Type, JsonConverter>();
+            throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
+        }
+
 
 		/// <summary>
 		/// Writes this token to a <see cref="JsonWriter"/>.
@@ -288,93 +344,7 @@ namespace Raven.Json.Linq
 		/// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
 		public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
 		{
-			switch (_valueType)
-			{
-				case JTokenType.Comment:
-					writer.WriteComment(_value.ToString());
-					return;
-				case JTokenType.Raw:
-					writer.WriteRawValue((_value != null) ? _value.ToString() : null);
-					return;
-				case JTokenType.Null:
-					writer.WriteNull();
-					return;
-				case JTokenType.Undefined:
-					writer.WriteUndefined();
-					return;
-			}
-            
-            if ( converters != null && converters.Length != 0 && _value != null )
-            {
-                Type typeToFind = _value.GetType();
-
-                // If we are using the default converters we will try to avoid repeatedly check the same types as 
-                // GetMatchingConverter is a costly call with a very low probability to hit (less than 1% in real scenarios).
-                JsonConverter matchingConverter;
-                if ( converters == Default.Converters )
-                {
-                    if ( !defaultConvertersCache.TryGetValue(typeToFind, out matchingConverter) )
-                    {
-                        matchingConverter = GetMatchingConverter(converters, typeToFind);
-                        // it is fine if we aren't actually adding, it means we already added this
-                        defaultConvertersCache.TryAdd(typeToFind, matchingConverter);
-                    }
-                }
-                else
-                {
-                    matchingConverter = GetMatchingConverter(converters, typeToFind);
-                }
-                
-                if (matchingConverter != null)
-                {
-                    matchingConverter.WriteJson(writer, _value, JsonExtensions.CreateDefaultJsonSerializer());
-                    return;
-                }
-            }            
-
-			switch (_valueType)
-			{
-				case JTokenType.Integer:
-					writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
-					return;
-				case JTokenType.Float:
-					if (_value is decimal)
-					{
-						writer.WriteValue((decimal)_value);
-						return;
-					}
-					if (_value is float)
-					{
-						writer.WriteValue((float)_value);
-						return;
-					}
-					writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
-					return;
-				case JTokenType.String:
-					writer.WriteValue((_value != null) ? _value.ToString() : null);
-					return;
-				case JTokenType.Boolean:
-					writer.WriteValue(Convert.ToBoolean(_value, CultureInfo.InvariantCulture));
-					return;
-				case JTokenType.Date:
-#if !PocketPC && !NET20
-					if (_value is DateTimeOffset)
-						writer.WriteValue((DateTimeOffset)_value);
-					else
-#endif
-						writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
-					return;
-				case JTokenType.Bytes:
-					writer.WriteValue((byte[])_value);
-					return;
-				case JTokenType.Guid:
-				case JTokenType.Uri:
-				case JTokenType.TimeSpan:
-					writer.WriteValue((_value != null) ? _value.ToString() : null);
-					return;
-			}
-
-			throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
+            WriteTo(writer, new JsonConverterCollection(converters));
 		}
 
 		/// <summary>
@@ -631,7 +601,7 @@ namespace Raven.Json.Linq
 			if (_value == null)
 				return string.Empty;
 
-			return _value.ToString();
+            return _value.ToInvariantString();
 		}
 
 		/// <summary>
@@ -643,7 +613,7 @@ namespace Raven.Json.Linq
 		/// </returns>
 		public string ToString(string format)
 		{
-			return ToString(format, CultureInfo.CurrentCulture);
+            return ToString(format, CultureInfo.InvariantCulture);
 		}
 
 		/// <summary>
@@ -675,7 +645,7 @@ namespace Raven.Json.Linq
 			if (formattable != null)
 				return formattable.ToString(format, formatProvider);
 
-			return _value.ToString();
+            return _value.ToInvariantString();
 		}
 
 		public override void EnsureCannotBeChangeAndEnableSnapshotting()

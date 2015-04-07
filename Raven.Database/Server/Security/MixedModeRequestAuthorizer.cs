@@ -132,16 +132,17 @@ namespace Raven.Database.Server.Security
 				return false;
 			}
 
-            if (string.Equals(value.ResourceName, tenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
+			if (string.Equals(value.ResourceName, tenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
                 (value.ResourceName == Constants.SystemDatabase && tenantName == null) == false)
 			{
                 msg = new
 				{
-					Error = "This single use token cannot be used for this database"
+					Error = "This single use token cannot be used for this resource!"
                 };
                 statusCode = HttpStatusCode.Forbidden;
 				return false;
 			}
+
 			if (value.Age.TotalMinutes > 2.5) // if the value is over 2.5 minutes old, reject it
 			{
                 msg = new
@@ -152,10 +153,6 @@ namespace Raven.Database.Server.Security
 				return false;
 			}
 
-			if (value.User != null)
-			{
-				CurrentOperationContext.RavenAuthenticatedUser.Value = value.User.Identity.Name;
-			}
 	        msg = null;
 	        statusCode = HttpStatusCode.OK;
 

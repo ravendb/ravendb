@@ -2,10 +2,10 @@
 
 namespace Voron.Impl
 {
-	using System;
-	using System.IO;
-
-	using Voron.Trees;
+    using System;
+    using System.IO;
+    using System.Runtime.CompilerServices;
+    using Voron.Trees;
 
 	public class SnapshotReader : IDisposable
 	{
@@ -154,6 +154,7 @@ namespace Voron.Impl
 			return tree.MultiRead(key);
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private Tree GetTree(string treeName)
 		{
 			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(Transaction, treeName);

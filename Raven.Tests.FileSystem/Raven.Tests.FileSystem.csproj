@@ -53,6 +53,7 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.WebRequest" />
@@ -100,6 +101,8 @@
     <Compile Include="Bugs\UpdatingMetadata.cs" />
     <Compile Include="Bugs\UploadFilesWithTheSameContentConcurrently.cs" />
     <Compile Include="Bugs\UploadDownload.cs" />
+    <Compile Include="Bundles\Versioning\RavenDB_3295.cs" />
+    <Compile Include="Bundles\Versioning\VersioningAndSynchronization.cs" />
     <Compile Include="Bundles\Versioning\VersioningTests.cs" />
     <Compile Include="ClientApi\FileQueryTests.cs" />
     <Compile Include="ClientApi\FileSessionListenersTests.cs" />
@@ -118,6 +121,8 @@
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />
+    <Compile Include="Issues\RavenDB_3268_ConcurrencyChecks.cs" />
+    <Compile Include="Migration\MigrationTests.cs" />
     <Compile Include="Search\SearchIndexes.cs" />
     <Compile Include="RavenFilesTestWithLogs.cs" />
     <Compile Include="RavenFilesWebApiTest.cs" />
@@ -125,6 +130,8 @@
     <Compile Include="Shard\SimpleSharding.cs" />
     <Compile Include="Smuggler\SmugglerBetweenOperationTests.cs" />
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
+    <Compile Include="Smuggler\SmugglerWithDisabledVersioning_RavenDB_3219.cs" />
+    <Compile Include="Smuggler\SmugglingConfigurations_RavenDB_3347.cs" />
     <Compile Include="Storage\StorageOperationsTests.cs" />
     <Compile Include="MtaFactAttribute.cs" />
     <Compile Include="Notifications.cs" />
@@ -170,6 +177,10 @@
   <ItemGroup>
     <None Include="app.config" />
     <EmbeddedResource Include="DefaultLogging.config" />
+    <None Include="Migration\Backups\from-3628\destination-3628-esent.zip" />
+    <None Include="Migration\Backups\from-3628\destination-3628-voron.zip" />
+    <None Include="Migration\Backups\from-3628\source-3628-esent.zip" />
+    <None Include="Migration\Backups\from-3628\source-3628-voron.zip" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>

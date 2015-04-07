@@ -20,6 +20,8 @@ namespace Raven.Abstractions.Data
 		/// Query information e.g. "?pageStart=10&pageSize=20".
 		/// </summary>
 		public string Query { get; set; }
+		
+		public string Method { get; set; }
 
 		/// <summary>
 		/// Concatenated Url and Query.
@@ -31,11 +33,14 @@ namespace Raven.Abstractions.Data
 			{
 				if (Query == null)
 					return Url;
+				
 				if (Query.StartsWith("?"))
 					return Url + Query;
 				return Url + "?" + Query;
 			}
 		}
+
+		public string Content { get; set; }
 
 		public GetRequest()
 		{

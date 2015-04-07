@@ -116,8 +116,8 @@ namespace Raven.Tests.FileSystem.Auth
 
 	        var names = await adminClient.GetNamesAsync();
 
-            Assert.Equal(1, names.Length); // will not return 'testName' file system name because used apiKey doesn't have access to a such file system
-            Assert.Equal("AdminClientWorkWithOAuthEnabled", names[0]);
+            Assert.Equal(2, names.Length);
+            Assert.Contains("AdminClientWorkWithOAuthEnabled", names);
 
 			var stats = await adminClient.GetStatisticsAsync();            
 			Assert.Equal(0, stats.Length); // 0 because our fs aren't active
@@ -178,9 +178,9 @@ namespace Raven.Tests.FileSystem.Auth
                 {
                     await anotherClient.UploadAsync("def.bin", new RandomStream(1)); // should throw because a file system ShouldThrow_ApiKeyDoesnContainsThisFS isn't added to ApiKeyDefinition
                 }
-                catch (InvalidOperationException ex)
+                catch (ErrorResponseException ex)
                 {
-                    errorResponse = ex.InnerException as ErrorResponseException;
+	                errorResponse = ex;
                 }
                 
                 Assert.NotNull(errorResponse);

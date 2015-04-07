@@ -4,26 +4,28 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using Raven.Abstractions.Extensions;
-using Raven.Bundles.Encryption.Settings;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util.Encryptors;
+using Raven.Bundles.Encryption.Settings;
 
-namespace Raven.Bundles.Encryption
+namespace Raven.Database.Bundles.Encryption
 {
-	using Raven.Abstractions.Util.Encryptors;
-
 	public class Codec
 	{
 		private static readonly ThreadLocal<RNGCryptoServiceProvider> LocalRNG = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
 
-		public readonly EncryptionSettings EncryptionSettings;
+		private readonly EncryptionSettings encryptionSettings;
 		private Tuple<byte[], byte[]> encryptionStartingKeyAndIV;
 		private int? encryptionKeySize;
 		private int? encryptionIVSize;
 
+		public bool UsingSha1 { get; private set; }
+
 		public Codec(EncryptionSettings settings)
 		{
-			this.EncryptionSettings = settings;
+			encryptionSettings = settings;
+			UsingSha1 = false;
 		}
 
 		public Stream Encode(string key, Stream dataStream)
@@ -128,7 +130,7 @@ namespace Raven.Bundles.Encryption
 
 		private SymmetricAlgorithm GetCryptoProvider(byte[] iv)
 		{
-			var result = EncryptionSettings.GenerateAlgorithm();
+			var result = encryptionSettings.GenerateAlgorithm();
 			encryptionStartingKeyAndIV = encryptionStartingKeyAndIV ?? GetStartingKeyAndIVForEncryption(result);
 
 			if (iv != null && iv.Length != encryptionIVSize)
@@ -147,23 +149,22 @@ namespace Raven.Bundles.Encryption
 			return GetCryptoProvider(iv);
 		}
 
-
 		private Tuple<byte[], byte[]> GetStartingKeyAndIVForEncryption(SymmetricAlgorithm algorithm)
 		{
-			int bits = algorithm.ValidKeySize(EncryptionSettings.PreferedEncryptionKeyBitsSize) ? 
-				EncryptionSettings.PreferedEncryptionKeyBitsSize :
+			int bits = algorithm.ValidKeySize(encryptionSettings.PreferedEncryptionKeyBitsSize) ? 
+				encryptionSettings.PreferedEncryptionKeyBitsSize :
 				algorithm.LegalKeySizes[0].MaxSize;
 			
 			encryptionKeySize = bits / 8;
 			encryptionIVSize = algorithm.IV.Length;
 
-			var deriveBytes = new Rfc2898DeriveBytes(EncryptionSettings.EncryptionKey, GetSaltFromEncryptionKey(EncryptionSettings.EncryptionKey), Constants.Rfc2898Iterations);
+			var deriveBytes = new Rfc2898DeriveBytes(encryptionSettings.EncryptionKey, GetSaltFromEncryptionKey(encryptionSettings.EncryptionKey), Constants.Rfc2898Iterations);
 			return Tuple.Create(deriveBytes.GetBytes(encryptionKeySize.Value), deriveBytes.GetBytes(encryptionIVSize.Value));
 		}
 
-		private static byte[] GetSaltFromEncryptionKey(byte[] key)
+		private byte[] GetSaltFromEncryptionKey(byte[] key)
 		{
-			return Encryptor.Current.Hash.Compute16(key);
+			return UsingSha1 == false ? Encryptor.Current.Hash.Compute16(key) : Encryptor.Current.Hash.Compute20(key);
 		}
 
 		public struct EncodedBlock
@@ -176,6 +177,12 @@ namespace Raven.Bundles.Encryption
 
 			public readonly byte[] IV;
 			public readonly byte[] Data;
+		}
+
+		public void UseSha1()
+		{
+			UsingSha1 = true;
+			encryptionStartingKeyAndIV = null;
 		}
 	}
 

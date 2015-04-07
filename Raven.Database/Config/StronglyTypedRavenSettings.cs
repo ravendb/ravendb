@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Specialized;
 using System.IO;
+using System.Net;
 using System.Runtime.Caching;
 using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
@@ -122,6 +123,8 @@ namespace Raven.Database.Config
 				new BooleanSetting(settings["Raven/ResetIndexOnUncleanShutdown"], false);
 			DisableInMemoryIndexing =
 				new BooleanSetting(settings["Raven/DisableInMemoryIndexing"], false);
+			WorkingDir =
+				new StringSetting(settings["Raven/WorkingDir"], @"~\");
 			DataDir =
 				new StringSetting(settings["Raven/DataDir"], @"~\Data");
 			IndexStoragePath =
@@ -161,7 +164,7 @@ namespace Raven.Database.Config
             EmbeddedFilesDirectory =
                 new StringSetting(settings["Raven/EmbeddedFilesDirectory"], (string)null);
 			CompiledIndexCacheDirectory =
-				new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\Raven\CompiledIndexCache");
+				new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\CompiledIndexCache");
 			TaskScheduler =
 				new StringSetting(settings["Raven/TaskScheduler"], (string)null);
 			AllowLocalAccessWithoutAuthorization =
@@ -215,6 +218,7 @@ namespace Raven.Database.Config
 
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
 			Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
+            Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"],false);
 			Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
 
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings[Constants.FileSystem.MaximumSynchronizationInterval], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
@@ -233,6 +237,11 @@ namespace Raven.Database.Config
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 
 			TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
+
+            ImplicitFetchFieldsFromDocumentMode = new EnumSetting<ImplicitFetchFieldsMode>(settings["Raven/ImplicitFetchFieldsFromDocumentMode"], ImplicitFetchFieldsMode.Enabled);
+		    
+            if (settings["Raven/MaxServicePointIdleTime"] != null) 
+                ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
 		}
 
 		private string GetDefaultWebDir()
@@ -308,6 +317,8 @@ namespace Raven.Database.Config
 		public BooleanSetting ResetIndexOnUncleanShutdown { get; private set; }
 
 		public BooleanSetting DisableInMemoryIndexing { get; private set; }
+
+		public StringSetting WorkingDir { get; private set; }
 
 		public StringSetting DataDir { get; private set; }
 
@@ -391,6 +402,8 @@ namespace Raven.Database.Config
 
 		public TimeSpanSetting TombstoneRetentionTime { get; private set; }
 
+        public EnumSetting<ImplicitFetchFieldsMode> ImplicitFetchFieldsFromDocumentMode { get; private set; }
+
 		public class VoronConfiguration
 		{
 			public IntegerSetting MaxBufferPoolSize { get; set; }
@@ -427,6 +440,9 @@ namespace Raven.Database.Config
 		{
 			public IntegerSetting FetchingFromDiskTimeoutInSeconds { get; set; }
 
+
+            public BooleanSetting ForceReplicationRequestBuffering { get; set; }
+
 			public IntegerSetting ReplicationRequestTimeoutInMilliseconds { get; set; }
 
 			public NullableIntegerSettingWithMin MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
@@ -451,5 +467,12 @@ namespace Raven.Database.Config
 
 			public BooleanSetting UseSsl { get; set; }
 		}
+	}
+
+	public enum ImplicitFetchFieldsMode
+	{
+		Enabled,
+		DoNothing,
+		Exception
 	}
 }

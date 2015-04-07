@@ -18,13 +18,14 @@ namespace Raven.Client.Document.Batches
 		private readonly Action<QueryResult> afterQueryExecuted;
 		private readonly HashSet<string> includes;
 
-		private IDictionary<string,string> headers;
+        private NameValueCollection headers;
 
-		public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted, HashSet<string> includes)
+        public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted, HashSet<string> includes, NameValueCollection headers)
 		{
 			this.queryOperation = queryOperation;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.includes = includes;
+            this.headers = headers;
 		}
 
 		public GetRequest CreateRequest()
@@ -43,9 +44,9 @@ namespace Raven.Client.Document.Batches
 			};
 			if (headers != null)
 			{
-				foreach (var header in headers)
+				foreach (var headerKey in headers.Keys)
 				{
-					request.Headers[header.Key] = header.Value;
+                    request.Headers[headerKey.ToString()] = headers[headerKey.ToString()];
 				}
 			}
 			return request;
@@ -106,7 +107,7 @@ namespace Raven.Client.Document.Batches
 			return queryOperation.EnterQueryContext();
 		}
 
-	    public void SetHeaders(IDictionary<string,string> theHeaders)
+        public void SetHeaders(NameValueCollection theHeaders)
 		{
 			headers = theHeaders;
 		}

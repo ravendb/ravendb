@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using Raven.Database.FileSystem.Infrastructure;
-using Raven.Database.FileSystem.Search;
+using System.Threading;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.FileSystem.Storage;
-using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 
@@ -13,6 +11,8 @@ namespace Raven.Database.FileSystem.Util
 {
 	public class StorageStream : Stream
 	{
+		private readonly RavenFileSystem fileSystem;
+		private readonly ITransactionalStorage storage;
 		private const int PagesBatchSize = 64;
 		private long currentOffset;
 
@@ -25,18 +25,18 @@ namespace Raven.Database.FileSystem.Util
 		protected int InnerBufferOffset = 0;
 		private int writtingPagePosition;
 
-		protected StorageStream(ITransactionalStorage transactionalStorage, string fileName,
-								StorageStreamAccess storageStreamAccess,
-								RavenJObject metadata, IndexStorage indexStorage, StorageOperationsTask operations)
+		protected StorageStream(RavenFileSystem fileSystem, ITransactionalStorage storage, string fileName, RavenJObject metadata, StorageStreamAccess storageStreamAccess)
 		{
-			TransactionalStorage = transactionalStorage;
+			this.fileSystem = fileSystem;
+			this.storage = storage;
+
 			StorageStreamAccess = storageStreamAccess;
 			Name = fileName;
 
 			switch (storageStreamAccess)
 			{
 				case StorageStreamAccess.Read:
-					TransactionalStorage.Batch(accessor => fileHeader = accessor.ReadFile(fileName));
+					storage.Batch(accessor => fileHeader = accessor.ReadFile(fileName));
 					if (fileHeader.TotalSize == null)
 					{
 						throw new FileNotFoundException("File is not uploaded yet");
@@ -45,11 +45,19 @@ namespace Raven.Database.FileSystem.Util
 					Seek(0, SeekOrigin.Begin);
 					break;
 				case StorageStreamAccess.CreateAndWrite:
-					TransactionalStorage.Batch(accessor =>
+
+					if (this.fileSystem == null)
+						throw new ArgumentNullException("fileSystem");
+
+					storage.Batch(accessor =>
 					{
-						operations.IndicateFileToDelete(fileName);
-						accessor.PutFile(fileName, null, metadata);
-						indexStorage.Index(fileName, metadata);
+						using (fileSystem.DisableAllTriggersForCurrentThread())
+						{
+							fileSystem.Files.IndicateFileToDelete(fileName, null);
+						}
+
+						var putResult = accessor.PutFile(fileName, null, metadata);
+						fileSystem.Search.Index(fileName, metadata, putResult.Etag);
 					});
 					Metadata = metadata;
 					break;
@@ -58,7 +66,6 @@ namespace Raven.Database.FileSystem.Util
 			}
 		}
 
-		public ITransactionalStorage TransactionalStorage { get; private set; }
 		public StorageStreamAccess StorageStreamAccess { get; private set; }
 		public string Name { get; private set; }
 
@@ -95,19 +102,14 @@ namespace Raven.Database.FileSystem.Util
 			set { Seek(value, SeekOrigin.Begin); }
 		}
 
-		public static StorageStream Reading(ITransactionalStorage transactionalStorage, string fileName)
+		public static StorageStream Reading(ITransactionalStorage storage, string fileName)
 		{
-			return new StorageStream(transactionalStorage, fileName, StorageStreamAccess.Read, null, null, null);
+			return new StorageStream(null, storage, fileName, null, StorageStreamAccess.Read);
 		}
 
-		public static StorageStream CreatingNewAndWritting(ITransactionalStorage transactionalStorage,
-														   IndexStorage indexStorage, StorageOperationsTask operations,
-														   string fileName, RavenJObject metadata)
+		public static StorageStream CreatingNewAndWritting(RavenFileSystem fileSystem, string fileName, RavenJObject metadata)
 		{
-			if (indexStorage == null)
-				throw new ArgumentNullException("indexStorage", "indexStorage == null");
-
-			return new StorageStream(transactionalStorage, fileName, StorageStreamAccess.CreateAndWrite, metadata, indexStorage, operations);
+			return new StorageStream(fileSystem, fileSystem.Storage, fileName, metadata, StorageStreamAccess.CreateAndWrite);
 		}
 
 		public override long Seek(long offset, SeekOrigin origin)
@@ -134,14 +136,14 @@ namespace Raven.Database.FileSystem.Util
 			offset = Math.Min(Length, offset);
 			if (offset < currentPageFrameOffset || fileAndPages == null)
 			{
-				TransactionalStorage.Batch(accessor => fileAndPages = accessor.GetFile(Name, 0, PagesBatchSize));
+				storage.Batch(accessor => fileAndPages = accessor.GetFile(Name, 0, PagesBatchSize));
 				currentPageFrameOffset = 0;
 			}
 			while (currentPageFrameOffset + CurrentPageFrameSize - 1 < offset)
 			{
 				var lastPageFrameSize = CurrentPageFrameSize;
 				var nextPageIndex = fileAndPages.Start + fileAndPages.Pages.Count;
-				TransactionalStorage.Batch(accessor => fileAndPages = accessor.GetFile(Name, nextPageIndex, PagesBatchSize));
+				storage.Batch(accessor => fileAndPages = accessor.GetFile(Name, nextPageIndex, PagesBatchSize));
 				if (fileAndPages.Pages.Count < 1)
 				{
 					fileAndPages.Start = 0;
@@ -172,7 +174,7 @@ namespace Raven.Database.FileSystem.Util
 				if (pageOffset <= currentOffset && currentOffset < pageOffset + page.Size)
 				{
 					var pageLength = 0;
-					TransactionalStorage.Batch(accessor => pageLength = accessor.ReadPage(page.Id, innerBuffer));
+					storage.Batch(accessor => pageLength = accessor.ReadPage(page.Id, innerBuffer));
 					var sourceIndex = currentOffset - pageOffset;
 					length = Math.Min(innerBuffer.Length - sourceIndex,
 									  Math.Min(pageLength, Math.Min(buffer.Length - offset, Math.Min(pageLength - sourceIndex, count))));
@@ -190,13 +192,36 @@ namespace Raven.Database.FileSystem.Util
 		{
 			if (InnerBuffer != null && InnerBufferOffset > 0)
 			{
-				ConcurrencyAwareExecutor.Execute(() => TransactionalStorage.Batch(
-					accessor =>
+				int retries = 50;
+				bool shouldRetry;
+
+				do
+				{
+					try
 					{
-						var hashKey = accessor.InsertPage(InnerBuffer, InnerBufferOffset);
-						accessor.AssociatePage(Name, hashKey, writtingPagePosition, InnerBufferOffset);
+						storage.Batch(accessor =>
+						{
+							var hashKey = accessor.InsertPage(InnerBuffer, InnerBufferOffset);
+							accessor.AssociatePage(Name, hashKey, writtingPagePosition, InnerBufferOffset);
+							fileSystem.PutTriggers.Apply(trigger => trigger.OnUpload(Name, Metadata, hashKey, writtingPagePosition, InnerBufferOffset));
+						});
+
 						writtingPagePosition++;
-					}));
+
+						shouldRetry = false;
+					}
+					catch (ConcurrencyException)
+					{
+						if (retries-- > 0)
+						{
+							shouldRetry = true;
+							Thread.Sleep(50);
+							continue;
+						}
+
+						throw;
+					}
+				} while (shouldRetry);
 
 				InnerBuffer = null;
 				InnerBufferOffset = 0;
@@ -235,7 +260,10 @@ namespace Raven.Database.FileSystem.Util
 					Flush();
 
 					if (StorageStreamAccess == StorageStreamAccess.CreateAndWrite)
-						TransactionalStorage.Batch(accessor => accessor.CompleteFileUpload(Name));
+					{
+						storage.Batch(accessor => accessor.CompleteFileUpload(Name));
+						fileSystem.PutTriggers.Apply(trigger => trigger.AfterUpload(Name, Metadata));
+					}
 				}
 				disposed = true;
 			}

@@ -22,6 +22,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -204,6 +205,14 @@ namespace Raven.Client.Connection
 		{
 			asyncServerClient.ResetIndexAsync(name).WaitUnwrap();
 		}
+        public void SetIndexLock(string name, IndexLockMode unLockMode) 
+        {
+            asyncServerClient.SetIndexLockAsync(name, unLockMode).WaitUnwrap();
+        }
+        public void SetIndexPriority(string name, IndexingPriority priority )
+        {
+            asyncServerClient.SetIndexPriorityAsync(name, priority).WaitUnwrap();
+        }
 
 		public IndexDefinition GetIndex(string name)
 		{

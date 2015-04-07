@@ -10,6 +10,6 @@
 
 		public static string FileName = "Temp-Syncing-file-name";
 
-		public static string SourceServerInfo = "Temp-Syncing-source-server-info";
+		public static string SourceFileSystemInfo = "Temp-Syncing-source-server-info";
 	}
 }

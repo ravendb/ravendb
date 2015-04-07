@@ -1,4 +1,5 @@
-﻿using Lucene.Net.Documents;
+﻿using System.Text.RegularExpressions;
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
@@ -8,6 +9,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Bundles.Versioning;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Impl;
@@ -21,6 +23,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using Constants = Raven.Abstractions.Data.Constants;
 using Directory = System.IO.Directory;
 using LuceneDirectory = Lucene.Net.Store.Directory;
 
@@ -31,13 +34,23 @@ namespace Raven.Database.FileSystem.Search
     /// </summary>
     public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-        private const string IndexVersion = "1.0.0.0";
+        private const string IndexVersion = "1.0.0.2";
 
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
         private static readonly ILog StartupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
 
 		private const string DateIndexFormat = "yyyy-MM-dd_HH-mm-ss";
-		private static readonly string[] NumericIndexFields = { "__size_numeric" };
+
+		public static Regex IsNumeric = new Regex(@"^-?(\d*\.?\d*)$", RegexOptions.Compiled & RegexOptions.CultureInvariant);
+
+		private static readonly string[] ExcludeNumericFields =
+	    {
+		    Constants.FileSystem.RavenFsSize,
+			"Content-Length",
+		    SynchronizationConstants.RavenSynchronizationVersion,
+		    VersioningUtil.RavenFileRevision,
+		    VersioningUtil.RavenFileParentRevision,
+	    };
 
         private readonly string name;
         private readonly InMemoryRavenConfiguration configuration; 
@@ -65,7 +78,6 @@ namespace Raven.Database.FileSystem.Search
             this.name = name;
             this.configuration = configuration;   
 		}
-
 
         public void Initialize(RavenFileSystem filesystem)
         {
@@ -175,7 +187,9 @@ namespace Raven.Database.FileSystem.Search
             if (EtagUtil.IsGreaterThan(lastEtag, lastStoredEtag))
                 return false;
 
-            return true;
+            var checkIndex = new CheckIndex(luceneDirectory);
+            var status = checkIndex.CheckIndex_Renamed_Method();
+            return status.clean;
         }
 
         protected Etag GetLastEtagForIndex()
@@ -224,7 +238,7 @@ namespace Raven.Database.FileSystem.Search
                             foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
                             {
                                 if (!file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
-                                    Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata);
+                                    Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata, file.Etag);
                             }
                         });
 
@@ -351,18 +365,20 @@ namespace Raven.Database.FileSystem.Search
 			IndexSearcher searcher;
 			using (GetSearcher(out searcher))
 			{
-				Query q;
+				Query fileQuery;
 				if (string.IsNullOrEmpty(query))
 				{
-					q = new MatchAllDocsQuery();
+                    Log.Debug("Issuing query on index for all files");
+					fileQuery = new MatchAllDocsQuery();
 				}
 				else
 				{
-					var queryParser = new RavenQueryParser(analyzer, NumericIndexFields);
-                    q = queryParser.Parse(query);
+                    Log.Debug("Issuing query on index for: {0}", query);
+					var queryParser = new SimpleFilesQueryParser(analyzer);
+                    fileQuery = queryParser.Parse(query);
 				}
 
-				var topDocs = ExecuteQuery(searcher, sortFields, q, pageSize + start);
+				var topDocs = ExecuteQuery(searcher, sortFields, fileQuery, pageSize + start);
 
 				var results = new List<string>();
 
@@ -397,7 +413,7 @@ namespace Raven.Database.FileSystem.Search
 			return topDocs;
 		}
 
-        private void Index(IndexWriter writer, string key, RavenJObject metadata)
+        private void Index(IndexWriter writer, string key, RavenJObject metadata, Etag etag)
         {
 	        if (filesystem.ReadTriggers.CanReadFile(key, metadata, ReadOperation.Index) == false)
 				return;
@@ -419,29 +435,51 @@ namespace Raven.Database.FileSystem.Search
                         {
                             // Object is an array. Therefore, we index each token. 
                             foreach (var item in array)
-                                doc.Add(new Field(metadataHolder.Key, item.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+								AddField(doc, metadataHolder.Key, item.ToString());
                         }
                         else
                         {
-                            doc.Add(new Field(metadataHolder.Key, metadataHolder.Value.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+                            AddField(doc, metadataHolder.Key, metadataHolder.Value.ToString());
                         }                            
                     }
                 }
 
+	            if (doc.GetField(Constants.MetadataEtagField) == null)
+		            doc.Add(new Field(Constants.MetadataEtagField, etag.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+
                 writer.DeleteDocuments(new Term("__key", lowerKey));
                 writer.AddDocument(doc);
 
-                // yes, this is slow, but we aren't expecting high writes count
-                var etag = lookup["ETag"].First();
-                var customCommitData = new Dictionary<string, string>() { { "LastETag", etag.Value.ToString() } };
+                var customCommitData = new Dictionary<string, string> { { "LastETag", etag.ToString() } };
                 writer.Commit(customCommitData);
                 ReplaceSearcher(writer);
             }
         }
 
-	    public virtual void Index(string key, RavenJObject metadata)
+	    private static void AddField(Document doc, string key, string value)
+	    {
+			doc.Add(new Field(key, value, Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+
+		    if (ExcludeNumericFields.Contains(key, StringComparer.InvariantCultureIgnoreCase) == false && 
+				IsNumeric.IsMatch(value))
+		    {
+			    long longValue;
+			    double doubleValue;
+
+			    if (long.TryParse(value, out longValue))
+				{
+					doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetLongValue(longValue));
+				}
+				else if (double.TryParse(value, out doubleValue))
+				{
+					doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetDoubleValue(doubleValue));
+				}				
+		    }
+	    }
+
+	    public virtual void Index(string key, RavenJObject metadata, Etag etag)
         {
-            Index(writer, key, metadata);
+            Index(writer, key, metadata, etag);
         }
 
         private static Document CreateDocument(string lowerKey, RavenJObject metadata)

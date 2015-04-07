@@ -11,6 +11,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Storage;
+using Raven.Database.Storage.Esent.StorageActions;
 using Raven.Database.Tasks;
 using Raven.Storage.Esent.StorageActions;
 

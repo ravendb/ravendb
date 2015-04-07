@@ -613,6 +613,7 @@
     <Compile Include="Notifications\ReplicationConflicts.cs" />
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
+    <Compile Include="Patching\UseX2JsScript.cs" />
     <Compile Include="PreFetching.cs" />
     <Compile Include="Properties\TestAssemblyInfo.cs" />
     <Compile Include="Queries\CommentsInQueries.cs" />
@@ -629,6 +630,7 @@
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
     <Compile Include="Smuggler\SmugglerIdentitiesTests.cs" />
     <Compile Include="Smuggler\SmugglerTransformScriptsTests.cs" />
+    <Compile Include="Smuggler\SmugglerWithDisabledVersioning_RavenDB_3219.cs" />
     <Compile Include="Sorting\SortByDynamicFields.cs" />
     <Compile Include="Sorting\CustomSorting.cs" />
     <Compile Include="Sorting\SortByNumberOfCharactersFromEnd.cs" />
@@ -794,6 +796,7 @@
     <Compile Include="Storage\Voron\IndexingStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\MappedResultsStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\StalenessStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\StorageActionsTests.cs" />
     <Compile Include="Storage\Voron\StorageIntegrationTests.cs" />
     <Compile Include="Storage\Voron\ListStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
@@ -1009,6 +1012,9 @@
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Patching\x2js.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />

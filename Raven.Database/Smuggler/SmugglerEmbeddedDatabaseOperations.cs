@@ -286,6 +286,16 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask();
 		}
 
+		public RavenJToken DisableVersioning(RavenJObject metadata)
+		{
+			if (metadata != null)
+			{
+				metadata.Add(Constants.RavenIgnoreVersioning, true);
+			}
+
+			return metadata;
+		}
+
 		public void ShowProgress(string format, params object[] args)
 		{
 			if (Progress != null)

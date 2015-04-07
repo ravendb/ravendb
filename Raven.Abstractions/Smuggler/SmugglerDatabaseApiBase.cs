@@ -104,8 +104,7 @@ namespace Raven.Abstractions.Smuggler
 
 			try
 			{
-				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
- leaveOpen: true))
+				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,leaveOpen: true))
 				using (var streamWriter = new StreamWriter(gZipStream))
 				{
 					var jsonWriter = new JsonTextWriter(streamWriter)
@@ -626,7 +625,7 @@ namespace Raven.Abstractions.Smuggler
 				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
 				var streamReader = new StreamReader(sizeStream);
 
-				jsonReader = new JsonTextReader(streamReader);
+				jsonReader = new RavenJsonTextReader(streamReader);
 
 				if (jsonReader.Read() == false)
 					return;
@@ -780,15 +779,8 @@ namespace Raven.Abstractions.Smuggler
 
 				var item = RavenJToken.ReadFrom(jsonReader);
 
-				var deletedDocumentInfo =
-					new JsonSerializer
-					{
-						Converters =
-							{
-								new JsonToJsonConverter(),
-                                new StreamFromJsonConverter()
-							}
-					}.Deserialize<Tombstone>(new RavenJTokenReader(item));
+				var deletedDocumentInfo = new JsonSerializer { Converters = DefaultConverters }
+                                                    .Deserialize<Tombstone>(new RavenJTokenReader(item));
 
 				Operations.ShowProgress("Importing deleted documents {0}", deletedDocumentInfo.Key);
 
@@ -811,15 +803,8 @@ namespace Raven.Abstractions.Smuggler
 
 				var item = RavenJToken.ReadFrom(jsonReader);
 
-				var deletedAttachmentInfo =
-					new JsonSerializer
-					{
-						Converters =
-							{
-								new JsonToJsonConverter(),
-                                new StreamFromJsonConverter()
-					}
-					}.Deserialize<Tombstone>(new RavenJTokenReader(item));
+				var deletedAttachmentInfo = new JsonSerializer { Converters = DefaultConverters }
+                                                    .Deserialize<Tombstone>(new RavenJTokenReader(item));
 
 				Operations.ShowProgress("Importing deleted attachments {0}", deletedAttachmentInfo.Key);
 
@@ -855,6 +840,23 @@ namespace Raven.Abstractions.Smuggler
 				return count;
 		}
 
+        private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
+        {
+            var converters = new JsonConverterCollection()
+            {
+                new JsonToJsonConverter(),
+                new StreamFromJsonConverter()
+            };
+            converters.Freeze();
+
+            return converters;
+        }, true);
+
+        private static JsonConverterCollection DefaultConverters 
+        {
+            get { return defaultConverters.Value; }
+        }
+
         [Obsolete("Use RavenFS instead.")]
 		private async Task<int> ImportAttachments(RavenConnectionStringOptions dst, JsonTextReader jsonReader)
 		{
@@ -868,15 +870,8 @@ namespace Raven.Abstractions.Smuggler
                 if ((Options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
 					continue;
 
-				var attachmentExportInfo =
-					new JsonSerializer
-					{
-						Converters =
-							{
-								new JsonToJsonConverter(),
-                                new StreamFromJsonConverter()
-							}
-					}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
+				var attachmentExportInfo = new JsonSerializer { Converters = DefaultConverters }
+                                                    .Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
 
 				Operations.ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
 
@@ -906,7 +901,7 @@ namespace Raven.Abstractions.Smuggler
             };
 
             JsonDocument lastEtagsDocument = null;
-            if ( Options.UseContinuationFile )
+            if (Options.UseContinuationFile)
             {
                 lastEtagsDocument = Operations.GetDocument(continuationDocId);
                 if ( lastEtagsDocument == null )
@@ -959,16 +954,19 @@ namespace Raven.Abstractions.Smuggler
                     continue;
 
                 var metadata = document["@metadata"] as RavenJObject;
-                if ( metadata != null )
+                if (metadata != null)
                 {
                     if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
                         continue;
 
                     if (Options.StripReplicationInformation)
                         document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
+
+					if(Options.ShouldDisableVersioningBundle)
+						document["@metadata"] = Operations.DisableVersioning(metadata);
                 }
 
-                if ( Options.UseContinuationFile )
+                if (Options.UseContinuationFile)
                 {
                     tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
                     if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.
@@ -1100,22 +1098,38 @@ namespace Raven.Abstractions.Smuggler
 			{
 				IsTransformersSupported = false;
 				IsDocsStreamingSupported = false;
+				IsIdentitiesSmugglingSupported = false;
                 Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
 				return;
 			}
 
+			if (intServerVersion == 25)
+			{
+				Operations.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+
+				IsTransformersSupported = true;
+				IsDocsStreamingSupported = true;
+				IsIdentitiesSmugglingSupported = false;
+
+				return;
+			}
+
+
 			IsTransformersSupported = true;
 			IsDocsStreamingSupported = true;
+			IsIdentitiesSmugglingSupported = true;
 		}
 
 		private void SetLegacyMode()
 		{
 			IsTransformersSupported = false;
 			IsDocsStreamingSupported = false;
+			IsIdentitiesSmugglingSupported = false;
 			Operations.ShowProgress("Server version is not available. Running in legacy mode which does not support transformers.");
 		}
 
 		public bool IsTransformersSupported { get; private set; }
 		public bool IsDocsStreamingSupported { get; private set; }
+		public bool IsIdentitiesSmugglingSupported { get; private set; }
 	}
 }

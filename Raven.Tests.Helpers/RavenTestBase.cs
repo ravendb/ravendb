@@ -224,14 +224,15 @@ namespace Raven.Tests.Helpers
 			bool runInMemory = true,
 			string dataDirectory = null,
 			string requestedStorage = null,
-				bool enableAuthentication = false,
-				bool ensureDatabaseExists = true,
-				Action<DocumentStore> configureStore = null)
+			bool enableAuthentication = false,
+			bool ensureDatabaseExists = true,
+			Action<DocumentStore> configureStore = null,
+			string activeBundles = null)
 		{
 			databaseName = NormalizeDatabaseName(databaseName);
 
 			checkPorts = true;
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName);
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName, activeBundles: activeBundles);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{

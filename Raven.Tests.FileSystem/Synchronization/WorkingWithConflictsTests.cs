@@ -18,6 +18,7 @@ using Raven.Json.Linq;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Raven.Tests.FileSystem.Tools;
 using Xunit;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {
@@ -124,13 +125,13 @@ namespace Raven.Tests.FileSystem.Synchronization
             pages = await destination.Synchronization.GetConflictsAsync();
 			Assert.Equal(25, pages.TotalCount);
 
-            pages = await destination.Synchronization.GetConflictsAsync(1, 10);
+            pages = await destination.Synchronization.GetConflictsAsync(start: 1, pageSize: 10);
 			Assert.Equal(10, pages.TotalCount);
 
-            pages = await destination.Synchronization.GetConflictsAsync(2, 10);
+            pages = await destination.Synchronization.GetConflictsAsync(start: 2, pageSize: 10);
 			Assert.Equal(5, pages.TotalCount);
 
-            pages = await destination.Synchronization.GetConflictsAsync(10);
+            pages = await destination.Synchronization.GetConflictsAsync(start: 10);
 			Assert.Equal(0, pages.TotalCount);
 		}
 
@@ -233,21 +234,18 @@ namespace Raven.Tests.FileSystem.Synchronization
 				                         {
 					                         {SynchronizationConstants.RavenSynchronizationVersion, new RavenJValue(1)},
 					                         {SynchronizationConstants.RavenSynchronizationSource, new RavenJValue(Guid.Empty)},
-					                         {SynchronizationConstants.RavenSynchronizationHistory, "[]"}
-				                         }
-                                         .WithETag(Guid.Empty);
+					                         {SynchronizationConstants.RavenSynchronizationHistory, "[]"},
+											 {"If-None-Match", "\"" + Etag.Empty + "\""}
+				                         };
 
 			request.AddHeaders(conflictedMetadata);
-
-			request.Headers[SyncingMultipartConstants.SourceServerInfo] = new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson();
+			request.Headers[SyncingMultipartConstants.SourceFileSystemInfo] = new FileSystemInfo {Id = Guid.Empty, Url = "http://localhost:12345"}.AsJson();
 
 			var response = await request.GetResponseAsync();
 
 			using (var stream = response.GetResponseStream())
 			{
 				Assert.NotNull(stream);
-				if (stream == null) 
-					return;
 
 				var report = new JsonSerializer().Deserialize<SynchronizationReport>(new JsonTextReader(new StreamReader(stream)));
 				Assert.Equal(string.Format( "File {0} is conflicted", FileHeader.Canonize("test.txt")), report.Exception.Message);
@@ -325,9 +323,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 			webRequest.ContentLength = 0;
 			webRequest.Method = "POST";
 
-			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo, new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
+			webRequest.Headers.Add(SyncingMultipartConstants.SourceFileSystemInfo, new FileSystemInfo {Id = Guid.Empty, Url = "http://localhost:12345"}.AsJson());
             webRequest.Headers.Add(Constants.MetadataEtagField, new Guid().ToString());
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
+			webRequest.Headers.Add("If-None-Match", "\"" + Etag.Empty + "\"");
 
 			var sb = new StringBuilder();
 			new JsonSerializer().Serialize(new JsonTextWriter(new StringWriter(sb)),
@@ -371,7 +370,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var report = sourceClient.Synchronization.SynchronizeAsync().Result;
+			var report = sourceClient.Synchronization.StartAsync().Result;
 
 			Assert.Equal(1, report.Count());
 			Assert.Null(report.First().Reports);
@@ -379,7 +378,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             var serverId = await sourceClient.GetServerIdAsync();
             var lastEtag = await destinationClient.Synchronization.GetLastSynchronizationFromAsync( serverId );
 
-            Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<Guid>(Constants.MetadataEtagField), lastEtag.LastSourceFileEtag);
+            Assert.Equal(sourceClient.GetMetadataForAsync("test").Result.Value<string>(Constants.MetadataEtagField), lastEtag.LastSourceFileEtag.ToString());
 		}
 
 		[Fact]
@@ -399,7 +398,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var report = await sourceClient.Synchronization.SynchronizeAsync();
+			var report = await sourceClient.Synchronization.StartAsync();
 			Assert.Null(report.ToArray()[0].Exception);
 
             var syncingItem = await sourceClient.Configuration.GetKeyAsync<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test", destinationClient.ServerUrl));
@@ -423,7 +422,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var report = await sourceClient.Synchronization.SynchronizeAsync();
+			var report = await sourceClient.Synchronization.StartAsync();
 			Assert.Null(report.ToArray()[0].Exception);
 
 			var syncingItem = await sourceClient.Configuration.GetKeyAsync<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test", destinationClient.ServerUrl));

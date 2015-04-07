@@ -43,6 +43,10 @@
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
     </Reference>
+    <Reference Include="Jint, Version=2.4.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Jint.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net">
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
@@ -112,11 +116,21 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB-3314.cs" />
+    <Compile Include="RavenDB_3230.cs" />
+    <Compile Include="RavenDB_3271.cs" />
+    <Compile Include="RavenDB_3276.cs" />
     <Compile Include="BulkInsertAuth.cs" />
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="RaqvenDB_3222.cs" />
+    <Compile Include="RavenDB-3136.cs" />
     <Compile Include="RavenDB-3150.cs" />
+    <Compile Include="RavenDB-3277.cs" />
+    <Compile Include="RavenDB-3285.cs" />
+    <Compile Include="RavenDB-3300.cs" />
+    <Compile Include="RavenDB-3301.cs" />
     <Compile Include="RavenDB3075.cs" />
     <Compile Include="RavenDB_2627.cs" />
     <Compile Include="RavenDB_2867.cs" />
@@ -342,12 +356,24 @@
     <Compile Include="RavenDB_3042.cs" />
     <Compile Include="RavenDB_3071.cs" />
     <Compile Include="RavenDB_3082.cs" />
+    <Compile Include="RavenDB_3086.cs" />
     <Compile Include="RavenDB_3109.cs" />
     <Compile Include="RavenDB_3117.cs" />
     <Compile Include="RavenDB_3145.cs" />
     <Compile Include="RavenDB_3166.cs" />
+    <Compile Include="RavenDB_3173.cs" />
+    <Compile Include="RavenDB_3181.cs" />
+    <Compile Include="RavenDB_3190.cs" />
     <Compile Include="RavenDB_3193.cs" />
+    <Compile Include="RavenDB_3197.cs" />
+    <Compile Include="RavenDB_3207.cs" />
+    <Compile Include="RavenDB_3232.cs" />
+    <Compile Include="RavenDB_3237.cs" />
+    <Compile Include="RavenDB_3248.cs" />
+    <Compile Include="RavenDB_3264.cs" />
+    <Compile Include="RavenDB_3298.cs" />
     <Compile Include="Ravendb_334.cs" />
+    <Compile Include="RavenDB_3344.cs" />
     <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_381.cs" />
@@ -413,9 +439,14 @@
     <Compile Include="SlowIndex.cs" />
     <Compile Include="RavenDB_3113.cs" />
     <Compile Include="RavenDB_3106.cs" />
+    <Compile Include="RavenDB-3225.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Bundles\Raven.Client.Authorization\Raven.Client.Authorization.csproj">
+      <Project>{3A852FD2-E0F9-449C-8F66-0C6A180D030A}</Project>
+      <Name>Raven.Client.Authorization</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Bundles\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj">
       <Project>{d185331d-2b7c-4251-8ebe-140ede1fab9f}</Project>
       <Name>Raven.Client.UniqueConstraints</Name>
@@ -445,7 +476,7 @@
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Bundles\Raven.Tests.Bundles.csproj">
-      <Project>{83ab5b46-5502-40dd-ba5f-83499f19b953}</Project>
+      <Project>{83AB5B46-5502-40DD-BA5F-83499F19B953}</Project>
       <Name>Raven.Tests.Bundles</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">

@@ -190,11 +190,17 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 
 				txw.Commit();
 			}
+			using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				env.CreateTree(txw, "Temp_" + table.TableName);
+					
+				txw.Commit();
+			}
 			do
 			{
 				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var destTree = env.CreateTree(txw, "Temp_" + table.TableName);
+					var destTree = txw.ReadTree("Temp_" + table.TableName);
 					var srcTree = txw.ReadTree(table.TableName);
 
 					var iterator = srcTree.Iterate();

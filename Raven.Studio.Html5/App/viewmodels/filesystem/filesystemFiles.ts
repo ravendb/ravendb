@@ -45,7 +45,7 @@ class filesystemFiles extends viewModelBase {
 
     static treeSelector = "#filesTree";
     static gridSelector = "#filesGrid";
-    static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle"
+    static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle";
     static uploadQueueSelector = "#uploadQueue";
     static uploadQueuePanelCollapsedSelector = "#uploadQueuePanelCollapsed";
 
@@ -273,6 +273,10 @@ class filesystemFiles extends viewModelBase {
         if (grid) {
             var selectedItem = <documentBase>grid.getSelectedItems(1).first();
             var selectedFolder = this.selectedFolder();
+
+            if (selectedFolder == null)
+                selectedFolder = "";
+
             var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + selectedItem.getId();
             window.location.assign(url);
         }

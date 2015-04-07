@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Document;
 using Raven.Client.FileSystem;
 using Raven.Json.Linq;
@@ -56,7 +57,7 @@ namespace Raven.Backup
 
             var json = RavenJObject.FromObject(backupRequest).ToString();
 
-            var url = "/admin/fs/backup";
+            var url = "/admin/backup";
             if (parameters.Incremental)
                 url += "?incremental=true";
             try

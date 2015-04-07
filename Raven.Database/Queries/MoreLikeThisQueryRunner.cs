@@ -107,7 +107,19 @@ namespace Raven.Database.Queries
 
 					var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
 					var tsdc = TopScoreDocCollector.Create(pageSize, true);
-					searcher.Search(mltQuery, tsdc);
+
+
+				    if (string.IsNullOrWhiteSpace(query.AdditionalQuery) == false)
+				    {
+				        var additionalQuery = QueryBuilder.BuildQuery(query.AdditionalQuery, perFieldAnalyzerWrapper);
+				        mltQuery = new BooleanQuery
+				        {
+                            {mltQuery, Occur.MUST},
+				            {additionalQuery, Occur.MUST}, 
+				        };
+				    }
+
+				    searcher.Search(mltQuery, tsdc);
 					var hits = tsdc.TopDocs().ScoreDocs;
 					var jsonDocuments = GetJsonDocuments(query, searcher, index, query.IndexName, hits, td.ScoreDocs[0].Doc);
 
@@ -126,7 +138,7 @@ namespace Raven.Database.Queries
 
 					database.TransactionalStorage.Batch(actions =>
 					{
-						documentRetriever = new DocumentRetriever(actions, database.ReadTriggers, database.InFlightTransactionalState, query.TransformerParameters, idsToLoad);
+						documentRetriever = new DocumentRetriever(database.Configuration, actions, database.ReadTriggers, database.InFlightTransactionalState, query.TransformerParameters, idsToLoad);
 
 						using (new CurrentTransformationScope(database, documentRetriever))
 						{

@@ -172,25 +172,35 @@ namespace Raven.Json.Linq
 			}
 		}
 
-		/// <summary>
-		/// Writes this token to a <see cref="JsonWriter"/>.
-		/// </summary>
-		/// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
-		/// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-		public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
-		{
-			writer.WriteStartArray();
+        /// <summary>
+        /// Writes this token to a <see cref="JsonWriter"/>.
+        /// </summary>
+        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+        public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+        {
+            writer.WriteStartArray();
 
-			if (Items != null)
-			{
-				foreach (var token in Items)
-				{
-					token.WriteTo(writer, converters);
-				}
-			}
+            if (Items != null)
+            {
+                foreach (var token in Items)
+                {
+                    token.WriteTo(writer, converters);
+                }
+            }
 
-			writer.WriteEndArray();
-		}
+            writer.WriteEndArray();
+        }
+
+        /// <summary>
+        /// Writes this token to a <see cref="JsonWriter"/>.
+        /// </summary>
+        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+        public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+        {
+            WriteTo(writer, new JsonConverterCollection(converters));
+        }
 
 		#region IEnumerable<RavenJToken> Members
 

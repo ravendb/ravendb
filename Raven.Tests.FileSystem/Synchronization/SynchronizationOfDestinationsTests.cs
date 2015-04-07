@@ -7,6 +7,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Util;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -47,7 +48,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             sourceClient.Synchronization.SetDestinationsAsync(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination()).Wait();
 
-			var destinationSyncResults = sourceClient.Synchronization.SynchronizeAsync().Result;
+			var destinationSyncResults = sourceClient.Synchronization.StartAsync().Result;
 
 			// we expect conflicts after first attempt of synchronization
 			Assert.Equal(2, destinationSyncResults.Length);
@@ -57,7 +58,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             await destination1Client.Synchronization.ResolveConflictAsync("test.bin", ConflictResolutionStrategy.RemoteVersion);
             await destination2Client.Synchronization.ResolveConflictAsync("test.bin", ConflictResolutionStrategy.RemoteVersion);
 
-            destinationSyncResults = await sourceClient.Synchronization.SynchronizeAsync();
+            destinationSyncResults = await sourceClient.Synchronization.StartAsync();
 
             var conflictItem = await destination1Client.Configuration.GetKeyAsync<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin"));
 			Assert.Null(conflictItem);
@@ -107,7 +108,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
 			// synchronize from source to destination
-			var destinationSyncResults = await sourceClient.Synchronization.SynchronizeAsync();
+			var destinationSyncResults = await sourceClient.Synchronization.StartAsync();
 
 			Assert.Equal(1, destinationSyncResults[0].Reports.Count());
 			Assert.Equal(SynchronizationType.ContentUpdate, destinationSyncResults[0].Reports.ToArray()[0].Type);
@@ -115,7 +116,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             await destinationClient.Synchronization.SetDestinationsAsync(sourceClient.ToSynchronizationDestination());
 
 			// synchronize from destination to source
-			var sourceSyncResults = await destinationClient.Synchronization.SynchronizeAsync();
+			var sourceSyncResults = await destinationClient.Synchronization.StartAsync();
 
 			Assert.Equal(1, sourceSyncResults.Count());
 			Assert.Null(sourceSyncResults[0].Reports);
@@ -136,7 +137,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			await sourceClient.UploadAsync("test2.bin", source2Content);
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 
 			var destinationFiles = await destinationClient.SearchOnDirectoryAsync("/");
 			Assert.Equal(2, destinationFiles.FileCount);
@@ -162,7 +163,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 
 			var configs = await destinationClient.Configuration.GetKeyNamesAsync();
 
@@ -185,7 +186,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 
 		    var fullDstUrl = destinationClient.ToSynchronizationDestination().Url;
 
@@ -193,7 +194,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationDetails.FileName);
             Assert.Equal(fullDstUrl, synchronizationDetails.DestinationUrl);
-			Assert.NotEqual(Guid.Empty, synchronizationDetails.FileETag);
+			Assert.NotEqual(Etag.Empty, synchronizationDetails.FileETag);
 			Assert.Equal(SynchronizationType.ContentUpdate, synchronizationDetails.Type);
 		}
 
@@ -210,10 +211,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 
 			// start synchronization again to force confirmation by source
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 
             var shouldBeNull = await sourceClient.Configuration.GetKeyAsync<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", destinationClient.ServerUrl));
 
@@ -226,7 +227,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 			var sourceContent = new RandomStream(1);
             var sourceClient = NewAsyncClient(0);
 
-            await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLimit, 1);
+            await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig
+            {
+	            MaxNumberOfSynchronizationsPerDestination = 1
+            });
 
             var destinationClient = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
 
@@ -234,7 +238,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			await sourceClient.UploadAsync("test2.bin", sourceContent);
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 
 			var pendingSynchronizations = await sourceClient.Synchronization.GetPendingAsync();
 
@@ -262,7 +266,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             await sourceClient.Synchronization.SetDestinationsAsync(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination());
 
 			// push file to all destinations
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 
 			// prevent pushing files after metadata update
 			await sourceClient.Configuration.DeleteKeyAsync(SynchronizationConstants.RavenSynchronizationDestinations);
@@ -273,7 +277,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             await sourceClient.Synchronization.SetDestinationsAsync(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination());
 
 			// should synchronize metadata
-			var destinationSyncResults = sourceClient.Synchronization.SynchronizeAsync().Result;
+			var destinationSyncResults = sourceClient.Synchronization.StartAsync().Result;
 
 			foreach (var destinationSyncResult in destinationSyncResults)
 			{
@@ -302,7 +306,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			// upload file to all servers
 			await sourceClient.UploadAsync("test.bin", new RandomStream(10));
             await sourceClient.Synchronization.SetDestinationsAsync(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination());
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 
 			await sourceClient.Configuration.DeleteKeyAsync(SynchronizationConstants.RavenSynchronizationDestinations);
 
@@ -313,7 +317,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			// set up destinations
             await sourceClient.Synchronization.SetDestinationsAsync(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination());
 
-			var destinationSyncResults = sourceClient.Synchronization.SynchronizeAsync().Result;
+			var destinationSyncResults = sourceClient.Synchronization.StartAsync().Result;
 
 			foreach (var destinationSyncResult in destinationSyncResults)
 			{
@@ -349,7 +353,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			// set up destinations
             await sourceClient.Synchronization.SetDestinationsAsync(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination());
 
-			var destinationSyncResults = await sourceClient.Synchronization.SynchronizeAsync();
+			var destinationSyncResults = await sourceClient.Synchronization.StartAsync();
 
 			foreach (var destinationSyncResult in destinationSyncResults)
 			{
@@ -375,14 +379,14 @@ namespace Raven.Tests.FileSystem.Synchronization
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
-			await sourceClient.Synchronization.SynchronizeAsync();
+			await sourceClient.Synchronization.StartAsync();
 
             var metadata = await sourceClient.GetMetadataForAsync("test.bin");
 
 			var confirmations = await destinationClient.Synchronization.GetConfirmationForFilesAsync(
-                                    new List<Tuple<string, Guid>>
+                                    new List<Tuple<string, Etag>>
 				                    {
-					                    new Tuple<string, Guid>("test.bin", metadata.Value<Guid>(Constants.MetadataEtagField))
+					                    new Tuple<string, Etag>("test.bin", metadata.Value<string>(Constants.MetadataEtagField))
 				                    });
 
 			var synchronizationConfirmations = confirmations as SynchronizationConfirmation[] ?? confirmations.ToArray();
@@ -404,14 +408,14 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination()).Wait();
 
-			sourceClient.Synchronization.SynchronizeAsync().Wait();
+			sourceClient.Synchronization.StartAsync().Wait();
 
 			var differentETag = Guid.NewGuid();
 
 			var confirmations = destinationClient.Synchronization.GetConfirmationForFilesAsync(
-                                                        new List<Tuple<string, Guid>> 
+                                                        new List<Tuple<string, Etag>> 
                                                         {
-                                                            new Tuple<string, Guid>("test.bin", differentETag)
+                                                            new Tuple<string, Etag>("test.bin", differentETag)
                                                         }).Result.ToList();
 
 			Assert.Equal(1, confirmations.Count());
@@ -424,10 +428,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 		{
 			var destinationClient = NewAsyncClient(0);
 
-			var confirmations = destinationClient.Synchronization.GetConfirmationForFilesAsync(new List<Tuple<string, Guid>>
+			var confirmations = destinationClient.Synchronization.GetConfirmationForFilesAsync(new List<Tuple<string, Etag>>
 					                                                    {
-						                                                    new Tuple<string, Guid>(
-							                                                    "test.bin", Guid.Empty)
+						                                                    new Tuple<string, Etag>(
+							                                                    "test.bin", Etag.Empty)
 					                                                    }).Result.ToList();
 
 			Assert.Equal(1, confirmations.Count());
@@ -450,9 +454,9 @@ namespace Raven.Tests.FileSystem.Synchronization
 			await destinationClient.Configuration.SetKeyAsync(RavenFileNameHelper.SyncResultNameForFile("test.bin"), failureSynchronization);
 
             var confirmations = await destinationClient.Synchronization
-                                                       .GetConfirmationForFilesAsync(new List<Tuple<string, Guid>>
+                                                       .GetConfirmationForFilesAsync(new List<Tuple<string, Etag>>
 					                                                    {
-						                                                    new Tuple<string, Guid>(
+						                                                    new Tuple<string, Etag>(
 							                                                    "test.bin", sampleGuid)
 					                                                    });
 			Assert.Equal(1, confirmations.Count());
@@ -472,7 +476,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var destinationSyncResults = await sourceClient.Synchronization.SynchronizeAsync();
+			var destinationSyncResults = await sourceClient.Synchronization.StartAsync();
 
 			Assert.Null(destinationSyncResults[0].Reports);
 		}
@@ -487,7 +491,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 
-			var destinationSyncResults = await sourceClient.Synchronization.SynchronizeAsync();
+			var destinationSyncResults = await sourceClient.Synchronization.StartAsync();
 
 			Assert.Null(destinationSyncResults[0].Reports);
 		}
@@ -499,7 +503,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			IEnumerable<DestinationSyncResult> results = null;
 
-			Assert.DoesNotThrow(() => results = sourceClient.Synchronization.SynchronizeAsync().Result);
+			Assert.DoesNotThrow(() => results = sourceClient.Synchronization.StartAsync().Result);
 			Assert.Equal(0, results.Count());
 		}
 
@@ -513,7 +517,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			IEnumerable<DestinationSyncResult> results = null;
 
-			Assert.DoesNotThrow(() => results = sourceClient.Synchronization.SynchronizeAsync().Result);
+			Assert.DoesNotThrow(() => results = sourceClient.Synchronization.StartAsync().Result);
 
 			Assert.Null(results.ToArray()[0].Reports);
 		}

@@ -26,7 +26,6 @@ namespace Raven.Database.Server.Tenancy
 {
 	public class CountersLandlord : AbstractLandlord<CounterStorage>
 	{
-		private readonly DocumentDatabase systemDatabase;
 		private bool initialized;
 
         private const string COUNTERS_PREFIX = "Raven/Counters/";
@@ -34,9 +33,8 @@ namespace Raven.Database.Server.Tenancy
 
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
-		public CountersLandlord(DocumentDatabase systemDatabase)
+		public CountersLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
 		{
-			this.systemDatabase = systemDatabase;
 		    Enabled = systemDatabase.Documents.Get("Raven/Counters/Enabled",null) != null;
 			Init();
 		}
@@ -151,6 +149,14 @@ namespace Raven.Database.Server.Tenancy
 		    {
                 throw new InvalidOperationException("Counters are an experimental feature that is not enabled");
 		    }
+
+			if (Locks.Contains(tenantId))
+				throw new InvalidOperationException("Counters '" + tenantId + "' is currently locked and cannot be accessed");
+
+			ManualResetEvent cleanupLock;
+			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad) == false)
+				throw new InvalidOperationException(string.Format("Counters '{0}' are currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxSecondsForTaskToWaitForDatabaseToLoad));
+
 			if (ResourcesStoresCache.TryGetValue(tenantId, out counter))
 			{
 				if (counter.IsFaulted || counter.IsCanceled)
@@ -165,9 +171,6 @@ namespace Raven.Database.Server.Tenancy
 					return true;
 				}
 			}
-
-			if (Locks.Contains(tenantId))
-				throw new InvalidOperationException("Counters '" + tenantId + "' is currently locked and cannot be accessed");
 
 			var config = CreateTenantConfiguration(tenantId);
 			if (config == null)

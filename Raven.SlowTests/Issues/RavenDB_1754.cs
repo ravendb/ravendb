@@ -20,7 +20,7 @@ namespace Raven.SlowTests.Issues
     {
 	    public RavenDB_1754()
 	    {
-		    ShowLogs = true;
+		    ShowLogs = false;
 	    }
 
         [Fact]

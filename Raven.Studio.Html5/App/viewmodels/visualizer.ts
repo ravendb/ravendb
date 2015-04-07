@@ -45,9 +45,8 @@ class visualizer extends viewModelBase {
     reduceKeys = ko.observableArray<string>();
     reduceKeysSearchResults = ko.observableArray<string>();
 
-    hasIndexSelected = ko.computed(() => {
-        return this.indexName() !== visualizer.chooseIndexText;
-    });
+    hasIndexSelected = ko.computed(() => this.indexName() !== visualizer.chooseIndexText);
+    docKeysOrReduceKeysSelected = ko.computed(() => this.docKeys().length > 0 || this.reduceKeys().length > 0);
 
     colors = d3.scale.category10();
     colorMap = {};
@@ -216,8 +215,11 @@ class visualizer extends viewModelBase {
     }
 
     addDocKey(key: string) {
-        if (key && this.docKeys.contains(key)) return;
-        new queryIndexDebugDocsCommand(this.indexName(), this.activeDatabase(), key, 0, 2)
+        if (key && this.docKeys.contains(key))
+            return;
+
+        this.showLoadingIndicator(true);
+        new queryIndexDebugDocsCommand(this.indexName(), this.activeDatabase(), key, 0, 1)
             .execute()
             .done(results => {
                 if (results && results.length === 1 && results[0] == key) {
@@ -226,22 +228,32 @@ class visualizer extends viewModelBase {
                         new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { sourceId: key }, 0, 1024)
                             .execute()
                             .then(results => {
-                                results.forEach(r => this.addReduceKey(r));
+                                var addReduceKeysTasks: Array<JQueryPromise<any[]>> = [];
+                                results.forEach(r => addReduceKeysTasks.push(this.addReduceKey(r, false)));
+
+                                $.when.apply($, addReduceKeysTasks).done(() => {
+                                    this.showLoadingIndicator(false);
+                                });
                             });
                     }
                 } else {
                     messagePublisher.reportWarning("The document, " + key + " , is not contained in the documents for this index.");
+                    this.showLoadingIndicator(false);
                 }
             });        
     }
 
-    addReduceKey(key: string) {
-        if (key && this.reduceKeys().contains(key)) return;
-        this.showLoadingIndicator(true);
+    addReduceKey(key: string, needToChangeLoadingIndicator = true): JQueryPromise<any[]> {
+        var deferred = $.Deferred();
+        if (key && this.reduceKeys().contains(key))
+            return deferred.resolve();
+
+        if (needToChangeLoadingIndicator)
+            this.showLoadingIndicator(true);
         var self = this;
-        new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: "",contains : key}, 0, 10)
-            .execute()
-            .done((x) => {
+
+        var getTask = new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: key }, 0, 1).execute();
+        getTask.done((x) => {
                 if (x) {
                     if (key && !this.reduceKeys().contains(key)) {
                         this.reduceKeys.push(key);
@@ -257,14 +269,27 @@ class visualizer extends viewModelBase {
                                 self.tree.children.push(subTree);
                                 self.updateGraph();
                             }
-                        }).always(() => this.showLoadingIndicator(false));
+                        }).always(() => {
+                            if (needToChangeLoadingIndicator)
+                                this.showLoadingIndicator(false);
+                            deferred.resolve();
+                        });
                     } else {
-                        this.showLoadingIndicator(false);
+                        if (needToChangeLoadingIndicator)
+                            this.showLoadingIndicator(false);
+                        deferred.resolve();
                     }
                 } else {
                     messagePublisher.reportWarning("The key, " + key + " , is not contained in the reduce keys for this index.");
+                    deferred.resolve();
                 }
-            }).always(() => this.showLoadingIndicator(false));         
+            }).always(() => {
+                if (needToChangeLoadingIndicator)
+                    this.showLoadingIndicator(false);
+                deferred.resolve();
+            });
+
+        return deferred;
     }
 
     setSelectedIndex(indexName) {

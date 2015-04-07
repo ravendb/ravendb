@@ -1,13 +1,8 @@
-﻿import app = require("durandal/app");
-import system = require("durandal/system");
-import router = require("plugins/router");
-import appUrl = require("common/appUrl");
+﻿import appUrl = require("common/appUrl");
 import shell = require("viewmodels/shell");
 
 import synchronizationReplicationSetup = require("models/filesystem/synchronizationReplicationSetup");
 import synchronizationDestination = require("models/filesystem/synchronizationDestination");
-import filesystem = require("models/filesystem/filesystem");
-
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
@@ -30,7 +25,7 @@ class synchronizationDestinations extends viewModelBase {
         if (fs) {
             this.fetchDestinations()
                 .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forFilesystem(this.activeFilesystem()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forFilesystemFiles(this.activeFilesystem()) }));
         }
         return deferred;
     }

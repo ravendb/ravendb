@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -81,13 +82,14 @@ namespace Raven.Client.Document
 		    }
 		    catch (Exception e)
 		    {
-		        var successCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false);
+		        var successCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false && x.IsCanceled == false);
 		        if (successCount >= toCheck)
 		        {
 		            // we have nothing to do here, we replicated to at least the 
                     // number we had to check, so that is good
 			        return successCount;
 		        }
+			   
 			    if (tasks.Any(x => x.IsFaulted) && successCount == 0)
 			    {
 				    // there was an error here, not just cancellation, let us just let it bubble up.
@@ -101,6 +103,9 @@ namespace Raven.Client.Document
                     destinationsToCheck.Count,
                     sp.Elapsed);
 
+				if(e is OperationCanceledException)
+					throw new TimeoutException(message);
+
 			    throw new TimeoutException(message, e);
 		    }
 		}
@@ -113,7 +118,7 @@ namespace Raven.Client.Document
 
 				var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId);
 
-		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
+		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
 
 		        if (replicated)
 		            return;
@@ -139,7 +144,6 @@ namespace Raven.Client.Document
 			    {
 				    DestinationUrl = destinationUrl, 
 					DocumentEtag = Etag.Parse(json.Value<string>("LastDocumentEtag")), 
-					AttachmentEtag = Etag.Parse(json.Value<string>("LastAttachmentEtag"))
 			    };
 		    }
 		}

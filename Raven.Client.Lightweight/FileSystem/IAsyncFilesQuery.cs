@@ -1,9 +1,4 @@
-﻿using Raven.Abstractions.FileSystem;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem
@@ -19,5 +14,10 @@ namespace Raven.Client.FileSystem
         IAsyncFilesQuery<T> OnDirectory(string path = null, bool recursive = false);
 
         Task<List<T>> ToListAsync();
+
+		/// <summary>
+		///   Deletes the files matching the query.
+		/// </summary>
+	    void RegisterResultsForDeletion();
     }
 }

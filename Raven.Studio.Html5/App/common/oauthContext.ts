@@ -8,6 +8,11 @@ class oauthContext {
 
     static enterApiKeyTask: JQueryPromise<any>;
 
+	static clean() {
+		oauthContext.apiKey(null);
+		oauthContext.authHeader(null);
+	}
+
     static apiKeyName = ko.computed(() => {
         var key = oauthContext.apiKey();
         if (key === null) {

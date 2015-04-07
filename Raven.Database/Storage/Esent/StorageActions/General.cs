@@ -6,22 +6,18 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
-using Raven.Database.Storage;
-using Raven.Database.Extensions;
-using Raven.Json.Linq;
+using Raven.Storage.Esent;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.StorageActions
 {
 	[CLSCompliant(false)]
 	public partial class DocumentStorageActions : IDisposable, IGeneralStorageActions
@@ -98,7 +94,16 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			catch (Exception ex)
 			{
-			    logger.WarnException("Error when trying to open a new DocumentStorageActions", ex);
+			    string location;
+			    try
+			    {
+			        location = new StackTrace(true).ToString();
+			    }
+			    catch (Exception)
+			    {
+			        location = "cannot get stack trace";
+			    }
+			    logger.WarnException("Error when trying to open a new DocumentStorageActions from \r\n" + location, ex);
 			    try
 			    {
 			        Dispose();

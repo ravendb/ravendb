@@ -6,14 +6,13 @@
 using System;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Client.Connection.Async;
 
 namespace Raven.Client
 {
@@ -134,6 +133,16 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
+
+		/// <summary>
+		/// Executes the index creation in side-by-side mode.
+		/// </summary>
+		void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
+
+		/// <summary>
+		/// Executes the index creation in side-by-side mode.
+		/// </summary>
+		Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
 
 		/// <summary>
 		/// Executes the index creation.

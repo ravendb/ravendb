@@ -5,7 +5,7 @@ namespace Raven.Database.FileSystem.Synchronization
 {
 	public class SynchronizationLock
 	{
-		public ServerInfo SourceServer { get; set; }
+		public FileSystemInfo SourceFileSystem { get; set; }
 		public DateTime FileLockedAt { get; set; }
 	}
 }

@@ -66,36 +66,53 @@
                     <div class="col-sm-8">
                         <table tabindex="8" class="table table-striped table-hover table-sql-replication-tables">
                             <thead>
-                                <tr class="sql-replication-tables-header">
-                                    <td>Table Name</td>
-                                    <td>Document Key</td>
-                                    <td class="narrowest-column">
-                                        <button type="button" class="btn btn-default" data-bind="click: addNewTable" title="Add new table">
-                                            <i class="fa fa-plus"></i>
-                                        </button>
-                                    </td>
-                                </tr>
+                            <tr class="sql-replication-tables-header">
+                                <td>Table Name</td>
+                                <td>Document Key</td>
+                                <td>Insert only</td>
+                                <td class="narrowest-column">
+                                    <button type="button" class="btn btn-default" data-bind="click: addNewTable" title="Add new table">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </td>
+                            </tr>
                             </thead>
                             <tbody data-bind="foreach: sqlReplicationTables">
-                                <tr>
-                                    <td>
-                                        <div>
-                                            <input required type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'afterkeydown'" />
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div>
-                                            <input required type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'afterkeydown'" />
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <button type="button" style="display: inline-block;" class="close" data-bind="visible: $parent.sqlReplicationTables().length > 1, click: $parent.removeTable.bind($parent)" title="Remove this table">
-                                            <i class="fa fa-times"></i>
+                            <tr>
+                                <td>
+                                    <div>
+                                        <input required type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'afterkeydown'"/>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <input required type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'afterkeydown'"/>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                            <span data-bind="visible: insertOnly()">Yes</span>
+                                            <span data-bind="visible: !insertOnly()">No</span>
+                                            <span class="caret"></span>
                                         </button>
-                                    </td>
-                                </tr>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <li><a href="#" data-bind="click: function() { $data.insertOnly(true); }">Yes</a></li>
+                                            <li><a href="#" data-bind="click: function() { $data.insertOnly(false); }">No</a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button type="button" style="display: inline-block;" class="close" data-bind="visible: $parent.sqlReplicationTables().length > 1, click: $parent.removeTable.bind($parent)" title="Remove this table">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
                             </tbody>
                         </table>
+                        <div class="alert alert-warning" role="älert" data-bind="visible: hasAnyInsertOnlyOption">
+                            <i class="fa fa-warning"></i> Insert only option is only valid for tables in which documents are not modified. If they do updates, they would result in errors/duplicate information. 
+                        </div>
                     </div>
                 </div>
             </div>
@@ -125,7 +142,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <button class="col-sm-4 btn" data-toggle="button" data-bind="attr:{title:('Switch to ' + ($root.isBasicView() === true?'Advanced':'Basic') + ' mode')}, click: function(){$root.isBasicView.toggle();}, css:{pressed: !$root.isBasicView() === true}">
+                    <button class="col-sm-4 btn" data-toggle="button" data-bind="attr:{title:('Switch to ' + ($root.isBasicView() === true?'Advanced':'Basic') + ' mode')}, click: function(){$root.isBasicView.toggle();}, css:{active: !$root.isBasicView() === true}">
                         <i class="fa fa-cogs"></i> Show advanced settings
                     </button>
                 </div>

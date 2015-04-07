@@ -8,7 +8,9 @@ namespace Raven.Database.Server.Abstractions
     {
         string Name { get; }
 
-        TransportState TransportState {get ; }
+		string ResourceName { get; }
+
+        TransportState TransportState { get; }
 
 		AtomicDictionary<object> ExtensionsState { get; }
 

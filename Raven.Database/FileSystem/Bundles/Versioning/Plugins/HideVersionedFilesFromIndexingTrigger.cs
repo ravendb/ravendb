@@ -20,7 +20,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			if (operation != ReadOperation.Index)
 				return ReadVetoResult.Allowed;
 
-			if (metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" && FileSystem.IsVersioningActive())
+			if (metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" && FileSystem.IsVersioningActive(name))
 				return ReadVetoResult.Ignore;
 
 			return ReadVetoResult.Allowed;

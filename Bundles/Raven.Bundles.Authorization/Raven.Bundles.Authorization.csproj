@@ -81,7 +81,6 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="AuthorizationDecisions.cs" />
-    <Compile Include="Constants.cs" />
     <Compile Include="Controllers\IsAllowedController.cs" />
     <Compile Include="Model\AuthorizationRole.cs" />
     <Compile Include="Model\AuthorizationUser.cs" />

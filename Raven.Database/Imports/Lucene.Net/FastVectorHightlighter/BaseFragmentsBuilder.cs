@@ -66,14 +66,14 @@ namespace Lucene.Net.Search.Vectorhighlight
 
         public abstract List<WeightedFragInfo> GetWeightedFragInfoList(List<WeightedFragInfo> src);
 
-        public virtual String CreateFragment(IndexReader reader, int docId, String fieldName, FieldFragList fieldFragList)
+        public virtual string CreateFragment(IndexReader reader, int docId, string fieldName, FieldFragList fieldFragList, int fragCharSize)
         {
-            String[] fragments = CreateFragments(reader, docId, fieldName, fieldFragList, 1);
+            String[] fragments = CreateFragments(reader, docId, fieldName, fieldFragList, 1, fragCharSize);
             if (fragments == null || fragments.Length == 0) return null;
             return fragments[0];
         }
 
-        public virtual String[] CreateFragments(IndexReader reader, int docId, String fieldName, FieldFragList fieldFragList, int maxNumFragments)
+        public virtual string[] CreateFragments(IndexReader reader, int docId, string fieldName, FieldFragList fieldFragList, int maxNumFragments, int fragCharSize)
         {
             if (maxNumFragments < 0)
                 throw new ArgumentException("maxNumFragments(" + maxNumFragments + ") must be positive number.");
@@ -88,7 +88,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             for (int n = 0; n < maxNumFragments && n < fragInfos.Count; n++)
             {
                 WeightedFragInfo fragInfo = fragInfos[n];
-                fragments.Add(MakeFragment(buffer, nextValueIndex, values, fragInfo));
+                fragments.Add(MakeFragment(buffer, nextValueIndex, values, fragInfo, fragCharSize));
             }
             return fragments.ToArray();
         }
@@ -107,21 +107,14 @@ namespace Lucene.Net.Search.Vectorhighlight
             return doc.GetFields(fieldName); // according to Document class javadoc, this never returns null
         }
 
-        [Obsolete]
-        protected virtual String MakeFragment(StringBuilder buffer, int[] index, String[] values, WeightedFragInfo fragInfo)
-        {
-            int s = fragInfo.startOffset;
-            return MakeFragment(fragInfo, GetFragmentSource(buffer, index, values, s, fragInfo.endOffset), s);
-        }
-
-        protected virtual String MakeFragment(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo fragInfo)
+        protected virtual string MakeFragment(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo fragInfo, int fragCharSize)
         {
 	        int adjustedStartPos;
 	        var fragmentSource = GetFragmentSource(buffer, index, values, fragInfo, out adjustedStartPos);
-			return MakeFragment(fragInfo, fragmentSource, adjustedStartPos);
+            return MakeFragment(fragInfo, fragmentSource, adjustedStartPos, fragCharSize);
         }
 
-	    private String MakeFragment(WeightedFragInfo fragInfo, String src, int s)
+        private String MakeFragment(WeightedFragInfo fragInfo, String src, int adjustedStart, int fragCharSize)
 	    {
 		    StringBuilder fragment = new StringBuilder();
 		    int srcIndex = 0;
@@ -135,14 +128,19 @@ namespace Lucene.Net.Search.Vectorhighlight
 			    };
 			foreach (var item in items)
 		    {
-			    var headerIndex = item.to.startOffset - s;
-			    fragment.Append(src.Substring(srcIndex, headerIndex - srcIndex))
+			    var headerIndex = item.to.startOffset - adjustedStart;
+		        var matchLen = item.to.endOffset - item.to.startOffset;
+		        var startLen = Math.Max(0, Math.Min(headerIndex - srcIndex, (fragCharSize - matchLen)/2));
+
+		        fragCharSize -= matchLen + startLen;
+
+                fragment.Append(src.Substring(headerIndex-startLen, startLen))
 					.Append(GetPreTag(item.subInfo.seqnum))
-					.Append(src.Substring(headerIndex, item.to.endOffset - item.to.startOffset))
+					.Append(src.Substring(headerIndex, matchLen))
 					.Append(GetPostTag(item.subInfo.seqnum));
-				srcIndex = item.to.endOffset - s;
+				srcIndex = item.to.endOffset - adjustedStart;
 		    }
-		    fragment.Append(src.Substring(srcIndex));
+            fragment.Append(src.Substring(srcIndex, Math.Min(Math.Max(0, fragCharSize), src.Length - srcIndex)));
 		    return fragment.ToString();
 	    }
 

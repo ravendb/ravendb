@@ -38,9 +38,12 @@
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getSynchronizationConfigCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\importFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\renameFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFoldersCommand.ts" />
@@ -66,6 +69,7 @@
     <TypeScriptCompile Include="App\commands\getIndexesDefinitionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexMergeSuggestionsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getPluginsInfoCommand.ts" />
     <TypeScriptCompile Include="App\commands\getServerConfigsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getOperationStatusCommand.ts" />
@@ -141,6 +145,7 @@
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
     <TypeScriptCompile Include="App\models\license.ts" />
     <TypeScriptCompile Include="App\models\databaseCollectionStyleMap.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
@@ -196,6 +201,11 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\exportFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\fileRenameDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\importFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\tasks.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestions.ts" />
@@ -354,7 +364,6 @@
     <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemRevisionsCommand.ts" />
-    <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\createDefaultSettingsCommand.ts" />
@@ -407,7 +416,7 @@
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\common\helpBindingHandler.ts" />
-    <Content Include="App\models\adminLogsConfigEntry.ts" />
+    <TypeScriptCompile Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
     <TypeScriptCompile Include="App\models\indexMergeSuggestion.ts" />
@@ -443,7 +452,7 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugExplainReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\cancelSideBySizeConfirm.ts" />
-    <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
+    <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\commands\monitorCompactCommand.ts" />
@@ -460,8 +469,13 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\filesystem\exportFilesystem.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
+    <Content Include="App\views\filesystem\fileRenameDialog.html" />
+    <Content Include="App\views\filesystem\importFilesystem.html" />
     <Content Include="App\views\filesystem\settings.html" />
+    <Content Include="App\views\filesystem\tasks.html" />
+    <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
     <Content Include="App\views\filesystem\versioning.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />

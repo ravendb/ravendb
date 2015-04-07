@@ -63,9 +63,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			tableStorage.Tasks.AddStruct(writeBatch.Value, idAsString, taskStructure, 0);
 
+            var indexKey = CreateKey(index);
+
 			tasksByType.MultiAdd(writeBatch.Value, CreateKey(type), idAsString);
-			tasksByIndex.MultiAdd(writeBatch.Value, CreateKey(index), idAsString);
-			tasksByIndexAndType.MultiAdd(writeBatch.Value, CreateKey(index, type), idAsString);
+            tasksByIndex.MultiAdd(writeBatch.Value, indexKey, idAsString);
+			tasksByIndexAndType.MultiAdd(writeBatch.Value, AppendToKey(indexKey, type), idAsString);
 		}
 
 		public bool HasTasks
@@ -174,9 +176,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
 			tableStorage.Tasks.Delete(writeBatch.Value, taskId);
+
+            var indexKey = CreateKey(index);
+
 			tasksByType.MultiDelete(writeBatch.Value, CreateKey(type), taskId);
-			tasksByIndex.MultiDelete(writeBatch.Value, CreateKey(index), taskId);
-			tasksByIndexAndType.MultiDelete(writeBatch.Value, CreateKey(index, type), taskId);
+            tasksByIndex.MultiDelete(writeBatch.Value, indexKey, taskId);
+			tasksByIndexAndType.MultiDelete(writeBatch.Value, AppendToKey(indexKey, type), taskId);
 		}
 
 

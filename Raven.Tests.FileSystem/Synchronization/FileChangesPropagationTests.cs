@@ -28,11 +28,11 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
-			Assert.Null(server1.Synchronization.SynchronizeAsync().Result[0].Exception);
+			Assert.Null(server1.Synchronization.StartAsync().Result[0].Exception);
 
 			SyncTestUtils.TurnOnSynchronization(server2, server3);
 
-			Assert.Null(server2.Synchronization.SynchronizeAsync().Result[0].Exception);
+			Assert.Null(server2.Synchronization.StartAsync().Result[0].Exception);
 
 			SyncTestUtils.TurnOffSynchronization(server1);
 
@@ -40,11 +40,11 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
-			var secondServer1Synchronization = await server1.Synchronization.SynchronizeAsync();
+			var secondServer1Synchronization = await server1.Synchronization.StartAsync();
 			Assert.Null(secondServer1Synchronization[0].Exception);
 			Assert.Equal(SynchronizationType.Rename, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
 
-			var secondServer2Synchronization = await server2.Synchronization.SynchronizeAsync();
+			var secondServer2Synchronization = await server2.Synchronization.StartAsync();
 			Assert.Null(secondServer2Synchronization[0].Exception);
 			Assert.Equal(SynchronizationType.Rename, secondServer2Synchronization[0].Reports.ToArray()[0].Type);
 
@@ -94,12 +94,12 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
-			Assert.Null(server1.Synchronization.SynchronizeAsync().Result[0].Exception);
+			Assert.Null(server1.Synchronization.StartAsync().Result[0].Exception);
 			Assert.Equal(1, server2.GetStatisticsAsync().Result.FileCount);
 
 			SyncTestUtils.TurnOnSynchronization(server2, server3);
 
-			Assert.Null(server2.Synchronization.SynchronizeAsync().Result[0].Exception);
+			Assert.Null(server2.Synchronization.StartAsync().Result[0].Exception);
 			Assert.Equal(1, server3.GetStatisticsAsync().Result.FileCount);
 
 			SyncTestUtils.TurnOffSynchronization(server1);
@@ -124,7 +124,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
 
-            var secondServer1Synchronization = await server1.Synchronization.SynchronizeAsync();
+            var secondServer1Synchronization = await server1.Synchronization.StartAsync();
             Assert.Null(secondServer1Synchronization[0].Exception);
             Assert.Equal(SynchronizationType.ContentUpdate, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
 
@@ -172,13 +172,13 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
-            var syncResult = await server1.Synchronization.SynchronizeAsync();
+            var syncResult = await server1.Synchronization.StartAsync();
             Assert.True(syncResult.Count() != 0);
             Assert.Null(syncResult.First().Exception);
 
 			SyncTestUtils.TurnOnSynchronization(server2, server3);
 
-            syncResult = await server2.Synchronization.SynchronizeAsync();
+            syncResult = await server2.Synchronization.StartAsync();
             Assert.True(syncResult.Count() != 0);
             Assert.Null(syncResult.First().Exception);
 
@@ -188,12 +188,12 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
-			var secondServer1Synchronization = await server1.Synchronization.SynchronizeAsync();
+			var secondServer1Synchronization = await server1.Synchronization.StartAsync();
             Assert.True(secondServer1Synchronization.Count() == 1);
             Assert.Null(secondServer1Synchronization.First().Exception);
             Assert.Equal(SynchronizationType.Delete, secondServer1Synchronization.First().Reports.First().Type);
 
-            var secondServer2Synchronization = await server2.Synchronization.SynchronizeAsync();
+            var secondServer2Synchronization = await server2.Synchronization.StartAsync();
             Assert.True(secondServer2Synchronization.Count() == 1);
 			Assert.Null(secondServer2Synchronization[0].Exception);
             Assert.Equal(SynchronizationType.Delete, secondServer2Synchronization.First().Reports.First().Type);
@@ -223,11 +223,11 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
-			Assert.Null(server1.Synchronization.SynchronizeAsync().Result[0].Exception);
+			Assert.Null(server1.Synchronization.StartAsync().Result[0].Exception);
 
 			SyncTestUtils.TurnOnSynchronization(server2, server3);
 
-			Assert.Null(server2.Synchronization.SynchronizeAsync().Result[0].Exception);
+			Assert.Null(server2.Synchronization.StartAsync().Result[0].Exception);
 
 			SyncTestUtils.TurnOffSynchronization(server1);
 
@@ -235,11 +235,11 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
-			var secondServer1Synchronization = await server1.Synchronization.SynchronizeAsync();
+			var secondServer1Synchronization = await server1.Synchronization.StartAsync();
 			Assert.Null(secondServer1Synchronization[0].Exception);
 			Assert.Equal(SynchronizationType.MetadataUpdate, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
 
-			var secondServer2Synchronization = await server2.Synchronization.SynchronizeAsync();
+			var secondServer2Synchronization = await server2.Synchronization.StartAsync();
 			Assert.Null(secondServer2Synchronization[0].Exception);
 			Assert.Equal(SynchronizationType.MetadataUpdate, secondServer2Synchronization[0].Reports.ToArray()[0].Type);
 

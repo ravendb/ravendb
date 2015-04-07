@@ -361,6 +361,18 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       return (JObject)token;
     }
 
+    public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+    {
+        writer.WriteStartObject();
+
+        for (int i = 0; i < _properties.Count; i++)
+        {
+            _properties[i].WriteTo(writer, converters);
+        }
+
+        writer.WriteEndObject();
+    }
+
     /// <summary>
     /// Writes this token to a <see cref="JsonWriter"/>.
     /// </summary>
@@ -368,14 +380,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
     public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
     {
-      writer.WriteStartObject();
-
-      for (int i = 0; i < _properties.Count; i++)
-      {
-        _properties[i].WriteTo(writer, converters);
-      }
-
-      writer.WriteEndObject();
+        WriteTo(writer, new JsonConverterCollection(converters));
     }
 
     /// <summary>

@@ -9,13 +9,12 @@ using System.IO;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
-using Raven.Abstractions.Util;
 using Raven.Abstractions.Data;
-using Raven.Database.Storage;
-using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
+using Raven.Json.Linq;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IListsStorageActions
 	{

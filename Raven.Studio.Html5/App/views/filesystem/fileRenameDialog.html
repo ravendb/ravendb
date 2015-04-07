@@ -1,0 +1,25 @@
+﻿<div class="messageBox" tabindex="-1" style="width: 715px;">
+    <div class=" modal-header">
+        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+            <i class="fa fa-times"></i>
+        </button>
+        <h4 class="modal-title">Rename file: <span data-bind="oldFilename"></span></h4>
+    </div>
+    <div class="modal-body">
+        <div class="row">
+            <form class="form-horizontal" role="form">
+                <div class="form-group">
+                    <div class="col-sm-4 control-label">New file name:</div>
+                    <div class="col-sm-8">
+                        <input required type="text" class="form-control" data-bind="value: newName" />
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+        <button class="btn btn-primary" data-bind="click: rename">Ok</button>
+    </div>
+</div>
+

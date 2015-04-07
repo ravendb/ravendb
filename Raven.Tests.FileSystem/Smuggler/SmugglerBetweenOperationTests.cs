@@ -10,6 +10,7 @@ using Raven.Tests.Common.Util;
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -166,7 +167,8 @@ namespace Raven.Tests.FileSystem.Smuggler
                 {
                     VetoTransfer = (totalRead, buffer) =>
                     {
-                        if (alreadyReset == false && totalRead > 28000)
+	                    var s = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
+                        if (alreadyReset == false && totalRead > 28000 && !s.Contains("200 OK"))
                         {
                             alreadyReset = true;
                             return true;
@@ -205,6 +207,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 					try
 					{
 						await smugglerApi.Between(options);
+						Assert.False(true, "Expected error to happen during this Between operation, but it didn't happen :-(");
 					}
 					catch (SmugglerExportException inner)
 					{

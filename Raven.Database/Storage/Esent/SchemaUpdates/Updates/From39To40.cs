@@ -7,6 +7,7 @@ using System;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Config;
 using Raven.Database.Impl;
+using Raven.Database.Storage.Esent.StorageActions;
 using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent.SchemaUpdates.Updates

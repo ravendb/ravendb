@@ -159,7 +159,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-            await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLockTimeout, TimeSpan.FromSeconds(0));
+			await destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig
+			{
+				SynchronizationLockTimeoutMiliseconds = 0
+			});
 
 			Assert.DoesNotThrow(() => SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin"));
 		}
@@ -186,7 +189,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 		{
 			destinationClient.Configuration.SetKeyAsync(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.MinValue)).Wait();
 
-            destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLockTimeout, TimeSpan.FromSeconds(0) ).Wait();
+			destinationClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig
+			{
+				SynchronizationLockTimeoutMiliseconds = 0
+			}).Wait();
 
 			Assert.DoesNotThrow(() => action());
 		}

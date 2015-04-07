@@ -19,6 +19,7 @@ class commandBase {
     static splashTimerHandle = 0;
     static alertTimeout = 0;
     static loadingCounter = 0;
+    static biggestTimeToAlert = 0;
 
     constructor() {
     }
@@ -41,10 +42,14 @@ class commandBase {
         }
 
         return "?" + propNameAndValues.join("&");
-    }
+	}
 
-    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, timeToAlert:number = 9000): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "GET", resource,null, timeToAlert);
+	getTimeToAlert(longWait: boolean) {
+		return longWait ? 60000 : 9000;
+	}
+
+    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, timeToAlert: number = 9000): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "GET", resource, null, timeToAlert);
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
@@ -163,8 +168,12 @@ class commandBase {
                 defaultOptions[prop] = options[prop];
             }
         }
-        if (commandBase.loadingCounter == 0 && timeToAlert > 0) {
-            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000, timeToAlert);
+
+        var isBiggestTimeToAlertUpdated = timeToAlert > commandBase.biggestTimeToAlert;
+        if ((commandBase.loadingCounter == 0 && timeToAlert > 0) || isBiggestTimeToAlertUpdated) {
+            commandBase.biggestTimeToAlert = timeToAlert;
+            clearTimeout(commandBase.splashTimerHandle);
+            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000, timeToAlert, isBiggestTimeToAlertUpdated); 
         }
 
         if (oauthContext.apiKey()) {
@@ -181,15 +190,15 @@ class commandBase {
             defaultOptions.headers["Authorization"] = oauthContext.authHeader();
         }
 
+        commandBase.loadingCounter++;
         var ajaxTask = $.Deferred();
 
-        commandBase.loadingCounter++;
         $.ajax(defaultOptions).always(() => {
             --commandBase.loadingCounter;
             if (commandBase.loadingCounter == 0) {
+                clearTimeout(commandBase.splashTimerHandle);
                 clearTimeout(commandBase.alertTimeout);
                 commandBase.alertTimeout = 0;
-                clearTimeout(commandBase.splashTimerHandle);
                 commandBase.hideSpin();
             }
         }).done((results, status, xhr) => {
@@ -314,9 +323,11 @@ class commandBase {
         return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
 	}
 
-    private static showSpin(timeToAlert: number) {
+    private static showSpin(timeToAlert: number, isBiggestTimeToAlertUpdated: boolean) {
         ko.postbox.publish("LoadProgress", alertType.warning);
-        if (commandBase.alertTimeout == 0) {
+        if (commandBase.alertTimeout == 0 || isBiggestTimeToAlertUpdated) {
+            clearTimeout(commandBase.alertTimeout);
+            commandBase.biggestTimeToAlert = timeToAlert;
             commandBase.alertTimeout = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
         }
     }
