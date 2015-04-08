@@ -405,7 +405,18 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage DocRefs(string id)
 		{
-			var op = GetQueryStringValue("op") == "from" ? "from" : "to";
+		    var op = GetQueryStringValue("op");
+		    if (op == "dump")
+		    {
+		        int numberOfSample;
+		        if (!int.TryParse(GetQueryStringValue("SampleCount"), out numberOfSample)) numberOfSample = 10;
+		        Database.TransactionalStorage.Batch(accessor =>
+		        {
+		            accessor.Indexing.DumpAllReferancesToCSV(GetQueryStringValue("DumpPath"), numberOfSample);
+		        });
+		        return GetEmptyMessage();
+		    }
+			op = op == "from" ? "from" : "to";
 
 			var totalCountReferencing = -1;
 			List<string> results = null;
@@ -425,7 +436,7 @@ namespace Raven.Database.Server.Controllers
 				Results = results
 			});
 		}
-
+        //DumpAllReferancesToCSV
 		[HttpGet]
 		[RavenRoute("debug/d0crefs-t0ps")]
 		[RavenRoute("databases/{databaseName}/debug/d0crefs-t0ps")]

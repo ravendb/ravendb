@@ -429,7 +429,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		private StructureReader<T> LoadStruct<T>(TableOfStructures<T> table, string name, out ushort version) where T : struct
+	    public void DumpAllReferancesToCSV(string dumpFilePath, int numberOfSampleDocs)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    private StructureReader<T> LoadStruct<T>(TableOfStructures<T> table, string name, out ushort version) where T : struct
 		{
 			var reader = LoadStruct(table, CreateKey(name), writeBatch.Value, out version);
 

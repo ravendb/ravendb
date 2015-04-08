@@ -37,5 +37,6 @@ namespace Raven.Database.Storage
 		int GetCountOfDocumentsReferencing(string key);
 		Dictionary<string, int> GetDocumentReferencesStats();
 		IEnumerable<string> GetDocumentsReferencesFrom(string key);
+	    void DumpAllReferancesToCSV(string dumpFilePath, int numberOfSampleDocs);
 	}
 }
