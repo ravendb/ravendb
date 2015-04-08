@@ -19,11 +19,13 @@ namespace Raven.Database.Json
 	{
 		private readonly bool debugMode;
 
+		internal bool DebugMode { get {  return debugMode; } }
+
 		protected DocumentDatabase Database { get; private set; }
 
 		public JsonDocument CustomFunctions { get; set; }
 
-		public RavenJObject DebugActions { get; private set; }		
+		public RavenJObject DebugActions { get; private set; }
 
 		public int AdditionalStepsPerSize { get; set; }
 		public int MaxSteps { get; set; }
