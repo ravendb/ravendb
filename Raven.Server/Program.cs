@@ -37,6 +37,7 @@ using Raven.Database.Util;
 using Raven.Client.Connection;
 
 using Raven.Client.Extensions;
+using Raven.Database.FileSystem.Util;
 
 namespace Raven.Server
 {
@@ -873,7 +874,7 @@ Configuration databaseOptions:
 			    ConsoleWriteWithColor(new ConsoleText {Message = "  Working directory    : "},
 			        new ConsoleText
 			        {
-			            Message = ravenConfiguration.RunInMemory ? " RAM " : ravenConfiguration.WorkingDirectory,
+			            Message = ravenConfiguration.RunInMemory ? " RAM " : ravenConfiguration.WorkingDirectory.TrimEnd('\\'),
                         ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
                         BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
@@ -882,7 +883,7 @@ Configuration databaseOptions:
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Data directory       : " },
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.RunInMemory ? " RAM " : ravenConfiguration.DataDirectory,
+                        Message = ravenConfiguration.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.WorkingDirectory, ravenConfiguration.DataDirectory),
                         ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
                         BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
@@ -891,7 +892,7 @@ Configuration databaseOptions:
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Index cache directory: " },
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.RunInMemory ? " RAM " : ravenConfiguration.CompiledIndexCacheDirectory,
+                        Message = ravenConfiguration.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.WorkingDirectory, ravenConfiguration.CompiledIndexCacheDirectory),
                         ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
                         BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
@@ -900,7 +901,7 @@ Configuration databaseOptions:
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Plugins directory    : " },
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.RunInMemory ? " RAM " : ravenConfiguration.PluginsDirectory,
+                        Message = ravenConfiguration.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.WorkingDirectory, ravenConfiguration.PluginsDirectory),
                         ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
                         BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true

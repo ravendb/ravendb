@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Raven.Database.Extensions;
 
 namespace Raven.Database.FileSystem.Util
@@ -9,6 +10,13 @@ namespace Raven.Database.FileSystem.Util
 		{
 			return filePath.TrimEnd('\\') + "\\";
 		}
+
+	    public static string StripWorkingDirectory(string workDir, string dir)
+	    {
+	        if (dir.StartsWith(workDir, StringComparison.OrdinalIgnoreCase))
+	            return "\t\\" + dir.Substring(workDir.Length);
+	        return dir;
+	    }
 
 		public static string ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(string workingDirectory, string path)
 		{
