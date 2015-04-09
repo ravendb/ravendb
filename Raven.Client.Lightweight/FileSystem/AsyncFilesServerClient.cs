@@ -283,6 +283,27 @@ namespace Raven.Client.FileSystem
             });
         }
 
+		public Task CopyAsync(string sourceName, string targetName, Etag etag = null)
+		{
+			return ExecuteWithReplication(HttpMethods.Post, async operation =>
+			{
+				var requestUriString = operation.Url + "/files/copy/" + Uri.EscapeDataString(sourceName) + "?targetFilename=" + Uri.EscapeDataString(targetName);
+
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+				{
+					AddEtagHeader(request, etag);
+					try
+					{
+						await request.ExecuteRequestAsync().ConfigureAwait(false);
+					}
+					catch (Exception e)
+					{
+						throw e.SimplifyException();
+					}
+				}
+			});
+		}
+
         public Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication(HttpMethod.Get, async operation =>
@@ -1680,6 +1701,26 @@ namespace Raven.Client.FileSystem
 	                }
                 });
             }
+
+			public Task RetryCopyingAsync()
+			{
+				return client.ExecuteWithReplication(HttpMethod.Post, async operation =>
+				{
+					var requestUriString = String.Format("{0}/storage/retrycopying", operation.Url);
+
+					using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+					{
+						try
+						{
+							await request.ExecuteRequestAsync().ConfigureAwait(false);
+						}
+						catch (Exception e)
+						{
+							throw e.SimplifyException();
+						}
+					}
+				});
+			}
 
             public ProfilingInformation ProfilingInformation { get; private set; }
 

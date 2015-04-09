@@ -275,5 +275,38 @@ namespace Raven.Tests.FileSystem
 
 			Assert.NotNull(renamedMetadata);
 		}
+
+		[Fact]
+		public async Task Should_resume_file_copying_from_client()
+		{
+			var client = NewAsyncClient();
+			var rfs = GetFileSystem();
+
+			string fileName = FileHeader.Canonize("file.bin");
+			string newName = FileHeader.Canonize("file2.bin");
+
+			await client.UploadAsync(fileName, new RandomStream(1));
+
+			// create config to say to the server that rename operation performed last time were not finished
+			var copyOpConfig = RavenFileNameHelper.CopyOperationConfigNameForFile(fileName);
+			var copyOperation = new CopyFileOperation
+			{
+				SourceFilename = fileName,
+				TargetFilename = newName,
+				MetadataAfterOperation = new RavenJObject()
+			};
+
+			rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(copyOpConfig, copyOperation));
+
+			await client.Storage.RetryCopyingAsync();
+
+			IEnumerable<string> configNames = await client.Configuration.GetKeyNamesAsync();
+
+			Assert.DoesNotContain(copyOpConfig, configNames);
+
+			var renamedMetadata = await client.GetMetadataForAsync(newName);
+
+			Assert.NotNull(renamedMetadata);
+		}
 	}
 }
