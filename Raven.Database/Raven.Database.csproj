@@ -235,6 +235,7 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\Triggers\RenameConflictDocumentIdIndexTrigger.cs" />
     <Compile Include="Bundles\Versioning\Data\FileVersioningConfiguration.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\EnumSetting.cs" />
@@ -743,7 +744,6 @@
     <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\PreventConflictDocumentsPutTrigger.cs" />
-    <Compile Include="Bundles\Replication\Triggers\PreventIndexingConflictDocumentsReadTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\VirtualAttachmentDeleteTrigger.cs" />
