@@ -501,5 +501,72 @@ namespace Raven.Tests.FileSystem.Storage
                 });
             }
         }
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void CopyFile1(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.CopyFile("file1", "file2")));
+
+				storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+
+				storage.Batch(accessor => accessor.CopyFile("file1", "file2"));
+
+				storage.Batch(accessor =>
+				{
+					var file = accessor.GetFile("file2", 0, 0);
+
+					Assert.NotNull(file);
+					Assert.Equal("file2", file.Name);
+					Assert.Equal(null, file.TotalSize);
+					Assert.Equal(0, file.UploadedSize);
+					Assert.Equal(0, file.Start);
+					Assert.Equal(0, file.Pages.Count);
+
+					var fileMetadata = file.Metadata;
+
+					Assert.NotNull(fileMetadata);
+					Assert.Equal(1, fileMetadata.Count);
+					Assert.Equal("00000000-0000-0000-0000-000000000001", fileMetadata.Value<string>(Constants.MetadataEtagField));
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void CopyFile2(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+
+				storage.Batch(accessor => accessor.AssociatePage("file1", 1, 0, 10));
+
+				storage.Batch(accessor => accessor.CopyFile("file1", "file2"));
+
+				storage.Batch(accessor =>
+				{
+					var file = accessor.GetFile("file2", 0, 10);
+
+					Assert.NotNull(file);
+					Assert.Equal("file2", file.Name);
+					Assert.Equal(-10, file.TotalSize);
+					Assert.Equal(10, file.UploadedSize);
+					Assert.Equal(0, file.Start);
+
+					Assert.Equal(1, file.Pages.Count);
+					Assert.Equal(1, file.Pages[0].Id);
+					Assert.Equal(10, file.Pages[0].Size);
+
+					var fileMetadata = file.Metadata;
+
+					Assert.NotNull(fileMetadata);
+					Assert.Equal(1, fileMetadata.Count);
+					Assert.Equal("00000000-0000-0000-0000-000000000001", fileMetadata.Value<string>(Constants.MetadataEtagField));
+				});
+			}
+		}
     }
 }

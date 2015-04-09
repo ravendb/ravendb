@@ -654,6 +654,51 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		    }
 		}
 
+		public void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false)
+		{
+			try
+			{
+				Api.JetSetCurrentIndex(session, Files, "by_name");
+				Api.MakeKey(session, Files, sourceFilename, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
+					throw new FileNotFoundException("Could not find file: " + sourceFilename);
+
+				using (var update = new Update(session, Files, JET_prep.Insert))
+					update.Save();
+				}
+
+				Api.JetSetCurrentIndex(session, Usage, "by_name_and_pos");
+				Api.MakeKey(session, Usage, sourceFilename, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				if (Api.TrySeek(session, Usage, SeekGrbit.SeekGE))
+				{
+					var count = 0;
+					do
+					{
+						var name = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
+						if (name != sourceFilename)
+							break;
+
+						using (var update = new Update(session, Usage, JET_prep.Insert))
+							update.Save();
+						}
+
+						if (commitPeriodically && count++ > 1000)
+						{
+							PulseTransaction();
+							count = 0;
+						}
+					} while (Api.TryMoveNext(session, Usage));
+				}
+			}
+			catch (Exception e)
+			{
+				if (e is EsentKeyDuplicateException)
+					throw new FileExistsException(string.Format("Cannot copy '{0}' to '{1}'. File '{1}' already exists.", sourceFilename, targetFilename), e);
+
+				throw;
+			}
+		}
+
         public RavenJObject GetConfig(string name)
 		{
 			Api.JetSetCurrentIndex(session, Config, "by_name");

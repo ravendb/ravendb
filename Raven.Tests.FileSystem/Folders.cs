@@ -140,6 +140,24 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
+		public async Task AfterCopy_WeHaveNewFolder()
+		{
+			var client = NewAsyncClient();
+			var ms = new MemoryStream();
+			await client.UploadAsync("test/abc.txt", ms);
+
+			Assert.Contains("/test", await client.GetDirectoriesAsync());
+
+			await client.CopyAsync("test/abc.txt", "test2/abc.txt");
+
+			await client.DownloadAsync("test2/abc.txt");// would throw if missing
+
+			Assert.Contains("/test", await client.GetDirectoriesAsync());
+
+			Assert.Contains("/test2", await client.GetDirectoriesAsync());
+		}
+
+		[Fact]
 		public async Task CanGetListOfFilesInFolder()
 		{
 			var client = NewAsyncClient();
