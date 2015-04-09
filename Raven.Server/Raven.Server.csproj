@@ -164,6 +164,7 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiDatabase.cs">
       <Link>Smuggler\Imports\MultiDatabase.cs</Link>
     </Compile>
+    <Compile Include="ConsoleText.cs" />
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs">
