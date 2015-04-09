@@ -21,7 +21,6 @@ using System.Xml;
 using Microsoft.Win32;
 using NDesk.Options;
 using NLog.Config;
-using NLog.Targets;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -38,7 +37,6 @@ using Raven.Database.Util;
 using Raven.Client.Connection;
 
 using Raven.Client.Extensions;
-using Raven.Database.Linq.Ast;
 
 namespace Raven.Server
 {
