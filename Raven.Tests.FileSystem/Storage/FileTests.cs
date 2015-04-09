@@ -529,7 +529,7 @@ namespace Raven.Tests.FileSystem.Storage
 
 					Assert.NotNull(fileMetadata);
 					Assert.Equal(1, fileMetadata.Count);
-					Assert.Equal("00000000-0000-0000-0000-000000000001", fileMetadata.Value<string>(Constants.MetadataEtagField));
+					Assert.Equal("00000000-0000-0000-0000-000000000002", fileMetadata.Value<string>(Constants.MetadataEtagField));
 				});
 			}
 		}
@@ -564,7 +564,50 @@ namespace Raven.Tests.FileSystem.Storage
 
 					Assert.NotNull(fileMetadata);
 					Assert.Equal(1, fileMetadata.Count);
-					Assert.Equal("00000000-0000-0000-0000-000000000001", fileMetadata.Value<string>(Constants.MetadataEtagField));
+					Assert.Equal("00000000-0000-0000-0000-000000000002", fileMetadata.Value<string>(Constants.MetadataEtagField));
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void CopyFile3(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+
+				storage.Batch(accessor =>
+				{
+					var id = accessor.InsertPage(new byte[10], 10);
+					accessor.AssociatePage("file1", id, 0, 10);
+				});
+
+				storage.Batch(accessor => accessor.CopyFile("file1", "file2"));
+
+				storage.Batch(accessor => Assert.NotNull(accessor.GetFile("file2", 0, int.MaxValue)));
+
+				storage.Batch(accessor => accessor.Delete("file1"));
+
+				storage.Batch(accessor =>
+				{
+					var file = accessor.GetFile("file2", 0, 2);
+
+					Assert.NotNull(file);
+					Assert.Equal("file2", file.Name);
+					Assert.Equal(-10, file.TotalSize);
+					Assert.Equal(10, file.UploadedSize);
+					Assert.Equal(0, file.Start);
+
+					Assert.Equal(1, file.Pages.Count);
+					Assert.Equal(1, file.Pages[0].Id);
+					Assert.Equal(10, file.Pages[0].Size);
+
+					var fileMetadata = file.Metadata;
+
+					Assert.NotNull(fileMetadata);
+					Assert.Equal(1, fileMetadata.Count);
+					Assert.Equal("00000000-0000-0000-0000-000000000002", fileMetadata.Value<string>(Constants.MetadataEtagField));
 				});
 			}
 		}

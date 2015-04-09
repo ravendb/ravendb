@@ -658,36 +658,43 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		{
 			try
 			{
-				Api.JetSetCurrentIndex(session, Files, "by_name");
-				Api.MakeKey(session, Files, sourceFilename, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
-					throw new FileNotFoundException("Could not find file: " + sourceFilename);
+				var sourceFileInfo = GetFile(sourceFilename, 0, int.MaxValue);
 
 				using (var update = new Update(session, Files, JET_prep.Insert))
+				{
+					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], targetFilename, Encoding.Unicode);
+					if (sourceFileInfo.TotalSize != null)
+						Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["total_size"], BitConverter.GetBytes(sourceFileInfo.TotalSize.Value));
+
+					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"], sourceFileInfo.UploadedSize);
+
+					sourceFileInfo.Metadata.Remove(Constants.MetadataEtagField);
+					var newEtag = uuidGenerator.CreateSequentialUuid();
+
+					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newEtag.TransformToValueForEsentSorting());
+					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], ToQueryString(sourceFileInfo.Metadata), Encoding.Unicode);
+
 					update.Save();
 				}
-
-				Api.JetSetCurrentIndex(session, Usage, "by_name_and_pos");
-				Api.MakeKey(session, Usage, sourceFilename, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				if (Api.TrySeek(session, Usage, SeekGrbit.SeekGE))
+				
+				var count = 0;
+				foreach (var pageInfo in sourceFileInfo.Pages)
 				{
-					var count = 0;
-					do
+					using (var update = new Update(session, Usage, JET_prep.Insert))
 					{
-						var name = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
-						if (name != sourceFilename)
-							break;
+						Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["name"], targetFilename, Encoding.Unicode);
+						Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["file_pos"], pageInfo.PositionInFile);
+						Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["page_id"], pageInfo.Id);
+						Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["page_size"], pageInfo.Size);
 
-						using (var update = new Update(session, Usage, JET_prep.Insert))
-							update.Save();
-						}
+						update.Save();
+					}
 
-						if (commitPeriodically && count++ > 1000)
-						{
-							PulseTransaction();
-							count = 0;
-						}
-					} while (Api.TryMoveNext(session, Usage));
+					if (commitPeriodically && count++ > 1000)
+					{
+						PulseTransaction();
+						count = 0;
+					}
 				}
 			}
 			catch (Exception e)

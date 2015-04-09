@@ -555,6 +555,10 @@ namespace Raven.Database.FileSystem.Storage.Voron
 			if (file == null)
 				throw new FileNotFoundException("Could not find file: " + sourceFilename);
 
+			var newEtag = uuidGenerator.CreateSequentialUuid();
+			file["etag"] = newEtag.ToByteArray();
+			file.Value<RavenJObject>("metadata").Remove(RavenConstants.MetadataEtagField);
+
 			CopyUsage(sourceFilename, targetFilename, commitPeriodically);
 
 			file["name"] = targetFilename;
@@ -564,7 +568,6 @@ namespace Raven.Database.FileSystem.Storage.Voron
 			fileCount.Add(writeBatch.Value, targetKey, targetKey);
 
 			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
-
 			filesByEtag.Add(writeBatch.Value, CreateKey(Etag.Parse(file.Value<byte[]>("etag"))), targetKey);
 		}
 
@@ -588,14 +591,24 @@ namespace Raven.Database.FileSystem.Storage.Voron
 					var usageId = iterator.CurrentKey.ToString();
 					ushort version;
 					var usage = LoadJson(storage.Usage, usageId, writeBatch.Value, out version);
-
-					usage["name"] = targetFilename;
+					var newId = IdGenerator.GetNextIdForTable(storage.Usage);
 					var position = usage.Value<int>("file_pos");
 
-					storage.Usage.Add(writeBatch.Value, usageId, usage, version);
+					var newUsage = new RavenJObject
+                        {
+                            { "id", newId },
+                            { "name", targetFilename }, 
+                            { "file_pos", position }, 
+                            { "page_id", usage.Value<int>("page_id") }, 
+                            { "page_size", usage.Value<int>("page_size") }
+                        };
 
-					usageByFileName.MultiAdd(writeBatch.Value, newKey, usageId);
-					usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(targetFilename, position), usageId);
+					var newUsageId = CreateKey(newId);
+
+					storage.Usage.Add(writeBatch.Value, newUsageId, newUsage);
+
+					usageByFileName.MultiAdd(writeBatch.Value, newKey, newUsageId);
+					usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(targetFilename, position), newUsageId);
 
 					if (commitPeriodically && count++ > 1000)
 					{
