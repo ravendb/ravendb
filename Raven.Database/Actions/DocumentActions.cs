@@ -260,6 +260,7 @@ namespace Raven.Database.Actions
                     var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
 
 			        using (Database.DocumentLock.Lock())
+					using (Database.PreventIdleUnloadScope())
 			        {
 				        TransactionalStorage.Batch(accessor =>
 				        {

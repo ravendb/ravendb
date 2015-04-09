@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Documents;
@@ -42,6 +43,8 @@ using Raven.Database.Prefetching;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 
@@ -456,6 +459,53 @@ namespace Raven.Database
 								Extensions = extensions,
 								CustomBundles = customBundles
 							};
+			}
+		}
+
+		private int _preventIdleUnloadScopeCount;
+		private Timer _preventIdleUnloadTimer;
+
+		public IDisposable PreventIdleUnloadScope()
+		{
+			AddPreventUnloadScopeRef();
+			return new DisposableAction(ReleasePreventUnloadScope);
+		}
+
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		private void AddPreventUnloadScopeRef()
+		{
+			if (_preventIdleUnloadScopeCount == 0)
+			{
+				int val;
+				if (int.TryParse(Configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
+					val = 900;
+				var maxIdleTimeForTenantDatabaseInSec = val;
+
+				if (int.TryParse(Configuration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
+					val = 60;
+				var frequencyToCheckForIdleDatabasesInSec = val;
+
+
+				var updateFoundWorkFrequency = Math.Min(maxIdleTimeForTenantDatabaseInSec/2,
+														frequencyToCheckForIdleDatabasesInSec/2);
+
+				if (updateFoundWorkFrequency <= 0)
+					updateFoundWorkFrequency = 1; //precaution
+
+				Debug.Assert(_preventIdleUnloadTimer == null);
+				_preventIdleUnloadTimer = TimerManager.NewTimer(state => WorkContext.NotifyAboutWork(), TimeSpan.Zero, TimeSpan.FromSeconds(updateFoundWorkFrequency));
+			}
+			_preventIdleUnloadScopeCount++;
+		}
+
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		private void ReleasePreventUnloadScope()
+		{
+			_preventIdleUnloadScopeCount--;
+			if (_preventIdleUnloadScopeCount == 0)
+			{
+				TimerManager.ReleaseTimer(_preventIdleUnloadTimer);
+				_preventIdleUnloadTimer = null;
 			}
 		}
 

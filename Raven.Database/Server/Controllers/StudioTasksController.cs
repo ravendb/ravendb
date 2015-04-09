@@ -232,18 +232,12 @@ for(var customFunction in customFunctions) {{
 			{
 			    try
 			    {
-					var updateFrequency = Math.Min(DatabasesLandlord.FrequencyToCheckForIdleDatabasesInSec / 2,
-												   DatabasesLandlord.MaxIdleTimeForTenantDatabaseInSec / 2) ;
-				    using (new Timer(state => DatabasesLandlord.LastRecentlyUsed.AddOrUpdate(DatabaseName, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow), null, 0, updateFrequency))
-				    {
-					    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
-					    await dataDumper.ExportData(
-						    new SmugglerExportOptions<RavenConnectionStringOptions>
-						    {
-							    ToStream = outputStream
-						    }).ConfigureAwait(false);
-
-				    }
+				    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
+				    await dataDumper.ExportData(
+					    new SmugglerExportOptions<RavenConnectionStringOptions>
+					    {
+						    ToStream = outputStream
+					    }).ConfigureAwait(false);
 			    }
 			    finally
 			    {

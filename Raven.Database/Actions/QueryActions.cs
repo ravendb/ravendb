@@ -151,6 +151,11 @@ namespace Raven.Database.Actions
 
 			private readonly Dictionary<QueryTimings, double> executionTimes = new Dictionary<QueryTimings, double>();
 
+			public DocumentDatabase Database
+			{
+				get { return database; }
+			}
+
 			public DatabaseQueryOperation(DocumentDatabase database, string indexName, IndexQuery query, IStorageActionsAccessor actions, CancellationTokenSource cancellationTokenSource)
 			{
 				this.database = database;
