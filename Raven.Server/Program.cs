@@ -496,87 +496,6 @@ namespace Raven.Server
             });
         }
 
-        //private static void ConsoleWriteLineWithColor(ConsoleColor foregroundColor, 
-        //    ConsoleColor backgroundColor, 
-        //    string message, 
-        //    params object[] args)
-        //{
-        //    if (string.IsNullOrEmpty(message))
-        //    {
-        //        throw new ArgumentNullException("message");
-        //    }
-
-        //    var previousForegroundColor = Console.ForegroundColor;
-        //    var previousBackgroundColor = Console.BackgroundColor;
-
-        //    Console.ForegroundColor = foregroundColor;
-        //    Console.BackgroundColor = backgroundColor;
-
-        //    Console.WriteLine(message, args);
-            
-        //    Console.ForegroundColor = previousForegroundColor;
-        //    Console.BackgroundColor = previousBackgroundColor;
-        //}
-
-        //private static void ConsoleWriteWithTwoColors(string firstMessage,
-        //    string secondMessage,
-        //    ConsoleColor secondColor,
-        //    params object[] args)
-        //{
-        //    ConsoleWriteWithTwoColors(firstMessage, Console.ForegroundColor, secondMessage, secondColor, args);
-        //}
-
-        //private static void ConsoleWriteWithTwoColors(string firstMessage,
-        //    ConsoleColor firstColor,
-        //    string secondMessage,
-        //    ConsoleColor secondColor,
-        //    params object[] args)
-        //{
-        //    ConsoleWriteWithTwoColors(firstMessage, firstColor, secondMessage, secondColor, false, args);
-        //}
-
-        //private static void ConsoleWriteLineWithTwoColors(string firstMessage,
-        //    string secondMessage,
-        //    ConsoleColor secondColor,
-        //    params object[] args)
-        //{
-        //    ConsoleWriteLineWithTwoColors(firstMessage, Console.ForegroundColor, secondMessage, secondColor, args);
-        //}
-
-        //private static void ConsoleWriteLineWithTwoColors(string firstMessage,
-        //    ConsoleColor firstColor,
-        //    string secondMessage,
-        //    ConsoleColor secondColor,
-        //    params object[] args)
-        //{
-        //    ConsoleWriteWithTwoColors(firstMessage, firstColor, secondMessage, secondColor, true, args);
-        //}
-
-        //private static void ConsoleWriteWithTwoColors(string firstMessage,
-        //    ConsoleColor firstColor,
-        //    string secondMessage,
-        //    ConsoleColor secondColor,
-        //    bool isWriteLine,
-        //    params object[] args)
-        //{
-        //    var previousColor = Console.ForegroundColor;
-
-        //    Console.ForegroundColor = firstColor;
-        //    Console.Write(firstMessage);
-        //    Console.ForegroundColor = secondColor;
-
-        //    if (isWriteLine)
-        //    {
-        //        Console.WriteLine(secondMessage, args);
-        //    }
-        //    else
-        //    {
-        //        Console.Write(secondMessage, args);
-        //    }
-
-        //    Console.ForegroundColor = previousColor;
-        //}
-
 		private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, bool disableReplicationDestionations, Uri uri, bool waitForRestore, int? timeout)
 		{
 			using (var store = new DocumentStore
@@ -933,17 +852,6 @@ Configuration databaseOptions:
 					Console.WriteLine("Loading data from: {0}", path);
 					//new SmugglerApi(new SmugglerDatabaseOptions(), new RavenConnectionStringOptions {Url = ravenConfiguration.ServerUrl}).ImportData(new SmugglerDatabaseOptions {BackupPath = path});
 				}
-
-                //Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
-                //Console.WriteLine("Server started in {0:#,#;;0} ms", sp.ElapsedMilliseconds);
-                //ConsoleWriteLineWithColor(ConsoleColor.Green, "Working directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.WorkingDirectory);
-                //ConsoleWriteLineWithColor(ConsoleColor.Green, "Data directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.DataDirectory);
-                //ConsoleWriteLineWithColor(ConsoleColor.Green, "Index cache directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.CompiledIndexCacheDirectory);
-                //ConsoleWriteLineWithColor(ConsoleColor.Green, "Plugins directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.PluginsDirectory);
-                //Console.WriteLine("HostName: {0} Port: {1}, Storage: {2}", ravenConfiguration.HostName ?? "<any>",
-                //    ravenConfiguration.Port,
-                //    server.SystemDatabase.TransactionalStorage.FriendlyName);
-                //Console.WriteLine("Server Url: {0}", ravenConfiguration.ServerUrl);
 
                 const string asciiHeader = @"        ____                       ____  _{0}       |  _ \ __ ___   _____ _ __ |  _ \| |__{0}       | |_) / _` \ \ / / _ \ '_ \| | | | '_ \{0}       |  _ < (_| |\ V /  __/ | | | |_| | |_) |{0}       |_| \_\__,_| \_/ \___|_| |_|____/|_.__/{0}{0}";
                 ConsoleWriteLineWithColor(ConsoleColor.DarkGray, asciiHeader, Environment.NewLine);
