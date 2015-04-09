@@ -41,8 +41,8 @@ namespace Raven.Database.Indexing
 
 		private int changesSinceCommit;
 
-		private readonly Field forceCommitField = new Field("dummy", "dummy", Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
-		private readonly Term forceCommitTerm = new Term("dummy", "dummy");
+		private readonly Field forceCommitField = new Field("__dummy_force_index_write", "forced", Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
+        private readonly Term forceCommitTerm = new Term("__dummy_force_index_write", "forced");
 		private readonly Document forceCommitDoc;
 		private DateTime lastCommitDataStoreTime;
 
