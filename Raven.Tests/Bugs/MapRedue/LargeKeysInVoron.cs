@@ -1,4 +1,5 @@
-﻿using Raven.Client.Indexes;
+﻿using Raven.Abstractions.Indexing;
+using Raven.Client.Indexes;
 using Raven.Tests.Common;
 using System;
 using System.Collections.Generic;
@@ -15,34 +16,59 @@ namespace Raven.Tests.Bugs.MapRedue
         {
             public string Id { get; set; }
             public string Name { get; set; }
+            public string[] Aliases { get; set; }
+
+            public User()
+            {
+                this.Aliases = new string[] { };
+            }
         }
 
         public class LargeKeysInVoronFunction : AbstractIndexCreationTask<User, LargeKeysInVoronFunction.ReduceResult>
         {
             public class ReduceResult
             {
-                public string Id { get; set; }
                 public string Name { get; set; }
+                public int Count { get; set; }
+                public string[] Aliases { get; set; }
             }
 
             public LargeKeysInVoronFunction()
             {
                 Map = users => from user in users
-                               select new
-                               {
-                                   user.Id,
-                                   user.Name
-                               };
+                               let aliases = from alias in user.Aliases
+                                             select new
+                                             {
+                                                 user.Name,
+                                                 Alias = alias
+                                             }
+                               from alias in aliases
+                               group aliases by new
+                                {
+                                    Name = alias.Name,
+                                } into g
+                                select new
+                                {
+                                    Name = g.Key.Name,                                    
+                                    Count = g.Count(),
+                                    Aliases = g
+                                };
 
-                Reduce = results => from result in results
-                                    group result by result.Id
-                                        into g
-                                        let dummy = g.FirstOrDefault(x => x.Name != null)
-                                        select new
-                                        {
-                                            Id = g.Key,
-                                            Name = dummy.Name
-                                        };
+                Reduce = users => from user in users
+                                  group user by new
+                                    {
+                                        Name = user.Name,
+                                        Count = user.Count,
+                                    } into g
+                                  select new ReduceResult
+                                    {
+                                        // This is the bag used on the reduce.
+                                        Name = g.Key.Name,
+                                        Count = g.Key.Count,
+                                        Aliases = g.First().Aliases
+                                    };
+
+                StoreAllFields(FieldStorage.Yes);
             }
         }
 
@@ -55,14 +81,28 @@ namespace Raven.Tests.Bugs.MapRedue
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Id = new string('A', 10000), Name = "Ayende Rahien" });
-                    session.Store(new User { Id = new string('B', 10000), Name = "Daniel Lang" });
+                    session.Store(new User { Id = "name/ayende", Name = new string('A', 10000), Aliases = new[] { "alias1", "alias2" } });
+                    session.Store(new User { Id = "name/ayende2", Name = new string('A', 10000), Aliases = new[]{ "alias1", "alias3"} });
                     session.SaveChanges();
                 }
 
                 new LargeKeysInVoronFunction().Execute(store);
 
                 WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<LargeKeysInVoronFunction.ReduceResult, LargeKeysInVoronFunction>()
+                                       .ToList();
+
+                    Assert.Equal(1, query.Count());
+
+                    var result = query.First();
+                    Assert.Equal(3, result.Count);
+                }
+
+                foreach (var error in store.SystemDatabase.Statistics.Errors)
+                    Console.WriteLine(error.ToString());
 
                 Assert.Empty(store.SystemDatabase.Statistics.Errors);
             }
