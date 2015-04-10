@@ -248,38 +248,40 @@ namespace Raven.Database.Extensions
 							.ToArray());
 		}
 
+        private const string _Range = "_Range";
+        private const string _SortHint = "SortHint-";
+        private static CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
 		public static SortOptions? GetSortOption(this IndexDefinition self, string name, IndexQuery query)
 		{
-			SortOptions value;
+            SortOptions value;
 
-			if (name.EndsWith("_Range"))
+            if (InvariantCompare.IsSuffix(name, _Range, CompareOptions.None))
 			{
-				string nameWithoutRange = name.Substring(0, name.Length - "_Range".Length);
+                string nameWithoutRange = name.Substring(0, name.Length - _Range.Length);
 				if (self.SortOptions.TryGetValue(nameWithoutRange, out value))
 					return value;
 
 				if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 					return value;
 
-				if (query != null && query.SortHints != null && query.SortHints.ContainsKey("SortHint-" + nameWithoutRange))
-					return query.SortHints["SortHint-" + nameWithoutRange];
+                if (query != null && query.SortHints != null && query.SortHints.TryGetValue(_SortHint + nameWithoutRange, out value))
+                    return value;
 			}
 
 			if (self.SortOptions.TryGetValue(name, out value))
-			{
 				return value;
-			}
+
 			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 				return value;
 
 			if (query == null || query.SortHints == null)
 				return value;
 
-			if (query.SortHints.ContainsKey("SortHint-" + name) == false)
-				return value;
+            if (!query.SortHints.TryGetValue(_SortHint + name, out value))
+                return SortOptions.None;
 
-			return query.SortHints["SortHint-" + name];
+            return value;
 		}
 	}
 }
