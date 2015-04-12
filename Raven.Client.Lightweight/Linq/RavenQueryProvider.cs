@@ -370,11 +370,15 @@ namespace Raven.Client.Linq
         public IDocumentQuery<TResult> ToDocumentQuery<TResult>(Expression expression)
         {
             var processor = GetQueryProviderProcessor<T>();
+	        //var fieldsToRename = processor.FieldsToRename;
+			
             var result = (IDocumentQuery<TResult>)processor.GetDocumentQueryFor(expression);
-            result.SetResultTransformer(ResultTransformer);
+            
+			result.SetResultTransformer(ResultTransformer);
+			
+			//AfterStreamExecuted(RavenJObject);
+			
             return result;
         }
-
-
     }
 }

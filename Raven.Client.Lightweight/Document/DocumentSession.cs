@@ -18,6 +18,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Document.Async;
 
 
 namespace Raven.Client.Document
@@ -600,7 +601,7 @@ namespace Raven.Client.Document
 
         public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
         {
-            var queryProvider = (IRavenQueryProvider)query.Provider;
+			var queryProvider = (IRavenQueryProvider)query.Provider;
 			var docQuery = queryProvider.ToDocumentQuery<T>(query.Expression);
             return Stream(docQuery, out queryHeaderInformation);
         }
@@ -619,7 +620,6 @@ namespace Raven.Client.Document
             if (!waitForNonStaleResultsWasSetGloably && (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow))
 				throw new NotSupportedException(
 					"Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
-
 			IncrementRequestCount();
             var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
             return YieldQuery(query, enumerator);
@@ -631,10 +631,18 @@ namespace Raven.Client.Document
             {
                 var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation();
                 queryOperation.DisableEntitiesTracking = true;
+				
+	           // var fields = queryOperation.IndexQuery.FieldsToFetch;
+
+
+					
                 while (enumerator.MoveNext())
                 {
+				
                     var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
-
+	                /*enumerator.Current.Remove("Address");
+					enumerator.Current.Add("OtherThanName", "Tel Aviv");
+*/
                     string key = null;
                     Etag etag = null;
                     if (meta != null)

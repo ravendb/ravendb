@@ -1821,6 +1821,17 @@ If you really want to do in memory filtering on the data returned from the query
 			if (queryExecuted != null)
 				queryExecuted(result);
 		}
+/*
+
+
+		public void InvokeAfterStreamExecuted(RavenJObject result)
+		{
+			var queryExecuted = afterQueryExecutedCallback;
+			if (queryExecuted != null)
+				queryExecuted(result);
+		}
+*/
+
 
 		#endregion
 
