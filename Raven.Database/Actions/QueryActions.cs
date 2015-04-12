@@ -277,8 +277,8 @@ namespace Raven.Database.Actions
 				{
 					foreach (var result in results)
 					{
-						cancellationToken.ThrowIfCancellationRequested();						
-						database.WorkContext.NotifyAboutWork();
+						cancellationToken.ThrowIfCancellationRequested();
+						database.WorkContext.UpdateFoundWork();
 
 						onResult(result);
 					}
