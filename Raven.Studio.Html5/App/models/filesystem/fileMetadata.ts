@@ -36,7 +36,7 @@
 
             // Effectively remove all the headers that are not useful as metadata.
             var property: string;
-            for (var property in dto) {
+            for (property in dto) {
                 if (this.headerPropsToRemove.contains(property))
                     delete dto[property];
             }

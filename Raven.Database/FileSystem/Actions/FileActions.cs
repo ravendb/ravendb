@@ -126,7 +126,7 @@ namespace Raven.Database.FileSystem.Actions
 				{
 					await readFileToDatabase.Execute();
 
-					if (readFileToDatabase.TotalSizeRead != size)
+					if (size != null && readFileToDatabase.TotalSizeRead != size)
 					{
 						using (FileSystem.DisableAllTriggersForCurrentThread())
 						{

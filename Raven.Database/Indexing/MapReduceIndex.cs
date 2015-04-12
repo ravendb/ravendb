@@ -288,6 +288,7 @@ namespace Raven.Database.Indexing
 					while (enumerator.MoveNext())
 					{
 						accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
+						actions.General.MaybePulseTransaction();
 					}
 				}
 
@@ -518,7 +519,7 @@ namespace Raven.Database.Indexing
 
 			private readonly Field reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
 													 Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
-			private PropertyDescriptorCollection properties = null;
+            private readonly ConcurrentDictionary<Type, PropertyAccessor> propertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
 			private readonly List<AbstractIndexUpdateTriggerBatcher> batchers;
 
 			public ReduceDocuments(MapReduceIndex parent, AbstractViewGenerator viewGenerator, IEnumerable<IGrouping<int, object>> mappedResultsByBucket, int level, WorkContext context, IStorageActionsAccessor actions, HashSet<string> reduceKeys, int inputCount)
@@ -580,13 +581,14 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					if (doc is IDynamicJsonObject)
+				    var dynamicJsonObject = doc as IDynamicJsonObject;
+				    if (dynamicJsonObject != null)
 					{
-						fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.NO);
+						fields = anonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, Field.Store.NO);
 					}
 					else
 					{
-						properties = properties ?? TypeDescriptor.GetProperties(doc);
+                        var properties = propertyAccessorCache.GetOrAdd(doc.GetType(), PropertyAccessor.Create);
 						fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO);
 					}
 				}

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Raven.Abstractions.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -12,8 +13,6 @@ namespace Raven.Abstractions.Json
     public class ConflictsResolver
     {
         private readonly RavenJObject[] docs;
-        readonly RavenJTokenEqualityComparer ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
-
         private readonly bool isMetadataResolver;
 
         public ConflictsResolver(IEnumerable<RavenJObject> docs, bool isMetadataResolver = false)
@@ -77,7 +76,7 @@ namespace Raven.Abstractions.Json
             var mergedArray = new RavenJArray();
             while (arrays.Count > 0)
             {
-                var set = new HashSet<RavenJToken>(ravenJTokenEqualityComparer);
+				var set = new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
                 for (var i = 0; i < arrays.Count; i++)
                 {
                     if (arrays[i].Length == 0)
@@ -96,7 +95,7 @@ namespace Raven.Abstractions.Json
                 }
             }
 
-            if (ravenJTokenEqualityComparer.Equals(mergedArray, prop.Value))
+			if (RavenJTokenEqualityComparer.Default.Equals(mergedArray, prop.Value))
             {
                 result.Add(prop.Key, mergedArray);
                 return true;
@@ -145,7 +144,7 @@ namespace Raven.Abstractions.Json
                 RavenJToken otherVal;
                 if (other.TryGetValue(prop.Key, out otherVal) == false)
                     continue;
-                if (ravenJTokenEqualityComparer.Equals(prop.Value, otherVal) == false)
+				if (RavenJTokenEqualityComparer.Default.Equals(prop.Value, otherVal) == false)
                     conflicted.Values.Add(otherVal);
             }
 
@@ -286,7 +285,7 @@ namespace Raven.Abstractions.Json
 
         private class Conflicted
         {
-            public readonly HashSet<RavenJToken> Values = new HashSet<RavenJToken>(new RavenJTokenEqualityComparer());
+			public readonly HashSet<RavenJToken> Values = new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
         }
 
         private class ArrayWithWarning

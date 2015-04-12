@@ -93,9 +93,14 @@
         <button type="button" class="btn btn-default" data-bind="click: toggleSqlReplicationBundle">
             <i data-bind="css: {'fa-check': isSqlReplicationBundleEnabled }" class="fa fa-fw"></i> SQL Replication
         </button>
-        <button type="button" class="btn btn-default" data-bind="click: toggleVersioningBundle, css: { 'license-inactive': !isBundleActive('versioning') }">
-            <i data-bind="css: {'fa-check': isVersioningBundleEnabled }" class="fa fa-fw"></i> Versioning
-        </button>
+	    <button type="button" class="btn btn-default" data-bind="click: toggleVersioningBundle, css: { 'license-inactive': !isBundleActive('versioning') }">
+		    <i data-bind="css: {'fa-check': isVersioningBundleEnabled }" class="fa fa-fw"></i> Versioning
+	    </button>
+	    <!-- ko foreach: customBundles -->
+			<button type="button" class="btn btn-default" data-bind="click: $parent.toggleCustomBundle.bind($parent, $data)">
+				<i data-bind="css: {'fa-check': $parent.selectedCustomBundles().indexOf($data)>=0 }" class="fa fa-fw"></i> <span data-bind="text: $data"></span>
+			</button>
+		<!-- /ko -->
     </div>
 </div>
           

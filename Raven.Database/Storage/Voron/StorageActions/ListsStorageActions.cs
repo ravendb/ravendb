@@ -65,8 +65,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "createdAt", createdAt}
 				});
 
-			listsByName.MultiAdd(writeBatch.Value, CreateKey(name), etagAsString);
-			listsByNameAndKey.Add(writeBatch.Value, CreateKey(name, key), etagAsString);
+            var nameKey = CreateKey(name);
+
+            listsByName.MultiAdd(writeBatch.Value, nameKey, etagAsString);
+			listsByNameAndKey.Add(writeBatch.Value, AppendToKey(nameKey, key), etagAsString);
 		}
 
 		public void Remove(string name, string key)

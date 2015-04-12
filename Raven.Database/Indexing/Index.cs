@@ -28,6 +28,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Json.Linq;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
@@ -1117,7 +1118,7 @@ namespace Raven.Database.Indexing
 				this.reduceKeys = reduceKeys;
 
 				if (fieldsToFetch.IsDistinctQuery)
-					alreadySeenProjections = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
+					alreadySeenProjections = new HashSet<RavenJObject>(RavenJTokenEqualityComparer.Default);
 			}
 
 			public IEnumerable<RavenJObject> IndexEntries(Reference<int> totalResults)

@@ -402,11 +402,13 @@ for(var customFunction in customFunctions) {{
 
 		[HttpGet]
 		[RavenRoute("studio-tasks/latest-server-build-version")]
-		public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true)
+		public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true, int min = 3000, int max = 3999)
 		{
-			var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?stableOnly=" + stableOnly);
+			var args = string.Format("stableOnly={0}&min={1}&max={2}", stableOnly, min, max);
+			var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?" + args);
 			try
 			{
+			    request.Timeout = 5000;
 				using (var response = request.GetResponse())
 				using (var stream = response.GetResponseStream())
 				{
@@ -416,7 +418,7 @@ for(var customFunction in customFunctions) {{
 			}
 			catch (Exception e)
 			{
-				return GetMessageWithObject(new { Exception = e.Message });
+				return GetMessageWithObject(new {Exception = e.Message});
 			}
 		}
 

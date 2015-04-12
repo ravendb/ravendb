@@ -4,30 +4,30 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.IO;
 using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Connection;
-using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
-using System.Collections;
 
-namespace Raven.Client.Connection
+namespace Raven.Client.Connection.Implementation
 {
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
@@ -231,7 +231,6 @@ namespace Raven.Client.Connection
 				try
 				{
                     return await requestOperation().ConfigureAwait(false);
-					
 				}
 				catch (ErrorResponseException e)
 				{
@@ -733,7 +732,7 @@ namespace Raven.Client.Connection
 
 		private async Task<HttpResponseMessage> ExecuteRawResponseInternalAsync(HttpContent content)
 		{
-            Response = await RunWithAuthRetry(async () =>
+            return await RunWithAuthRetry(async () =>
 		    {
                 var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 
@@ -744,29 +743,25 @@ namespace Raven.Client.Connection
 
                 CopyHeadersToHttpRequestMessage(rawRequestMessage);
 
-                var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-
-                if (response.IsSuccessStatusCode == false &&
-                    (response.StatusCode == HttpStatusCode.PreconditionFailed ||
-                    response.StatusCode == HttpStatusCode.Forbidden ||
-                    response.StatusCode == HttpStatusCode.Unauthorized))
+                Response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+				ResponseStatusCode = Response.StatusCode;
+				if (Response.IsSuccessStatusCode == false &&
+					(Response.StatusCode == HttpStatusCode.PreconditionFailed ||
+					Response.StatusCode == HttpStatusCode.Forbidden ||
+					Response.StatusCode == HttpStatusCode.Unauthorized))
                 {
-                    throw new ErrorResponseException(response, "Failed request");
+					throw new ErrorResponseException(Response, "Failed request");
                 }
-                return response;
 
+				return Response;
 		    }).ConfigureAwait(false);
-
-            ResponseStatusCode = Response.StatusCode;
-
-            return Response;
 		}
 
 		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(Action<Stream, TaskCompletionSource<object>> action)
 		{
 			httpClient.DefaultRequestHeaders.TransferEncodingChunked = true;
 
-            Response = await RunWithAuthRetry(async () =>
+            return await RunWithAuthRetry(async () =>
             {
                 var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
                 {
@@ -774,20 +769,19 @@ namespace Raven.Client.Connection
                 };
 
                 CopyHeadersToHttpRequestMessage(rawRequestMessage);
-                var response = await httpClient.SendAsync(rawRequestMessage).ConfigureAwait(false);
-                if (response.IsSuccessStatusCode == false && 
-                    (response.StatusCode == HttpStatusCode.PreconditionFailed || 
-                    response.StatusCode == HttpStatusCode.Forbidden || 
-                    response.StatusCode == HttpStatusCode.Unauthorized))
+                Response = await httpClient.SendAsync(rawRequestMessage).ConfigureAwait(false);
+				ResponseStatusCode = Response.StatusCode;
+
+				if (Response.IsSuccessStatusCode == false &&
+					(Response.StatusCode == HttpStatusCode.PreconditionFailed ||
+					Response.StatusCode == HttpStatusCode.Forbidden ||
+					Response.StatusCode == HttpStatusCode.Unauthorized))
                 {
-                    throw new ErrorResponseException(response, "Failed request");
+					throw new ErrorResponseException(Response, "Failed request");
                 }
-                return response;
-            }).ConfigureAwait(false);
 
-            ResponseStatusCode = Response.StatusCode;
-
-            return Response;		
+				return Response;
+            }).ConfigureAwait(false);		
 		}
 
 		private class PushContent : HttpContent

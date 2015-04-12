@@ -24,11 +24,11 @@
 
         <div data-bind="if: isDeletingDatabase">
             <div data-bind="visible: resourcesToDelete().length === 1">
-                You can <a href="#" data-bind="attr: { href: exportDatabaseUrl }">export the database</a> if needed.<br />
+                You can <a href="#" data-bind="click: exportDatabase">export the database</a> if needed.<br />
             </div>
 
             <div data-bind="visible: resourcesToDelete().length > 1">
-                You can <a href="#" data-bind="attr: { href: exportDatabaseUrl }">export these databases</a> if needed.<br />
+                You can <a href="#" data-bind="click: exportDatabase">export these databases</a> if needed.<br />
             </div>
         </div>
         <br />

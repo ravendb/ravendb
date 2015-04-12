@@ -6,7 +6,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -43,6 +46,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 
 using metrics.Core;
+using Raven.Database.Plugins.Catalogs;
 
 namespace Raven.Database
 {
@@ -424,28 +428,59 @@ namespace Raven.Database
 							Type = "Index Update"
 						})).ToList();
 
-				var extensions = Configuration.ReportExtensions(
-					typeof(IStartupTask),
-					typeof(AbstractReadTrigger),
-					typeof(AbstractDeleteTrigger),
-					typeof(AbstractPutTrigger),
-					typeof(AbstractDocumentCodec),
-					typeof(AbstractIndexCodec),
-					typeof(AbstractDynamicCompilationExtension),
-					typeof(AbstractIndexQueryTrigger),
-					typeof(AbstractIndexUpdateTrigger),
-					typeof(AbstractAnalyzerGenerator),
-					typeof(AbstractAttachmentDeleteTrigger),
-					typeof(AbstractAttachmentPutTrigger),
-					typeof(AbstractAttachmentReadTrigger),
-					typeof(AbstractBackgroundTask),
-					typeof(IAlterConfiguration)).ToList();
+				var types = new[]
+				{
+					typeof (IStartupTask),
+					typeof (AbstractReadTrigger),
+					typeof (AbstractDeleteTrigger),
+					typeof (AbstractPutTrigger),
+					typeof (AbstractDocumentCodec),
+					typeof (AbstractIndexCodec),
+					typeof (AbstractDynamicCompilationExtension),
+					typeof (AbstractIndexQueryTrigger),
+					typeof (AbstractIndexUpdateTrigger),
+					typeof (AbstractAnalyzerGenerator),
+					typeof (AbstractAttachmentDeleteTrigger),
+					typeof (AbstractAttachmentPutTrigger),
+					typeof (AbstractAttachmentReadTrigger),
+					typeof (AbstractBackgroundTask),
+					typeof (IAlterConfiguration)
+				};
+
+				var extensions = Configuration.ReportExtensions(types).ToList();
+
+				var customBundles = FindPluginBundles(types);
 				return new PluginsInfo
 							{
 								Triggers = triggerInfos,
 								Extensions = extensions,
+								CustomBundles = customBundles
 							};
 			}
+		}
+
+		private List<string> FindPluginBundles(Type[] types)
+		{
+			var unfilteredCatalogs = InMemoryRavenConfiguration.GetUnfilteredCatalogs(Configuration.Catalog.Catalogs);
+
+			AggregateCatalog unfilteredAggregate = null;
+
+			var innerAggregate = unfilteredCatalogs as AggregateCatalog;
+			if (innerAggregate != null)
+			{
+				unfilteredAggregate = new AggregateCatalog(innerAggregate.Catalogs.OfType<BuiltinFilteringCatalog>());
+			}
+
+			if (unfilteredAggregate == null || unfilteredAggregate.Catalogs.Count == 0)
+				return new List<string>();
+
+			return types
+				.SelectMany(type => unfilteredAggregate.GetExports(new ImportDefinition(info => info.Metadata.ContainsKey("Bundle"), type.FullName, ImportCardinality.ZeroOrMore, false, false)))
+				.Select(info => info.Item2.Metadata["Bundle"] as string)
+				.Where(x => x != null)
+				.Distinct()
+				.OrderBy(x => x)
+				.ToList();
 		}
 
 		public DatabaseStatistics Statistics
@@ -509,14 +544,9 @@ namespace Raven.Database
 							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
 							index.IsTestIndex = indexDefinition.IsTestIndex;
 							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
-						    if (indexDefinition != null)
-						    {
-						        index.LockMode = indexDefinition.LockMode;
-                                if (indexDefinition.Priority != null)
-						            index.Priority = indexDefinition.Priority.Value;
-						    }
+							index.LockMode = indexDefinition.LockMode;
 
-						    index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
+							index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
 							IndexSearcher searcher;
 							using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
 								index.DocsCount = searcher.IndexReader.NumDocs();

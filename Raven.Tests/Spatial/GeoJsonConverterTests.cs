@@ -30,21 +30,15 @@ namespace Raven.Tests.Spatial
 			var store = new EmbeddableDocumentStore {RunInMemory = true};
 			store.Conventions.CustomizeJsonSerializer = serializer =>
 			{
-                var converters = new JsonConverterCollection(serializer.Converters)
-                {
-				    new ICRSObjectConverter(),
-				    new FeatureCollectionConverter(),
-				    new FeatureConverter(),
-				    new AttributesTableConverter(),
-				    new GeometryConverter(),
-				    new GeometryArrayConverter(),
-				    new CoordinateConverter(),
-				    new EnvelopeConverter(),
-                };
-                converters.Freeze();
-
-                serializer.Converters = converters;
-            };
+				serializer.Converters.Add(new ICRSObjectConverter());
+				serializer.Converters.Add(new FeatureCollectionConverter());
+				serializer.Converters.Add(new FeatureConverter());
+				serializer.Converters.Add(new AttributesTableConverter());
+				serializer.Converters.Add(new GeometryConverter());
+				serializer.Converters.Add(new GeometryArrayConverter());
+				serializer.Converters.Add(new CoordinateConverter());
+				serializer.Converters.Add(new EnvelopeConverter());
+			};
 			store.Initialize();
 			store.ExecuteIndex(new CartesianIndex());
 			return store;

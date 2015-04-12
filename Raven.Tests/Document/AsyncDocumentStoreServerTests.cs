@@ -13,8 +13,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Connection.Async;
-using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 

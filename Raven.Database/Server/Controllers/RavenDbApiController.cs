@@ -142,7 +142,7 @@ namespace Raven.Database.Server.Controllers
 																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
 																Nothing to do in this case..."
 			},
-				HttpStatusCode.NoContent);
+			HttpStatusCode.Accepted);
 			return null;
 		}
 
@@ -692,7 +692,8 @@ namespace Raven.Database.Server.Controllers
 				{
 					Remark = "Using windows auth",
 					User = windowsPrincipal.Identity.Name,
-					IsAdminGlobal = windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+					IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
+									windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
 				};
 
 				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
@@ -707,7 +708,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					Remark = "Using windows auth",
 					User = principalWithDatabaseAccess.Identity.Name,
-					IsAdminGlobal =
+					IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
 						principalWithDatabaseAccess.IsAdministrator(
 							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
 					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),

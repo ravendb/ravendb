@@ -108,6 +108,8 @@ namespace Raven.Database.Json
 				CleanupEngine(patch, jintEngine, scope);
 
 				OutputLog(jintEngine);
+				if (scope.DebugMode) 
+					Debug.Add(string.Format("Statements executed: {0}", jintEngine.StatementsCount));
 
 				ScriptsCache.CheckinScript(patch, jintEngine, customFunctions);
 

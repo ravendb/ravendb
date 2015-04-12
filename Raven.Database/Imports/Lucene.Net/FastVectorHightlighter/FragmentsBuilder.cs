@@ -38,10 +38,11 @@ namespace Lucene.Net.Search.Vectorhighlight
         /// <param name="docId">document id to be highlighted</param>
         /// <param name="fieldName">field of the document to be highlighted</param>
         /// <param name="fieldFragList">FieldFragList object</param>
+        /// <param name="fragCharSize"></param>
         /// <returns>a created fragment or null when no fragment created</returns>
-        String CreateFragment( IndexReader reader, int docId, String fieldName, FieldFragList fieldFragList ) ;
+        string CreateFragment(IndexReader reader, int docId, string fieldName, FieldFragList fieldFragList, int fragCharSize) ;
 
-        
+
         /// <summary>
         /// create multiple fragments.
         /// </summary>
@@ -50,7 +51,8 @@ namespace Lucene.Net.Search.Vectorhighlight
         /// <param name="fieldName">field of the document to be highlighted</param>
         /// <param name="fieldFragList">ieldFragList object</param>
         /// <param name="maxNumFragments">maximum number of fragments</param>
+        /// <param name="fragCharSize"></param>
         /// <returns>created fragments or null when no fragments created. Size of the array can be less than maxNumFragments</returns>
-        String[] CreateFragments( IndexReader reader, int docId, String fieldName, FieldFragList fieldFragList, int maxNumFragments ) ;
+        string[] CreateFragments(IndexReader reader, int docId, string fieldName, FieldFragList fieldFragList, int maxNumFragments, int fragCharSize) ;
     }
 }

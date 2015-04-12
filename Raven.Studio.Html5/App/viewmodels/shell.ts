@@ -713,6 +713,14 @@ class shell extends viewModelBase {
 
     private handleRavenConnectionFailure(result) {
         NProgress.done();
+
+		if (result.status === 401) {
+			// Unauthorized might be caused by invalid credentials. 
+			// Remove them from both local storage and oauth context.
+			apiKeyLocalStorage.clean();
+			oauthContext.clean();
+		}
+
         sys.log("Unable to connect to Raven.", result);
         var tryAgain = 'Try again';
         var messageBoxResultPromise = this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain]);
@@ -921,7 +929,7 @@ class shell extends viewModelBase {
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion != 13) {
-                    new getLatestServerBuildVersionCommand() //pass false as a parameter to get the latest unstable
+                    new getLatestServerBuildVersionCommand(true, 3000, 3599) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {
                             if (latestServerBuildResult.LatestBuild > currentBuildVersion) { //

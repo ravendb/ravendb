@@ -28,6 +28,7 @@
     <Compile Include="Components\IIS\IISConfiguration_ExistingWebSite.wxs" />
     <Compile Include="Components\IIS\Setup.wxs" />
     <Compile Include="Components\IIS\Raven.Web.wxs" />
+    <Compile Include="Components\NLogIgnoredFile.wxs" />
     <Compile Include="Components\Raven.Abstractions.wxs" />
     <Compile Include="Components\Raven.Database.wxs" />
     <Compile Include="Components\Service\Raven.Server.wxs" />

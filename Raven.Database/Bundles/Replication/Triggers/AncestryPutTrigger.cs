@@ -6,13 +6,15 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json.Linq;
 using Raven.Bundles.Replication.Impl;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Replication.Triggers
+namespace Raven.Database.Bundles.Replication.Triggers
 {
 	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
@@ -24,6 +26,7 @@ namespace Raven.Bundles.Replication.Triggers
 			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // we don't deal with system documents
 				key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilos
 				return;
+
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
 				var documentMetadata = GetDocumentMetadata(key);
@@ -35,11 +38,13 @@ namespace Raven.Bundles.Replication.Triggers
 					if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) && 
 						documentMetadata.ContainsKey(Constants.RavenReplicationSource))
 					{
-						history.Add(new RavenJObject
+						var historyEntry = new RavenJObject
 						{
 							{Constants.RavenReplicationVersion, documentMetadata[Constants.RavenReplicationVersion]},
 							{Constants.RavenReplicationSource, documentMetadata[Constants.RavenReplicationSource]}
-						});
+						};
+						if (history.Contains(historyEntry, RavenJTokenEqualityComparer.Default) == false)
+							history.Add(historyEntry);
 					}
 					else 
 					{

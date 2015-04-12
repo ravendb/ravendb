@@ -122,11 +122,6 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
-        /// <summary>
-        /// Gets or sets the index priority 
-        /// </summary>
-	    public IndexingPriority? Priority { get; set; }
-
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
@@ -174,7 +169,6 @@ namespace Raven.Client.Indexes
 				DisableInMemoryIndexing = DisableInMemoryIndexing,
 				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
                 LockMode = LockMode,
-                Priority = Priority 
 			};
 
 			if (convention.PrettifyGeneratedLinqExpressions)
