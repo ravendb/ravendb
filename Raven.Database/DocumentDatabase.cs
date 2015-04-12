@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Documents;
@@ -42,6 +43,8 @@ using Raven.Database.Prefetching;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 
@@ -457,7 +460,7 @@ namespace Raven.Database
 								CustomBundles = customBundles
 							};
 			}
-		}
+		}	
 
 		private List<string> FindPluginBundles(Type[] types)
 		{
