@@ -59,7 +59,6 @@ namespace Raven.Database.Server.Controllers
 
 		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter)
 		{
-			using (Database.PreventIdleUnloadScope())
 			using (var cts = new CancellationTokenSource())
 			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
@@ -181,8 +180,7 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-			{			
-				using(queryOp.Database.PreventIdleUnloadScope())
+			{							
 				using(queryOp)
 				using(accessor)
 				using(_timeout)

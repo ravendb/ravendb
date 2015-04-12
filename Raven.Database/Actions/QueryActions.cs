@@ -277,7 +277,9 @@ namespace Raven.Database.Actions
 				{
 					foreach (var result in results)
 					{
-						cancellationToken.ThrowIfCancellationRequested();
+						cancellationToken.ThrowIfCancellationRequested();						
+						database.WorkContext.NotifyAboutWork();
+
 						onResult(result);
 					}
 					if (transformerErrors.Count > 0)

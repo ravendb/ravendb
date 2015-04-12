@@ -260,7 +260,6 @@ namespace Raven.Database.Actions
                     var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
 
 			        using (Database.DocumentLock.Lock())
-					using (Database.PreventIdleUnloadScope())
 			        {
 				        TransactionalStorage.Batch(accessor =>
 				        {
@@ -319,6 +318,8 @@ namespace Raven.Database.Actions
 							        {
 								        trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
 							        }
+
+									Database.WorkContext.NotifyAboutWork();
 						        }
 						        catch (Exception e)
 						        {
@@ -440,7 +441,8 @@ namespace Raven.Database.Actions
 
                         addDocument(document);
                         returnedDocs = true;
-                    }
+						Database.WorkContext.NotifyAboutWork();
+					}
                     if (returnedDocs || docCount == 0)
                         break;
                     start += docCount;

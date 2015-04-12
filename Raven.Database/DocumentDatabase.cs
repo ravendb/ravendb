@@ -460,54 +460,7 @@ namespace Raven.Database
 								CustomBundles = customBundles
 							};
 			}
-		}
-
-		private int _preventIdleUnloadScopeCount;
-		private Timer _preventIdleUnloadTimer;
-
-		public IDisposable PreventIdleUnloadScope()
-		{
-			AddPreventUnloadScopeRef();
-			return new DisposableAction(ReleasePreventUnloadScope);
-		}
-
-		[MethodImpl(MethodImplOptions.Synchronized)]
-		private void AddPreventUnloadScopeRef()
-		{
-			if (_preventIdleUnloadScopeCount == 0)
-			{
-				int val;
-				if (int.TryParse(Configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
-					val = 900;
-				var maxIdleTimeForTenantDatabaseInSec = val;
-
-				if (int.TryParse(Configuration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
-					val = 60;
-				var frequencyToCheckForIdleDatabasesInSec = val;
-
-
-				var updateFoundWorkFrequency = Math.Min(maxIdleTimeForTenantDatabaseInSec/2,
-														frequencyToCheckForIdleDatabasesInSec/2);
-
-				if (updateFoundWorkFrequency <= 0)
-					updateFoundWorkFrequency = 1; //precaution
-
-				Debug.Assert(_preventIdleUnloadTimer == null);
-				_preventIdleUnloadTimer = TimerManager.NewTimer(state => WorkContext.NotifyAboutWork(), TimeSpan.Zero, TimeSpan.FromSeconds(updateFoundWorkFrequency));
-			}
-			_preventIdleUnloadScopeCount++;
-		}
-
-		[MethodImpl(MethodImplOptions.Synchronized)]
-		private void ReleasePreventUnloadScope()
-		{
-			_preventIdleUnloadScopeCount--;
-			if (_preventIdleUnloadScopeCount == 0)
-			{
-				TimerManager.ReleaseTimer(_preventIdleUnloadTimer);
-				_preventIdleUnloadTimer = null;
-			}
-		}
+		}	
 
 		private List<string> FindPluginBundles(Type[] types)
 		{
