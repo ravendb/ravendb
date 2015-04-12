@@ -54,14 +54,10 @@ namespace Raven.Tests.Issues
 						.LazilyAsync();
 
 
-					var requestTimes = await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
+					await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
 
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
-					Assert.NotNull(requestTimes.TotalClientDuration);
-					Assert.NotNull(requestTimes.TotalServerDuration);
-					Assert.NotNull(articleResults.Value);
-					Assert.Equal(2, requestTimes.DurationBreakdown.Count);
-
+					
 
 					var facetResults = await facetResultsLazy.Value;
 
