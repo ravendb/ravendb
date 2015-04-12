@@ -262,5 +262,7 @@ namespace Raven.Abstractions.Data
 			public const string RavenAuthorizationOperation = "Raven-Authorization-Operation";
 			public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
 		}
+
+		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";
 	}
 }
