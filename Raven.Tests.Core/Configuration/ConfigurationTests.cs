@@ -243,6 +243,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.MaxConcurrentRequestsForDatabaseDuringLoad.Value, actual => actual.MaxConcurrentRequestsForDatabaseDuringLoad);
 			configurationComparer.Assert(expected => expected.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value, actual => actual.Replication.MaxNumberOfItemsToReceiveInSingleBatch);
             configurationComparer.Assert(expected => expected.ImplicitFetchFieldsFromDocumentMode.Value, actual => actual.ImplicitFetchFieldsFromDocumentMode);
+			configurationComparer.Assert(expected => expected.AllowScriptsToAdjustNumberOfSteps.Value, actual => actual.AllowScriptsToAdjustNumberOfSteps);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.WorkingDir.Value.ToFullPath(null)), actual => actual.WorkingDirectory);
 			configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
 			configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
