@@ -30,8 +30,15 @@ namespace Raven.Tests.Bugs.MapRedue
             {
                 public string Name { get; set; }
                 public int Count { get; set; }
-                public string[] Aliases { get; set; }
+                public AliasReduceResult[] Aliases { get; set; }
+
+	            public class AliasReduceResult
+	            {
+		            public string Name;
+		            public string Alias;
+	            }
             }
+
 
             public LargeKeysInVoronFunction()
             {
@@ -98,7 +105,7 @@ namespace Raven.Tests.Bugs.MapRedue
                     Assert.Equal(1, query.Count());
 
                     var result = query.First();
-                    Assert.Equal(3, result.Count);
+                    Assert.Equal(2, result.Count);
                 }
 
                 foreach (var error in store.SystemDatabase.Statistics.Errors)
