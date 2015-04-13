@@ -23,7 +23,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task To_Facet_Lazy_Async()
 		{
-			using (var store = NewRemoteDocumentStore(fiddler: true))
+			using (var store = NewDocumentStore())
 			{
 				new AdviceSearch().Execute(store);
 				using (var session = store.OpenSession())
