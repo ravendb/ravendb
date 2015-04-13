@@ -1302,8 +1302,6 @@ namespace Raven.Database.Config
 				/// Whether to allow Voron to run in 32 bits process.
 				/// </summary>
 				public bool AllowOn32Bits { get; set; }
-
-				public bool AllowVoronStorage { get { return Environment.Is64BitProcess || AllowOn32Bits; } }
 			}
 		}
 

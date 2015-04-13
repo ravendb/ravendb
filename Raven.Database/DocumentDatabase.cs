@@ -506,7 +506,7 @@ namespace Raven.Database
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
 					SupportsDtc = TransactionalStorage.SupportsDtc,
-					AllowVoronStorage = Configuration.Storage.Voron.AllowVoronStorage
+					AllowVoronStorage = Environment.Is64BitProcess || Configuration.Storage.Voron.AllowOn32Bits 
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -1159,7 +1159,8 @@ namespace Raven.Database
 			{
 				var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
 				if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
-					&& configuration.Storage.Voron.AllowVoronStorage == false)
+					&& configuration.Storage.Voron.AllowOn32Bits == false && 
+                    Environment.Is64BitProcess == false)
 				{
 					throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
 				}
