@@ -5,6 +5,7 @@ using System.Linq;
 using Lucene.Net.Store;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 
 namespace Raven.Database.Indexing
@@ -96,7 +97,7 @@ namespace Raven.Database.Indexing
 			{
 				try
 				{
-					file.Delete();
+					IOExtensions.DeleteFile(file.FullName);
 				}
 				catch (Exception e)
 				{
