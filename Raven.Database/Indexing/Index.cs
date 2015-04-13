@@ -243,11 +243,9 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					if (indexWriter == null)
-						CreateIndexWriter();
-
+					EnsureIndexWriter();
 					ForceWriteToDisk();
-					WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
+					WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
 				}
 				catch (Exception e)
 				{
@@ -293,6 +291,12 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public void EnsureIndexWriter()
+		{
+			if (indexWriter == null)
+				CreateIndexWriter();
+		}
+
 		public void Flush(Etag highestETag)
 		{
 			lock (writeLock)
@@ -325,10 +329,9 @@ namespace Raven.Database.Indexing
 				{
 					logIndexing.Info("Starting merge of {0}", indexId);
 					var sp = Stopwatch.StartNew();
-					if (indexWriter == null)
-					{
-						CreateIndexWriter();
-					}
+					
+					EnsureIndexWriter();
+
 					indexWriter.Optimize();
 					logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
 
@@ -490,10 +493,7 @@ namespace Raven.Database.Indexing
 						throw;
 					}
 
-					if (indexWriter == null)
-					{
-						CreateIndexWriter();
-					}
+					EnsureIndexWriter();
 
 					var locker = directory.MakeLock("writing-to-index.lock");
 					try
