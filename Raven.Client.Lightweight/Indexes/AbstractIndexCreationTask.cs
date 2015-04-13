@@ -64,6 +64,14 @@ namespace Raven.Client.Indexes
         /// </summary>
         public DocumentConvention Conventions { get; set; }
 
+		/// <summary>
+		///  index can have a priority that controls how much power of the indexing process it is allowed to consume. index priority can be forced by the user.
+		///  There are four available values that you can set: Normal, Idle, Disabled, Abandoned
+		/// <para>Default value: null means that the priority of the index is Normal.</para>
+		/// </summary>
+		public IndexingPriority? Priority { get; set; }
+
+
         /// <summary>
         /// Provide a way to dynamically index values with runtime known values
         /// </summary>
@@ -258,6 +266,9 @@ namespace Raven.Client.Indexes
             // the new definition.
             databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
+			if(Priority != null)
+				databaseCommands.SetIndexPriority(IndexName, Priority.Value);
+
             if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
                 ReplicateIndexesIfNeeded(databaseCommands);
         }
@@ -387,6 +398,9 @@ namespace Raven.Client.Indexes
             // to a noop of the index already exists and the stored definition matches
             // the new definition.
             await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true, token);
+	        if (Priority != null)
+		        await asyncDatabaseCommands.SetIndexPriorityAsync(IndexName, Priority.Value, token);
+
             if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
                 await ReplicateIndexesIfNeededAsync(asyncDatabaseCommands);
         }
@@ -445,7 +459,6 @@ namespace Raven.Client.Indexes
                 SpatialIndexesStrings = SpatialIndexesStrings,
                 DisableInMemoryIndexing = DisableInMemoryIndexing,
                 MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
-                Priority = Priority
             }.ToIndexDefinition(Conventions);
 
             var fields = Map.Body.Type.GenericTypeArguments.First().GetProperties();
@@ -490,13 +503,6 @@ namespace Raven.Client.Indexes
         /// <para>Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.</para>
         /// </summary>
         public int? MaxIndexOutputsPerDocument { get; set; }
-
-        /// <summary>
-        ///  index can have a priority that controls how much power of the indexing process it is allowed to consume. index priority can be forced by the user.
-        ///  There are four available values that you can set: Normal, Idle, Disabled, Abandoned
-        /// <para>Default value: null means that the priority of the index is Normal.</para>
-        /// </summary>
-        public IndexingPriority? Priority { get; set; }
 
         /// <summary>
         /// Gets a value indicating whether this instance is map reduce index definition

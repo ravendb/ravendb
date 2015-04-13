@@ -5,8 +5,9 @@ import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/database");
-import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import getPluginsInfoCommand = require("commands/getPluginsInfoCommand");
+import appUrl = require("common/appUrl");
 
 class createDatabase extends viewModelBase {
 
@@ -39,6 +40,9 @@ class createDatabase extends viewModelBase {
     isIncrementalBackupChecked = ko.observable(false);
     alertTimeout = ko.observable("");
     alertRecurringTimeout = ko.observable("");
+
+	customBundles = ko.observableArray<string>();
+	selectedCustomBundles = ko.observableArray<string>([]);
 
     constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();
@@ -83,9 +87,11 @@ class createDatabase extends viewModelBase {
             var errorMessage: string = this.isPathLegal(newPath, "Temp");
             return errorMessage;
         });
+
+		this.fetchCustomBundles();
     }
 
-    attached() {
+	attached() {
     }
 
     deactivate() {
@@ -96,10 +102,18 @@ class createDatabase extends viewModelBase {
         }
     }
 
+	fetchCustomBundles() {
+		new getPluginsInfoCommand(appUrl.getSystemDatabase())
+			.execute()
+			.done((result: pluginsInfoDto) => {
+			this.customBundles(result.CustomBundles);
+		});
+	}
+
     isBundleActive(name: string): boolean {
         var licenseStatus: licenseStatusDto = this.licenseStatus();
 
-        if (licenseStatus == null || licenseStatus.IsCommercial == false) {
+        if (licenseStatus == null || !licenseStatus.IsCommercial) {
             return true;
         }
         else {
@@ -212,6 +226,18 @@ class createDatabase extends viewModelBase {
         this.isScriptedIndexBundleEnabled.toggle();
     }
 
+	toggleCustomBundle(name: string) {
+		if (this.selectedCustomBundles.contains(name)) {
+			this.selectedCustomBundles.remove(name);
+		} else {
+			this.selectedCustomBundles.push(name);
+		}
+	}
+
+	isCustomBundleEnabled(name: string) {
+		return this.selectedCustomBundles().contains(name);
+	}
+
     private getActiveBundles(): string[] {
         var activeBundles: string[] = [];
         if (this.isCompressionBundleEnabled()) {
@@ -249,6 +275,8 @@ class createDatabase extends viewModelBase {
         if (this.isScriptedIndexBundleEnabled()) {
             activeBundles.push("ScriptedIndexResults");
         }
+
+	    activeBundles.pushAll(this.selectedCustomBundles());
 
         return activeBundles;
     }

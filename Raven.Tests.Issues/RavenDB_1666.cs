@@ -55,7 +55,7 @@ namespace Raven.Tests.Issues
             RegisterNoSysDbForControllersInThisNamespace<FilesController>();
             RegisterNoSysDbForControllersInThisNamespace<CountersController>();
 
-			RegisterRouteForOnlySysDb<StudioTasksController>(a => a.GetLatestServerBuildVersion(false));
+			RegisterRouteForOnlySysDb<StudioTasksController>(a => a.GetLatestServerBuildVersion(false, 3000, 3999));
             RegisterRouteForOnlySysDb<AdminController>(a => a.Stats());
 			RegisterRouteForOnlySysDb<AdminController>(a => a.OnAdminLogsConfig());
 			RegisterRouteForOnlySysDb<AdminController>(a => a.OnAdminLogsFetch());

@@ -6,6 +6,7 @@
 using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Bundles.Encryption.Settings;
+using Raven.Database.Bundles.Encryption.Settings;
 using Raven.Database.FileSystem.Plugins;
 
 namespace Raven.Database.FileSystem.Bundles.Encryption.Plugin

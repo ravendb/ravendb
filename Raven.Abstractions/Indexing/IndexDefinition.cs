@@ -153,13 +153,6 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
-        /// <summary>
-        ///  index can have a priority that controls how much power of the indexing process it is allowed to consume. index priority can be forced by the user.
-        ///  There are four available values that you can set: Normal, Idle, Disabled, Abandoned
-        /// <para>Default value: null means that the priority of the index is Normal.</para>
-        /// </summary>
-        public IndexingPriority? Priority { get; set; }
-
 		/// <summary>
 		/// Equals the specified other.
 		/// </summary>

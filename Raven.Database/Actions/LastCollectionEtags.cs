@@ -22,6 +22,7 @@ namespace Raven.Database.Actions
 		public LastCollectionEtags(WorkContext context)
 		{
 			this.context = context;
+            this.lastCollectionEtags = new ConcurrentDictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public void InitializeBasedOnIndexingResults()
@@ -70,7 +71,7 @@ namespace Raven.Database.Actions
 										})
 										.ToDictionary(x => x.CollectionName, y => new Entry { Etag = y.MaxEtag, Updated = SystemTime.UtcNow });
 
-			lastCollectionEtags = new ConcurrentDictionary<string, Entry>(collectionEtags, StringComparer.OrdinalIgnoreCase);
+            lastCollectionEtags = new ConcurrentDictionary<string, Entry>(collectionEtags, StringComparer.OrdinalIgnoreCase);
 		}
 
 		public bool HasEtagGreaterThan(List<string> collectionsToCheck, Etag etagToCheck)
@@ -79,6 +80,7 @@ namespace Raven.Database.Actions
 
 			foreach (var collectionName in collectionsToCheck)
 			{
+                // TODO: Check why lastCollectionEtags == null 
 				Entry highestEtagForCollectionEntry;
 				if (lastCollectionEtags.TryGetValue(collectionName, out highestEtagForCollectionEntry) && highestEtagForCollectionEntry.Etag != null)
 				{

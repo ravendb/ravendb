@@ -123,6 +123,8 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public bool DisableInMemoryIndexing { get; set; }
 
+
+	
 		/// <summary>
 		/// Register a field to be indexed
 		/// </summary>

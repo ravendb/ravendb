@@ -214,7 +214,7 @@ for(var customFunction in customFunctions) {{
 		[HttpPost]
 		[RavenRoute("studio-tasks/exportDatabase")]
 		[RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
-        public Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
+        public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData smugglerOptionsJson)
 		{
             var requestString = smugglerOptionsJson.SmugglerOptions;
             SmugglerDatabaseOptions smugglerOptions;
@@ -225,7 +225,6 @@ for(var customFunction in customFunctions) {{
                 smugglerOptions = (SmugglerDatabaseOptions)serializer.Deserialize(jsonReader, typeof(SmugglerDatabaseOptions));
 			}
 
-
             var result = GetEmptyMessage();
             
             // create PushStreamContent object that will be called when the output stream will be ready.
@@ -235,7 +234,7 @@ for(var customFunction in customFunctions) {{
 			    {
 				    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
 				    await dataDumper.ExportData(
-                        new SmugglerExportOptions<RavenConnectionStringOptions>
+					    new SmugglerExportOptions<RavenConnectionStringOptions>
 					    {
 						    ToStream = outputStream
 					    }).ConfigureAwait(false);
@@ -244,12 +243,10 @@ for(var customFunction in customFunctions) {{
 			    {
 			        outputStream.Close();
 			    }
-
-				
 			});
 		    
             var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ? 
-		        string.Format("Dump of {0}, {1}", this.DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
+		        string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
 		        smugglerOptions.NoneDefualtFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
@@ -402,11 +399,13 @@ for(var customFunction in customFunctions) {{
 
 		[HttpGet]
 		[RavenRoute("studio-tasks/latest-server-build-version")]
-		public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true)
+		public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true, int min = 3000, int max = 3999)
 		{
-			var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?stableOnly=" + stableOnly);
+			var args = string.Format("stableOnly={0}&min={1}&max={2}", stableOnly, min, max);
+			var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?" + args);
 			try
 			{
+			    request.Timeout = 5000;
 				using (var response = request.GetResponse())
 				using (var stream = response.GetResponseStream())
 				{
@@ -416,7 +415,7 @@ for(var customFunction in customFunctions) {{
 			}
 			catch (Exception e)
 			{
-				return GetMessageWithObject(new { Exception = e.Message });
+				return GetMessageWithObject(new {Exception = e.Message});
 			}
 		}
 

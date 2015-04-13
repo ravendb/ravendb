@@ -20,7 +20,7 @@ namespace Raven.Database.Linq.Ast
 				if (target == null || target.Target is IdentifierExpression || target.Target is ThisReferenceExpression)
 					return base.VisitQueryFromClause(fromClause, data);
 
-			    node = target.Target;
+				node = expression;
 			}
 
 			node.ReplaceWith(new ParenthesizedExpression(new CastExpression(new SimpleType("IEnumerable<dynamic>"), node.Clone())));

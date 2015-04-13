@@ -4,6 +4,7 @@ using Raven.Client.Connection;
 
 using System;
 using System.Threading;
+using Raven.Client.Connection.Implementation;
 
 namespace Raven.Backup
 {

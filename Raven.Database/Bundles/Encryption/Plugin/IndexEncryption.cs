@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.Composition;
 using System.IO;
+using Raven.Database.Bundles.Encryption.Settings;
 using Raven.Database.Plugins;
 using Raven.Bundles.Encryption.Streams;
 using Raven.Bundles.Encryption.Settings;

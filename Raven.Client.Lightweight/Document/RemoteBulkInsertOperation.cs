@@ -16,6 +16,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
 

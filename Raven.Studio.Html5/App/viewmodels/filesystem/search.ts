@@ -11,6 +11,7 @@ import searchSingleInputClause = require("viewmodels/filesystem/searchSingleInpu
 import searchFileSizeRangeClause = require("viewmodels/filesystem/searchFileSizeRangeClause");
 import searchHasMetadataClause = require("viewmodels/filesystem/searchHasMetadataClause");
 import searchLastModifiedBetweenClause = require("viewmodels/filesystem/searchLastModifiedBetweenClause");
+import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFilesMatchingQueryConfirm");
 
 class search extends viewModelBase {
 
@@ -69,7 +70,7 @@ class search extends viewModelBase {
     }
 
     fetchFiles(query: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new searchByQueryCommand(appUrl.getFileSystem(), query, skip, take, null).execute();
+        var task = new searchByQueryCommand(appUrl.getFileSystem(), query, skip, take).execute();
         return task;
     }
 
@@ -88,7 +89,7 @@ class search extends viewModelBase {
             var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename ends with: ");
             searchSingleInputClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.addToSearchInput("__rfileName:" + String.prototype.reverse(this.escapeQueryString(input)) + "*"));
+                .done((input: string) => this.addToSearchInput("__rfileName:" + this.escapeQueryString(String.prototype.reverse(input)) + "*"));
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }
@@ -118,7 +119,11 @@ class search extends viewModelBase {
             var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Folder path: ");
             searchSingleInputClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.addToSearchInput("__directoryName:/" + this.escapeQueryString(input)));
+                .done((input: string) => {
+		            if (!input.startsWith("/")) input = "/" + input;
+					var escaped = this.escapeQueryString(input);
+		            this.addToSearchInput("__directoryName:" + escaped);
+	            });
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }
@@ -141,7 +146,29 @@ class search extends viewModelBase {
     }
 
     private escapeQueryString(query: string) : string {
-        return query.replace(/([ /\-\_\.])/g, '\\$1');
+        return query.replace(/([ \-\_\.])/g, '\\$1');
+    }
+
+
+	deleteFilesMatchingQuery() {
+		// Run the query so that we have an idea of what we'll be deleting.
+		this.search();
+		this.allFilesPagedItems()
+			.fetch(0, 1)
+			.done((results: pagedResultSet) => {
+				if (results.totalResultCount === 0) {
+					app.showMessage("There are no files matching your query.", "Nothing to do");
+				} else {
+					this.promptDeleteFilesMatchingQuery(results.totalResultCount);
+				}
+			});
+	}
+
+	promptDeleteFilesMatchingQuery(resultCount: number) {
+        var viewModel = new deleteFilesMatchingQueryConfirm(this.searchText(), resultCount, this.activeFilesystem());
+        app
+            .showDialog(viewModel)
+            .done(() => this.search());
     }
 }
 

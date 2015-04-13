@@ -49,6 +49,12 @@ class deleteResourceConfirm extends dialogViewModelBase {
         this.deleteTask.reject();
         dialog.close(this);
     }
+
+	exportDatabase() {
+		this.resourcesToDelete.first().activate();
+		router.navigate(this.exportDatabaseUrl);
+		dialog.close(this);
+	}
 }
 
 export = deleteResourceConfirm;

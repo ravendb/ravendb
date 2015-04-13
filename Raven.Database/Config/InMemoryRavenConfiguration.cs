@@ -100,7 +100,10 @@ namespace Raven.Database.Config
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
 
+			AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
+
 			IndexAndTransformerReplicationLatencyInSec = ravenSettings.IndexAndTransformerReplicationLatencyInSec.Value;
+
 			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
 
 			// Important! this value is synchronized with the max sessions number in esent
@@ -331,6 +334,8 @@ namespace Raven.Database.Config
 
 	    public int IndexAndTransformerReplicationLatencyInSec { get; internal set; }
 
+		public bool AllowScriptsToAdjustNumberOfSteps { get; set; }
+
 		/// <summary>
 		/// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
 		/// purged on next database startup. Default: 14 days.
@@ -403,7 +408,7 @@ namespace Raven.Database.Config
 			}
 		} 
 
-		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
+		internal static ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
 			if (catalogs.Count != 1)
 				return new AggregateCatalog(catalogs.Select(GetUnfilteredCatalog));
