@@ -921,21 +921,15 @@ Configuration databaseOptions:
                 Console.WriteLine();
                 ConsoleWriteWithColor(new ConsoleText 
                 {
-                    ForegroundColor = ConsoleColor.Black, 
-                    BackgroundColor = ConsoleColor.White, 
-                    Message = "  Raven is ready to process requests :"
+                    ForegroundColor = ConsoleColor.Green, 
+                    BackgroundColor = ConsoleColor.Black, 
+                    Message = "  Raven is ready to process requests "
                 },
                 new ConsoleText
                 {
-                    ForegroundColor    = ConsoleColor.Red,
-                    BackgroundColor = ConsoleColor.White,
-                    Message = ")"
-                },
-                new ConsoleText
-                {
-                    ForegroundColor = ConsoleColor.Black,
-                    BackgroundColor = ConsoleColor.White,
-                    Message = " ",
+                    ForegroundColor = ConsoleColor.Red,
+                    BackgroundColor = ConsoleColor.Black,
+                    Message = "\u2665 \u2665 \u2665", // heart heart heart
                     IsNewLinePostPended = true
                 });
 
