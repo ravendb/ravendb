@@ -48,6 +48,10 @@ namespace Raven.Abstractions.Smuggler
              });
         }
 
+		/// <summary>
+		/// if true, smuggler will not halt its operation on errors, but instead will log them.
+		/// </summary>
+		public bool ShouldLogErrorsAndContinue { get; set; }
 
         private string continuationFile;
         private bool useContinuationFile = false;

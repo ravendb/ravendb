@@ -6,6 +6,7 @@
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.Document;
@@ -21,10 +22,11 @@ namespace Raven.Smuggler
 {
 	public class SmugglerDatabaseApi : SmugglerDatabaseApiBase
 	{
+
 		public SmugglerDatabaseApi(SmugglerDatabaseOptions options = null)
 			: base(options ?? new SmugglerDatabaseOptions())
 		{
-			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported, () => IsIdentitiesSmugglingSupported);
+			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported, () => IsIdentitiesSmugglingSupported);			
 		}
 
 		private BulkInsertOperation operation;
