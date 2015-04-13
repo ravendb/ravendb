@@ -24,7 +24,7 @@
                     <!-- ko foreach: indexesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                     <!-- /ko -->
-                    <li class="divider" data-bind="visible: collectionNames.length"></li>
+					<li class="divider" data-bind="visible: collectionNamesExceptCurrent().length"></li>
                     <!-- ko foreach: collectionNamesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic/' + $data)">
                         <a href="#">
