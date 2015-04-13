@@ -91,6 +91,7 @@ interface databaseStatisticsDto {
     Prefetches: any[];
     StaleIndexes: string[];
     SupportsDtc: boolean;
+	AllowVoronStorage: boolean;
 }
 
 interface indexStatisticsDto {
