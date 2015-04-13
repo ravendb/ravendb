@@ -106,6 +106,8 @@ namespace Raven.Abstractions.Data
 		/// Indicates if database supports DTC transactions.
 		/// </summary>
 		public bool SupportsDtc { get; set; }
+
+		public bool AllowVoronStorage { get; set; }
 	}
 
 	public class TriggerInfo
