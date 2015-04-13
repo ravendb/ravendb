@@ -25,6 +25,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Store;
+using Raven.Client.Linq;
 
 
 namespace Lucene.Net.Search.Vectorhighlight
@@ -118,10 +119,9 @@ namespace Lucene.Net.Search.Vectorhighlight
             List<String> termSet = fieldQuery.getTermSet(fieldName);
             // just return to make null snippet if un-matched fieldName specified when fieldMatch == true
             if (termSet == null) return;
-
             foreach (String term in tpv.GetTerms())
             {
-                if (!termSet.Contains(term)) continue;
+                if (!StringUtils.AnyTermMatch(termSet, term)) continue;
                 int index = tpv.IndexOf(term);
                 TermVectorOffsetInfo[] tvois = tpv.GetOffsets(index);
                 if (tvois == null) return; // just return to make null snippets
