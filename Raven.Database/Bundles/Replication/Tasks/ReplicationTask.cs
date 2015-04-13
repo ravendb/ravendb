@@ -1654,8 +1654,10 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public void Dispose()
 		{
-			_indexReplicationTaskTimer.Dispose();
-			_lastQueriedTaskTimer.Dispose();
+            if (_indexReplicationTaskTimer != null) 
+                _indexReplicationTaskTimer.Dispose();
+            if (_lastQueriedTaskTimer != null)
+    			_lastQueriedTaskTimer.Dispose();
 
 			Task task;
 			while (activeTasks.TryDequeue(out task))
