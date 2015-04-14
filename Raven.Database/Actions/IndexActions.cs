@@ -543,18 +543,14 @@ namespace Raven.Database.Actions
                 if (suggestionOption.Distance == StringDistanceTypes.None)
                     continue;
 
-                var indexExtensionKey =
-                    MonoHttpUtility.UrlEncode(field + "-" + suggestionOption.Distance + "-" +
-                                              suggestionOption.Accuracy);
+                var indexExtensionKey = MonoHttpUtility.UrlEncode(field);
 
                 var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
 					index,
                      WorkContext,
                      Path.Combine(Database.Configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
-                     SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
                      Database.Configuration.RunInMemory,
-                     field,
-                     suggestionOption.Accuracy);
+                     field);
 
                 Database.IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);
             }

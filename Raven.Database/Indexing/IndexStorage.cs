@@ -324,22 +324,13 @@ namespace Raven.Database.Indexing
 					using (indexImplementation.GetSearcher(out searcher))
 					{
 						var key = Path.GetFileName(directory);
-						var decodedKey = MonoHttpUtility.UrlDecode(key);
-						var lastIndexOfDash = decodedKey.LastIndexOf('-');
-						var accuracy = float.Parse(decodedKey.Substring(lastIndexOfDash + 1), CultureInfo.InvariantCulture);
-						var lastIndexOfDistance = decodedKey.LastIndexOf('-', lastIndexOfDash - 1);
-						StringDistanceTypes distanceType;
-						Enum.TryParse(decodedKey.Substring(lastIndexOfDistance + 1, lastIndexOfDash - lastIndexOfDistance - 1),
-									  true, out distanceType);
-						var field = decodedKey.Substring(0, lastIndexOfDistance);
+						var field = MonoHttpUtility.UrlDecode(key);
 						var extension = new SuggestionQueryIndexExtension(
 							indexImplementation,
 							documentDatabase.WorkContext,
 							Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key),
-							SuggestionQueryRunner.GetStringDistance(distanceType),
 							searcher.IndexReader.Directory() is RAMDirectory,
-							field,
-							accuracy);
+							field);
 						indexImplementation.SetExtension(key, extension);
 					}
 				}
