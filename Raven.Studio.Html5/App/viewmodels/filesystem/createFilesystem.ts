@@ -6,6 +6,7 @@ import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem/filesystem");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 
 class createFilesystem extends viewModelBase {
 
@@ -54,12 +55,14 @@ class createFilesystem extends viewModelBase {
             return errorMessage;
         });
 
-	    this.fetchGlobalStats();
+		this.fetchAllowVoron();
     }
 
-	fetchGlobalStats() {
-		new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute().done((stats) => {
-			this.allowVoron(stats.AllowVoronStorage);
+	fetchAllowVoron() {
+		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
+			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
+			).done((stats: Array<databaseStatisticsDto>, config: any) => {
+			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
 		});
 	}
 
