@@ -506,7 +506,7 @@ namespace Raven.Database
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
 					SupportsDtc = TransactionalStorage.SupportsDtc,
-					AllowVoronStorage = Environment.Is64BitProcess || Configuration.Storage.Voron.AllowOn32Bits 
+					Is64Bit = Environment.Is64BitProcess
 				};
 
 				TransactionalStorage.Batch(actions =>

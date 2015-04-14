@@ -107,7 +107,10 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public bool SupportsDtc { get; set; }
 
-		public bool AllowVoronStorage { get; set; }
+		/// <summary>
+		/// Indicates if process is 64-bit
+		/// </summary>
+		public bool Is64Bit { get; set; }
 	}
 
 	public class TriggerInfo
