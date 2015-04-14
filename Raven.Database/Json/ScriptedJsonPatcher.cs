@@ -115,7 +115,7 @@ namespace Raven.Database.Json
 				CleanupEngine(patch, jintEngine, scope);
 
 				OutputLog(jintEngine);
-				if (scope.DebugMode) 
+				if (scope.DebugMode)
 					Debug.Add(string.Format("Statements executed: {0}", jintEngine.StatementsCount));
 
 				ScriptsCache.CheckinScript(patch, jintEngine, customFunctions);
@@ -174,9 +174,7 @@ namespace Raven.Database.Json
 			jintEngine.Global.Delete("PutDocument", false);
 			jintEngine.Global.Delete("LoadDocument", false);
 			jintEngine.Global.Delete("DeleteDocument", false);
-
-			if (database != null && database.Configuration.AllowScriptsToAdjustNumberOfSteps)
-				jintEngine.Global.Delete("IncreaseNumberOfAllowedStepsBy", false);
+			jintEngine.Global.Delete("IncreaseNumberOfAllowedStepsBy", false);
 
 			CustomizeEngine(jintEngine, scope);
 
@@ -184,13 +182,19 @@ namespace Raven.Database.Json
 			jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref totalScriptSteps)));
 			jintEngine.SetValue("DeleteDocument", (Action<string>)(scope.DeleteDocument));
 			jintEngine.SetValue("__document_id", docId);
-			
-			if (database != null && database.Configuration.AllowScriptsToAdjustNumberOfSteps)
-				jintEngine.SetValue("IncreaseNumberOfAllowedStepsBy",(Action<int>)(number => 
-				{ 
-					scope.MaxSteps += number; 
+
+			jintEngine.SetValue("IncreaseNumberOfAllowedStepsBy", (Action<int>)(number =>
+			{
+				if (database != null && database.Configuration.AllowScriptsToAdjustNumberOfSteps)
+				{
+					scope.MaxSteps += number;
 					jintEngine.Options.MaxStatements(totalScriptSteps + number);
-				}));		
+
+					return;
+				}
+
+				throw new InvalidOperationException("Cannot use 'IncreaseNumberOfAllowedStepsBy' method, because `Raven/AllowScriptsToAdjustNumberOfSteps` is set to false.");
+			}));
 
 			foreach (var kvp in patch.Values)
 			{
