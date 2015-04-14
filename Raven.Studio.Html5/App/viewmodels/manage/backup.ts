@@ -63,7 +63,7 @@ class backupDatabase extends viewModelBase {
             this.dbBackupOptions.isBusy(!!newBackupStatus.IsRunning);
         };
 
-        require(["commands/backupDatabaseCommand"], backupDatabaseCommand => {
+        require(["commands/maintenance/backupDatabaseCommand"], backupDatabaseCommand => {
             var dbToBackup = shell.databases.first((db: database) => db.name == this.dbBackupOptions.resourceName());
             new backupDatabaseCommand(dbToBackup, this.dbBackupOptions.backupLocation(), updateBackupStatus, this.dbBackupOptions.incremental())
                 .execute()

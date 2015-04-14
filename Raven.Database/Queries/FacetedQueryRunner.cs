@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using ICSharpCode.NRefactory.TypeSystem.Implementation;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
-using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -304,32 +302,28 @@ namespace Raven.Database.Queries
                                     }
                                 }
 
-                                var count = GetIntersectCount(kvp.Value, readerFacetInfo.Results, alreadySeen);
-						
-                                if (count == 0)
+	                            var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
+								var intersectedDocuments = GetIntersectedDocuments(kvp.Value, readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
+								var intersectCount = intersectedDocuments.Count;
+                                if (intersectCount == 0)
                                     continue;
 
-                                FacetValue value;
-                                if (facetValues.TryGetValue(kvp.Key, out value) == false)
+                                FacetValue facetValue;
+                                if (facetValues.TryGetValue(kvp.Key, out facetValue) == false)
                                 {
-                                    value = new FacetValue
+                                    facetValue = new FacetValue
                                     {
                                         Range = GetRangeName(facet.Name, kvp.Key)
                                     };
-                                    facetValues.Add(kvp.Key, value);
+                                    facetValues.Add(kvp.Key, facetValue);
                                 }
-                                value.Hits += count;
-                                value.Count = value.Hits;
+                                facetValue.Hits += intersectCount;
+                                facetValue.Count = facetValue.Hits;
 
-                                switch (facet.Aggregation)
-                                {
-                                    case FacetAggregation.None:
-                                    case FacetAggregation.Count:
-                                        continue;
-                                    default:
-                                        ApplyAggregation(facet, value, kvp.Value, readerFacetInfo.Reader, readerFacetInfo.DocBase);
-                                        break;
-                                }
+	                            if (needToApplyAggregation)
+	                            {
+									ApplyAggregation(facet, facetValue, intersectedDocuments.Documents, readerFacetInfo.Reader, readerFacetInfo.DocBase);
+	                            }
                             }
 					    }
 					}
@@ -337,7 +331,9 @@ namespace Raven.Database.Queries
 				    foreach (var range in Ranges)
 				    {
 				        var facet = Facets[range.Key];
-                        Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
+						var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
+						
+						Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
                         HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
                         if (isDistinct)
                             distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
@@ -356,7 +352,7 @@ namespace Raven.Database.Queries
 
 				            var facetResult = Results.Results[range.Key];
 				            var ranges = range.Value;
-				            foreach (var kvp in termsForField)
+							foreach (var kvp in termsForField)
 				            {
 				                for (int i = 0; i < ranges.Count; i++)
 				                {
@@ -365,21 +361,18 @@ namespace Raven.Database.Queries
 				                    {
 				                        var facetValue = facetResult.Values[i];
 
-                                        var intersectCount = GetIntersectCount(kvp.Value, readerFacetInfo.Results, alreadySeen);
+										var intersectedDocuments = GetIntersectedDocuments(kvp.Value, readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
+					                    var intersectCount = intersectedDocuments.Count;
 				                        if (intersectCount == 0)
 				                            continue;
+
 				                        facetValue.Hits += intersectCount;
 				                        facetValue.Count = facetValue.Hits;
 
-				                        switch (facet.Aggregation)
-				                        {
-				                            case FacetAggregation.None:
-				                            case FacetAggregation.Count:
-				                                continue;
-				                            default:
-                                                ApplyAggregation(facet, facetValue, kvp.Value, readerFacetInfo.Reader, readerFacetInfo.DocBase);
-				                                break;
-				                        }
+										if (needToApplyAggregation)
+										{
+											ApplyAggregation(facet, facetValue, intersectedDocuments.Documents, readerFacetInfo.Reader, readerFacetInfo.DocBase);
+										}
 				                    }
 				                }
 				            }
@@ -390,7 +383,6 @@ namespace Raven.Database.Queries
 					CompleteFacetCalculationsStage();
 				}
 			}
-
 
 		    private List<ReaderFacetInfo> GetQueryMatchingDocuments(IndexSearcher currentIndexSearcher, Query baseQuery)
             {
@@ -408,10 +400,24 @@ namespace Raven.Database.Queries
                 return gatherAllCollector.Results;
             }
 
+			private class IntersectDocs
+			{
+				public int Count;
+				public List<int> Documents;
+
+				[MethodImpl(MethodImplOptions.AggressiveInlining)]
+				public void AddIntersection(int docId)
+				{
+					Count++;
+					if (Documents != null)
+						Documents.Add(docId);
+				}
+			}
+
 		    /// <summary>
             /// This method expects both lists to be sorted
             /// </summary>
-			private int GetIntersectCount(int[] a,  int[] b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
+			private IntersectDocs GetIntersectedDocuments(int[] a, int[] b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, bool needToApplyAggregation)
 		    {
                 int[] n,m;
                 if (a.Length > b.Length)
@@ -432,7 +438,10 @@ namespace Raven.Database.Queries
                 double o2 = nSize * Math.Log(mSize, 2);
 
                 var isDistinct = IndexQuery.IsDistinct;
-                int result = 0;
+                var result = new IntersectDocs();
+				if (needToApplyAggregation)
+					result.Documents = new List<int>();
+
                 if (o1 < o2)
                 {
                     int mi = 0, ni = 0;
@@ -448,12 +457,13 @@ namespace Raven.Database.Queries
                         }
                         else
                         {
-                            if (isDistinct)
-                                result += GetDistinctCountValue(n[ni], alreadySeen);
-                            else
-                                result++; 
+	                        int docId = n[ni];
+	                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
+	                        {
+		                        result.AddIntersection(docId);
+	                        }
 
-                            ni++;
+	                        ni++;
                             mi++;
                         }
                     }
@@ -462,23 +472,24 @@ namespace Raven.Database.Queries
                 {
                     for (int i = 0; i < mSize; i++)
                     {
-                        if (Array.BinarySearch(n,m[i]) >= 0)
+                        if (Array.BinarySearch(n, m[i]) >= 0)
                         {
-                            if (isDistinct)
-                                result += GetDistinctCountValue(m[i], alreadySeen);
-                            else
-                                result++;
+	                        int docId = m[i];
+	                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
+	                        {
+		                        result.AddIntersection(docId);
+	                        }
                         }
                     }
                 }
                 return result;
             }
 
-		   
-		    private int GetDistinctCountValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
 		    {
                 var fields = _currentState.GetFieldsValues(docId, _fieldsCrc, IndexQuery.FieldsToFetch);
-		        return alreadySeen.Add(fields) ? 1 : 0;
+		        return alreadySeen.Add(fields);
 		    }
 
 		    private void ValidateFacets()
@@ -586,7 +597,7 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			private void ApplyAggregation(Facet facet, FacetValue value, int[] docsInQuery, IndexReader indexReader, int docBase)
+			private void ApplyAggregation(Facet facet, FacetValue value, List<int> docsInQuery, IndexReader indexReader, int docBase)
 			{
 			    var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
 			    switch (sortOptionsForFacet)

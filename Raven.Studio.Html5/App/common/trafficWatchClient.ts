@@ -1,6 +1,6 @@
 ﻿ /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import changesApi = require("common/changesApi");

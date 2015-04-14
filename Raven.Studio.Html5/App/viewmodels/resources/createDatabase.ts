@@ -3,6 +3,9 @@ import dialog = require("plugins/dialog");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import getPluginsInfoCommand = require("commands/database/debug/getPluginsInfoCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import topology = require("models/database/replication/topology");
 import shell = require("viewmodels/shell");
@@ -23,7 +26,7 @@ class createDatabase extends viewModelBase {
     databaseTempPath = ko.observable('');
     tempCustomValidityError: KnockoutComputed<string>;
     storageEngine = ko.observable('');
-    tempPathVisible = ko.computed(() => "voron" == this.storageEngine());
+    tempPathVisible = ko.computed(() => "voron" === this.storageEngine());
     private maxNameLength = 200;
 
     isCompressionBundleEnabled = ko.observable(false);
@@ -40,6 +43,11 @@ class createDatabase extends viewModelBase {
     isClusterWideChecked = ko.observable(true);
     alertTimeout = ko.observable("");
     alertRecurringTimeout = ko.observable("");
+
+	customBundles = ko.observableArray<string>();
+	selectedCustomBundles = ko.observableArray<string>([]);
+	allowVoron = ko.observable<boolean>(true);
+	voronWarningVisible = ko.computed(() => !this.allowVoron() && "voron" === this.storageEngine());
 
 	clusterMode = ko.computed(() => shell.clusterMode());
 
@@ -91,6 +99,9 @@ class createDatabase extends viewModelBase {
             return errorMessage;
         });
 
+		this.fetchCustomBundles();
+	    this.fetchAllowVoron();
+
         this.fetchClusterWideConfig();
     }
 
@@ -112,6 +123,22 @@ class createDatabase extends viewModelBase {
             this.creationTask.reject();
         }
     }
+
+	fetchCustomBundles() {
+		new getPluginsInfoCommand(appUrl.getSystemDatabase())
+			.execute()
+			.done((result: pluginsInfoDto) => {
+			this.customBundles(result.CustomBundles);
+		});
+	}
+
+	fetchAllowVoron() {
+		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
+			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
+		).done((stats: Array<databaseStatisticsDto>, config: any) => {
+			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
+		});
+	}
 
     isBundleActive(name: string): boolean {
         var licenseStatus: licenseStatusDto = this.licenseStatus();
@@ -229,6 +256,18 @@ class createDatabase extends viewModelBase {
         this.isScriptedIndexBundleEnabled.toggle();
     }
 
+	toggleCustomBundle(name: string) {
+		if (this.selectedCustomBundles.contains(name)) {
+			this.selectedCustomBundles.remove(name);
+		} else {
+			this.selectedCustomBundles.push(name);
+		}
+	}
+
+	isCustomBundleEnabled(name: string) {
+		return this.selectedCustomBundles().contains(name);
+	}
+
     private getActiveBundles(): string[] {
         var activeBundles: string[] = [];
         if (this.isCompressionBundleEnabled()) {
@@ -266,6 +305,8 @@ class createDatabase extends viewModelBase {
         if (this.isScriptedIndexBundleEnabled()) {
             activeBundles.push("ScriptedIndexResults");
         }
+
+	    activeBundles.pushAll(this.selectedCustomBundles());
 
         return activeBundles;
     }

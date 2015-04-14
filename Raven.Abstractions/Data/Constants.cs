@@ -18,15 +18,15 @@ namespace Raven.Abstractions.Data
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
 		public const string RavenShardId = "Raven-Shard-Id";
-
-
+        
+		
 		public const string LastModified = "Last-Modified";
 
-		public const string CreationDate = "Creation-Date";
+        public const string CreationDate = "Creation-Date";
 
-		public const string RavenCreationDate = "Raven-Creation-Date";
+        public const string RavenCreationDate = "Raven-Creation-Date";
 
-		public const string RavenLastModified = "Raven-Last-Modified";
+        public const string RavenLastModified = "Raven-Last-Modified";
 
 		public const string SystemDatabase = "<system>";
 
@@ -68,6 +68,8 @@ namespace Raven.Abstractions.Data
 		public const string NotForReplication = "Raven-Not-For-Replication";
 
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
+		public const string RavenIndexDeleteMarker = "Raven-Index-Delete-Marker";
+		public const string RavenTransformerDeleteMarker = "Raven-Transformer-Delete-Marker";
 
 		public const string ActiveBundles = "Raven/ActiveBundles";
 
@@ -81,22 +83,22 @@ namespace Raven.Abstractions.Data
 
 		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
 
-		public const string RunInMemory = "Raven/RunInMemory";
+        public const string RunInMemory = "Raven/RunInMemory";
 
-		public const string ExposeConfigOverTheWire = "Raven/ExposeConfigOverTheWire";
+	    public const string ExposeConfigOverTheWire = "Raven/ExposeConfigOverTheWire";
 
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
 
-		public const string MaxConcurrentRequestsForDatabaseDuringLoad = "Raven/MaxConcurrentRequestsForDatabaseDuringLoad";
+	    public const string MaxConcurrentRequestsForDatabaseDuringLoad = "Raven/MaxConcurrentRequestsForDatabaseDuringLoad";
 
-		public const string MaxSecondsForTaskToWaitForDatabaseToLoad = "Raven/MaxSecondsForTaskToWaitForDatabaseToLoad";
+        public const string MaxSecondsForTaskToWaitForDatabaseToLoad = "Raven/MaxSecondsForTaskToWaitForDatabaseToLoad";
 
-		public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
+	    public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
 
-		public const string RavenServerBuild = "Raven-Server-Build";
+	    public const string RavenServerBuild = "Raven-Server-Build";
 
 		// Indexing
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
@@ -107,7 +109,7 @@ namespace Raven.Abstractions.Data
 
 		public const int BulkImportDefaultTimeoutInMs = 60000;
 
-		public const string IndexingDisabled = "Raven/IndexingDisabled";
+	    public const string IndexingDisabled = "Raven/IndexingDisabled";
 
 		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
 
@@ -118,7 +120,7 @@ namespace Raven.Abstractions.Data
 
 		public const string RavenEsentLogsPath = "Raven/Esent/LogsPath";
 
-		public const string RavenTxJournalPath = "Raven/TransactionJournalsPath";
+        public const string RavenTxJournalPath = "Raven/TransactionJournalsPath";
 
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
 
@@ -168,9 +170,9 @@ namespace Raven.Abstractions.Data
 		public const string SizeSoftLimitInKB = "Raven/Quotas/Size/SoftMarginInKB";
 
 		//Replications
-		public const string RavenIndexAndTransformerReplicationLatencyInSec = "Raven/Replication/IndexAndTransformerReplicationLatency"; //in seconds
+	    public const string RavenIndexAndTransformerReplicationLatencyInSec = "Raven/Replication/IndexAndTransformerReplicationLatency"; //in seconds
 
-		public const int DefaultRavenIndexAndTransformerReplicationLatencyInSec = 600;
+	    public const int DefaultRavenIndexAndTransformerReplicationLatencyInSec = 600;
 
 		public const string RavenReplicationSource = "Raven-Replication-Source";
 
@@ -191,14 +193,18 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationConfig = "Raven/Replication/Config";
 
 		public const string RavenReplicationDocsTombstones = "Raven/Replication/Docs/Tombstones";
+		public const string RavenReplicationIndexesTombstones = "Raven/Replication/Indexes/Tombstones";
+		public const string RavenReplicationTransformerTombstones = "Raven/Replication/Transformers/Tombstones";
 
-		[Obsolete("Use RavenFS instead.")]
+		public const string RavenSqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
+
+        [Obsolete("Use RavenFS instead.")]
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 
-		//Periodic export
+        //Periodic export
 		public const string RavenPeriodicExportsDocsTombstones = "Raven/PeriodicExports/Docs/Tombstones";
 
-		[Obsolete("Use RavenFS instead.")]
+        [Obsolete("Use RavenFS instead.")]
 		public const string RavenPeriodicExportsAttachmentsTombstones = "Raven/PeriodicExports/Attachments/Tombstones";
 
 		public const int ChangeHistoryLength = 50;
@@ -220,25 +226,25 @@ namespace Raven.Abstractions.Data
 		public const double EarthMeanRadiusKm = 6371.0087714;
 
 		public const double MilesToKm = 1.60934;
-
+		
 		//Versioning
 		public const string RavenCreateVersion = "Raven-Create-Version";
 
-		public const string RavenIgnoreVersioning = "Raven-Ignore-Versioning";
+	    public const string RavenIgnoreVersioning = "Raven-Ignore-Versioning";
 
 		public const string RavenClientVersion = "Raven-Client-Version";
 
-		public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
+        public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
 
 		public const string NextPageStart = "Next-Page-Start";
 
-		/// <summary>
-		/// if no encoding information in headers of incoming request, this encoding is assumed
-		/// </summary>
-		public const string DefaultRequestEncoding = "UTF-8";
-
+        /// <summary>
+        /// if no encoding information in headers of incoming request, this encoding is assumed
+        /// </summary>
+        public const string DefaultRequestEncoding = "UTF-8";
+        
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
-
+		
 		//Counters
 		public static class Counter
 		{
@@ -257,7 +263,7 @@ namespace Raven.Abstractions.Data
 
 
 
-		public const string MetadataEtagField = "ETag";
+        public const string MetadataEtagField = "ETag";
 
 		public const string TempUploadsDirectoryName = "RavenTempUploads";
 
@@ -269,9 +275,9 @@ namespace Raven.Abstractions.Data
 
 		public const string FilesystemDocumentFilename = "Filesystem.Document";
 
-		public const string IncrementalBackupAlertTimeout = "Raven/IncrementalBackup/AlertTimeoutHours";
+	    public const string IncrementalBackupAlertTimeout = "Raven/IncrementalBackup/AlertTimeoutHours";
 
-		public const string IncrementalBackupRecurringAlertTimeout = "Raven/IncrementalBackup/RecurringAlertTimeoutDays";
+        public const string IncrementalBackupRecurringAlertTimeout = "Raven/IncrementalBackup/RecurringAlertTimeoutDays";
 
 		public const string IncrementalBackupState = "IncrementalBackupState.Document";
 
@@ -285,65 +291,66 @@ namespace Raven.Abstractions.Data
 
 			public const string UrlPrefix = "databases";
 		}
-
+		
 		public static class FileSystem
-		{
+        {
 			public const string Prefix = "Raven/FileSystems/";
 
-			public const string DataDirectory = "Raven/FileSystem/DataDir";
+            public const string DataDirectory = "Raven/FileSystem/DataDir";
 
-			public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
+            public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
 
-			public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
+            public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
 
-			public const string Storage = "Raven/FileSystem/Storage";
+            public const string Storage = "Raven/FileSystem/Storage";
 
-			public const string UrlPrefix = "fs";
+	        public const string UrlPrefix = "fs";
 
-			public const string RavenFsSize = "RavenFS-Size";
+	        public const string RavenFsSize = "RavenFS-Size";
 
-			public static class Versioning
-			{
+	        public static class Versioning
+	        {
 				public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
-			}
-		}
+	        }
+        }
 
 		// Subscriptions
 		public const string RavenSubscriptionsPrefix = "Raven/Subscriptions/";
 
 		public static class Esent
-		{
-			public const string CircularLog = "Raven/Esent/CircularLog";
+        {
+            public const string CircularLog = "Raven/Esent/CircularLog";
 
-			public const string CacheSizeMax = "Raven/Esent/CacheSizeMax";
+            public const string CacheSizeMax = "Raven/Esent/CacheSizeMax";
 
-			public const string MaxVerPages = "Raven/Esent/MaxVerPages";
+            public const string MaxVerPages = "Raven/Esent/MaxVerPages";
 
-			public const string PreferredVerPages = "Raven/Esent/PreferredVerPages";
+            public const string PreferredVerPages = "Raven/Esent/PreferredVerPages";
 
-			public const string LogFileSize = "Raven/Esent/LogFileSize";
+            public const string LogFileSize = "Raven/Esent/LogFileSize";
 
-			public const string LogBuffers = "Raven/Esent/LogBuffers";
+            public const string LogBuffers = "Raven/Esent/LogBuffers";
 
-			public const string MaxCursors = "Raven/Esent/MaxCursors";
+            public const string MaxCursors = "Raven/Esent/MaxCursors";
 
-			public const string DbExtensionSize = "Raven/Esent/DbExtensionSize";
-		}
+            public const string DbExtensionSize = "Raven/Esent/DbExtensionSize";
+        }
 
-		public static class Voron
-		{
-			public const string AllowIncrementalBackups = "Raven/Voron/AllowIncrementalBackups";
+        public static class Voron
+        {
+            public const string AllowIncrementalBackups = "Raven/Voron/AllowIncrementalBackups";
 
-			public const string InitialFileSize = "Raven/Voron/InitialFileSize";
+            public const string InitialFileSize = "Raven/Voron/InitialFileSize";
 
-			public const string TempPath = "Raven/Voron/TempPath";
+            public const string TempPath = "Raven/Voron/TempPath";
 
-			public const string MaxBufferPoolSize = "Raven/Voron/MaxBufferPoolSize";
+            public const string MaxBufferPoolSize = "Raven/Voron/MaxBufferPoolSize";
 
-			public const string InitialSize = "Raven/Voron/InitialSize";
+            public const string InitialSize = "Raven/Voron/InitialSize";
 
-			public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
-		}
+            public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
+	        public const string AllowOn32Bits = "Raven/Voron/AllowOn32Bits";
+        }
 
 		public class Versioning
 		{
@@ -387,10 +394,10 @@ namespace Raven.Abstractions.Data
 			public const string JavascriptFunctions = "Raven/Global/Javascript/Functions";
 		}
 
-		public static class Smuggler
-		{
-			public const string CallContext = "Raven/Smuggler/CallContext";
-		}
+	    public static class Smuggler
+	    {
+		    public const string CallContext = "Raven/Smuggler/CallContext";
+	    }
 
 		public static class Cluster
 		{
@@ -413,5 +420,7 @@ namespace Raven.Abstractions.Data
 
 			public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
 		}
+
+		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";
 	}
 }

@@ -1,7 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import moment = require("moment");
-import changeSubscription = require("models/changeSubscription");
+import changeSubscription = require("common/changeSubscription");
 import shell = require("viewmodels/shell");
 
 class indexErrors extends viewModelBase {

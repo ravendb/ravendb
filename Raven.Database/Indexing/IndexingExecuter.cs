@@ -378,7 +378,9 @@ namespace Raven.Database.Indexing
 					performanceResult = IndexDocuments(actions, batchForIndex, token);
 				});
 
-				performanceResult.RunCompleted();
+                // This can be null if IndexDocument fails to execute and the exception is catched.
+                if ( performanceResult != null )
+                    performanceResult.RunCompleted();
 			}
 			catch (Exception e)
 			{
@@ -387,7 +389,9 @@ namespace Raven.Database.Indexing
 			finally
 			{
 				if (performanceResult != null)
-					performanceResult.OnCompleted = null;
+                {                    
+                    performanceResult.OnCompleted = null;
+                }				
 
 				if (Log.IsDebugEnabled)
 				{
@@ -494,7 +498,16 @@ namespace Raven.Database.Indexing
 					Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
 							  lastEtag, lastModified);
 					// we use it this way to batch all the updates together
-					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified);
+					actions[i] = accessor =>
+					{
+						accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified);
+
+						accessor.AfterStorageCommit += () =>
+						{
+							indexToWorkOn.Index.EnsureIndexWriter();
+							indexToWorkOn.Index.Flush(lastEtag);
+						};
+					};
 					return;
 				}
 				if (Log.IsDebugEnabled)

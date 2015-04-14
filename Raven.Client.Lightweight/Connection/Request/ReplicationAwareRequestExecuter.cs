@@ -13,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Metrics;
 
 namespace Raven.Client.Connection.Request

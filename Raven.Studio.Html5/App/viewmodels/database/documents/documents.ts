@@ -9,7 +9,7 @@ import deleteCollection = require("viewmodels/database/documents/deleteCollectio
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
 import alert = require("models/database/debug/alert");
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import customFunctions = require("models/database/documents/customFunctions");
 import customColumns = require('models/database/documents/customColumns');
 import customColumnParams = require('models/database/documents/customColumnParams');
@@ -20,6 +20,7 @@ import getEffectiveCustomFunctionsCommand = require("commands/database/globalCon
 import getOperationStatusCommand = require('commands/operations/getOperationStatusCommand');
 import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
@@ -52,9 +53,8 @@ class documents extends viewModelBase {
     canCopyAllSelected: KnockoutComputed<boolean>;
 
     lastCollectionCountUpdate = ko.observable<string>();
-
     alerts = ko.observable<alert[]>([]);
-
+    token = ko.observable<singleAuthToken>();
     static gridSelector = "#documentsGrid";
 
     constructor() {
@@ -96,10 +96,12 @@ class documents extends viewModelBase {
             var collection: collection = this.selectedCollection();
             return !!collection && !collection.isAllDocuments && !collection.isSystemDocuments;
         });
+
+        this.updateAuthToken();
         this.currentExportUrl = ko.computed(() => {
             var collection: collection = this.selectedCollection();
             if (this.isRegularCollection()) {
-                return appUrl.forExportCollectionCsv(collection, collection.ownerDatabase);
+                return appUrl.forExportCollectionCsv(collection, collection.ownerDatabase) + (!!this.token() ? "&singleUseAuthToken=" + this.token().Token : "");
             }
             return null;
         });
@@ -142,6 +144,18 @@ class documents extends viewModelBase {
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);
+    }
+
+    private updateAuthToken() {
+        new getSingleAuthTokenCommand(this.activeDatabase())
+            .execute()
+            .done(token => this.token(token));
+    }
+
+    exportCsv() {
+        // schedule token update (to properly handle subseqent downloads)
+        setTimeout(() => this.updateAuthToken(), 50);
+        return true;
     }
 
     private fetchAlerts() {

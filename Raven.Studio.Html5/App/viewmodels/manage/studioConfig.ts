@@ -90,7 +90,7 @@ class studioConfig extends viewModelBase {
     saveStudioConfig(newDocument: documentClass) {
         var deferred = $.Deferred();
 
-        require(["commands/saveDocumentCommand"], saveDocumentCommand => {
+        require(["commands/database/documents/saveDocumentCommand"], saveDocumentCommand => {
             var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase).execute();
             saveTask
                 .done((saveResult: bulkDocumentDto[]) => {

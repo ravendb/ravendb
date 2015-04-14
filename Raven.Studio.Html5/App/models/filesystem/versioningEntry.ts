@@ -3,6 +3,7 @@
     exclude = ko.observable<boolean>();
     excludeUnlessExplicit = ko.observable<boolean>();
     purgeOnDelete = ko.observable<boolean>();
+	resetOnRename = ko.observable<boolean>();
 
     disabled: KnockoutComputed<boolean>;
 
@@ -14,7 +15,8 @@
                 MaxRevisions: 214748368,
                 Exclude: false,
                 ExcludeUnlessExplicit: false,
-                PurgeOnDelete: false
+                PurgeOnDelete: false,
+				ResetOnRename: false
             };
         }
 
@@ -22,6 +24,7 @@
         this.exclude(dto.Exclude);
         this.excludeUnlessExplicit(dto.ExcludeUnlessExplicit);
         this.purgeOnDelete(dto.PurgeOnDelete);
+	    this.resetOnRename(dto.ResetOnRename);
         this.disabled = ko.computed(() => this.exclude());
         
     }
@@ -40,7 +43,8 @@
             MaxRevisions: this.maxRevisions(),
             Exclude: this.exclude(),
             ExcludeUnlessExplicit: this.excludeUnlessExplicit(),
-            PurgeOnDelete: this.purgeOnDelete()
+            PurgeOnDelete: this.purgeOnDelete(),
+			ResetOnRename: this.resetOnRename()
         };
 
         return dto;

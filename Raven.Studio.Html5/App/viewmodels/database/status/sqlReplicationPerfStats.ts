@@ -5,7 +5,7 @@ import d3 = require("d3/d3");
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 
 class sqlReplicationPerfStats extends viewModelBase {
 

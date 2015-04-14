@@ -125,7 +125,7 @@ namespace Raven.Abstractions.Util
 			memoryAfterLastForcedGC = GC.GetTotalMemory(false);
 			memoryDifferenceLastGc = DifferenceAsDecimalPercents(MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
 
-			log.Info("Finished GC, before was {0:#,#}kb, after is {1#,#}kb", MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
+			log.Info("Finished GC, before was {0:#,#}kb, after is {1:#,#}kb", MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
 
 
 			// -> reset last time, increase delay threshold and disallow GC (too early!)

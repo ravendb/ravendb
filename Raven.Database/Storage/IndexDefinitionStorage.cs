@@ -484,11 +484,14 @@ namespace Raven.Database.Storage
             });
         }
 
-        public void RemoveTransformer(string name)
+        public bool RemoveTransformer(string name)
         {
             var transformer = GetTransformerDefinition(name);
-            if (transformer == null) return;
+            if (transformer == null) 
+				return false;
             RemoveTransformer(transformer.TransfomerId);
+
+	        return true;
         }
 
         public void RemoveIndex(string name)

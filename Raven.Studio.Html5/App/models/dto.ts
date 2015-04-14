@@ -91,6 +91,7 @@ interface databaseStatisticsDto {
     Prefetches: any[];
     StaleIndexes: string[];
     SupportsDtc: boolean;
+	Is64Bit: boolean;
 }
 
 interface indexStatisticsDto {
@@ -434,6 +435,7 @@ interface versioningEntryDto extends documentDto {
   Exclude: boolean;
   ExcludeUnlessExplicit: boolean;
   PurgeOnDelete: boolean;
+  ResetOnRename?: boolean;
 }
 
 interface versioningDto {
@@ -659,7 +661,8 @@ interface sqlReplicationDto extends documentDto {
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
-    PerformTableQuatation?:boolean;
+    QuoteTables?: boolean;
+	PerformTableQuatation?: boolean; //obsolate
 }
 
 interface commandData {
@@ -1247,6 +1250,27 @@ interface synchronizationConfigDto {
     FileConflictResolution: string;
     MaxNumberOfSynchronizationsPerDestination: number;
     SynchronizationLockTimeoutMiliseconds: number;
+}
+
+interface pluginsInfoDto {
+	Extensions: Array<extensionsLogDto>;
+	Triggers: Array<triggerInfoDto>;
+	CustomBundles: Array<string>;
+}
+
+interface extensionsLogDto {
+	Name: string;
+	Installed: Array<extensionsLogDetailDto>;
+}
+
+interface extensionsLogDetailDto {
+	Name: string;
+	Assembly: string;
+}
+
+interface triggerInfoDto {
+	Type: string;
+	Name: string;
 }
 
 interface copyFromParentDto<T> {

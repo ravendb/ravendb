@@ -11,9 +11,14 @@ namespace Raven.Database.Bundles.Replication.Impl
 {
 	public class ReplicationData
 	{
-		public static RavenJArray GetHistory(RavenJObject existingMetadata)
+		public static RavenJArray GetHistory(RavenJObject metadata)
 		{
-			return (existingMetadata[Constants.RavenReplicationHistory] as RavenJArray) ?? new RavenJArray();
-		} 
+			return (metadata[Constants.RavenReplicationHistory] as RavenJArray) ?? new RavenJArray();
+		}
+
+		public static void SetHistory(RavenJObject metadata, RavenJArray history)
+		{
+			metadata[Constants.RavenReplicationHistory] = history;
+		}
 	}
 }

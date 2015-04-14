@@ -21,6 +21,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection.Request

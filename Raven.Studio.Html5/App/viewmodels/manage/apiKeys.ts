@@ -101,7 +101,7 @@ class apiKeys extends viewModelBase {
         var deletedApiKeys = this.loadedApiKeys().filter((key: apiKey) => apiKeysNamesArray.contains(key.name()) == false);
         deletedApiKeys.forEach((key: apiKey) => key.setIdFromName());
 
-        require(["commands/saveApiKeysCommand"], saveApiKeysCommand => {
+        require(["commands/auth/saveApiKeysCommand"], saveApiKeysCommand => {
             new saveApiKeysCommand(this.apiKeys(), deletedApiKeys)
                 .execute()
                 .done((result: bulkDocumentDto[]) => {

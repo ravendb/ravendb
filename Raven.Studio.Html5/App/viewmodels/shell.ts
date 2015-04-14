@@ -12,8 +12,8 @@ import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import documentClass = require("models/database/documents/document");
 import collection = require("models/database/documents/collection");
-import uploadItem = require("models/uploadItem");
-import changeSubscription = require("models/changeSubscription");
+import uploadItem = require("models/filesystem/uploadItem");
+import changeSubscription = require("common/changeSubscription");
 import license = require("models/auth/license");
 
 import appUrl = require("common/appUrl");
@@ -31,7 +31,7 @@ import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
 
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
-import getServerBuildVersionCommand = require("commands/getServerBuildVersionCommand");
+import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
@@ -715,6 +715,14 @@ class shell extends viewModelBase {
 
     private handleRavenConnectionFailure(result) {
         NProgress.done();
+
+		if (result.status === 401) {
+			// Unauthorized might be caused by invalid credentials. 
+			// Remove them from both local storage and oauth context.
+			apiKeyLocalStorage.clean();
+			oauthContext.clean();
+		}
+
         sys.log("Unable to connect to Raven.", result);
         var tryAgain = 'Try again';
         var messageBoxResultPromise = this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain]);
@@ -923,7 +931,7 @@ class shell extends viewModelBase {
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion != 13) {
-                    new getLatestServerBuildVersionCommand() //pass false as a parameter to get the latest unstable
+                    new getLatestServerBuildVersionCommand(true, 3000, 3599) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {
                             if (latestServerBuildResult.LatestBuild > currentBuildVersion) { //

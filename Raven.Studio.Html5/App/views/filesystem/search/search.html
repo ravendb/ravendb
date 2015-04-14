@@ -26,9 +26,12 @@
                         <a class="input-group-addon" style="width: 30px" href="#" data-bind="click: clear">
                            <i class="fa fa-times"></i>
                         </a>
-                        <a href="#" data-bind="click: search" class="input-group-addon" style="width: 30px">
-                            <i class="fa fa-search"></i>
-                        </a>
+	                    <a href="#" data-bind="click: search" class="input-group-addon" style="width: 30px">
+		                    <i class="fa fa-search"></i>
+	                    </a>
+						<a href="#" class="btn btn-danger input-group-addon" style="width: 30px" title="Delete all files matching the query" data-bind="click: deleteFilesMatchingQuery">
+							<i class="fa fa-trash-o"></i>
+						</a>
                     </div>
                 </div>
             </form>

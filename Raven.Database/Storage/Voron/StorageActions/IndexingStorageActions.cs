@@ -108,8 +108,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					.Set(IndexingWorkStatsFields.LastIndexingTime, DateTime.MinValue.ToBinary()),
 				0);
 
-			tableStorage.IndexingMetadata.Add(writeBatch.Value, CreateKey(id, "priority"), BitConverter.GetBytes(1), 0);
-			tableStorage.IndexingMetadata.Increment(writeBatch.Value, CreateKey(id, "touches"), 0, 0);
+            var idKey = CreateKey(id);
+
+            tableStorage.IndexingMetadata.Add(writeBatch.Value, AppendToKey(idKey, "priority"), BitConverter.GetBytes(1), 0);
+            tableStorage.IndexingMetadata.Increment(writeBatch.Value, AppendToKey(idKey, "touches"), 0, 0);
 
 			tableStorage.ReduceStats.AddStruct(
 				writeBatch.Value,
@@ -134,11 +136,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public void PrepareIndexForDeletion(int id)
 		{
-			var key = CreateKey(id);
+            var key = CreateKey(id);
 
 			tableStorage.IndexingStats.Delete(writeBatch.Value, key);
-			tableStorage.IndexingMetadata.Delete(writeBatch.Value, CreateKey(id, "priority"));
-			tableStorage.IndexingMetadata.Delete(writeBatch.Value, CreateKey(id, "touches"));
+            tableStorage.IndexingMetadata.Delete(writeBatch.Value, AppendToKey(key, "priority"));
+            tableStorage.IndexingMetadata.Delete(writeBatch.Value, AppendToKey(key, "touches"));
 			tableStorage.ReduceStats.Delete(writeBatch.Value, key);
 			tableStorage.LastIndexedEtags.Delete(writeBatch.Value, key);
 		}
@@ -316,11 +318,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				var newKeyAsString = newKey.ToString();
 
+                var idKey = CreateKey(id);
+
 				tableStorage.DocumentReferences.AddStruct(writeBatch.Value, newKeyAsString, value);
 				documentReferencesByKey.MultiAdd(writeBatch.Value, CreateKey(key), newKeyAsString);
 				documentReferencesByRef.MultiAdd(writeBatch.Value, CreateKey(reference), newKeyAsString);
-				documentReferencesByView.MultiAdd(writeBatch.Value, CreateKey(id), newKeyAsString);
-				documentReferencesByViewAndKey.MultiAdd(writeBatch.Value, CreateKey(id, key), newKeyAsString);
+                documentReferencesByView.MultiAdd(writeBatch.Value, idKey, newKeyAsString);
+				documentReferencesByViewAndKey.MultiAdd(writeBatch.Value, AppendToKey(idKey, key), newKeyAsString);
 			}
 		}
 
@@ -498,11 +502,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var view = value.ReadInt(DocumentReferencesFields.IndexId).ToString(CultureInfo.InvariantCulture);
 			var key = value.ReadString(DocumentReferencesFields.Key);
 
+            var viewKey = CreateKey(view);
+
 			tableStorage.DocumentReferences.Delete(writeBatch.Value, id);
 			documentReferencesByKey.MultiDelete(writeBatch.Value, CreateKey(key), id);
 			documentReferencesByRef.MultiDelete(writeBatch.Value, CreateKey(reference), id);
-			documentReferencesByView.MultiDelete(writeBatch.Value, CreateKey(view), id);
-			documentReferencesByViewAndKey.MultiDelete(writeBatch.Value, CreateKey(view, key), id);
+            documentReferencesByView.MultiDelete(writeBatch.Value, viewKey, id);
+			documentReferencesByViewAndKey.MultiDelete(writeBatch.Value, AppendToKey(viewKey, key), id);
 		}
 
 		private int ReadPriority(string key)

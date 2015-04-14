@@ -288,7 +288,7 @@ class resources extends viewModelBase {
         var message = this.confirmationMessage(actionText + " indexing?", "Are you sure?");
         
         message.done(() => {
-            require(["commands/disableIndexingCommand"], disableIndexingCommand => {
+            require(["commands/database/index/disableIndexingCommand"], disableIndexingCommand => {
                 var task = new disableIndexingCommand(db.name, action).execute();
                 task.done(() => db.indexingDisabled(action));
             });
@@ -300,7 +300,7 @@ class resources extends viewModelBase {
         var actionText = action ? "reject clients mode" : "accept clients mode";
         var message = this.confirmationMessage("Switch to " + actionText, "Are you sure?");
         message.done(() => {
-            require(["commands/toggleRejectDatabaseClients"], toggleRejectDatabaseClients => {
+            require(["commands/maintenance/toggleRejectDatabaseClients"], toggleRejectDatabaseClients => {
                 var task = new toggleRejectDatabaseClients(db.name, action).execute();
                 task.done(() => db.rejectClientsMode(action));
             });

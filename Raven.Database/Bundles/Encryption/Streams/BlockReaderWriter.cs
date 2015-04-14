@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Encryption.Settings;
+using Raven.Database.Bundles.Encryption;
 
 namespace Raven.Bundles.Encryption.Streams
 {
@@ -48,7 +49,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 			this.header = ReadOrWriteEmptyHeader(defaultBlockSize);
 			this.footer = ReadOrWriteFooter();
-			totalUnencryptedSize = EncryptedFile.Header.HeaderSize + EncryptedFile.Footer.FooterSize; //at least the unencrypted size is the size of the header and footer
+		    totalUnencryptedSize = 0;
 		}
 
 		public EncryptedFile.Header Header
@@ -104,7 +105,7 @@ namespace Raven.Bundles.Encryption.Streams
 						DecryptedBlockSize = defaultBlockSize,
 						IVSize = sizeTest.IV.Length,
 						EncryptedBlockSize = sizeTest.Data.Length,
-						TotalUnencryptedSize = EncryptedFile.Header.HeaderSize + EncryptedFile.Footer.FooterSize
+						TotalUnencryptedSize = 0
 					};
 
 					WriteHeaderInCurrentPositionIfNotReadonly(fileHeader);
@@ -203,7 +204,7 @@ namespace Raven.Bundles.Encryption.Streams
 		/// Writes a block to its correct place in the file.
 		/// The block's TotalStreamLength is saved as the total length of the stream IF AND ONLY IF the written block is the last block in the stream.
 		/// </summary>
-		public void WriteBlock(EncryptedFile.Block block)
+		public void WriteBlock(EncryptedFile.Block block, long size)
 		{
 			if (isReadonly)
 				throw new InvalidOperationException("The current stream is read-only.");
@@ -228,7 +229,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 				stream.Write(encrypted.IV, 0, encrypted.IV.Length);
 				stream.Write(encrypted.Data, 0, encrypted.Data.Length);
-				totalUnencryptedSize += block.Data.Length;
+				totalUnencryptedSize += size;
 
 				if (stream.Length <= stream.Position + EncryptedFile.Footer.FooterSize)
 				{

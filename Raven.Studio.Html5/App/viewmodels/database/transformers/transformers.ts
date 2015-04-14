@@ -4,7 +4,7 @@ import getTransformersCommand = require("commands/database/transformers/getTrans
 import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/database/transformers/deleteTransformerConfirm");
 import app = require("durandal/app");
-import changeSubscription = require("models/changeSubscription");
+import changeSubscription = require("common/changeSubscription");
 import shell = require("viewmodels/shell");
 import copyTransformerDialog = require("viewmodels/database/transformers/copyTransformerDialog");
 

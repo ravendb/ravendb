@@ -1,6 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import uploadItem = require("models/uploadItem");
+import uploadItem = require("models/filesystem/uploadItem");
 
 class uploadFileToFilesystemCommand extends commandBase {
 
