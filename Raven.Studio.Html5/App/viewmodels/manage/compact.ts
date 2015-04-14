@@ -79,7 +79,7 @@ class compact extends viewModelBase {
         this.isBusy(true);
         var self = this;
 
-        require(["commands/startCompactCommand"], startCompactCommand => {
+        require(["commands/maintenance/startCompactCommand"], startCompactCommand => {
             new startCompactCommand(this.dbCompactOptions.resourceName(), self.dbCompactOptions.updateCompactStatus.bind(self.dbCompactOptions))
                 .execute();
         });

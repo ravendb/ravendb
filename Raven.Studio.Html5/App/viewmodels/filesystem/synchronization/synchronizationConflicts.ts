@@ -5,7 +5,7 @@ import resolveConflict = require("viewmodels/filesystem/synchronization/resolveC
 
 import conflictItem = require("models/filesystem/conflictItem");
 import filesystem = require("models/filesystem/filesystem");
-import changeSubscription = require("models/changeSubscription");
+import changeSubscription = require("common/changeSubscription");
 
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
 import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");

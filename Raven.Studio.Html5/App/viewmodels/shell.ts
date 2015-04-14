@@ -12,8 +12,8 @@ import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import documentClass = require("models/database/documents/document");
 import collection = require("models/database/documents/collection");
-import uploadItem = require("models/uploadItem");
-import changeSubscription = require("models/changeSubscription");
+import uploadItem = require("models/filesystem/uploadItem");
+import changeSubscription = require("common/changeSubscription");
 import license = require("models/auth/license");
 
 import appUrl = require("common/appUrl");
@@ -31,7 +31,7 @@ import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
 
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
-import getServerBuildVersionCommand = require("commands/getServerBuildVersionCommand");
+import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");

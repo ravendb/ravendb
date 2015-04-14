@@ -9,7 +9,7 @@ import deleteCollection = require("viewmodels/database/documents/deleteCollectio
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
 import alert = require("models/database/debug/alert");
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import customFunctions = require("models/database/documents/customFunctions");
 import customColumns = require('models/database/documents/customColumns');
 import customColumnParams = require('models/database/documents/customColumnParams');
@@ -20,7 +20,7 @@ import getEffectiveCustomFunctionsCommand = require("commands/database/globalCon
 import getOperationStatusCommand = require('commands/operations/getOperationStatusCommand');
 import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");

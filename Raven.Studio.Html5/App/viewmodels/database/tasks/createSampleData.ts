@@ -11,7 +11,7 @@ class createSampleData extends viewModelBase{
     generateSampleData() {
         this.isBusy(true);
         
-        require(["commands/createSampleDataCommand"], createSampleDataCommand => {
+        require(["commands/database/studio/createSampleDataCommand"], createSampleDataCommand => {
             new createSampleDataCommand(this.activeDatabase())
                 .execute()
                 .always(() => this.isBusy(false));
@@ -24,7 +24,7 @@ class createSampleData extends viewModelBase{
     }
 
     showSampleDataClass() {
-        require(["commands/createSampleDataClassCommand"], createSampleDataClassCommand => {
+        require(["commands/database/studio/createSampleDataClassCommand"], createSampleDataClassCommand => {
             new createSampleDataClassCommand(this.activeDatabase())
                 .execute()
                 .done((results: string) => {

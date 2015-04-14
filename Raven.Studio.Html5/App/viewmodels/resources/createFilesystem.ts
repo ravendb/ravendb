@@ -3,8 +3,8 @@ import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem/filesystem");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 
 class createFilesystem extends viewModelBase {
 

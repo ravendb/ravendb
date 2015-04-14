@@ -4,7 +4,7 @@ import getIndexingPerfStatsCommand = require("commands/database/debug/getIndexin
 import d3 = require("d3/d3");
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 
 class indexStats extends viewModelBase {
     jsonData: any[] = [];

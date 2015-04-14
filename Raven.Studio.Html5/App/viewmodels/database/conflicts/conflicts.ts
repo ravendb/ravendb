@@ -15,7 +15,7 @@ import getIndexDefinitionCommand = require("commands/database/index/getIndexDefi
 import getSingleTransformerCommand = require("commands/database/transformers/getSingleTransformerCommand");
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
 import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import shell = require("viewmodels/shell");
 
 import viewModelBase = require("viewmodels/viewModelBase");

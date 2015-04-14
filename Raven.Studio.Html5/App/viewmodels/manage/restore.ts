@@ -109,7 +109,7 @@ class restore extends viewModelBase {
             GenerateNewDatabaseId: this.generateNewDatabaseId(),
         };
 
-        require(["commands/startRestoreCommand"], startRestoreCommand => {
+        require(["commands/maintenance/startRestoreCommand"], startRestoreCommand => {
             new startRestoreCommand(this.dbRestoreOptions.defrag(), restoreDatabaseDto, self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions))
                 .execute()
                 .always(() => shell.reloadDatabases(this.activeDatabase()));

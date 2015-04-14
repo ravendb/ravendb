@@ -392,7 +392,7 @@ class editIndex extends viewModelBase {
     }
 
     createCSharpCode() {
-        require(["commands/getCSharpIndexDefinitionCommand"], getCSharpIndexDefinitionCommand => {
+        require(["commands/database/index/getCSharpIndexDefinitionCommand"], getCSharpIndexDefinitionCommand => {
             new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
                 .execute()
                 .done((data: string) => {
@@ -404,7 +404,7 @@ class editIndex extends viewModelBase {
     }
 
     formatIndex() {
-        require(["commands/formatIndexCommand"], formatIndexCommand => {
+        require(["commands/database/index/formatIndexCommand"], formatIndexCommand => {
             var index: indexDefinition = this.editedIndex();
             var mapReduceObservableArray = new Array<KnockoutObservable<string>>();
             mapReduceObservableArray.pushAll(index.maps());

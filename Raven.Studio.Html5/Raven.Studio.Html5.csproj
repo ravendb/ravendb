@@ -682,8 +682,8 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getPluginsInfoCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getServerBuildVersionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\debug\getPluginsInfoCommand.ts" />
+    <TypeScriptCompile Include="App\commands\resources\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\backupDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\monitorCompactCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\monitorRestoreCommand.ts" />
@@ -707,7 +707,6 @@
     <TypeScriptCompile Include="App\commands\resources\getDatabaseSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\getDatabaseStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\saveDatabaseSettingsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\saveReplicationDocument.ts" />
     <TypeScriptCompile Include="App\common\adminLogsClient.ts" />
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
@@ -754,7 +753,7 @@
     <TypeScriptCompile Include="App\models\auth\license.ts" />
     <TypeScriptCompile Include="App\models\auth\windowsAuthData.ts" />
     <TypeScriptCompile Include="App\models\auth\windowsAuthSetup.ts" />
-    <TypeScriptCompile Include="App\models\changeSubscription.ts" />
+    <TypeScriptCompile Include="App\common\changeSubscription.ts" />
     <TypeScriptCompile Include="App\models\counter\counter.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
     <TypeScriptCompile Include="App\models\counter\counterServerValue.ts" />
@@ -830,14 +829,14 @@
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDetail.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
     <TypeScriptCompile Include="App\models\filesystem\versioningEntry.ts" />
-    <TypeScriptCompile Include="App\models\patchDocuments.ts" />
+    <TypeScriptCompile Include="App\models\database\patch\patchDocuments.ts" />
     <TypeScriptCompile Include="App\models\resources\database.ts" />
     <TypeScriptCompile Include="App\models\resources\databaseAccess.ts" />
     <TypeScriptCompile Include="App\models\resources\databaseCollectionStyleMap.ts" />
     <TypeScriptCompile Include="App\models\resources\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\resources\resource.ts" />
     <TypeScriptCompile Include="App\models\resources\serverSmugglingItem.ts" />
-    <TypeScriptCompile Include="App\models\uploadItem.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\uploadItem.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\confirmationDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\deleteItems.ts" />

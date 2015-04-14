@@ -37,7 +37,7 @@ class windowsAuth extends viewModelBase {
     }
 
     saveChanges() {
-        require(["commands/saveWindowsAuthCommand"], saveWindowsAuthCommand => {
+        require(["commands/auth/saveWindowsAuthCommand"], saveWindowsAuthCommand => {
             new saveWindowsAuthCommand(this.setup().toDto())
                 .execute()
                 .done(() => this.dirtyFlag().reset());

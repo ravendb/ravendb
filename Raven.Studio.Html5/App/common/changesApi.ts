@@ -3,7 +3,7 @@
 
 import resource = require('models/resources/resource');
 import appUrl = require('common/appUrl');
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");

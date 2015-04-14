@@ -11,7 +11,7 @@ import file = require("models/filesystem/file");
 import fileMetadata = require("models/filesystem/fileMetadata");
 import deleteItems = require("viewmodels/common/deleteItems");
 import fileRenameDialog = require("viewmodels/filesystem/files/fileRenameDialog");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class filesystemEditFile extends viewModelBase {
 

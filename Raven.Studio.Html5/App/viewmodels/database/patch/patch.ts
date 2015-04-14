@@ -17,7 +17,7 @@ import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import executePatchCommand = require("commands/database/patch/executePatchCommand");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import evalByQueryCommand = require("commands/database/patch/evalByQueryCommand");
-import documentMetadata = require("models/documentMetadata");
+import documentMetadata = require("models/database/documents/documentMetadata");
 
 class patch extends viewModelBase {
 

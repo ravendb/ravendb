@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import router = require("plugins/router");
 
 class deleteResourceConfirm extends dialogViewModelBase {
     private isKeepingFiles = ko.observable(true);

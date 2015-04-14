@@ -1,6 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import getOperationStatusCommand = require("commands/getOperationStatusCommand");
+import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 
 class evalByQueryCommand extends commandBase {
 
