@@ -189,12 +189,13 @@ namespace Raven.Database
 					CompleteWorkContextSetup();
 
 					prefetcher = new Prefetcher(workContext);
+					
 					IndexReplacer = new IndexReplacer(this);
 					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
+					InitializeTriggersExceptIndexCodecs();
 
 					RaiseIndexingWiringComplete();
-
-					InitializeTriggersExceptIndexCodecs();
+					
 					SecondStageInitialization();
 					ExecuteStartupTasks();
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
