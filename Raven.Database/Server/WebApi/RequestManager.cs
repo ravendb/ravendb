@@ -51,7 +51,7 @@ namespace Raven.Database.Server.WebApi
 		private CancellationToken cancellationToken;
 
 		private ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>> resourceHttpTraces = new ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>>();
-		private ConcurrentSet<IEventsTransport> serverHttpTrace = new ConcurrentSet<IEventsTransport>();
+		private readonly ConcurrentSet<IEventsTransport> serverHttpTrace = new ConcurrentSet<IEventsTransport>();
 
 		public int NumberOfRequests
 		{
@@ -74,16 +74,9 @@ namespace Raven.Database.Server.WebApi
 			BeforeRequest += OnBeforeRequest;
 			cancellationTokenSource = new CancellationTokenSource();
 			this.landlord = landlord;
-			int val;
-			if (int.TryParse(landlord.SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
-				val = 900;
-
-			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(val);
-
-			if (int.TryParse(landlord.SystemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
-				val = 60;
-
-			frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(val);
+			
+			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(landlord.MaxIdleTimeForTenantDatabaseInSec);
+			frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(landlord.FrequencyToCheckForIdleDatabasesInSec);
 
 			Init();
 			cancellationToken = cancellationTokenSource.Token;
@@ -254,17 +247,7 @@ namespace Raven.Database.Server.WebApi
                 
                 return nameValueCollection;
             });
-            CurrentOperationContext.RavenAuthenticatedUser.Value = string.Empty;
-            foreach (var innerHeader in innerHeaders)
-            {
-                if (innerHeader.Key.Equals("Raven-Authorization-User"))
-                {
-                    CurrentOperationContext.RavenAuthenticatedUser.Value = innerHeader.Value.FirstOrDefault();
-                }
-            }
-            
-            
-
+          
 			CurrentOperationContext.User.Value = null;
 
 			LogContext.DatabaseName.Value = databaseName;
@@ -518,17 +501,14 @@ namespace Raven.Database.Server.WebApi
 			};
 		}
 
+
 		private void IdleOperations(object state)
 		{
 			try
 			{
-				var idleTime = TimeSpan.FromMinutes(1);
-				if (idleTime > maxTimeDatabaseCanBeIdle)
-					idleTime = maxTimeDatabaseCanBeIdle;
-
 				try
 				{
-					if ((SystemTime.UtcNow - landlord.SystemDatabase.WorkContext.LastWorkTime) > idleTime)
+					if (DatabaseNeedToRunIdleOperations(landlord.SystemDatabase))
 						landlord.SystemDatabase.RunIdleOperations();
 				}
 				catch (Exception e)
@@ -545,7 +525,7 @@ namespace Raven.Database.Server.WebApi
 							continue;
 
 						var database = documentDatabase.Value.Result;
-						if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime) > idleTime)
+						if (DatabaseNeedToRunIdleOperations(database))
 							database.RunIdleOperations();
 					}
 
@@ -584,6 +564,16 @@ namespace Raven.Database.Server.WebApi
 				{
 				}
 			}
+		}
+
+		private bool DatabaseNeedToRunIdleOperations(DocumentDatabase documentDatabase)
+		{
+			var dateTime = SystemTime.UtcNow;
+			if ((dateTime - documentDatabase.WorkContext.LastWorkTime).TotalMinutes > 5)
+				return true;
+			if ((dateTime - documentDatabase.WorkContext.LastIdleTime).TotalHours > 2)
+				return true;
+			return false;
 		}
 	}
 }

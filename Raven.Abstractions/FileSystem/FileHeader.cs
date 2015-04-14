@@ -132,9 +132,9 @@ namespace Raven.Abstractions.FileSystem
 
         private void SetFileSize()
         {
-            if (this.Metadata.Keys.Contains("RavenFS-Size"))
+			if (this.Metadata.Keys.Contains(Constants.FileSystem.RavenFsSize))
             {
-                var metadataTotalSize = this.Metadata["RavenFS-Size"].Value<long>();
+				var metadataTotalSize = this.Metadata[Constants.FileSystem.RavenFsSize].Value<long>();
                 if (metadataTotalSize > 0)
                     this._totalSize = metadataTotalSize;
             }
@@ -215,5 +215,4 @@ namespace Raven.Abstractions.FileSystem
             return name.TrimEnd('/');
         }
     }
-
 }

@@ -29,7 +29,7 @@ namespace Raven.Tests.Issues
 
 			public string QuantityPerUnit { get; set; }
 
-			public decimal PricePerUser { get; set; }
+			public decimal PricePerUnit{ get; set; }
 
 			public int UnitsInStock { get; set; }
 

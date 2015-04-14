@@ -33,6 +33,8 @@ class index {
     editUrl: KnockoutComputed<string>;
     queryUrl: KnockoutComputed<string>;
 
+	filteredOut = ko.observable<boolean>(false); //UI only property
+
     willReplaceIndex = ko.observable<string>();
     willBeReplacedByIndex = ko.observable<string>();
 

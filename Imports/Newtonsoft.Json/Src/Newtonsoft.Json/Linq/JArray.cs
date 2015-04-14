@@ -179,6 +179,18 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       return (JArray)token;
     }
 
+    public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+    {
+        writer.WriteStartArray();
+
+        for (int i = 0; i < _values.Count; i++)
+        {
+            _values[i].WriteTo(writer, converters);
+        }
+
+        writer.WriteEndArray();
+    }
+
     /// <summary>
     /// Writes this token to a <see cref="JsonWriter"/>.
     /// </summary>
@@ -186,14 +198,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
     public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
     {
-      writer.WriteStartArray();
-
-      for (int i = 0; i < _values.Count; i++)
-      {
-        _values[i].WriteTo(writer, converters);
-      }
-
-      writer.WriteEndArray();
+        WriteTo(writer, new JsonConverterCollection(converters));
     }
 
     /// <summary>

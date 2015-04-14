@@ -1,21 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
-
+using Mono.Unix.Native;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util.Streams;
@@ -79,32 +79,45 @@ namespace Raven.Database.Server.Controllers
             var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var currentDatabase = Database;
             var timeout = tre.TimeoutAfter(currentDatabase.Configuration.BulkImportBatchTimeout);
+            var user = CurrentOperationContext.User.Value;
+            var headers = CurrentOperationContext.Headers.Value;
+            Exception error = null;
             var task = Task.Factory.StartNew(() =>
             {
                 try
                 {
+                    CurrentOperationContext.User.Value = user;
+                    CurrentOperationContext.Headers.Value = headers;
                     currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token);
                 }
-                catch (OperationCanceledException)
+				catch (InvalidDataException e)
+				{
+					status.Faulted = true;
+					status.State = RavenJObject.FromObject(new { Error = "Could not understand json.", InnerError = e.SimplifyException().Message });
+					status.IsSerializationError = true;
+					error = e;
+				}
+				catch (OperationCanceledException)
                 {
                     // happens on timeout
                     currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
                     status.IsTimedOut = true;
                     status.Faulted = true;
-                    throw;
                 }
                 catch (Exception e)
                 {
                     status.Faulted = true;
                     status.State = RavenJObject.FromObject(new { Error = e.SimplifyException().Message });
-                    throw;
+                    error = e;
                 }
                 finally
                 {
                     status.Completed = true;
                     status.Documents = documents;
+	                CurrentOperationContext.User.Value = null;
+	                CurrentOperationContext.Headers.Value = null;
                 }
-            });
+			}, tre.Token);
 
             long id;
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
@@ -114,8 +127,18 @@ namespace Raven.Database.Server.Controllers
                                                      Payload = operationId.ToString()
                                                  }, out id, tre);
 
-            task.Wait(Database.WorkContext.CancellationToken);
-            if (status.IsTimedOut)
+            await task;
+
+            if (error != null)
+            {
+				var httpStatusCode = status.IsSerializationError ? (HttpStatusCode)422 : HttpStatusCode.InternalServerError;
+	            return GetMessageWithObject(new
+                {
+                    error.Message,
+                    Error = error.ToString()
+				}, httpStatusCode);
+            }
+	        if (status.IsTimedOut)
                 throw new TimeoutException("Bulk insert operation did not receive new data longer than configured treshold");
 
             sp.Stop();
@@ -217,6 +240,8 @@ namespace Raven.Database.Server.Controllers
             public RavenJToken State { get; set; } 
 
             public bool IsTimedOut { get; set; }
+
+			public bool IsSerializationError { get; set; }
         }
     }
 }

@@ -87,7 +87,7 @@ namespace Raven.Tests.Bugs
 					user.Name = "Rahien";
 					s.SaveChanges();
 					task.Start();
-					Thread.Sleep(250);
+                    Assert.False(task.Wait(250, CancellationToken.None));
 					scope.Complete();
 				}
 				task.Wait();

@@ -22,6 +22,7 @@ namespace Raven.Storage.Esent.StorageActions
 		where T : class
 	{
 		private readonly List<Key> primaryKeyIndexes;
+        private static int bookmarkMost = SystemParameters.BookmarkMost;
 		
 		private class Key
 		{
@@ -50,7 +51,7 @@ namespace Raven.Storage.Esent.StorageActions
 			byte[] buffer;
 			int actualBookmarkSize;
 
-			var largeBuffer = IndexReaderBuffers.Buffers.TakeBuffer(SystemParameters.BookmarkMost);
+            var largeBuffer = IndexReaderBuffers.Buffers.TakeBuffer(bookmarkMost);
 			try
 			{
 				Api.JetGetBookmark(session, table, largeBuffer,

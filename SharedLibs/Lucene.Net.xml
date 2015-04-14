@@ -11742,12 +11742,6 @@
         <member name="T:Lucene.Net.QueryParsers.QueryParserTokenManager">
             <summary>Token Manager. </summary>
         </member>
-        <member name="F:Lucene.Net.QueryParsers.QueryParserTokenManager.debugStream">
-            <summary>Debug output. </summary>
-        </member>
-        <member name="M:Lucene.Net.QueryParsers.QueryParserTokenManager.SetDebugStream(System.IO.StreamWriter)">
-            <summary>Set debug output. </summary>
-        </member>
         <member name="F:Lucene.Net.QueryParsers.QueryParserTokenManager.jjstrLiteralImages">
             <summary>Token literal values. </summary>
         </member>

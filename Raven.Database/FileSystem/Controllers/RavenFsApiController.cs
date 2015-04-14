@@ -1,12 +1,12 @@
 ﻿using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
 using Raven.Client.FileSystem;
 using Raven.Database.Config;
+using Raven.Database.FileSystem.Actions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Notifications;
 using Raven.Database.FileSystem.Search;
@@ -17,7 +17,6 @@ using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 using System;
@@ -35,6 +34,7 @@ using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Controllers
 {
@@ -171,6 +171,16 @@ namespace Raven.Database.FileSystem.Controllers
 			get { return FileSystem.Search; }
 		}
 
+	    protected FileActions Files
+	    {
+			get { return FileSystem.Files; }
+	    }
+
+	    protected SynchronizationActions Synchronizations
+	    {
+			get { return FileSystem.Synchronizations; }
+	    }
+
 		protected FileLockManager FileLockManager
 		{
 			get { return FileSystem.FileLockManager; }
@@ -194,11 +204,6 @@ namespace Raven.Database.FileSystem.Controllers
 		protected SynchronizationTask SynchronizationTask
 		{
 			get { return FileSystem.SynchronizationTask; }
-		}
-
-		protected StorageOperationsTask StorageOperationsTask
-		{
-			get { return FileSystem.StorageOperationsTask; }
 		}
 
 		protected PagingInfo Paging
@@ -288,37 +293,10 @@ namespace Raven.Database.FileSystem.Controllers
 			return response;
 		}
 
-		protected void AssertFileIsNotBeingSynced(string fileName, IStorageActionsAccessor accessor,
-		                                          bool wrapByResponseException = false)
-		{
-			if (FileLockManager.TimeoutExceeded(fileName, accessor))
-			{
-				FileLockManager.UnlockByDeletingSyncConfiguration(fileName, accessor);
-			}
-			else
-			{
-				Log.Debug("Cannot execute operation because file '{0}' is being synced", fileName);
-
-				var beingSyncedException = new SynchronizationException(string.Format("File {0} is being synced", fileName));
-
-				if (wrapByResponseException)
-				{
-					throw new HttpResponseException(Request.CreateResponse((HttpStatusCode)420, beingSyncedException));
-				}
-
-				throw beingSyncedException;
-			}
-		}
-
 		protected HttpResponseException BadRequestException(string message)
 		{
 			return
                 new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new MultiGetSafeStringContent(message) });
-		}
-
-		protected HttpResponseException ConcurrencyResponseException(ConcurrencyException concurrencyException)
-		{
-			return new HttpResponseException(Request.CreateResponse(HttpStatusCode.MethodNotAllowed, concurrencyException));
 		}
 
 		protected class PagingInfo
@@ -408,7 +386,14 @@ namespace Raven.Database.FileSystem.Controllers
 	    public override void MarkRequestDuration(long duration)
 	    {
 	        FileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
-	    }        
+	    }
+
+		protected FileSystemInfo GetSourceFileSystemInfo()
+		{
+			var json = GetHeader(SyncingMultipartConstants.SourceFileSystemInfo);
+
+			return RavenJObject.Parse(json).JsonDeserialization<FileSystemInfo>();
+		}
 
         #region Metadata Headers Handling
 
@@ -501,6 +486,5 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         #endregion Metadata Headers Handling
-
-    }
+	}
 }

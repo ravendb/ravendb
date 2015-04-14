@@ -21,14 +21,14 @@ namespace Raven.Database.Indexing
 {
 	public static class QueryBuilder
 	{
-		private const string FieldRegexVal = @"([@\w\d<>_,]+?):";
+		private const string FieldRegexVal = @"([@\w<>,]+?):";
 	    private const string MethodRegexVal = @"(@\w+<[^>]+>):";
 	    private const string DateTimeVal = @"\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)";
 		static readonly Regex fieldQuery = new Regex(FieldRegexVal, RegexOptions.Compiled);
 		static readonly Regex untokenizedQuery = new Regex( FieldRegexVal + @"[\s\(]*(\[\[.+?\]\])|(?<=,)\s*(\[\[.+?\]\])(?=\s*[,\)])", RegexOptions.Compiled);
 		static readonly Regex searchQuery = new Regex(FieldRegexVal + @"\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
         static readonly Regex dateQuery = new Regex(FieldRegexVal + DateTimeVal, RegexOptions.Compiled);
-        static readonly Regex inDatesQuery = new Regex(MethodRegexVal + @"\s*(\(.*" + DateTimeVal + @".*\))", RegexOptions.Compiled | RegexOptions.Singleline);
+        static readonly Regex inDatesQuery = new Regex(MethodRegexVal + @"\s*(\([^)]*" + DateTimeVal + @"[^)]*\))", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex rightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
 		static readonly Regex leftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
 		static readonly Regex commentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
@@ -53,7 +53,7 @@ namespace Raven.Database.Indexing
 			var originalQuery = query;
 			try
 			{
-				var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
+                var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
 				{
 					DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or
 										? QueryParser.Operator.OR
@@ -78,8 +78,21 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static string PreProcessComments(string query)
-		{
+        private static bool MightMatchComments(string query)
+        {
+            //return query.Contains("//");
+            int len = query.Length-1;
+            for (int i = 0; i < len; i++)
+            {
+                if (query[i] == '/' &&  query[i + 1] == '/') return true;
+            }
+            return false;
+        }
+
+        internal static string PreProcessComments(string query)
+        {
+            // First we should check if this query might match the regex because regex are expenssive...
+            if (!MightMatchComments(query)) return query;
 			var matches = commentsRegex.Matches(query);
 			if (matches.Count < 1)
 				return query;
@@ -92,7 +105,7 @@ namespace Raven.Database.Indexing
 			return q.ToString();
 		}
 
-		private static Query HandleMethods(Query query, RavenPerFieldAnalyzerWrapper analyzer)
+        internal static Query HandleMethods(Query query, RavenPerFieldAnalyzerWrapper analyzer)
 		{
 			var termQuery = query as TermQuery;
 			if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
@@ -152,7 +165,7 @@ namespace Raven.Database.Indexing
 
 		private static Regex unescapedSplitter = new Regex("(?<!`),(?!`)", RegexOptions.Compiled);
 
-		private static Query HandleMethodsForQueryAndTerm(Query query, Term term)
+		internal static Query HandleMethodsForQueryAndTerm(Query query, Term term)
 		{
 			Func<string, List<string>, Query> value;
 			var field = term.Field;
@@ -168,7 +181,7 @@ namespace Raven.Database.Indexing
 			return value(field, list);
 		}
 
-		private static Query HandleMethodsForQueryAndTerm(Query query, Term[] terms)
+		internal static Query HandleMethodsForQueryAndTerm(Query query, Term[] terms)
 		{
 			Func<string, List<string>, Query> value;
 			var field = terms[0].Field;
@@ -198,8 +211,22 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
-		private static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
-		{
+        private static bool MightMatchDateTerms(string query)
+        {
+            //d{4}-\d{2}-\d{2}T
+            //return query.Contains("//");
+            int len = query.Length-6;
+            for (int i = 0; i < len; i++)
+            {
+                if (query[i] == '-' && query[i + 3] == '-' && query[i + 6] == 'T') return true;
+            }
+            return false;
+        }
+
+        internal static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
+        {
+            // First we should check if this query might match the regex because regex are expenssive...
+            if (!MightMatchDateTerms(query)) return query;
 			var searchMatches = dateQuery.Matches(query);
 		    if (searchMatches.Count > 0)
 		    {
@@ -230,8 +257,21 @@ namespace Raven.Database.Indexing
 	        return queryStringBuilder.ToString();
 	    }
 
-	    private static string PreProcessSearchTerms(string query)
-		{
+	    private static bool MightMatchSearchTerms(string query)
+	    {
+            //return query.Contains("<<");
+	        int len = query.Length-1;
+            for (int i=0; i<len; i++)
+            {
+                if (query[i] == '<' && query[i + 1] == '<') return true;
+            }
+	        return false;	        
+	    }
+
+	    internal static string PreProcessSearchTerms(string query)
+	    {
+            // First we should check if this query might match the regex because regex are expenssive...
+	        if (!MightMatchSearchTerms(query)) return query;
 			var searchMatches = searchQuery.Matches(query);
 			if (searchMatches.Count < 1)
 				return query;
@@ -272,11 +312,23 @@ namespace Raven.Database.Indexing
 			return queryStringBuilder.ToString();
 		}
 
+	    private static bool MightMatchUntokenizedTerms(string query)
+	    {
+            //return query.Contains("[[");
+            int len = query.Length-1;
+            for (int i = 0; i < len; i++)
+            {
+                if (query[i] == '[' && query[i + 1] == '[') return true;
+            }
+            return false;	
+	    }
 		/// <summary>
 		/// Detects untokenized fields and sets as NotAnalyzed in analyzer
 		/// </summary>
 		private static string PreProcessUntokenizedTerms(string query, RangeQueryParser queryParser)
 		{
+            // First we should check if this query might match the regex because regex are expenssive...
+		    if (!MightMatchUntokenizedTerms(query)) return query;
 			var untokenizedMatches = untokenizedQuery.Matches(query);
 			if (untokenizedMatches.Count < 1)
 				return query;
@@ -409,12 +461,24 @@ namespace Raven.Database.Indexing
 			return buffer.ToString();
 		}
 
+	    private static bool MightMatchMixedInclusiveExclusiveRangeQueries(string query)
+	    {
+	        foreach (char c in query)
+	        {
+	            if (c == '{' || c == '}') return true;
+	        }
+	        return false;
+	    }
 		public static string PreProcessMixedInclusiveExclusiveRangeQueries(string query)
 		{
+            // First we should check if this query might match the regex because regex are expenssive...
+            if (!MightMatchMixedInclusiveExclusiveRangeQueries(query)) return query;
+
 			// we need this method to support queries like [x, y} and {x, y]
 			// Lucene 4 will have a built-in support for this
 
 			StringBuilder queryStringBuilder = null;
+			var tempSb = new StringBuilder();
 
 			var rightOpenRanges = rightOpenRangeQuery.Matches(query);
 			if (rightOpenRanges.Count > 0) // // field:[x, y} - right-open interval convert to (field: [x, y] AND NOT field:y)
@@ -427,24 +491,17 @@ namespace Raven.Database.Indexing
 					var field = range.Groups[1].Value;
 					var rangeStart = range.Groups[2].Value;
 					var rangeEnd = range.Groups[3].Value;
-
+					tempSb.Clear();
+                    //string.Format("({0}:[{1} TO {2}] AND NOT {0}:{2})",field,rangeStart,rangeEnd)
+				    tempSb.Append('(').Append(field).Append(":[").Append(rangeStart).Append(" TO ").Append(rangeEnd).Append("] AND NOT ").Append(field)
+				        .Append(':').Append(rangeEnd).Append(')');
 					queryStringBuilder.Remove(range.Index, range.Length)
-					                  .Insert(range.Index, "(")
-					                  .Insert(range.Index + 1, field)
-					                  .Insert(range.Index + 1 + field.Length, ":[")
-					                  .Insert(range.Index + 1 + field.Length + 2, rangeStart)
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length, " TO ")
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4, rangeEnd)
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length, "] AND NOT ")
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10, field)
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length, ":")
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1, rangeEnd)
-					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1 + rangeEnd.Length, ")");
+                        .Insert(range.Index,tempSb.ToString());
 				}
 			}
 
 			var leftOpenRanges = leftOpenRangeQuery.Matches(queryStringBuilder != null ? queryStringBuilder.ToString() : query);
-
+            
 			if (leftOpenRanges.Count > 0) // field:{x, y] - left-open interval convert to (field: [x, y] AND NOT field:x)
 			{
 				if(queryStringBuilder == null)
@@ -456,19 +513,12 @@ namespace Raven.Database.Indexing
 					var field = range.Groups[1].Value;
 					var rangeStart = range.Groups[2].Value;
 					var rangeEnd = range.Groups[3].Value;
-
+					tempSb.Clear();
+                    //string.Format("({0}:[{1} TO {2}] AND NOT {0}:{2})",field,rangeStart,rangeStart)
+					tempSb.Append('(').Append(field).Append(":[").Append(rangeStart).Append(" TO ").Append(rangeEnd).Append("] AND NOT ").Append(field)
+				        .Append(':').Append(rangeStart).Append(')');
 					queryStringBuilder.Remove(range.Index, range.Length)
-									  .Insert(range.Index, "(")
-									  .Insert(range.Index + 1, field)
-									  .Insert(range.Index + 1 + field.Length, ":[")
-									  .Insert(range.Index + 1 + field.Length + 2, rangeStart)
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length, " TO ")
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4, rangeEnd)
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length, "] AND NOT ")
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10, field)
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length, ":")
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1, rangeStart)
-									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1 + rangeStart.Length, ")");
+						.Insert(range.Index, tempSb.ToString());
 				}
 			}
 

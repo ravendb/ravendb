@@ -13,7 +13,7 @@ namespace Raven.Client.FileSystem.Listeners
         /// </summary>
         /// <param name="local">The file in conflict in its local version</param>
         /// <param name="remote">The file in conflict in its remote version</param>
-        /// <param name="sourceServerUri">The Destination Uri where the conflict appeared</param>
+        /// <param name="sourceServerUri">The source file system URL that tried to synchronize a file to a destination where the conflict appeared</param>
         /// <returns>A resolution strategy for this conflict</returns>
         ConflictResolutionStrategy ConflictDetected(FileHeader local, FileHeader remote, string sourceServerUri);
 

@@ -27,7 +27,7 @@ class sqlReplication extends document {
     ravenEntityName = ko.observable<string>("").extend({ required: true });
     parameterizeDeletesDisabled = ko.observable<boolean>(false).extend({ required: true });
     forceSqlServerQueryRecompile = ko.observable<boolean>(false);
-    performTableQuatation = ko.observable<boolean>(true);
+    quoteTables = ko.observable<boolean>(true);
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
     script = ko.observable<string>("").extend({ required: true });
     connectionString = ko.observable<string>(null);
@@ -40,6 +40,17 @@ class sqlReplication extends document {
     
     showReplicationConfiguration = ko.observable<boolean>(false);
 
+    hasAnyInsertOnlyOption = ko.computed(() => {
+        var hasAny = false;
+        this.sqlReplicationTables().forEach(s => {
+            // don't use return here to register all deps in knockout
+            if (s.insertOnly()) {
+                hasAny = true;
+            }
+        });
+        return hasAny;
+    });
+
     constructor(dto: sqlReplicationDto) {
         super(dto);
 
@@ -51,7 +62,7 @@ class sqlReplication extends document {
         this.sqlReplicationTables(dto.SqlReplicationTables.map(tab => new sqlReplicationTable(tab)));
         this.script(dto.Script);
         this.forceSqlServerQueryRecompile(!!dto.ForceSqlServerQueryRecompile? dto.ForceSqlServerQueryRecompile:false);
-        this.performTableQuatation(!!dto.PerformTableQuatation ? dto.PerformTableQuatation : true);
+        this.quoteTables(("PerformTableQuatation" in dto) ? dto.PerformTableQuatation : ("QuoteTables" in dto ? dto.QuoteTables : true));
         this.setupConnectionString(dto);
 
         this.metadata = new documentMetadata(dto["@metadata"]);
@@ -136,7 +147,7 @@ class sqlReplication extends document {
             ConnectionStringSettingName: null,
             SqlReplicationTables: [sqlReplicationTable.empty().toDto()],
             ForceSqlServerQueryRecompile: false,
-            PerformTableQuatation:true
+            QuoteTables:true
         });
     }
 
@@ -156,7 +167,7 @@ class sqlReplication extends document {
             ConnectionStringName: this.prepareConnectionString(this.CONNECTION_STRING_NAME),
             ConnectionStringSettingName: this.prepareConnectionString(this.CONNECTION_STRING_SETTING_NAME),
             ForceSqlServerQueryRecompile: this.forceSqlServerQueryRecompile(),
-            PerformTableQuatation: this.performTableQuatation(),
+            QuoteTables: this.quoteTables(),
             SqlReplicationTables: this.sqlReplicationTables().map(tab => tab.toDto())
         };
     }

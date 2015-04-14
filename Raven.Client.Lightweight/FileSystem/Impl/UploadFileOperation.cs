@@ -10,25 +10,25 @@ namespace Raven.Client.FileSystem.Impl
 {
     internal class UploadFileOperation : IFilesOperation
     {
-        protected readonly InMemoryFilesSessionOperations sessionOperations;
+	    private readonly InMemoryFilesSessionOperations sessionOperations;
 
-        public String Filename { get; set; }
-        public RavenJObject Metadata { get; private set; }
-        public Etag Etag { get; private set; }
+        public string FileName { get; private set; }
+	    private RavenJObject Metadata { get; set; }
+	    private Etag Etag { get; set; }
 
-        
-        public long Size { get; private set; }
-        public Action<Stream> StreamWriter { get; private set; }
+
+	    private long Size { get; set; }
+	    private Action<Stream> StreamWriter { get; set; }
 
 
         public UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, long size, Action<Stream> stream, RavenJObject metadata = null, Etag etag = null)
         {
             if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace.");
+                throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace!");
 
             this.sessionOperations = sessionOperations;
 
-            this.Filename = path;
+            this.FileName = path;
             this.Metadata = metadata;
             this.Etag = etag;
 
@@ -46,23 +46,23 @@ namespace Raven.Client.FileSystem.Impl
                                 .ContinueWith(x => pipe.CompleteWriting())
                                 .ConfigureAwait(false);
 
-            if (sessionOperations.EntityChanged(Filename))
+            if (sessionOperations.EntityChanged(FileName))
             {
-                if (!sessionOperations.IsDeleted(Filename))
+                if (!sessionOperations.IsDeleted(FileName))
                 {
-                    var fileHeaderInCache = await session.LoadFileAsync(Filename).ConfigureAwait(false);
+                    var fileHeaderInCache = await session.LoadFileAsync(FileName).ConfigureAwait(false);
                     Metadata = fileHeaderInCache.Metadata;
                 }
             }
 
-            await commands.UploadAsync(Filename, pipe, Metadata, Size, null)
+            await commands.UploadAsync(FileName, pipe, Metadata, Size, Etag)
                           .ConfigureAwait(false);
 
-            var metadata = await commands.GetMetadataForAsync(Filename);
+            var metadata = await commands.GetMetadataForAsync(FileName).ConfigureAwait(false);
             if (metadata == null)
                 return null;
 
-            return new FileHeader(Filename, metadata);
+            return new FileHeader(FileName, metadata);
         }
     }
 }

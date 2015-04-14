@@ -1,4 +1,6 @@
-﻿namespace Raven.Database.Bundles.Replication.Plugins
+﻿using Raven.Abstractions.Json.Linq;
+
+namespace Raven.Database.Bundles.Replication.Plugins
 {
 	using System;
 	using System.Linq;
@@ -12,7 +14,7 @@
     [Obsolete("Use RavenFS instead.")]
 	public class DefaultAttachmentReplicationConflictResolver : AbstractAttachmentReplicationConflictResolver
 	{
-		public override bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
+	    public override bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
 		                                Func<string, Attachment> getAttachment, out RavenJObject metadataToSave,
 		                                out byte[] dataToSave)
 		{
@@ -30,7 +32,8 @@
 					                  .Select(x => x.Value<string>())
 					                  .ToArray();
 
-				if (conflictIds.Length == 0) return false;
+				if (conflictIds.Length == 0)
+					return false;
 
 				if (conflictIds
 					    .Select(getAttachment)

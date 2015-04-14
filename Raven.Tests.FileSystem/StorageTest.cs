@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Database.Plugins;
@@ -26,12 +27,14 @@ namespace Raven.Tests.FileSystem
 
 			IOExtensions.DeleteDirectory("test");
 			transactionalStorage = new TransactionalStorage(configuration);
-			transactionalStorage.Initialize(new OrderedPartCollection<AbstractFileCodec>());
+			transactionalStorage.Initialize(new UuidGenerator(), new OrderedPartCollection<AbstractFileCodec>());
 		}
 
 		public void Dispose()
 		{
 			transactionalStorage.Dispose();
+
+			IOExtensions.DeleteDirectory("test");
 		}
 	}
 }

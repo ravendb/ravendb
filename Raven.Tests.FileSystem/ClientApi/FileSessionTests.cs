@@ -92,6 +92,48 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
+
+        [Fact]
+        public async Task CopyToNewFile()
+        {
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", 128, x =>
+                {
+                    for (byte i = 0; i < 128; i++)
+                        x.WriteByte(i);
+                });
+
+                await session.SaveChangesAsync();
+
+                var file = await session.LoadFileAsync("test1.file");
+                var resultingStream = await session.DownloadAsync(file);
+
+                session.RegisterUpload("test2.file", 128, x =>
+                {
+                    resultingStream.CopyTo(x);
+                });
+
+                await session.SaveChangesAsync();
+
+                var newStream = await session.DownloadAsync("test2.file");
+
+                var ms = new MemoryStream();
+                newStream.CopyTo(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                Assert.Equal(128, ms.Length);
+
+                for (byte i = 0; i < 128; i++)
+                {
+                    int value = ms.ReadByte();
+                    Assert.True(value >= 0);
+                    Assert.Equal(i, (byte)value);
+                }
+            }
+        }
+
         [Fact]
 		public async Task UploadActionWritesIncompleteStream()
         {
@@ -199,6 +241,208 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task SearchAndDownloadInParallelUsingCommandsInterface(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    // Uploading 10 files
+                    for (int i = 0; i < 10; i++)
+                        session.RegisterUpload(string.Format("/docs/test{0}.file", i), CreateUniformFileStream(128));
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var searchResults = await session.Commands.SearchAsync("__directoryName:/docs");
+
+                    var deleteTasks = new Task[searchResults.FileCount];
+                    for (int index = 0; index < searchResults.Files.Count; index++)
+                    {
+                        var fileHeader = searchResults.Files[index];
+                        deleteTasks[index] = session.Commands.DeleteAsync(fileHeader.FullPath);
+                    }
+
+                    Task.WaitAll(deleteTasks);
+                }
+            }
+        }
+
+		[Theory]
+		[InlineData("voron", 27, 19)]
+		[InlineData("esent", 19, 27)]
+		public async Task DeleteDirectoryByQuery(string storage, int uploadSize1, int uploadSize2)
+		{
+			using (var store = NewStore(requestedStorage: storage))
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					session.Advanced.MaxNumberOfRequestsPerSession = 50;
+
+					for (var i = 0; i < uploadSize1; i++)
+						session.RegisterUpload(string.Format("/docs/test{0}.file", i), CreateUniformFileStream(128));
+
+					for (var i = 0; i < uploadSize2; i++)
+						session.RegisterUpload(string.Format("/docs/test/test{0}.file", i), CreateUniformFileStream(128));
+
+					await session.SaveChangesAsync();
+				}
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var query = await session.Query().OnDirectory(recursive: true).ToListAsync();
+					Assert.Equal(uploadSize1 + uploadSize2, query.Count);
+
+					query = await session.Query().OnDirectory("/docs/test")
+						.WhereStartsWith(x => x.Name, "test").ToListAsync();
+					Assert.Equal(uploadSize2, query.Count);
+
+					session.Query().OnDirectory("/docs/test").RegisterResultsForDeletion();
+					await session.SaveChangesAsync();
+					query = await session.Query().OnDirectory("/docs/test")
+						.WhereStartsWith(x => x.Name, "test").ToListAsync();
+					Assert.Equal(0, query.Count);
+
+					query = await session.Query().OnDirectory(recursive: true).ToListAsync();
+					Assert.Equal(uploadSize1, query.Count);
+
+					session.Query().OnDirectory(recursive: true).RegisterResultsForDeletion();
+					await session.SaveChangesAsync();
+					query = await session.Query().OnDirectory(recursive: true).ToListAsync();
+					Assert.Equal(0, query.Count);
+				}
+			}
+		}
+
+		[Theory]
+		[InlineData("voron", 11, 26)]
+		[InlineData("esent", 26, 11)]
+		public async Task DeleteByQuery(string storage, int uploadSize1, int uploadSize2)
+		{
+			using (var store = NewStore(requestedStorage: storage))
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					session.Advanced.MaxNumberOfRequestsPerSession = 50;
+
+					for (var i = 0; i < uploadSize1; i++)
+						session.RegisterUpload(string.Format("/docs/test{0}.file", i), CreateUniformFileStream(128));
+
+					for (var i = 0; i < uploadSize2; i++)
+						session.RegisterUpload(string.Format("/docs/toast{0}.file", i), CreateUniformFileStream(128));
+
+					await session.SaveChangesAsync();
+				}
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var query = await session.Query().OnDirectory(recursive: true).ToListAsync();
+					Assert.Equal(uploadSize1 + uploadSize2, query.Count);
+
+					query = await session.Query().OnDirectory("docs")
+						.WhereStartsWith(x => x.Name, "test").ToListAsync();
+					Assert.Equal(uploadSize1, query.Count);
+
+					//delete only test* files in docs directory
+					session.Query().OnDirectory("docs")
+						.WhereStartsWith(fileHeader => fileHeader.Name, "test").RegisterResultsForDeletion();
+					await session.SaveChangesAsync();
+					query = await session.Query().OnDirectory("docs")
+						.WhereStartsWith(fileHeader => fileHeader.Name, "test").ToListAsync();
+					Assert.Equal(0, query.Count);
+
+					query = await session.Query().OnDirectory("docs")
+						.WhereStartsWith(fileHeader => fileHeader.Name, "toast").ToListAsync();
+					Assert.Equal(uploadSize2, query.Count);
+
+					//delete only toast* files in docs directory
+					session.Query().OnDirectory("docs")
+						.WhereStartsWith(fileHeader => fileHeader.Name, "toast").RegisterResultsForDeletion();
+					await session.SaveChangesAsync();
+					query = await session.Query().OnDirectory("docs")
+						.WhereStartsWith(fileHeader => fileHeader.Name, "toast").ToListAsync();
+					Assert.Equal(0, query.Count);
+
+					query = await session.Query().OnDirectory(recursive: true).ToListAsync();
+					Assert.Equal(0, query.Count);
+				}
+			}
+		}
+
+		[Theory]
+		[InlineData("voron", 1000)]
+		[InlineData("esent", 1000)]
+		public async Task DeleteBigBatchOfFilesByQuery(string storage, int uploadSize)
+		{
+			using (var store = NewStore(requestedStorage: storage))
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					session.Advanced.MaxNumberOfRequestsPerSession = uploadSize;
+
+					for (var i = 0; i < uploadSize; i++)
+						session.RegisterUpload(string.Format("/docs/test{0}.file", i), CreateUniformFileStream(128));
+
+					await session.SaveChangesAsync();
+				}
+
+				using (var session = store.OpenAsyncSession())
+				{
+					
+					var query = await session.Query().OnDirectory(recursive: true).ToListAsync();
+					Assert.Equal(query.Count, uploadSize);
+
+					session.Query().OnDirectory(recursive: true).RegisterResultsForDeletion();
+					await session.SaveChangesAsync();
+					query = await session.Query().OnDirectory(recursive: true).ToListAsync();
+					Assert.Equal(0, query.Count);
+				}
+			}
+		}
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task SearchAndDownloadInParallel(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    // Uploading 10 files
+                    for (int i = 0; i < 10; i++)
+                        session.RegisterUpload(string.Format("/docs/test{0}.file", i), CreateUniformFileStream(128));
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {                    
+                    var searchResults = await session.Commands.SearchAsync("__directoryName:/docs");
+                    
+                    for (int index = 0; index < searchResults.Files.Count; index++)
+                    {
+                        var fileHeader = searchResults.Files[index];
+                        session.RegisterFileDeletion(fileHeader.FullPath);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var file = await session.LoadFileAsync(string.Format("/docs/test{0}.file", i));
+                        Assert.Null(file);
+                    }                        
+                }
+            }
+        }
+
         [Fact]
         public async Task EnsureSlashPrefixWorks()
         {
@@ -274,7 +518,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                     resultingStream = await session.DownloadAsync("test1.file", metadata);
 
                     Assert.NotNull(metadata.Value);
-                    Assert.Equal(128, metadata.Value.Value<long>("RavenFS-Size"));
+					Assert.Equal(128, metadata.Value.Value<long>(Constants.FileSystem.RavenFsSize));
                 }
             }
         }
@@ -544,5 +788,82 @@ namespace Raven.Tests.FileSystem.ClientApi
                 Assert.Equal(metadataCreationDate, originalFile.Metadata[Constants.RavenCreationDate]);
             }
         }
+
+		[Fact]
+		public async Task UploadedFileShouldBeIncludedInSessionContextAfterSaveChanges()
+		{
+			using (var store = NewStore())
+			using (var session = store.OpenAsyncSession())
+			{
+				session.RegisterUpload("test.file", CreateUniformFileStream(128));
+				await session.SaveChangesAsync();
+
+				var asyncFilesSession = (AsyncFilesSession) session;
+
+				var numberOfRequests = asyncFilesSession.NumberOfRequests;
+
+				var fileHeader = await session.LoadFileAsync("test.file");
+
+				Assert.NotNull(fileHeader);
+				Assert.Equal(numberOfRequests, asyncFilesSession.NumberOfRequests);
+			}
+		}
+
+	    [Fact]
+	    public async Task RenamedFileShouldBeIncludedInSessionContextAfterSaveChanges()
+	    {
+		    using (var store = NewStore())
+		    {
+			    using (var session = store.OpenAsyncSession())
+			    {
+				    session.RegisterUpload("test.file", CreateUniformFileStream(128));
+				    await session.SaveChangesAsync();
+			    }
+
+			    using (var session = store.OpenAsyncSession())
+			    {
+				    session.RegisterRename("test.file", "new.file");
+
+				    await session.SaveChangesAsync();
+
+				    var asyncFilesSession = (AsyncFilesSession) session;
+
+				    var numberOfRequests = asyncFilesSession.NumberOfRequests;
+
+				    var fileHeader = await session.LoadFileAsync("new.file");
+
+				    Assert.NotNull(fileHeader);
+				    Assert.Equal(numberOfRequests, asyncFilesSession.NumberOfRequests);
+			    }
+		    }
+	    }
+
+		[Fact]
+		public async Task ShouldNotAttemptToLoadAlreadyDeletedFile()
+		{
+			using (var store = NewStore())
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					session.RegisterUpload("test.file", CreateUniformFileStream(128));
+					await session.SaveChangesAsync();
+				}
+
+				using (var session = store.OpenAsyncSession())
+				{
+					session.RegisterFileDeletion("test.file");
+					await session.SaveChangesAsync();
+
+					var asyncFilesSession = (AsyncFilesSession) session;
+
+					var numberOfRequests = asyncFilesSession.NumberOfRequests;
+
+					var fileHeader = await session.LoadFileAsync("test.file");
+
+					Assert.Null(fileHeader);
+					Assert.Equal(numberOfRequests, asyncFilesSession.NumberOfRequests);
+				}
+			}
+		}
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -13,7 +14,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 
 		private readonly ReaderWriterLockSlim _disposerLock = new ReaderWriterLockSlim();
 
-		private readonly IRdcLibrary _rdcLibrary;
+		private IRdcLibrary _rdcLibrary;
 		private bool _disposed;
 
 		public RdcVersionChecker()
@@ -75,7 +76,29 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 		private void DisposeInternal()
 		{
 			if (_rdcLibrary != null)
+			{
 				Marshal.ReleaseComObject(_rdcLibrary);
+				_rdcLibrary = null;
+			}
+		}
+		~RdcVersionChecker()
+		{
+			try
+			{
+				Trace.WriteLine(
+					"~RdcVersionChecker: Disposing COM resources from finalizer! You should call Dispose() instead!");
+				DisposeInternal();
+			}
+			catch (Exception exception)
+			{
+				try
+				{
+					Trace.WriteLine("Failed to dispose COM instance from finalizer because: " + exception);
+				}
+				catch
+				{
+				}
+			}
 		}
 	}
 }

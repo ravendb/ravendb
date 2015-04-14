@@ -1,6 +1,7 @@
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Bundles.Replication.Responders.Behaviors;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;

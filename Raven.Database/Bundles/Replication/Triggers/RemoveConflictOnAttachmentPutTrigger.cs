@@ -9,12 +9,12 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json.Linq;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
-using Raven.Database.Plugins.Catalogs;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Replication.Triggers
+namespace Raven.Database.Bundles.Replication.Triggers
 {
 	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
@@ -37,7 +37,6 @@ namespace Raven.Bundles.Replication.Triggers
 				var history = new RavenJArray(ReplicationData.GetHistory(metadata));
 				metadata[Constants.RavenReplicationHistory] = history;
 
-				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
 				// this is a conflict document, holding document keys in the 
 				// values of the properties
 				var conflictData = oldVersion.Data().ToJObject();
@@ -62,7 +61,7 @@ namespace Raven.Bundles.Replication.Triggers
 
 					foreach (var item in conflictHistory)
 					{
-						if (history.Any(x => ravenJTokenEqualityComparer.Equals(x, item)))
+						if (history.Any(x => RavenJTokenEqualityComparer.Default.Equals(x, item)))
 							continue;
 						history.Add(item);
 					}

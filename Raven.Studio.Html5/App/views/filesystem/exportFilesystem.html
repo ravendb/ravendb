@@ -1,0 +1,43 @@
+﻿<div class="panel panel-default">    
+    <div class="panel-heading">
+        <h3 class="panel-title">Export Filesystem</h3>
+    </div>
+    <div class="panel-body">
+        <h4 class="pull-left">Export your filesystem to a .ravendump file.</h4>
+        <br />
+        <br />
+        <div class="btn-toolbar">
+            <div>
+                <div class="checkbox">
+                    <a class="btn btn-primary" data-bind="click: startExport" download>
+                        <i class="fa fa-download"></i>
+                        Export Filesystem
+                    </a>
+
+                    <label data-bind="visible: !chooseDifferntFileName()">
+                        <input type="checkbox" data-bind="checked: chooseDifferntFileName">Override file name
+                    </label>
+                    <span data-bind="visible: chooseDifferntFileName">
+                        File name:
+                        <input type="text" name="fileName" data-bind="visible: chooseDifferntFileName, value: noneDefualtFileName" title="Insert a file name to ovveride the default one.">
+                    </span>
+                </div>
+                
+                <form id="fsExportDownloadForm" method="post" data-bind="attr:{action:exportActionUrl}" target="about:blank">
+                    <input type="hidden" id="SmugglerOptions" name="SmugglerOptions" />
+                </form>
+            </div>
+        </div>
+        <br />
+        <div>
+            <form class="form-horizontal" role="form">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Batch size</label>
+                    <div class="col-sm-2">
+                        <input class="form-control" type="number" min="0" data-bind="value: batchSize" />
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -8,8 +8,10 @@ using System.ComponentModel.Composition;
 using System.Linq;
 
 using Raven.Abstractions.Data;
+using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.Plugins;
+using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 {
@@ -17,6 +19,13 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 	[ExportMetadata("Bundle", "Versioning")]
 	public class VersioningDeleteTrigger : AbstractFileDeleteTrigger
 	{
+		private VersioningTriggerActions actions;
+
+		public override void Initialize()
+		{
+			actions = new VersioningTriggerActions(FileSystem);
+		}
+
 		public override VetoResult AllowDelete(string name)
 		{
 			var result = VetoResult.Allowed;
@@ -29,7 +38,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 				if (file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) != "Historical")
 					return;
 
-				if (FileSystem.ChangesToRevisionsAllowed() || accessor.IsVersioningActive() == false)
+				if (FileSystem.ChangesToRevisionsAllowed() || accessor.IsVersioningActive(name) == false)
 					return;
 
 				var revisionPos = name.LastIndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
@@ -53,16 +62,18 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			{
 				FileSystem.Storage.Batch(accessor =>
 				{
-					var versioningConfiguration = accessor.GetVersioningConfiguration();
-
-					foreach (var file in accessor.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue).Where(file => file != null))
+					FileVersioningConfiguration versioningConfiguration;
+					if (actions.TryGetVersioningConfiguration(name, new RavenJObject(), accessor, out versioningConfiguration))
 					{
-						if (versioningConfiguration != null && versioningConfiguration.PurgeOnDelete) 
-							FileSystem.StorageOperationsTask.IndicateFileToDelete(file.FullPath);
-						else
+						foreach (var file in accessor.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue).Where(file => file != null))
 						{
-							file.Metadata.Remove(Constants.RavenReadOnly);
-							accessor.UpdateFileMetadata(file.FullPath, file.Metadata);
+							if (versioningConfiguration != null && versioningConfiguration.PurgeOnDelete)
+								FileSystem.Files.IndicateFileToDelete(file.FullPath, null);
+							else
+							{
+								file.Metadata.Remove(Constants.RavenReadOnly);
+								accessor.UpdateFileMetadata(file.FullPath, file.Metadata, null);
+							}
 						}
 					}
 				});

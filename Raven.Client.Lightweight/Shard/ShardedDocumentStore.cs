@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -288,7 +289,7 @@ namespace Raven.Client.Shard
 			ShardStrategy.Shards.ForEach(shard => shard.Value.InitializeProfiling());
 		}
 
-		public override bool CanEnlistInDistributedTransactions(string dbName)
+	    public override bool CanEnlistInDistributedTransactions(string dbName)
 		{
 			return false;// sharding & dtc don't mix
 		}
@@ -394,7 +395,40 @@ namespace Raven.Client.Shard
             });
         }
 
-        public override Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
+		public override void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			var list = ShardStrategy.Shards.Values.Select(x => x.DatabaseCommands).ToList();
+			ShardStrategy.ShardAccessStrategy.Apply(list,
+															new ShardRequestData()
+															, (commands, i) =>
+															{
+																indexCreationTask.SideBySideExecute(commands, Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
+																return (object)null;
+															});
+		}
+
+		public override Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			var list = ShardStrategy.Shards.Values.Select(x => x.AsyncDatabaseCommands).ToList();
+			return ShardStrategy.ShardAccessStrategy.ApplyAsync(list, new ShardRequestData(), (commands, i) =>
+			{
+				var tcs = new TaskCompletionSource<bool>();
+
+				try
+				{
+					indexCreationTask.SideBySideExecuteAsync(commands, Conventions, minimumEtagBeforeReplace, replaceTimeUtc)
+									 .ContinueWith(t => tcs.SetResult(true));
+				}
+				catch (Exception e)
+				{
+					tcs.SetException(e);
+				}
+
+				return tcs.Task;
+			});
+		}
+
+		public override Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
         {
             var list = ShardStrategy.Shards.Values.Select(x => x.AsyncDatabaseCommands).ToList();
             return ShardStrategy.ShardAccessStrategy.ApplyAsync(list,

@@ -324,7 +324,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					.Put(Constants.RavenReplicationDestinations, null, RavenJObject.FromObject(replicationDocument), new RavenJObject(), null);
 			}
 
-			var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.RavenDatabasesPrefix + databaseName, null);
+			var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Database.Prefix + databaseName, null);
 			var databaseDocument = databaseDocumentAsJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
 			var bundles = databaseDocument.Settings[Constants.ActiveBundles].GetSemicolonSeparatedValues();
@@ -336,7 +336,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					.SystemDatabase
 					.Documents
 					.Put(
-						Constants.RavenDatabasesPrefix + databaseName,
+						Constants.Database.Prefix + databaseName,
 						null,
 						RavenJObject.FromObject(databaseDocument),
 						new RavenJObject
@@ -624,10 +624,10 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (EnsureSystemDatabase() == false)
 				return GetMessageWithString("Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
 
+			Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
+			Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
-			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-			DatabasesLandlord.ForAllDatabases(documentDatabase => documentDatabase.TransactionalStorage.ClearCaches());
-			GC.WaitForPendingFinalizers();
+			RavenGC.CollectGarbage(false, afterCollect, true);
 
 			return GetMessageWithString("GC Done");
 		}
@@ -644,7 +644,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
 			Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
-			RavenGC.CollectGarbage(true, afterCollect);
+			RavenGC.CollectGarbage(true, afterCollect, true);
 
 			return GetMessageWithString("LOH GC Done");
 		}
@@ -696,8 +696,8 @@ namespace Raven.Database.Server.Controllers.Admin
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 			try
 			{
-				var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
-				jsonSerializer.Converters.Add(new EtagJsonConverter());
+				var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+				jsonSerializer.Formatting = Formatting.Indented;
 
 				using (var file = new FileStream(tempFileName, FileMode.Create))
 				using (var package = new ZipArchive(file, ZipArchiveMode.Create))
@@ -754,8 +754,8 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				var stacktrace = package.CreateEntry("stacktraces.txt", CompressionLevel.Optimal);
 
-				var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
-				jsonSerializer.Converters.Add(new EtagJsonConverter());
+				var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+				jsonSerializer.Formatting = Formatting.Indented;
 
 				using (var stacktraceStream = stacktrace.Open())
 				{

@@ -157,6 +157,7 @@
     <Compile Include="FileSystem\IFilesChanges.cs" />
     <Compile Include="FileSystem\Impl\RenameFileOperation.cs" />
     <Compile Include="FileSystem\Impl\UpdateMetadataOperation.cs" />
+    <Compile Include="FileSystem\Impl\DeleteByQueryOperation.cs" />
     <Compile Include="FileSystem\Impl\UploadFileOperation.cs" />
     <Compile Include="FileSystem\InMemoryFilesSessionOperations.cs" />
     <Compile Include="FileSystem\Listeners\IFilesConflictListener.cs" />

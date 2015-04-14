@@ -2,9 +2,12 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
@@ -298,17 +301,17 @@ namespace Raven.Tests.FileSystem
 			var content = new RandomStream(10);
 			var client = NewAsyncClient();
 
-			// note that file upload modifies ETag twice
+			// note that file upload modifies ETag twice and indicates file to delete what creates another etag for tombstone
             await client.UploadAsync("test.bin", content, new RavenJObject());
             var resultFileMetadata = await client.GetMetadataForAsync("test.bin");
-            var etag0 = resultFileMetadata.Value<Guid>(Constants.MetadataEtagField);
+            var etag0 = Etag.Parse(resultFileMetadata.Value<string>(Constants.MetadataEtagField));
             await client.UploadAsync("test.bin", content, new RavenJObject());
             resultFileMetadata = await client.GetMetadataForAsync("test.bin");
-            var etag1 = resultFileMetadata.Value<Guid>(Constants.MetadataEtagField);
+            var etag1 = Etag.Parse(resultFileMetadata.Value<string>(Constants.MetadataEtagField));
 			
-			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000002").ToByteArray(), etag0.ToByteArray()), 0);
-			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000004").ToByteArray(), etag1.ToByteArray()), 0);
-            Assert.True(Buffers.Compare(etag1.ToByteArray(), etag0.ToByteArray()) > 0, "ETag after second update should be greater");
+			Assert.Equal(Etag.Parse("00000000-0000-0001-0000-000000000002"), etag0);
+			Assert.Equal(Etag.Parse("00000000-0000-0001-0000-000000000005"), etag1);
+            Assert.True(etag1.CompareTo(etag0) > 0, "ETag after second update should be greater");
 		}
 
 		[Fact]
@@ -412,7 +415,7 @@ namespace Raven.Tests.FileSystem
 			{
 				await client.RenameAsync("file1.bin", "file2.bin");
 			}
-			catch (InvalidOperationException e)
+			catch (ErrorResponseException e)
 			{
 				ex = e.GetBaseException();
 			}
@@ -638,6 +641,7 @@ namespace Raven.Tests.FileSystem
 		                                {
 		                                    {"test", "1"}
 		                                });
+
             await client.UploadAsync("a/b/2.txt", new RandomStream(128));
 
             var fileMetadata = await client.GetAsync(new string[] { "1.txt", "a/b/2.txt" });
@@ -673,6 +677,176 @@ namespace Raven.Tests.FileSystem
 			writer.Flush();
 			ms.Position = 0;
 			return ms;
+		}
+
+		[Fact]
+		public async Task Can_Handle_Upload_With_Etag()
+		{
+			var client = NewAsyncClient();
+			await client.UploadAsync("1.txt", new RandomStream(128),
+										new RavenJObject
+		                                {
+		                                    {"test", "1"}
+		                                });
+
+			var fileMetadata = await client.GetAsync(new [] {"1.txt" });
+			Assert.NotNull(fileMetadata);
+			Assert.Equal(1, fileMetadata.Length);
+
+			var etag = fileMetadata[0].Etag;
+
+			await client.UploadAsync("1.txt", new RandomStream(256),
+										new RavenJObject
+		                                {
+		                                    {"test", "2"}
+		                                }, etag: etag);
+
+			await ThrowsAsync<ConcurrencyException>(() => client.UploadAsync("1.txt", new RandomStream(256), etag: etag.IncrementBy(10)));
+
+		}
+
+		[Fact]
+		public async Task CanDelete()
+		{
+			var client = NewAsyncClient();
+			await client.UploadAsync("1.txt", new RandomStream(128),
+										new RavenJObject
+		                                {
+		                                    {"test", "1"}
+		                                });
+
+			await client.UploadAsync("2.txt", new RandomStream(128),
+										new RavenJObject
+		                                {
+		                                    {"test", "1"}
+		                                });
+
+			var fileMetadata = await client.GetAsync(new[] { "1.txt", "2.txt" });
+			Assert.NotNull(fileMetadata);
+			Assert.Equal(2, fileMetadata.Length);
+
+			var etag1 = fileMetadata[0].Etag;
+			await client.DeleteAsync("1.txt", etag1);
+
+			var deletedFileMetadata = await client.GetMetadataForAsync("1.txt");
+
+			Assert.Null(deletedFileMetadata);
+
+			fileMetadata = await client.GetAsync(new[] { "1.txt", "2.txt" });
+			Assert.NotNull(fileMetadata);
+			Assert.Equal(2, fileMetadata.Length);
+			Assert.Null(fileMetadata[0]);
+		}
+
+		[Fact]
+		public async Task Can_Handle_Delete_With_Etag()
+		{
+			var client = NewAsyncClient();
+			await client.UploadAsync("1.txt", new RandomStream(128),
+										new RavenJObject
+		                                {
+		                                    {"test", "1"}
+		                                });
+
+			await client.UploadAsync("2.txt", new RandomStream(128),
+										new RavenJObject
+		                                {
+		                                    {"test", "1"}
+		                                });
+
+			var fileMetadata = await client.GetAsync(new[] { "1.txt", "2.txt" });
+			Assert.NotNull(fileMetadata);
+			Assert.Equal(2, fileMetadata.Length);
+
+			var etag1 = fileMetadata[0].Etag;
+			await client.DeleteAsync("1.txt", etag1);
+
+			var ex = await ThrowsAsync<ConcurrencyException>(() => client.DeleteAsync("2.txt", etag1 /* we are using wrong etag here */));
+
+			Assert.Equal("Operation attempted on file '/2.txt' using a non current etag", ex.Message);
+
+			Assert.NotNull(ex.ExpectedETag);
+			Assert.NotNull(ex.ActualETag);
+
+			fileMetadata = await client.GetAsync(new[] { "1.txt", "2.txt" });
+			Assert.NotNull(fileMetadata);
+			Assert.Equal(2, fileMetadata.Length);
+			Assert.Null(fileMetadata[0]);
+			Assert.NotNull(fileMetadata[1]);
+		}
+
+		[Fact]
+		public async Task Can_Handle_Rename_With_Etag()
+		{
+			var client = NewAsyncClient();
+			await client.UploadAsync("1.txt", new RandomStream(128),
+										new RavenJObject
+		                                {
+		                                    {"test", "1"}
+		                                });
+
+			await client.UploadAsync("2.txt", new RandomStream(128),
+										new RavenJObject
+		                                {
+		                                    {"test", "1"}
+		                                });
+
+			var fileMetadata = await client.GetAsync(new[] { "1.txt", "2.txt" });
+			Assert.NotNull(fileMetadata);
+			Assert.Equal(2, fileMetadata.Length);
+
+			var etag1 = fileMetadata[0].Etag;
+			await client.RenameAsync("1.txt", "1.new.txt", etag1);
+
+			await ThrowsAsync<ConcurrencyException>(() => client.RenameAsync("2.txt", "2.new.txt", etag1 /* we are using wrong etag here */));
+
+			fileMetadata = await client.GetAsync(new[] { "1.txt", "1.new.txt", "2.txt", "2.new.txt" });
+			Assert.NotNull(fileMetadata);
+			Assert.Equal(4, fileMetadata.Length);
+			Assert.Null(fileMetadata[0]);
+			Assert.NotNull(fileMetadata[1]);
+			Assert.NotNull(fileMetadata[2]);
+			Assert.Null(fileMetadata[3]);
+		}
+
+		[Fact]
+		public async Task Can_Handle_Metadata_Update_With_Etag()
+		{
+			var client = NewAsyncClient();
+			await client.UploadAsync("1.txt", new RandomStream(128),
+										new RavenJObject
+		                                {
+		                                    {"test", "1"}
+		                                });
+
+			await client.UploadAsync("2.txt", new RandomStream(128),
+										new RavenJObject
+		                                {
+		                                    {"test", "2"}
+		                                });
+
+			var fileMetadata = await client.GetAsync(new[] { "1.txt", "2.txt" });
+			Assert.NotNull(fileMetadata);
+			Assert.Equal(2, fileMetadata.Length);
+
+			var etag1 = fileMetadata[0].Etag;
+			await client.UpdateMetadataAsync("1.txt", new RavenJObject
+			{
+				{"test-new", "1"}
+			}, etag1);
+
+			await ThrowsAsync<ConcurrencyException>(() => client.UpdateMetadataAsync("2.txt", new RavenJObject
+			{
+				{"test-new2", "4"}
+			}, etag1 /* we are using wrong etag here */));
+
+			fileMetadata = await client.GetAsync(new[] { "1.txt", "2.txt" });
+			Assert.NotNull(fileMetadata);
+			Assert.Equal(2, fileMetadata.Length);
+			Assert.Null(fileMetadata[0].Metadata["test"]);
+			Assert.NotNull(fileMetadata[0].Metadata["test-new"]);
+			Assert.NotNull(fileMetadata[1].Metadata["test"]);
+			Assert.Null(fileMetadata[1].Metadata["test-new2"]);
 		}
 	}
 }

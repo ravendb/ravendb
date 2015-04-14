@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -104,7 +105,29 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> IndexPut(string id)
 		{
 			var index = id;
-			var jsonIndex = await ReadJsonAsync();
+			RavenJObject jsonIndex;
+
+			try
+			{
+				jsonIndex = await ReadJsonAsync();
+			}
+			catch (InvalidOperationException e)
+			{
+				Log.Debug("Failed to deserialize index request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					Message = "Could not understand json, please check its validity."
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+
+			}
+			catch (InvalidDataException e)
+			{
+				Log.Debug("Failed to deserialize index request. Error: " + e);
+				return GetMessageWithObject(new
+				{
+					e.Message
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+			}
 
 			var data = jsonIndex.JsonDeserialization<IndexDefinition>();
 
@@ -176,7 +199,6 @@ namespace Raven.Database.Server.Controllers
 				var postedQuery = await ReadStringAsync();
 				
 				SetPostRequestQuery(postedQuery);
-
 				return IndexGet(id);
 			}
 
@@ -200,7 +222,16 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage IndexDelete(string id)
 		{
 			var index = id;
-			Database.Indexes.DeleteIndex(index);
+
+			var isReplication = GetQueryStringValue("is-replication");
+			if (Database.Indexes.DeleteIndex(index) &&
+				!String.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
+			{
+				const string emptyFrom = "<no hostname>";
+				var from = Uri.UnescapeDataString(GetQueryStringValue("from") ?? emptyFrom);
+				Log.Info("received index deletion from replication (replicating index tombstone, received from = {0})", from);
+			}
+
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
@@ -300,7 +331,7 @@ namespace Raven.Database.Server.Controllers
                 keys = accessor.MapReduce.GetSourcesForIndexForDebug(definition.IndexId, prefix, GetPageSize(Database.Configuration.MaxPageSize))
                     .ToList(); 
             });
-            return GetMessageWithObject(new { keys.Count, Results = keys });
+	        return GetMessageWithObject(new {keys.Count, Results = keys});
         }
 
 		private HttpResponseMessage GetIndexMappedResult(string index)
@@ -312,8 +343,8 @@ namespace Raven.Database.Server.Controllers
 			var key = GetQueryStringValue("key");
 			if (string.IsNullOrEmpty(key))
 			{
-                var startsWith = GetQueryStringValue("startsWith");
 				var sourceId = GetQueryStringValue("sourceId");
+				var startsWith = GetQueryStringValue("startsWith");
 
 				List<string> keys = null;
 				Database.TransactionalStorage.Batch(accessor =>
@@ -321,12 +352,7 @@ namespace Raven.Database.Server.Controllers
                     keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
 						.ToList();
 				});
-			    var keyToSearch = GetQueryStringValue("contains");
-                if (!String.IsNullOrEmpty(keyToSearch))
-                    return GetMessageWithObject(new
-                    {
-                        Results = keys.Contains(keyToSearch)
-                    });
+
 				return GetMessageWithObject(new
 				{
 					keys.Count,
@@ -466,8 +492,6 @@ namespace Raven.Database.Server.Controllers
 			string entityName;
 			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
 
-			if (index.Contains("UserIndex"))
-				Debugger.Launch();
 			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
 				indexEtag = Database.Indexes.GetIndexEtag(dynamicIndexName, null, indexQuery.ResultsTransformer);

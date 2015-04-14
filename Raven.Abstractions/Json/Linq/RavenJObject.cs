@@ -87,9 +87,13 @@ namespace Raven.Json.Linq
 			Properties = new DictionaryWithParentSnapshot(comparer);
 		}
 
-		public RavenJObject(RavenJObject other)
+		public RavenJObject(RavenJObject other) : this(other, other.comparer)
 		{
-			Properties = new DictionaryWithParentSnapshot(other.comparer);
+		}
+
+		public RavenJObject(RavenJObject other, IEqualityComparer<string> comparer)
+		{
+			Properties = new DictionaryWithParentSnapshot(comparer);
 			foreach (var kv in other.Properties)
 			{
 				Properties.Add(kv);
@@ -206,6 +210,8 @@ namespace Raven.Json.Linq
 						break;
 					case JsonToken.PropertyName:
 						propName = reader.Value.ToString();
+						if (String.Equals(propName, String.Empty))
+							throw new InvalidDataException("Deserializing Json object with empty string as property name is not supported.");
 						break;
 					case JsonToken.EndObject:
 						return o;
@@ -275,6 +281,25 @@ namespace Raven.Json.Linq
 			}
 		}
 
+        public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+        {
+            writer.WriteStartObject();
+
+            if (Properties != null)
+            {
+                foreach (var property in Properties)
+                {
+                    writer.WritePropertyName(property.Key);
+                    if (property.Value == null)
+                        writer.WriteNull();
+                    else
+                        property.Value.WriteTo(writer, converters);
+                }
+            }
+
+            writer.WriteEndObject();
+        }
+
 		/// <summary>
 		/// Writes this token to a <see cref="JsonWriter"/>.
 		/// </summary>
@@ -282,21 +307,7 @@ namespace Raven.Json.Linq
 		/// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
 		public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
 		{
-			writer.WriteStartObject();
-
-			if (Properties != null)
-			{
-				foreach (var property in Properties)
-				{
-					writer.WritePropertyName(property.Key);
-					if(property.Value == null)
-						writer.WriteNull();
-					else
-						property.Value.WriteTo(writer, converters);
-				}
-			}
-
-			writer.WriteEndObject();
+            WriteTo(writer, new JsonConverterCollection(converters));
 		}
 
 		#region IEnumerable<KeyValuePair<string,RavenJToken>> Members
@@ -393,6 +404,9 @@ namespace Raven.Json.Linq
 						break;
 					case JsonToken.PropertyName:
 						propName = reader.Value.ToString();
+						if (String.Equals(propName, String.Empty))
+							throw new InvalidDataException("Deserializing Json object with empty string as property name is not supported.");
+
 						break;
 					case JsonToken.EndObject:
 						return o;

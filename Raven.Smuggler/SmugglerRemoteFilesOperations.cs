@@ -70,10 +70,10 @@ namespace Raven.Smuggler
             };
         }
 
-        public virtual async Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take)
+        public virtual async Task<IAsyncEnumerator<FileHeader>> GetFiles(Etag lastEtag, int take)
         {
             ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
-            return await PrimaryStore.AsyncFilesCommands.StreamFilesAsync(lastEtag, pageSize: take);
+            return await PrimaryStore.AsyncFilesCommands.StreamFileHeadersAsync(lastEtag, pageSize: take);
         }
 
         public virtual Task<Stream> DownloadFile(FileHeader file)
@@ -81,12 +81,31 @@ namespace Raven.Smuggler
             return PrimaryStore.AsyncFilesCommands.DownloadAsync(file.FullPath);
         }
 
-        public virtual Task PutFiles(FileHeader file, Stream data, long size)
+        public virtual Task PutFile(FileHeader file, Stream data, long size)
         {
             return PrimaryStore.AsyncFilesCommands.UploadRawAsync(file.FullPath, data, file.Metadata, size);
         }
 
-        public virtual void Initialize(SmugglerFilesOptions options)
+	    public virtual async Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take)
+	    {
+		    var names = await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(start, take);
+
+			var results = new List<KeyValuePair<string, RavenJObject>>(names.Length);
+
+		    foreach (var name in names)
+		    {
+			    results.Add(new KeyValuePair<string, RavenJObject>(name, await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyAsync<RavenJObject>(name)));
+		    }
+
+		    return results;
+	    }
+
+	    public virtual Task PutConfig(string name, RavenJObject value)
+	    {
+		    return PrimaryStore.AsyncFilesCommands.Configuration.SetKeyAsync(name, value);
+	    }
+
+	    public virtual void Initialize(SmugglerFilesOptions options)
         {
             this.Options = options;
         }
@@ -134,6 +153,16 @@ namespace Raven.Smuggler
 
 			return metadata;
 	    }
+
+	    public RavenJObject DisableVersioning(RavenJObject metadata)
+	    {
+		    if (metadata != null)
+		    {
+			    metadata.Add(Constants.RavenIgnoreVersioning, true);
+		    }
+
+		    return metadata;
+	    }
     }
 
 
@@ -155,7 +184,7 @@ namespace Raven.Smuggler
             this.secondaryStore = secondaryStore;
         }
 
-        public override Task PutFiles(FileHeader file, Stream data, long size)
+        public override Task PutFile(FileHeader file, Stream data, long size)
         {
             return SecondaryStore.AsyncFilesCommands.UploadRawAsync(file.FullPath, data, file.Metadata, size);
         }
@@ -174,5 +203,10 @@ namespace Raven.Smuggler
         {
             return this.SecondaryStore.AsyncFilesCommands.Configuration.SetKeyAsync<ExportFilesDestinations>(ExportFilesDestinations.RavenDocumentKey, destinations);
         }
+
+	    public override Task PutConfig(string name, RavenJObject value)
+	    {
+			return SecondaryStore.AsyncFilesCommands.Configuration.SetKeyAsync(name, value);
+	    }
     }
 }

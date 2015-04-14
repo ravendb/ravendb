@@ -36,10 +36,8 @@ namespace Voron.Impl.Paging
         {
             _increaseSize = MinIncreaseSize;
 
-            MaxNodeSize = PageMaxSpace/2 - 1;
-
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
-            Debug.Assert(MaxNodeSize < ushort.MaxValue);
+            Debug.Assert(NodeMaxSize < ushort.MaxValue);
             Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
             
             PageMinSpace = (int)(PageMaxSpace * 0.33);
@@ -48,13 +46,13 @@ namespace Voron.Impl.Paging
             PagerState.AddRef();
         }
 
-        public int MaxNodeSize { get; private set; }
         public int PageMinSpace { get; private set; }
 
         public bool DeleteOnClose { get; set; }
 
         public const int PageSize = 4096;
-        public static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
+		public readonly static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
+	    public readonly static int NodeMaxSize = PageMaxSpace/2 - 1;
         private PagerState _pagerState;
         private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
 
@@ -131,8 +129,8 @@ namespace Voron.Impl.Paging
         public bool ShouldGoToOverflowPage(int len)
         {
 			ThrowObjectDisposedIfNeeded();
-			
-            return len + Constants.PageHeaderSize > MaxNodeSize;
+
+			return len + Constants.PageHeaderSize > NodeMaxSize;
         }
 
         public int GetNumberOfOverflowPages(int overflowSize)

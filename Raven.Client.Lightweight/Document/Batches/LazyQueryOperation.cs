@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
@@ -18,13 +17,14 @@ namespace Raven.Client.Document.Batches
 		private readonly Action<QueryResult> afterQueryExecuted;
 		private readonly HashSet<string> includes;
 
-		private IDictionary<string,string> headers;
+        private NameValueCollection headers;
 
-		public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted, HashSet<string> includes)
+        public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted, HashSet<string> includes, NameValueCollection headers)
 		{
 			this.queryOperation = queryOperation;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.includes = includes;
+            this.headers = headers;
 		}
 
 		public GetRequest CreateRequest()
@@ -43,9 +43,9 @@ namespace Raven.Client.Document.Batches
 			};
 			if (headers != null)
 			{
-				foreach (var header in headers)
+				foreach (var headerKey in headers.Keys)
 				{
-					request.Headers[header.Key] = header.Value;
+                    request.Headers[headerKey.ToString()] = headers[headerKey.ToString()];
 				}
 			}
 			return request;
@@ -82,7 +82,14 @@ namespace Raven.Client.Document.Batches
 
         public void HandleResponse(GetResponse response)
 		{
-			if (response.Status == 404)
+	        if (response.ForceRetry)
+	        {
+		        Result = null;
+		        RequiresRetry = true;
+		        return;
+	        }
+
+	        if (response.Status == 404)
 				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
 			var json = (RavenJObject)response.Result;
 			var queryResult = SerializationHelper.ToQueryResult(json, response.GetEtagHeader(), response.Headers["Temp-Request-Time"], -1);
@@ -106,7 +113,7 @@ namespace Raven.Client.Document.Batches
 			return queryOperation.EnterQueryContext();
 		}
 
-	    public void SetHeaders(IDictionary<string,string> theHeaders)
+        public void SetHeaders(NameValueCollection theHeaders)
 		{
 			headers = theHeaders;
 		}

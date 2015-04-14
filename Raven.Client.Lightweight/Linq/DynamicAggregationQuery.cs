@@ -166,7 +166,10 @@ namespace Raven.Client.Linq
 	            FacetResult value;
 	            if (facetResults.Results.TryGetValue(rename.Value, out value) &&
 	                facetResults.Results.ContainsKey(rename.Key) == false)
-	                facetResults.Results[rename.Key] = value;
+	            {
+                        facetResults.Results[rename.Key] = value;
+	                facetResults.Results.Remove(rename.Value);
+	            }
 	        }
 	        return facetResults;
 	    }

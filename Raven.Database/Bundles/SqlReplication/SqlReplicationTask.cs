@@ -53,8 +53,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			public string Key;
 		}
 
-		public const string RavenSqlReplicationStatus = "Raven/SqlReplication/Status";
-		private const string ConnectionsDocumentName = "Raven/SqlReplication/Connections";
+		public const string RavenSqlReplicationStatus = "Raven/SqlReplication/Status";		
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
 		public event Action<int> AfterReplicationCompleted = delegate { };
@@ -521,7 +520,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			countOfReplicatedItems = 0;
             var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
 			var scriptResult = ApplyConversionScript(cfg, docs, replicationStats);
-			if (scriptResult.Data.Count == 0)
+			if (scriptResult.Ids.Count == 0)
 				return true;
 			
 			countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
@@ -652,7 +651,7 @@ namespace Raven.Database.Bundles.SqlReplication
                            };
 				var scriptResult = ApplyConversionScript(sqlReplication, docs, stats);
 
-				var connectionsDoc = Database.Documents.Get(ConnectionsDocumentName, null);
+				var connectionsDoc = Database.Documents.Get(Constants.RavenSqlReplicationConnectionsDocumentName, null);
 				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections();
 
 				if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections, false, false))
@@ -711,7 +710,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				const string prefix = "Raven/SqlReplication/Configuration/";
 
-				var connectionsDoc = accessor.Documents.DocumentByKey(ConnectionsDocumentName);
+				var connectionsDoc = accessor.Documents.DocumentByKey(Constants.RavenSqlReplicationConnectionsDocumentName);
 				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections(); // backward compatibility
 
 				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))

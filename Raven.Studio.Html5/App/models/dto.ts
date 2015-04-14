@@ -402,6 +402,8 @@ interface periodicExportSetupDto {
     AwsRegionEndpoint: string;
     AzureStorageContainer: string;
     LocalFolderName: string;
+    S3RemoteFolderName: string;
+    AzureRemoteFolderName: string;
     IntervalMilliseconds: number;
     FullBackupIntervalMilliseconds: number;
 }
@@ -430,6 +432,9 @@ interface versioningEntryDto extends documentDto {
   Id: string;
   MaxRevisions: number;
   Exclude: boolean;
+  ExcludeUnlessExplicit: boolean;
+  PurgeOnDelete: boolean;
+  ResetOnRename?: boolean;
 }
 
 interface versioningDto {
@@ -616,6 +621,7 @@ interface compactStatusDto {
 interface sqlReplicationTableDto {
     TableName: string;
     DocumentKeyColumn: string;
+    InsertOnlyMode: boolean;
 }
 
 interface sqlReplicationDto extends documentDto {
@@ -631,7 +637,8 @@ interface sqlReplicationDto extends documentDto {
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
-    PerformTableQuatation?:boolean;
+    QuoteTables?: boolean;
+	PerformTableQuatation?: boolean; //obsolate
 }
 
 interface commandData {
@@ -1210,4 +1217,31 @@ enum ResponseCodes {
     NotFound = 404,
     PreconditionFailed = 412,
     InternalServerError = 500
+}
+
+interface synchronizationConfigDto {
+    FileConflictResolution: string;
+    MaxNumberOfSynchronizationsPerDestination: number;
+    SynchronizationLockTimeoutMiliseconds: number;
+}
+
+interface pluginsInfoDto {
+	Extensions: Array<extensionsLogDto>;
+	Triggers: Array<triggerInfoDto>;
+	CustomBundles: Array<string>;
+}
+
+interface extensionsLogDto {
+	Name: string;
+	Installed: Array<extensionsLogDetailDto>;
+}
+
+interface extensionsLogDetailDto {
+	Name: string;
+	Assembly: string;
+}
+
+interface triggerInfoDto {
+	Type: string;
+	Name: string;
 }

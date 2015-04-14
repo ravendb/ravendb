@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Linq;
 using Jint;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Json;
@@ -46,7 +47,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
 			engine.SetValue("documentId", docId);
 			engine.SetValue("replicateTo", new Action<string, object>(ReplicateToFunction));
-			foreach (var sqlReplicationTable in config.SqlReplicationTables)
+            scriptResult.Ids.Add(docId);
+            foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				var current = sqlReplicationTable;
 				engine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<object>)(cols =>

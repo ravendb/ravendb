@@ -1,0 +1,42 @@
+﻿<form data-bind="submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
+
+    <div class="btn-toolbar">
+        <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
+    </div>
+    <br />
+    <div class="form-group">
+        <label for="fileConflictResolution" class="col-sm-3 control-label">File conflict resolution:</label>
+        <div class="col-sm-3">
+            <div class="btn-group" data-bind="with: config">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span data-bind="visible: fileConflictResolution() === 'None'">None</span>
+                    <span data-bind="visible: fileConflictResolution() === 'ResolveToLocal'">Resolve to local</span>
+                    <span data-bind="visible: fileConflictResolution() === 'ResolveToRemote'">Resolve to remote</span>
+                    <span data-bind="visible: fileConflictResolution() === 'ResolveToLatest'">Resolve to latest</span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="#" data-bind="click: fileConflictResolution.bind(fileConflictResolution, 'None')">None</a></li>
+                    <li><a href="#" data-bind="click: fileConflictResolution.bind(fileConflictResolution, 'ResolveToLocal')">Resolve to local</a></li>
+                    <li><a href="#" data-bind="click: fileConflictResolution.bind(fileConflictResolution, 'ResolveToRemote')">Resolve to remote</a></li>
+                    <li><a href="#" data-bind="click: fileConflictResolution.bind(fileConflictResolution, 'ResolveToLatest')">Resolve to latest</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="maxNumberOfSynchronizationsPerDestination" class="col-sm-3 control-label">Max number of synchronizations per destination:</label>
+        <div class="col-sm-3">
+            <input type="number" id="maxNumberOfSynchronizationsPerDestination" required class="form-control" data-bind="value: config().maxNumberOfSynchronizationsPerDestination, valueUpdate: 'afterkeydown'" />
+        </div>
+    </div>
+    <div class="form-group" data-bind="with: config">
+        <label for="lockInterval" class="col-sm-3 control-label">Synchronization lock timeout:</label>
+        <div class="col-sm-1">
+            <input id="lockInterval" required type="number" class="form-control" min="0" data-bind="numericValue: synchronizationLockTimeout, valueUpdate: 'afterkeydown'" />
+        </div>
+        <div class="col-sm-2">
+            <select class="form-control" data-bind="options: availableIntervalUnits, value: synchronizationLockTimeoutUnit"></select>
+        </div>
+    </div>
+</form>

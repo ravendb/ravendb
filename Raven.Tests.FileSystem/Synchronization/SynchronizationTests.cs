@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Util;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
@@ -262,7 +264,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			var sourceMetadataWithEtag = await sourceClient.GetMetadataForAsync("test.bin");
 
-            Assert.Equal(sourceMetadataWithEtag.Value<Guid>(Constants.MetadataEtagField), lastSynchronization.LastSourceFileEtag);
+            Assert.Equal(sourceMetadataWithEtag.Value<string>(Constants.MetadataEtagField), lastSynchronization.LastSourceFileEtag.ToString());
 		}
 
 		[Fact]
@@ -283,10 +285,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 			await sourceClient.Synchronization.StartAsync("test2.bin", destinationClient);
 			await sourceClient.Synchronization.StartAsync("test1.bin", destinationClient);
 
-            var lastSourceETag = sourceClient.GetMetadataForAsync("test2.bin").Result.Value<Guid>(Constants.MetadataEtagField);
+            var lastSourceETag = sourceClient.GetMetadataForAsync("test2.bin").Result.Value<string>(Constants.MetadataEtagField);
 			var lastSynchronization = await destinationClient.Synchronization.GetLastSynchronizationFromAsync(await sourceClient.GetServerIdAsync());
 
-			Assert.Equal(lastSourceETag, lastSynchronization.LastSourceFileEtag);
+			Assert.Equal(lastSourceETag, lastSynchronization.LastSourceFileEtag.ToString());
 		}
 
 		[Fact]
@@ -296,7 +298,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			var lastSynchronization = destinationClient.Synchronization.GetLastSynchronizationFromAsync(Guid.Empty).Result;
 
-			Assert.Equal(Guid.Empty, lastSynchronization.LastSourceFileEtag);
+			Assert.Equal(Etag.Empty, lastSynchronization.LastSourceFileEtag);
 		}
 
 		[Fact]
@@ -427,7 +429,10 @@ namespace Raven.Tests.FileSystem.Synchronization
 			var sourceClient = NewAsyncClient(0);
             var destinationClient = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
 
-            await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationLimit, -1);
+            await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig
+            {
+	            MaxNumberOfSynchronizationsPerDestination = -1
+            });
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
@@ -597,7 +602,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			var client = NewAsyncClient(1);
 
 			var id = Guid.NewGuid();
-			var etag = Guid.NewGuid();
+			var etag = EtagUtil.Increment(Etag.Empty, 5);
 
 			client.Synchronization.IncrementLastETagAsync(id, "http://localhost:12345", etag).Wait();
 
@@ -747,7 +752,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			var report = await source.Synchronization.StartAsync("test.bin", destination);
 
-			Assert.NotEqual(Guid.Empty, report.FileETag);
+			Assert.NotEqual(Etag.Empty, report.FileETag);
 		}
 
 		[Fact]

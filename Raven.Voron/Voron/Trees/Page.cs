@@ -66,7 +66,8 @@ namespace Voron.Trees
 			if(KeysPrefixed)
 				key.PrepareForSearching();
 
-			if (NumberOfEntries == 0)
+            int numberOfEntries = NumberOfEntries;
+            if (numberOfEntries == 0)
 			{
 				LastSearchPosition = 0;
 				LastMatch = 1;
@@ -79,16 +80,18 @@ namespace Voron.Trees
                     {
                         var pageKey = CreateNewEmptyKey();
 
-                        if (NumberOfEntries == 1)
+                        if (numberOfEntries == 1)
                         {
-                            SetNodeKey(GetNode(0), ref pageKey);
+                            var node = GetNode(0);
+
+                            SetNodeKey(node, ref pageKey);
                             LastMatch = key.Compare(pageKey);
                             LastSearchPosition = LastMatch > 0 ? 1 : 0;
-                            return LastSearchPosition == 0 ? GetNode(0) : null;
+                            return LastSearchPosition == 0 ? node : null;
                         }
 
                         int low = IsLeaf ? 0 : 1;
-                        int high = NumberOfEntries - 1;
+                        int high = numberOfEntries - 1;
                         int position = 0;
 
                         while (low <= high)
@@ -117,7 +120,7 @@ namespace Voron.Trees
                         Debug.Assert(position < ushort.MaxValue);
                         LastSearchPosition = position;
 
-                        if (position >= NumberOfEntries)
+                        if (position >= numberOfEntries)
                             return null;
                         return GetNode(position);
                     }
@@ -130,7 +133,7 @@ namespace Voron.Trees
                 case SliceOptions.AfterAllKeys:
                     {
                         LastMatch = -1;
-                        LastSearchPosition = NumberOfEntries - 1;
+                        LastSearchPosition = numberOfEntries - 1;
                         return GetNode(LastSearchPosition);
                     }
                 default:
@@ -138,6 +141,7 @@ namespace Voron.Trees
             }
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public NodeHeader* GetNode(int n)
         {
             Debug.Assert(n >= 0 && n < NumberOfEntries);
@@ -250,8 +254,8 @@ namespace Voron.Trees
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.KeyLength == 0);// branch page's first item must be the implicit ref
-            if (HasSpaceFor(key, len) == false)
-                throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
+	        if (HasSpaceFor(key, len) == false)
+		        throw new InvalidOperationException(string.Format("The page is full and cannot add an entry, this is probably a bug. Key: {0}, data length: {1}, size left: {2}", key, len, SizeLeft));
 
 	        var prefixedKey = key as PrefixedSlice;
 			if (prefixedKey != null && prefixedKey.NewPrefix != null)

@@ -1,21 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Database.FileSystem.Util;
 using Raven.Database.Server.WebApi.Attributes;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
-using System.Web.Http.ModelBinding;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.FileSystem;
@@ -41,19 +33,11 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/config")]
         public HttpResponseMessage Get(string name)
 		{
-			try
-			{
-                RavenJObject config = null;
-                Storage.Batch(accessor => { config = accessor.GetConfig(name); });
+            RavenJObject config = null;
+            Storage.Batch(accessor => { config = accessor.GetConfig(name); });
                 
-                return this.GetMessageWithObject(config, HttpStatusCode.OK)
-                           .WithNoCache();
-			}
-			catch (FileNotFoundException)
-			{
-                return this.GetEmptyMessage(HttpStatusCode.NotFound)
-                           .WithNoCache();
-			}
+            return this.GetMessageWithObject(config)
+                        .WithNoCache();
 		}
 
         [HttpGet]
@@ -106,30 +90,29 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/config")]
 		public async Task<HttpResponseMessage> Put(string name)
 		{
-            var json = await ReadJsonAsync();
+			var json = await ReadJsonAsync();
 
-            ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfig(name, json)), ConcurrencyResponseException);
+			Storage.Batch(accessor => accessor.SetConfig(name, json));
 
-            Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Set });
+			Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Set });
 
-            Log.Debug("Config '{0}' was inserted", name);
+			Log.Debug("Config '{0}' was inserted", name);
 
-            return this.GetMessageWithObject(json, HttpStatusCode.Created)
-                       .WithNoCache();
+			return GetMessageWithObject(json, HttpStatusCode.Created)
+				.WithNoCache();
 		}
 
 		[HttpDelete]
         [RavenRoute("fs/{fileSystemName}/config")]
         public HttpResponseMessage Delete(string name)
 		{
-			ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.DeleteConfig(name)),
-											 ConcurrencyResponseException);
+			Storage.Batch(accessor => accessor.DeleteConfig(name));
 
 			Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Delete });
 
 			Log.Debug("Config '{0}' was deleted", name);
 
-            return GetEmptyMessage(HttpStatusCode.NoContent);
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 	}
 }

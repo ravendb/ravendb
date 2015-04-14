@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
+using Jint.Runtime;
 
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -15,7 +16,7 @@ namespace Raven.Database.Json
     {
 		private Dictionary<string, KeyValuePair<RavenJValue, JsValue>> propertiesByValue = new Dictionary<string, KeyValuePair<RavenJValue, JsValue>>();
 
-        public RavenJObject ToRavenJObject(JsValue jsObject, string propertyKey = null)
+        public RavenJObject ToRavenJObject(JsValue jsObject, string propertyKey = null, bool recursiveCall = false)
         {
             var rjo = new RavenJObject();
             foreach (var property in jsObject.AsObject().Properties)
@@ -24,18 +25,22 @@ namespace Raven.Database.Json
                     continue;
 
                 var value = property.Value.Value;
-                if (!value.HasValue)
+                if (value.HasValue == false)
                     continue;
 
                 if (value.Value.IsRegExp())
                     continue;
 
-				rjo[property.Key] = ToRavenJToken(value.Value, CreatePropertyKey(property.Key, propertyKey));
+				var recursive = jsObject == value;
+				if (recursiveCall && recursive)
+					rjo[property.Key] = null;
+				else
+					rjo[property.Key] = ToRavenJToken(value.Value, CreatePropertyKey(property.Key, propertyKey), recursive);
             }
             return rjo;
         }
 
-        private RavenJToken ToRavenJToken(JsValue v, string propertyKey)
+		private RavenJToken ToRavenJToken(JsValue v, string propertyKey, bool recursiveCall)
         {
             if (v.IsBoolean())
                 return new RavenJValue(v.AsBoolean());
@@ -97,7 +102,7 @@ namespace Raven.Database.Json
                     if (!jsInstance.HasValue)
                         continue;
 
-                    var ravenJToken = ToRavenJToken(jsInstance.Value, CreatePropertyKey(property.Key, propertyKey));
+                    var ravenJToken = ToRavenJToken(jsInstance.Value, CreatePropertyKey(property.Key, propertyKey), recursiveCall);
                     if (ravenJToken == null)
                         continue;
 
@@ -107,7 +112,7 @@ namespace Raven.Database.Json
                 return rja;
             }
             if (v.IsObject())
-                return ToRavenJObject(v, propertyKey);
+                return ToRavenJObject(v, propertyKey, recursiveCall);
             if (v.IsRegExp())
                 return null;
 
@@ -116,10 +121,7 @@ namespace Raven.Database.Json
 
 		public JsValue ToJsObject(Engine engine, RavenJObject doc, string propertyName = null)
         {
-            var jsObject = new ObjectInstance(engine)
-                           {
-                               Extensible = true
-                           };
+			var jsObject = engine.Object.Construct(Arguments.Empty);
 
             foreach (var prop in doc)
             {
@@ -187,13 +189,13 @@ namespace Raven.Database.Json
 
         private JsValue ToJsArray(Engine engine, RavenJArray array)
         {
-            var elements = new JsValue[array.Length];
+			var elements = new JsValue[array.Length];
 	        for (var i = 0; i < array.Length; i++)
-	        {
-				elements[i] = ToJsInstance(engine, array[i]);
-	        }
+		        elements[i] = ToJsInstance(engine, array[i]);
 
-	        return engine.Array.Construct(elements);
+			var result = engine.Array.Construct(Arguments.Empty);
+			engine.Array.PrototypeObject.Push(result, elements);
+	        return result;
         }
 
         public virtual RavenJObject ConvertReturnValue(JsValue jsObject)

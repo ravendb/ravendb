@@ -6,11 +6,15 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Documents;
@@ -40,10 +44,13 @@ using Raven.Database.Prefetching;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 
 using metrics.Core;
+using Raven.Database.Plugins.Catalogs;
 
 namespace Raven.Database
 {
@@ -96,6 +103,7 @@ namespace Raven.Database
 			TimerManager = new ResourceTimerManager();
 			DocumentLock = new PutSerialLock();
 			Name = configuration.DatabaseName;
+			ResourceName = Name;
 			Configuration = configuration;
 			transportState = recievedTransportState ?? new TransportState();
 			ExtensionsState = new AtomicDictionary<object>();
@@ -137,10 +145,24 @@ namespace Raven.Database
 					initializer.InitializeTransactionalStorage(uuidGenerator);
 					lastCollectionEtags = new LastCollectionEtags(WorkContext);
 				}
-				catch (Exception)
+				catch (Exception ex)
 				{
-					if (TransactionalStorage != null)
-						TransactionalStorage.Dispose();
+					Log.ErrorException("Could not initialize transactional storage, not creating database", ex);
+					try
+					{
+						if (TransactionalStorage != null)
+							TransactionalStorage.Dispose();
+						if (initializer != null)
+						{
+							initializer.UnsubscribeToDomainUnloadOrProcessExit();
+							initializer.Dispose();
+						}
+					}
+					catch (Exception e)
+					{
+						Log.ErrorException("Could not dispose on initialized DocumentDatabase members", e);
+					}
+
 					throw;
 				}
 
@@ -180,7 +202,7 @@ namespace Raven.Database
 					IndexReplacer = new IndexReplacer(this);
 					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 
-					RaiseIndexingWiringComplete();
+					
 
 					InitializeTriggersExceptIndexCodecs();
 					SecondStageInitialization();
@@ -349,6 +371,8 @@ namespace Raven.Database
 		/// </summary>
 		public string Name { get; private set; }
 
+		public string ResourceName { get; private set; }
+
 		public NotificationActions Notifications { get; private set; }
 
 		public SubscriptionActions Subscriptions { get; private set; }
@@ -422,28 +446,59 @@ namespace Raven.Database
 							Type = "Index Update"
 						})).ToList();
 
-				var extensions = Configuration.ReportExtensions(
-					typeof(IStartupTask),
-					typeof(AbstractReadTrigger),
-					typeof(AbstractDeleteTrigger),
-					typeof(AbstractPutTrigger),
-					typeof(AbstractDocumentCodec),
-					typeof(AbstractIndexCodec),
-					typeof(AbstractDynamicCompilationExtension),
-					typeof(AbstractIndexQueryTrigger),
-					typeof(AbstractIndexUpdateTrigger),
-					typeof(AbstractAnalyzerGenerator),
-					typeof(AbstractAttachmentDeleteTrigger),
-					typeof(AbstractAttachmentPutTrigger),
-					typeof(AbstractAttachmentReadTrigger),
-					typeof(AbstractBackgroundTask),
-					typeof(IAlterConfiguration)).ToList();
+				var types = new[]
+				{
+					typeof (IStartupTask),
+					typeof (AbstractReadTrigger),
+					typeof (AbstractDeleteTrigger),
+					typeof (AbstractPutTrigger),
+					typeof (AbstractDocumentCodec),
+					typeof (AbstractIndexCodec),
+					typeof (AbstractDynamicCompilationExtension),
+					typeof (AbstractIndexQueryTrigger),
+					typeof (AbstractIndexUpdateTrigger),
+					typeof (AbstractAnalyzerGenerator),
+					typeof (AbstractAttachmentDeleteTrigger),
+					typeof (AbstractAttachmentPutTrigger),
+					typeof (AbstractAttachmentReadTrigger),
+					typeof (AbstractBackgroundTask),
+					typeof (IAlterConfiguration)
+				};
+
+				var extensions = Configuration.ReportExtensions(types).ToList();
+
+				var customBundles = FindPluginBundles(types);
 				return new PluginsInfo
 							{
 								Triggers = triggerInfos,
 								Extensions = extensions,
+								CustomBundles = customBundles
 							};
 			}
+		}	
+
+		private List<string> FindPluginBundles(Type[] types)
+		{
+			var unfilteredCatalogs = InMemoryRavenConfiguration.GetUnfilteredCatalogs(Configuration.Catalog.Catalogs);
+
+			AggregateCatalog unfilteredAggregate = null;
+
+			var innerAggregate = unfilteredCatalogs as AggregateCatalog;
+			if (innerAggregate != null)
+			{
+				unfilteredAggregate = new AggregateCatalog(innerAggregate.Catalogs.OfType<BuiltinFilteringCatalog>());
+			}
+
+			if (unfilteredAggregate == null || unfilteredAggregate.Catalogs.Count == 0)
+				return new List<string>();
+
+			return types
+				.SelectMany(type => unfilteredAggregate.GetExports(new ImportDefinition(info => info.Metadata.ContainsKey("Bundle"), type.FullName, ImportCardinality.ZeroOrMore, false, false)))
+				.Select(info => info.Item2.Metadata["Bundle"] as string)
+				.Where(x => x != null)
+				.Distinct()
+				.OrderBy(x => x)
+				.ToList();
 		}
 
 		public DatabaseStatistics Statistics
@@ -507,8 +562,7 @@ namespace Raven.Database
 							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
 							index.IsTestIndex = indexDefinition.IsTestIndex;
 							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
-							if (indexDefinition != null)
-								index.LockMode = indexDefinition.LockMode;
+							index.LockMode = indexDefinition.LockMode;
 
 							index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
 							IndexSearcher searcher;
@@ -874,7 +928,7 @@ namespace Raven.Database
 			{
 				if (tryEnter == false)
 					return;
-
+				WorkContext.LastIdleTime = SystemTime.UtcNow;
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
 				IndexReplacer.ReplaceIndexes(IndexDefinitionStorage.Indexes);
@@ -909,6 +963,8 @@ namespace Raven.Database
 
 			MappingThreadPool.Start();
 			ReducingThreadPool.Start();
+
+			RaiseIndexingWiringComplete();
 
 		}
 		

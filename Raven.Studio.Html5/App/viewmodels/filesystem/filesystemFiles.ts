@@ -17,6 +17,9 @@ import folder = require("models/filesystem/folder");
 import uploadItem = require("models/uploadItem");
 import fileUploadBindingHandler = require("common/fileUploadBindingHandler");
 import uploadQueueHelper = require("common/uploadQueueHelper");
+import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFilesMatchingQueryConfirm");
+import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
+import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 
 class filesystemFiles extends viewModelBase {
 
@@ -45,7 +48,7 @@ class filesystemFiles extends viewModelBase {
 
     static treeSelector = "#filesTree";
     static gridSelector = "#filesGrid";
-    static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle"
+    static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle";
     static uploadQueueSelector = "#uploadQueue";
     static uploadQueuePanelCollapsedSelector = "#uploadQueuePanelCollapsed";
 
@@ -190,7 +193,7 @@ class filesystemFiles extends viewModelBase {
 
     createPagedList(directory): pagedList {
         var fetcher;
-        if (directory == filesystemFiles.revisionsFolderId) { 
+        if (directory === filesystemFiles.revisionsFolderId) { 
             fetcher = (skip: number, take: number) => this.fetchRevisions(skip, take);
         } else {
             fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
@@ -201,7 +204,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), directory, skip, take).execute();
+        var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), this.escapeQueryString(directory), skip, take).execute();
         return task;
     }
 
@@ -273,6 +276,10 @@ class filesystemFiles extends viewModelBase {
         if (grid) {
             var selectedItem = <documentBase>grid.getSelectedItems(1).first();
             var selectedFolder = this.selectedFolder();
+
+            if (selectedFolder == null)
+                selectedFolder = "";
+
             var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + selectedItem.getId();
             window.location.assign(url);
         }
@@ -337,6 +344,41 @@ class filesystemFiles extends viewModelBase {
         $(filesystemFiles.uploadQueueSelector).addClass("hidden");
         $(filesystemFiles.uploadQueuePanelCollapsedSelector).removeClass("hidden");
         $(".upload-queue").addClass("upload-queue-min");
+    }
+
+	deleteFolder() {
+		if (!this.selectedFolder()) {
+			// delete all files from filesystem
+			new getFileSystemStatsCommand(this.activeFilesystem())
+				.execute()
+				.done((fs: filesystemStatisticsDto) => {
+					this.promptDeleteFilesMatchingQuery(fs.FileCount, "");
+				});
+		} else {
+			// Run the query so that we have an idea of what we'll be deleting.
+			var query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
+			new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
+				.execute()
+				.done((results: pagedResultSet) => {
+				if (results.totalResultCount === 0) {
+					app.showMessage("There are no files matching your query.", "Nothing to do");
+				} else {
+					this.promptDeleteFilesMatchingQuery(results.totalResultCount, query);
+				}
+			});
+		}
+	}
+
+	private escapeQueryString(query: string): string {
+		if (!query) return null;
+        return query.replace(/([ \-\_\.])/g, '\\$1');
+    }
+
+	promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
+        var viewModel = new deleteFilesMatchingQueryConfirm(query, resultCount, this.activeFilesystem());
+        app
+            .showDialog(viewModel)
+            .done(() => this.loadFiles());
     }
 }
 

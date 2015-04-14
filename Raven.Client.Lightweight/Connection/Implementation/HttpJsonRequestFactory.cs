@@ -3,11 +3,13 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -41,11 +43,15 @@ namespace Raven.Client.Connection
 				handler(sender, generateRequestResult());
 		}
 
-		private readonly int maxNumberOfCachedRequests;
+		private int maxNumberOfCachedRequests;
 
 		internal readonly HttpClientCache httpClientCache;
+	    public HttpClientCache HttpClientCache
+	    {
+	        get { return httpClientCache; }
+	    }
 
-		internal readonly HttpMessageHandler httpMessageHandler;
+	    internal readonly HttpMessageHandler httpMessageHandler;
 
 		internal readonly bool acceptGzipContent;
 
@@ -83,7 +89,7 @@ namespace Raven.Client.Connection
 		}
 
 		internal CachedRequestOp ConfigureCaching(string url, Action<string, string> setHeader)
-		{
+		 {
 			var cachedRequest = cache.Get(url);
 			if (cachedRequest == null)
 				return new CachedRequestOp { SkipServerCheck = false };
@@ -109,11 +115,19 @@ namespace Raven.Client.Connection
 		/// Reset the number of cached requests and clear the entire cache
 		/// Mostly used for testing
 		/// </summary>
-		public void ResetCache()
+		public void ResetCache(int? newMaxNumberOfCachedRequests = null)
 		{
+
+		    if (newMaxNumberOfCachedRequests != null && newMaxNumberOfCachedRequests.Value == maxNumberOfCachedRequests)
+		        return;
+
 			if (cache != null)
 				cache.Dispose();
 
+		    if (newMaxNumberOfCachedRequests != null)
+		    {
+		        maxNumberOfCachedRequests = newMaxNumberOfCachedRequests.Value;
+            }
 			cache = new SimpleCache(maxNumberOfCachedRequests);
 			NumOfCachedRequests = 0;
 		}
@@ -198,6 +212,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Advanced: Don't set this unless you know what you are doing!
 		/// 
+		/// 
 		/// Enable using basic authentication using http
 		/// By default, RavenDB only allows basic authentication over HTTPS, setting this property to true
 		/// will instruct RavenDB to make unsecured calls (usually only good for testing / internal networks).
@@ -259,7 +274,7 @@ namespace Raven.Client.Connection
 
 		internal void IncrementCachedRequests()
 		{
-			Interlocked.Increment(ref NumOfCachedRequests);
+			 Interlocked.Increment(ref NumOfCachedRequests);
 		}
 
 		internal void CacheResponse(string url, RavenJToken data, NameValueCollection headers)

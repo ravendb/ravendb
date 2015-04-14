@@ -132,9 +132,11 @@ namespace Raven.Database.Actions
 
                     do
                     {
+						Database.WorkContext.UpdateFoundWork();
+
                         docCount = 0;
 						var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
-                        var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
 
                         foreach (var doc in docs)
                         {
@@ -254,13 +256,13 @@ namespace Raven.Database.Actions
 		        {
 			        cts.Token.ThrowIfCancellationRequested();
 
+                    var docsToInsert = docs.ToArray();
+                    var batch = 0;
+                    var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
+
 			        using (Database.DocumentLock.Lock())
 			        {
-				        var docsToInsert = docs.ToArray();
-						var batch = 0;
-						var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-						var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
-
 				        TransactionalStorage.Batch(accessor =>
 				        {
 					        var inserts = 0;
@@ -318,6 +320,8 @@ namespace Raven.Database.Actions
 							        {
 								        trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
 							        }
+
+									Database.WorkContext.UpdateFoundWork();
 						        }
 						        catch (Exception e)
 						        {
@@ -421,7 +425,7 @@ namespace Raven.Database.Actions
                     var documents = etag == null
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
 										: actions.Documents.GetDocumentsAfter(etag, pageSize, token);
-                    var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState);
+                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     int docCount = 0;
                     foreach (var doc in documents)
                     {
@@ -439,7 +443,8 @@ namespace Raven.Database.Actions
 
                         addDocument(document);
                         returnedDocs = true;
-                    }
+						Database.WorkContext.UpdateFoundWork();
+					}
                     if (returnedDocs || docCount == 0)
                         break;
                     start += docCount;
@@ -471,7 +476,7 @@ namespace Raven.Database.Actions
 
             JsonDocument.EnsureIdInMetadata(document);
 
-            return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
+            return new DocumentRetriever(null, null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
         }
 
@@ -494,7 +499,7 @@ namespace Raven.Database.Actions
             }
 
             JsonDocument.EnsureIdInMetadata(document);
-            return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
+            return new DocumentRetriever(null, null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
         }
 
@@ -520,7 +525,7 @@ namespace Raven.Database.Actions
             TransactionalStorage.Batch(
             actions =>
             {
-                docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
+                docRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
                 using (new CurrentTransformationScope(Database, docRetriever))
                 {
                     var document = Get(key, transactionInformation);

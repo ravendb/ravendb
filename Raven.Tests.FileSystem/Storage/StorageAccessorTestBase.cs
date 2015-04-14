@@ -7,6 +7,7 @@ using System.Threading;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 using Raven.Abstractions.Data;
@@ -82,7 +83,7 @@ namespace Raven.Tests.FileSystem.Storage
             }
 
             storages.Add(storage);
-			storage.Initialize(new OrderedPartCollection<AbstractFileCodec>());
+			storage.Initialize(new UuidGenerator(), new OrderedPartCollection<AbstractFileCodec>());
 
             return storage;
         }

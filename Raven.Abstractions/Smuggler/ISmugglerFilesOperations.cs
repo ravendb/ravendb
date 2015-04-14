@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
@@ -12,7 +9,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
-
     public interface ISmugglerFilesOperations
     {
         SmugglerFilesOptions Options { get; }
@@ -24,10 +20,13 @@ namespace Raven.Abstractions.Smuggler
         LastFilesEtagsInfo FetchCurrentMaxEtags();
 
 
-        Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take);
+        Task<IAsyncEnumerator<FileHeader>> GetFiles(Etag lastEtag, int take);
         Task<Stream> DownloadFile(FileHeader file);
-        Task PutFiles(FileHeader file, Stream data, long dataSize);                
+        Task PutFile(FileHeader file, Stream data, long dataSize);
 
+
+	    Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take);
+		Task PutConfig(string name, RavenJObject value);
         
         void Initialize(SmugglerFilesOptions options);
 
@@ -41,5 +40,6 @@ namespace Raven.Abstractions.Smuggler
 
 	    RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata);
 
+		RavenJObject DisableVersioning(RavenJObject metadata);
     }
 }

@@ -90,7 +90,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             String fieldName, int fragCharSize)
         {
             FieldFragList fieldFragList = GetFieldFragList(fieldQuery, reader, docId, fieldName, fragCharSize);
-            return fragmentsBuilder.CreateFragment(reader, docId, fieldName, fieldFragList);
+            return fragmentsBuilder.CreateFragment(reader, docId, fieldName, fieldFragList, fragCharSize);
         }
 
         /// <summary>
@@ -102,12 +102,12 @@ namespace Lucene.Net.Search.Vectorhighlight
         /// <param name="fieldName">field of the document to be highlighted</param>
         /// <param name="fragCharSize">the length (number of chars) of a fragment</param>
         /// <param name="maxNumFragments">maximum number of fragments</param>
+        /// <param name="fragCharSize1"></param>
         /// <returns>created fragments or null when no fragments created. Size of the array can be less than maxNumFragments</returns>
-        public String[] GetBestFragments(FieldQuery fieldQuery, IndexReader reader, int docId,
-            String fieldName, int fragCharSize, int maxNumFragments)
+        public string[] GetBestFragments(FieldQuery fieldQuery, IndexReader reader, int docId, string fieldName, int fragCharSize, int maxNumFragments)
         {
             FieldFragList fieldFragList = GetFieldFragList(fieldQuery, reader, docId, fieldName, fragCharSize);
-            return fragmentsBuilder.CreateFragments(reader, docId, fieldName, fieldFragList, maxNumFragments);
+            return fragmentsBuilder.CreateFragments(reader, docId, fieldName, fieldFragList, maxNumFragments, fragCharSize);
         }
 
         private FieldFragList GetFieldFragList(FieldQuery fieldQuery, IndexReader reader, int docId,

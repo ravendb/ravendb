@@ -5,6 +5,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
 
 namespace Raven.Database.FileSystem.Storage
@@ -13,7 +14,7 @@ namespace Raven.Database.FileSystem.Storage
     {
         Guid Id { get; }
 
-		void Initialize(OrderedPartCollection<AbstractFileCodec> fileCodecs);
+		void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> fileCodecs);
 
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         void Batch(Action<IStorageActionsAccessor> action);

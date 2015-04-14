@@ -246,6 +246,7 @@
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\ClientNotSupportedException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\ImplicitFetchFieldsFromDocumentNotAllowedException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
@@ -279,11 +280,14 @@
     <Compile Include="FileSystem\FileHeader.cs" />
     <Compile Include="FileSystem\FileSystemDocument.cs" />
     <Compile Include="FileSystem\SearchResults.cs" />
+    <Compile Include="FileSystem\SynchronizationConfig.cs" />
+    <Compile Include="FileSystem\SynchronizationDestinationsConfig.cs" />
     <Compile Include="Indexing\IndexLockMode.cs" />
     <Compile Include="Indexing\IndexMergeResults.cs" />
     <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
+    <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
     <Compile Include="Json\JsonLinqEnumerableConverter.cs" />
     <Compile Include="Json\JsonTextReaderAsync.cs" />
@@ -361,7 +365,7 @@
     <Compile Include="FileSystem\ItemsPage.cs" />
     <Compile Include="FileSystem\Notification.cs" />
     <Compile Include="FileSystem\RdcStats.cs" />
-    <Compile Include="FileSystem\ServerInfo.cs" />
+    <Compile Include="FileSystem\FileSystemInfo.cs" />
     <Compile Include="FileSystem\FileSystemStats.cs" />
     <Compile Include="FileSystem\Signature.cs" />
     <Compile Include="FileSystem\SignatureManifest.cs" />
@@ -375,7 +379,6 @@
     <Compile Include="FileSystem\SynchronizationType.cs" />
     <Compile Include="FileSystem\Notifications\SynchronizationUpdateNotification.cs" />
     <Compile Include="FileSystem\SyncingMultipartConstants.cs" />
-    <Compile Include="FileSystem\Notifications\UploadFailedNotification.cs" />
     <Compile Include="Replication\FailoverBehavior.cs" />
     <Compile Include="Replication\ReplicatedEtagInfo.cs" />
     <Compile Include="Replication\ReplicationClientConfiguration.cs" />
@@ -425,6 +428,7 @@
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />
     <Compile Include="Util\MD5.cs" />
+    <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />

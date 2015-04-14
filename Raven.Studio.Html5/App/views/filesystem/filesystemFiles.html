@@ -26,12 +26,17 @@
                     </button>
                 </div>
 
-                <div class="btn-group" data-bind="visible: inRevisionsFolder() == false">
-                    <span class="btn btn-primary btn-file" title="Upload files">
+	            <div class="btn-group" data-bind="visible: inRevisionsFolder() == false">
+		            <span class="btn btn-primary btn-file" title="Upload files">
                         <i class="fa fa-upload"></i>
                         <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: uploadFiles, fileUpload: { files: uploadFiles, directory: selectedFolder, uploads: uploadQueue, before: expandUploadQueuePanel, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
                     </span>
-                </div>
+	            </div>
+				<div class="btn-group" data-bind="visible: !inRevisionsFolder()">
+					<button type="button" class="btn btn-danger" data-bind="click: deleteFolder" title="Remove folder">
+						<i class="fa fa-trash-o"></i>
+					</button>
+				</div>
             </div>
             <span><br/></span>
             <div id="filesTree" data-bind="tree: {selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories}" ></div>
@@ -44,7 +49,7 @@
                     </button>
                 </div>
                 <div class="btn-group" data-bind="visible: hasAnyFileSelected">
-                    <button type="button" class="btn btn-default" data-bind="click: editSelectedFile" title="Edit selected document (F2)">
+                    <button type="button" class="btn btn-default" data-bind="enable: selectedFilesIndices().length == 1, click: editSelectedFile" title="Edit selected document (F2)">
                         <i class="fa fa-pencil"></i>
                     </button>
                     <button type="button" class="btn btn-default" data-bind="click: deleteSelectedFiles" title="Delete selected documents (DEL)">

@@ -19,6 +19,7 @@ using Raven.Client.Document;
 using System.Text;
 using NetTopologySuite.Features;
 using Constants = Raven.Abstractions.Data.Constants;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Tests.Spatial
 {

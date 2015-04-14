@@ -66,9 +66,6 @@
     <Compile Include="..\..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Bundles.Authorization\Constants.cs">
-      <Link>Constants.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Bundles.Authorization\Model\AuthorizationRole.cs">
       <Link>Model\AuthorizationRole.cs</Link>
     </Compile>

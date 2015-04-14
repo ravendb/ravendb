@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using Jint.Runtime.References;
 using Raven.Abstractions.Data;
@@ -27,6 +28,9 @@ namespace Raven.Database.Storage
 		long GetDocumentsCount();
 
 		JsonDocument DocumentByKey(string key);
+
+		Stream RawDocumentByKey(string key);
+
 		JsonDocumentMetadata DocumentMetadataByKey(string key);
 
 		bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag);

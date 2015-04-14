@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs
 					var allSync = session
 						.Advanced
                         .DocumentQuery<Bar<Foo>>("ByClr")
-						.Where("ClrType:[[" + RavenQuery.Escape(typeName) + "]]")
+						.Where("ClrType:[[" + RavenQuery.Escape(typeName,false,false) + "]]")
 						.WaitForNonStaleResultsAsOfNow(TimeSpan.MaxValue)
 						.ToList();
 
