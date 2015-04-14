@@ -83,6 +83,7 @@ namespace Raven.Client
 		public abstract IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
 		public abstract IAsyncDocumentSession OpenAsyncSession();
 		public abstract IAsyncDocumentSession OpenAsyncSession(string database);
+		public abstract IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions);
 
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);
