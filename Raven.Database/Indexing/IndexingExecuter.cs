@@ -363,6 +363,8 @@ namespace Raven.Database.Indexing
 			        }
 		        }
 	        }
+
+			indexReplacer.ReplaceIndexes(new []{ indexToWorkOn.IndexId });
         }
 
 		private IndexingPerformanceStats HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified, CancellationToken token)
