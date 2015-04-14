@@ -65,8 +65,10 @@ class query extends viewModelBase {
     selectedIndexLabel: KnockoutComputed<string>;
     appUrls: computedAppUrls;
     isIndexMapReduce: KnockoutComputed<boolean>;
+	isDynamicIndex: KnockoutComputed<boolean>;
     isLoading = ko.observable<boolean>(false);
     isCacheDisable = ko.observable<boolean>(false);
+	enableDeleteButton: KnockoutComputed<boolean>;
     token = ko.observable<singleAuthToken>();
 
     contextName = ko.observable<string>();
@@ -108,10 +110,15 @@ class query extends viewModelBase {
             var allIndexes = this.indexes();
             var selectedIndex = this.selectedIndex();
 
-            if (!!selectedIndex && selectedIndex.indexOf(this.dynamicPrefix) == -1) {
-                return allIndexes.filter((indexDto: indexDataDto) => indexDto.name != selectedIndex);
+	        var allIndexesCopy: Array<indexDataDto>;
+
+            if (!!selectedIndex && selectedIndex.indexOf(this.dynamicPrefix) === -1) {
+	            allIndexesCopy = allIndexes.filter((indexDto: indexDataDto) => indexDto.name !== selectedIndex);
+            } else {
+	            allIndexesCopy = allIndexes.slice(0); // make copy as sort works in situ
             }
-            return allIndexes;
+			allIndexesCopy.sort((l: indexDataDto, r: indexDataDto) => l.name.toLowerCase() > r.name.toLowerCase() ? 1 : -1);
+            return allIndexesCopy;
         });
 
         this.collectionNamesExceptCurrent = ko.computed(() => {
@@ -141,8 +148,23 @@ class query extends viewModelBase {
 
         this.isIndexMapReduce = ko.computed(() => {
             var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
-            return !!currentIndex && currentIndex.hasReduce == true;
+            return !!currentIndex && currentIndex.hasReduce;
         });
+
+	    this.isDynamicIndex = ko.computed(() => {
+			var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+		    if (currentIndex) {
+			    console.log(currentIndex.name);
+		    }
+		    return !!currentIndex && currentIndex.name.startsWith("Auto/");
+		});
+
+		this.enableDeleteButton = ko.computed(() => {
+			var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+			var isMapReduce = this.isIndexMapReduce();
+			var isDynamic = this.isDynamicIndex();
+			return !!currentIndex && !isMapReduce && !isDynamic;
+	    });
 
         aceEditorBindingHandler.install();
 

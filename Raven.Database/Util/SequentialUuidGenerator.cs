@@ -20,6 +20,7 @@ namespace Raven.Database.Util
 		private long sequentialUuidCounterTasks;
 		private long sequentialUuidCounterScheduledReductions;
 		private long sequentialUuidCounterIndexing;
+		private long sequentialUuidCounterTransformers;
 		private long sequentialUuidDocumentReferences;
 		private long sequentialUuidSubscriptions;
 
@@ -69,6 +70,9 @@ namespace Raven.Database.Util
 					break;
 				case UuidType.Indexing:
 					increment = Interlocked.Increment(ref sequentialUuidCounterIndexing);
+					break;
+				case UuidType.Transformers:
+					increment = Interlocked.Increment(ref sequentialUuidCounterTransformers);
 					break;
 				case UuidType.DocumentReferences:
 					increment = Interlocked.Increment(ref sequentialUuidDocumentReferences);

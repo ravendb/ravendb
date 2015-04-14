@@ -11,12 +11,14 @@ namespace Raven.Abstractions.Util
 	public class PositionWrapperStream : Stream
 	{
 		private readonly Stream wrapped;
+		private readonly bool leaveOpen;
 
 		private int pos = 0;
 
-		public PositionWrapperStream(Stream wrapped)
+		public PositionWrapperStream(Stream wrapped, bool leaveOpen)
 		{
 			this.wrapped = wrapped;
+			this.leaveOpen = leaveOpen;
 		}
 
 		public override bool CanSeek { get { return false; } }
@@ -42,7 +44,9 @@ namespace Raven.Abstractions.Util
 
 		protected override void Dispose(bool disposing)
 		{
-			wrapped.Dispose();
+			if (leaveOpen == false)
+				wrapped.Dispose();
+
 			base.Dispose(disposing);
 		}
 

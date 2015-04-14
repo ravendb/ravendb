@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-
+using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
@@ -24,12 +24,19 @@ namespace Raven.Tests.Common
 {
     public class RavenTest : RavenTestBase
     {
-        
+	    public class TestMemoryTarget : DatabaseMemoryTarget
+	    {
+		    public override bool ShouldLog(ILog logger, LogLevel level)
+		    {
+			    return true;
+		    }
+	    }
+
 		protected bool ShowLogs { get; set; }
 
         static RavenTest()
         {
-            LogManager.RegisterTarget<DatabaseMemoryTarget>();
+			LogManager.RegisterTarget<TestMemoryTarget>();
         }
 
         public RavenTest()
@@ -52,7 +59,7 @@ namespace Raven.Tests.Common
 
 		    foreach (var databaseName in DatabaseNames)
 		    {
-			    var target = LogManager.GetTarget<DatabaseMemoryTarget>()[databaseName];
+				var target = LogManager.GetTarget<TestMemoryTarget>()[databaseName];
 			    if (target == null)
 				    continue;
 
@@ -62,15 +69,9 @@ namespace Raven.Tests.Common
 					WriteLine(writer);
 				    WriteLine(writer, "Logs for: " + databaseName);
 
-				    foreach (var info in target.GeneralLog)
+				    foreach (var info in target.GeneralLog.Concat(target.WarnLog).OrderBy(x => x.TimeStamp))
 				    {
-						WriteLine(writer, "========================================");
-						WriteLine(writer, "Time: " + info.TimeStamp);
-						WriteLine(writer, "Level: " + info.Level);
-						WriteLine(writer, "Logger: " + info.LoggerName);
-						WriteLine(writer, "Message: " + info.FormattedMessage);
-						WriteLine(writer, "Exception: " + info.Exception);
-						WriteLine(writer, "========================================");
+						WriteLine(writer, string.Format("{0},{1},{2},{3},{4}", info.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.ffff"), info.Level, info.LoggerName, info.FormattedMessage, info.Exception));
 				    }
 
 				    WriteLine(writer);

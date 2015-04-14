@@ -244,6 +244,7 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\Triggers\RenameConflictDocumentIdIndexTrigger.cs" />
     <Compile Include="Bundles\Versioning\Data\FileVersioningConfiguration.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\GlobalSettingsDocument.cs" />
@@ -290,6 +291,7 @@
     <Compile Include="FileSystem\Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
+    <Compile Include="Indexing\PropertyAccessor.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
@@ -785,7 +787,6 @@
     <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\PreventConflictDocumentsPutTrigger.cs" />
-    <Compile Include="Bundles\Replication\Triggers\PreventIndexingConflictDocumentsReadTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\VirtualAttachmentDeleteTrigger.cs" />

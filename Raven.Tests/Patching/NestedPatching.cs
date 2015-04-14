@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Abstractions.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -77,7 +78,7 @@ namespace Raven.Tests.Patching
 				});
 
             Assert.Equal(RavenJToken.Parse(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}"),
-				patchedDoc,new RavenJTokenEqualityComparer());
+				patchedDoc, RavenJTokenEqualityComparer.Default);
 		}
 
 		[Fact]
@@ -99,7 +100,7 @@ namespace Raven.Tests.Patching
 				});
 
             Assert.Equal(RavenJToken.Parse(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}"),
-				patchedDoc, new RavenJTokenEqualityComparer());
+				patchedDoc, RavenJTokenEqualityComparer.Default);
 		}
 
 		[Fact]

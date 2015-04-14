@@ -636,13 +636,14 @@ namespace Raven.Database.Actions
             PutIndex(index, indexDefinition);
         }
 
-        public void DeleteIndex(string name)
+        public bool DeleteIndex(string name)
         {
             var instance = IndexDefinitionStorage.GetIndexDefinition(name);
             if (instance == null) 
-				return;
+				return false;
 
 			DeleteIndex(instance);
+	        return true;
         }
 
 		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true)

@@ -24,7 +24,7 @@
                     <!-- ko foreach: indexesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                     <!-- /ko -->
-                    <li class="divider" data-bind="visible: collectionNames.length"></li>
+					<li class="divider" data-bind="visible: collectionNamesExceptCurrent().length"></li>
                     <!-- ko foreach: collectionNamesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic/' + $data)">
                         <a href="#">
@@ -48,7 +48,6 @@
         <div class="btn-group">
             <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
             <button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
-                <!--Cache <i class="fa" data-bind="css: { 'fa-lock': !isCacheDisable(), 'fa-unlock': isCacheDisable() }, title: { }"></i>-->
                 <span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
             </button>
             <div class="btn-group">
@@ -132,7 +131,7 @@
         </div>
 
         <div class="btn-group" title="Delete all documents matching the query (map index only)">
-            <button class=" btn btn-danger" data-bind="enable: hasSelectedIndex && isIndexMapReduce() == false, click: deleteDocsMatchingQuery">
+            <button class=" btn btn-danger" data-bind="enable: enableDeleteButton, click: deleteDocsMatchingQuery">
                 <i class="fa fa-trash-o"></i>
             </button>
         </div>

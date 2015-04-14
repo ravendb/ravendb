@@ -1,6 +1,8 @@
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Util;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Database.Indexing
 {
@@ -9,30 +11,41 @@ namespace Raven.Database.Indexing
 		public LowerCaseKeywordTokenizer(System.IO.TextReader input)
 			: base(input)
 		{
-			offsetAtt = AddAttribute<IOffsetAttribute>();
-			termAtt = AddAttribute<ITermAttribute>();
+            offsetAtt = AddAttribute<IOffsetAttribute>();
+            termAtt = AddAttribute<ITermAttribute>();
+
+            isAsciiCasingSameAsInvariant = CultureInfo.InvariantCulture.CompareInfo.Compare("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", CompareOptions.IgnoreCase) == 0;
+            invariantTextInfo = CultureInfo.InvariantCulture.TextInfo;   
 		}
 
 		protected LowerCaseKeywordTokenizer(AttributeSource source, System.IO.TextReader input)
 			: base(source, input)
 		{
-			offsetAtt = AddAttribute<IOffsetAttribute>();
-			termAtt = AddAttribute<ITermAttribute>();
+            offsetAtt = AddAttribute<IOffsetAttribute>();
+            termAtt = AddAttribute<ITermAttribute>();
+
+            isAsciiCasingSameAsInvariant = CultureInfo.InvariantCulture.CompareInfo.Compare("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", CompareOptions.IgnoreCase) == 0;
+            invariantTextInfo = CultureInfo.InvariantCulture.TextInfo;
 		}
 
 		protected LowerCaseKeywordTokenizer(AttributeFactory factory, System.IO.TextReader input)
 			: base(factory, input)
 		{
-			offsetAtt = AddAttribute<IOffsetAttribute>();
-			termAtt = AddAttribute<ITermAttribute>();
+            offsetAtt = AddAttribute<IOffsetAttribute>();
+            termAtt = AddAttribute<ITermAttribute>();
+
+            isAsciiCasingSameAsInvariant = CultureInfo.InvariantCulture.CompareInfo.Compare("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", CompareOptions.IgnoreCase) == 0;
+            invariantTextInfo = CultureInfo.InvariantCulture.TextInfo;
 		}
 
 		private int offset = 0, bufferIndex = 0, dataLen = 0;
 		private const int IO_BUFFER_SIZE = 4096;
 		private readonly char[] ioBuffer = new char[IO_BUFFER_SIZE];
 
-		private readonly ITermAttribute termAtt;
-		private readonly IOffsetAttribute offsetAtt;
+        private readonly ITermAttribute termAtt;
+        private readonly IOffsetAttribute offsetAtt;
+        private readonly bool isAsciiCasingSameAsInvariant;
+        private readonly TextInfo invariantTextInfo;
 
 		/// <summary>Returns true iff a character should be included in a token.  This
 		/// tokenizer generates as tokens adjacent sequences of characters which
@@ -45,12 +58,24 @@ namespace Raven.Database.Indexing
 		}
 
 		/// <summary>Called on each token character to normalize it before it is added to the
-		/// token.  The default implementation does nothing.  Subclasses may use this
+		/// token.  The default implementation does nothing. Subclasses may use this
 		/// to, e.g., lowercase tokens. 
 		/// </summary>
 		protected internal virtual char Normalize(char c)
 		{
-			return char.ToLowerInvariant(c);
+            int cInt = (int)c;
+
+            if (c < 128 && isAsciiCasingSameAsInvariant)
+            {
+                if (65 <= cInt && cInt <= 90)
+                    c |= ' ';
+
+                return c;
+            }                
+            else
+            {
+                return invariantTextInfo.ToLower(c);
+            }                
 		}
 
 		public override bool IncrementToken()

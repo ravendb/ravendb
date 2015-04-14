@@ -144,6 +144,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			transaction = new Transaction(session);
 		}
 
+        private static int bookmarkMost = SystemParameters.BookmarkMost;
+
 		public int InsertPage(byte[] buffer, int size)
 		{
 			var key = new HashKey(buffer, size);
@@ -159,7 +161,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 				return Api.RetrieveColumnAsInt32(session, Pages, tableColumnsCache.PagesColumns["id"]).Value;
 			}
 
-			var bookMarkBuffer = new byte[SystemParameters.BookmarkMost];
+            var bookMarkBuffer = new byte[bookmarkMost];
 			var actualSize = 0;
 			using (var update = new Update(session, Pages, JET_prep.Insert))
 			{

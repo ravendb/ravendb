@@ -9,6 +9,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
 using Raven.Client.Util;

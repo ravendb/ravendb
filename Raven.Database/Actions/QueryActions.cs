@@ -151,6 +151,11 @@ namespace Raven.Database.Actions
 
 			private readonly Dictionary<QueryTimings, double> executionTimes = new Dictionary<QueryTimings, double>();
 
+			public DocumentDatabase Database
+			{
+				get { return database; }
+			}
+
 			public DatabaseQueryOperation(DocumentDatabase database, string indexName, IndexQuery query, IStorageActionsAccessor actions, CancellationTokenSource cancellationTokenSource)
 			{
 				this.database = database;
@@ -273,6 +278,8 @@ namespace Raven.Database.Actions
 					foreach (var result in results)
 					{
 						cancellationToken.ThrowIfCancellationRequested();
+						database.WorkContext.UpdateFoundWork();
+
 						onResult(result);
 					}
 					if (transformerErrors.Count > 0)

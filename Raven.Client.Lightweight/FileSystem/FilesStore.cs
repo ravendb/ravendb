@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Connection;
+﻿using System.Diagnostics;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -165,7 +166,12 @@ namespace Raven.Client.FileSystem
         public virtual string Url
         {
             get { return url; }
-            set { url = value.TrimEnd('/'); }
+	        set
+	        {
+		        if(value == null)
+					throw new ArgumentNullException("value");
+		        url = value.TrimEnd('/');
+	        }
         }
         
 

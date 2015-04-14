@@ -132,6 +132,8 @@ namespace Raven.Database.Actions
 
                     do
                     {
+						Database.WorkContext.UpdateFoundWork();
+
                         docCount = 0;
 						var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
                         var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
@@ -318,6 +320,8 @@ namespace Raven.Database.Actions
 							        {
 								        trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
 							        }
+
+									Database.WorkContext.UpdateFoundWork();
 						        }
 						        catch (Exception e)
 						        {
@@ -439,7 +443,8 @@ namespace Raven.Database.Actions
 
                         addDocument(document);
                         returnedDocs = true;
-                    }
+						Database.WorkContext.UpdateFoundWork();
+					}
                     if (returnedDocs || docCount == 0)
                         break;
                     start += docCount;

@@ -373,7 +373,7 @@ namespace Raven.Database.FileSystem.Search
 				}
 				else
 				{
-                    Log.Debug("Issuing query on index for: {1}", query);
+                    Log.Debug("Issuing query on index for: {0}", query);
 					var queryParser = new SimpleFilesQueryParser(analyzer);
                     fileQuery = queryParser.Parse(query);
 				}

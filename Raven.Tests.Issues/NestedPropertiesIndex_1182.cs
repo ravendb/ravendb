@@ -52,7 +52,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ShouldWork()
+		public void ShouldWork1()
 		{
 			Assert.DoesNotThrow(
 				() =>
@@ -72,6 +72,68 @@ namespace Raven.Tests.Issues
 						});
 					}
 				});
+		}
+
+		[Fact]
+		public void ShouldWork2()
+		{
+			Assert.DoesNotThrow(
+				() =>
+				{
+					using (var store = NewDocumentStore())
+					{
+						new Employee_Test_Index().Execute(store);
+					}
+				});
+		}
+
+		[Fact]
+		public void ShouldWork3()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new Employee_Test_Index().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Employee
+								  {
+									  Name = "Employee1",
+									  Address = new Address
+												{
+													HouseholdMembers = new List<string>
+													                   {
+														                   "John",
+																		   "Edward"
+													                   }
+												},
+									  Skills = new[]
+									           {
+										           new Skill
+										           {
+											           Projects = new List<string> { "Project1", "Project2" }
+										           },
+												   new Skill
+										           {
+											           Projects = new List<string> { "Project3", "Project4" }
+										           },
+									           }
+								  });
+
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+
+				using (var session = store.OpenSession())
+				{
+					var result = session
+						.Query<Employee, Employee_Test_Index>()
+						.ToList();
+
+					Assert.Equal(1, result.Count);
+				}
+			}
 		}
 	}
 }

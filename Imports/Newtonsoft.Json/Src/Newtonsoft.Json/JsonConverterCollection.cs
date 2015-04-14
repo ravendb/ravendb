@@ -59,6 +59,11 @@ namespace Raven.Imports.Newtonsoft.Json
             }
         }
 
+        protected JsonConverterCollection( JsonConverterCollection collection ) : base ( collection )
+        {
+            this.IsFrozen = collection.IsFrozen;
+        }
+
         protected override void ClearItems()
         {
             if (IsFrozen)

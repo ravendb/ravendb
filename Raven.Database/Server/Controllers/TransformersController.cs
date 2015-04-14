@@ -78,7 +78,16 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/transformers/{*id}")]
 		public HttpResponseMessage TransformersDelete(string id)
 		{
-			Database.Transformers.DeleteTransform(id);
+			var isReplication = GetQueryStringValue("is-replication");
+
+			if (Database.Transformers.DeleteTransform(id) &&
+				!String.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
+			{
+				const string emptyFrom = "<no hostname>";
+				var from = Uri.UnescapeDataString(GetQueryStringValue("from") ?? emptyFrom);
+				Log.Info("received transformer deletion from replication (replicating transformer tombstone, received from {0})", from);
+			}
+
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
