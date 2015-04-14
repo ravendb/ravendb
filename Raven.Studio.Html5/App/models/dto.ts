@@ -91,6 +91,7 @@ interface databaseStatisticsDto {
     Prefetches: any[];
     StaleIndexes: string[];
     SupportsDtc: boolean;
+	Is64Bit: boolean;
 }
 
 interface indexStatisticsDto {

@@ -209,6 +209,7 @@ namespace Raven.Database.Config
             Voron.InitialFileSize = new NullableIntegerSetting(settings[Constants.Voron.InitialFileSize], (int?)null);
 			Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 1024);
             Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
+			Voron.AllowOn32Bits = new BooleanSetting(settings[Constants.Voron.AllowOn32Bits], false);
             Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
 
 			var txJournalPath = settings[Constants.RavenTxJournalPath];
@@ -421,6 +422,8 @@ namespace Raven.Database.Config
 			public StringSetting TempPath { get; set; }
 
 			public StringSetting JournalsStoragePath { get; set; }
+
+			public BooleanSetting AllowOn32Bits { get; set; }
 		}
 
 		public class EsentConfiguration
