@@ -4,7 +4,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import getPluginsInfoCommand = require("commands/getPluginsInfoCommand");
-import appUrl = require("common/appUrl");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");

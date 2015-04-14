@@ -16,6 +16,7 @@ using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Connection.Request;
 using Raven.Client.Document;
@@ -28,7 +29,6 @@ using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using Constants = Raven.Abstractions.Data.Constants;
 
 using System;
 using System.Collections.Generic;

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Implementation;
 
 namespace Raven.Client.Connection.Request
 {

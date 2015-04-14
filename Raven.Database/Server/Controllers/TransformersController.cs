@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
