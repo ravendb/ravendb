@@ -133,7 +133,9 @@ namespace Raven.Smuggler
 						if (databaseOptions.ShouldLogErrorsAndContinue == false)
 							throw;
 
-						log.ErrorException(string.Format("Failed to fetch identities. {0} retries remaining.", retries),e);
+						var message = string.Format("Failed to fetch identities. {0} retries remaining.", retries);
+						log.ErrorException(message,e);
+						ShowProgress(message);
 						continue;						
 					}
 
@@ -244,7 +246,9 @@ namespace Raven.Smuggler
 				{
 					if (retries-- == 0 && databaseOptions.ShouldLogErrorsAndContinue)
 					{
-						log.ErrorException("Failed getting indexes too much times, stopping the index export entirely",e);
+						const string message = "Failed getting indexes too much times, stopping the index export entirely";
+						log.ErrorException(message,e);
+						ShowProgress(message);
 						return;
 					}
 
@@ -273,7 +277,9 @@ namespace Raven.Smuggler
 					{
 						if (databaseOptions.ShouldLogErrorsAndContinue)
 						{
-							log.ErrorException("Failed PUT of an index " + index.Name,e);
+							var error = "Failed PUT of an index " + index.Name;
+							log.ErrorException(error,e);
+							ShowProgress(error);
 						}
 						else throw;
 					}
@@ -343,7 +349,11 @@ namespace Raven.Smuggler
 								catch (Exception e)
 								{
 									if (databaseOptions.ShouldLogErrorsAndContinue)
-										log.ErrorException("Failed to smuggle a document " + document, e);
+									{
+										var message = "Failed to smuggle a document " + document;
+										log.ErrorException(message, e);
+										ShowProgress(message);
+									}
 									else 
 										throw;
 								}
@@ -396,7 +406,9 @@ namespace Raven.Smuggler
 										{
 											if (databaseOptions.ShouldLogErrorsAndContinue)
 											{
-												log.DebugException(string.Format("Failed to store document in a bulk insert operation (id = {0})", id), e);
+												var message = string.Format("Failed to store document in a bulk insert operation (id = {0})", id);
+												log.DebugException(message, e);
+												ShowProgress(message);
 											}
 											else throw;
 										}
@@ -477,7 +489,9 @@ namespace Raven.Smuggler
 					if (databaseOptions.ShouldLogErrorsAndContinue == false)
 						throw;
 
-					log.ErrorException("Failed fetching transformer information from exporting store. " + retries + " retries remaining.", e);
+					var message = "Failed fetching transformer information from exporting store. " + retries + " retries remaining.";
+					log.ErrorException(message, e);
+					ShowProgress(message);
 					continue;
 				}
 
@@ -497,7 +511,9 @@ namespace Raven.Smuggler
 						if (databaseOptions.ShouldLogErrorsAndContinue == false)
 							throw;
 
-						log.ErrorException("Failed fetching database statistics from exporting store", e);
+						const string message = "Failed fetching database statistics from exporting store";
+						log.ErrorException(message, e);
+						ShowProgress(message);
 						continue;						
 					}
 
@@ -567,7 +583,9 @@ namespace Raven.Smuggler
 					if (databaseOptions.ShouldLogErrorsAndContinue == false)
 						throw;
 
-					log.ErrorException("Failed fetching transformer information from exporting store. " + retries + " retries remaining.", e);
+					var message = string.Format("Failed fetching transformer information from exporting store. {0} retries remaining.", retries);
+					log.ErrorException(message, e);
+					ShowProgress(message);
 					continue;										
 				}
 
@@ -589,7 +607,9 @@ namespace Raven.Smuggler
 					{
 						if (databaseOptions.ShouldLogErrorsAndContinue)
 						{
-							log.ErrorException("Failed PUT of an transformer " + transformer.Name, e);
+							var message = "Failed PUT of an transformer " + transformer.Name;
+							log.ErrorException(message, e);
+							ShowProgress(message);
 						}
 						else throw;
 					}

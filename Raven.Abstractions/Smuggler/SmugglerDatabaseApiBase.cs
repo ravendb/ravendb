@@ -941,7 +941,11 @@ namespace Raven.Abstractions.Smuggler
 			catch (Exception e)
 			{
 				if (ShouldLogErrorsAndContinue)
-					_log.ErrorException("Failed loading continuation state", e);
+				{
+					const string message = "Failed loading continuation state";
+					_log.ErrorException(message, e);
+					Operations.ShowProgress(message);
+				}
 				else throw;
 			}
 
@@ -1010,10 +1014,15 @@ namespace Raven.Abstractions.Smuggler
 				{
 					if (ShouldLogErrorsAndContinue)
 					{
-						if(document != null)
-							_log.ErrorException("Failed to import document - " + document, e);
+						string message;
+						if (document != null)
+							message = "Failed to import document - " + document;
 						else
-							_log.ErrorException("Failed to import document", e); //TODO : give here more information about the failure
+							message = "Failed to import document";
+
+						_log.ErrorException(message, e);
+						Operations.ShowProgress(message);
+
 					}
 					else throw;
 				}
@@ -1093,7 +1102,11 @@ namespace Raven.Abstractions.Smuggler
 				catch (Exception e)
 				{
 					if (ShouldLogErrorsAndContinue)
-						_log.ErrorException("Failed to import index - " + indexName, e);
+					{
+						var message = "Failed to import index - " + indexName;
+						_log.ErrorException(message, e);
+						Operations.ShowProgress(message);
+					}
 					else
 						throw;
 				}
@@ -1128,7 +1141,11 @@ namespace Raven.Abstractions.Smuggler
 					catch (Exception e)
 					{
 						if (ShouldLogErrorsAndContinue)
-							_log.ErrorException(string.Format("Failed to export index {0}", index), e);
+						{
+							var message = string.Format("Failed to export index {0}", index);
+							_log.ErrorException(message, e);
+							Operations.ShowProgress(message);
+						}
 						else
 							throw;
 					}
