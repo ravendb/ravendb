@@ -3,6 +3,8 @@ import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
 import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
+import startDbCompactCommand = require("commands/maintenance/startCompactCommand");
+import startFsCompactCommand = require("commands/filesystem/startCompactCommand");
 
 class resourceCompact {
     resourceName = ko.observable<string>('');
@@ -79,20 +81,16 @@ class compact extends viewModelBase {
         this.isBusy(true);
         var self = this;
 
-        require(["commands/startCompactCommand"], startCompactCommand => {
-            new startCompactCommand(this.dbCompactOptions.resourceName(), self.dbCompactOptions.updateCompactStatus.bind(self.dbCompactOptions))
-                .execute();
-        });
+        new startDbCompactCommand(this.dbCompactOptions.resourceName(), self.dbCompactOptions.updateCompactStatus.bind(self.dbCompactOptions))
+            .execute();
     }
 
     startFsCompact() {
         this.isBusy(true);
         var self = this;
 
-        require(["commands/filesystem/startCompactCommand"], startCompactCommand => {
-            new startCompactCommand(this.fsCompactOptions.resourceName(), self.fsCompactOptions.updateCompactStatus.bind(self.fsCompactOptions))
-                .execute();
-        });
+        new startFsCompactCommand(this.fsCompactOptions.resourceName(), self.fsCompactOptions.updateCompactStatus.bind(self.fsCompactOptions))
+            .execute();
     }
 }
 

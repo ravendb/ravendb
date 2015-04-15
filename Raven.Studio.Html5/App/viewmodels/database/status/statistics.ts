@@ -1,7 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import shell = require("viewmodels/shell");
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import optional = require("common/optional");
 
 class statistics extends viewModelBase {

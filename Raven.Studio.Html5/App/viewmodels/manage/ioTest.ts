@@ -177,19 +177,17 @@ class ioTest extends viewModelBase {
 
         var diskTestParams = this.ioTestRequest.toDto();
 
-        require(["commands/ioTestCommand"], ioTestCommand => {
-            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams); 
-            this.lastCommand
-                .execute()
-                .done(() => {
-                    new getDocumentWithMetadataCommand("Raven/Disk/Performance", appUrl.getSystemDatabase())
-                        .execute()
-                        .done((result: diskPerformanceResultWrappedDto) => {
-                            this.onIoTestCompleted(result);
-                        });
-                })
-                .always(() => this.isBusy(false));
-        });
+        this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams); 
+        this.lastCommand
+            .execute()
+            .done(() => {
+                new getDocumentWithMetadataCommand("Raven/Disk/Performance", appUrl.getSystemDatabase())
+                    .execute()
+                    .done((result: diskPerformanceResultWrappedDto) => {
+                        this.onIoTestCompleted(result);
+                    });
+            })
+            .always(() => this.isBusy(false));
     }
 
     detached() {

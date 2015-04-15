@@ -1,18 +1,18 @@
 ﻿<form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
     <div class="panel panel-default">
         <div class="panel-heading">
-            <div class="pull-left panel-title">Replication Destinations</div>
+            <div class="pull-left panel-title">Synchronization Destinations</div>
             <div class="pull-right">
                 <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N">
                     <i class="fa fa-plus"></i> Add destination
                 </button>
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save replication destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save synchronization destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </div>
             <div class="clearfix"></div>
         </div>
         <div class="panel-body" data-bind="with: replicationsSetup">
             <div class="alert alert-warning" data-bind="visible: destinations().length === 0">
-                You've got no replication destinations set up.
+                You've got no synchronization destinations set up.
             </div>
             <div data-bind="foreach: destinations">
                 <div class="panel replication-destination-card" data-bind="css: { 'panel-danger': !isValid(), 'panel-info': isValid() && !disabled(), 'panel-warning': isValid() && disabled() }">

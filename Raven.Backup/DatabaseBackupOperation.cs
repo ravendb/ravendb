@@ -3,6 +3,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using System;

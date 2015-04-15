@@ -55,8 +55,11 @@ namespace Raven.Database.Indexing
         public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
 		public string DatabaseName { get; set; }
 
-		public DateTime LastWorkTime { get; private set; }
-		public DateTime LastIdleTime { get; set; }
+	    public DateTime LastWorkTime
+	    {
+            get { return new DateTime(lastWorkTimeTicks); }
+	    }
+	    public DateTime LastIdleTime { get; set; }
 		public bool DoWork
 		{
 			get { return doWork; }
@@ -69,10 +72,18 @@ namespace Raven.Database.Indexing
 
 		public void UpdateFoundWork()
 		{
-			LastWorkTime = SystemTime.UtcNow;
+		    var now = SystemTime.UtcNow;
+		    var lastWorkTime = LastWorkTime;
+		    if ((now - lastWorkTime).TotalSeconds < 2)
+		    {
+                // to avoid too much pressure on this, we only update this every 2 seconds
+		        return;
+		    }
+            // set the value atomically
+		    Interlocked.Exchange(ref lastWorkTimeTicks, now.Ticks);
 		}
 
-        //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
+	    //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
         public ConcurrentDictionary<string,ConcurrentSet<ExecutingQueryInfo>> CurrentlyRunningQueries { get; private set; }
 
 	    private int nextQueryId = 0;
@@ -182,7 +193,7 @@ namespace Raven.Database.Indexing
 				log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
 				var forWork = Monitor.Wait(waitForWork, timeout);
 				if (forWork)
-					LastWorkTime = SystemTime.UtcNow;
+					UpdateFoundWork();
 				return forWork;
 			}
 		}
@@ -349,8 +360,9 @@ namespace Raven.Database.Indexing
 		public Action<IndexChangeNotification> RaiseIndexChangeNotification { get; set; }
 
 		private bool disposed;
+	    private long lastWorkTimeTicks;
 
-		[CLSCompliant(false)]
+	    [CLSCompliant(false)]
         public MetricsCountersManager MetricsCounters { get; private set; }
 
 		public IndexingBatchInfo ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn)

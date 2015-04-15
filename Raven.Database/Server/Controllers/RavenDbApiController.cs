@@ -132,7 +132,7 @@ namespace Raven.Database.Server.Controllers
 																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
 																Nothing to do in this case..."
 			},
-				HttpStatusCode.NotFound);
+			HttpStatusCode.Accepted);
 			return null;
 		}
 
@@ -468,7 +468,7 @@ namespace Raven.Database.Server.Controllers
 			return stale;
 		}
 
-        protected bool GetSkipOverwriteIfUnchanged()
+		protected bool GetSkipOverwriteIfUnchanged()
 		{
 			bool result;
 			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);

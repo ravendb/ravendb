@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -39,20 +43,43 @@ namespace Raven.Client.Document.Batches
 		{
 			string addition;
 			if (facetSetupDoc != null)
+			{
 				addition = "facetDoc=" + facetSetupDoc;
-			else
-				addition = "facets=" + Uri.EscapeDataString(JsonConvert.SerializeObject(facets));
-
-			return new GetRequest
+				return new GetRequest
+				{
+					Url = "/facets/" + index,
+					Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
+											query.GetQueryString(),
+											start,
+											pageSize,
+											addition)
+				};
+			}
+			var unescapedFacetsJson = JsonConvert.SerializeObject(facets, Default.Converters);
+			if (unescapedFacetsJson.Length < (32*1024)-1)
+			{
+				addition = "facets=" + Uri.EscapeDataString(unescapedFacetsJson);
+				return new GetRequest
+				{
+					Url = "/facets/" + index,
+					Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
+											query.GetQueryString(),
+											start,
+											pageSize,
+											addition)
+				};
+			}
+			
+			return new GetRequest()
 			{
 				Url = "/facets/" + index,
-				Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
-										query.GetQueryString(),
-										start,
-										pageSize,
-										addition)
+				Method = "POST",
+				Content = unescapedFacetsJson
 			};
+
 		}
+
+		
 
 		public object Result { get; private set; }
 		public QueryResult QueryResult { get; set; }

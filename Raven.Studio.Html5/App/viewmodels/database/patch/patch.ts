@@ -17,6 +17,7 @@ import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import executePatchCommand = require("commands/database/patch/executePatchCommand");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import evalByQueryCommand = require("commands/database/patch/evalByQueryCommand");
+import documentMetadata = require("models/database/documents/documentMetadata");
 
 class patch extends viewModelBase {
 
@@ -29,8 +30,17 @@ class patch extends viewModelBase {
 
     patchDocument = ko.observable<patchDocument>();
 
-    beforePatch = ko.observable<string>();
+    beforePatch: KnockoutComputed<string>;
+	beforePatchDoc = ko.observable<string>();
+	beforePatchMeta = ko.observable<string>();
+	beforePatchDocMode = ko.observable<boolean>(true);
+	beforePatchEditor: AceAjax.Editor;
+
     afterPatch = ko.observable<string>();
+	afterPatchDoc = ko.observable<string>();
+	afterPatchMeta = ko.observable<string>();
+	afterPatchDocMode = ko.observable<boolean>(true);
+	afterPatchEditor: AceAjax.Editor;
 
     loadedDocuments = ko.observableArray<string>();
     putDocuments = ko.observableArray<any>();
@@ -46,13 +56,63 @@ class patch extends viewModelBase {
         super();
 
         aceEditorBindingHandler.install();
+
+		// When we programmatically change the document text or meta text, push it into the editor.
+        this.beforePatchDocMode.subscribe(() => {
+            if (this.beforePatchEditor) { 
+                var text = this.beforePatchDocMode() ? this.beforePatchDoc() : this.beforePatchMeta();
+                this.beforePatchEditor.getSession().setValue(text);
+    }
+        });
+        this.beforePatch = ko.computed({
+            read: () => {
+                return this.beforePatchDocMode() ? this.beforePatchDoc() : this.beforePatchMeta();
+            },
+            write: (text: string) => {
+                var currentObservable = this.beforePatchDocMode() ? this.beforePatchDoc : this.beforePatchMeta;
+                currentObservable(text);
+            },
+            owner: this
+        });
+
+		this.afterPatchDocMode.subscribe(() => {
+            if (this.afterPatchEditor) {
+                var text = this.afterPatchDocMode() ? this.afterPatchDoc() : this.afterPatchMeta();
+                this.afterPatchEditor.getSession().setValue(text);
+            }
+        });
+        this.afterPatch = ko.computed({
+            read: () => {
+                return this.afterPatchDocMode() ? this.afterPatchDoc() : this.afterPatchMeta();
+            },
+            write: (text: string) => {
+                var currentObservable = this.afterPatchDocMode() ? this.afterPatchDoc : this.afterPatchMeta;
+                currentObservable(text);
+            },
+            owner: this
+        });
+
+    }
+
+	compositionComplete() {
+        super.compositionComplete();
+
+        var beforePatchEditorElement = $("#beforePatchEditor");
+        if (beforePatchEditorElement.length > 0) {
+            this.beforePatchEditor = ko.utils.domData.get(beforePatchEditorElement[0], "aceEditor");
+        }
+
+		var afterPatchEditorElement = $("#afterPatchEditor");
+        if (afterPatchEditorElement.length > 0) {
+            this.afterPatchEditor = ko.utils.domData.get(afterPatchEditorElement[0], "aceEditor");
+        }
     }
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
         this.updateHelpLink('QGGJR5');
         this.patchDocument(patchDocument.empty());
-        this.isExecuteAllowed = ko.computed(() => ((this.patchDocument().script()) && (this.beforePatch())) ? true : false);
+        this.isExecuteAllowed = ko.computed(() => ((this.patchDocument().script()) && (this.beforePatchDoc())) ? true : false);
         this.keyOfTestedDocument = ko.computed(() => {
             switch (this.patchDocument().patchOnOption()) {
                 case "Collection":
@@ -68,7 +128,8 @@ class patch extends viewModelBase {
                 this.currentCollectionPagedItems().getNthItem(firstCheckedOnList)
                     .done(document => {
                         this.documentKey(document.__metadata.id);
-                        this.beforePatch(JSON.stringify(document.toDto(), null, 4));
+                        this.beforePatchDoc(JSON.stringify(document.toDto(), null, 4));
+		                this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
                     });
             } else {
                 this.clearDocumentPreview();
@@ -100,7 +161,8 @@ class patch extends viewModelBase {
         if (selectedItem) {
             var loadDocTask = new getDocumentWithMetadataCommand(selectedItem, this.activeDatabase()).execute();
             loadDocTask.done(document => {
-                this.beforePatch(JSON.stringify(document.toDto(), null, 4));
+                this.beforePatchDoc(JSON.stringify(document.toDto(), null, 4));
+				this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
             }).fail(this.clearDocumentPreview());
         } else {
             this.clearDocumentPreview();
@@ -108,8 +170,10 @@ class patch extends viewModelBase {
     }
 
     private clearDocumentPreview() {
-        this.beforePatch('');
-        this.afterPatch('');
+        this.beforePatchDoc('');
+	    this.beforePatchMeta('');
+        this.afterPatchDoc('');
+	    this.afterPatchMeta('');
     }
 
     setSelectedPatchOnOption(patchOnOption: string) {
@@ -245,7 +309,8 @@ class patch extends viewModelBase {
             .execute()
             .done((result: bulkDocumentDto[]) => {
                 var testResult = new document(result[0].AdditionalData['Document']);
-                this.afterPatch(JSON.stringify(testResult.toDto(), null, 4));
+                this.afterPatchDoc(JSON.stringify(testResult.toDto(), null, 4));
+				this.afterPatchMeta(JSON.stringify(documentMetadata.filterMetadata(testResult.__metadata.toDto()), null, 4));
                 this.updateActions(result[0].AdditionalData['Actions']);
                 this.outputLog(result[0].AdditionalData["Debug"]);
             })
@@ -329,7 +394,8 @@ class patch extends viewModelBase {
         new executePatchCommand(bulkDocs, this.activeDatabase(), false)
             .execute()
             .done((result: bulkDocumentDto[]) => {
-                this.afterPatch('');
+				this.afterPatchDoc("");
+		        this.afterPatchMeta("");
                 if (this.patchDocument().patchOnOption() === 'Document') {
                     this.loadDocumentToTest(this.patchDocument().selectedItem());
                 }
@@ -359,6 +425,22 @@ class patch extends viewModelBase {
 
         return null;
     }
+
+	activateBeforeDoc() {
+		this.beforePatchDocMode(true);
+}
+
+	activateBeforeMeta() {
+		this.beforePatchDocMode(false);
+	}
+
+	activateAfterDoc() {
+		this.afterPatchDocMode(true);
+	}
+
+	activateAfterMeta() {
+		this.afterPatchDocMode(false);
+	}
 }
 
 export = patch;

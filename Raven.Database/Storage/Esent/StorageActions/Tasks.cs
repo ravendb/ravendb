@@ -14,10 +14,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : ITasksStorageActions
 	{
+        private static int bookmarkMost = SystemParameters.BookmarkMost;
+
 		public void AddTask(DatabaseTask task, DateTime addedAt)
 		{
 			int actualBookmarkSize;
-			var bookmark = new byte[SystemParameters.BookmarkMost];
+            var bookmark = new byte[bookmarkMost];
 			using (var update = new Update(session, Tasks, JET_prep.Insert))
 			{
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task"], task.AsBytes());

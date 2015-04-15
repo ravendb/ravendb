@@ -1,5 +1,8 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
+import createSampleDataCommand = require("commands/database/studio/createSampleDataCommand");
+import createSampleDataClassCommand = require("commands/database/studio/createSampleDataClassCommand");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class createSampleData extends viewModelBase{
 
@@ -11,11 +14,9 @@ class createSampleData extends viewModelBase{
     generateSampleData() {
         this.isBusy(true);
         
-        require(["commands/createSampleDataCommand"], createSampleDataCommand => {
-            new createSampleDataCommand(this.activeDatabase())
-                .execute()
-                .always(() => this.isBusy(false));
-        });
+        new createSampleDataCommand(this.activeDatabase())
+            .execute()
+            .always(() => this.isBusy(false));
     }
 
     activate(args) {
@@ -24,19 +25,15 @@ class createSampleData extends viewModelBase{
     }
 
     showSampleDataClass() {
-        require(["commands/createSampleDataClassCommand"], createSampleDataClassCommand => {
-            new createSampleDataClassCommand(this.activeDatabase())
-                .execute()
-                .done((results: string) => {
-                    this.isVisible(true);
-                    var data = results.replace("\r\n", "");
+        new createSampleDataClassCommand(this.activeDatabase())
+            .execute()
+            .done((results: string) => {
+                this.isVisible(true);
+                var data = results.replace("\r\n", "");
 
-                    require(["viewmodels/common/showDataDialog"], showDataDialog => {
-                        app.showDialog(new showDataDialog("Sample Data Classes", data));
-                    });
-                })
-                .always(() => this.isBusy(false));
-        });
+                app.showDialog(new showDataDialog("Sample Data Classes", data));
+            })
+            .always(() => this.isBusy(false));
     }
 }
 

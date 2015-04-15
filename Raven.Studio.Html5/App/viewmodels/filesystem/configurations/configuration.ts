@@ -10,10 +10,13 @@ import shell = require("viewmodels/shell");
 import getConfigurationCommand = require("commands/filesystem/getConfigurationCommand");
 import filesystem = require("models/filesystem/filesystem");
 import configurationKey = require("models/filesystem/configurationKey");
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import Pair = require("common/pair");
+import saveConfigurationCommand = require("commands/filesystem/saveConfigurationCommand");
+import deleteConfigurationKeys = require("viewmodels/filesystem/configurations/deleteConfigurationKeys");
+import createConfigurationKey = require("viewmodels/filesystem/configurations/createConfigurationKey");
 
 class configuration extends viewModelBase {
 
@@ -209,11 +212,9 @@ class configuration extends viewModelBase {
             return;
         }
 
-        require(["commands/filesystem/saveConfigurationCommand"], saveConfigurationCommand => {
-            var saveCommand = new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), jsonConfigDoc);
-            var saveTask = saveCommand.execute();
-            saveTask.done(() => this.dirtyFlag().reset());
-        });
+        var saveCommand = new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), jsonConfigDoc);
+        var saveTask = saveCommand.execute();
+        saveTask.done(() => this.dirtyFlag().reset());
     }
 
     refreshConfig() {
@@ -221,15 +222,13 @@ class configuration extends viewModelBase {
     }
 
     deleteConfiguration() {
-        require(["viewmodels/filesystem/deleteConfigurationKeys"], deleteConfigurationKeys => {
-            var deleteConfigurationKeyViewModel = new deleteConfigurationKeys(this.activeFilesystem(), [this.currentKey()]);
-            deleteConfigurationKeyViewModel
-                .deletionTask
-                .done(() => {
-                    this.removeKey(this.currentKey().key);
-                });
-            app.showDialog(deleteConfigurationKeyViewModel);
-        });
+        var deleteConfigurationKeyViewModel = new deleteConfigurationKeys(this.activeFilesystem(), [this.currentKey()]);
+        deleteConfigurationKeyViewModel
+            .deletionTask
+            .done(() => {
+                this.removeKey(this.currentKey().key);
+            });
+        app.showDialog(deleteConfigurationKeyViewModel);
     }
 
     removeKey(key: string) {
@@ -269,20 +268,18 @@ class configuration extends viewModelBase {
     }
 
     newConfigurationKey() {
-        require(["viewmodels/filesystem/createConfigurationKey", "commands/filesystem/saveConfigurationCommand"], (createConfigurationKey, saveConfigurationCommand) => {
-            var createConfigurationKeyViewModel = new createConfigurationKey(this.keys());
-            createConfigurationKeyViewModel
-                .creationTask
-                .done((key: string) => {
-                    new saveConfigurationCommand(this.activeFilesystem(), new configurationKey(this.activeFilesystem(), key), JSON.parse("{}")).execute()
-                        .done(() => {
-                            var newKey = this.addKey(key);
-                            this.selectKey(newKey);
-                        })
-                        .fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not create Configuration Key!", errorThrown));
-                });
-            app.showDialog(createConfigurationKeyViewModel);
-        });
+        var createConfigurationKeyViewModel = new createConfigurationKey(this.keys());
+        createConfigurationKeyViewModel
+            .creationTask
+            .done((key: string) => {
+                new saveConfigurationCommand(this.activeFilesystem(), new configurationKey(this.activeFilesystem(), key), JSON.parse("{}")).execute()
+                    .done(() => {
+                        var newKey = this.addKey(key);
+                        this.selectKey(newKey);
+                    })
+                    .fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not create Configuration Key!", errorThrown));
+            });
+        app.showDialog(createConfigurationKeyViewModel);
     }
 } 
 

@@ -9,6 +9,19 @@ import resource = require("models/resources/resource");
 import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
 import filesystem = require("models/filesystem/filesystem");
+import deleteResourceConfirm = require("viewmodels/resources/deleteResourceConfirm");
+import disableResourceToggleConfirm = require("viewmodels/resources/disableResourceToggleConfirm");
+import disableIndexingCommand = require("commands/database/index/disableIndexingCommand");
+import toggleRejectDatabaseClients = require("commands/maintenance/toggleRejectDatabaseClients");
+import createResource = require("viewmodels/resources/createResource");
+import createEncryption = require("viewmodels/resources/createEncryption");
+import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
+import createEncryptionConfirmation = require("viewmodels/resources/createEncryptionConfirmation");
+import databaseSettingsDialog = require("viewmodels/resources/databaseSettingsDialog");
+import createDefaultDbSettingsCommand = require("commands/resources/createDefaultSettingsCommand");
+import createDefaultFsSettingsCommand = require("commands/filesystem/createDefaultSettingsCommand");
+import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
+import filesystemSettingsDialog = require("viewmodels/resources/filesystemSettingsDialog");
 
 class resources extends viewModelBase {
     resources: KnockoutComputed<resource[]>;
@@ -185,19 +198,17 @@ class resources extends viewModelBase {
 
     deleteSelectedResources(resources: Array<resource>) {
         if (resources.length > 0) {
-            require(["viewmodels/resources/deleteResourceConfirm"], deleteResourceConfirm => {
-                var confirmDeleteViewModel = new deleteResourceConfirm(resources);
+            var confirmDeleteViewModel = new deleteResourceConfirm(resources);
 
-                confirmDeleteViewModel.deleteTask.done((deletedResources: Array<resource>) => {
-                    if (resources.length == 1) {
-                        this.onResourceDeleted(resources[0]);
-                    } else {
-                        deletedResources.forEach(rs => this.onResourceDeleted(rs));
-                    }
-                });
-
-                app.showDialog(confirmDeleteViewModel);
+            confirmDeleteViewModel.deleteTask.done((deletedResources: Array<resource>) => {
+                if (resources.length == 1) {
+                    this.onResourceDeleted(resources[0]);
+                } else {
+                    deletedResources.forEach(rs => this.onResourceDeleted(rs));
+                }
             });
+
+            app.showDialog(confirmDeleteViewModel);
         }
     }
 
@@ -256,22 +267,20 @@ class resources extends viewModelBase {
         if (resources.length > 0) {
             var action = !resources[0].disabled();
 
-            require(["viewmodels/resources/disableResourceToggleConfirm"], disableResourceToggleConfirm => {
-                var disableDatabaseToggleViewModel = new disableResourceToggleConfirm(resources);
+            var disableDatabaseToggleViewModel = new disableResourceToggleConfirm(resources);
 
-                disableDatabaseToggleViewModel.disableToggleTask
-                    .done((toggledResources: resource[]) => {
-                        if (resources.length == 1) {
-                            this.onResourceDisabledToggle(resources[0], action);
-                        } else {
-                            toggledResources.forEach(rs => {
-                                this.onResourceDisabledToggle(rs, action);
-                            });
-                        }
-                    });
+            disableDatabaseToggleViewModel.disableToggleTask
+                .done((toggledResources: resource[]) => {
+                    if (resources.length == 1) {
+                        this.onResourceDisabledToggle(resources[0], action);
+                    } else {
+                        toggledResources.forEach(rs => {
+                            this.onResourceDisabledToggle(rs, action);
+                        });
+                    }
+                });
 
-                app.showDialog(disableDatabaseToggleViewModel);
-            });
+            app.showDialog(disableDatabaseToggleViewModel);
         }
     }
 
@@ -288,10 +297,8 @@ class resources extends viewModelBase {
         var message = this.confirmationMessage(actionText + " indexing?", "Are you sure?");
         
         message.done(() => {
-            require(["commands/disableIndexingCommand"], disableIndexingCommand => {
-                var task = new disableIndexingCommand(db.name, action).execute();
-                task.done(() => db.indexingDisabled(action));
-            });
+            var task = new disableIndexingCommand(db.name, action).execute();
+            task.done(() => db.indexingDisabled(action));
         });
     }
 
@@ -300,10 +307,8 @@ class resources extends viewModelBase {
         var actionText = action ? "reject clients mode" : "accept clients mode";
         var message = this.confirmationMessage("Switch to " + actionText, "Are you sure?");
         message.done(() => {
-            require(["commands/toggleRejectDatabaseClients"], toggleRejectDatabaseClients => {
-                var task = new toggleRejectDatabaseClients(db.name, action).execute();
-                task.done(() => db.rejectClientsMode(action));
-            });
+            var task = new toggleRejectDatabaseClients(db.name, action).execute();
+            task.done(() => db.rejectClientsMode(action));
         });
     }
     
@@ -327,67 +332,65 @@ class resources extends viewModelBase {
 	}
 
     newResource() {
-        require(["viewmodels/resources/createResource"], createResource => {
-            var createResourceViewModel = new createResource(this.databases, this.fileSystems, license.licenseStatus);
-            createResourceViewModel.createDatabasePart
+        var createResourceViewModel = new createResource(this.databases, this.fileSystems, license.licenseStatus);
+        createResourceViewModel.createDatabasePart
+            .creationTask
+            .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, databaseTemp: string, storageEngine: string, incrementalBackup: boolean
+                , alertTimeout: string, alertRecurringTimeout: string, clusterWide: boolean) => {
+                var settings = {
+                    "Raven/ActiveBundles": bundles.join(";")
+                };
+                if (storageEngine) {
+                    settings["Raven/StorageTypeName"] = storageEngine;
+                }
+                if (!clusterWide) {
+                    settings["Raven-Non-Cluster-Database"] = "true";
+                }
+                if (incrementalBackup) {
+                    if (storageEngine === "esent") {
+                        settings["Raven/Esent/CircularLog"] = "false";
+                    } else {
+                        settings["Raven/Voron/AllowIncrementalBackups"] = "true";
+                    }
+                }
+                if (!this.isEmptyStringOrWhitespace(databaseTemp)) {
+                    settings['Raven/Voron/TempPath'] = databaseTemp;
+                }
+                if (alertTimeout !== "") {
+                    settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
+                }
+                if (alertRecurringTimeout !== "") {
+                    settings["Raven/IncrementalBackup/RecurringAlertTimeoutDays"] = alertRecurringTimeout;
+                }
+                settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/" + databaseName;
+                if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
+                    settings["Raven/Esent/LogsPath"] = databaseLogs;
+                }
+                if (!this.isEmptyStringOrWhitespace(databaseIndexes)) {
+                    settings["Raven/IndexStoragePath"] = databaseIndexes;
+                }
+
+                this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings, clusterWide);
+            });
+
+        createResourceViewModel.createFilesystemPart
                 .creationTask
-                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, databaseTemp: string, storageEngine: string, incrementalBackup: boolean
-                    , alertTimeout: string, alertRecurringTimeout: string, clusterWide: boolean) => {
-                    var settings = {
-                        "Raven/ActiveBundles": bundles.join(";")
-                    };
-                    if (storageEngine) {
-                        settings["Raven/StorageTypeName"] = storageEngine;
-                    }
-                    if (!clusterWide) {
-                        settings["Raven-Non-Cluster-Database"] = "true";
-                    }
-                    if (incrementalBackup) {
-                        if (storageEngine === "esent") {
-                            settings["Raven/Esent/CircularLog"] = "false";
-                        } else {
-                            settings["Raven/Voron/AllowIncrementalBackups"] = "true";
-                        }
-                    }
-                    if (!this.isEmptyStringOrWhitespace(databaseTemp)) {
-                        settings['Raven/Voron/TempPath'] = databaseTemp;
-                    }
-                    if (alertTimeout !== "") {
-                        settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
-                    }
-                    if (alertRecurringTimeout !== "") {
-                        settings["Raven/IncrementalBackup/RecurringAlertTimeoutDays"] = alertRecurringTimeout;
-                    }
-                    settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/" + databaseName;
-                    if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
-                        settings["Raven/Esent/LogsPath"] = databaseLogs;
-                    }
-                    if (!this.isEmptyStringOrWhitespace(databaseIndexes)) {
-                        settings["Raven/IndexStoragePath"] = databaseIndexes;
-                    }
+            .done((filesystemName: string, bundles: string[], filesystemPath: string, filesystemLogs: string, storageEngine: string) => {
+                var settings = {
+                    "Raven/ActiveBundles": bundles.join(";")
+                }
 
-                    this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings, clusterWide);
-                });
+                settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(filesystemPath)) ? filesystemPath : "~\\FileSystems\\" + filesystemName;
+                if (storageEngine) {
+                    settings["Raven/FileSystem/Storage"] = storageEngine;
+                }
+                if (!this.isEmptyStringOrWhitespace(filesystemLogs)) {
+                    settings["Raven/TransactionJournalsPath"] = filesystemLogs;
+                }
+                this.showFsCreationAdvancedStepsIfNecessary(filesystemName, bundles, settings);
+            });
 
-            createResourceViewModel.createFilesystemPart
-                 .creationTask
-                .done((filesystemName: string, bundles: string[], filesystemPath: string, filesystemLogs: string, storageEngine: string) => {
-                    var settings = {
-                        "Raven/ActiveBundles": bundles.join(";")
-                    }
-
-                    settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(filesystemPath)) ? filesystemPath : "~\\FileSystems\\" + filesystemName;
-                    if (storageEngine) {
-                        settings["Raven/FileSystem/Storage"] = storageEngine;
-                    }
-                    if (!this.isEmptyStringOrWhitespace(filesystemLogs)) {
-                        settings["Raven/TransactionJournalsPath"] = filesystemLogs;
-                    }
-                    this.showFsCreationAdvancedStepsIfNecessary(filesystemName, bundles, settings);
-                });
-
-            app.showDialog(createResourceViewModel);
-        });
+        app.showDialog(createResourceViewModel);
     }
 
     showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}, clusterWide: boolean) {
@@ -397,58 +400,50 @@ class resources extends viewModelBase {
         var encryptionDeferred = $.Deferred();
 
         if (bundles.contains("Encryption")) {
-            require(["viewmodels/resources/createEncryption"], createEncryption => {
-                var createEncryptionViewModel = new createEncryption();
-                createEncryptionViewModel
-                    .creationEncryption
-                    .done((key: string, encryptionAlgorithm: string, encryptionBits: string, isEncryptedIndexes: string) => {
-                        savedKey = key;
-                        securedSettings = {
-                            'Raven/Encryption/Key': key,
-                            'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
-                            'Raven/Encryption/KeyBitsPreference': encryptionBits,
-                            'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
-                        };
-                        encryptionDeferred.resolve(securedSettings);
-                    });
-                app.showDialog(createEncryptionViewModel);
-            });
+            var createEncryptionViewModel = new createEncryption();
+            createEncryptionViewModel
+                .creationEncryption
+                .done((key: string, encryptionAlgorithm: string, encryptionBits: string, isEncryptedIndexes: string) => {
+                    savedKey = key;
+                    securedSettings = {
+                        'Raven/Encryption/Key': key,
+                        'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                        'Raven/Encryption/KeyBitsPreference': encryptionBits,
+                        'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
+                    };
+                    encryptionDeferred.resolve(securedSettings);
+                });
+            app.showDialog(createEncryptionViewModel);
         } else {
             encryptionDeferred.resolve();
         }
 
         encryptionDeferred.done(() => {
-            require(["commands/createDatabaseCommand"], createDatabaseCommand => {
-                new createDatabaseCommand(databaseName, settings, securedSettings)
-                    .execute()
-                    .done(() => {
-                        var newDatabase = this.addNewDatabase(databaseName, bundles, clusterWide);
-                        this.selectResource(newDatabase);
+            new createDatabaseCommand(databaseName, settings, securedSettings)
+                .execute()
+                .done(() => {
+                    var newDatabase = this.addNewDatabase(databaseName, bundles, clusterWide);
+                    this.selectResource(newDatabase);
 
-                        var encryptionConfirmationDialogPromise = $.Deferred();
-                        if (!jQuery.isEmptyObject(securedSettings)) {
-                            require(["viewmodels/resources/createEncryptionConfirmation"], createEncryptionConfirmation => {
-                                var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
-                                createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
-                                createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
-                                app.showDialog(createEncryptionConfirmationViewModel);
+                    var encryptionConfirmationDialogPromise = $.Deferred();
+                    if (!jQuery.isEmptyObject(securedSettings)) {
+                        var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
+                        createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
+                        createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
+                        app.showDialog(createEncryptionConfirmationViewModel);
+                    } else {
+                        encryptionConfirmationDialogPromise.resolve();
+                    }
+
+                    this.createDefaultDatabaseSettings(newDatabase, bundles).always(() => {
+                        if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
+                            encryptionConfirmationDialogPromise.always(() => {
+                                var settingsDialog = new databaseSettingsDialog(bundles);
+                                app.showDialog(settingsDialog);
                             });
-                        } else {
-                            encryptionConfirmationDialogPromise.resolve();
                         }
-
-                        this.createDefaultDatabaseSettings(newDatabase, bundles).always(() => {
-                            if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
-                                encryptionConfirmationDialogPromise.always(() => {
-                                    require(["viewmodels/resources/databaseSettingsDialog"], databaseSettingsDialog => {
-                                        var settingsDialog = new databaseSettingsDialog(bundles);
-                                        app.showDialog(settingsDialog);
-                                    });
-                                });
-                            }
-                        });
                     });
-            });
+                });
         });
     }
 
@@ -466,19 +461,15 @@ class resources extends viewModelBase {
 
     private createDefaultDatabaseSettings(db: database, bundles: Array<string>): JQueryPromise<any> {
         var deferred = $.Deferred();
-        require(["commands/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
-            new createDefaultSettingsCommand(db, bundles).execute()
-                .always(() => deferred.resolve());
-        });
+        new createDefaultDbSettingsCommand(db, bundles).execute()
+            .always(() => deferred.resolve());
         return deferred;
     }
 
     private createDefaultFilesystemSettings(fs: filesystem, bundles: Array<string>): JQueryPromise<any> {
         var deferred = $.Deferred();
-        require(["commands/filesystem/createDefaultSettingsCommand"], createDefaultSettingsCommand => {
-            new createDefaultSettingsCommand(fs, bundles).execute()
-                .always(() => deferred.resolve());
-        });
+        new createDefaultFsSettingsCommand(fs, bundles).execute()
+            .always(() => deferred.resolve());
         return deferred;
     }
 
@@ -511,58 +502,50 @@ class resources extends viewModelBase {
         var encryptionDeferred = $.Deferred();
 
         if (bundles.contains("Encryption")) {
-            require(["viewmodels/resources/createEncryption"], createEncryption => {
-                var createEncryptionViewModel = new createEncryption();
-                createEncryptionViewModel
-                    .creationEncryption
-                    .done((key: string, encryptionAlgorithm: string, encryptionBits: string, isEncryptedIndexes: string) => {
-                        savedKey = key;
-                        securedSettings = {
-                            'Raven/Encryption/Key': key,
-                            'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
-                            'Raven/Encryption/KeyBitsPreference': encryptionBits,
-                            'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
-                        };
-                        encryptionDeferred.resolve(securedSettings);
-                    });
-                app.showDialog(createEncryptionViewModel);
-            });
+            var createEncryptionViewModel = new createEncryption();
+            createEncryptionViewModel
+                .creationEncryption
+                .done((key: string, encryptionAlgorithm: string, encryptionBits: string, isEncryptedIndexes: string) => {
+                    savedKey = key;
+                    securedSettings = {
+                        'Raven/Encryption/Key': key,
+                        'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                        'Raven/Encryption/KeyBitsPreference': encryptionBits,
+                        'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
+                    };
+                    encryptionDeferred.resolve(securedSettings);
+                });
+            app.showDialog(createEncryptionViewModel);
         } else {
             encryptionDeferred.resolve();
         }
 
         encryptionDeferred.done(() => {
-            require(["commands/filesystem/createFilesystemCommand"], createFilesystemCommand => {
-                new createFilesystemCommand(filesystemName, settings, securedSettings)
-                    .execute()
-                    .done(() => {
-                        var newFileSystem = this.addNewFileSystem(filesystemName, bundles);
-                        this.selectResource(newFileSystem);
+            new createFilesystemCommand(filesystemName, settings, securedSettings)
+                .execute()
+                .done(() => {
+                    var newFileSystem = this.addNewFileSystem(filesystemName, bundles);
+                    this.selectResource(newFileSystem);
 
-                        var encryptionConfirmationDialogPromise = $.Deferred();
-                        if (!jQuery.isEmptyObject(securedSettings)) {
-                            require(["viewmodels/resources/createEncryptionConfirmation"], createEncryptionConfirmation => {
-                                var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
-                                createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
-                                createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
-                                app.showDialog(createEncryptionConfirmationViewModel);
+                    var encryptionConfirmationDialogPromise = $.Deferred();
+                    if (!jQuery.isEmptyObject(securedSettings)) {
+                            var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
+                            createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
+                            createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
+                            app.showDialog(createEncryptionConfirmationViewModel);
+                    } else {
+                        encryptionConfirmationDialogPromise.resolve();
+                    }
+
+                    this.createDefaultFilesystemSettings(newFileSystem, bundles).always(() => {
+                        if (bundles.contains("Versioning")) {
+                            encryptionConfirmationDialogPromise.always(() => {
+                                var settingsDialog = new filesystemSettingsDialog(bundles);
+                                app.showDialog(settingsDialog);
                             });
-                        } else {
-                            encryptionConfirmationDialogPromise.resolve();
                         }
-
-                        this.createDefaultFilesystemSettings(newFileSystem, bundles).always(() => {
-                            if (bundles.contains("Versioning")) {
-                                encryptionConfirmationDialogPromise.always(() => {
-                                    require(['viewmodels/resources/filesystemSettingsDialog'], filesystemSettingsDialog => {
-                                        var settingsDialog = new filesystemSettingsDialog(bundles);
-                                        app.showDialog(settingsDialog);
-                                    });
-                                });
-                            }
-                        });
                     });
-            });
+                });
         });
 
     }

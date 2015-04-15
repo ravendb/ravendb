@@ -109,6 +109,31 @@ namespace Raven.Tests.FileSystem
         }
 
 		[Fact]
+		public async Task NotificationsReceivedWhenFileCopied()
+		{
+			var store = NewStore();
+			var client = store.AsyncFilesCommands;
+
+			await client.UploadAsync("abc.txt", new MemoryStream());
+
+			var changes = store.Changes();
+			var notificationTask = changes.ForFolder("/")
+												.Buffer(TimeSpan.FromSeconds(5))
+												.Take(1).ToTask();
+
+			changes.WaitForAllPendingSubscriptions();
+
+			await client.CopyAsync("abc.txt", "newName.txt");
+
+			var fileChanges = await notificationTask;
+
+			Console.WriteLine("Notification count: " + fileChanges.Count);
+			Assert.Equal("/newName.txt", fileChanges[0].File);
+			Assert.Equal(FileChangeAction.Add, fileChanges[0].Action);
+		}
+
+
+		[Fact]
 		public async Task NotificationsAreOnlyReceivedForFilesInGivenFolder()
         {
             var store = NewStore();

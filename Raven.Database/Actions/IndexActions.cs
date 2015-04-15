@@ -543,18 +543,14 @@ namespace Raven.Database.Actions
                 if (suggestionOption.Distance == StringDistanceTypes.None)
                     continue;
 
-                var indexExtensionKey =
-                    MonoHttpUtility.UrlEncode(field + "-" + suggestionOption.Distance + "-" +
-                                              suggestionOption.Accuracy);
+                var indexExtensionKey = MonoHttpUtility.UrlEncode(field);
 
                 var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
 					index,
                      WorkContext,
                      Path.Combine(Database.Configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
-                     SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
                      Database.Configuration.RunInMemory,
-                     field,
-                     suggestionOption.Accuracy);
+                     field);
 
                 Database.IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);
             }
@@ -636,13 +632,14 @@ namespace Raven.Database.Actions
             PutIndex(index, indexDefinition);
         }
 
-        public void DeleteIndex(string name)
+        public bool DeleteIndex(string name)
         {
             var instance = IndexDefinitionStorage.GetIndexDefinition(name);
             if (instance == null) 
-				return;
+				return false;
 
 			DeleteIndex(instance);
+	        return true;
         }
 
 		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true)

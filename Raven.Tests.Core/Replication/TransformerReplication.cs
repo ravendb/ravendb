@@ -109,6 +109,61 @@ namespace Raven.Tests.Core.Replication
 		}
 
 		[Fact]
+		public async Task Should_replicate_transformer_deletion()
+		{
+			using (var sourceServer = GetNewServer(8077))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
+			using (var destinationServer1 = GetNewServer(8078))
+			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1))
+			using (var destinationServer2 = GetNewServer())
+			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2))
+			using (var destinationServer3 = GetNewServer(8081))
+			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3))
+			{
+				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+				
+				CreateDatabaseWithReplication(source, "testDB");
+				CreateDatabaseWithReplication(destination1, "testDB");
+				CreateDatabaseWithReplication(destination2, "testDB");
+				CreateDatabaseWithReplication(destination3, "testDB");
+
+				// ReSharper disable once AccessToDisposedClosure
+				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
+
+				var transformer = new UserWithoutExtraInfoTransformer();
+				transformer.Execute(source.DatabaseCommands.ForDatabase("testDB"), source.Conventions);
+
+				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
+				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
+				replicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.Zero;
+				replicationTask.ReplicateIndexesAndTransformersTask(null);
+
+				var transformersOnDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				Assert.Equal(1, transformersOnDestination1.Count(x => x.Name == transformer.TransformerName));
+
+				var transformersOnDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				Assert.Equal(1, transformersOnDestination2.Count(x => x.Name == transformer.TransformerName));
+
+				var transformersOnDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				Assert.Equal(1, transformersOnDestination3.Count(x => x.Name == transformer.TransformerName));
+
+				//now delete the transformer at the source and verify that the deletion is replicated
+				source.DatabaseCommands.ForDatabase("testDB").DeleteTransformer(transformer.TransformerName);
+				replicationTask.ReplicateIndexesAndTransformersTask(null);
+
+				transformersOnDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				Assert.Equal(0, transformersOnDestination1.Count(x => x.Name == transformer.TransformerName));
+
+				transformersOnDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				Assert.Equal(0, transformersOnDestination2.Count(x => x.Name == transformer.TransformerName));
+
+				transformersOnDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				Assert.Equal(0, transformersOnDestination3.Count(x => x.Name == transformer.TransformerName));
+	
+			}
+		}
+
+		[Fact]
 		public void Should_skip_transformer_replication_if_flag_is_set()
 		{
 			using (var sourceServer = GetNewServer(8077))

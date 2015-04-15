@@ -8,17 +8,19 @@ import querySort = require("models/database/query/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
 import shell = require("viewmodels/shell");
-import changeSubscription = require("models/changeSubscription");
+import changeSubscription = require("common/changeSubscription");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import d3 = require('d3/d3');
+import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
+import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 
 class indexes extends viewModelBase {
 
-    indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index> }>();
+    indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index>; groupHidden: KnockoutObservable<boolean> }>();
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
@@ -29,9 +31,11 @@ class indexes extends viewModelBase {
     btnStateTooltip = ko.observable<string>("ExpandAll");
     btnTitle = ko.computed(() => this.btnState() === true ? "Expand all" : "Collapse all");
     sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
+	searchText = ko.observable<string>();
 
     constructor() {
         super();
+		this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterIndexes());
 
         this.sortedGroups = ko.computed(() => {
             var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
@@ -101,6 +105,22 @@ class indexes extends viewModelBase {
     private fetchRecentQueries() {
         this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
     }
+
+	private filterIndexes() {
+		var filterLower = this.searchText().toLowerCase();
+		this.indexGroups().forEach(indexGroup => {
+			var hasAnyInGroup = false;
+			indexGroup.indexes().forEach(index => {
+				var match = index.name.toLowerCase().indexOf(filterLower) >= 0;
+				index.filteredOut(!match);
+				if (match) {
+					hasAnyInGroup = true;
+				}
+			});
+
+			indexGroup.groupHidden(!hasAnyInGroup);
+		});
+	}
 
     getRecentQueryUrl(query: storedQueryDto) {
         return appUrl.forQuery(this.activeDatabase(), query.Hash);
@@ -174,7 +194,7 @@ class indexes extends viewModelBase {
                 group.indexes.push(i);
             }
         } else {
-            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
+            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]), groupHidden: ko.observable<boolean>(false) });
         }
     }
 
@@ -278,37 +298,33 @@ class indexes extends viewModelBase {
     }
 
     cancelIndex(i: index) {
-        require(["viewmodels/database/indexes/cancelSideBySizeConfirm"], cancelSideBySizeConfirm => {
-            var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
-            app.showDialog(cancelSideBySideIndexViewModel);
-            cancelSideBySideIndexViewModel.cancelTask
-                .done((closedWithoutDeletion: boolean) => {
-                    if (closedWithoutDeletion == false) {
-                        this.removeIndexesFromAllGroups([i]);
-                    }
-                })
-                .fail(() => {
+        var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
+        app.showDialog(cancelSideBySideIndexViewModel);
+        cancelSideBySideIndexViewModel.cancelTask
+            .done((closedWithoutDeletion: boolean) => {
+                if (closedWithoutDeletion == false) {
                     this.removeIndexesFromAllGroups([i]);
-                    this.fetchIndexes();
-                });
-        });
+                }
+            })
+            .fail(() => {
+                this.removeIndexesFromAllGroups([i]);
+                this.fetchIndexes();
+            });
     }
 
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
-            require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
-                var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
-                app.showDialog(deleteIndexesVm);
-                deleteIndexesVm.deleteTask
-                    .done((closedWithoutDeletion: boolean) => {
-                        if (closedWithoutDeletion == false) {
-                            this.removeIndexesFromAllGroups(indexes);
-                        }
-                    })
-                    .fail(() => {
+            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
+            app.showDialog(deleteIndexesVm);
+            deleteIndexesVm.deleteTask
+                .done((closedWithoutDeletion: boolean) => {
+                    if (closedWithoutDeletion == false) {
                         this.removeIndexesFromAllGroups(indexes);
-                        this.fetchIndexes();
-                });
+                    }
+                })
+                .fail(() => {
+                    this.removeIndexesFromAllGroups(indexes);
+                    this.fetchIndexes();
             });
         }
     }

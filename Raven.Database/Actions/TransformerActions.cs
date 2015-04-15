@@ -60,14 +60,19 @@ namespace Raven.Database.Actions
             return IndexDefinitionStorage.GetTransformerDefinition(name);
         }
 
-        public void DeleteTransform(string name)
+        public bool DeleteTransform(string name)
         {
-            IndexDefinitionStorage.RemoveTransformer(name);
-            TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new TransformerChangeNotification
-            {
-                Name = name,
-                Type = TransformerChangeTypes.TransformerRemoved
-            }));
+	        if (!IndexDefinitionStorage.RemoveTransformer(name)) 
+				return false;
+
+			//raise notification only if the transformer was actually removed
+	        TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new TransformerChangeNotification
+	        {
+		        Name = name,
+		        Type = TransformerChangeTypes.TransformerRemoved
+	        }));
+
+	        return true;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

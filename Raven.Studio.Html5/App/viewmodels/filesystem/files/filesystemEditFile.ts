@@ -11,9 +11,11 @@ import file = require("models/filesystem/file");
 import fileMetadata = require("models/filesystem/fileMetadata");
 import deleteItems = require("viewmodels/common/deleteItems");
 import fileRenameDialog = require("viewmodels/filesystem/files/fileRenameDialog");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class filesystemEditFile extends viewModelBase {
 
+	metadataEditor: AceAjax.Editor;
     fileName = ko.observable<string>();
     file = ko.observable<file>();
     filesystemForEditedFile: filesystem;
@@ -29,9 +31,7 @@ class filesystemEditFile extends viewModelBase {
 
     constructor() {
         super();
-
-        // When we programmatically change the document text or meta text, push it into the editor.
-        this.fileMetadataText.subscribe(() => this.updateFileEditorText());
+	    aceEditorBindingHandler.install();
         this.fileName.subscribe(x => this.loadFile(x));
     }
 
@@ -47,44 +47,28 @@ class filesystemEditFile extends viewModelBase {
         this.metadata.subscribe((meta: fileMetadata) => this.metadataChanged(meta));
     }
 
-    // Called when the view is attached to the DOM.
     attached() {
-        this.initializeFileEditor();
         this.setupKeyboardShortcuts();
+    }
+
+	compositionComplete() {
+        super.compositionComplete();
+
+        var editorElement = $("#fileMetadataEditor");
+        if (editorElement.length > 0) {
+            this.metadataEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+    }
+
         this.focusOnEditor();
     }
 
     setupKeyboardShortcuts() {
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteFile(), filesystemEditFile.editFileSelector);
-    }
-
-    initializeFileEditor() {
-        // Startup the Ace editor with JSON syntax highlighting.
-        // TODO: Just use the simple binding handler instead.
-        this.fileMetadataEditor = ace.edit("fileMetadataEditor");
-        this.fileMetadataEditor.setTheme("ace/theme/xcode");
-        this.fileMetadataEditor.setFontSize("16px");
-        this.fileMetadataEditor.getSession().setMode("ace/mode/json");
-        $("#fileMetadataEditor").on('blur', ".ace_text-input", () => this.storeFileEditorTextIntoObservable());
-        this.updateFileEditorText();
-    }
+        }
 
     focusOnEditor() {
-        this.fileMetadataEditor.focus();
-    }
-
-    updateFileEditorText() {
-        if (this.fileMetadataEditor) {
-            this.fileMetadataEditor.getSession().setValue(this.fileMetadataText());
+        this.metadataEditor.focus();
         }
-    }
-
-    storeFileEditorTextIntoObservable() {
-        if (this.fileMetadataEditor) {
-            var editorText = this.fileMetadataEditor.getSession().getValue();
-            this.fileMetadataText(editorText);
-        }
-    }
 
     loadFile(fileName: string) {
         new getFileCommand(this.activeFilesystem(), fileName)
@@ -122,10 +106,6 @@ class filesystemEditFile extends viewModelBase {
         this.loadFile(this.fileName());
     }
 
-    saveInObservable() { //TODO: remove this and use ace binding handler
-        this.storeFileEditorTextIntoObservable();
-    }
-
     deleteFile() {
         var file = this.file();
         if (file) {
@@ -141,12 +121,22 @@ class filesystemEditFile extends viewModelBase {
     }
 
     renameFile() {
-        var dialog = new fileRenameDialog(this.fileName(), this.activeFilesystem());
+	    var currentFileName = this.fileName();
+        var dialog = new fileRenameDialog(currentFileName, this.activeFilesystem());
         dialog.onExit().done((newName: string) => {
+	        this.removeFromTopRecentFiles(currentFileName);
             router.navigate(appUrl.forEditFile(newName, this.activeFilesystem()));
         });
         app.showDialog(dialog);
     }
+
+	removeFromTopRecentFiles(fileName: string) {
+		var currentFilesystemName = this.activeFilesystem().name;
+        var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
+		if (recentFilesForCurFilesystem) {
+			recentFilesForCurFilesystem.recentFiles.remove(fileName);
+		}
+	}
 
     getTopRecentFiles() {
         var currentFilesystemName = this.activeFilesystem().name;

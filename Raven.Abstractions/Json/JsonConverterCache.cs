@@ -57,7 +57,7 @@ namespace Raven.Abstractions.Json
 
 
         [ThreadStatic]
-        private static Dictionary<CompoundKey, JsonConverter> _cache; 
+        private static Dictionary<CompoundKey, JsonConverter> _cache;
 
         private static Dictionary<CompoundKey, JsonConverter> Cache
         {
@@ -65,7 +65,10 @@ namespace Raven.Abstractions.Json
             get 
             { 
                 if ( _cache == null )
+                {
+                    // While a race condition can happen here, we don't care as it will eventually create a single useless cache.
                     _cache = new Dictionary<CompoundKey, JsonConverter>(Comparer);
+                }
 
                 return _cache; 
             }
@@ -91,23 +94,31 @@ namespace Raven.Abstractions.Json
             else
             {
                 var key = new FastCompoundKey(type, converters);
+               
+                JsonConverter converter;
 
-                JsonConverter converter;            
-                if (!Cache.TryGetValue(key, out converter))
+                // The locking will prevent the original thread to be able to continue until the one that got it releases it
+                // With a lockless implementation we have found non-reproducible NullReferenceExceptions. The hypothesis is that task stealing 
+                // (lightweight threading) may be the culprit. I prefer to pay 10% in performance here than fail or mask the error with extra indirections.
+                var cache = Cache;
+                lock ( cache )
                 {
-                    int count = converters.Count;
-                    for (int i = 0; i < count; i++)
+                    if (!cache.TryGetValue(key, out converter))
                     {
-                        var conv = converters[i];
-                        if (conv.CanConvert(type))
+                        int count = converters.Count;
+                        for (int i = 0; i < count; i++)
                         {
-                            converter = conv;
-                            break;
+                            var conv = converters[i];
+                            if (conv.CanConvert(type))
+                            {
+                                converter = conv;
+                                break;
+                            }
                         }
-                    }
 
-                    var newKey = new SlowCompoundKey(type, converters);
-                    Cache[newKey] = converter;
+                        var newKey = new SlowCompoundKey(type, converters);
+                        cache[newKey] = converter;
+                    }
                 }
 
                 return converter;

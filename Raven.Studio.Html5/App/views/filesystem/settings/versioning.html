@@ -51,22 +51,38 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <div class="col-sm-4 control-label">Purge on delete</div>
-                                <div class="col-sm-7">
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                            <span data-bind="visible: !purgeOnDelete()">No</span>
-                                            <span data-bind="visible: purgeOnDelete">Yes</span>
-                                            <span class="caret"></span>
-                                        </button>
-                                        <ul class="dropdown-menu" role="menu">
-                                            <li><a href="#" data-bind="click: purgeOnDelete.bind($root, false)">No</a></li>
-                                            <li><a href="#" data-bind="click: purgeOnDelete.bind($root, true)">Yes</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
+	                        <div class="form-group">
+		                        <div class="col-sm-4 control-label">Purge on delete</div>
+		                        <div class="col-sm-7">
+			                        <div class="btn-group">
+				                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+					                        <span data-bind="visible: !purgeOnDelete()">No</span>
+					                        <span data-bind="visible: purgeOnDelete">Yes</span>
+					                        <span class="caret"></span>
+				                        </button>
+				                        <ul class="dropdown-menu" role="menu">
+					                        <li><a href="#" data-bind="click: purgeOnDelete.bind($root, false)">No</a></li>
+					                        <li><a href="#" data-bind="click: purgeOnDelete.bind($root, true)">Yes</a></li>
+				                        </ul>
+			                        </div>
+		                        </div>
+	                        </div>
+							<div class="form-group">
+								<div class="col-sm-4 control-label">Reset on rename</div>
+								<div class="col-sm-7">
+									<div class="btn-group">
+										<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+											<span data-bind="visible: !resetOnRename()">No</span>
+											<span data-bind="visible: resetOnRename()">Yes</span>
+											<span class="caret"></span>
+										</button>
+										<ul class="dropdown-menu" role="menu">
+											<li><a href="#" data-bind="click: resetOnRename.bind($root, false)">No</a></li>
+											<li><a href="#" data-bind="click: resetOnRename.bind($root, true)">Yes</a></li>
+										</ul>
+									</div>
+								</div>
+							</div>
                         </div>
                     </div>
                 </div>

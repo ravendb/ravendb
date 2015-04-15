@@ -6,6 +6,8 @@ import appUrl = require("common/appUrl");
 import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
 import monitorRestoreCommand = require("commands/maintenance/monitorRestoreCommand");
+import startDbRestoreCommand = require("commands/maintenance/startRestoreCommand");
+import startFsRestoreCommand = require("commands/filesystem/startRestoreCommand");
 
 class resourceRestore {
     defrag = ko.observable<boolean>(false);
@@ -109,11 +111,9 @@ class restore extends viewModelBase {
             GenerateNewDatabaseId: this.generateNewDatabaseId(),
         };
 
-        require(["commands/startRestoreCommand"], startRestoreCommand => {
-            new startRestoreCommand(this.dbRestoreOptions.defrag(), restoreDatabaseDto, self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions))
-                .execute()
-                .always(() => shell.reloadDatabases(this.activeDatabase()));
-        });
+        new startDbRestoreCommand(this.dbRestoreOptions.defrag(), restoreDatabaseDto, self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions))
+            .execute()
+            .always(() => shell.reloadDatabases(this.activeDatabase()));
     }
 
     startFsRestore() {
@@ -126,11 +126,9 @@ class restore extends viewModelBase {
             FilesystemName: this.fsRestoreOptions.resourceName()
         };
 
-        require(["commands/filesystem/startRestoreCommand"], startRestoreCommand => {
-            new startRestoreCommand(this.fsRestoreOptions.defrag(), restoreFilesystemDto, self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions))
-                .execute()
-                .always(() => shell.reloadFilesystems(this.activeFilesystem()));
-        });
+        new startFsRestoreCommand(this.fsRestoreOptions.defrag(), restoreFilesystemDto, self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions))
+            .execute()
+            .always(() => shell.reloadFilesystems(this.activeFilesystem()));
     }
 }
 

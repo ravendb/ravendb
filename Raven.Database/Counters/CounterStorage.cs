@@ -87,8 +87,9 @@ namespace Raven.Database.Counters
 
 				if (id == null) // new counter db
 				{
-					ServerId = Guid.NewGuid().ToString();
-					var serverIdBytes = Guid.NewGuid().ToByteArray();
+					var newGuid = Guid.NewGuid();
+					ServerId = newGuid.ToString();
+					var serverIdBytes = newGuid.ToByteArray();
 
 					metadata.Add("id", serverIdBytes);
 

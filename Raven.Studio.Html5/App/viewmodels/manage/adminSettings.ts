@@ -18,7 +18,7 @@ class adminSettings extends viewModelBase {
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/manage/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
         var windowsAuthRoute = { route: 'admin/settings/windowsAuth', moduleId: 'viewmodels/manage/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
         var clusterRoute = { route: 'admin/settings/cluster', moduleId: "viewmodels/manage/cluster", title: "Cluster", nav: true, hash: appUrl.forCluster() };
-        var globalConfigRoute = { route: 'admin/settings/globalConfig*details', moduleId: 'viewmodels/manage/globalConfig', title: 'Global configuration', nav: true, hash: appUrl.forGlobalConfig() };
+        var globalConfigRoute = { route: 'admin/settings/globalConfig*details', moduleId: 'viewmodels/manage/globalConfig/globalConfig', title: 'Global configuration', nav: true, hash: appUrl.forGlobalConfig() };
 		var serverSmuggling = { route: "admin/settings/serverSmuggling", moduleId: "viewmodels/manage/serverSmuggling", title: "Server smuggling", nav: true, hash: appUrl.forServerSmugging() };
         var backupRoute = { route: 'admin/settings/backup', moduleId: 'viewmodels/manage/backup', title: 'Backup', nav: true, hash: appUrl.forBackup() };
         var compactRoute = { route: 'admin/settings/compact', moduleId: 'viewmodels/manage/compact', title: 'Compact', nav: true, hash: appUrl.forCompact() };

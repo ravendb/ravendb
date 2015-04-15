@@ -135,7 +135,7 @@ namespace Raven.Database.Server.Controllers
 				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
 				msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.GetDefaultRavenFormat());
 
-                if ( IsCsvDownloadRequest(InnerRequest))
+                if (IsCsvDownloadRequest(InnerRequest))
 				{
 					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
 				}
@@ -180,9 +180,9 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-			{
-				using (queryOp)
-				using (accessor)
+			{							
+				using(queryOp)
+				using(accessor)
 				using(_timeout)
 				using (var writer = GetOutputWriter(req, stream))
 				{

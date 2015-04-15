@@ -28,7 +28,7 @@ namespace Raven.Database.Queries
 
 		[CLSCompliant(false)]
 		public SuggestionQueryIndexExtension(Index indexInstance, WorkContext workContext, string key, 
-			StringDistance distanceType, bool isRunInMemory, string field, float accuracy)
+			bool isRunInMemory, string field)
 		{
 			_indexInstance = indexInstance;
 			this.workContext = workContext;
@@ -44,9 +44,7 @@ namespace Raven.Database.Queries
 			}
 
 			spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, null);
-			spellChecker.SetAccuracy(accuracy);
-			spellChecker.setStringDistance(distanceType);
-			_operationText = "Suggestions for " + field + " " + distanceType + " (" + accuracy + ")";
+			_operationText = "Suggestions for " + field;
 		}
 
 		public void Init(IndexReader reader)

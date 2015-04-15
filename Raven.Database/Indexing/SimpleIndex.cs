@@ -387,17 +387,17 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		private readonly ConcurrentDictionary<Type, PropertyDescriptorCollection> propertyDescriptorCache = new ConcurrentDictionary<Type, PropertyDescriptorCollection>();
+		private readonly ConcurrentDictionary<Type, PropertyAccessor> propertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
 
 		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc)
 		{
-			PropertyDescriptorCollection properties;
-			var newDocId = GetDocumentIdByReflection(doc, out properties);
+			PropertyAccessor propertyAccessor;
+			var newDocId = GetDocumentId(doc, out propertyAccessor);
 
 			List<AbstractField> abstractFields;
 			try
 			{
-				abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
+				abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, propertyAccessor, Field.Store.NO).ToList();
 			}
 			catch (InvalidShapeException e)
 			{
@@ -408,16 +408,16 @@ namespace Raven.Database.Indexing
 			{
 				Fields = abstractFields,
 				NewDocId = newDocId,
-				ShouldSkip = properties.Count > 1  // we always have at least __document_id
+				ShouldSkip = propertyAccessor.Properies.Count > 1  // we always have at least __document_id
 							&& abstractFields.Count == 0
 			};
 		}
 
-		private string GetDocumentIdByReflection(object doc, out PropertyDescriptorCollection properties)
+		private string GetDocumentId(object doc, out PropertyAccessor accessor)
 		{
 			Type type = doc.GetType();
-			properties = propertyDescriptorCache.GetOrAdd(type, TypeDescriptor.GetProperties);
-			return properties.Find(Constants.DocumentIdFieldName, false).GetValue(doc) as string;
+			accessor = propertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
+			return accessor.GetValue(Constants.DocumentIdFieldName, doc) as string;
 		}
 
 		public override void Remove(string[] keys, WorkContext context)

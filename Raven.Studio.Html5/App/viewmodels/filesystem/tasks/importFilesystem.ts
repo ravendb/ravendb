@@ -64,7 +64,6 @@ class importDatabase extends viewModelBase {
             .always(() => this.isUploading = false);
     }
 
-    
     private waitForOperationToComplete(fs: filesystem, operationId: number) {        
         new getOperationStatusCommand(fs, operationId)
             .execute()

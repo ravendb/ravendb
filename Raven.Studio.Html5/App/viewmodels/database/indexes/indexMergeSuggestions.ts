@@ -5,11 +5,12 @@ import appUrl = require("common/appUrl");
 import mergedIndexesStorage = require("common/mergedIndexesStorage");
 import indexMergeSuggestion = require("models/database/index/indexMergeSuggestion");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import shell = require("viewmodels/shell");
 import moment = require("moment");
 import dialog = require("plugins/dialog");
 import optional = require("common/optional");
+import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 
 class indexMergeSuggestions extends viewModelBase {
     
@@ -120,40 +121,32 @@ class indexMergeSuggestions extends viewModelBase {
     deleteIndexes(index: number) {
         var mergeSuggestion = this.suggestions()[index];
         var indexesToDelete = mergeSuggestion.canDelete;
-        require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
-            var db = this.activeDatabase();
-            var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db);
-            deleteViewModel.deleteTask.always(() => this.reload());
-            dialog.show(deleteViewModel);
-        });
+        var db = this.activeDatabase();
+        var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db);
+        deleteViewModel.deleteTask.always(() => this.reload());
+        dialog.show(deleteViewModel);
     }
 
 
     deleteIndex(name: string) {
-        require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
-            var db = this.activeDatabase();
-            var deleteViewModel = new deleteIndexesConfirm([name], db);
-            deleteViewModel.deleteTask.always(() => this.reload());
-            dialog.show(deleteViewModel);
-        });
+        var db = this.activeDatabase();
+        var deleteViewModel = new deleteIndexesConfirm([name], db);
+        deleteViewModel.deleteTask.always(() => this.reload());
+        dialog.show(deleteViewModel);
     }
 
     deleteAllIdleOrAbandoned () {
-        require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
-            var db = this.activeDatabase();
-            var deleteViewModel = new deleteIndexesConfirm(this.idleOrAbandonedIndexes().map(index => index.Name), db, "Delete all idle or abandoned indexes?");
-            deleteViewModel.deleteTask.always(() => this.reload());
-            dialog.show(deleteViewModel); 
-        });
+        var db = this.activeDatabase();
+        var deleteViewModel = new deleteIndexesConfirm(this.idleOrAbandonedIndexes().map(index => index.Name), db, "Delete all idle or abandoned indexes?");
+        deleteViewModel.deleteTask.always(() => this.reload());
+        dialog.show(deleteViewModel); 
     }
 
     deleteAllNotUsedForWeek() {
-        require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
-            var db = this.activeDatabase();
-            var deleteViewModel = new deleteIndexesConfirm(this.notUsedForLastWeek().map(index => index.Name), db, "Delete all indexes not used within last week?");
-            deleteViewModel.deleteTask.always(() => this.reload());
-            dialog.show(deleteViewModel);
-        });
+        var db = this.activeDatabase();
+        var deleteViewModel = new deleteIndexesConfirm(this.notUsedForLastWeek().map(index => index.Name), db, "Delete all indexes not used within last week?");
+        deleteViewModel.deleteTask.always(() => this.reload());
+        dialog.show(deleteViewModel);
     }
 }
 

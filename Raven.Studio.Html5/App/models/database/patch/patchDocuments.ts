@@ -1,4 +1,4 @@
-import patchParam = require("models/patchParam");
+import patchParam = require("models/database/patch/patchParam");
 
 class patchDocuments {
 

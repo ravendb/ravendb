@@ -69,6 +69,10 @@
     <StartupObject>Raven.Tryouts.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Esent.Interop, Version=1.7.0.0, Culture=neutral, PublicKeyToken=8dd49bbdae3f61af, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
+    </Reference>
     <Reference Include="GeoAPI, Version=1.7.4693.18483, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
@@ -235,6 +239,10 @@
     <ProjectReference Include="..\Raven.Tests.Issues\Raven.Tests.Issues.csproj">
       <Project>{D8BDD718-6E21-41B7-9C41-D0FBE0532DF4}</Project>
       <Name>Raven.Tests.Issues</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.MailingList\Raven.Tests.MailingList.csproj">
+      <Project>{EA32FD05-8537-4A31-879E-20A0F2C87479}</Project>
+      <Name>Raven.Tests.MailingList</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>

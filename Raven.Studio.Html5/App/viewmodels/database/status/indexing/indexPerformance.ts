@@ -7,7 +7,7 @@ import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexi
 import getReducingBatchStatsCommand = require("commands/database/debug/getReducingBatchStatsCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 
 class dateRange {
     constructor(public start: Date, public end: Date) {
