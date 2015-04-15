@@ -1,5 +1,5 @@
-﻿import resource = require("models/resource");
-import license = require("models/license");
+﻿import resource = require("models/resources/resource");
+import license = require("models/auth/license");
 
 class counterStorage extends resource{
     static type = 'counterstorage';

@@ -363,6 +363,17 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
+		public void File_system_stats_after_copy()
+		{
+			var client = NewAsyncClient();
+			client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 })).Wait();
+
+			client.CopyAsync("file.bin", "newName.bin").Wait();
+
+			Assert.Equal(2, client.GetStatisticsAsync().Result.FileCount);
+		}
+
+		[Fact]
 		public async Task Can_back_to_previous_name()
 		{
 			var client = NewAsyncClient();
@@ -420,6 +431,26 @@ namespace Raven.Tests.FileSystem
 				ex = e.GetBaseException();
 			}
 			Assert.Contains(string.Format("Cannot rename because file {0} already exists", FileHeader.Canonize("file2.bin")), ex.Message);
+		}
+
+		[Fact]
+	    public async Task Can_copy_file()
+		{
+			var client = NewAsyncClient();
+			await client.UploadAsync("file1.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject
+			{
+				{"first", "aa"},
+				{"second", "bb"}
+			});
+			await client.CopyAsync("file1.bin", "file2.bin");
+			var files = await client.BrowseAsync();
+			Assert.Equal(2, files.Length);
+			Assert.True("file1.bin" == files[0].Name || "file2.bin" == files[0].Name);
+			Assert.True("file2.bin" == files[1].Name || "file1.bin" == files[1].Name);
+
+			var metadata = await client.GetMetadataForAsync("file2.bin");
+			Assert.Equal("aa", metadata.Value<string>("first"));
+			Assert.Equal("bb", metadata.Value<string>("second"));
 		}
 
 		[Fact]

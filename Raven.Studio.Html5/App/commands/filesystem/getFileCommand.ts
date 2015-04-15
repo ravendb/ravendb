@@ -2,7 +2,6 @@
 import file = require("models/filesystem/file");
 import fileMetadata = require("models/filesystem/fileMetadata");
 import filesystem = require("models/filesystem/filesystem");
-import pagedResultSet = require("common/pagedResultSet");
 
 class getFileCommand extends commandBase {
 

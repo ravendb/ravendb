@@ -1,0 +1,18 @@
+﻿<div id="upgradeContainer">
+    <div class="text-center">
+        <div data-bind="visible: inProgress" class="alert alert-warning" role="alert">
+            <br /><br />
+            <h2>Opening database...</h2>
+            <h4>The database is currently being loaded.</h4>
+            <br /><br />
+            <i class="fa fa-spin fa-5x fa-cog"></i>
+        </div>
+        
+        <div data-bind="visible: !inProgress()" class="alert alert-info" role="alert">
+            <br /><br />
+            <h2>Database has been loaded</h2>
+            <br /><br />
+            <i class="fa fa-check fa-5x"></i>
+        </div>
+    </div>
+</div>

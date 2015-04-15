@@ -1,14 +1,8 @@
 ﻿ /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
-
-import resource = require('models/resource');
-import appUrl = require('common/appUrl');
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
-import folder = require("models/filesystem/folder");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
-import shell = require("viewmodels/shell");
 import changesApi = require("common/changesApi");
 import idGenerator = require("common/idGenerator");
 

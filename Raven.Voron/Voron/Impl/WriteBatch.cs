@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Voron.Exceptions;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Impl
@@ -212,6 +213,7 @@ namespace Voron.Impl
 		{
 			var treeName = operation.TreeName;
 			AssertValidTreeName(treeName);
+			AssertValidKey(operation.Key);
 
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
@@ -249,6 +251,13 @@ namespace Voron.Impl
 				}
 				lastOpsForTree[operation.Key] = operation;
 			}
+		}
+
+		private void AssertValidKey(Slice key)
+		{
+			if (key.Size + Constants.NodeHeaderSize > AbstractPager.NodeMaxSize)
+				throw new ArgumentException(
+					"Key size is too big, must be at most " + (AbstractPager.NodeMaxSize - Constants.NodeHeaderSize) + " bytes, but was " + key.Size, "key");
 		}
 
 		internal class BatchOperation : IComparable<BatchOperation>

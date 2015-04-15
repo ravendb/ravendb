@@ -16,6 +16,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Abstractions.Data;
+using Raven.Client.FileSystem.Extensions;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {
@@ -769,6 +770,46 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			Assert.Equal(SynchronizationType.Delete, synchronizationReport.Type);
 			Assert.Null(synchronizationReport.Exception);
+		}
+
+		[Fact]
+	    public async Task Should_synchronize_copied_file()
+		{
+			var source = NewAsyncClient(0);
+			var destination = NewAsyncClient(1);
+			await source.UploadAsync("test.bin", new RandomStream(1024));
+			await source.CopyAsync("test.bin", "test-copy.bin");
+			await source.Synchronization.SetDestinationsAsync(destination.ToSynchronizationDestination());
+
+			var syncResult = await source.Synchronization.StartAsync();
+			Assert.Equal(1, syncResult.Length);
+			Assert.True(syncResult[0].Reports.All(r => r.Exception == null));
+
+			var destinationStream  = await destination.DownloadAsync("test-copy.bin");
+			var sourceStream = await destination.DownloadAsync("test-copy.bin");
+			Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
+		}
+
+		[Fact]
+		public async Task Should_resolve_copied_files()
+		{
+			var source = NewAsyncClient(0);
+			var destination = NewAsyncClient(1);
+			await source.UploadAsync("test.bin", new RandomStream(1024));
+			await source.CopyAsync("test.bin", "test-copy.bin");
+
+			await destination.UploadAsync("test.bin", new RandomStream(1024));
+			await destination.CopyAsync("test.bin", "test-copy.bin");
+
+			var result = SyncTestUtils.ResolveConflictAndSynchronize(source, destination, "test-copy.bin");
+
+			Assert.Null(result.Exception);
+
+			var destinationStream = await destination.DownloadAsync("test-copy.bin");
+			var sourceStream = await destination.DownloadAsync("test-copy.bin");
+			Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
+
+
 		}
 	}
 }

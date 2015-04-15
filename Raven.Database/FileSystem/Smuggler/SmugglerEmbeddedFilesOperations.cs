@@ -66,7 +66,7 @@ namespace Raven.Database.FileSystem.Smuggler
 			};
 		}
 
-		public Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take)
+		public Task<IAsyncEnumerator<FileHeader>> GetFiles(Etag lastEtag, int take)
 		{
 			ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
 
@@ -80,6 +80,30 @@ namespace Raven.Database.FileSystem.Smuggler
 			return new CompletedTask<IAsyncEnumerator<FileHeader>>(new AsyncEnumeratorBridge<FileHeader>(enumerable.GetEnumerator()));
 		}
 
+		public Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take)
+		{
+			var results = new List<KeyValuePair<string, RavenJObject>>();
+
+			filesystem.Storage.Batch(accessor =>
+			{
+				var names = accessor.GetConfigNames(start, take);
+
+				foreach (var name in names)
+				{
+					results.Add(new KeyValuePair<string, RavenJObject>(name, accessor.GetConfig(name)));
+				}
+			});
+
+			return new CompletedTask<IEnumerable<KeyValuePair<string, RavenJObject>>>(results);
+		}
+
+		public Task PutConfig(string name, RavenJObject value)
+		{
+			filesystem.Storage.Batch(accessor => accessor.SetConfig(name, value));
+
+			return new CompletedTask();
+		}
+
 		public Task<Stream> DownloadFile(FileHeader file)
 		{
 			var name = file.FullPath;
@@ -87,7 +111,7 @@ namespace Raven.Database.FileSystem.Smuggler
 			return new CompletedTask<Stream>(readingStream);
 		}
 
-		public async Task PutFiles(FileHeader file, Stream data, long dataSize)
+		public async Task PutFile(FileHeader file, Stream data, long dataSize)
 		{
 			await filesystem.Files.PutAsync(file.FullPath, null, file.Metadata, () => new CompletedTask<Stream>(data), new FileActions.PutOperationOptions
 			{

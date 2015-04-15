@@ -32,6 +32,7 @@ namespace Raven.Database.FileSystem.Actions
 	{
 		private readonly ConcurrentDictionary<string, Task> deleteFileTasks = new ConcurrentDictionary<string, Task>();
 		private readonly ConcurrentDictionary<string, Task> renameFileTasks = new ConcurrentDictionary<string, Task>();
+		private readonly ConcurrentDictionary<string, Task> copyFileTasks = new ConcurrentDictionary<string, Task>();
 		private readonly ConcurrentDictionary<string, FileHeader> uploadingFiles = new ConcurrentDictionary<string, FileHeader>();
 
 		private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(15));
@@ -47,6 +48,7 @@ namespace Raven.Database.FileSystem.Actions
 			timer.Subscribe(tick =>
 			{
 				ResumeFileRenamingAsync();
+				ResumeFileCopyingAsync();
 				CleanupDeletedFilesAsync();
 			});
 		}
@@ -126,7 +128,7 @@ namespace Raven.Database.FileSystem.Actions
 				{
 					await readFileToDatabase.Execute();
 
-					if (readFileToDatabase.TotalSizeRead != size)
+					if (size != null && readFileToDatabase.TotalSizeRead != size)
 					{
 						using (FileSystem.DisableAllTriggersForCurrentThread())
 						{
@@ -273,6 +275,39 @@ namespace Raven.Database.FileSystem.Actions
 
 			Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
 			Publisher.Publish(new FileChangeNotification { File = operation.Rename, Action = FileChangeAction.Renamed });
+		}
+
+		public void ExecuteCopyOperation(CopyFileOperation operation)
+		{
+			var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename);
+
+			Storage.Batch(accessor =>
+			{
+				AssertPutOperationNotVetoed(operation.TargetFilename, operation.MetadataAfterOperation);
+
+				var targetTombstrone = accessor.ReadFile(operation.TargetFilename);
+
+				if (targetTombstrone != null &&
+					targetTombstrone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+				{
+					// if there is a tombstone delete it
+					accessor.Delete(targetTombstrone.FullPath);
+				}
+
+				FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(operation.TargetFilename, operation.MetadataAfterOperation));
+
+				accessor.CopyFile(operation.SourceFilename, operation.TargetFilename, true);
+				var putResult = accessor.UpdateFileMetadata(operation.TargetFilename, operation.MetadataAfterOperation, null);
+
+				FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(operation.TargetFilename, null, operation.MetadataAfterOperation)); 
+
+				accessor.DeleteConfig(configName);
+
+				Search.Index(operation.TargetFilename, operation.MetadataAfterOperation, putResult.Etag);
+			});
+
+			Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
+			Publisher.Publish(new FileChangeNotification { File = operation.TargetFilename, Action = FileChangeAction.Add });
 		}
 
 		public void IndicateFileToDelete(string fileName, Etag etag)
@@ -508,6 +543,55 @@ namespace Raven.Database.FileSystem.Actions
 			return Task.WhenAll(tasks);
 		}
 
+		public Task ResumeFileCopyingAsync()
+		{
+			var filesToCopy = new List<CopyFileOperation>();
+
+			Storage.Batch(accessor =>
+			{
+				var copyOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.CopyOperationConfigPrefix, 0, 10);
+
+				filesToCopy = copyOpConfigs.Select(config => config.JsonDeserialization<CopyFileOperation>()).ToList();
+			});
+
+			if (filesToCopy.Count == 0)
+				return Task.FromResult<object>(null);
+
+			var tasks = new List<Task>();
+
+			foreach (var item in filesToCopy)
+			{
+				var copyOperation = item;
+
+				if (IsCopyInProgress(copyOperation.SourceFilename))
+					continue;
+
+				Log.Debug("Starting to resume a copy operation of a file '{0}' to '{1}'", copyOperation.SourceFilename,
+						  copyOperation.TargetFilename);
+
+				var copyTask = Task.Run(() =>
+				{
+					try
+					{
+						ExecuteCopyOperation(copyOperation);
+						Log.Debug("File '{0}' was copyied to '{1}'", copyOperation.SourceFilename, copyOperation.TargetFilename);
+
+					}
+					catch (Exception e)
+					{
+						Log.Warn(string.Format("Could not copy file '{0}' to '{1}'", copyOperation.SourceFilename, copyOperation.TargetFilename), e);
+						throw;
+					}
+				});
+
+				copyFileTasks.AddOrUpdate(copyOperation.SourceFilename, copyTask, (file, oldTask) => copyTask);
+
+				tasks.Add(copyTask);
+			}
+
+			return Task.WhenAll(tasks);
+		}
+
 		private static string SynchronizedFileName(string originalFileName)
 		{
 			return originalFileName.Substring(0, originalFileName.IndexOf(RavenFileNameHelper.DownloadingFileSuffix, StringComparison.InvariantCulture));
@@ -574,6 +658,22 @@ namespace Raven.Database.FileSystem.Actions
 				}
 
 				renameFileTasks.TryRemove(fileName, out existingTask);
+			}
+			return false;
+		}
+
+		private bool IsCopyInProgress(string fileName)
+		{
+			Task existingTask;
+
+			if (copyFileTasks.TryGetValue(fileName, out existingTask))
+			{
+				if (!existingTask.IsCompleted)
+				{
+					return true;
+				}
+
+				copyFileTasks.TryRemove(fileName, out existingTask);
 			}
 			return false;
 		}

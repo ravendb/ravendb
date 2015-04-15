@@ -47,8 +47,7 @@ namespace Raven.Database.Queries
 				suggestionQuery.Distance = StringDistanceTypes.Default;
 
 		    var definition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
-			var indexExtensionKey =
-				MonoHttpUtility.UrlEncode(suggestionQuery.Field + "-" + suggestionQuery.Distance + "-" + suggestionQuery.Accuracy);
+			var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field);
 			var indexExtension = database.IndexStorage.GetIndexExtensionByPrefix(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
 			IndexSearcher currentSearcher;
@@ -70,10 +69,8 @@ namespace Raven.Database.Queries
 					indexInstance,
 					database.WorkContext,
 					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
-					GetStringDistance((StringDistanceTypes) suggestionQuery.Distance),
 					indexReader.Directory() is RAMDirectory,
-					suggestionQuery.Field,
-					(float) suggestionQuery.Accuracy);
+					suggestionQuery.Field);
 
 				database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 

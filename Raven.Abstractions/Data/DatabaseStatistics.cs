@@ -106,6 +106,11 @@ namespace Raven.Abstractions.Data
 		/// Indicates if database supports DTC transactions.
 		/// </summary>
 		public bool SupportsDtc { get; set; }
+
+		/// <summary>
+		/// Indicates if process is 64-bit
+		/// </summary>
+		public bool Is64Bit { get; set; }
 	}
 
 	public class TriggerInfo
@@ -119,5 +124,6 @@ namespace Raven.Abstractions.Data
 	{
 		public List<ExtensionsLog> Extensions { get; set; }
 		public List<TriggerInfo> Triggers { get; set; }
+		public List<string> CustomBundles { get; set; }
 	}
 }

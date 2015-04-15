@@ -195,6 +195,7 @@
     <Compile Include="DynamicObjectTests.cs" />
     <Compile Include="DynamicQueryIndexSelection.cs" />
     <Compile Include="Edin.cs" />
+    <Compile Include="EncryptionFrank.cs" />
     <Compile Include="EnumAsInts.cs" />
     <Compile Include="EnumInIndexDef.cs" />
     <Compile Include="EtagIssue.cs" />
@@ -214,6 +215,7 @@
     <Compile Include="FilteredIndexTest.cs" />
     <Compile Include="FirstOrDefaultNullableDate.cs" />
     <Compile Include="FormOpensByDateAndMediaSourceAndVersionTest.cs" />
+    <Compile Include="FragementFail.cs" />
     <Compile Include="Gal.cs" />
     <Compile Include="Garrett.cs" />
     <Compile Include="gaz.cs" />

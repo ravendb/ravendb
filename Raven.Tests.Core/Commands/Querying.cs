@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
@@ -42,6 +43,56 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal("First Name", companies.Results[2].Value<string>("FirstName"));
             }
         }
+
+		[Fact]
+		public void CanProcessLongQueryString()
+		{
+			using (var store = GetDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var entity1 = new Company {Name = "Async Company #1", Id = "companies/1"};
+					session.Store(entity1);
+					var entity2 = new Company {Name = "Async Company #2", Id = "companies/2"};
+					session.Store(entity2);
+
+					session.SaveChanges();
+
+					session.Advanced.DocumentStore.DatabaseCommands.PutIndex("Test", new IndexDefinition
+					{
+						Map = "from doc in docs.Companies select new { doc.Name }"
+					}, true);
+
+					QueryResult query;
+					while (true)
+					{
+						query = session.Advanced.DocumentStore.DatabaseCommands.Query("Test", new IndexQuery());
+
+						if (query.IsStale == false)
+							break;
+
+						Thread.Sleep(100);
+					}
+				}
+
+				var stringBuilder = new StringBuilder();
+				var maxLengthOfQueryUsingGetUrl = store.Conventions.MaxLengthOfQueryUsingGetUrl;
+				while (stringBuilder.Length < maxLengthOfQueryUsingGetUrl)
+				{
+					stringBuilder.Append(@"(Name: ""Async Company #1"") OR");
+				}
+				stringBuilder.Append(@"(Name: ""Async Company #2"")");
+				//const string queryString = @"(((TagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""d278241e\-d6b2\-4d53\-bf42\-ae2786bb8307"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""ba59490f\-7003\-463b\-bb3d\-7ffd3f016af9"") AND (AssociatedTagID: ""0f7e407f\-46c8\-4dcc\-bcae\-512934732af5"")) OR (((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""53cd8b83\-8793\-4328\-a6f3\-d45755275766"")) OR (((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""7227bfa3\-1da2\-48d5\-aefb\-5716fe538173"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""66010435\-60bd\-4cb2\-bbba\-ef262c6f3b40"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""95cda7f6\-181c\-49f7\-809b\-9436011c7f29"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""6ce4f353\-93fa\-452c\-be97\-5c91c5a2a6bb"") AND (AssociatedTagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"")) OR (((TagID: ""6ba9d9d1\-6b33\-40df\-b0fe\-5091790d9519"") AND (AssociatedTagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"")) OR (((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"")) OR (((TagID: ""d278241e\-d6b2\-4d53\-bf42\-ae2786bb8307"") AND (AssociatedTagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"")) OR (((TagID: ""ba59490f\-7003\-463b\-bb3d\-7ffd3f016af9"") AND (AssociatedTagID: ""4e470c6a\-b2cc\-47ba\-a8c6\-0e84cc3c2f98"")) OR (((TagID: ""fb638f78\-686d\-4d81\-b9f6\-332a1c936a36"") AND (AssociatedTagID: ""ba59490f\-7003\-463b\-bb3d\-7ffd3f016af9"")) OR ((TagID: ""bd7ad8b4\-f9df\-4aa0\-9a18\-9517bfd4bd83"") AND (AssociatedTagID: ""ba59490f\-7003\-463b\-bb3d\-7ffd3f016af9""))))))))))))))))))";
+
+				Assert.NotInRange(stringBuilder.Length, 0, store.Conventions.MaxLengthOfQueryUsingGetUrl);
+				using (var session = store.OpenSession())
+				{
+					var indexQuery = new IndexQuery {Start = 0, PageSize = 50, Query = stringBuilder.ToString()};
+					var queryResult = session.Advanced.DocumentStore.DatabaseCommands.Query("Test", indexQuery);
+					Assert.Equal(2, queryResult.TotalResults);
+				}
+			}
+		}
 
         [Fact]
         public void CanStreamQueryResult()

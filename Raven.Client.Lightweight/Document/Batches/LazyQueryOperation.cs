@@ -82,7 +82,14 @@ namespace Raven.Client.Document.Batches
 
         public void HandleResponse(GetResponse response)
 		{
-			if (response.Status == 404)
+	        if (response.ForceRetry)
+	        {
+		        Result = null;
+		        RequiresRetry = true;
+		        return;
+	        }
+
+	        if (response.Status == 404)
 				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
 			var json = (RavenJObject)response.Result;
 			var queryResult = SerializationHelper.ToQueryResult(json, response.GetEtagHeader(), response.Headers["Temp-Request-Time"], -1);

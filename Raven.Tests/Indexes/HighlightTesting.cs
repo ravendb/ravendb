@@ -28,6 +28,7 @@ namespace Raven.Tests.Indexes
 				store.DatabaseCommands.PutIndex(new ContentSearchIndex().IndexName, new ContentSearchIndex().CreateIndexDefinition());
 				session.SaveChanges();
 				FieldHighlightings nameHighlighting;
+                WaitForIndexing(store);
                 var results = session.Advanced.DocumentQuery<SearchItem>("ContentSearchIndex")
 				                     .WaitForNonStaleResults()
 				                     .Highlight("Name", 128, 1, out nameHighlighting)

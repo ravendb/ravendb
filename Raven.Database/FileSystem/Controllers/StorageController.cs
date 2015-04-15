@@ -20,5 +20,12 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			return Files.ResumeFileRenamingAsync();
 		}
+
+		[HttpPost]
+		[RavenRoute("fs/{fileSystemName}/storage/retryCopying")]
+		public Task RetryCopying()
+		{
+			return Files.ResumeFileCopyingAsync();
+		}
 	}
 }

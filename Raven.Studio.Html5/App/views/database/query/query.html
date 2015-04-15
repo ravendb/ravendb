@@ -1,0 +1,273 @@
+﻿<div id="queryContainer" class="no-outline" tabindex="0">
+    <ul class="breadcrumb">
+        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+        <li>
+            <h3>
+                <a href="#resources">
+                    Databases
+                </a>
+            </h3>
+        </li>
+        <li data-bind="with: activeDatabase">
+            <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+        </li>
+        <li>
+            <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+        </li>
+        <li>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span data-bind="text: selectedIndexLabel"></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu scrollable-menu" role="menu">
+                    <!-- ko foreach: indexesExceptCurrent -->
+                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                    <!-- /ko -->
+					<li class="divider" data-bind="visible: collectionNamesExceptCurrent().length"></li>
+                    <!-- ko foreach: collectionNamesExceptCurrent -->
+                    <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic/' + $data)">
+                        <a href="#">
+                            <span data-bind="text: 'dynamic/' + $data"></span>
+                        </a>
+                    </li>
+                    <!-- /ko -->
+                    <li class="divider"></li>
+                    <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic')">
+                        <a href="#">
+                            <span>dynamic/All Documents</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </li>
+        <li class="active">Query</li>
+    </ul>
+
+    <div class="btn-toolbar" role="toolbar">
+        <div class="btn-group">
+            <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
+            <button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
+                <span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
+            </button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom" data-bind="enable: hasSelectedIndex">
+                    <i class="fa fa-plus"></i> Add <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li data-bind="visible: selectedIndex() !== 'All Documents'"><a href="#" data-bind="click: addSortBy" accesskey="O" title="Add a field to sort by (Alt+O)">Sort By</a></li>
+                    <li data-bind="visible: !transformer()"><a href="#" data-bind="click: addTransformer" accesskey="T" title="Add a transformer to transform the results of the query (Alt+T)" data-placement="right">Transformer</a></li>
+                </ul>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Configure advanced query options" data-bind="enable: hasSelectedIndex">
+                    <i class="fa fa-cog"></i> <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li style="padding-left: 20px;">
+                        <div class="btn-group">
+                            <label class="btn btn-default" data-bind="click: setOperatorOr, css: { active: isDefaultOperatorOr }" title="Set the default operator to OR">Or</label>
+                            <label class="btn btn-default" data-bind="click: setOperatorAnd, css: { active: !isDefaultOperatorOr() }" title="Set the default operator to AND">And</label>
+                        </div>
+                    </li>
+                    <li><a href="#"><label class="btn btn-default" data-bind="click: toggleShowFields, css: { active: showFields }" title="Show fields from matching index entries instead of matching documents">Show Fields</label></a></li>
+                    <li><a href="#"><label class="btn btn-default" data-bind="click: toggleIndexEntries, css: { active: indexEntries }" title="Show the raw index entries instead of matching documents">Index Entries</label></a></li>
+                </ul>
+            </div>
+            <a class="btn btn-default" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
+            <button type="button" class="btn btn-default" data-bind="click: selectColumns" title="Choose columns...">
+                <i class="fa fa-table"></i>
+            </button>
+            <a href="#" target="_blank" data-bind="attr: { href: exportUrl }, visible: isStaticIndexSelected, click: exportCsv" class=" btn btn-default" title="Export CSV" download>
+                <i class="fa fa-file-excel-o"></i>
+            </a>
+            <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">
+                <i class="fa fa-sitemap"></i>
+            </a>
+            <a class="btn btn-default" data-bind="attr: { href: indexPerfStatsUrl }" title="Indexing performance statistics">
+                <i class="fa fa-line-chart" />
+            </a>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: recentQueries().length > 0">
+                Recent Queries <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu" data-bind="foreach: recentQueries">
+                <li>
+                    <a href="#" data-bind="click: $root.runRecentQuery.bind($root, $data)">
+                        <span data-bind="text: IndexName === 'dynamic' ? 'All Documents' : IndexName"></span>
+                        <span data-bind="visible: QueryText">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: QueryText"></span>
+                        </span>
+                        <span data-bind="visible: Sorts.length, with: Sorts">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: 'sort by ' + $root.getRecentQuerySortText($data)"></span>
+                        </span>
+                        <span data-bind="with: TransformerQuery">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: 'transform by ' + transformerName + ' ' + $root.getStoredQueryTransformerParameters(queryParams)"></span>
+                        </span>
+                        <span data-bind="visible: UseAndOperator">
+                            <span class="text-muted">|</span>
+                            <span>AND operator</span>
+                        </span>
+                        <span data-bind="visible: ShowFields">
+                            <span class="text-muted">|</span>
+                            <span>show fields</span>
+                        </span>
+                        <span data-bind="visible: IndexEntries">
+                            <span class="text-muted">|</span>
+                            <span>index entries</span>
+                        </span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="btn-group">
+            <a class="btn btn-default" data-bind="attr: { href: termsUrl }, enable: hasSelectedIndex" title="Navigate to index terms">Terms</a>
+            <a class="btn btn-default" data-bind="enable: !!queryStats(), click: openQueryStats" title="Show Query Stats In Dialog">Query Stats</a>
+        </div>
+
+        <div class="btn-group" title="Delete all documents matching the query (map index only)">
+            <button class=" btn btn-danger" data-bind="enable: enableDeleteButton, click: deleteDocsMatchingQuery">
+                <i class="fa fa-trash-o"></i>
+            </button>
+        </div>
+    </div>
+    <br />
+    <div class="alert alert-warning" data-bind="visible: isTestIndex()" role="alert">This is test index which operates on limited data set.</div>
+
+    <form class="form-horizontal" role="form" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+        <div class="form-group">
+            <label id="indexQueryLabelContainer" class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index Query" data-trigger="hover">
+                <span id="indexQueryLabel" class="help-cursor">
+                    Query
+                    <i class="fa fa-info-circle text-info"></i>
+                </span>
+                <a target="_blank" class="label control-label-additional-link" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
+            </label>
+            <div class="col-md-11">
+                <div class="row">
+                    <div class="col-md-11">
+                        <pre id="queryEditor" class="form-control editor" data-bind="aceEditor: { code: queryText, allowResize: true, minHeight: 60, maxHeight: 200, completer:queryCompleter, typeName:'query', lang:'ace/mode/lucene', completerHostObject:$root}, valueUpdate: 'afterkeydown'"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group" data-bind="visible: sortBys().length > 0">
+            <label class="col-sm-1 control-label">
+                Sort By
+            </label>
+            <div class="col-md-9" data-bind="foreach: sortBys">
+                <div class="col-xs-12 col-sm-9 col-md-6 col-lg-5" style="padding-left: 0">
+                    <div class="panel panel-default">
+                        <div class="panel-body">
+                            <div class="col-md-11">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                        <span data-bind="text: fieldNameOrDefault"></span> <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.indexFields">
+                                        <li><a href="#" data-bind="text: $data, click: $parent.fieldName.bind($data)"></a></li>
+                                    </ul>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                        <span data-bind="visible: isAscending() && !isRange()">Ascending</span>
+                                        <span data-bind="visible: !isAscending() && !isRange()">Descending</span>
+                                        <span data-bind="visible: isAscending() && isRange()">Range Ascending</span>
+                                        <span data-bind="visible: !isAscending() && isRange()">Range Descending</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu">
+                                        <li><a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(false); }">Ascending</a></li>
+                                        <li><a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(false); }">Descending</a></li>
+                                        <li><a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(true); }">Range Ascending</a></li>
+                                        <li><a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(true); }">Range Descending</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div>
+                                <button type="button" class="close" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group" data-bind="visible: transformer() != null">
+            <label id="indexQueryLabelContainer" style="overflow-x: hidden; text-overflow: ellipsis;" class="col-md-1 control-label">
+                <span>Transformer</span>
+            </label>
+            <div class="col-xs-12 col-sm-9 col-md-6 col-lg-3">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <div class="btn-group col-md-11">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: transformer() && transformer().name() ? transformer().name() : 'Select a transformer'"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.allTransformers">
+                                <li><a href="#" data-bind="text: name, click: $root.selectTransformer.bind($root, $data)"></a></li>
+                            </ul>
+
+                        </div>
+                        <div>
+                            <button type="button" class="close" data-bind="click: $root.removeTransformer.bind($root)" title="Remove this transformer from the query">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="clearfix"></div>
+                    </div>
+                    <!-- ko if: typeof transformer() !== "undefined" && transformer() != null && transformer().extractInputs().length > 0 -->
+                    <div class="panel-body">
+                        <div class="btn-group col-md-12">
+                            <div class="clearfix"></div>
+                            <div id="transformerParams" data-bind="foreach: transformer().extractInputs()">
+                                <div class="form-group row">
+                                    <label data-bind="text: 'Parameter: '+$data.name" class="control-label"></label>
+                                    <input type="text" class="form-control transformer_param_flag" data-bind="attr: { name: $data.name, required: $data.hasDefault ? null : '' }, event: { change: $root.runQuery.bind($root) }" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /ko -->
+                </div>
+            </div>
+        </div>
+        <!--<ul class="list-group" data-bind="foreach: relatedDocumentHrefs">
+                <li class="list-group-item"><a data-bind="text:$data.id, attr:{href:$data.href}"></a></li>
+            </ul>-->
+        <div class="form-group">
+            <div class="form-group" data-bind="if:(isTestIndex() == false && !!$root.queryStats() && $root.queryStats().IsStale == true)">
+                <span class="col-md-offset-1 text-danger">Index is stale, possibly not all results presented</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="form-group col-md-12">
+                <label id="indexQueryLabelContainer" class="control-label col-md-1">
+                    Results
+                </label>
+                <div class="col-md-11 query-results">
+                    <div id="queryResultsPanel" class="panel panel-default">
+                        <div class="panel-body" data-bind="visible: isLoading">
+                            <span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="suggestion-box" data-bind="visible: $root.showSuggestions, foreach: $root.indexSuggestions">
+                                <div>Did you mean <a data-bind="text: Suggestion, click: $root.applySuggestion.bind($root, $data)" href="#"></a> for the field <i data-bind="text: FieldName"></i>?</div>
+                            </div>
+                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce:isIndexMapReduce, collections: collections, contextMenuOptions: ['copyitems', 'CopyIDs' , 'Delete', 'EditItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>

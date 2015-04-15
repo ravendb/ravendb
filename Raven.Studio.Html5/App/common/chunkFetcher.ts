@@ -1,5 +1,3 @@
-import pagedResultSet = require("common/pagedResultSet");
-
 class chunkFetcher<T> {
 
     constructor(private fetcher: (skip: number, take: number) => JQueryPromise<T[]>) {

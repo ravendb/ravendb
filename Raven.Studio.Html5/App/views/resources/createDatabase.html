@@ -1,0 +1,113 @@
+﻿<div class="col-md-7">
+    <div class="form-group">
+        <label for="databaseName">Name</label>
+        <input autofocus data-bind="value: databaseName, customValidity: nameCustomValidityError, valueUpdate: 'afterkeydown'" type="text" class=" autofocus form-control" id="databaseName" autocomplete="off" placeholder="Database Name">
+    </div>
+    <div class="panel-group" id="accordion">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#dbAdvancedOptions">
+                        Advanced Settings
+                    </a>
+                </h4>
+            </div>
+            <div id="dbAdvancedOptions" class="panel-collapse collapse">
+                <div class="panel-body">
+	                <div class="form-group">
+		                <label for="storageEngine">Storage Engine</label>
+		                <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
+			                <option value="">Default</option>
+			                <option value="esent">Esent</option>
+			                <option value="voron">Voron</option>
+		                </select>
+	                </div>
+					<div class="alert alert-danger" role="alert" data-bind="visible: voronWarningVisible">
+						Running Voron in 32-bit mode is error prone. Set Raven/Voron/AllowOn32Bits in configuration to allow Voron on 32-bit.
+					</div>
+                    <div class="form-group">
+                        <label for="databasePath">Path</label>
+                        <input data-bind="value: databasePath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + databaseName() }" type="text" class="form-control" id="databasePath" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="databaseLogs">Logs</label>
+                        <input data-bind="value: databaseLogsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + databaseName() }" type="text" class="form-control" id="databaseLogs" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="databaseIndexes">Indexes</label>
+                        <input data-bind="value: databaseIndexesPath, customValidity: indexesCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + databaseName() + '/Indexes/' }" type="text" class="form-control" id="databaseIndexes" autocomplete="off">
+                    </div>
+                    <div class="form-group" data-bind="visible: tempPathVisible">
+                        <label for="databaseIndexes">Temp</label>
+                        <input data-bind="value: databaseTempPath, customValidity: tempCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + databaseName() }" type="text" class="form-control" id="databaseTemp" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="incrementalBackup">Incremental Backup</label>
+                        <input type="checkbox" data-bind="checked: isIncrementalBackupChecked"/>
+                        <label for="alertTimeout" data-bind="visible: isIncrementalBackupChecked">Alert timeout in hours:</label>
+                        <select data-bind="value: alertTimeout, visible: isIncrementalBackupChecked" title="Sets the span of time allowed before issuing an alert for missing backup(in hours)." class="form-control" id="alertTimeout">
+                            <option value="4">4</option>
+                            <option value="8">8</option>
+                            <option value="12">12</option>
+                            <option value="">24</option>
+                            <option value="48">48</option>
+                            <option value="72">72</option>
+                        </select>
+                        <label for="alertRecurringTimeout" data-bind="visible: isIncrementalBackupChecked">Alert recurring Timeout in days:</label>
+                        <select data-bind="value: alertRecurringTimeout, visible: isIncrementalBackupChecked" title="Sets the span of time allowed before issuing multiple alerts on the same missed backup(in days)." class="form-control" id="alertRecurringTimeout">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="4">4</option>
+                            <option value="">7</option>
+                            <option value="14">14</option>
+                        </select>
+                    </div>
+                    <div class="form-group" data-bind="if: isClusterWideVisible, visible: isClusterWideVisible">
+                        <label for="clusterWide"> Cluster-wide</label>
+                        <input type="checkbox" id="clusterWide" data-bind="checked: isClusterWideChecked" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="col-md-5">
+    <div>
+        <label>Bundles</label>
+    </div>
+    <div class="btn-group-vertical" data-toggle="buttons-checkbox">
+        <button type="button" class="btn btn-default" data-bind="click: toggleCompressionBundle, css: { 'license-inactive': !isBundleActive('compression') }">
+            <i data-bind="css: {'fa-check': isCompressionBundleEnabled }" class="fa fa-fw"></i> Compression
+        </button>
+        <button type="button" class="btn btn-default" data-bind="click: toggleEncryptionBundle, css: { 'license-inactive': !isBundleActive('encryption') }">
+            <i data-bind="css: {'fa-check': isEncryptionBundleEnabled }" class="fa fa-fw"></i> Encryption
+        </button>
+        <button type="button" class="btn btn-default" data-bind="click: toggleExpirationBundle, css: { 'license-inactive': !isBundleActive('documentExpiration') }">
+            <i data-bind="css: {'fa-check': isExpirationBundleEnabled }" class="fa fa-fw"></i> Expiration
+        </button>
+        <button type="button" class="btn btn-default" data-bind="click: togglePeriodicExportBundle, css: { 'license-inactive': !isBundleActive('periodicBackup') }">
+            <i data-bind="css: {'fa-check': isPeriodicExportBundleEnabled }" class="fa fa-fw"></i> Periodic Export
+        </button>
+        <button type="button" class="btn btn-default" data-bind="click: toggleQuotasBundle, css: { 'license-inactive': !isBundleActive('quotas') }">
+            <i data-bind="css: {'fa-check': isQuotasBundleEnabled }" class="fa fa-fw"></i> Quotas
+        </button>
+        <button type="button" class="btn btn-default" data-bind="click: toggleReplicationBundle, disable: clusterMode(), css: { 'license-inactive': !isBundleActive('replication') }">
+            <i data-bind="css: {'fa-check': isReplicationBundleEnabled }" class="fa fa-fw"></i> Replication
+        </button>
+        <button type="button" class="btn btn-default" data-bind="click: toggleScriptedIndexBundle">
+            <i data-bind="css: {'fa-check': isScriptedIndexBundleEnabled }" class="fa fa-fw"></i> Scripted Index
+        </button>
+        <button type="button" class="btn btn-default" data-bind="click: toggleSqlReplicationBundle">
+            <i data-bind="css: {'fa-check': isSqlReplicationBundleEnabled }" class="fa fa-fw"></i> SQL Replication
+        </button>
+	    <button type="button" class="btn btn-default" data-bind="click: toggleVersioningBundle, css: { 'license-inactive': !isBundleActive('versioning') }">
+		    <i data-bind="css: {'fa-check': isVersioningBundleEnabled }" class="fa fa-fw"></i> Versioning
+	    </button>
+	    <!-- ko foreach: customBundles -->
+			<button type="button" class="btn btn-default" data-bind="click: $parent.toggleCustomBundle.bind($parent, $data)">
+				<i data-bind="css: {'fa-check': $parent.selectedCustomBundles().indexOf($data)>=0 }" class="fa fa-fw"></i> <span data-bind="text: $data"></span>
+			</button>
+		<!-- /ko -->
+    </div>
+</div>
+          

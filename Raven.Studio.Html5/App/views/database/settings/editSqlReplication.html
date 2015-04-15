@@ -1,0 +1,237 @@
+﻿<section id="editSQLReplication">
+    <form class="form-horizontal" role="form" data-bind="submit: save">
+        <div class="btn-toolbar edit-sql-replication-actions">
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary" data-bind="enable: $root.isSaveEnabled()" title="Save the index (Alt+S)" accesskey="S">
+                    <i class="fa fa-save"></i>
+                </button>
+                <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshSqlReplication">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+            <div class="btn-group tools">
+                <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="A">
+                    Tools
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a href="#" title="View current SQL Replication stats" data-bind="click: showStats">Stats</a>
+                    </li>
+                    <li>
+                        <a href="#" title="Simulate SQL Replication" data-bind="click: simulateSqlReplication">
+                            Simulation
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" title="Open Sql Replication Statistics and Metrics View" data-bind="attr: {href: $root.sqlReplicationStatsAndMetricsHref }" target="_blank">
+                            Metrics Page<i class="fa fa-external-link"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-warning" title="Reset SQL Replication" data-bind="click: resetSqlReplication">
+                    <span class="glyphicon glyphicon-retweet"></span>
+                </button>
+                <button class="btn btn-danger" title="Delete SQL Replication" data-bind="click: deleteSqlReplication">
+                    <i class="fa fa-trash-o"></i>
+                </button>
+            </div>
+        </div>
+
+        <div data-bind="with: $root.editedReplication" style="padding-top: 5px;">
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label class="col-sm-4 control-label" title="SQL Replication name (alt+i)">Name</label>
+                    <div class="col-sm-8">
+                        <input tabindex="3" required type="text" class="form-control" name="name" data-bind="value: name, valueUpdate: 'afterkeydown', attr: { placeholder: 'New SQL Replication'}" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Source Document Collection</label>
+                    <div class="col-sm-8">
+                        <input tabindex="2" required name="ravenEntityName" type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'afterkeydown', attr: { 'id': 'sourceDocumentCollection'}" />
+                        <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#sourceDocumentCollection', foreach: searchResults">
+                            <li role="presentation" data-bind="click: $parent.saveNewRavenEntityName.bind($parent, $data)">
+                                <a role="menuitem" tabindex="-1" href="#">
+                                    <span data-bind="text: $data"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">SQL Replication Tables</label>
+                    <div class="col-sm-8">
+                        <table tabindex="8" class="table table-striped table-hover table-sql-replication-tables">
+                            <thead>
+                            <tr class="sql-replication-tables-header">
+                                <td>Table Name</td>
+                                <td>Document Key</td>
+                                <td>Insert only</td>
+                                <td class="narrowest-column">
+                                    <button type="button" class="btn btn-default" data-bind="click: addNewTable" title="Add new table">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            </thead>
+                            <tbody data-bind="foreach: sqlReplicationTables">
+                            <tr>
+                                <td>
+                                    <div>
+                                        <input required type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'afterkeydown'"/>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <input required type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'afterkeydown'"/>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                            <span data-bind="visible: insertOnly()">Yes</span>
+                                            <span data-bind="visible: !insertOnly()">No</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <li><a href="#" data-bind="click: function() { $data.insertOnly(true); }">Yes</a></li>
+                                            <li><a href="#" data-bind="click: function() { $data.insertOnly(false); }">No</a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button type="button" style="display: inline-block;" class="close" data-bind="visible: $parent.sqlReplicationTables().length > 1, click: $parent.removeTable.bind($parent)" title="Remove this table">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                        <div class="alert alert-warning" role="älert" data-bind="visible: hasAnyInsertOnlyOption">
+                            <i class="fa fa-warning"></i> Insert only option is only valid for tables in which documents are not modified. If they do updates, they would result in errors/duplicate information. 
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label class="col-sm-4 control-label" title="Sql Replication Mode (Alt+I)">Replication</label>
+                    <div class="col-sm-8">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: !disabled()">Enabled</span>
+                                <span data-bind="visible: disabled">Disabled</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: enable">Enabled</a></li>
+                                <li><a href="#" data-bind="click: disable">Disabled</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label" data-bind="text: connectionStringSourceFieldName"></label>
+                    <div class="col-sm-8">
+                        <textarea tabindex="6" rows="4" required class="form-control" data-bind="attr:{required:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringValue, valueUpdate: 'afterkeydown'" />
+                        <select tabindex="7" required class="form-control" data-bind="options:$root.availableConnectionStrings, optionsText:'name', optionsValue:'name', attr:{required:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?connectionStringValue:null, valueUpdate: 'afterkeydown'" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button class="col-sm-4 btn" data-toggle="button" data-bind="attr:{title:('Switch to ' + ($root.isBasicView() === true?'Advanced':'Basic') + ' mode')}, click: function(){$root.isBasicView.toggle();}, css:{active: !$root.isBasicView() === true}">
+                        <i class="fa fa-cogs"></i> Show advanced settings
+                    </button>
+                </div>
+                <div class="form-group" data-bind="visible:$root.isBasicView() == false">
+                    <label class="col-sm-4 control-label">SQL Provider</label>
+                    <div class="col-sm-8">
+                        <select tabindex="5" required class="form-control"
+                                data-bind="attr:{required:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null}, event:{change:$root.providerChanged.bind($root)}, options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
+                    </div>
+                </div>
+                <div class="form-group" data-bind="visible:$root.isBasicView() == false">
+                    <label class="col-sm-4 control-label">Connection String Source</label>
+                    <div class="col-sm-8">
+                        <select tabindex="7" required class="form-control"
+                                data-bind="options: $data.availableConnectionStringTypes, optionsCaption: '', value: connectionStringType"></select>
+                    </div>
+                </div>
+                <div class="form-group" data-bind="visible:$root.isBasicView() == false">
+                    <!--<label class="col-sm-4 control-label">Disable Parameterized Deletes</label>
+                    <div class="checkbox col-sm-8">
+                        <input type="checkbox" data-bind="checked: parameterizeDeletesDisabled" />
+                    </div>-->
+                    <label class="col-sm-4 control-label">Parameterized Deletes</label>
+                    <div class="checkbox col-sm-8">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: !parameterizeDeletesDisabled()">Enable parameterized deletes</span>
+                                <span data-bind="visible: parameterizeDeletesDisabled">Disable parameterized deletes</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: parameterizeDeletesDisabled.bind(parameterizeDeletesDisabled, false)">Enable parameterized deletes</a></li>
+                                <li><a href="#" data-bind="click: parameterizeDeletesDisabled.bind(parameterizeDeletesDisabled, true)">Disable parameterized deletes</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" data-bind="visible:$root.isBasicView() === false &&  (isSqlServerKindOfFactory(factoryName()) === true  || (connectionStringType() == PREDEFINED_CONNECTION_STRING_NAME && !!$root.availableConnectionStrings.first(function(x){debugger; return x.name() == connectionStringValue() && isSqlServerKindOfFactory(x.factoryName()) == true})))">
+                    <label class="col-sm-4 control-label">Query Recompiling</label>
+                    <div class="checkbox col-sm-8">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: forceSqlServerQueryRecompile">Force recompile</span>
+                                <span data-bind="visible: !forceSqlServerQueryRecompile()">Don't force recompile</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: forceSqlServerQueryRecompile.bind(forceSqlServerQueryRecompile, true)">Force recompile</a></li>
+                                <li><a href="#" data-bind="click: forceSqlServerQueryRecompile.bind(forceSqlServerQueryRecompile, false)">Don't force recompile</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" data-bind="visible:$root.isBasicView() === false">
+                    <label class="col-sm-4 control-label">Table Quotation</label>
+                    <div class="checkbox col-sm-8">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+								<span data-bind="visible: quoteTables()">Use quotes for tables</span>
+								<span data-bind="visible: !quoteTables()">Don't use quotes for tables</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: quoteTables.bind(quoteTables, true)">Use quotes for tables</a></li>
+                                <li><a href="#" data-bind="click: quoteTables.bind(quoteTables, false)">Don't use quotes for tables</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <br />
+
+            
+        </div>
+        <div data-bind="visible: $root.editedReplication">
+            <div class="form-group sql-replication-script-container col-sm-12">
+                <label class="col-sm-1 control-label script-label" data-placement="auto right" data-trigger="hover">
+                    <span class="help-cursor">
+                        Script
+                        <i class="fa fa-info-circle text-info"></i>
+                    </span>
+                </label>
+
+                <div class="col-sm-11">
+                    <pre tabindex="9" id="sqlReplicationEditor" class="form-control editor" data-bind="aceEditor: { code: $root.script, lang: 'ace/mode/javascript' }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 40 }"></pre>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>

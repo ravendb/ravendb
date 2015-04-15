@@ -2,10 +2,10 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require('viewmodels/shell');
 import counterStorage = require("models/counter/counterStorage");
-import changeSubscription = require("models/changeSubscription");
-import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import createCounterStorageCommand = require("commands/counter/createCounterStorageCommand");
 import appUrl = require("common/appUrl");
+import createCounterStorage = require("viewmodels/counter/createCounterStorage");
+import deleteCounterStorageConfirm = require("viewmodels/counter/deleteCounterStorageConfirm");
 
 class counterStorages extends viewModelBase {
 
@@ -89,16 +89,14 @@ class counterStorages extends viewModelBase {
     }
     
     createNewCountersStorage() {
-        require(["viewmodels/counter/createCounterStorage"], createCounterStorage => {
-            var createCounterStorageiewModel = new createCounterStorage(this.counterStorages);
-            createCounterStorageiewModel
-                .creationTask
-                .done((counterStorageName: string, counterStoragePath: string) => {
-                    counterStoragePath = !!counterStoragePath && counterStoragePath.length > 0 ? counterStoragePath : "~/Counters/" + counterStorageName;
-                    this.showCreationAdvancedStepsIfNecessary(counterStorageName, counterStoragePath);
-                });
-            app.showDialog(createCounterStorageiewModel);
-        });
+        var createCounterStorageiewModel = new createCounterStorage(this.counterStorages);
+        createCounterStorageiewModel
+            .creationTask
+            .done((counterStorageName: string, counterStoragePath: string) => {
+                counterStoragePath = !!counterStoragePath && counterStoragePath.length > 0 ? counterStoragePath : "~/Counters/" + counterStorageName;
+                this.showCreationAdvancedStepsIfNecessary(counterStorageName, counterStoragePath);
+            });
+        app.showDialog(createCounterStorageiewModel);
     }
 
     private showCreationAdvancedStepsIfNecessary(counterStorageName: string, counterStoragePath: string) {
@@ -113,11 +111,9 @@ class counterStorages extends viewModelBase {
     deleteSelectedCounterStorage() {
         var cs: counterStorage = this.selectedCounterStorage();
         if (!!cs) {
-            require(["viewmodels/counter/deleteCounterStorageConfirm"], deleteCounterStorageConfirm => {
-                var confirmDeleteVm = new deleteCounterStorageConfirm(cs);
-                confirmDeleteVm.deleteTask.done(() => this.onCounterStorageDeleted(cs.name));
-                app.showDialog(confirmDeleteVm);
-            });
+            var confirmDeleteVm = new deleteCounterStorageConfirm(cs);
+            confirmDeleteVm.deleteTask.done(() => this.onCounterStorageDeleted(cs.name));
+            app.showDialog(confirmDeleteVm);
         }
     }
 

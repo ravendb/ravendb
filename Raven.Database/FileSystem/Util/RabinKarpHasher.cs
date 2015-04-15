@@ -30,8 +30,14 @@ namespace Raven.Database.FileSystem.Util
 			if (size != length)
 				throw new ArgumentException("Buffer size must match hasher length");
 
-			return current = bytes.Skip(position).Take(size)
-				.Aggregate(0, (acc, cur) => (R * acc + cur) % Q);
+			var result = 0;
+			for (var i = position; i < position + size; i++)
+			{
+				var c = bytes[i];
+				result = (R * result + c) % Q;
+			}
+
+			return result;
 		}
 
 		public int Move(byte prev, byte next)

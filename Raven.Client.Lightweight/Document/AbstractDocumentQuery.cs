@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -157,7 +158,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected int start;
 
-		private DocumentConvention conventions;
+		private readonly DocumentConvention conventions;
 		/// <summary>
 		/// Timeout for this query
 		/// </summary>
@@ -299,7 +300,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AbstractDocumentQuery{T, TSelf}"/> class.
 		/// </summary>
-		public AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
+		protected AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 									 IDatabaseCommands databaseCommands,
 									 IAsyncDatabaseCommands asyncDatabaseCommands,
 									 string indexName,
@@ -308,15 +309,15 @@ namespace Raven.Client.Document
 									 IDocumentQueryListener[] queryListeners,
 									 bool isMapReduce)
 		{
-			this.theDatabaseCommands = databaseCommands;
+			theDatabaseCommands = databaseCommands;
 			this.projectionFields = projectionFields;
 			this.fieldsToFetch = fieldsToFetch;
 			this.queryListeners = queryListeners;
 			this.isMapReduce = isMapReduce;
 			this.indexName = indexName;
 			this.theSession = theSession;
-			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
-			this.AfterQueryExecuted(this.UpdateStatsAndHighlightings);
+			theAsyncDatabaseCommands = asyncDatabaseCommands;
+			AfterQueryExecuted(UpdateStatsAndHighlightings);
 
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
@@ -336,8 +337,8 @@ namespace Raven.Client.Document
 
 		private void UpdateStatsAndHighlightings(QueryResult queryResult)
 		{
-			this.queryStats.UpdateQueryStats(queryResult);
-			this.highlightings.Update(queryResult);
+			queryStats.UpdateQueryStats(queryResult);
+			highlightings.Update(queryResult);
 		}
 
 		/// <summary>
@@ -378,7 +379,7 @@ namespace Raven.Client.Document
 			showQueryTimings = other.showQueryTimings;
 			shouldExplainScores = other.shouldExplainScores;
 
-			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
+			AfterQueryExecuted(UpdateStatsAndHighlightings);
 		}
 
 		#region TSelf Members
@@ -709,6 +710,17 @@ namespace Raven.Client.Document
 			return Lazily(null);
 		}
 
+		//the assumption here that there is only one of them is not null
+		//and even if not, they should have the same operation headers 
+		private NameValueCollection GetOperationHeaders()
+		{
+			if (DatabaseCommands != null)
+				return DatabaseCommands.OperationsHeaders;
+			
+			return AsyncDatabaseCommands != null ? 
+				AsyncDatabaseCommands.OperationsHeaders : new NameValueCollection(0);
+		}
+
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
@@ -721,7 +733,7 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation();
 			}
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, DatabaseCommands.OperationsHeaders);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
 
@@ -737,9 +749,8 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation();
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, AsyncDatabaseCommands.OperationsHeaders);
-
-			return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
+			return ((AsyncDocumentSession) theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
 
 
@@ -756,7 +767,8 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation();
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes,DatabaseCommands.OperationsHeaders);
+
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
 
 			return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
 		}

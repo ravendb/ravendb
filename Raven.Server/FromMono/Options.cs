@@ -843,7 +843,7 @@ namespace NDesk.Options
 			{
 				currentCategory = p.Category;
 			}
-			else if (p.Category.HasFlag(currentCategory) || p.Category == OptionCategory.None)
+			else if (p.Category.HasFlag(currentCategory) || currentCategory.HasFlag(p.Category) || p.Category == OptionCategory.None)
 			{
 				currentCategory |= p.Category;
 			}

@@ -1,6 +1,4 @@
-﻿import pagedList = require("common/pagedList");
-import pagedResultSet = require("common/pagedResultSet");
-import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
+﻿import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 import filesystem = require("models/filesystem/filesystem");
 
 class configurationKey {
