@@ -77,7 +77,6 @@ namespace Raven.Database.Bundles.SqlReplication
 		public void Execute(DocumentDatabase database)
 		{
 			defaultPrefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
-			defaultPrefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
 			prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
 
 			Database = database;
@@ -222,6 +221,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					.ToList();
 
 				var successes = new ConcurrentQueue<Tuple<SqlReplicationConfigWithLastReplicatedEtag, Etag>>();
+				var waitForWork = new bool[groupedConfigs.Count];
 				try
 				{
 					BackgroundTaskExecuter.Instance.ExecuteAll(Database.WorkContext, groupedConfigs, (sqlConfigGroup, i) =>
@@ -269,6 +269,10 @@ namespace Raven.Database.Bundles.SqlReplication
 								{
 									foreach (var configToWorkOn in configsToWorkOn)
 										successes.Enqueue(Tuple.Create(configToWorkOn, latestEtag));
+								}
+								else
+								{
+									waitForWork[i] = true;
 								}
 
 								return;
@@ -374,7 +378,12 @@ namespace Raven.Database.Bundles.SqlReplication
 					});
 
 					if (successes.Count == 0)
-						break;
+					{
+						if (waitForWork.All(x => x))
+							Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
+
+						continue;
+					}
 
 					foreach (var t in successes)
 					{
@@ -549,7 +558,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			return "SqlReplication/Deletions/" + replicationConfig.Name;
 		}
 
-		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs, out int countOfReplicatedItems)
+		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, ICollection<ReplicatedDoc> docs, out int countOfReplicatedItems)
 		{
 			countOfReplicatedItems = 0;
 			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
@@ -659,9 +668,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			return lastEtag;
 		}
 
-		public RelationalDatabaseWriter.TableQuerySummary[] SimulateSqlReplicationSQLQueries(string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert)
+		public RelationalDatabaseWriter.TableQuerySummary[] SimulateSqlReplicationSqlQueries(string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert)
 		{
-			alert = null;
 			RelationalDatabaseWriter.TableQuerySummary[] resutls = null;
 
 			try
@@ -742,16 +750,17 @@ namespace Raven.Database.Bundles.SqlReplication
 			sqlReplicationConfigs = new List<SqlReplicationConfig>();
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				const string prefix = "Raven/SqlReplication/Configuration/";
+				const string Prefix = "Raven/SqlReplication/Configuration/";
 
 				var connectionsDoc = accessor.Documents.DocumentByKey(Constants.RavenSqlReplicationConnectionsDocumentName);
 				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections(); // backward compatibility
 
-				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))
+				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(Prefix, 0, int.MaxValue, null))
 				{
 					var cfg = sqlReplicationConfigDocument.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
 					var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
-					if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections)) continue;
+					if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections)) 
+						continue;
 					sqlReplicationConfigs.Add(cfg);
 				}
 			});

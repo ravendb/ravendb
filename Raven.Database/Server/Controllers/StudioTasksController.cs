@@ -295,7 +295,7 @@ for(var customFunction in customFunctions) {{
                     JsonConvert.DeserializeObject<SqlReplicationConfig>(GetQueryStringValue("sqlReplication"));
 
                 // string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert, out Dictionary<string,object> parameters
-                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
+                var results = task.SimulateSqlReplicationSqlQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
 
                 return GetMessageWithObjectAsTask(new {
                     Results = results,
