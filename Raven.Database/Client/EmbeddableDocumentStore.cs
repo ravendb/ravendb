@@ -287,7 +287,12 @@ namespace Raven.Client.Embedded
             return Inner.OpenAsyncSession(database);
         }
 
-        public IDocumentSession OpenSession()
+	    public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
+	    {
+		    return Inner.OpenAsyncSession(sessionOptions);
+	    }
+
+	    public IDocumentSession OpenSession()
         {
             return Inner.OpenSession();
         }

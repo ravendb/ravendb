@@ -130,6 +130,14 @@ namespace Raven.Client.Shard
 			return OpenAsyncSessionInternal(databaseName, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(databaseName)));
 		}
 
+		/// <summary>
+		/// Opens the async session with the specified options.
+		/// </summary>
+		public override IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
+		{
+			return OpenAsyncSessionInternal(sessionOptions.Database, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(sessionOptions.Database).With(sessionOptions.Credentials)));
+		}
+
 		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName,Dictionary<string, IAsyncDatabaseCommands> shardDbCommands)
 		{
 			EnsureNotClosed();

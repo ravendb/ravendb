@@ -1,13 +1,10 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
 using Raven.Tests.Common;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Raven.Tests.Indexes
@@ -74,7 +71,9 @@ namespace Raven.Tests.Indexes
                
                 WaitForIndexing(store);
 
-                store.DocumentDatabase.RunIdleOperations();
+	            var indexReplaceDocId = Constants.IndexReplacePrefix + "ReplacementOf/" + new NewIndex().IndexName;
+
+				Assert.True(SpinWait.SpinUntil(() => store.DatabaseCommands.Get(indexReplaceDocId) == null, TimeSpan.FromSeconds(30))); // wait for index replacement
 
                 using (var session = store.OpenSession())
                 {
