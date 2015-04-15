@@ -1,4 +1,5 @@
 import getApiKeysCommand = require("commands/auth/getApiKeysCommand");
+import saveApiKeysCommand = require("commands/auth/saveApiKeysCommand");
 import apiKey = require("models/auth/apiKey");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require('viewmodels/shell');
@@ -101,15 +102,13 @@ class apiKeys extends viewModelBase {
         var deletedApiKeys = this.loadedApiKeys().filter((key: apiKey) => apiKeysNamesArray.contains(key.name()) == false);
         deletedApiKeys.forEach((key: apiKey) => key.setIdFromName());
 
-        require(["commands/auth/saveApiKeysCommand"], saveApiKeysCommand => {
-            new saveApiKeysCommand(this.apiKeys(), deletedApiKeys)
-                .execute()
-                .done((result: bulkDocumentDto[]) => {
-                    this.updateKeys(result);
-                    this.saveLoadedApiKeys(this.apiKeys());
-                    this.dirtyFlag().reset();
-                });
-        });
+        new saveApiKeysCommand(this.apiKeys(), deletedApiKeys)
+            .execute()
+            .done((result: bulkDocumentDto[]) => {
+                this.updateKeys(result);
+                this.saveLoadedApiKeys(this.apiKeys());
+                this.dirtyFlag().reset();
+            });
     }
 
     updateKeys(serverKeys: bulkDocumentDto[]) {

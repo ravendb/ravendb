@@ -15,6 +15,8 @@ import indexesAndTransformersClipboardDialog = require("viewmodels/database/inde
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import d3 = require('d3/d3');
+import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
+import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 
 class indexes extends viewModelBase {
 
@@ -296,37 +298,33 @@ class indexes extends viewModelBase {
     }
 
     cancelIndex(i: index) {
-        require(["viewmodels/database/indexes/cancelSideBySizeConfirm"], cancelSideBySizeConfirm => {
-            var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
-            app.showDialog(cancelSideBySideIndexViewModel);
-            cancelSideBySideIndexViewModel.cancelTask
-                .done((closedWithoutDeletion: boolean) => {
-                    if (closedWithoutDeletion == false) {
-                        this.removeIndexesFromAllGroups([i]);
-                    }
-                })
-                .fail(() => {
+        var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
+        app.showDialog(cancelSideBySideIndexViewModel);
+        cancelSideBySideIndexViewModel.cancelTask
+            .done((closedWithoutDeletion: boolean) => {
+                if (closedWithoutDeletion == false) {
                     this.removeIndexesFromAllGroups([i]);
-                    this.fetchIndexes();
-                });
-        });
+                }
+            })
+            .fail(() => {
+                this.removeIndexesFromAllGroups([i]);
+                this.fetchIndexes();
+            });
     }
 
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
-            require(["viewmodels/database/indexes/deleteIndexesConfirm"], deleteIndexesConfirm => {
-                var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
-                app.showDialog(deleteIndexesVm);
-                deleteIndexesVm.deleteTask
-                    .done((closedWithoutDeletion: boolean) => {
-                        if (closedWithoutDeletion == false) {
-                            this.removeIndexesFromAllGroups(indexes);
-                        }
-                    })
-                    .fail(() => {
+            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
+            app.showDialog(deleteIndexesVm);
+            deleteIndexesVm.deleteTask
+                .done((closedWithoutDeletion: boolean) => {
+                    if (closedWithoutDeletion == false) {
                         this.removeIndexesFromAllGroups(indexes);
-                        this.fetchIndexes();
-                });
+                    }
+                })
+                .fail(() => {
+                    this.removeIndexesFromAllGroups(indexes);
+                    this.fetchIndexes();
             });
         }
     }

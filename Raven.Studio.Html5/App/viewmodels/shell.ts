@@ -52,6 +52,7 @@ import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import topology = require("models/database/replication/topology");
+import licensingStatus = require("viewmodels/common/licensingStatus");
 
 class shell extends viewModelBase {
     private router = router;
@@ -999,10 +1000,8 @@ class shell extends viewModelBase {
     }
 
     showLicenseStatusDialog() {
-        require(["viewmodels/common/licensingStatus"], licensingStatus => {
-            var dialog = new licensingStatus(license.licenseStatus());
-            app.showDialog(dialog);
-        });
+        var dialog = new licensingStatus(license.licenseStatus());
+        app.showDialog(dialog);
     }
 
     fetchSystemDatabaseAlerts() {

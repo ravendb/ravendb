@@ -5,6 +5,7 @@ import appUrl = require("common/appUrl");
 import documentClass = require("models/database/documents/document");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 
 class studioConfig extends viewModelBase {
 
@@ -90,16 +91,14 @@ class studioConfig extends viewModelBase {
     saveStudioConfig(newDocument: documentClass) {
         var deferred = $.Deferred();
 
-        require(["commands/database/documents/saveDocumentCommand"], saveDocumentCommand => {
-            var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase).execute();
-            saveTask
-                .done((saveResult: bulkDocumentDto[]) => {
-                    this.configDocument(newDocument);
-                    this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
-                    deferred.resolve();
-                })
-                .fail(() => deferred.reject());
-        });
+        var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase).execute();
+        saveTask
+            .done((saveResult: bulkDocumentDto[]) => {
+                this.configDocument(newDocument);
+                this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
+                deferred.resolve();
+            })
+            .fail(() => deferred.reject());
 
         return deferred;
     }
