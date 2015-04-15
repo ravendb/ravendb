@@ -86,7 +86,6 @@
     <TypeScriptCompile Include="App\commands\database\studio\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\operations\getOperationStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\getLatestServerBuildVersionCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\getSingleAuthTokenCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\transformers\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\exportDatabaseCommand.ts" />
@@ -215,7 +214,6 @@
     <TypeScriptCompile Include="App\models\database\sqlReplication\sqlReplicationConnections.ts" />
     <TypeScriptCompile Include="App\models\database\sqlReplication\sqlReplicationSimulatedCommand.ts" />
     <TypeScriptCompile Include="App\models\database\index\transformer.ts" />
-    <TypeScriptCompile Include="App\models\uploadItem.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\adminSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\alerts.ts" />
@@ -410,7 +408,6 @@
     <TypeScriptCompile Include="App\models\database\documents\customColumns.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\selectColumns.ts" />
     <TypeScriptCompile Include="App\common\changesApi.ts" />
-    <TypeScriptCompile Include="App\models\changeSubscription.ts" />
     <TypeScriptCompile Include="App\common\changesCallback.ts" />
     <TypeScriptCompile Include="App\models\database\patch\patchDocument.ts" />
     <TypeScriptCompile Include="App\models\database\patch\patchParam.ts" />
