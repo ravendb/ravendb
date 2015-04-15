@@ -805,6 +805,7 @@
     <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\TasksStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
+    <Compile Include="Suggestions\LegacySuggestionsHandling.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
     <Compile Include="T1.cs" />

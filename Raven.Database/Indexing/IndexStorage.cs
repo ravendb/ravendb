@@ -318,7 +318,21 @@ namespace Raven.Database.Indexing
 
 			try
 			{
-				foreach (var directory in Directory.GetDirectories(suggestionsForIndex))
+				var directories = Directory.GetDirectories(suggestionsForIndex);
+				if (directories.Any(dir => dir.Contains("-")))
+				{
+					// Legacy handling:
+					// Previously we had separate folder with suggestions for each triple: (field, distanceType, accuracy)
+					// Now we have field only.
+					// Legacy naming convention was: field-{distanceType}-{accuracy}
+					// since when we have - (dash) in SOME folder name it seems to be legacy
+					HandleLegacySuggestions(directories);
+
+					// Refresh directories list as handling legacy might rename or delete some of them.					
+					directories = Directory.GetDirectories(suggestionsForIndex);
+				}
+
+				foreach (var directory in directories)
 				{
 					IndexSearcher searcher;
 					using (indexImplementation.GetSearcher(out searcher))
@@ -350,6 +364,38 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		internal static void HandleLegacySuggestions(string[] directories)
+		{
+			var alreadySeenFields = new HashSet<string>();
+			foreach (var directory in directories)
+			{
+				var key = Path.GetFileName(directory);
+				var parentDir = Directory.GetParent(directory).FullName;
+
+				if (key.Contains("-"))
+				{
+					var tokens = key.Split('-');
+					var field = tokens[0];
+					if (alreadySeenFields.Contains(field))
+					{
+						log.Info("Removing legacy suggestions: {0}", directory);
+						IOExtensions.DeleteDirectory(directory);
+					}
+					else
+					{
+						alreadySeenFields.Add(field);
+						var newLocation = Path.Combine(parentDir, field);
+
+						log.Info("Moving suggestions from: {0} to {1}", directory, newLocation);
+						Directory.Move(directory, newLocation);
+					}
+				}
+				else
+				{
+					alreadySeenFields.Add(key);
+				}
+			}
+		}
 
 		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, bool createIfMissing = true)
 		{
