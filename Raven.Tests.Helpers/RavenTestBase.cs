@@ -12,7 +12,6 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -28,7 +27,6 @@ using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
@@ -36,7 +34,6 @@ using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.FileSystem.Util;
-using Raven.Database.Impl;
 using Raven.Database.Raft;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
@@ -45,7 +42,6 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
-using Xunit;
 
 
 namespace Raven.Tests.Helpers
@@ -873,7 +869,7 @@ namespace Raven.Tests.Helpers
 			var url = store.Url.ForDatabase(string.IsNullOrEmpty(databaseName) == false ? databaseName : store.DefaultDatabase);
 
 			var requestFactory = store.JsonRequestFactory;
-			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", HttpMethod.Post, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", HttpMethods.Post, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
 			request.ExecuteRequest();
 		}
 

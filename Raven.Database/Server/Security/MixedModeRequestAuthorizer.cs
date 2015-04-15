@@ -173,10 +173,7 @@ namespace Raven.Database.Server.Security
             IPrincipal user;
             var success = TryAuthorizeSingleUseAuthToken(token, controller.TenantName, out result, out statusCode, out user);
             controller.User = user;
-            if (success == false)
-                msg = controller.GetMessageWithObject(result, statusCode);
-            else
-                msg = controller.GetEmptyMessage();
+            msg = success == false ? controller.GetMessageWithObject(result, statusCode) : controller.GetEmptyMessage();
 
             controller.WasAlreadyAuthorizedUsingSingleAuthToken = success;
             return success;
@@ -240,7 +237,7 @@ namespace Raven.Database.Server.Security
 		{
 			var token = new OneTimeToken
 			{
-				ResourceName = string.IsNullOrEmpty(resourceName)?"<system>":resourceName,
+				ResourceName = string.IsNullOrEmpty(resourceName)?"<system>" : resourceName,
 				User = user
 			};
 			var tokenString = Guid.NewGuid().ToString();

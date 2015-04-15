@@ -117,7 +117,7 @@ namespace Raven.Database.Server.Controllers
                     status.Completed = true;
                     status.Documents = documents;
                 }
-            });
+            }, tre.Token);
 
             long id;
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
@@ -149,13 +149,6 @@ namespace Raven.Database.Server.Controllers
             {
                 OperationId = id
             });
-        }
-
-        private Guid ExtractOperationId()
-        {
-            Guid result;
-            Guid.TryParse(GetQueryStringValue("operationId"), out result);
-            return result;
         }
 
         private IEnumerable<IEnumerable<JsonDocument>> YieldBatches(CancellationTimeout timeout, Stream inputStream, ManualResetEventSlim mre, BulkInsertOptions options, Action<int> increaseDocumentsCount)

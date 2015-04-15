@@ -199,7 +199,7 @@ namespace Raven.Client.FileSystem
 
 		private async Task<RavenJToken> GetOperationStatusAsync(long id)
 		{
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, BaseUrl + "/operation/status?id=" + id, HttpMethod.Get, CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, Conventions).AddOperationHeaders(OperationsHeaders)))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, BaseUrl + "/operation/status?id=" + id, HttpMethods.Get, CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, Conventions).AddOperationHeaders(OperationsHeaders)))
 			{
 				try
 				{
@@ -215,10 +215,10 @@ namespace Raven.Client.FileSystem
 
         public Task<FileSystemStats> GetStatisticsAsync()
         {
-            return ExecuteWithReplication(HttpMethod.Get, async operation =>
+            return ExecuteWithReplication(HttpMethods.Get, async operation =>
             {
                 var requestUriString = operation.Url + "/stats";
-	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
 					try
 					{
@@ -239,11 +239,11 @@ namespace Raven.Client.FileSystem
 
         public Task DeleteAsync(string filename, Etag etag = null)
         {
-            return ExecuteWithReplication(HttpMethod.Delete, async operation =>
+            return ExecuteWithReplication(HttpMethods.Delete, async operation =>
             {
                 var requestUriString = operation.Url + "/files/" + Uri.EscapeDataString(filename);
 
-	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Delete, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Delete, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
 		            AddEtagHeader(request, etag);
 					try
@@ -302,9 +302,9 @@ namespace Raven.Client.FileSystem
 
         public Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 25)
         {
-            return ExecuteWithReplication(HttpMethod.Get, async operation =>
+            return ExecuteWithReplication(HttpMethods.Get, async operation =>
             {
-	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + "/files?start=" + start + "&pageSize=" + pageSize, HttpMethod.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + "/files?start=" + start + "&pageSize=" + pageSize, HttpMethods.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
 					try
 					{
@@ -321,10 +321,10 @@ namespace Raven.Client.FileSystem
 
         public Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25)
         {
-            return ExecuteWithReplication(HttpMethod.Get, async operation =>
+            return ExecuteWithReplication(HttpMethods.Get, async operation =>
             {
                 var requestUriString = string.Format("{0}/search/terms?start={1}&pageSize={2}", operation.Url, start, pageSize);
-	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, operation.Credentials, Conventions).AddOperationHeaders(OperationsHeaders)))
+	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, operation.Credentials, Conventions).AddOperationHeaders(OperationsHeaders)))
 	            {
 					try
 					{
@@ -341,7 +341,7 @@ namespace Raven.Client.FileSystem
 
         public Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 25)
         {
-            return ExecuteWithReplication(HttpMethod.Get, async operation =>
+            return ExecuteWithReplication(HttpMethods.Get, async operation =>
             {
                 var requestUriBuilder = new StringBuilder(operation.Url)
                     .Append("/search/?query=")
@@ -359,7 +359,7 @@ namespace Raven.Client.FileSystem
                     }
                 }
 
-	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriBuilder.ToString(), HttpMethod.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriBuilder.ToString(), HttpMethods.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
 					try
 					{
@@ -376,11 +376,11 @@ namespace Raven.Client.FileSystem
 
 		public Task DeleteByQueryAsync(string query)
 		{
-			return ExecuteWithReplication(HttpMethod.Delete, async operation =>
+			return ExecuteWithReplication(HttpMethods.Delete, async operation =>
 			{
 				var requestUriString = string.Format("{0}/search?query={1}", operation.Url, query);
 
-				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Delete, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Delete, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 				{
 					try
 					{
@@ -399,17 +399,17 @@ namespace Raven.Client.FileSystem
 
         public Task<RavenJObject> GetMetadataForAsync(string filename)
         {
-            return ExecuteWithReplication(HttpMethod.Head, operation => GetMetadataForAsyncImpl(filename, operation));
+            return ExecuteWithReplication(HttpMethods.Head, operation => GetMetadataForAsyncImpl(filename, operation));
         }
 
         public Task<FileHeader[]> GetAsync(string[] filename)
         {
-            return ExecuteWithReplication(HttpMethod.Get, operation => GetAsyncImpl(filename, operation));
+            return ExecuteWithReplication(HttpMethods.Get, operation => GetAsyncImpl(filename, operation));
         }
 
 	    public Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize)
 	    {
-			return ExecuteWithReplication(HttpMethod.Get, operation => StartsWithAsyncImpl(prefix, matches, start, pageSize, operation));
+			return ExecuteWithReplication(HttpMethods.Get, operation => StartsWithAsyncImpl(prefix, matches, start, pageSize, operation));
 	    }
 
 	    public async Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue)
@@ -431,7 +431,7 @@ namespace Raven.Client.FileSystem
                 .Append("&pageSize=")
                 .Append(pageSize);
 
-                var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethod.Get, operationMetadata.Credentials, this.Conventions)
+                var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethods.Get, operationMetadata.Credentials, this.Conventions)
                                             .AddOperationHeaders(OperationsHeaders));
 
                 var response = await request.ExecuteRawResponseAsync()
@@ -486,7 +486,7 @@ namespace Raven.Client.FileSystem
                        .Append("&pageSize=")
                        .Append(pageSize);
 
-                var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(client, sb.ToString(), HttpMethod.Get, operationMetadata.Credentials, conventions)
+                var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(client, sb.ToString(), HttpMethods.Get, operationMetadata.Credentials, conventions)
                                             .AddOperationHeaders(headers));
 
                 var response = await request.ExecuteRawResponseAsync()
@@ -655,7 +655,7 @@ namespace Raven.Client.FileSystem
 		{
 			var uri = string.Format("/files?startsWith={0}&matches={1}&start={2}&pageSize={3}", string.IsNullOrEmpty(prefix) ? null : Uri.EscapeDataString(prefix), string.IsNullOrEmpty(matches) ? null : Uri.EscapeDataString(matches), start, pageSize);
 
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + uri, HttpMethod.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + uri, HttpMethods.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				try
 				{
@@ -679,7 +679,7 @@ namespace Raven.Client.FileSystem
                     requestUriBuilder.Append("&");
             }
 
-	        using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + requestUriBuilder.ToString(), HttpMethod.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+	        using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + requestUriBuilder.ToString(), HttpMethods.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	        {
 				try
 				{
@@ -706,7 +706,7 @@ namespace Raven.Client.FileSystem
 
         private async Task<RavenJObject> GetMetadataForAsyncImpl(string filename, OperationMetadata operation)
         {
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + "/files?name=" + Uri.EscapeDataString(filename), HttpMethod.Head, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + "/files?name=" + Uri.EscapeDataString(filename), HttpMethods.Head, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	        {
 				try
 				{
@@ -734,12 +734,12 @@ namespace Raven.Client.FileSystem
 
         public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadataRef = null, long? from = null, long? to = null)
         {
-            return ExecuteWithReplication(HttpMethod.Get, async operation => await DownloadAsyncImpl("/files/", filename, metadataRef, from, to, operation).ConfigureAwait(false));
+            return ExecuteWithReplication(HttpMethods.Get, async operation => await DownloadAsyncImpl("/files/", filename, metadataRef, from, to, operation).ConfigureAwait(false));
         }
 
         private async Task<Stream> DownloadAsyncImpl(string path, string filename, Reference<RavenJObject> metadataRef, long? @from, long? to, OperationMetadata operation)
         {
-	        var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + path + filename, HttpMethod.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders);
+	        var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + path + filename, HttpMethods.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders);
 
 			if (@from != null)
 			{
@@ -770,9 +770,9 @@ namespace Raven.Client.FileSystem
 
         public Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null)
         {
-            return ExecuteWithReplication(HttpMethod.Post, async operation =>
+            return ExecuteWithReplication(HttpMethods.Post, async operation =>
             {
-				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + "/files/" + filename, HttpMethod.Post, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + "/files/" + filename, HttpMethods.Post, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
 					AddHeaders(metadata, request);
 					AddEtagHeader(request, etag);
@@ -793,7 +793,7 @@ namespace Raven.Client.FileSystem
             if (metadata == null)
                 metadata = new RavenJObject();
 
-			return ExecuteWithReplication(HttpMethod.Put, async operation =>
+			return ExecuteWithReplication(HttpMethods.Put, async operation =>
             {
                 await UploadAsyncImpl(operation, filename, source, metadata, false, size, etag).ConfigureAwait(false);
             });
@@ -814,7 +814,7 @@ namespace Raven.Client.FileSystem
             if (preserveTimestamps)
                 operationUrl += "&preserveTimestamps=true";
 
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Put, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethods.Put, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	        {
 				metadata[Constants.FileSystem.RavenFsSize] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
 
@@ -944,7 +944,7 @@ namespace Raven.Client.FileSystem
 
         public Task<string[]> GetDirectoriesAsync(string from = null, int start = 0, int pageSize = 25)
         {
-            return ExecuteWithReplication(HttpMethod.Get, async operation =>
+            return ExecuteWithReplication(HttpMethods.Get, async operation =>
             {
                 var path = @from ?? "";
                 if (path.StartsWith("/"))
@@ -953,7 +953,7 @@ namespace Raven.Client.FileSystem
                 var requestUriString = operation.Url + "/folders/subdirectories/" + Uri.EscapeUriString(path) + "?pageSize=" +
                                        pageSize + "&start=" + start;
 
-	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
 					try
 					{
@@ -984,11 +984,11 @@ namespace Raven.Client.FileSystem
 
         public Task<Guid> GetServerIdAsync()
         {
-            return ExecuteWithReplication(HttpMethod.Get, async operation =>
+            return ExecuteWithReplication(HttpMethods.Get, async operation =>
             {
                 var requestUriString = operation.Url + "/static/id";
 
-	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
 					try
 					{
@@ -1085,11 +1085,11 @@ namespace Raven.Client.FileSystem
 
             public Task<string[]> GetKeyNamesAsync(int start = 0, int pageSize = 25)
             {
-                return client.ExecuteWithReplication(HttpMethod.Get, async operation =>
+                return client.ExecuteWithReplication(HttpMethods.Get, async operation =>
                 {
                     var requestUriString = operation.Url + "/config?start=" + start + "&pageSize=" + pageSize;
 
-	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
 						try
 						{
@@ -1106,10 +1106,10 @@ namespace Raven.Client.FileSystem
 
             public Task SetKeyAsync<T>(string name, T data)
             {
-				return client.ExecuteWithReplication(HttpMethod.Put, async operation =>
+				return client.ExecuteWithReplication(HttpMethods.Put, async operation =>
                 {
                     var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(name);
-					using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Put, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+					using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Put, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
 						var jsonData = data as RavenJObject;
 						if (jsonData != null)
@@ -1130,11 +1130,11 @@ namespace Raven.Client.FileSystem
 
             public Task DeleteKeyAsync(string name)
             {
-                return client.ExecuteWithReplication(HttpMethod.Delete, async operation =>
+                return client.ExecuteWithReplication(HttpMethods.Delete, async operation =>
                 {
                     var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(name);
 
-	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Delete, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Delete, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
 						await request.ExecuteRequestAsync().ConfigureAwait(false);
 	                }
@@ -1143,11 +1143,11 @@ namespace Raven.Client.FileSystem
 
             public Task<T> GetKeyAsync<T>(string name)
             {
-                return client.ExecuteWithReplication(HttpMethod.Get, async operation =>
+                return client.ExecuteWithReplication(HttpMethods.Get, async operation =>
                 {
                     var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(name);
 
-	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
 						try
 						{
@@ -1171,7 +1171,7 @@ namespace Raven.Client.FileSystem
 
             public Task<ConfigurationSearchResults> SearchAsync(string prefix, int start = 0, int pageSize = 25)
             {
-                return client.ExecuteWithReplication(HttpMethod.Get, async operation =>
+                return client.ExecuteWithReplication(HttpMethods.Get, async operation =>
                 {
                     var requestUriBuilder = new StringBuilder(operation.Url)
                         .Append("/config/search/?prefix=")
@@ -1181,7 +1181,7 @@ namespace Raven.Client.FileSystem
                         .Append("&pageSize=")
                         .Append(pageSize);
 
-	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriBuilder.ToString(), HttpMethod.Get, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriBuilder.ToString(), HttpMethods.Get, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
 						try
 						{
@@ -1235,7 +1235,7 @@ namespace Raven.Client.FileSystem
             public async Task<SignatureManifest> GetRdcManifestAsync(string path)
             {
                 var requestUriString = client.BaseUrl + "/rdc/manifest/" + Uri.EscapeDataString(path);
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1253,7 +1253,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUriString = String.Format("{0}/synchronization/ToDestinations?forceSyncingAll={1}", client.BaseUrl, forceSyncingAll);
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1274,10 +1274,10 @@ namespace Raven.Client.FileSystem
 
             public Task<SynchronizationDestination[]> GetDestinationsAsync()
             {
-                return client.ExecuteWithReplication(HttpMethod.Get, async operation =>
+                return client.ExecuteWithReplication(HttpMethods.Get, async operation =>
                 {
                     var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
-	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
 						try
 						{
@@ -1295,10 +1295,10 @@ namespace Raven.Client.FileSystem
 
             public Task SetDestinationsAsync(params SynchronizationDestination[] destinations)
             {
-				return client.ExecuteWithReplication(HttpMethod.Put, async operation =>
+				return client.ExecuteWithReplication(HttpMethods.Put, async operation =>
                 {
                     var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
-					using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Put, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+					using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Put, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
 						var data = new { Destinations = destinations };
 
@@ -1318,7 +1318,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUriString = String.Format("{0}/synchronization/start/{1}", client.BaseUrl, Uri.EscapeDataString(fileName));
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1338,7 +1338,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUriString = String.Format("{0}/synchronization/status/{1}", client.BaseUrl, Uri.EscapeDataString(fileName));
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1396,7 +1396,7 @@ namespace Raven.Client.FileSystem
 	        {
 		        var requestUriString = string.Format("{0}/synchronization/ResolutionStrategyFromServerResolvers", client.BaseUrl);
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 				{
 					request.AddHeaders(localMetadata);
 
@@ -1418,7 +1418,7 @@ namespace Raven.Client.FileSystem
                 var requestUriString = String.Format("{0}/synchronization/finished?start={1}&pageSize={2}", client.BaseUrl, start,
                                                          pageSize);
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1437,7 +1437,7 @@ namespace Raven.Client.FileSystem
                 var requestUriString = String.Format("{0}/synchronization/active?start={1}&pageSize={2}",
                                                         client.BaseUrl, start, pageSize);
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1456,7 +1456,7 @@ namespace Raven.Client.FileSystem
                 var requestUriString = String.Format("{0}/synchronization/pending?start={1}&pageSize={2}",
                                                      client.BaseUrl, start, pageSize);
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1474,7 +1474,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUriString = String.Format("{0}/synchronization/LastSynchronization?from={1}", client.BaseUrl, serverId);
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1492,7 +1492,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUriString = String.Format("{0}/synchronization/Confirm", client.BaseUrl);
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1524,7 +1524,7 @@ namespace Raven.Client.FileSystem
                 var requestUriString = String.Format("{0}/synchronization/conflicts?start={1}&pageSize={2}", client.BaseUrl, start,
                                                          pageSize);
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1544,7 +1544,7 @@ namespace Raven.Client.FileSystem
                     String.Format("{0}/synchronization/IncrementLastETag?sourceServerId={1}&sourceFileSystemUrl={2}&sourceFileETag={3}",
                                     client.BaseUrl, sourceServerId, sourceFileSystemUrl, sourceFileETag);
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1561,7 +1561,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUriString = client.BaseUrl + "/rdc/stats";
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					try
 					{
@@ -1597,7 +1597,7 @@ namespace Raven.Client.FileSystem
 
             public async Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
             {
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization?fileName=" + Uri.EscapeDataString(fileName), HttpMethod.Delete, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization?fileName=" + Uri.EscapeDataString(fileName), HttpMethods.Delete, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					request.AddHeaders(metadata);
 					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
@@ -1617,7 +1617,7 @@ namespace Raven.Client.FileSystem
 
             public async Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
             {
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName), HttpMethod.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName), HttpMethods.Post, credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
 					request.AddHeaders(metadata);
 					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
@@ -1660,11 +1660,11 @@ namespace Raven.Client.FileSystem
 
             public Task CleanUpAsync()
             {
-				return client.ExecuteWithReplication(HttpMethod.Post, async operation =>
+				return client.ExecuteWithReplication(HttpMethods.Post, async operation =>
                 {
                     var requestUriString = String.Format("{0}/storage/cleanup", operation.Url);
 
-					using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+					using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
 						try
 						{
@@ -1680,11 +1680,11 @@ namespace Raven.Client.FileSystem
 
             public Task RetryRenamingAsync()
             {
-				return client.ExecuteWithReplication(HttpMethod.Post, async operation =>
+				return client.ExecuteWithReplication(HttpMethods.Post, async operation =>
                 {
                     var requestUriString = String.Format("{0}/storage/retryrenaming", operation.Url);
 
-					using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Post, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+					using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
 						try
 						{
@@ -1746,7 +1746,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUriString = string.Format("{0}/fs", client.ServerUrl);
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, client.PrimaryCredentials, convention)))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, client.PrimaryCredentials, convention)))
 	            {
 					try
 					{
@@ -1764,7 +1764,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUriString = string.Format("{0}/fs/stats", client.ServerUrl);
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, client.PrimaryCredentials, convention)))
+	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, client.PrimaryCredentials, convention)))
 	            {
 					try
 					{
@@ -1783,7 +1783,7 @@ namespace Raven.Client.FileSystem
 				var requestUriString = string.Format("{0}/admin/fs/{1}", client.ServerUrl,
                                                      newFileSystemName ?? client.FileSystem);
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Put, client.PrimaryCredentials, convention)))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Put, client.PrimaryCredentials, convention)))
 	            {
 					try
 					{
@@ -1808,7 +1808,7 @@ namespace Raven.Client.FileSystem
 				var requestUriString = string.Format("{0}/admin/fs/{1}?update=true", client.ServerUrl,
                                                      newFileSystemName ?? client.FileSystem);
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Put, client.PrimaryCredentials, convention)))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Put, client.PrimaryCredentials, convention)))
 	            {
 					try
 					{
@@ -1825,7 +1825,7 @@ namespace Raven.Client.FileSystem
 			{
 				var requestUriString = string.Format("{0}/admin/fs/{1}?hard-delete={2}", client.ServerUrl, fileSystemName ?? client.FileSystem, hardDelete);
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Delete, client.PrimaryCredentials, convention)))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Delete, client.PrimaryCredentials, convention)))
 				{
 					try
 					{
@@ -1859,7 +1859,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUrlString = string.Format("{0}/admin/fs/restore", client.ServerUrl);
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethod.Post, client.PrimaryCredentials, convention)))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethods.Post, client.PrimaryCredentials, convention)))
 	            {
 					try
 					{
@@ -1879,7 +1879,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUrlString = string.Format("{0}/admin/fs/compact?filesystem={1}", client.ServerUrl, Uri.EscapeDataString(filesystemName));
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethod.Post, client.PrimaryCredentials, convention)))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethods.Post, client.PrimaryCredentials, convention)))
 	            {
 					try
 					{
@@ -1897,7 +1897,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUrlString = string.Format("{0}/fs/{1}/admin/backup?incremental={2}", client.ServerUrl, fileSystemName, incremental);
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethod.Post, client.PrimaryCredentials, convention)))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethods.Post, client.PrimaryCredentials, convention)))
 	            {
 					try
 					{
@@ -1918,7 +1918,7 @@ namespace Raven.Client.FileSystem
             {
                 var requestUrlString = string.Format("{0}/fs/{1}/admin/reset-index", client.ServerUrl, Uri.EscapeDataString(filesystemName));
 
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethod.Post, client.PrimaryCredentials, convention)))
+				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethods.Post, client.PrimaryCredentials, convention)))
                 {
                     try
                     {

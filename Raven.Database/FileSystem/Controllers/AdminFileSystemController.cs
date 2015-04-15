@@ -13,7 +13,6 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 using System;
@@ -27,7 +26,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-using Voron.Impl.Backup;
 
 
 namespace Raven.Database.FileSystem.Controllers
@@ -136,7 +134,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 		[HttpDelete]
 		[RavenRoute("admin/fs/{*id}")]
-		public HttpResponseMessage FileSystemDelete(string id)
+		public HttpResponseMessage Delete(string id)
 		{
 			bool result;
 			var isHardDeleteNeeded = bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result;
@@ -152,7 +150,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 		[HttpDelete]
 		[RavenRoute("admin/fs/batch-delete")]
-		public HttpResponseMessage FileSystemBatchDelete()
+		public HttpResponseMessage BatchDelete()
 		{
 			string[] fileSystemsToDelete = GetQueryStringValues("ids");
 			if (fileSystemsToDelete == null)
@@ -179,7 +177,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 		[HttpPost]
 		[RavenRoute("admin/fs/{*id}")]
-		public HttpResponseMessage FileSystemToggleDisable(string id, bool isSettingDisabled)
+		public HttpResponseMessage ToggleDisable(string id, bool isSettingDisabled)
 		{
 			var message = ToggleFileSystemDisabled(id, isSettingDisabled);
 			if (message.ErrorCode != HttpStatusCode.OK)
@@ -192,7 +190,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 		[HttpPost]
 		[RavenRoute("admin/fs/batch-toggle-disable")]
-		public HttpResponseMessage FileSystemBatchToggleDisable(bool isSettingDisabled)
+		public HttpResponseMessage BatchToggleDisable(bool isSettingDisabled)
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");
 			if (databasesToToggle == null)

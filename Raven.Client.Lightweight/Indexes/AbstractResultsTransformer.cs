@@ -170,7 +170,7 @@ namespace Raven.Client.Indexes
 				return;
 
 			var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethod.Post))
+			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
 			{
 				try
 				{
@@ -190,7 +190,7 @@ namespace Raven.Client.Indexes
 				return;
 
 			var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethod.Post))
+			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
 			{
 				try
 				{

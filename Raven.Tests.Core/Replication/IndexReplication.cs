@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
@@ -258,7 +260,7 @@ namespace Raven.Tests.Core.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
@@ -309,7 +311,7 @@ namespace Raven.Tests.Core.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all-to-destination", source.Url);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
@@ -361,7 +363,7 @@ namespace Raven.Tests.Core.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
@@ -409,7 +411,7 @@ namespace Raven.Tests.Core.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replication&indexName={1}", source.Url, userIndex.IndexName);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
@@ -505,7 +507,7 @@ namespace Raven.Tests.Core.Replication
 				Assert.False(indexStatsBeforeReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?indexName={1}", source.Url, userIndex.IndexName);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});

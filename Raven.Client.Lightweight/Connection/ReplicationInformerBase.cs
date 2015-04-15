@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Request;
 using Raven.Client.Metrics;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -123,7 +124,7 @@ namespace Raven.Client.Connection
 	                    {
 	                        var r = await TryOperationAsync<object>(async metadata =>
 	                        {
-								var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), HttpMethod.Get, metadata.Credentials, Conventions);
+								var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), HttpMethods.Get, metadata.Credentials, Conventions);
 		                        using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 		                        {
 			                        await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -162,14 +163,14 @@ namespace Raven.Client.Connection
 			{
 				case FailoverBehavior.AllowReadsFromSecondaries:
 				case FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed:
-					if (method == HttpMethod.Get)
+					if (method == HttpMethods.Get)
 						return;
 					break;
 				case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
 					return;
 				case FailoverBehavior.FailImmediately:
 					var allowReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
-					if (allowReadFromAllServers && method == HttpMethod.Get)
+					if (allowReadFromAllServers && method == HttpMethods.Get)
 						return;
 					break;
 			}
@@ -207,12 +208,12 @@ namespace Raven.Client.Connection
 			var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 
 			var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
-			if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && method == HttpMethod.Get && primaryRequestTimeMetric != null)
+			if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && method == HttpMethods.Get && primaryRequestTimeMetric != null)
 			{
 				shouldReadFromAllServers = primaryRequestTimeMetric.RateSurpassed(Conventions);
 			}
            
-            if (shouldReadFromAllServers && method == HttpMethod.Get)
+            if (shouldReadFromAllServers && method == HttpMethods.Get)
             {
                 var replicationIndex = currentReadStripingBase%(localReplicationDestinations.Count + 1);
                 // if replicationIndex == destinations count, then we want to use the master

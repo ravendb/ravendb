@@ -185,9 +185,11 @@ namespace Raven.Database.Actions
 
             IoTest,
 
-	        NewIndexPrecomputedBatch,
+			NewIndexPrecomputedBatch,
 
-			ServerSmuggling
-        }
+			ServerSmuggling,
+
+			CounterBatchOperation
+		}
     }
 }

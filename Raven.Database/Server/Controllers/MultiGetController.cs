@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -228,27 +227,13 @@ namespace Raven.Database.Server.Controllers
 			{
 				query = modifiedQuery;
 			}
-			HttpRequestMessage msg;
-			if (request.Method == "POST")
+
+			var msg = new HttpRequestMessage(HttpMethods.Get, new UriBuilder
 			{
-				msg = new HttpRequestMessage(HttpMethod.Post, new UriBuilder
-				{
-					Host = "multi.get",
-					Path = request.Url
-				}.Uri);
-				msg.Content = new StringContent(request.Content);
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-				
-			}
-			else
-			{
-				msg = new HttpRequestMessage(HttpMethod.Get, new UriBuilder
-				{
-					Host = "multi.get",
-					Query = query,
-					Path = request.Url
-				}.Uri);
-			}
+				Host = "multi.get",
+				Query = query,
+				Path = request.Url
+			}.Uri);
 
 			IncrementInnerRequestsCount();
 

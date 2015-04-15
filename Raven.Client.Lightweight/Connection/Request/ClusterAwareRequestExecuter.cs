@@ -157,14 +157,14 @@ namespace Raven.Client.Connection.Request
 			switch (serverClient.ClusterBehavior)
 			{
 				case ClusterBehavior.ReadFromAllWriteToLeader:
-					if (method == HttpMethod.Get)
+					if (method == HttpMethods.Get)
 						node = GetNodeForReadOperation(node);
 					break;
 				case ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers:
 					if (node == null)
 						return await HandleWithFailovers(operation, token).ConfigureAwait(false);
 
-					if (method == HttpMethod.Get)
+					if (method == HttpMethods.Get)
 						node = GetNodeForReadOperation(node);
 					break;
 				case ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers:

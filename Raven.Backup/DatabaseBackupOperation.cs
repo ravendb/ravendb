@@ -1,6 +1,7 @@
 ﻿using System.Net.Http;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -9,7 +10,7 @@ using System.Net;
 
 namespace Raven.Backup
 {
-    using Raven.Abstractions.Connection;
+    using Abstractions.Connection;
 
     public class DatabaseBackupOperation : AbstractBackupOperation
     {
@@ -61,7 +62,7 @@ namespace Raven.Backup
                 url += "?incremental=true";
             try
             {
-				using (var req = CreateRequest(url, HttpMethod.Post))
+				using (var req = CreateRequest(url, HttpMethods.Post))
 	            {
 					req.WriteAsync(json).Wait();
 
@@ -95,7 +96,7 @@ namespace Raven.Backup
 
         public override BackupStatus GetStatusDoc()
         {
-			using (var req = CreateRequest("/docs/" + BackupStatus.RavenBackupStatusDocumentKey, HttpMethod.Get))
+			using (var req = CreateRequest("/docs/" + BackupStatus.RavenBackupStatusDocumentKey, HttpMethods.Get))
 	        {
 		        try
 		        {

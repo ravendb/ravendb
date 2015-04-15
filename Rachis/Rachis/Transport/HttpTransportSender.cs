@@ -18,6 +18,7 @@ using NLog;
 using Rachis.Messages;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.OAuth;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis.Transport
@@ -54,7 +55,7 @@ namespace Rachis.Transport
 				var requestUri =
 					string.Format("raft/installSnapshot?term={0}&lastIncludedIndex={1}&lastIncludedTerm={2}&from={3}&topology={4}&clusterTopologyId={5}",
 						req.Term, req.LastIncludedIndex, req.LastIncludedTerm, req.From, Uri.EscapeDataString(JsonConvert.SerializeObject(req.Topology)), req.ClusterTopologyId);
-				using (var request = CreateRequest(dest, requestUri, "POST"))
+				using (var request = CreateRequest(dest, requestUri, HttpMethods.Post))
 				{
 					var httpResponseMessage = await request.WriteAsync(() => new SnapshotContent(streamWriter)).ConfigureAwait(false);
 					UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -94,9 +95,9 @@ namespace Rachis.Transport
 			}
 		}
 
-		private HttpRaftRequest CreateRequest(NodeConnectionInfo node, string url, string method)
+		private HttpRaftRequest CreateRequest(NodeConnectionInfo node, string url, HttpMethod httpMethod)
 		{
-			var request = new HttpRaftRequest(node, url, method, info =>
+			var request = new HttpRaftRequest(node, url, httpMethod, info =>
 			{
 				HttpClient client;
 				var dispose = (IDisposable)GetConnection(info, out client);
@@ -184,7 +185,7 @@ namespace Rachis.Transport
 			{
 				var requestUri = string.Format("raft/appendEntries?term={0}&leaderCommit={1}&prevLogTerm={2}&prevLogIndex={3}&entriesCount={4}&from={5}&clusterTopologyId={6}",
 					req.Term, req.LeaderCommit, req.PrevLogTerm, req.PrevLogIndex, req.EntriesCount, req.From, req.ClusterTopologyId);
-				using (var request = CreateRequest(dest, requestUri, "POST"))
+				using (var request = CreateRequest(dest, requestUri, HttpMethods.Post))
 				{
 					var httpResponseMessage = await request.WriteAsync(() => new EntriesContent(req.Entries)).ConfigureAwait(false);
 					UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -247,7 +248,7 @@ namespace Rachis.Transport
 			{
 				var requestUri = string.Format("raft/canInstallSnapshot?term={0}&index={1}&from={2}&clusterTopologyId={3}", req.Term, req.Index,
 					req.From, req.ClusterTopologyId);
-				using (var request = CreateRequest(dest, requestUri, "GET"))
+				using (var request = CreateRequest(dest, requestUri, HttpMethods.Get))
 				{
 					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
 					UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -273,7 +274,7 @@ namespace Rachis.Transport
 			{
 				var requestUri = string.Format("raft/requestVote?term={0}&lastLogIndex={1}&lastLogTerm={2}&trialOnly={3}&forcedElection={4}&from={5}&clusterTopologyId={6}",
 					req.Term, req.LastLogIndex, req.LastLogTerm, req.TrialOnly, req.ForcedElection, req.From, req.ClusterTopologyId);
-				using (var request = CreateRequest(dest, requestUri, "GET"))
+				using (var request = CreateRequest(dest, requestUri, HttpMethods.Get))
 				{
 					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
 					UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -300,7 +301,7 @@ namespace Rachis.Transport
 			LogStatus("timeout to " + dest, async () =>
 			{
 				var requestUri = string.Format("raft/timeoutNow?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
-				using (var request = CreateRequest(dest, requestUri, "GET"))
+				using (var request = CreateRequest(dest, requestUri, HttpMethods.Get))
 				{
 					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
 					UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -321,7 +322,7 @@ namespace Rachis.Transport
 			LogStatus("disconnect " + dest, async () =>
 			{
 				var requestUri = string.Format("raft/disconnectFromCluster?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
-				using (var request = CreateRequest(dest, requestUri, "GET"))
+				using (var request = CreateRequest(dest, requestUri, HttpMethods.Get))
 				{
 					var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
 					UpdateConnectionFailureCounts(dest, httpResponseMessage);

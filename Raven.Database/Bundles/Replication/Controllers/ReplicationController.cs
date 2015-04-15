@@ -878,7 +878,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}
 
 			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(transformerName));
-			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, HttpMethods.Put, connectionOptions);
 			replicationRequest.Write(transformerDefinition);
 
 			try
@@ -910,7 +910,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			const string urlTemplate = "{0}/databases/{1}/indexes/{2}";
 
 			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(indexName));
-			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, HttpMethods.Put, connectionOptions);
 			replicationRequest.Write(indexDefinition);
 
 			replicationRequest.ExecuteRequest();

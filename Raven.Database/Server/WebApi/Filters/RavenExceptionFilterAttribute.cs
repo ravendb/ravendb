@@ -12,6 +12,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Database.FileSystem.Controllers;
 using Raven.Json.Linq;
 
@@ -63,7 +64,7 @@ namespace Raven.Database.Server.WebApi.Filters
 
 		public static void SerializeError(HttpActionExecutedContext ctx, object error)
 		{
-			if (ctx.Request.Method == HttpMethod.Head) // head request must not return a message body in the response
+			if (ctx.Request.Method == HttpMethods.Head) // head request must not return a message body in the response
 				return;
 
 			ctx.Response.Content = new JsonContent(RavenJObject.FromObject(error))

@@ -100,7 +100,7 @@ namespace Raven.Client.Changes
                 clientSideHeartbeatTimer = null;
             }
 
-			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethod.Get, credentials, conventions)
+			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethods.Get, credentials, conventions)
             {
                 AvoidCachingRequest = true,
                 DisableRequestCompression = true
@@ -189,7 +189,7 @@ namespace Raven.Client.Changes
                     if (string.IsNullOrEmpty(value) == false)
                         sendUrl += "&value=" + Uri.EscapeUriString(value);
 
-					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethod.Get, credentials, conventions)
+					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.Get, credentials, conventions)
                     {
                         AvoidCachingRequest = true
                     };

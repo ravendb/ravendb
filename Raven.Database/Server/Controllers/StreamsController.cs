@@ -117,7 +117,7 @@ namespace Raven.Database.Server.Controllers
 			var index = id;
 			var query = GetIndexQuery(int.MaxValue);
 			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
-			var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
+			var isHeadRequest = InnerRequest.Method == HttpMethods.Head;
 			if (isHeadRequest) query.PageSize = 0;
 
 			var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!

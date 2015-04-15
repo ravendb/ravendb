@@ -1,17 +1,17 @@
 ﻿using Raven.Abstractions.Replication;
 
-namespace Raven.Client.Counters.Connections
+namespace Raven.Client.Counters
 {
 	/// <summary>
-	/// The set of conventions used by the <see cref="CounterConvention"/> which allow the users to customize
+	/// The set of conventions used by the <see cref="Convention"/> which allow the users to customize
 	/// the way the Raven client API behaves
 	/// </summary>
-	public class CounterConvention : Convention
+	public class Convention : Client.Convention
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="CounterConvention"/> class.
+		/// Initializes a new instance of the <see cref="Convention"/> class.
 		/// </summary>
-		public CounterConvention()
+		public Convention()
 		{
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			AllowMultipuleAsyncOperations = true;
@@ -22,9 +22,9 @@ namespace Raven.Client.Counters.Connections
 		/// <summary>
 		/// Clone the current conventions to a new instance
 		/// </summary>
-		public CounterConvention Clone()
+		public Convention Clone()
 		{
-			return (CounterConvention)MemberwiseClone();
+			return (Convention)MemberwiseClone();
 		}
 	}
 }

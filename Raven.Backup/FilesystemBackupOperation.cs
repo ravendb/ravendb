@@ -1,16 +1,18 @@
 ﻿using System.Net.Http;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.FileSystem;
 using Raven.Json.Linq;
 using System;
 using System.Net;
+
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Backup
 {
-    using Raven.Abstractions.Connection;
+    using Abstractions.Connection;
 
     public class FilesystemBackupOperation : AbstractBackupOperation
     {
@@ -57,7 +59,7 @@ namespace Raven.Backup
                 url += "?incremental=true";
             try
             {
-				using (var req = CreateRequest("/fs/" + parameters.Filesystem + url, HttpMethod.Post))
+				using (var req = CreateRequest("/fs/" + parameters.Filesystem + url, HttpMethods.Post))
 	            {
 					req.WriteAsync(json).Wait();
 
@@ -84,7 +86,7 @@ namespace Raven.Backup
 
         public override BackupStatus GetStatusDoc()
         {
-			using (var req = CreateRequest("/fs/" + parameters.Filesystem + "/config/" + BackupStatus.RavenBackupStatusDocumentKey, HttpMethod.Get))
+			using (var req = CreateRequest("/fs/" + parameters.Filesystem + "/config/" + BackupStatus.RavenBackupStatusDocumentKey, HttpMethods.Get))
 	        {
 		        try
 		        {

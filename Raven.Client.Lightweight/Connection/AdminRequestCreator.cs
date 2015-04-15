@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -39,7 +40,7 @@ namespace Raven.Client.Connection
 			doc = RavenJObject.FromObject(databaseDocument);
 			doc.Remove("Id");
 
-			return createRequestForSystemDatabase("/admin/databases/" + Uri.EscapeDataString(dbname), HttpMethod.Put);
+			return createRequestForSystemDatabase("/admin/databases/" + Uri.EscapeDataString(dbname), HttpMethods.Put);
 		}
 
 		public HttpJsonRequest DeleteDatabase(string databaseName, bool hardDelete)
@@ -49,12 +50,12 @@ namespace Raven.Client.Connection
 			if(hardDelete)
 				deleteUrl += "?hard-delete=true";
 
-			return createRequestForSystemDatabase(deleteUrl, HttpMethod.Delete);
+			return createRequestForSystemDatabase(deleteUrl, HttpMethods.Delete);
 		}
 
 		public HttpJsonRequest StopIndexing(string serverUrl)
 		{
-			return createReplicationAwareRequest(serverUrl, "/admin/StopIndexing", HttpMethod.Post);
+			return createReplicationAwareRequest(serverUrl, "/admin/StopIndexing", HttpMethods.Post);
 		}
 
         public HttpJsonRequest StartIndexing(string serverUrl, int? maxNumberOfParallelIndexTasks)
@@ -65,42 +66,42 @@ namespace Raven.Client.Connection
                 url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
             }
 
-			return createReplicationAwareRequest(serverUrl, url, HttpMethod.Post);
+			return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
 		}
 
 		public HttpJsonRequest AdminStats()
 		{
-			return createRequestForSystemDatabase("/admin/stats", HttpMethod.Get);
+			return createRequestForSystemDatabase("/admin/stats", HttpMethods.Get);
 		}
 
 		public HttpJsonRequest StartBackup(string backupLocation, DatabaseDocument databaseDocument, string databaseName, bool incremental)
 		{
             if (databaseName == Constants.SystemDatabase)
             {
-				return createRequestForSystemDatabase("/admin/backup", HttpMethod.Post);
+				return createRequestForSystemDatabase("/admin/backup", HttpMethods.Post);
             }
-			return createRequestForSystemDatabase("/databases/" + databaseName + "/admin/backup?incremental=" + incremental, HttpMethod.Post);
+			return createRequestForSystemDatabase("/databases/" + databaseName + "/admin/backup?incremental=" + incremental, HttpMethods.Post);
             
 		}
 
 		public HttpJsonRequest CreateRestoreRequest()
 		{
-			return createRequestForSystemDatabase("/admin/restore", HttpMethod.Post);
+			return createRequestForSystemDatabase("/admin/restore", HttpMethods.Post);
 		}
 
 		public HttpJsonRequest IndexingStatus(string serverUrl)
 		{
-			return createReplicationAwareRequest(serverUrl, "/admin/IndexingStatus", HttpMethod.Get);
+			return createReplicationAwareRequest(serverUrl, "/admin/IndexingStatus", HttpMethods.Get);
 		}
 
 		public HttpJsonRequest CompactDatabase(string databaseName)
 		{
-			return createRequestForSystemDatabase("/admin/compact?database=" + databaseName, HttpMethod.Post);
+			return createRequestForSystemDatabase("/admin/compact?database=" + databaseName, HttpMethods.Post);
 		}
 
 		public HttpJsonRequest GetDatabaseConfiguration(string serverUrl)
 		{
-			return createReplicationAwareRequest(serverUrl, "/debug/config", HttpMethod.Get);
+			return createReplicationAwareRequest(serverUrl, "/debug/config", HttpMethods.Get);
 		}
 
         /// <summary>
@@ -108,7 +109,7 @@ namespace Raven.Client.Connection
         /// </summary>
 		public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default (CancellationToken))
         {
-	        using (var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture, "/databases?pageSize={0}&start={1}", pageSize, start), HttpMethod.Get))
+	        using (var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture, "/databases?pageSize={0}&start={1}", pageSize, start), HttpMethods.Get))
 	        {
 				var result = await requestForSystemDatabase.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				var json = (RavenJArray)result;
