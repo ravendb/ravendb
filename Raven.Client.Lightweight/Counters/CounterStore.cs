@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Counters.Actions;
 using Raven.Imports.Newtonsoft.Json;

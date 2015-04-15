@@ -1096,7 +1096,7 @@ namespace Raven.Bundles.Replication.Tasks
 				try
 				{
 					var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInfomration());
-					var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions);
+					var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, HttpMethods.Delete, destination.ConnectionStringOptions);
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated index deletion (index name = {0})", tombstone.Key);
@@ -1119,7 +1119,7 @@ namespace Raven.Bundles.Replication.Tasks
 				try
 				{
 					var url = string.Format("{0}/transformers/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInfomration());
-					var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions);
+					var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, HttpMethods.Delete, destination.ConnectionStringOptions);
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated transformer deletion (transformer name = {0})", tombstone.Key);
