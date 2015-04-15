@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Bundles.Encryption.Settings;
 using Raven.Database.Bundles.Encryption;
 
@@ -14,6 +13,7 @@ namespace Raven.Bundles.Encryption.Streams
 {
 	internal class BlockReaderWriter : IDisposable
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly EncryptionSettings settings;
 
 		private readonly Stream stream;
@@ -49,7 +49,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 			this.header = ReadOrWriteEmptyHeader(defaultBlockSize);
 			this.footer = ReadOrWriteFooter();
-		    totalUnencryptedSize = 0;
+			totalUnencryptedSize = 0;
 		}
 
 		public EncryptedFile.Header Header
@@ -67,27 +67,15 @@ namespace Raven.Bundles.Encryption.Streams
 			lock (locker)
 			{
 				stream.Position = 0;
-
 				if (stream.Length >= EncryptedFile.Header.HeaderSize)
 				{
 					// Read header
-					int headerSize;
 					var magicNumber = stream.ReadUInt64();
-					switch (magicNumber)
-					{
-						case EncryptedFile.DefaultMagicNumber: //old header struct --> without the last field
-							headerSize = EncryptedFile.Header.HeaderSize - Marshal.SizeOf(typeof(long));
-							break;
-						case EncryptedFile.WithTotalSizeMagicNumber:
-							headerSize = EncryptedFile.Header.HeaderSize;
-						break;
-						default:
-							throw new ApplicationException("Invalid magic number");
-					}
-					stream.Position = 0;
+					var headerSize = GetHeaderSizeByMagicNumber(magicNumber);
 
+					stream.Position = 0;
 					var headerBytes = stream.ReadEntireBlock(headerSize);
-					var fileHeader = StructConverter.ConvertBitsToStruct<EncryptedFile.Header>(headerBytes);
+					var fileHeader = StructConverter.ConvertBitsToStruct<EncryptedFile.Header>(headerBytes, headerSize);
 
 					if (fileHeader.MagicNumber != EncryptedFile.DefaultMagicNumber && fileHeader.MagicNumber != EncryptedFile.WithTotalSizeMagicNumber)
 						throw new InvalidDataException("The magic number in the file doesn't match the expected magic number for encrypted files. Perhaps this file isn't encrypted?");
@@ -108,19 +96,38 @@ namespace Raven.Bundles.Encryption.Streams
 						TotalUnencryptedSize = 0
 					};
 
-					WriteHeaderInCurrentPositionIfNotReadonly(fileHeader);
+					WriteHeaderInCurrentPositionIfNotReadonly(fileHeader, fileHeader.MagicNumber);
 
 					return fileHeader;
 				}
 			}
 		}
 
-		private void WriteHeaderInCurrentPositionIfNotReadonly(EncryptedFile.Header fileHeader)
+		private int GetHeaderSizeByMagicNumber(ulong magicNumber)
 		{
-			if (isReadonly) return;
+			int headerSize;
+			switch (magicNumber)
+			{
+				case EncryptedFile.DefaultMagicNumber: //old header struct --> without the last field
+					headerSize = EncryptedFile.Header.HeaderSize - Marshal.SizeOf(typeof(long));
+					break;
+				case EncryptedFile.WithTotalSizeMagicNumber:
+					headerSize = EncryptedFile.Header.HeaderSize;
+					break;
+				default:
+					throw new ApplicationException("Invalid magic number");
+			}
+			return headerSize;
+		}
 
-			var headerBytes = StructConverter.ConvertStructToBits(fileHeader);
-			stream.Write(headerBytes, 0, EncryptedFile.Header.HeaderSize);
+		private void WriteHeaderInCurrentPositionIfNotReadonly(EncryptedFile.Header fileHeader, ulong magicNumber)
+		{
+			if (isReadonly)
+				return;
+
+			var headerSize = GetHeaderSizeByMagicNumber(magicNumber);
+			var headerBytes = StructConverter.ConvertStructToBits(fileHeader, headerSize);
+			stream.Write(headerBytes, 0, headerSize);
 		}
 
 		private EncryptedFile.Footer ReadOrWriteFooter()
@@ -187,7 +194,7 @@ namespace Raven.Bundles.Encryption.Streams
 				var iv = stream.ReadEntireBlock(header.IVSize);
 				var encrypted = stream.ReadEntireBlock(header.EncryptedBlockSize);
 
-				var decrypted = settings.Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted));
+				var decrypted = DecryptBlock(iv, encrypted, true);
 
 				Debug.Assert(decrypted.Length == header.DecryptedBlockSize);
 
@@ -198,6 +205,37 @@ namespace Raven.Bundles.Encryption.Streams
 					Data = decrypted,
 				};
 			}
+		}
+
+		//isFirstRun --> true if the DecryptBlock is run at the beginning of recursion. 
+		//(recursion here is used as a mechanism of retry usage of different hashing algoritm.
+		private byte[] DecryptBlock(byte[] iv, byte[] encrypted, bool isFirstRun = false)
+		{
+			byte[] decrypted;
+
+			try
+			{
+				decrypted = settings.Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted));
+			}
+			catch (Exception e)
+			{
+				if (isFirstRun == false)
+				{
+					if (e is CryptographicException)
+					{
+						throw new ConfigurationErrorsException("The database is encrypted with a different key and/or algorithm than the ones "
+														   + "currently in the configuration file.", e);
+					}
+					throw;
+				}
+
+				log.Debug("Couldn't decrypt the index using MD5. Trying with SHA1.");
+				settings.Codec.UseSha1();
+
+				decrypted = DecryptBlock(iv, encrypted);
+			}
+
+			return decrypted;
 		}
 
 		/// <summary>
@@ -247,7 +285,7 @@ namespace Raven.Bundles.Encryption.Streams
 				stream.Position = 0;
 				var headerWithUpdatedUnencryptedLenght = header;
 				headerWithUpdatedUnencryptedLenght.TotalUnencryptedSize = totalUnencryptedSize;
-				WriteHeaderInCurrentPositionIfNotReadonly(headerWithUpdatedUnencryptedLenght);
+				WriteHeaderInCurrentPositionIfNotReadonly(headerWithUpdatedUnencryptedLenght, header.MagicNumber);
 
 				stream.Flush();
 				stream.Position = position;
