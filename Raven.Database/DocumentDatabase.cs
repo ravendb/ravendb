@@ -6,11 +6,16 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Primitives;
+using System.Configuration;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -38,8 +43,13 @@ using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+
+using metrics.Core;
+using Raven.Database.Plugins.Catalogs;
 
 namespace Raven.Database
 {
@@ -100,6 +110,7 @@ namespace Raven.Database
 				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
 				initializer = new DocumentDatabaseInitializer(this, configuration);
+				initializer.ValidateStorage();
 
 				initializer.InitializeEncryption();
 				initializer.ValidateLicense();
@@ -425,28 +436,59 @@ namespace Raven.Database
 							Type = "Index Update"
 						})).ToList();
 
-				var extensions = Configuration.ReportExtensions(
-					typeof(IStartupTask),
-					typeof(AbstractReadTrigger),
-					typeof(AbstractDeleteTrigger),
-					typeof(AbstractPutTrigger),
-					typeof(AbstractDocumentCodec),
-					typeof(AbstractIndexCodec),
-					typeof(AbstractDynamicCompilationExtension),
-					typeof(AbstractIndexQueryTrigger),
-					typeof(AbstractIndexUpdateTrigger),
-					typeof(AbstractAnalyzerGenerator),
-					typeof(AbstractAttachmentDeleteTrigger),
-					typeof(AbstractAttachmentPutTrigger),
-					typeof(AbstractAttachmentReadTrigger),
-					typeof(AbstractBackgroundTask),
-					typeof(IAlterConfiguration)).ToList();
+				var types = new[]
+				{
+					typeof (IStartupTask),
+					typeof (AbstractReadTrigger),
+					typeof (AbstractDeleteTrigger),
+					typeof (AbstractPutTrigger),
+					typeof (AbstractDocumentCodec),
+					typeof (AbstractIndexCodec),
+					typeof (AbstractDynamicCompilationExtension),
+					typeof (AbstractIndexQueryTrigger),
+					typeof (AbstractIndexUpdateTrigger),
+					typeof (AbstractAnalyzerGenerator),
+					typeof (AbstractAttachmentDeleteTrigger),
+					typeof (AbstractAttachmentPutTrigger),
+					typeof (AbstractAttachmentReadTrigger),
+					typeof (AbstractBackgroundTask),
+					typeof (IAlterConfiguration)
+				};
+
+				var extensions = Configuration.ReportExtensions(types).ToList();
+
+				var customBundles = FindPluginBundles(types);
 				return new PluginsInfo
 							{
 								Triggers = triggerInfos,
 								Extensions = extensions,
+								CustomBundles = customBundles
 							};
 			}
+		}	
+
+		private List<string> FindPluginBundles(Type[] types)
+		{
+			var unfilteredCatalogs = InMemoryRavenConfiguration.GetUnfilteredCatalogs(Configuration.Catalog.Catalogs);
+
+			AggregateCatalog unfilteredAggregate = null;
+
+			var innerAggregate = unfilteredCatalogs as AggregateCatalog;
+			if (innerAggregate != null)
+			{
+				unfilteredAggregate = new AggregateCatalog(innerAggregate.Catalogs.OfType<BuiltinFilteringCatalog>());
+			}
+
+			if (unfilteredAggregate == null || unfilteredAggregate.Catalogs.Count == 0)
+				return new List<string>();
+
+			return types
+				.SelectMany(type => unfilteredAggregate.GetExports(new ImportDefinition(info => info.Metadata.ContainsKey("Bundle"), type.FullName, ImportCardinality.ZeroOrMore, false, false)))
+				.Select(info => info.Item2.Metadata["Bundle"] as string)
+				.Where(x => x != null)
+				.Distinct()
+				.OrderBy(x => x)
+				.ToList();
 		}
 
 		public DatabaseStatistics Statistics
@@ -467,7 +509,7 @@ namespace Raven.Database
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
 					SupportsDtc = TransactionalStorage.SupportsDtc,
-
+					Is64Bit = Environment.Is64BitProcess
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -1010,7 +1052,6 @@ namespace Raven.Database
 			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
 		}
 
-
 		private void ExecuteStartupTasks()
 		{
 			using (LogContext.WithDatabase(Name))
@@ -1115,6 +1156,17 @@ namespace Raven.Database
 
 				validateLicense = new ValidateLicense();
 				validateLicense.Execute(configuration);
+			}
+
+			public void ValidateStorage()
+			{
+				var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+				if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
+					&& configuration.Storage.Voron.AllowOn32Bits == false && 
+                    Environment.Is64BitProcess == false)
+				{
+					throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
+				}
 			}
 
 			public void Dispose()
