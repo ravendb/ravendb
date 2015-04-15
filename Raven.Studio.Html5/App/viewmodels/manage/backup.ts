@@ -3,6 +3,8 @@ import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resources/resource");
+import backupDatabaseCommand = require("commands/maintenance/backupDatabaseCommand");
+import backupFilesystemCommand = require("commands/filesystem/backupFilesystemCommand");
 
 class resourceBackup {
     incremental = ko.observable<boolean>(false);
@@ -63,12 +65,10 @@ class backupDatabase extends viewModelBase {
             this.dbBackupOptions.isBusy(!!newBackupStatus.IsRunning);
         };
 
-        require(["commands/maintenance/backupDatabaseCommand"], backupDatabaseCommand => {
-            var dbToBackup = shell.databases.first((db: database) => db.name == this.dbBackupOptions.resourceName());
-            new backupDatabaseCommand(dbToBackup, this.dbBackupOptions.backupLocation(), updateBackupStatus, this.dbBackupOptions.incremental())
-                .execute()
-                .always(() => this.dbBackupOptions.isBusy(false));
-        });
+        var dbToBackup = shell.databases.first((db: database) => db.name == this.dbBackupOptions.resourceName());
+        new backupDatabaseCommand(dbToBackup, this.dbBackupOptions.backupLocation(), updateBackupStatus, this.dbBackupOptions.incremental())
+            .execute()
+            .always(() => this.dbBackupOptions.isBusy(false));
     }
 
     startFsBackup() {
@@ -79,12 +79,10 @@ class backupDatabase extends viewModelBase {
             this.fsBackupOptions.isBusy(!!newBackupStatus.IsRunning);
         };
 
-        require(["commands/filesystem/backupFilesystemCommand"], backupFilesystemCommand => {
-            var fsToBackup = shell.fileSystems.first((fs: filesystem) => fs.name == this.fsBackupOptions.resourceName());
-            new backupFilesystemCommand(fsToBackup, this.fsBackupOptions.backupLocation(), updateBackupStatus, this.fsBackupOptions.incremental())
-                .execute()
-                .always(() => this.fsBackupOptions.isBusy(false));
-        });
+        var fsToBackup = shell.fileSystems.first((fs: filesystem) => fs.name == this.fsBackupOptions.resourceName());
+        new backupFilesystemCommand(fsToBackup, this.fsBackupOptions.backupLocation(), updateBackupStatus, this.fsBackupOptions.incremental())
+            .execute()
+            .always(() => this.fsBackupOptions.isBusy(false));
     }
 }
 

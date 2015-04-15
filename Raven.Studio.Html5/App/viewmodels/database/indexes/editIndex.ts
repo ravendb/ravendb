@@ -28,6 +28,10 @@ import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDe
 import saveScriptedIndexesCommand = require("commands/database/documents/saveScriptedIndexesCommand");
 import deleteIndexCommand = require("commands/database/index/deleteIndexCommand");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
+import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
+import getCSharpIndexDefinitionCommand = require("commands/database/index/getCSharpIndexDefinitionCommand");
+import showDataDialog = require("viewmodels/common/showDataDialog");
+import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 
 class editIndex extends viewModelBase { 
 
@@ -386,47 +390,39 @@ class editIndex extends viewModelBase {
     }
 
     copyIndex() {
-        require(["viewmodels/database/indxes/copyIndexDialog"], copyIndexDialog => {
-            app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
-        });   
+		app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
 
     createCSharpCode() {
-        require(["commands/database/index/getCSharpIndexDefinitionCommand"], getCSharpIndexDefinitionCommand => {
-            new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
-                .execute()
-                .done((data: string) => {
-                    require(["viewmodels/common/showDataDialog"], showDataDialog => {
-                        app.showDialog(new showDataDialog("C# Index Definition", data));
-                    });
-                });
-        });
+        new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
+            .execute()
+            .done((data: string) => {
+              app.showDialog(new showDataDialog("C# Index Definition", data));
+            });
     }
 
     formatIndex() {
-        require(["commands/database/index/formatIndexCommand"], formatIndexCommand => {
-            var index: indexDefinition = this.editedIndex();
-            var mapReduceObservableArray = new Array<KnockoutObservable<string>>();
-            mapReduceObservableArray.pushAll(index.maps());
-            if (!!index.reduce()) {
-                mapReduceObservableArray.push(index.reduce);
-            }
+        var index: indexDefinition = this.editedIndex();
+        var mapReduceObservableArray = new Array<KnockoutObservable<string>>();
+        mapReduceObservableArray.pushAll(index.maps());
+        if (!!index.reduce()) {
+            mapReduceObservableArray.push(index.reduce);
+        }
 
-            var mapReduceArray = mapReduceObservableArray.map((observable: KnockoutObservable<string>) => observable());
+        var mapReduceArray = mapReduceObservableArray.map((observable: KnockoutObservable<string>) => observable());
 
-            new formatIndexCommand(this.activeDatabase(), mapReduceArray, this.activeDatabase())
-                .execute()
-                .done((formatedMapReduceArray: string[]) => {
-                    formatedMapReduceArray.forEach((element: string, i: number) => {
-                        if (element.indexOf("Could not format:") == -1) {
-                            mapReduceObservableArray[i](element);
-                        } else {
-                            var isReduce = !!index.reduce() && i == formatedMapReduceArray.length - 1;
-                            var errorMessage = isReduce ? "Failed to format reduce!" : "Failed to format map '" + i + "'!";
-                            messagePublisher.reportError(errorMessage, element);
-                        }
-                    });
-            });
+        new formatIndexCommand(this.activeDatabase(), mapReduceArray)
+            .execute()
+            .done((formatedMapReduceArray: string[]) => {
+                formatedMapReduceArray.forEach((element: string, i: number) => {
+                    if (element.indexOf("Could not format:") == -1) {
+                        mapReduceObservableArray[i](element);
+                    } else {
+                        var isReduce = !!index.reduce() && i == formatedMapReduceArray.length - 1;
+                        var errorMessage = isReduce ? "Failed to format reduce!" : "Failed to format map '" + i + "'!";
+                        messagePublisher.reportError(errorMessage, element);
+                    }
+                });
         });
     }
 

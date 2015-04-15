@@ -106,22 +106,20 @@ class synchronizationConflicts extends viewModelBase {
             "Are you sure you want to resolve the conflict for file <b>" + this.selectedConflicts()[0] + "</b> by choosing the local version?" :
             "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the local version?";
 
-        require(["viewmodels/filesystem/resolveConflict"], resolveConflict => {
-            var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with local");
-            resolveConflictViewModel
-                .resolveTask
-                .done(x => {
-                    var fs = this.activeFilesystem();
+        var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with local");
+        resolveConflictViewModel
+            .resolveTask
+            .done(x => {
+                var fs = this.activeFilesystem();
 
-                    for (var i = 0; i < this.selectedConflicts().length; i++) {
-                        var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 2, fs).execute().done(() => {
-                            this.selectedConflicts.remove(conflict);
-                        });
-                    }
-                });
-            app.showDialog(resolveConflictViewModel);
-        });
+                for (var i = 0; i < this.selectedConflicts().length; i++) {
+                    var conflict = this.selectedConflicts()[i];
+                    new resolveConflictCommand(conflict, 2, fs).execute().done(() => {
+                        this.selectedConflicts.remove(conflict);
+                    });
+                }
+            });
+        app.showDialog(resolveConflictViewModel);
     }
 
     resolveWithRemoteVersion() {
@@ -130,20 +128,18 @@ class synchronizationConflicts extends viewModelBase {
             "Are you sure you want to resolve the conflict for file <b>" + this.selectedConflicts()[0] + "</b> by choosing the remote version?" :
             "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the remote version?";
 
-        require(["viewmodels/filesystem/resolveConflict"], resolveConflict => {
-            var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with remote");
-            resolveConflictViewModel
-                .resolveTask
-                .done(x => {
-                    var fs = this.activeFilesystem();
+        var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with remote");
+        resolveConflictViewModel
+            .resolveTask
+            .done(x => {
+                var fs = this.activeFilesystem();
 
-                    for (var i = 0; i < this.selectedConflicts().length; i++) {
-                        var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 1, fs).execute();
-                    }
-                });
-            app.showDialog(resolveConflictViewModel);
-        });
+                for (var i = 0; i < this.selectedConflicts().length; i++) {
+                    var conflict = this.selectedConflicts()[i];
+                    new resolveConflictCommand(conflict, 1, fs).execute();
+                }
+            });
+        app.showDialog(resolveConflictViewModel);
 
     }
 
@@ -158,7 +154,7 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     toggleSelectAll() {
-        this.isSelectAllValue(this.isSelectAllValue() ? false : true);
+        this.isSelectAllValue(!this.isSelectAllValue());
         if (this.isSelectAllValue()) {
             this.selectedConflicts.pushAll(this.conflicts().map(x => x.fileName));
         }

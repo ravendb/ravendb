@@ -7,6 +7,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import pagedList = require("common/pagedList");
 import app = require("durandal/app");
+import editCounterDialog = require("viewmodels/counter/editCounterDialog");
+import resetCounterCommand = require("commands/counter/resetCounterCommand");
 
 class counterStorageCounters extends viewModelBase {
     counterGroups = ko.observableArray<counterGroup>([]);
@@ -48,31 +50,27 @@ class counterStorageCounters extends viewModelBase {
     }
 
     addOrEditCounter(counterToUpdate: counter) {
-        require(["viewmodels/counter/editCounterDialog"], editCounterDialog => {
-            var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
-            editCounterDialogViewModel.updateTask
-                .done((editedCounter: counter, delta: number) => {
-                    new updateCounterCommand(this.activeCounterStorage(), editedCounter, delta)
-                        .execute()
-                        .done(() => {
-                            this.fetchGroups(); //TODO: remove this after changes api is implemented
-                        });
-                });
-            app.showDialog(editCounterDialogViewModel);
-        });
+        var editCounterDialogViewModel = new editCounterDialog(counterToUpdate);
+        editCounterDialogViewModel.updateTask
+            .done((editedCounter: counter, delta: number) => {
+                new updateCounterCommand(this.activeCounterStorage(), editedCounter, delta)
+                    .execute()
+                    .done(() => {
+                        this.fetchGroups(); //TODO: remove this after changes api is implemented
+                    });
+            });
+        app.showDialog(editCounterDialogViewModel);
     }
 
     resetCounter(counterToReset: counter) {
         var confirmationMessageViewModel = this.confirmationMessage('Reset Counter', 'Are you sure you want to reset the counter?');
         confirmationMessageViewModel
             .done(() => {
-                require(["commands/counter/resetCounterCommand"], resetCounterCommand => {
-                    new resetCounterCommand(this.activeCounterStorage(), counterToReset)
-                        .execute()
-                        .done(() => {
-                            this.fetchGroups(); //TODO: remove this after changes api is implemented
-                        });
-                });
+                new resetCounterCommand(this.activeCounterStorage(), counterToReset)
+                    .execute()
+                    .done(() => {
+                        this.fetchGroups(); //TODO: remove this after changes api is implemented
+                    });
             });
     }
 

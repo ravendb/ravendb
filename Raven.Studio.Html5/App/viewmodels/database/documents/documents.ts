@@ -22,6 +22,8 @@ import getOperationAlertsCommand = require("commands/operations/getOperationAler
 import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
+import selectColumns = require("viewmodels/common/selectColumns");
+
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
@@ -354,28 +356,25 @@ class documents extends viewModelBase {
     }
 
     selectColumns() {
-        require(["viewmodels/common/selectColumns"], selectColumns => {
-
-            // Fetch column widths from virtual table
-            var virtualTable = this.getDocumentsGrid();
-            var vtColumns = virtualTable.columns();
-            this.currentColumnsParams().columns().forEach((column: customColumnParams) => {
-                for (var i = 0; i < vtColumns.length; i++) {
-                    if (column.binding() === vtColumns[i].binding) {
-                        column.width(vtColumns[i].width() | 0);
-                        break;
-                    }
+        // Fetch column widths from virtual table
+        var virtualTable = this.getDocumentsGrid();
+        var vtColumns = virtualTable.columns();
+        this.currentColumnsParams().columns().forEach((column: customColumnParams) => {
+            for (var i = 0; i < vtColumns.length; i++) {
+                if (column.binding() === vtColumns[i].binding) {
+                    column.width(vtColumns[i].width() | 0);
+                    break;
                 }
-            });
+            }
+        });
 
-            var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
-            app.showDialog(selectColumnsViewModel);
-            selectColumnsViewModel.onExit().done((cols) => {
-                this.currentColumnsParams(cols);
+        var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
+        app.showDialog(selectColumnsViewModel);
+        selectColumnsViewModel.onExit().done((cols) => {
+            this.currentColumnsParams(cols);
 
-                var pagedList = this.currentCollection().getDocuments();
-                this.currentCollectionPagedItems(pagedList);
-            });
+            var pagedList = this.currentCollection().getDocuments();
+            this.currentCollectionPagedItems(pagedList);
         });
     }
 

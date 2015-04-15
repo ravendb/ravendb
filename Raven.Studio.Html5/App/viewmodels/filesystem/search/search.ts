@@ -74,67 +74,55 @@ class search extends viewModelBase {
     }
 
     fileNameStartsWith() {
-        require(["viewmodels/filesystem/searchSingleInputClause"], searchSingleInputClause => {
-            var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename starts with: ");
-            searchSingleInputClauseViewModel
-                .applyFilterTask
-                .done((input: string) => this.addToSearchInput("__fileName:" + this.escapeQueryString(input) + "*"));
-            app.showDialog(searchSingleInputClauseViewModel);
-        });
+        var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename starts with: ");
+        searchSingleInputClauseViewModel
+            .applyFilterTask
+            .done((input: string) => this.addToSearchInput("__fileName:" + this.escapeQueryString(input) + "*"));
+        app.showDialog(searchSingleInputClauseViewModel);
     }
 
     fileNameEndsWith() {
-        require(["viewmodels/filesystem/searchSingleInputClause"], searchSingleInputClause => {
-            var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename ends with: ");
-            searchSingleInputClauseViewModel
-                .applyFilterTask
-                .done((input: string) => this.addToSearchInput("__rfileName:" + this.escapeQueryString(String.prototype.reverse(input)) + "*"));
-            app.showDialog(searchSingleInputClauseViewModel);
-        });
+        var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename ends with: ");
+        searchSingleInputClauseViewModel
+            .applyFilterTask
+            .done((input: string) => this.addToSearchInput("__rfileName:" + this.escapeQueryString(String.prototype.reverse(input)) + "*"));
+        app.showDialog(searchSingleInputClauseViewModel);
     }
 
     fileSizeBetween() {
-        require(["viewmodels/filesystem/searchFileSizeRangeClause"], searchFileSizeRangeClause => {
-            var searchFileSizeRangeClauseViewModel: searchFileSizeRangeClause = new searchFileSizeRangeClause();
-            searchFileSizeRangeClauseViewModel
-                .applyFilterTask
-                .done((input: string) => this.addToSearchInput(input));
-            app.showDialog(searchFileSizeRangeClauseViewModel);
-        });
+        var searchFileSizeRangeClauseViewModel: searchFileSizeRangeClause = new searchFileSizeRangeClause();
+        searchFileSizeRangeClauseViewModel
+            .applyFilterTask
+            .done((input: string) => this.addToSearchInput(input));
+        app.showDialog(searchFileSizeRangeClauseViewModel);
     }
 
     hasMetadata() {
-        require(["viewmodels/filesystem/searchHasMetadataClause"], searchHasMetadataClause => {
-            var searchHasMetadataClauseViewModel: searchHasMetadataClause = new searchHasMetadataClause(this.activeFilesystem());
-            searchHasMetadataClauseViewModel
-                .applyFilterTask
-                .done((input: string) => this.addToSearchInput(this.escapeQueryString(input)));
-            app.showDialog(searchHasMetadataClauseViewModel);
-        });
+        var searchHasMetadataClauseViewModel: searchHasMetadataClause = new searchHasMetadataClause(this.activeFilesystem());
+        searchHasMetadataClauseViewModel
+            .applyFilterTask
+            .done((input: string) => this.addToSearchInput(this.escapeQueryString(input)));
+        app.showDialog(searchHasMetadataClauseViewModel);
     }
 
     inFolder() {
-        require(["viewmodels/filesystem/searchSingleInputClause"], searchSingleInputClause => {
-            var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Folder path: ");
-            searchSingleInputClauseViewModel
-                .applyFilterTask
-                .done((input: string) => {
-		            if (!input.startsWith("/")) input = "/" + input;
-					var escaped = this.escapeQueryString(input);
-		            this.addToSearchInput("__directoryName:" + escaped);
-	            });
-            app.showDialog(searchSingleInputClauseViewModel);
-        });
+        var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Folder path: ");
+        searchSingleInputClauseViewModel
+            .applyFilterTask
+            .done((input: string) => {
+		        if (!input.startsWith("/")) input = "/" + input;
+				var escaped = this.escapeQueryString(input);
+		        this.addToSearchInput("__directoryName:" + escaped);
+	        });
+        app.showDialog(searchSingleInputClauseViewModel);
     }
 
     lastModifiedBetween() {
-        require(["viewmodels/filesystem/searchLastModifiedBetweenClause"], searchLastModifiedBetweenClause => {
-            var searchLastModifiedBetweenClauseViewModel: searchLastModifiedBetweenClause = new searchLastModifiedBetweenClause();
-            searchLastModifiedBetweenClauseViewModel
-                .applyFilterTask
-                .done((input: string) => this.addToSearchInput(input));
-            app.showDialog(searchLastModifiedBetweenClauseViewModel);
-        });
+        var searchLastModifiedBetweenClauseViewModel: searchLastModifiedBetweenClause = new searchLastModifiedBetweenClause();
+        searchLastModifiedBetweenClauseViewModel
+            .applyFilterTask
+            .done((input: string) => this.addToSearchInput(input));
+        app.showDialog(searchLastModifiedBetweenClauseViewModel);
     }
 
     addToSearchInput(input: string) {
