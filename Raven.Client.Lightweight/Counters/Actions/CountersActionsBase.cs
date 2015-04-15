@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net.Http;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Imports.Newtonsoft.Json;
 

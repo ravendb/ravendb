@@ -16,6 +16,7 @@ using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Connection.Request;
 using Raven.Client.Document;
