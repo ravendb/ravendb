@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
 using Raven.Bundles.Encryption.Settings;
 using Raven.Database.Bundles.Encryption;
 
@@ -13,7 +10,6 @@ namespace Raven.Bundles.Encryption.Streams
 {
 	internal class BlockReaderWriter : IDisposable
 	{
-		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly EncryptionSettings settings;
 
 		private readonly Stream stream;
@@ -194,7 +190,7 @@ namespace Raven.Bundles.Encryption.Streams
 				var iv = stream.ReadEntireBlock(header.IVSize);
 				var encrypted = stream.ReadEntireBlock(header.EncryptedBlockSize);
 
-				var decrypted = DecryptBlock(iv, encrypted, true);
+				var decrypted = settings.Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted));
 
 				Debug.Assert(decrypted.Length == header.DecryptedBlockSize);
 
@@ -205,37 +201,6 @@ namespace Raven.Bundles.Encryption.Streams
 					Data = decrypted,
 				};
 			}
-		}
-
-		//isFirstRun --> true if the DecryptBlock is run at the beginning of recursion. 
-		//(recursion here is used as a mechanism of retry usage of different hashing algoritm.
-		private byte[] DecryptBlock(byte[] iv, byte[] encrypted, bool isFirstRun = false)
-		{
-			byte[] decrypted;
-
-			try
-			{
-				decrypted = settings.Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted));
-			}
-			catch (Exception e)
-			{
-				if (isFirstRun == false)
-				{
-					if (e is CryptographicException)
-					{
-						throw new ConfigurationErrorsException("The database is encrypted with a different key and/or algorithm than the ones "
-														   + "currently in the configuration file.", e);
-					}
-					throw;
-				}
-
-				log.Debug("Couldn't decrypt the index using MD5. Trying with SHA1.");
-				settings.Codec.UseSha1();
-
-				decrypted = DecryptBlock(iv, encrypted);
-			}
-
-			return decrypted;
 		}
 
 		/// <summary>
