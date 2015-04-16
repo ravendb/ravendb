@@ -302,6 +302,12 @@ namespace Raven.Tests.Core.Replication
 				//make sure replication is off for indexes/transformers
 				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
 
+				// ReSharper disable once AccessToDisposedClosure
+				var destinationDocuments = SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
+
+				// index and transformer replication is forced if we are replicating for the first time, so replicating one document to bypass this
+				ReplicateOneDummyDocument(source, destination1, destination2, destination3);
+
 				var userTransformer = new UserWithoutExtraInfoTransformer();
 				var anotherTransformer = new AnotherTransformer();
 				var yetAnotherTransformer = new YetAnotherTransformer();
@@ -315,15 +321,12 @@ namespace Raven.Tests.Core.Replication
 							anotherTransformer.TransformerName, 
 							yetAnotherTransformer.TransformerName };
 
-				// ReSharper disable once AccessToDisposedClosure
-				var destinations = SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
-
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-transformers?op=replicate-all-to-destination", source.Url);
 				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
-				replicationRequest.Write(RavenJObject.FromObject(destinations[1]));
+				replicationRequest.Write(RavenJObject.FromObject(destinationDocuments[1]));
 				replicationRequest.ExecuteRequest();
 
 				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
@@ -478,6 +481,24 @@ namespace Raven.Tests.Core.Replication
 			}
 
 			return replicationDocument.Destinations;
+		}
+
+		private void ReplicateOneDummyDocument(IDocumentStore source, IDocumentStore destination1, IDocumentStore destination2, IDocumentStore destination3)
+		{
+			string id;
+			using (var session = source.OpenSession("testDB"))
+			{
+				var dummy = new { Id = "" };
+
+				session.Store(dummy);
+				session.SaveChanges();
+
+				id = dummy.Id;
+			}
+
+			WaitForDocument(destination1.DatabaseCommands.ForDatabase("testDB"), id);
+			WaitForDocument(destination2.DatabaseCommands.ForDatabase("testDB"), id);
+			WaitForDocument(destination3.DatabaseCommands.ForDatabase("testDB"), id);
 		}
 	}
 }
