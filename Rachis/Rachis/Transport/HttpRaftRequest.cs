@@ -18,7 +18,7 @@ namespace Rachis.Transport
 	public class HttpRaftRequest : IDisposable
 	{
 		internal readonly string Url;
-		internal readonly string Method;
+		internal readonly HttpMethod HttpMethod;
 
 		private readonly Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> _getConnection;
 		private readonly CancellationToken _cancellationToken;
@@ -32,10 +32,10 @@ namespace Rachis.Transport
 
 		public HttpClient HttpClient { get; private set; }
 
-		public HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, string method, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection, CancellationToken cancellationToken)
+		public HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, HttpMethod httpMethod, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection, CancellationToken cancellationToken)
 		{
 			Url = url;
-			Method = method;
+			HttpMethod = httpMethod;
 			_getConnection = getConnection;
 			_cancellationToken = cancellationToken;
 			_nodeConnection = nodeConnection;
@@ -91,14 +91,14 @@ namespace Rachis.Transport
 
 		public async Task<HttpResponseMessage> ExecuteAsync()
 		{
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)).ConfigureAwait(false);
+			await SendRequestInternal(() => new HttpRequestMessage(HttpMethod, Url)).ConfigureAwait(false);
 
 			return Response;
 		}
 
 		public async Task<HttpResponseMessage> WriteAsync(Func<HttpContent> content)
 		{
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+			await SendRequestInternal(() => new HttpRequestMessage(HttpMethod, Url)
 			{
 				Content = content()
 			}).ConfigureAwait(false);

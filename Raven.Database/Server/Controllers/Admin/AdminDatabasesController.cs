@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Controllers.Admin
 	{
 		[HttpGet]
 		[RavenRoute("admin/databases/{*id}")]
-		public HttpResponseMessage DatabasesGet(string id)
+		public HttpResponseMessage Get(string id)
 		{
 			if (IsSystemDatabase(id))
 			{
@@ -45,7 +45,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpPut]
 		[RavenRoute("admin/databases/{*id}")]
-		public async Task<HttpResponseMessage> DatabasesPut(string id)
+		public async Task<HttpResponseMessage> Put(string id)
 		{
 			if (IsSystemDatabase(id))
 			{
@@ -128,7 +128,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpDelete]
 		[RavenRoute("admin/databases/batch-delete")]
-		public HttpResponseMessage DatabasesBatchDelete()
+		public HttpResponseMessage BatchDelete()
 		{
 			string[] databasesToDelete = GetQueryStringValues("ids");
 			if (databasesToDelete == null)
@@ -155,7 +155,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpPost]
 		[RavenRoute("admin/databases/{*id}")]
-		public HttpResponseMessage DatabaseToggleDisable(string id, bool isSettingDisabled)
+		public HttpResponseMessage ToggleDisable(string id, bool isSettingDisabled)
 		{
 			var message = ToggeleDatabaseDisabled(id, isSettingDisabled);
 			if (message.ErrorCode != HttpStatusCode.OK)
@@ -168,7 +168,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
         [HttpPost]
         [RavenRoute("admin/databases/toggle-indexing/{*id}")]
-        public HttpResponseMessage DatabaseToggleIndexingDisable(string id, bool isSettingIndexingDisabled)
+        public HttpResponseMessage ToggleIndexingDisable(string id, bool isSettingIndexingDisabled)
         {
             var message = ToggeleDatabaseIndexingDisabled(id, isSettingIndexingDisabled);
             if (message.ErrorCode != HttpStatusCode.OK)

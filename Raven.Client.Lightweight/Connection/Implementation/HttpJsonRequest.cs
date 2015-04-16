@@ -127,7 +127,7 @@ namespace Raven.Client.Connection.Implementation
 
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
 			{
-				if (Method == HttpMethod.Post || Method == HttpMethod.Put || Method == HttpMethods.Patch || Method == HttpMethods.Eval)
+				if (Method == HttpMethods.Post || Method == HttpMethods.Put || Method == HttpMethods.Patch || Method == HttpMethods.Eval)
 				{
 					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
 					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
@@ -194,10 +194,14 @@ namespace Raven.Client.Connection.Implementation
 				{
 					var requestMessage = getRequestMessage();
 					CopyHeadersToHttpRequestMessage(requestMessage);
-                    Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+					Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
 					SetResponseHeaders(Response);
-				    AssertServerVersionSupported();
+					AssertServerVersionSupported();
 					ResponseStatusCode = Response.StatusCode;
+				}
+				catch (Exception e)
+				{
+					
 				}
 				finally
 				{
@@ -476,7 +480,7 @@ namespace Raven.Client.Connection.Implementation
 				var data = RavenJToken.TryLoad(countingStream);
 				Size = countingStream.NumberOfReadBytes;
 
-				if (Method == HttpMethod.Get && ShouldCacheRequest)
+				if (Method == HttpMethods.Get && ShouldCacheRequest)
 				{
 					factory.CacheResponse(Url, data, ResponseHeaders);
 				}

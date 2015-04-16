@@ -313,12 +313,12 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequest CreateAcknowledgmentRequest(Etag lastProcessedEtag)
 		{
-			return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), HttpMethod.Post);
+			return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), HttpMethods.Post);
 		}
 
 		private HttpJsonRequest CreatePullingRequest()
 		{
-			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), HttpMethod.Get);
+			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Get);
 		}
 
 		private HttpJsonRequest CreateClientAliveRequest()
@@ -328,7 +328,7 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequest CreateCloseRequest()
 		{
-			return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), HttpMethod.Post);
+			return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Post);
 		}
 
 		private void OnCompletedNotification()

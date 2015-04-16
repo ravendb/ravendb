@@ -5,13 +5,12 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Net;
-using System.Net.Http;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -35,7 +34,7 @@ namespace Raven.Tests.Issues
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                               servers[0].SystemDatabase.ServerUrl +
                                                                               string.Format("admin/replication/purge-tombstones?docEtag={0}&attachmentEtag={1}", null, lastAttachmentEtag),
-                                                                              HttpMethod.Post,
+                                                                              HttpMethods.Post,
                                                                               new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                               store1.Conventions);
             store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();

@@ -26,6 +26,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
+using Raven.Abstractions.Util;
 using Raven.Database.Raft.Commands;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
@@ -49,9 +50,9 @@ namespace Raven.Database.Raft
 			this.raftEngine = raftEngine;
 		}
 
-		private HttpRaftRequest CreateRequest(NodeConnectionInfo node, string url, string method)
+		private HttpRaftRequest CreateRequest(NodeConnectionInfo node, string url, HttpMethod httpMethod)
 		{
-			var request = new HttpRaftRequest(node, url, method, info =>
+			var request = new HttpRaftRequest(node, url, httpMethod, info =>
 			{
 				HttpClient client;
 				var dispose = (IDisposable) GetConnection(info, out client);
@@ -148,7 +149,7 @@ namespace Raven.Database.Raft
 		{
 			var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/join";
 
-			using (var request = CreateRequest(leaderNode, url, "POST"))
+			using (var request = CreateRequest(leaderNode, url, HttpMethods.Post))
 			{
 				var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(newNode))).ConfigureAwait(false);
 
@@ -214,7 +215,7 @@ namespace Raven.Database.Raft
 			try
 			{
 				var url = node.Uri.AbsoluteUri + "stats";
-				using (var request = CreateRequest(node, url, "GET"))
+				using (var request = CreateRequest(node, url, HttpMethods.Get))
 				{
 					var response = await request.ExecuteAsync().ConfigureAwait(false);
 					return response.IsSuccessStatusCode ? ConnectivityStatus.Online : ConnectivityStatus.Offline;
@@ -233,7 +234,7 @@ namespace Raven.Database.Raft
 		private async Task SendDatabaseDeleteInternalAsync(NodeConnectionInfo node, string databaseName, bool hardDelete)
 		{
 			var url = node.Uri.AbsoluteUri + "admin/cluster/commands/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
-			using (var request = CreateRequest(node, url, "DELETE"))
+			using (var request = CreateRequest(node, url, HttpMethods.Delete))
 			{
 				var response = await request.ExecuteAsync().ConfigureAwait(false);
 				if (response.IsSuccessStatusCode)
@@ -256,7 +257,7 @@ namespace Raven.Database.Raft
 		private async Task PutAsync(NodeConnectionInfo node, string action, object content)
 		{
 			var url = node.Uri.AbsoluteUri + action;
-			using (var request = CreateRequest(node, url, "PUT"))
+			using (var request = CreateRequest(node, url, HttpMethods.Put))
 			{
 				var response = await request.WriteAsync(() => new JsonContent(RavenJObject.FromObject(content))).ConfigureAwait(false);
 				if (response.IsSuccessStatusCode)
@@ -270,7 +271,7 @@ namespace Raven.Database.Raft
 		{
 			var url = nodeConnectionInfo.Uri.AbsoluteUri + "admin/cluster/canJoin?topologyId=" + raftEngine.CurrentTopology.TopologyId;
 
-			using (var request = CreateRequest(nodeConnectionInfo, url, "GET"))
+			using (var request = CreateRequest(nodeConnectionInfo, url, HttpMethods.Get))
 			{
 				var response = await request.ExecuteAsync().ConfigureAwait(false);
 
@@ -319,7 +320,7 @@ namespace Raven.Database.Raft
 		public async Task SendNodeUpdateInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo nodeToUpdate)
 		{
 			var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/update";
-			using (var request = CreateRequest(leaderNode, url, "POST"))
+			using (var request = CreateRequest(leaderNode, url, HttpMethods.Post))
 			{
 				var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(nodeToUpdate))).ConfigureAwait(false);
 				if (response.IsSuccessStatusCode)
@@ -353,7 +354,7 @@ namespace Raven.Database.Raft
 		public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
 		{
 			var url = leavingNode.Uri.AbsoluteUri + "admin/cluster/leave?name=" + leavingNode.Name;
-			using (var request = CreateRequest(leavingNode, url, "GET"))
+			using (var request = CreateRequest(leavingNode, url, HttpMethods.Get))
 			{
 				var response = await request.ExecuteAsync().ConfigureAwait(false);
 				if (response.IsSuccessStatusCode)
@@ -412,7 +413,7 @@ namespace Raven.Database.Raft
 		public async Task<Guid> GetDatabaseId(NodeConnectionInfo nodeConnectionInfo)
 		{
 			var url = nodeConnectionInfo.Uri + "/stats";
-			using (var request = CreateRequest(nodeConnectionInfo, url, "GET"))
+			using (var request = CreateRequest(nodeConnectionInfo, url, HttpMethods.Get))
 			{
 				var response = await request.ExecuteAsync().ConfigureAwait(false);
 				if (!response.IsSuccessStatusCode)

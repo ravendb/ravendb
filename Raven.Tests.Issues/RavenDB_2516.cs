@@ -6,10 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Data;
 using Raven.Database.Config;
@@ -57,7 +57,7 @@ namespace Raven.Tests.Issues
 
 				var request = store1
 					.JsonRequestFactory
-					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethod.Post, store1.DatabaseCommands.PrimaryCredentials, store1.Conventions));
+					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Post, store1.DatabaseCommands.PrimaryCredentials, store1.Conventions));
 
 				var json = (RavenJObject)request.ReadResponseJson();
 				var topology = json.Deserialize<ReplicationTopology>(store1.Conventions);
@@ -140,7 +140,7 @@ namespace Raven.Tests.Issues
 
 				var request = store1
 					.JsonRequestFactory
-					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethod.Post, store1.DatabaseCommands.PrimaryCredentials, store1.Conventions));
+					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Post, store1.DatabaseCommands.PrimaryCredentials, store1.Conventions));
 
 				var json = (RavenJObject)request.ReadResponseJson();
 				var topology = json.Deserialize<ReplicationTopology>(store1.Conventions);

@@ -5,11 +5,11 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Database.Actions;
 using Raven.Json.Linq;
@@ -39,7 +39,7 @@ namespace Raven.Tests.Issues
                     while (true)
                     {
                         var response = (RavenJArray)store.JsonRequestFactory.CreateHttpJsonRequest(
-                            new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operations", HttpMethod.Get,
+                            new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operations", HttpMethods.Get,
                                 store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ReadResponseJson();
                         var taskList = response.Select(
                             t => ((RavenJObject)t).Deserialize<TaskActions.PendingTaskDescriptionAndStatus>(store.Conventions)).ToList();
@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
                             var operationId = taskList.First().Id;
                             store.JsonRequestFactory.CreateHttpJsonRequest(
                                 new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operation/kill?id=" + operationId,
-                                    HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ExecuteRequest();
+                                    HttpMethods.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ExecuteRequest();
                             break;
                         }
                     }

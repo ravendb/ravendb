@@ -118,6 +118,21 @@ namespace Voron.Trees
 			structure.Write(pos);
 		}
 
+		public void ReplaceValueIfBigger(Slice key, long newValue, Func<long,long,long> merge, ushort? version = null)
+		{
+			State.IsModified = true;
+
+			var read = Read(key);
+			var result = (long*)DirectAdd(key, sizeof(long), version: version);
+			if (read == null)
+			{
+				*result = newValue;
+				return;
+			}
+			var oldValue = read.Reader.ReadLittleEndianInt64();
+			*result = merge(oldValue, newValue);
+		}
+
 		public long Increment(Slice key, long delta, ushort? version = null)
 		{
 			State.IsModified = true;

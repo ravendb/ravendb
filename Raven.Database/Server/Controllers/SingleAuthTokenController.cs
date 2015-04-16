@@ -69,12 +69,12 @@ namespace Raven.Database.Counters.Controllers
     public class CounterSingleAuthTokenController : RavenCountersApiController
     {
         [HttpGet]
-        [RavenRoute("counters/{counterName}/singleAuthToken")]
+        [RavenRoute("cs/{counterStorageName}/singleAuthToken")]
         public HttpResponseMessage SingleAuthGet()
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken("counters/" + CountersName, User);
+            var token = authorizer.GenerateSingleUseAuthToken("counters/" + CounterStorageName, User);
 
             return GetMessageWithObject(new
             {

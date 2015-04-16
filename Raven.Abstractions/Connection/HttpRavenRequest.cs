@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions.Data;
@@ -15,7 +17,7 @@ namespace Raven.Abstractions.Connection
 	public class HttpRavenRequest
 	{
 		private readonly string url;
-		private readonly string method;
+		private readonly HttpMethod httpMethod;
 		private readonly Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest;
 		private readonly Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse;
 		private readonly RavenConnectionStringOptions connectionStringOptions;
@@ -36,10 +38,10 @@ namespace Raven.Abstractions.Connection
 			set { webRequest = value; }
 		}
 
-		public HttpRavenRequest(string url, string method, Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions)
+		public HttpRavenRequest(string url, HttpMethod httpMethod, Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions)
 		{
 			this.url = url;
-			this.method = method;
+			this.httpMethod = httpMethod;
 			this.configureRequest = configureRequest;
 			this.handleUnauthorizedResponse = handleUnauthorizedResponse;
 			this.connectionStringOptions = connectionStringOptions;
@@ -48,8 +50,8 @@ namespace Raven.Abstractions.Connection
 		private HttpWebRequest CreateRequest()
 		{
 			var request = (HttpWebRequest)System.Net.WebRequest.Create(url);
-			request.Method = method;
-			if (method == "POST" || method == "PUT")
+			request.Method = httpMethod.Method;
+			if (httpMethod == HttpMethods.Post || httpMethod == HttpMethods.Put)
 				request.Headers["Content-Encoding"] = "gzip";
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
 			request.ContentType = "application/json; charset=utf-8";

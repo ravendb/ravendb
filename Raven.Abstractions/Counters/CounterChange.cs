@@ -4,11 +4,18 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Threading.Tasks;
+using Raven.Imports.Newtonsoft.Json;
+
 namespace Raven.Abstractions.Counters
 {
-	public class CounterChanges
+	public class CounterChange
 	{
-		public string FullCounterName { get; set; }
+		public string Name { get; set; }
+		public string Group { get; set; }
 		public long Delta { get; set; }
+
+		[JsonIgnore]
+		public TaskCompletionSource<object> Done { get; set; }
 	}
 }

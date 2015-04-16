@@ -150,9 +150,10 @@
     <Compile Include="Connection\OperationCredentials.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
-    <Compile Include="Counters\CountersDocument.cs" />
+    <Compile Include="Counters\CountersBatchOptions.cs" />
+    <Compile Include="Counters\CounterStorageDocument.cs" />
     <Compile Include="Counters\CounterStorageStats.cs" />
-    <Compile Include="Counters\CounterChanges.cs" />
+    <Compile Include="Counters\CounterChange.cs" />
     <Compile Include="Counters\CounterStorageReplicationDestination.cs" />
     <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
     <Compile Include="Counters\CounterView.cs" />
@@ -432,6 +433,7 @@
     <Compile Include="Util\Encryptors\IEncryptor.cs" />
     <Compile Include="Util\EscapingHelper.cs" />
     <Compile Include="Util\EtagUtil.cs" />
+    <Compile Include="Util\HttpMethods.cs" />
     <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />
@@ -440,7 +442,6 @@
     <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\RavenQuery.cs" />
-    <Compile Include="Util\HttpMethods.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />

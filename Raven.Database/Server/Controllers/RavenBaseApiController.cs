@@ -142,6 +142,13 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+	    protected Guid ExtractOperationId()
+		{
+			Guid result;
+			Guid.TryParse(GetQueryStringValue("operationId"), out result);
+			return result;
+		}
+
 		public async Task<RavenJObject> ReadJsonAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
