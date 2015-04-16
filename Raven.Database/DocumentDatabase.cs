@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
@@ -14,10 +13,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
 using Raven.Abstractions;
@@ -40,15 +37,10 @@ using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
-using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.Tenancy;
-using Raven.Database.Server.WebApi;
 using Raven.Database.Storage;
 using Raven.Database.Util;
-
-using metrics.Core;
 using Raven.Database.Plugins.Catalogs;
 
 namespace Raven.Database
@@ -110,6 +102,7 @@ namespace Raven.Database
 				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
 				initializer = new DocumentDatabaseInitializer(this, configuration);
+				initializer.ValidateStorage();
 
 				initializer.InitializeEncryption();
 				initializer.ValidateLicense();
@@ -1146,6 +1139,17 @@ namespace Raven.Database
 			{
 				this.database = database;
 				this.configuration = configuration;
+			}
+
+			public void ValidateStorage()
+			{
+				var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+				if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
+					&& configuration.Storage.Voron.AllowOn32Bits == false &&
+					Environment.Is64BitProcess == false)
+				{
+					throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
+				}
 			}
 
 			public void ValidateLicense()
