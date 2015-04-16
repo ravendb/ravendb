@@ -302,6 +302,9 @@ namespace Raven.Tests.Core.Replication
 				// ReSharper disable once AccessToDisposedClosure
 				var destinationDocuments = SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
 
+				// index and transformer replication is forced if we are replicating for the first time, so replicating one document to bypass this
+				ReplicateOneDummyDocument(source, destination1, destination2, destination3);
+
 				//make sure not to replicate the index automatically
 				var userIndex = new UserIndex();
 				var anotherUserIndex = new AnotherUserIndex();
@@ -590,6 +593,24 @@ namespace Raven.Tests.Core.Replication
 					{"Raven/ActiveBundles", "Replication"}
 				}
 			});
+		}
+
+		private void ReplicateOneDummyDocument(IDocumentStore source, IDocumentStore destination1, IDocumentStore destination2, IDocumentStore destination3)
+		{
+			string id;
+			using (var session = source.OpenSession("testDB"))
+			{
+				var dummy = new { Id = "" };
+
+				session.Store(dummy);
+				session.SaveChanges();
+
+				id = dummy.Id;
+			}
+
+			WaitForDocument(destination1.DatabaseCommands.ForDatabase("testDB"), id);
+			WaitForDocument(destination2.DatabaseCommands.ForDatabase("testDB"), id);
+			WaitForDocument(destination3.DatabaseCommands.ForDatabase("testDB"), id);
 		}
 	}
 }
