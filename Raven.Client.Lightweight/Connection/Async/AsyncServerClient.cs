@@ -859,7 +859,7 @@ namespace Raven.Client.Connection.Async
 				AddTransactionInformation(metadata);
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
 				{
-					return await request.ReadResponseJsonAsync().WithCancellation(token);
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
 			}, token).ConfigureAwait(false);
 			return ((RavenJObject)result).Deserialize<MultiLoadResult>(convention);
