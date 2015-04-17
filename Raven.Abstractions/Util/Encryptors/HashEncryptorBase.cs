@@ -12,17 +12,35 @@
 			AllowNonThreadSafeMethods = allowNonThreadSafeMethods;
 		}
 
-		public byte[] ComputeHash(HashAlgorithm algorithm, byte[] bytes, int? size = null)
-		{
-			using (algorithm)
-			{
-				var hash = algorithm.ComputeHash(bytes);
-				if (size.HasValue)
-					Array.Resize(ref hash, size.Value);
+        protected byte[] ComputeHashInternal(HashAlgorithm algorithm, byte[] bytes, int? size = null)
+        {
+            var hash = algorithm.ComputeHash(bytes);
+            if (size.HasValue)
+                Array.Resize(ref hash, size.Value);
 
-				return hash;
-			}
-		}
+            return hash;
+        }
+
+        protected byte[] ComputeHashInternal(HashAlgorithm algorithm, byte[] bytes, int offset, int count, int? size = null)
+        {
+            var hash = algorithm.ComputeHash(bytes, offset, count);
+            if (size.HasValue)
+                Array.Resize(ref hash, size.Value);
+
+            return hash;
+        }
+
+        public byte[] ComputeHash(HashAlgorithm algorithm, byte[] bytes, int? size = null)
+        {
+            using (algorithm)
+            {
+                var hash = algorithm.ComputeHash(bytes);
+                if (size.HasValue)
+                    Array.Resize(ref hash, size.Value);
+
+                return hash;
+            }
+        }
 
         public byte[] ComputeHash(HashAlgorithm algorithm, byte[] bytes, int offset, int count, int? size = null)
         {
