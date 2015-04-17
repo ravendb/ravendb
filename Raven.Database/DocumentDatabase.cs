@@ -159,8 +159,17 @@ namespace Raven.Database
 				try
 				{
 					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-
-					Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
+                    initializer.InitializeIndexDefinitionStorage();
+                    Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
+                    Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
+                    Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
+                    Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
+                    Subscriptions = new SubscriptionActions(this, Log);
+                    Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
+                    Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
+                    Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
+                    Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
+                    Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
 					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
 
@@ -172,15 +181,7 @@ namespace Raven.Database
 					InitializeIndexCodecTriggers();
 					initializer.InitializeIndexStorage();
 
-					Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
-					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
-					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
-					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
-					Subscriptions = new SubscriptionActions(this, Log);
-					Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
-					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
-					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
-					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
+				
 
 					CompleteWorkContextSetup();
 
@@ -1227,9 +1228,13 @@ namespace Raven.Database
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
+		    public void InitializeIndexDefinitionStorage()
+		    {
+                database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
+		    }
+
 			public void InitializeIndexStorage()
 			{
-				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 
