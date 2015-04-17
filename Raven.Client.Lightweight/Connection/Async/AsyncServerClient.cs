@@ -1722,7 +1722,7 @@ namespace Raven.Client.Connection.Async
 											.ConfigureAwait(false);
 				}
 
-				await response.AssertNotFailingResponse().WithCancellation(cancellationToken);
+				await response.AssertNotFailingResponse().WithCancellation(cancellationToken).ConfigureAwait(false);
 			}
 			catch (Exception e)
 			{
@@ -1971,7 +1971,7 @@ namespace Raven.Client.Connection.Async
 										.WithCancellation(cancellationToken)
 										.ConfigureAwait(false);
 
-				await response.AssertNotFailingResponse().WithCancellation(cancellationToken);
+				await response.AssertNotFailingResponse().WithCancellation(cancellationToken).ConfigureAwait(false);
 			}
 			catch (Exception)
 			{
