@@ -269,10 +269,12 @@ namespace Raven.Client.Linq
             var processor = GetQueryProviderProcessor<T>();
             var documentQuery = (IAsyncDocumentQuery<TResult>)processor.GetAsyncDocumentQueryFor(expression);
 
-            if (FieldsToRename.Count > 0)
-                documentQuery.AfterQueryExecuted(processor.RenameResults);
-
-            return documentQuery;
+	        if (FieldsToRename.Count > 0)
+	        {
+		        documentQuery.AfterQueryExecuted(processor.RenameResults);
+		        documentQuery.AfterStreamExecuted(processor.RenameStreamResults);
+	        }
+	        return documentQuery;
         }
 
 		/// <summary>
