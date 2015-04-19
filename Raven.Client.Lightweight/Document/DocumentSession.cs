@@ -602,8 +602,11 @@ namespace Raven.Client.Document
         public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
         {
 			var queryProvider = (IRavenQueryProvider)query.Provider;
+			
 			var docQuery = queryProvider.ToDocumentQuery<T>(query.Expression);
+	
             return Stream(docQuery, out queryHeaderInformation);
+
         }
 
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
@@ -632,17 +635,10 @@ namespace Raven.Client.Document
                 var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation();
                 queryOperation.DisableEntitiesTracking = true;
 				
-	           // var fields = queryOperation.IndexQuery.FieldsToFetch;
-
-
-					
                 while (enumerator.MoveNext())
                 {
-				
                     var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
-	                /*enumerator.Current.Remove("Address");
-					enumerator.Current.Add("OtherThanName", "Tel Aviv");
-*/
+					query.InvokeAfterStreamExecuted(enumerator.Current);
                     string key = null;
                     Etag etag = null;
                     if (meta != null)
@@ -655,7 +651,7 @@ namespace Raven.Client.Document
                         if (value != null)
                             etag = Etag.Parse(value);
                     }
-
+				
                     yield return new StreamResult<T>
                     {
                         Document = queryOperation.Deserialize<T>(enumerator.Current),

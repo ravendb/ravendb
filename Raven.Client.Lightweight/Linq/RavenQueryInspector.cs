@@ -218,7 +218,7 @@ namespace Raven.Client.Linq
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-		    return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName,
+		    return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null,null, indexName,
 		                                              new HashSet<string>(), new List<RenamedField>(), isMapReduce,
                                                       provider.ResultTransformer, provider.TransformerParameters);
 		}
@@ -230,7 +230,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, 
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null,null,indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, 
                     provider.ResultTransformer, provider.TransformerParameters);
 				var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
 				return ((IRavenQueryInspector)documentQuery).IndexQueried;
@@ -244,7 +244,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null,null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
                     provider.ResultTransformer, provider.TransformerParameters);
 				var documentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
 				return ((IRavenQueryInspector)documentQuery).IndexQueried;
@@ -290,7 +290,7 @@ namespace Raven.Client.Linq
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
-            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, provider.ResultTransformer, provider.TransformerParameters);
+            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null,null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, provider.ResultTransformer, provider.TransformerParameters);
 			if (isAsync)
 			{
 				var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);

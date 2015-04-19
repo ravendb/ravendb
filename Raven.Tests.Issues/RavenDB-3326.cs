@@ -29,38 +29,23 @@ namespace Raven.Tests.Issues
           
                     WaitForIndexing(store);
 
-                   // WaitForUserToContinueTheTest(store);
-/*
-
-					var list = session.Query<Customer>(index.IndexName)
-						.Select(r => new
-						{
-							Name = r.Name,
-							OtherThanName = r.Address
-						}).ToList();
-*/
-
-					  var query = session.Query<Customer>(index.IndexName)
+					var query = session.Query<Customer>(index.IndexName)
                         .Select(r => new
                         {
                             Name = r.Name,
                             OtherThanName = r.Address
                         });
 
-                    
-                        //WaitForUserToContinueTheTest(store);
-             
-                        var enumerator = session.Advanced.Stream(query);
+                         var enumerator = session.Advanced.Stream(query);
 
                         while (enumerator.MoveNext())
                         {
-                            var result = enumerator.Current.Document.Name; //works
-                            var result2 = enumerator.Current.Document.OtherThanName; //Null
+                            Assert.Equal("John",enumerator.Current.Document.Name); 
+                            Assert.Equal("Tel Aviv",enumerator.Current.Document.OtherThanName); 
                         }
                     }
                 }
             }
-
         public class Customer
         {
             public string Name { get; set; }
