@@ -301,7 +301,7 @@ namespace Raven.Database.Indexing
 
 		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo)
 		{
-			logIndexing.Error("HandlingCommitPoint for index {0} in DB {1}", this.PublicName);
+			logIndexing.Error("HandlingCommitPoint for index {0} in DB {1}", this.PublicName, this.context.DatabaseName);
 			if (ShouldStoreCommitPoint(itemsInfo) && itemsInfo.HighestETag != null)
 			{
 				context.IndexStorage.StoreCommitPoint(indexId.ToString(), new IndexCommitPoint
