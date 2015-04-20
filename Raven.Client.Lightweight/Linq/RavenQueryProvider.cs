@@ -272,7 +272,7 @@ namespace Raven.Client.Linq
 	        if (FieldsToRename.Count > 0)
 	        {
 		        documentQuery.AfterQueryExecuted(processor.RenameResults);
-		        documentQuery.AfterStreamExecuted(processor.RenameStreamResults);
+				documentQuery.AfterStreamExecuted(o => processor.RenameSingleResult(o));
 	        }
 	        return documentQuery;
         }
@@ -391,7 +391,7 @@ namespace Raven.Client.Linq
 			}).ToArray();
 
 			if (renamedFields.Length > 0)
-				result.AfterStreamExecuted(processor.RenameStreamResults);
+				result.AfterStreamExecuted(o => processor.RenameSingleResult(o));
             return result;
         }
     }

@@ -1640,35 +1640,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				var result = queryResult.Results[index];
 				var safeToModify = (RavenJObject)result.CreateSnapshot();
 				bool changed = false;
-				var values = new Dictionary<string, RavenJToken>();
-				foreach (var renamedField in FieldsToRename.Select(x => x.OriginalField).Distinct())
-				{
-					RavenJToken value;
-					if (safeToModify.TryGetValue(renamedField, out value) == false) 
-						continue;
-					values[renamedField] = value;
-					safeToModify.Remove(renamedField);
-				}
-				foreach (var rename in FieldsToRename)
-				{
-					RavenJToken val;
-					if (values.TryGetValue(rename.OriginalField, out val) == false)
-						continue;
-					changed = true;
-					var ravenJObject = val as RavenJObject;
-					if (rename.NewField == null && ravenJObject != null)
-					{
-						safeToModify = ravenJObject;
-					}
-					else if (rename.NewField != null)
-					{
-						safeToModify[rename.NewField] = val;
-					}
-					else
-					{
-						safeToModify[rename.OriginalField] = val;
-					}
-				}
+				
 				if (!changed)
 					continue;
 				safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
@@ -1676,31 +1648,39 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 		}
 
-		public void RenameStreamResults(RavenJObject streamResult)
+		public bool RenameStreamResults(RavenJObject safeToModify)
 		{
+			var changed = false;
 			var values = new Dictionary<string, RavenJToken>();
 			foreach (var renamedField in FieldsToRename.Select(x => x.OriginalField).Distinct())
 			{
 				RavenJToken value;
-				if (streamResult.TryGetValue(renamedField, out value) == false)
+				if (safeToModify.TryGetValue(renamedField, out value) == false)
 					continue;
 				values[renamedField] = value;
-				streamResult.Remove(renamedField);
+				safeToModify.Remove(renamedField);
 			}
 			foreach (var rename in FieldsToRename)
 			{
 				RavenJToken val;
 				if (values.TryGetValue(rename.OriginalField, out val) == false)
 					continue;
-				if (rename.NewField != null)
+				changed = true;
+				var ravenJObject = val as RavenJObject;
+				if (rename.NewField == null && ravenJObject != null)
 				{
-					streamResult[rename.NewField] = val;
+					safeToModify = ravenJObject;
+				}
+				else if (rename.NewField != null)
+				{
+					safeToModify[rename.NewField] = val;
 				}
 				else
 				{
-					streamResult[rename.OriginalField] = val;
+					safeToModify[rename.OriginalField] = val;
 				}
 			}
+			return changed;
 		}
 
 		private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)
