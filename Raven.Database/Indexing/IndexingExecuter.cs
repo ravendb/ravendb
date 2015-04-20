@@ -15,11 +15,8 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Client.Linq;
 using Raven.Database.Config;
-using Raven.Database.Embedded;
 using Raven.Database.Impl;
-using Raven.Database.Impl.BackgroundTaskExecuter;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
@@ -34,7 +31,7 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
 		private readonly Prefetcher prefetcher;
 		private readonly PrefetchingBehavior defaultPrefetchingBehavior;
-
+		
 		public IndexingExecuter(WorkContext context, Prefetcher prefetcher, IndexReplacer indexReplacer)
 			: base(context, indexReplacer)
 		{
@@ -52,7 +49,6 @@ namespace Raven.Database.Indexing
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
-		    
 			var isStale = actions.Staleness.IsMapStale(indexesStat.Id);
 			var indexingPriority = indexesStat.Priority;
 			if (isStale == false)
@@ -61,7 +57,7 @@ namespace Raven.Database.Indexing
 			if (indexingPriority == IndexingPriority.None)
 				return true;
 
-            
+
 			if ((indexingPriority & IndexingPriority.Normal) == IndexingPriority.Normal)
 			{
 				onlyFoundIdleWork.Value = false;
@@ -87,10 +83,9 @@ namespace Raven.Database.Indexing
 			throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Id + ": " + indexesStat.Priority);
 		}
 
-	    
+
 		protected override void UpdateStalenessMetrics(int staleCount)
 		{
-	    
 			context.MetricsCounters.StaleIndexMaps.Update(staleCount);
 		}
 
@@ -102,7 +97,7 @@ namespace Raven.Database.Indexing
 		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 
 		{
-			var removeFromIndexTasks = (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>();
+			var removeFromIndexTasks = (DatabaseTask) actions.Tasks.GetMergedTask<RemoveFromIndexTask>();
 			var touchReferenceDocumentIfChangedTask = removeFromIndexTasks ?? actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>();
 
 
@@ -124,25 +119,41 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		
+
 		private class IndexingGroup : IDisposable
 		{
-			
 			public Etag LastIndexedEtag;
 			public DateTime? LastQueryTime;
-			
+
 			public List<IndexToWorkOn> Indexes;
 			public PrefetchingBehavior PrefetchingBehavior;
 			public List<JsonDocument> JsonDocs;
 			private IDisposable prefetchDisposable;
 			public IndexingBatchInfo BatchInfo { get; set; }
 			private int disposed = 0;
+			private int indexedAmount = 0;
+
+			public event Action<IndexingGroup> IndexingGroupProcessingFinished;
+
+
+			public void SignalIndexingComplete()
+			{
+				if (Interlocked.Increment(ref indexedAmount) == Indexes.Count && IndexingGroupProcessingFinished != null)
+				{
+					IndexingGroupProcessingFinished(this);
+				}
+			}
+
+			public void ReleaseIndexingGroupFinished()
+			{
+				IndexingGroupProcessingFinished = null;
+			}
 
 			public void PrefetchDocuments()
 			{
 				/*prefetchDisposable  = new WeakReference<IDisposable>(
 					PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs));*/
-				prefetchDisposable = 
+				prefetchDisposable =
 					PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs);
 			}
 
@@ -157,7 +168,7 @@ namespace Raven.Database.Indexing
 			public void Dispose()
 			{
 				if (prefetchDisposable != null)
-				{ 
+				{
 					IDisposable prefetcherDisposableValue;
 					/*if (prefetchDisposable.TryGetTarget(out prefetcherDisposableValue))
 					{
@@ -169,7 +180,6 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-        
 		public class IndexingBatchOperation
 		{
 			public IndexingBatchForIndex IndexingBatch { get; set; }
@@ -178,40 +188,69 @@ namespace Raven.Database.Indexing
 			public IndexingBatchInfo IndexingBatchInfo { get; set; }
 		}
 
-	        
+
 		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexes)
 		{
 			ConcurrentSet<PrefetchingBehavior> usedPrefetchers;
 			List<IndexingGroup> groupedIndexes;
-			
-			if (GenerateIndexingGroupsByEtagRanges(indexes, out usedPrefetchers, out groupedIndexes)) return;
-			
+			var completedGroups = 0;
+
+			if (GenerateIndexingGroupsByEtagRanges(indexes, out usedPrefetchers, out groupedIndexes))
+			{
+				return;
+			}
+
+
+			foreach (var indexToWorkOn in indexes)
+			{
+				indexToWorkOn.Index.IsMapIndexingInProgress = true;
+			}
+
 			var indexingAutoTunerContext = ((IndexBatchSizeAutoTuner) autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(
-					groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument)),
-					groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce)));
-			indexes.ForEach(x=>x.Index.CurrentNumberOfItemsToIndexInSingleBatch = autoTuner.NumberOfItemsToProcessInSingleBatch);
+				groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument)),
+				groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce)));
+			indexes.ForEach(x => x.Index.CurrentNumberOfItemsToIndexInSingleBatch = autoTuner.NumberOfItemsToProcessInSingleBatch);
 			using (indexingAutoTunerContext)
 			{
-
 				var indexBatchOperations = new ConcurrentDictionary<IndexingBatchOperation, object>();
-				
+
 				var operationWasCancelled = GenerateIndexingBatchesAndPrefetchDocuments(groupedIndexes, indexBatchOperations);
+
 				var executionStopwatch = Stopwatch.StartNew();
-				try
+
+				foreach (var indexingGroup in groupedIndexes)
 				{
-					
-					operationWasCancelled = PerformIndexingOnIndexBatches(indexBatchOperations, operationWasCancelled, groupedIndexes);
-				}
-				finally
-				{
-					if (operationWasCancelled == false)
+					indexingGroup.IndexingGroupProcessingFinished += x =>
 					{
-						ReleasePrefethersAndUpdateStatistics(groupedIndexes, executionStopwatch.Elapsed);
-					}
+						if (!operationWasCancelled)
+						{
+							ReleasePrefethersAndUpdateStatistics(x, executionStopwatch.Elapsed);
+						}
+
+						if (Interlocked.Increment(ref completedGroups) == groupedIndexes.Count)
+						{
+							RemoveUnusedPrefetchers(usedPrefetchers);
+						}
+					};
 				}
+
+				if (!operationWasCancelled)
+					operationWasCancelled = PerformIndexingOnIndexBatches(indexBatchOperations);
 			}
-			RemoveUnusedPrefetchers(usedPrefetchers);
 		}
+
+		private void ReleasePrefethersAndUpdateStatistics(IndexingGroup indexingGroup, TimeSpan ellapsedTimeSpan)
+		{
+			if (indexingGroup.JsonDocs != null && indexingGroup.JsonDocs.Count > 0)
+			{
+				indexingGroup.PrefetchingBehavior.CleanupDocuments(indexingGroup.LastIndexedEtag);
+				indexingGroup.PrefetchingBehavior.UpdateAutoThrottler(indexingGroup.JsonDocs, ellapsedTimeSpan);
+				indexingGroup.PrefetchingBehavior.BatchProcessingComplete();
+				context.ReportIndexingBatchCompleted(indexingGroup.BatchInfo);
+			}
+			indexingGroup.ReleaseIndexingGroupFinished();
+		}
+
 		private void ReleasePrefethersAndUpdateStatistics(List<IndexingGroup> groupedIndexes, TimeSpan ellapsedTimeSpan)
 		{
 			foreach (var indexingGroup in groupedIndexes)
@@ -227,8 +266,9 @@ namespace Raven.Database.Indexing
 		}
 
 
-		private bool PerformIndexingOnIndexBatches(ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations, bool operationWasCancelled, List<IndexingGroup> groupedIndexes)
+		private bool PerformIndexingOnIndexBatches(ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations)
 		{
+			bool operationWasCancelled = false;
 			try
 			{
 				context.MetricsCounters.IndexedPerSecond.Mark(indexBatchOperations.Keys.Count);
@@ -239,15 +279,12 @@ namespace Raven.Database.Indexing
 					indexBatchOperation =>
 					{
 						context.CancellationToken.ThrowIfCancellationRequested();
-using (LogContext.WithDatabase(context.DatabaseName))
-				{
-						using (MapIndexingInProgress(new[] {indexBatchOperation.IndexingBatch.Index}))
+						using (LogContext.WithDatabase(context.DatabaseName))
 						{
 							try
 							{
 								var performance = HandleIndexingFor(indexBatchOperation.IndexingBatch, indexBatchOperation.LastEtag, indexBatchOperation.LastModified, CancellationToken.None);
 
-			
 								if (performance != null)
 									indexBatchOperation.IndexingBatchInfo.PerformanceStats.TryAdd(indexBatchOperation.IndexingBatch.Index.PublicName, performance);
 
@@ -262,13 +299,11 @@ using (LogContext.WithDatabase(context.DatabaseName))
 								context.AddError(indexBatchOperation.IndexingBatch.IndexId, indexBatchOperation.IndexingBatch.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message));
 							}
 						}
-}
-					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: "Executing Map Indexing");
+					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5*context.Configuration.MemoryLimitForProcessingInMb, description: "Executing Map Indexing");
 				Interlocked.Increment(ref executedPartially);
 			}
 			catch (InvalidDataException e)
 			{
-				
 				Log.ErrorException("Failed to index because of data corruption. ", e);
 				indexBatchOperations.Keys.ForEach(indexBatch =>
 					context.AddError(indexBatch.IndexingBatch.Index.IndexId, indexBatch.IndexingBatch.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
@@ -277,7 +312,6 @@ using (LogContext.WithDatabase(context.DatabaseName))
 			{
 				operationWasCancelled = true;
 			}
-				
 
 
 			return operationWasCancelled;
@@ -292,7 +326,6 @@ using (LogContext.WithDatabase(context.DatabaseName))
 				{
 					try
 					{
-
 						indexingGroup.PrefetchDocuments();
 						var curGroupJsonDocs = indexingGroup.JsonDocs;
 						if (Log.IsDebugEnabled)
@@ -312,19 +345,30 @@ using (LogContext.WithDatabase(context.DatabaseName))
 						var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(curGroupJsonDocs);
 						var lastModified = lastByEtag.LastModified.Value;
 						var lastEtag = lastByEtag.Etag;
+						List<IndexToWorkOn> filteredOutIndexes;
+						var indexBatches = FilterIndexes(indexingGroup.Indexes, curGroupJsonDocs, lastEtag, out filteredOutIndexes).OrderByDescending(x => x.Index.LastQueryTime).ToList();
 
-						var indexBatches = FilterIndexes(indexingGroup.Indexes, curGroupJsonDocs, lastEtag).OrderByDescending(x => x.Index.LastQueryTime).ToList();
+						foreach (var filteredOutIndex in filteredOutIndexes)
+						{
+							indexingGroup.SignalIndexingComplete();
+							filteredOutIndex.Index.IsMapIndexingInProgress = false;
+						}
+
+
 						foreach (var indexBatch in indexBatches)
 						{
-							indexBatchOperations.TryAdd(new IndexingBatchOperation
+							var indexingBatchOperation = new IndexingBatchOperation
 							{
 								IndexingBatch = indexBatch,
 								LastEtag = lastEtag,
 								LastModified = lastModified,
 								IndexingBatchInfo = indexingGroup.BatchInfo
-							}, new object());
+							};
+							if (indexBatchOperations.TryAdd(indexingBatchOperation, new object()))
+							{
+								indexingBatchOperation.IndexingBatch.OnIndexingComplete += indexingGroup.SignalIndexingComplete;
+							}
 						}
-
 					}
 					catch (OperationCanceledException)
 					{
@@ -340,13 +384,13 @@ using (LogContext.WithDatabase(context.DatabaseName))
 			return operationWasCancelled;
 		}
 
-						
+
 		private bool GenerateIndexingGroupsByEtagRanges(IList<IndexToWorkOn> indexes, out ConcurrentSet<PrefetchingBehavior> usedPrefetchers, out List<IndexingGroup> indexingGroups)
 		{
 			usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 			indexingGroups = new List<IndexingGroup>();
 			usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
-		
+
 			var groupedIndexesByEtagRange = context.Configuration.IndexingClassifier.GroupMapIndexes(indexes);
 			if (groupedIndexesByEtagRange.Count == 0)
 				return true;
@@ -357,8 +401,8 @@ using (LogContext.WithDatabase(context.DatabaseName))
 			{
 				var result = new IndexingGroup
 				{
-					LastIndexedEtag = indexingGroup.Key,
 					Indexes = indexingGroup.Value,
+					LastIndexedEtag = indexingGroup.Key,
 					LastQueryTime = indexingGroup.Value.Max(y => y.Index.LastQueryTime),
 					PrefetchingBehavior = GetPrefetcherFor(indexingGroup.Key, usedPrefetchers)
 				};
@@ -382,10 +426,7 @@ using (LogContext.WithDatabase(context.DatabaseName))
 			var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
 
 			var recentEtag = Etag.Empty;
-			context.Database.TransactionalStorage.Batch(accessor =>
-			{
-				recentEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-			});
+			context.Database.TransactionalStorage.Batch(accessor => { recentEtag = accessor.Staleness.GetMostRecentDocumentEtag(); });
 
 			if (recentEtag.Restarts != fromEtag.Restarts || Math.Abs(recentEtag.Changes - fromEtag.Changes) > context.CurrentNumberOfItemsToIndexInSingleBatch)
 			{
@@ -408,7 +449,7 @@ using (LogContext.WithDatabase(context.DatabaseName))
 				defaultPrefetchingBehavior
 			})).ToList();
 
-			
+
 			if (unused.Count == 0)
 				return;
 
@@ -424,22 +465,21 @@ using (LogContext.WithDatabase(context.DatabaseName))
 			RemoveUnusedPrefetchers(Enumerable.Empty<PrefetchingBehavior>());
 		}
 
-		
+
 		private static IDisposable MapIndexingInProgress(IList<Index> indexesToWorkOn)
 		{
-			
 			indexesToWorkOn.ForEach(x => x.IsMapIndexingInProgress = true);
 
-			
+
 			return new DisposableAction(() => indexesToWorkOn.ForEach(x => x.IsMapIndexingInProgress = false));
 		}
 
-		
+
 		public void IndexPrecomputedBatch(PrecomputedIndexingBatch precomputedBatch, CancellationToken token)
 		{
 			token.ThrowIfCancellationRequested();
 
-            
+
 			context.MetricsCounters.IndexedPerSecond.Mark(precomputedBatch.Documents.Count);
 
 
@@ -450,49 +490,49 @@ using (LogContext.WithDatabase(context.DatabaseName))
 				LastIndexedEtag = Etag.Empty
 			};
 
-	        
+
 			using (LogContext.WithDatabase(context.DatabaseName))
-			using (MapIndexingInProgress(new List<Index> { indexToWorkOn.Index })) 
+			using (MapIndexingInProgress(new List<Index> {indexToWorkOn.Index}))
 			{
+				List<IndexToWorkOn> filteredOutIndexes;
 				var indexingBatchForIndex =
-					FilterIndexes(new List<IndexToWorkOn> { indexToWorkOn }, precomputedBatch.Documents,
-									precomputedBatch.LastIndexed).FirstOrDefault();
+					FilterIndexes(new List<IndexToWorkOn> {indexToWorkOn}, precomputedBatch.Documents,
+						precomputedBatch.LastIndexed, out filteredOutIndexes).FirstOrDefault();
 
 				if (indexingBatchForIndex == null)
 					return;
 
 				IndexingBatchInfo batchInfo = null;
-		        
+
 				IndexingPerformanceStats performance = null;
 				try
 				{
 					batchInfo = context.ReportIndexingBatchStarted(precomputedBatch.Documents.Count, -1, new List<string>
-			        {
-				        indexToWorkOn.Index.PublicName
-			        });
+					{
+						indexToWorkOn.Index.PublicName
+					});
 
-			        
+
 					batchInfo.BatchType = BatchType.Precomputed;
 
-			        
+
 					if (Log.IsDebugEnabled)
 					{
 						Log.Debug("Going to index precomputed documents for a new index {0}. Count of precomputed docs {1}",
 							precomputedBatch.Index.PublicName, precomputedBatch.Documents.Count);
 					}
 
-			     
+
 					performance = HandleIndexingFor(indexingBatchForIndex, precomputedBatch.LastIndexed, precomputedBatch.LastModified, token);
 				}
 				finally
 				{
 					if (batchInfo != null)
 					{
-				        
 						if (performance != null)
 							batchInfo.PerformanceStats.TryAdd(indexingBatchForIndex.Index.PublicName, performance);
 
-				        
+
 						context.ReportIndexingBatchCompleted(batchInfo);
 					}
 				}
@@ -501,21 +541,22 @@ using (LogContext.WithDatabase(context.DatabaseName))
 
 		private IndexingPerformanceStats HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified, CancellationToken token)
 		{
-		    
 			if (currentlyProcessedIndexes.TryAdd(batchForIndex.IndexId, batchForIndex.Index) == false)
+			{
+				Log.Error("Entered handle indexing with index {0} inside currentlyProcessedIndexes", batchForIndex.Index.PublicName);
+				batchForIndex.SignalIndexingComplete();
 				return null;
+			}
 			IndexingPerformanceStats performanceResult = null;
 
 			try
 			{
-				
 				transactionalStorage.Batch(actions => { performanceResult = IndexDocuments(actions, batchForIndex, token); });
 
 
-                // This can be null if IndexDocument fails to execute and the exception is catched.
-                if ( performanceResult != null )
-                    performanceResult.RunCompleted();
-				performanceResult = null;
+				// This can be null if IndexDocument fails to execute and the exception is catched.
+				if (performanceResult != null)
+					performanceResult.RunCompleted();
 			}
 			catch (Exception e)
 			{
@@ -523,31 +564,55 @@ using (LogContext.WithDatabase(context.DatabaseName))
 			}
 			finally
 			{
-
 				if (performanceResult != null)
-                {                    
-                    performanceResult.OnCompleted = null;
-                }				
+				{
+					performanceResult.OnCompleted = null;
+				}
 
 				Index _;
-				currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
 				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
-
 						batchForIndex.Batch.Docs.Count,
 						lastEtag,
 						batchForIndex.Index.PublicName);
 				}
 
-				transactionalStorage.Batch(actions =>
-					// whatever we succeeded in indexing or not, we have to update this
-					// because otherwise we keep trying to re-index failed documents
-					actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified));
+				bool keepTrying = true;
+				try
+				{
+					for (int i = 0; i < 10 && keepTrying; i++)
+					{
+						keepTrying = false;
+						transactionalStorage.Batch(actions =>
+						{
+							try
+							{
+								// whatever we succeeded in indexing or not, we have to update this
+								// because otherwise we keep trying to re-index failed documents
+								actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+							}
+							catch (Exception e)
+							{
+								if (actions.IsWriteConflict(e))
+								{
+									keepTrying = true;
+									return;
+								}
+								throw;
+							}
+						});
 
-
-				
-				
+						if (keepTrying)
+							Thread.Sleep(11);
+					}
+				}
+				finally
+				{
+					currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
+					batchForIndex.SignalIndexingComplete();
+					batchForIndex.Index.IsMapIndexingInProgress = false;
+				}
 			}
 
 			return performanceResult;
@@ -556,18 +621,36 @@ using (LogContext.WithDatabase(context.DatabaseName))
 
 		public class IndexingBatchForIndex
 		{
+			private static int _counter = 0;
+			public int BatchId = 0;
+
+			public IndexingBatchForIndex()
+			{
+				BatchId = Interlocked.Increment(ref _counter);
+			}
+
 			public int IndexId { get; set; }
 
-            
+
 			public Index Index { get; set; }
 
 			public Etag LastIndexedEtag { get; set; }
 
 			public IndexingBatch Batch { get; set; }
+			public event Action OnIndexingComplete;
+
+			public void SignalIndexingComplete()
+			{
+				if (OnIndexingComplete != null)
+				{
+					OnIndexingComplete();
+				}
+			}
 		}
 
-		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs, Etag highestETagInBatch)
+		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs, Etag highestETagInBatch, out List<IndexToWorkOn> filteredOutIndexes)
 		{
+			var innerFilteredOutIndexes = new ConcurrentStack<IndexToWorkOn>();
 			var last = jsonDocs.Last();
 
 			Debug.Assert(last.Etag != null);
@@ -576,7 +659,7 @@ using (LogContext.WithDatabase(context.DatabaseName))
 			var lastEtag = last.Etag;
 			var lastModified = last.LastModified.Value;
 
-			
+
 			var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers, context.Database.InFlightTransactionalState);
 
 
@@ -585,17 +668,15 @@ using (LogContext.WithDatabase(context.DatabaseName))
 			Parallel.ForEach(jsonDocs.Where(x => x != null),
 				new ParallelOptions()
 				{
-
 					MaxDegreeOfParallelism = context.CurrentNumberOfParallelTasks
 				}, doc =>
 				{
 					if (doc != null)
 					{
-
 						var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
 						filteredDocs.Enqueue(
 							filteredDoc == null ?
-								Tuple.Create(doc, (object)new FilteredDocument(doc)) :
+								Tuple.Create(doc, (object) new FilteredDocument(doc)) :
 								Tuple.Create(filteredDoc, JsonToExpando.Convert(doc.ToJson())));
 					}
 				});
@@ -614,34 +695,34 @@ using (LogContext.WithDatabase(context.DatabaseName))
 
 				var batch = new IndexingBatch(highestETagInBatch);
 
-				
+
 				foreach (var filteredDoc in filteredDocs)
 				{
-				
 					var doc = filteredDoc.Item1;
 					var json = filteredDoc.Item2;
-					if (defaultPrefetchingBehavior.FilterDocuments(doc) == false)
+
+
+					if (defaultPrefetchingBehavior.FilterDocuments(doc) == false
+					    || doc.Etag.CompareTo(indexToWorkOn.LastIndexedEtag) <= 0)
 						continue;
 
 					// did we already indexed this document in this index?
-				
+
 					var etag = doc.Etag;
 					if (etag == null)
 						continue;
 
 					// is the Raven-Entity-Name a match for the things the index executes on?
 					if (viewGenerator.ForEntityNames.Count != 0 &&
-						
-						viewGenerator.ForEntityNames.Contains(doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
+					    viewGenerator.ForEntityNames.Contains(doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
 					{
 						continue;
 					}
 
-					
 					batch.Add(doc, json, defaultPrefetchingBehavior.ShouldSkipDeleteFromIndex(doc));
 
 					if (batch.DateTime == null)
-					
+
 						batch.DateTime = doc.LastModified;
 					else
 						batch.DateTime = batch.DateTime > doc.LastModified
@@ -654,7 +735,9 @@ using (LogContext.WithDatabase(context.DatabaseName))
 					Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
 						lastEtag, lastModified);
 					// we use it this way to batch all the updates together
-					actions.Enqueue(accessor => accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified));
+					if (indexToWorkOn.LastIndexedEtag.CompareTo(lastEtag) < 0)
+						actions.Enqueue(accessor => { accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified); });
+					innerFilteredOutIndexes.Push(indexToWorkOn);
 					return;
 				}
 				if (Log.IsDebugEnabled)
@@ -670,17 +753,38 @@ using (LogContext.WithDatabase(context.DatabaseName))
 				});
 			});
 
-			transactionalStorage.Batch(actionsAccessor =>
+			filteredOutIndexes = innerFilteredOutIndexes.ToList();
+			foreach (var action in actions)
 			{
-				foreach (var action in actions)
+				bool keepTrying = true;
+				for (int i = 0; i < 10 && keepTrying; i++)
 				{
-					if (action != null)
-						action(actionsAccessor);
-				}
-			});
+					keepTrying = false;
+					transactionalStorage.Batch(actionsAccessor =>
+					{
+						try
+						{
+							if (action != null)
+								action(actionsAccessor);
+						}
+						catch (Exception e)
+						{
+							if (actionsAccessor.IsWriteConflict(e))
+							{
+								keepTrying = true;
+								return;
+							}
+							throw;
+						}
+					});
 
+					if (keepTrying)
+						Thread.Sleep(11);
+				}
+			}
 			return results.Where(x => x != null);
 		}
+
 
 		protected override bool IsValidIndex(IndexStats indexesStat)
 		{
