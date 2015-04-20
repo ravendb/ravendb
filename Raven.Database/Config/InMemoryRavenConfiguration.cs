@@ -284,7 +284,7 @@ namespace Raven.Database.Config
 			Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
 
 			Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
-
+		    Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
@@ -1055,7 +1055,7 @@ namespace Raven.Database.Config
         ///     DoNothing (fields are not fetched from the document)
         ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
         /// </summary>
-        public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
+        public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }	    
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -1255,6 +1255,7 @@ namespace Raven.Database.Config
 				Voron = new VoronConfiguration();
 				Esent = new EsentConfiguration();
 	        }
+            public bool PreventSchemaUpdate { get; set; }
 
 			public VoronConfiguration Voron { get; private set; }
 
