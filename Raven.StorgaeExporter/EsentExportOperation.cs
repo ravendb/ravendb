@@ -5,35 +5,55 @@ using System.Linq;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Config;
+using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
-namespace Raven.DataExporter
+namespace Raven.StorgaeExporter
 {
-    public class TableExporter : IDisposable
+    public class EsentExportOperation : IDisposable
     {
-        public TableExporter(string dataDirPath)
+        public EsentExportOperation(string dataDirPath)
         {
-            var dbFullPath = Path.Combine(dataDirPath, "Data");
-            Api.JetCreateInstance(out instance, "instance");
-            var instanceParameters = new InstanceParameters(instance)
-            {
-                Recovery = false
-            };
-            Api.JetInit(ref instance);
-            Api.JetBeginSession(instance, out sesid, null, null);
+            var dbFullPath = Path.Combine(dataDirPath, "Data");            
             try
             {
+                Api.JetCreateInstance(out instance, "instance");
+                Api.JetInit(ref instance);
+                Api.JetBeginSession(instance, out sesid, null, null);           
                 Api.JetAttachDatabase(sesid, dbFullPath, AttachDatabaseGrbit.None);
                 Api.JetOpenDatabase(sesid, dbFullPath, null, out dbid, OpenDatabaseGrbit.None);
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                var ravenConfiguration = new RavenConfiguration();
+                ravenConfiguration.DataDirectory = dataDirPath;
+                ravenConfiguration.Storage.PreventSchemaUpdate = true;
+                ITransactionalStorage storage;
+                var success = StorageExporter.TryToCreateTransactionalStorage(ravenConfiguration, out storage);
+                if (!success)
+                {
+                    ConsoleUtils.PrintErrorAndFail(e.Message,e.StackTrace);
+                }
+                try
+                {
+                    storage.Dispose();
+                    Api.JetCreateInstance(out instance, "recovery_instance");
+                    Api.JetInit(ref instance);
+                    Api.JetBeginSession(instance, out sesid, null, null); 
+                    //Api.JetAttachDatabase(sesid, dbFullPath, AttachDatabaseGrbit.None);
+                    Api.JetOpenDatabase(sesid, dbFullPath, null, out dbid, OpenDatabaseGrbit.None);
+                }
+                catch (Exception ex)
+                {
+                    //Here we fail even after trying to recover using tansactional storage
+                    //This should not happen...
+                    ConsoleUtils.PrintErrorAndFail(ex.Message, ex.StackTrace);                   
+                }
             }
-
-            //Api.JetOpenDatabase(sesid, dbFullPath, null, out dbid, OpenDatabaseGrbit.None);
         }
+
         public void ExportTable(string tableName, string destinationPath)
         {
             var tables = GetTablesNames(dbid);
@@ -58,95 +78,6 @@ namespace Raven.DataExporter
 
         }
 
-        public void ExportDocuments(JsonTextWriter writer)
-        {
-            JET_TABLEID tableId;
-            Api.JetOpenTable(sesid, dbid, "documents", null, 0, OpenTableGrbit.ReadOnly, out tableId);
-            bool hasNext = Api.TryMoveFirst(sesid, tableId);
-            var dataColumn = Api.GetTableColumnid(sesid, tableId, "data");
-            var metadataColumn = Api.GetTableColumnid(sesid, tableId, "metadata");
-            var idColumn = Api.GetTableColumnid(sesid, tableId, "key");
-            var lastmodifyColumn = Api.GetTableColumnid(sesid, tableId, "last_modified");//GetDefaultRavenFormat
-            var etagColumn = Api.GetTableColumnid(sesid, tableId, "etag");
-
-            
-            while (hasNext)
-            {
-                var doc = Api.RetrieveColumn(sesid, tableId, dataColumn).ToJObject();
-                var metadata = Api.RetrieveColumn(sesid, tableId, metadataColumn).ToJObject();
-                var id = Api.RetrieveColumnAsString(sesid, tableId, idColumn);
-                var etag = Etag.Parse(Api.RetrieveColumn(sesid, tableId, etagColumn));
-                var lastModify = DateTime.FromBinary(Api.RetrieveColumnAsInt64(sesid, tableId, lastmodifyColumn).Value);
-                metadata.Add("@id", id);
-                metadata.Add("@etag", etag.ToString());
-                metadata.Add(Constants.LastModified, lastModify.GetDefaultRavenFormat(true));
-                metadata.Add(Constants.RavenLastModified, lastModify.GetDefaultRavenFormat());
-                doc.Add("@metadata", metadata);
-                doc.WriteTo(writer);
-                hasNext = Api.TryMoveNext(sesid, tableId);
-            }
-            Api.JetCloseTable(sesid,tableId);
-        }
-
-        public void ExportAttachments(JsonTextWriter writer)
-        {
-            JET_TABLEID tableId;
-            Api.JetOpenTable(sesid, dbid, "files", null, 0, OpenTableGrbit.ReadOnly, out tableId);
-            bool hasNext = Api.TryMoveFirst(sesid, tableId);
-            var dataColumn = Api.GetTableColumnid(sesid, tableId, "data");
-            var metadataColumn = Api.GetTableColumnid(sesid, tableId, "metadata");
-            var etagColumn = Api.GetTableColumnid(sesid, tableId, "etag");
-            var keyColumn = Api.GetTableColumnid(sesid, tableId, "name");
-            //var columnInfo = Api.GetTableColumns(sesid, tableId);
-            while (hasNext)
-            {
-                var data = Api.RetrieveColumn(sesid, tableId, dataColumn);
-                //Api.RetrieveColumnAsString(sesid, tableId, column.Columnid)
-                var metadata = RavenJObject.Parse(Api.RetrieveColumnAsString(sesid, tableId, metadataColumn));
-                var etag = Etag.Parse(Api.RetrieveColumn(sesid, tableId, etagColumn));
-                var key = Api.RetrieveColumnAsString(sesid, tableId, keyColumn);
-                var obj = new RavenJObject();
-                obj.Add("Data",data);
-                obj.Add("Metadata", metadata);
-                obj.Add("Key", key);
-                obj.Add("Etag", etag.ToString());
-                obj.WriteTo(writer);
-                hasNext = Api.TryMoveNext(sesid, tableId);
-            }
-            Api.JetCloseTable(sesid, tableId);
-        }
-
-        public void ExportIdentities(JsonTextWriter writer)
-        {
-            JET_TABLEID tableId;
-            Api.JetOpenTable(sesid, dbid, "identity_table", null, 0, OpenTableGrbit.ReadOnly, out tableId);
-            bool hasNext = Api.TryMoveFirst(sesid, tableId);
-            var keyColumn = Api.GetTableColumnid(sesid, tableId, "key");
-            var valColumn = Api.GetTableColumnid(sesid, tableId, "val");
-            while (hasNext)
-            {
-                var key = Api.RetrieveColumnAsString(sesid, tableId, keyColumn);
-                if (FilterIdentify(key))
-                {
-                    hasNext = Api.TryMoveNext(sesid, tableId);
-                    continue;
-                }
-                var value = Api.RetrieveColumnAsInt32(sesid, tableId, valColumn);
-                new RavenJObject
-						{
-							{ "Key", key }, 
-							{ "Value", value }
-						}.WriteTo(writer);
-                hasNext = Api.TryMoveNext(sesid, tableId);
-            }
-            Api.JetCloseTable(sesid, tableId);
-        }
-
-        private bool FilterIdentify(string key)
-        {
-            return filteredIdentities.Contains(key);
-        }
-        private static readonly List<string> filteredIdentities = new List<string>() { "Raven/Etag", "IndexId"}; 
         private void ExportSingleRecord(CsvFileWriter writer, IEnumerable<ColumnInfo> columnInfo, JET_TABLEID tableId)
         {
             foreach (var column in columnInfo)
@@ -212,6 +143,7 @@ namespace Raven.DataExporter
                 }                
             }
         }
+
         private IEnumerable<string> GetTablesNames(JET_DBID dbid)
         {
             if (!databasesToTablesNames.ContainsKey(dbid))
@@ -220,10 +152,12 @@ namespace Raven.DataExporter
             }
             return databasesToTablesNames[dbid];
         }
+
         private Dictionary<JET_DBID, IEnumerable<string>> databasesToTablesNames = new Dictionary<JET_DBID, IEnumerable<string>>();
         private JET_INSTANCE instance;
         private JET_SESID sesid;
         private JET_DBID dbid;
+
         public void Dispose()
         {
             Api.JetCloseDatabase(sesid,dbid,CloseDatabaseGrbit.None);

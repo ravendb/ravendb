@@ -89,7 +89,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.LiveTest", "B
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron.Tryout", "Raven.Voron\Voron.Tryout\Voron.Tryout.csproj", "{FE36CB0D-80BE-4898-9599-81FDC9D4BF77}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.DataExporter", "Raven.DataExporter\Raven.DataExporter.csproj", "{713C4EF5-E694-4B94-BCA5-66590338C0C2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.StorgaeExporter", "Raven.StorgaeExporter\Raven.StorgaeExporter.csproj", "{713C4EF5-E694-4B94-BCA5-66590338C0C2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -19,21 +20,21 @@ namespace Raven.StorgaeExporter
 {
     public class StorageExporter
     {
-        public StorageExporter(string databaseBaseDirectory, string databaseOutputFile,int? batchSize = null)
+        public StorageExporter(string databaseBaseDirectory, string databaseOutputFile,int batchSize)
         {
             baseDirectory = databaseBaseDirectory;
             outputDirectory = databaseOutputFile;
-            var ravenConfiguration = new InMemoryRavenConfiguration().Initialize();
-            //initialize seems to override this value
+            var ravenConfiguration = new RavenConfiguration();
             ravenConfiguration.DataDirectory = databaseBaseDirectory;
             ravenConfiguration.Storage.PreventSchemaUpdate = true;
             CreateTransactionalStorage(ravenConfiguration);
-            BatchSize = batchSize ?? 1024;
+            BatchSize = batchSize;
         }
 
         public void ExportDatabase()
         {
-            var stream = File.Create(outputDirectory);
+           
+            using (var stream = File.Create(outputDirectory))
             using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,leaveOpen: true))
             using (var streamWriter = new StreamWriter(gZipStream))
             {
@@ -45,7 +46,7 @@ namespace Raven.StorgaeExporter
                 //Indexes
                 jsonWriter.WritePropertyName("Indexes");
                 jsonWriter.WriteStartArray();
-                WriteIndexes(jsonWriter);
+                //WriteIndexes(jsonWriter);
                 jsonWriter.WriteEndArray();
                 //documents
                 jsonWriter.WritePropertyName("Docs");
@@ -55,7 +56,7 @@ namespace Raven.StorgaeExporter
                 //Transformers
                 jsonWriter.WritePropertyName("Transformers");
                 jsonWriter.WriteStartArray();
-                WriteTransformers(jsonWriter);
+                //WriteTransformers(jsonWriter);
                 jsonWriter.WriteEndArray();
                 //Identities
                 jsonWriter.WritePropertyName("Identities");
@@ -70,7 +71,7 @@ namespace Raven.StorgaeExporter
 
         private void ReportProgress(string stage,long from, long outof)
         {
-            if (from == outof) Program.ConsoleWriteLineWithColor(ConsoleColor.Green, "Completed exporting {0} out of {1} {2}",from,outof,stage);
+            if (from == outof) ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Green, "Completed exporting {0} out of {1} {2}",from,outof,stage);
             else Console.WriteLine("exporting {0} out of {1} {2}", from, outof, stage);
         }
 
@@ -101,7 +102,7 @@ namespace Raven.StorgaeExporter
             }
             catch (Exception e)
             {
-                PrintErrorAndFail("Failed to export documents, error:" + e.Message);
+                ConsoleUtils.PrintErrorAndFail("Failed to export documents, error:" + e.Message);
             }
         }
 
@@ -150,16 +151,17 @@ namespace Raven.StorgaeExporter
             do
             {
                 storage.Batch(accsesor =>
-            {
-                var identities = accsesor.General.GetIdentities(currentIdentitiesCount, BatchSize, out totalIdentities).Where(x=>FilterIdentity(x.Key));
-                foreach (var identityInfo in identities)
                 {
-                    new RavenJObject
-						{
-							{ "Key", identityInfo.Key }, 
-							{ "Value", identityInfo.Value }
-						}.WriteTo(jsonWriter);
-                }
+                    var identities = accsesor.General.GetIdentities(currentIdentitiesCount, BatchSize, out totalIdentities);
+                    var filteredIdentities = identities.Where(x=>FilterIdentity(x.Key));
+                    foreach (var identityInfo in filteredIdentities)
+                        {
+                            new RavenJObject
+						        {
+							        { "Key", identityInfo.Key }, 
+							        { "Value", identityInfo.Value }
+						        }.WriteTo(jsonWriter);
+                        }
                 currentIdentitiesCount += identities.Count();
                 ReportProgress("identities", currentIdentitiesCount, totalIdentities);
             });
@@ -180,44 +182,50 @@ namespace Raven.StorgaeExporter
         {
             if (String.IsNullOrEmpty(ravenConfiguration.DataDirectory) == false && Directory.Exists(ravenConfiguration.DataDirectory))
             {
-                if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
-                    storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.VoronTypeName, () => { }, () => { });
-                else if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, "Data")))
-                    storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.EsentTypeName, () => { }, () => { });                
-                if(storage != null)
-                    try
-                    {
-                        storage.Initialize(new SequentialUuidGenerator {EtagBase = 0}, new OrderedPartCollection<AbstractDocumentCodec>());
-                    }
-                    catch (UnauthorizedAccessException uae)
-                    {
-                        PrintErrorAndFail(String.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}", uae.Message),uae.StackTrace);
-                    }
-                    catch (InvalidOperationException ioe)
-                    {
-                        PrintErrorAndFail(String.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}", ioe.Message),ioe.StackTrace);
-                    }
-                    catch (Exception e)
-                    {
-                        PrintErrorAndFail(e.Message,e.StackTrace);
-                        return;
-                    }
+
+                try
+                {
+                    TryToCreateTransactionalStorage(ravenConfiguration, out storage);
+                }
+                catch (UnauthorizedAccessException uae)
+                {
+                    ConsoleUtils.PrintErrorAndFail(String.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}", uae.Message), uae.StackTrace);
+                }
+                catch (InvalidOperationException ioe)
+                {
+                    ConsoleUtils.PrintErrorAndFail(String.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}", ioe.Message), ioe.StackTrace);
+                }
+                catch (Exception e)
+                {
+                    ConsoleUtils.PrintErrorAndFail(e.Message, e.StackTrace);
+                    return;
+                }
                 return;
             }
-            PrintErrorAndFail(string.Format("Could not detect storage file under the given directory:{0}", ravenConfiguration.DataDirectory));
+            ConsoleUtils.PrintErrorAndFail(string.Format("Could not detect storage file under the given directory:{0}", ravenConfiguration.DataDirectory));
         }
 
-        private void PrintErrorAndFail(string ErrorMessage,string stackTrace = null)
+        public static bool TryToCreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration, out ITransactionalStorage storage)
         {
-            Console.Clear();
-            Program.ConsoleWriteLineWithColor(ConsoleColor.Red, ErrorMessage);
-            if (stackTrace != null)
+            storage = null;
+            if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
+                storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.VoronTypeName, () => { }, () => { });
+            else if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, "Data")))
+                storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.EsentTypeName, () => { }, () => { });
+            if (storage != null)
             {
-                Program.ConsoleWriteLineWithColor(ConsoleColor.Blue, "StackTrace:\n"+stackTrace);
+                storage.Initialize(new SequentialUuidGenerator {EtagBase = 0}, new OrderedPartCollection<AbstractDocumentCodec>());
+                return true;
             }
-            Console.Read();
-            throw new Exception(ErrorMessage);
+            return false;
         }
+
+        public static bool ValidateStorageExsist(string dataDir)
+        {
+            return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename))
+                   || File.Exists(Path.Combine(dataDir, "Data"));
+        }
+
 
         private static readonly string indexDefinitionFolder = "IndexDefinitions";
         private string baseDirectory;

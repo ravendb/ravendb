@@ -7,8 +7,8 @@
     <ProjectGuid>{713C4EF5-E694-4B94-BCA5-66590338C0C2}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Raven.DataExporter</RootNamespace>
-    <AssemblyName>Raven.DataExporter</AssemblyName>
+    <RootNamespace>Raven.StorgaeExporter</RootNamespace>
+    <AssemblyName>Raven.StorgaeExporter</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -44,10 +44,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConsoleUtils.cs" />
     <Compile Include="CsvFileWriter.cs" />
-    <Compile Include="DatabaseExporter.cs" />
-    <Compile Include="DataExporter.cs" />
-    <Compile Include="DataExporterConfiguration.cs" />
+    <Compile Include="StorageExporter.cs" />
+    <Compile Include="StorgaeExporterConfiguration.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="EsentExportOperation.cs" />
