@@ -384,7 +384,7 @@ namespace Raven.Tests.Indexes.Recovery
 				}
 			}
 
-			IndexMessing.MessSegmentsFile(indexFullPath);
+			//IndexMessing.MessSegmentsFile(indexFullPath);
 
 			using (GetNewServer(runInMemory: false, dataDirectory: dataDir)) // do not delete previous directory
 			{

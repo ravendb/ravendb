@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Microsoft.VisualBasic.Logging;
 using Mono.CSharp;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -522,29 +523,36 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 		{
 			lock (_locker)
 			{
-				_createLinkedTokenSource.Cancel();
-				var concurrentEvents = new List<CountdownEvent>();
-				CountdownEvent ce;
-				while (_concurrentEvents.TryDequeue(out ce))
-					concurrentEvents.Add(ce);
+				try
+				{
+					_createLinkedTokenSource.Cancel();
+					var concurrentEvents = new List<CountdownEvent>();
+					CountdownEvent ce;
+					while (_concurrentEvents.TryDequeue(out ce))
+						concurrentEvents.Add(ce);
 
-				foreach (var concurrentEvent in concurrentEvents)
-				{
-					if (concurrentEvent.IsSet == false)
-						concurrentEvent.Signal();
+					foreach (var concurrentEvent in concurrentEvents)
+					{
+						if (concurrentEvent.IsSet == false)
+							concurrentEvent.Signal();
+					}
+					for (int index = 0; index < _threads.Length; index++)
+					{
+						var t = _threads[index];
+						t.StopWork.Set();
+						t.Thread.Join();
+						t.StopWork.Dispose();
+					}
+					foreach (var concurrentEvent in concurrentEvents)
+					{
+						concurrentEvent.Dispose();
+					}
+					_threads = null;
 				}
-				for (int index = 0; index < _threads.Length; index++)
+				catch (Exception e)
 				{
-					var t = _threads[index];
-					t.StopWork.Set();
-					t.Thread.Join();
-					t.StopWork.Dispose();
+					logger.ErrorException(string.Format("Error occured while disposing RTP named {0}", this.Name), e);
 				}
-				foreach (var concurrentEvent in concurrentEvents)
-				{
-					concurrentEvent.Dispose();
-				}
-				_threads = null;
 			}
 		}
 
@@ -552,22 +560,32 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 		{
 			lock (_locker)
 			{
-				if (_threads == null)
-					return;
-				if (_currentWorkingThreadsAmount < _threads.Length)
+				try
 				{
-					_threads[_currentWorkingThreadsAmount].StopWork.Set();
-					_currentWorkingThreadsAmount++;
-					return;
+					if (_threads == null)
+						return;
+					if (_currentWorkingThreadsAmount < _threads.Length)
+					{
+						_threads[_currentWorkingThreadsAmount].StopWork.Set();
+						_currentWorkingThreadsAmount++;
+						return;
+					}
+
+					foreach (var thread in _threads)
+					{
+						if (thread.Thread.IsAlive == false)
+							return;
+						if (thread.Thread.Priority != ThreadPriority.BelowNormal)
+							continue;
+
+						thread.Thread.Priority = ThreadPriority.Normal;
+						return;
+					}
 				}
-
-				foreach (var thread in _threads)
+				catch (Exception e)
 				{
-					if (thread.Thread.Priority != ThreadPriority.BelowNormal)
-						continue;
-
-					thread.Thread.Priority = ThreadPriority.Normal;
-					return;
+					logger.ErrorException(string.Format("Error occured while throttling up RTP named {0}", this.Name), e);
+					throw;
 				}
 			}
 		}
@@ -576,21 +594,31 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 		{
 			lock (_locker)
 			{
-				if (_threads == null)
-					return;
-				foreach (var thread in _threads)
+				try
 				{
-					if (thread.Thread.Priority != ThreadPriority.Normal)
-						continue;
+					if (_threads == null)
+						return;
+					foreach (var thread in _threads)
+					{
+						if (thread.Thread.IsAlive == false)
+							return;
+						if (thread.Thread.Priority != ThreadPriority.Normal)
+							continue;
 
-					thread.Thread.Priority = ThreadPriority.BelowNormal;
-					return;
+						thread.Thread.Priority = ThreadPriority.BelowNormal;
+						return;
+					}
+
+					if (_currentWorkingThreadsAmount > (UnstoppableTasksCount + 1))
+					{
+						_threads[_currentWorkingThreadsAmount - 1].StopWork.Reset();
+						_currentWorkingThreadsAmount--;
+					}
 				}
-
-				if (_currentWorkingThreadsAmount > (UnstoppableTasksCount + 1))
+				catch (Exception e)
 				{
-					_threads[_currentWorkingThreadsAmount - 1].StopWork.Reset();
-					_currentWorkingThreadsAmount--;
+					logger.ErrorException(string.Format("Error occured while throttling down RTP named {0}", this.Name), e);
+					throw;
 				}
 			}
 		}

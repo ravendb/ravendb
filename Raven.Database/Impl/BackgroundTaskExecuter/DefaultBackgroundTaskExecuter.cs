@@ -18,7 +18,28 @@ namespace Raven.Database.Indexing
 		public DefaultBackgroundTaskExecuter()
 		{
 			CpuStatistics.RegisterCpuUsageHandler(this);
-		}				
+		}
+
+		public IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
+			where TResult : class
+		{
+			var maxNumberOfParallelIndexTasks = context.CurrentNumberOfParallelTasks;
+			if (maxNumberOfParallelIndexTasks == 1)
+			{
+				return source.Select(func).ToList();
+			}
+			var list = source.AsParallel()
+				.Select(func)
+				.ToList();
+			for (int i = 0; i < list.Count; i++)
+			{
+				if (list[i] != null)
+					continue;
+				list.RemoveAt(i);
+				i--;
+			}
+			return list;
+		}
 
 		/// <summary>
 		/// Note that here we assume that  source may be very large (number of documents)

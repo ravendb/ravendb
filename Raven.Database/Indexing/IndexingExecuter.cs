@@ -663,9 +663,11 @@ namespace Raven.Database.Indexing
 			var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers, context.Database.InFlightTransactionalState);
 
 
-			var filteredDocs = new ConcurrentQueue<Tuple<JsonDocument, object>>();
+			//var filteredDocs = new ConcurrentQueue<Tuple<JsonDocument, object>>();
 			//context
-			Parallel.ForEach(jsonDocs.Where(x => x != null),
+			
+
+			/*Parallel.ForEach(jsonDocs.Where(x => x != null).AsParallel()
 				new ParallelOptions()
 				{
 					MaxDegreeOfParallelism = context.CurrentNumberOfParallelTasks
@@ -679,6 +681,21 @@ namespace Raven.Database.Indexing
 								Tuple.Create(doc, (object) new FilteredDocument(doc)) :
 								Tuple.Create(filteredDoc, JsonToExpando.Convert(doc.ToJson())));
 					}
+				});*/
+
+			var filteredDocs =
+				BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>
+				{
+					var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
+					return filteredDoc == null ? new
+					{
+						Doc = doc,
+						Json = (object)new FilteredDocument(doc)
+					} : new
+					{
+						Doc = filteredDoc,
+						Json = JsonToExpando.Convert(doc.ToJson())
+					};
 				});
 
 			Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
@@ -698,8 +715,8 @@ namespace Raven.Database.Indexing
 
 				foreach (var filteredDoc in filteredDocs)
 				{
-					var doc = filteredDoc.Item1;
-					var json = filteredDoc.Item2;
+					var doc = filteredDoc.Doc;
+					var json = filteredDoc.Json;
 
 
 					if (defaultPrefetchingBehavior.FilterDocuments(doc) == false
