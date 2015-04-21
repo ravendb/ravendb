@@ -6,6 +6,7 @@
 using ICSharpCode.NRefactory.CSharp;
 using ICSharpCode.NRefactory.PatternMatching;
 using Lucene.Net.Documents;
+using Lucene.Net.Store;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
@@ -33,6 +34,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Directory = System.IO.Directory;
 
 namespace Raven.Database.Linq
 {
@@ -295,29 +297,33 @@ namespace Raven.Database.Linq
 
 			var indexFilePath = GetIndexFilePath(source, indexCacheDir);
 
-			var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
-			if (shouldCachedIndexBeRecompiled == false)
+			var locker = Locks.GetOrAdd(indexFilePath, s => new object());
+			lock (locker)
 			{
-				// Look up the index in the in-memory cache.
-				CacheEntry entry;
-				if (cacheEntries.TryGetValue(source, out entry))
+				var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
+				if (shouldCachedIndexBeRecompiled == false)
 				{
-					Interlocked.Increment(ref entry.Usages);
-					return entry.Type;
+					// Look up the index in the in-memory cache.
+					CacheEntry entry;
+					if (cacheEntries.TryGetValue(source, out entry))
+					{
+						Interlocked.Increment(ref entry.Usages);
+						return entry.Type;
+					}
+
+					Type type;
+
+					if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
+						return type;
 				}
 
-				Type type;
+				var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath, configuration);
 
-				if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
-					return type;
+				// ReSharper disable once RedundantArgumentName
+				AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
+
+				return result;
 			}
-
-			var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath, configuration);
-
-			// ReSharper disable once RedundantArgumentName
-			AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
-
-			return result;
 		}
 
 		private static bool ShouldIndexCacheBeRecompiled(string indexFilePath)
@@ -485,12 +491,8 @@ namespace Raven.Database.Linq
 			if (indexFilePath != null)
 			{
 				var sourceFileName = indexFilePath + ".cs";
-
-				var locker = Locks.GetOrAdd(sourceFileName, new object());
-				lock (locker)
-				{
-					File.WriteAllText(sourceFileName, source);
-				}
+				
+				File.WriteAllText(sourceFileName, source);
 
 				compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, sourceFileName);
 			}
