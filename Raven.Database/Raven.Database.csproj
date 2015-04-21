@@ -422,7 +422,7 @@
     <Compile Include="Counters\Controllers\AdminCounterStorageController.cs" />
     <Compile Include="Counters\Controllers\CountersReplicationController.cs" />
     <Compile Include="Counters\Controllers\CountersController.cs" />
-    <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
+    <Compile Include="Counters\Controllers\CountersReplicationTask.cs" />
     <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
     <Compile Include="Counters\CountersMetricsManager.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />

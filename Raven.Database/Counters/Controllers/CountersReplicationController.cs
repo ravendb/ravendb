@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -56,10 +57,17 @@ namespace Raven.Database.Counters.Controllers
 						continue;
 
 					wroteCounter = true;
-					writer.Store(counter.FullCounterName, counter.CounterValue);
+
+					if (String.IsNullOrWhiteSpace(counter.FullCounterName))
+						return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
+
+		            writer.Store(counter.FullCounterName, counter.CounterValue);
 	            }
 
-				var serverId = replicationMessage.SendingServerName;
+				var serverId = replicationMessage.ServerId;
+	            if (String.IsNullOrWhiteSpace(serverId))
+		            return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty server Id");
+
 				if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
                 {
 					//TODO: fix this
@@ -75,7 +83,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
         public HttpResponseMessage HeartbeatPost(string sourceServer)
         {
-            var replicationTask = Storage.ReplicationTask;
+            var replicationTask = Storage.replicationTask;
             if (replicationTask == null)
             {
                 return GetMessageWithObject(new
@@ -110,7 +118,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public async Task<HttpResponseMessage> ReplicationsSave()
 		{
-			var newReplicationDocument = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
+			var newReplicationDocument = await ReadJsonObjectAsync<CountersReplicationDocument>();
 			using (var writer = Storage.CreateWriter())
 			{
 				writer.UpdateReplications(newReplicationDocument);

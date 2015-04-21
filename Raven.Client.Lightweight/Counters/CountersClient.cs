@@ -10,9 +10,10 @@ namespace Raven.Client.Counters
 	public class CountersClient : IHoldProfilingInformation, IDisposable
     {
 		private readonly ICounterStore parent;
-		//private readonly RemoteFileSystemChanges notifications;
-		//private readonly IFileSystemClientReplicationInformer replicationInformer; //todo: implement replication and failover management on the client side
-		//private int readStripingBase;
+		
+		private readonly ICountersReplicationInformer replicationInformer;
+
+		private readonly int readStripingBase;
 
 	    internal readonly JsonSerializer JsonSerializer;
 
@@ -29,7 +30,6 @@ namespace Raven.Client.Counters
 
 		public ProfilingInformation ProfilingInformation { get; private set; }
 
-
 	    public CountersStats Stats { get; private set; }
 
 	    public ReplicationClient Replication { get; private set; }
@@ -41,22 +41,20 @@ namespace Raven.Client.Counters
         /// <summary>
         /// Notify when the failover status changed
         /// </summary>
-		/*public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
+		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
 		{
 			add { replicationInformer.FailoverStatusChanged += value; }
 			remove { replicationInformer.FailoverStatusChanged -= value; }
 		}
-		
+
 		/// <summary>
 		/// Allow access to the replication informer used to determine how we replicate requests
 		/// </summary>
-		public IFileSystemClientReplicationInformer ReplicationInformer
+		public ICountersReplicationInformer ReplicationInformer
 		{
 			get { return replicationInformer; }
 		}
-		 */
-
-
+		 
 		public CountersClient(ICounterStore parent, string counterStorageName)
         {
 	        this.parent = parent;
@@ -72,11 +70,10 @@ namespace Raven.Client.Counters
                 ApiKey = parent.Credentials.ApiKey;
 
 				Conventions = new Convention();
-                //replicationInformer = new RavenFileSystemReplicationInformer(convention, JsonRequestFactory);
-                //readStripingBase = replicationInformer.GetReadStripingBase();
-	            //todo: implement remote counter changes
-                //notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, jsonRequestFactory, convention, replicationInformer, () => { });
-                               
+                replicationInformer = new CounterReplicationInformer(Conventions, JsonRequestFactory);
+                readStripingBase = replicationInformer.GetReadStripingBase(true);
+
+		        CounterStorageName = counterStorageName;  
 				InitializeActions(counterStorageName);
             }
             catch (Exception)
@@ -95,8 +92,6 @@ namespace Raven.Client.Counters
 
 	    public void Dispose()
         {
-            //if (notifications != null)
-            //    notifications.Dispose();
         }
     }
 }

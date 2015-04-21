@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Client;
@@ -13,18 +14,22 @@ namespace Raven.Tests.Counters
 		protected IDocumentStore ravenStore;
 		protected const string DefaultCounteStorageName = "FooBarCounter_ThisIsRelativelyUniqueCounterName";
 
+		private int storeCount;
+
 		public RavenBaseCountersTest()
 		{
 			ravenStore = NewRemoteDocumentStore(fiddler:true);
+			storeCount = 0;
 		}
 
-		public ICounterStore NewRemoteCountersStore(string counterStorageName = DefaultCounteStorageName,bool createDefaultCounter = false,OperationCredentials credentials = null)
+		public ICounterStore NewRemoteCountersStore(string counterStorageName = DefaultCounteStorageName,bool createDefaultCounter = true,OperationCredentials credentials = null)
 		{
+			Interlocked.Increment(ref storeCount);
 			var counterStore = new CounterStore
 			{
 				Url = ravenStore.Url,
 				Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
-				DefaultCounterStorageName = counterStorageName
+				DefaultCounterStorageName = counterStorageName + storeCount
 			};
 
 			counterStore.Initialize(createDefaultCounter);

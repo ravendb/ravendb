@@ -277,6 +277,9 @@ namespace Raven.Database.Counters.Controllers
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
+			if (!IsCounterCreated(groupName, counterName))
+				return Request.CreateResponse(HttpStatusCode.OK, 0);
+
 			using (var reader = Storage.CreateReader())
 			{
 				var overallTotal = reader.GetCounterOverallTotal(groupName, counterName);
@@ -290,8 +293,11 @@ namespace Raven.Database.Counters.Controllers
 		[RavenRoute("cs/{counterStorageName}/getCounterServersValues/{groupName}/{counterName}")]
         [HttpGet]
         public HttpResponseMessage GetCounterServersValues(string groupName, string counterName)
-        {
-            using (var reader = Storage.CreateReader())
+		{
+			if (!IsCounterCreated(groupName, counterName))
+				return Request.CreateResponse(HttpStatusCode.OK, new CounterView.ServerValue[0]);
+
+			using (var reader = Storage.CreateReader())
             {
 				var countersByPrefix = reader.GetCounterValuesByPrefix(groupName, counterName);
                 if (countersByPrefix == null)
@@ -320,7 +326,16 @@ namespace Raven.Database.Counters.Controllers
                     }).ToList();
                 return Request.CreateResponse(HttpStatusCode.OK, serverValues);
             }
-        }
+		}
+
+		private bool IsCounterCreated(string groupName, string counterName)
+		{
+			using (var reader = Storage.CreateReader())
+			{
+				var countersByPrefix = reader.GetCounterValuesByPrefix(groupName, counterName);
+				return countersByPrefix != null;
+			}
+		}
 
 		private class ServerValue
 		{

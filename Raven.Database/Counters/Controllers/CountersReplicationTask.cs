@@ -17,7 +17,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
-	public class RavenCounterReplication:IDisposable
+	public class CountersReplicationTask:IDisposable
 	{
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -45,7 +45,7 @@ namespace Raven.Database.Counters.Controllers
 			NotReplicated = 2
 		}
 
-		public RavenCounterReplication(CounterStorage storage)
+		public CountersReplicationTask(CounterStorage storage)
 		{
 			this.storage = storage;
 			this.storage.CounterUpdated += SignalCounterUpdate;
@@ -134,7 +134,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				try
 				{
-					List<CounterStorageReplicationDestination> replicationDestinations = GetReplicationDestinations();
+					var replicationDestinations = GetReplicationDestinations();
 
 					if (replicationDestinations != null && replicationDestinations.Count > 0)
 					{
@@ -143,7 +143,7 @@ namespace Raven.Database.Counters.Controllers
 						var destinationForReplication = replicationDestinations.Where(
 							destination => (!runningBecauseOfDataModifications || IsNotFailing(destination.CounterStorageUrl, currentReplicationAttempts)) && !destination.Disabled);
 
-						foreach (CounterStorageReplicationDestination destination in destinationForReplication)
+						foreach (var destination in destinationForReplication)
 						{
 							ReplicateToDestination(destination);
 						}
@@ -156,7 +156,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		private void ReplicateToDestination(CounterStorageReplicationDestination destination)
+		private void ReplicateToDestination(CounterReplicationDestination destination)
 		{
 			var dest = destination.CounterStorageUrl;
 			var holder = activeReplicationTasks.GetOrAdd(dest, s => new SemaphoreSlim(1));
@@ -192,7 +192,7 @@ namespace Raven.Database.Counters.Controllers
 				});
 		}
 
-		private bool ReplicateTo(CounterStorageReplicationDestination destination)
+		private bool ReplicateTo(CounterReplicationDestination destination)
 		{
             var replicationStopwatch = Stopwatch.StartNew();
 			//todo: here, build url according to :destination.Url + '/counters/' + destination.
@@ -238,7 +238,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		private ReplicationResult TryReplicate(CounterStorageReplicationDestination destination, out long lastEtagSent, out string lastError)
+		private ReplicationResult TryReplicate(CounterReplicationDestination destination, out long lastEtagSent, out string lastError)
 		{
             long etag = 0;
 		    lastEtagSent = 0;
@@ -253,7 +253,7 @@ namespace Raven.Database.Counters.Controllers
 
 				if (replicationData.Counters.Count > 0)
 				{
-                    return PerformReplicationToServer(connectionStringOptions, destination.CounterStorageUrl, etag, replicationData, out lastError) ?
+                    return PerformReplicationToServer(connectionStringOptions, destination.CounterStorageUrl, replicationData, out lastError) ?
 						ReplicationResult.Success : ReplicationResult.Failure;
 				}
 
@@ -283,10 +283,11 @@ namespace Raven.Database.Counters.Controllers
 			try
 			{
 				long etag = 0;
-				var url = string.Format("{0}/lastEtag?serverUrl={1}", counterStorageUrl, storage.CounterStorageUrl);
+				var url = string.Format("{0}/lastEtag?serverId={1}", counterStorageUrl, storage.CounterStorageUrl);
 				var request = httpRavenRequestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
+				
 				request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));
-
+				
 				lastEtag = etag;
 				lastError = string.Empty;
 				return true;
@@ -303,7 +304,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		private bool PerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, long etag, ReplicationMessage message, out string lastError)
+		private bool PerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, ReplicationMessage message, out string lastError)
 		{
 			var destinationUrl = connectionStringOptions.Url;
 
@@ -344,9 +345,9 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		private List<CounterStorageReplicationDestination> GetReplicationDestinations()
+		private List<CounterReplicationDestination> GetReplicationDestinations()
 		{
-			CounterStorageReplicationDocument replicationData;
+			CountersReplicationDocument replicationData;
 			using (var reader = storage.CreateReader())
 				replicationData = reader.GetReplicationData();
 			return (replicationData != null) ? replicationData.Destinations : null;
@@ -381,7 +382,7 @@ namespace Raven.Database.Counters.Controllers
 
 	    private ReplicationMessage GetCountersDataSinceEtag(long etag, out long lastEtagSent)
 	    {
-            var message = new ReplicationMessage { ServerId = storage.ServerId };
+			var message = new ReplicationMessage { ServerId = storage.ServerId, SendingServerName = storage.ResourceName };
 
             using (var reader = storage.CreateReader())
             {
@@ -392,7 +393,7 @@ namespace Raven.Database.Counters.Controllers
 	        return message;
 	    }
 
-		private RavenConnectionStringOptions GetConnectionOptionsSafe(CounterStorageReplicationDestination destination, out string lastError)
+		private RavenConnectionStringOptions GetConnectionOptionsSafe(CounterReplicationDestination destination, out string lastError)
 		{
 			try
 			{

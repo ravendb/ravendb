@@ -154,8 +154,8 @@
     <Compile Include="Counters\CounterStorageDocument.cs" />
     <Compile Include="Counters\CounterStorageStats.cs" />
     <Compile Include="Counters\CounterChange.cs" />
-    <Compile Include="Counters\CounterStorageReplicationDestination.cs" />
-    <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
+    <Compile Include="Counters\CounterReplicationDestination.cs" />
+    <Compile Include="Counters\CountersReplicationDocument.cs" />
     <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />

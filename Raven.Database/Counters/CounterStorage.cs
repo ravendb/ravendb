@@ -33,7 +33,7 @@ namespace Raven.Database.Counters
 		private readonly ILog Log = LogManager.GetCurrentClassLogger();
 		public string CounterStorageUrl { get; private set; }
 		private readonly StorageEnvironment storageEnvironment;
-		public readonly RavenCounterReplication ReplicationTask;
+		public readonly CountersReplicationTask replicationTask;
 
 		public DateTime LastWrite { get; private set; }
 
@@ -61,7 +61,7 @@ namespace Raven.Database.Counters
 				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
-			ReplicationTask = new RavenCounterReplication(this);
+			replicationTask = new CountersReplicationTask(this);
 
 			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
@@ -109,7 +109,7 @@ namespace Raven.Database.Counters
 					}
 				}
 
-				ReplicationTask.StartReplication();
+				replicationTask.StartReplication();
 			}
 		}
 
@@ -137,7 +137,7 @@ namespace Raven.Database.Counters
 					Url = CounterStorageUrl,
 					CountersCount = reader.GetCountersCount(),
 					LastCounterEtag = lastEtag,
-					TasksCount = ReplicationTask.GetActiveTasksCount(),
+					TasksCount = replicationTask.GetActiveTasksCount(),
 					CounterStorageSize = SizeHelper.Humane(storageEnvironment.Stats().UsedDataFileSizeInBytes),
 					GroupsCount = reader.GetGroupsCount(),
 				};
@@ -213,8 +213,8 @@ namespace Raven.Database.Counters
 		{
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of CounterStorage: " + Name);
 
-			if (ReplicationTask != null)
-				exceptionAggregator.Execute(ReplicationTask.Dispose);
+			if (replicationTask != null)
+				exceptionAggregator.Execute(replicationTask.Dispose);
 
 			if (storageEnvironment != null)
 				exceptionAggregator.Execute(storageEnvironment.Dispose);
@@ -401,7 +401,7 @@ namespace Raven.Database.Counters
 				return result != null ? result.Reader.ReadLittleEndianInt64() : 0;
 			}
 
-			public CounterStorageReplicationDocument GetReplicationData()
+			public CountersReplicationDocument GetReplicationData()
 			{
 				var readResult = metadata.Read("replication");
 				if (readResult == null) 
@@ -412,7 +412,7 @@ namespace Raven.Database.Counters
 				using (var streamReader = new StreamReader(stream))
 				using (var jsonTextReader = new JsonTextReader(streamReader))
 				{
-					return new JsonSerializer().Deserialize<CounterStorageReplicationDocument>(jsonTextReader);
+					return new JsonSerializer().Deserialize<CountersReplicationDocument>(jsonTextReader);
 				}
 			}
 
@@ -560,7 +560,7 @@ namespace Raven.Database.Counters
 				serversLastEtag.Add(serverId, EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 
-			public void UpdateReplications(CounterStorageReplicationDocument newReplicationDocument)
+			public void UpdateReplications(CountersReplicationDocument newReplicationDocument)
 			{
 				using (var memoryStream = new MemoryStream())
 				using (var streamWriter = new StreamWriter(memoryStream))
@@ -572,7 +572,7 @@ namespace Raven.Database.Counters
 					metadata.Add("replication", memoryStream);
 				}
 
-				parent.ReplicationTask.SignalCounterUpdate();
+				parent.replicationTask.SignalCounterUpdate();
 			}
 
 			private bool DoesCounterExist(Slice name)
