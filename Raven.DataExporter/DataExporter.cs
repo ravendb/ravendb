@@ -21,13 +21,13 @@ namespace Raven.DataExporter
             }
             else
             {
-                ExportDB(configuration.DatabaseDataDir, configuration.OutputDumpPath, configuration.IncludeAttachments);
+                ExportDB(configuration.DatabaseDataDir, configuration.OutputDumpPath);
             }
         }
 
-        private void ExportDB(string databaseDataDir, string outputDumpPath,bool includeAttachments = false)
+        private void ExportDB(string databaseDataDir, string outputDumpPath)
         {
-            var exporter = new DatabaseExporter(databaseDataDir, outputDumpPath, includeAttachments);
+            var exporter = new DatabaseExporter(databaseDataDir, outputDumpPath);
             exporter.Export();
         }
 

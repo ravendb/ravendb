@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.DataExporter
+namespace Raven.StorgaeExporter
 {
-    public class DataExporterConfiguration
+    public class StorgaeExporterConfiguration
     {
-        public bool IncludeAttachments { get; set; }
         public string DatabaseDataDir { get; set; }
         public string OutputDumpPath { get; set; }
         public string TableName { get; set; }

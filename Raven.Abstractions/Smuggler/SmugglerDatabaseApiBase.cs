@@ -218,7 +218,7 @@ namespace Raven.Abstractions.Smuggler
 							{ "Key", identityInfo.Key }, 
 							{ "Value", identityInfo.Value }
 						}.WriteTo(jsonWriter);
-		}
+		    }
 
 			jsonWriter.WriteEndArray();
 

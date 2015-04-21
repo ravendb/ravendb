@@ -47,7 +47,7 @@ namespace Raven.DataExporter
                 configuration = new DataExporterConfiguration(){DatabaseDataDir = args[0],OutputDumpPath = args[3],TableName = args[2]};
                 return true;
             }
-            configuration = new DataExporterConfiguration() { DatabaseDataDir = args[0], OutputDumpPath = args[1], IncludeAttachments = args.Contains("-ATTACHMENTS")};
+            configuration = new DataExporterConfiguration() { DatabaseDataDir = args[0], OutputDumpPath = args[1]};
             return true;
         }
 
@@ -69,7 +69,7 @@ Usage:
             Console.WriteLine();
         }
 
-        private static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
+        public static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
         {
             var previousColor = Console.ForegroundColor;
             Console.ForegroundColor = color;
