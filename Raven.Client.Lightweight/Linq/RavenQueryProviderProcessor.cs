@@ -1639,26 +1639,25 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				var result = queryResult.Results[index];
 				var safeToModify = (RavenJObject)result.CreateSnapshot();
-				bool changed = false;
-				
-				if (!changed)
+
+				if (!RenameSingleResult(safeToModify))
 					continue;
 				safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
 				queryResult.Results[index] = safeToModify;
 			}
 		}
 
-		public bool RenameStreamResults(RavenJObject safeToModify)
+		public bool RenameSingleResult(RavenJObject doc)
 		{
 			var changed = false;
 			var values = new Dictionary<string, RavenJToken>();
 			foreach (var renamedField in FieldsToRename.Select(x => x.OriginalField).Distinct())
 			{
 				RavenJToken value;
-				if (safeToModify.TryGetValue(renamedField, out value) == false)
+				if (doc.TryGetValue(renamedField, out value) == false)
 					continue;
 				values[renamedField] = value;
-				safeToModify.Remove(renamedField);
+				doc.Remove(renamedField);
 			}
 			foreach (var rename in FieldsToRename)
 			{
@@ -1669,15 +1668,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				var ravenJObject = val as RavenJObject;
 				if (rename.NewField == null && ravenJObject != null)
 				{
-					safeToModify = ravenJObject;
+					doc = ravenJObject;
 				}
 				else if (rename.NewField != null)
 				{
-					safeToModify[rename.NewField] = val;
+					doc[rename.NewField] = val;
 				}
 				else
 				{
-					safeToModify[rename.OriginalField] = val;
+					doc[rename.OriginalField] = val;
 				}
 			}
 			return changed;
