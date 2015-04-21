@@ -16,9 +16,9 @@ namespace Voron.Impl
 		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
 		private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>> _multiTreeOperations;
 
-		private readonly HashSet<string> _trees = new HashSet<string>(); 
+		private readonly HashSet<string> _trees = new HashSet<string>();
 
-		private readonly SliceEqualityComparer _sliceEqualityComparer;
+        private readonly SliceComparer _sliceEqualityComparer;
 		private bool _disposeAfterWrite = true;
 
 		public HashSet<string> Trees
@@ -45,10 +45,12 @@ namespace Voron.Impl
 			if (_multiTreeOperations.TryGetValue(treeName, out multiOperations) == false)
 				yield break;
 
-			foreach (var operation in multiOperations
-				.OrderBy(x => x.Key, _sliceEqualityComparer)
-				.SelectMany(x => x.Value)
-				.OrderBy(x => x.ValueSlice, _sliceEqualityComparer))
+            var orderedOperations = multiOperations
+                        				.SelectMany(x => x.Value)
+				                        .OrderBy(x => x.ValueSlice, _sliceEqualityComparer)
+                                        .ThenBy(x => x.Key, _sliceEqualityComparer);
+
+            foreach (var operation in orderedOperations)
 				yield return operation;
 		}
 
@@ -127,7 +129,7 @@ namespace Voron.Impl
 		{
 			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
 			_multiTreeOperations = new Dictionary<string, Dictionary<Slice, List<BatchOperation>>>();
-			_sliceEqualityComparer = new SliceEqualityComparer();
+			_sliceEqualityComparer = new SliceComparer();
 		}
 
 		public void Add(Slice key, Slice value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
@@ -394,7 +396,7 @@ namespace Voron.Impl
 
 			public int CompareTo(BatchOperation other)
 			{
-				var r = SliceEqualityComparer.Instance.Compare(Key, other.Key);
+				var r = SliceComparer.Instance.Compare(Key, other.Key);
 				if (r != 0)
 					return r;
 				if (ValueSlice != null)
