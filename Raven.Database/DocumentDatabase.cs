@@ -6,19 +6,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
-using System.Configuration;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
 using Raven.Abstractions;
@@ -41,15 +37,10 @@ using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
-using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.Tenancy;
-using Raven.Database.Server.WebApi;
 using Raven.Database.Storage;
 using Raven.Database.Util;
-
-using metrics.Core;
 using Raven.Database.Plugins.Catalogs;
 
 namespace Raven.Database
@@ -168,14 +159,9 @@ namespace Raven.Database
 				try
 				{
 					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-
-					// Index codecs must be initialized before we try to read an index
-					InitializeIndexCodecTriggers();
-					initializer.InitializeIndexStorage();
-
-					Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
-					Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
+                    initializer.InitializeIndexDefinitionStorage();
 					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
+                    Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
 					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
 					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
 					Subscriptions = new SubscriptionActions(this, Log);
@@ -183,8 +169,19 @@ namespace Raven.Database
 					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
 					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
 					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
+                    Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
 					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
+
+					InitializeTriggersExceptIndexCodecs();
+					// Second stage initializing before index storage for determining the hash algotihm for encrypted databases that were upgraded from 2.5
+					SecondStageInitialization();
+
+					// Index codecs must be initialized before we try to read an index
+					InitializeIndexCodecTriggers();
+					initializer.InitializeIndexStorage();
+
+				
 
 					CompleteWorkContextSetup();
 
@@ -195,8 +192,7 @@ namespace Raven.Database
 					InitializeTriggersExceptIndexCodecs();
 
 					RaiseIndexingWiringComplete();
-					
-					SecondStageInitialization();
+
 					ExecuteStartupTasks();
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
 
@@ -507,7 +503,7 @@ namespace Raven.Database
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
 					SupportsDtc = TransactionalStorage.SupportsDtc,
-					AllowVoronStorage = Environment.Is64BitProcess || Configuration.Storage.Voron.AllowOn32Bits 
+
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -1050,6 +1046,7 @@ namespace Raven.Database
 			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
 		}
 
+
 		private void ExecuteStartupTasks()
 		{
 			using (LogContext.WithDatabase(Name))
@@ -1147,15 +1144,6 @@ namespace Raven.Database
 				this.configuration = configuration;
 			}
 
-			public void ValidateLicense()
-			{
-				if (configuration.IsTenantDatabase)
-					return;
-
-				validateLicense = new ValidateLicense();
-				validateLicense.Execute(configuration);
-			}
-
 			public void ValidateStorage()
 			{
 				var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
@@ -1165,6 +1153,15 @@ namespace Raven.Database
 				{
 					throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
 				}
+			}
+
+			public void ValidateLicense()
+			{
+				if (configuration.IsTenantDatabase)
+					return;
+
+				validateLicense = new ValidateLicense();
+				validateLicense.Execute(configuration);
 			}
 
 			public void Dispose()
@@ -1233,9 +1230,13 @@ namespace Raven.Database
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
-			public void InitializeIndexStorage()
+		    public void InitializeIndexDefinitionStorage()
 			{
 				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
+		    }
+
+			public void InitializeIndexStorage()
+			{
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 

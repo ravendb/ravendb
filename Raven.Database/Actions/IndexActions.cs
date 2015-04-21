@@ -127,7 +127,7 @@ namespace Raven.Database.Actions
 
 	        using (Database.TransactionalStorage.DisableBatchNesting())
 	        {
-				// in external tranasction number of references will be >= from current transaction references
+				// in external transaction number of references will be >= from current transaction references
 		        Database.TransactionalStorage.Batch(externalActions =>
 		        {
 					foreach (var referencing in externalActions.Indexing.GetDocumentsReferencing(key))

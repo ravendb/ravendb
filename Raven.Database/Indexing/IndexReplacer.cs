@@ -50,7 +50,10 @@ namespace Raven.Database.Indexing
 				}
 
 				var document = db.Documents.Get(notification.Id, null);
-				HandleIndexReplaceDocument(document);
+				var replaceIndexId = HandleIndexReplaceDocument(document);
+
+				if (replaceIndexId != null)
+					ReplaceIndexes(new []{ replaceIndexId.Value });
 			};
 
 			Initialize();
@@ -67,10 +70,10 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void HandleIndexReplaceDocument(JsonDocument document)
+		private int? HandleIndexReplaceDocument(JsonDocument document)
 		{
 			if (document == null)
-				return;
+				return null;
 
 			var id = document.Key;
 			var replaceIndexName = id.Substring(Constants.IndexReplacePrefix.Length);
@@ -79,7 +82,7 @@ namespace Raven.Database.Indexing
 			if (replaceIndex == null)
 			{
 				DeleteIndexReplaceDocument(id);
-				return;
+				return null;
 			}
 
 			var replaceIndexId = replaceIndex.IndexId;
@@ -97,7 +100,7 @@ namespace Raven.Database.Indexing
 			if (string.Equals(replaceIndexName, indexReplaceInformation.IndexToReplace, StringComparison.OrdinalIgnoreCase))
 			{
 				DeleteIndexReplaceDocument(id);
-				return;
+				return null;
 			}
 
 			if (indexReplaceInformation.ReplaceTimeUtc.HasValue)
@@ -116,6 +119,8 @@ namespace Raven.Database.Indexing
 
 				return indexReplaceInformation;
 			});
+
+			return replaceIndexId;
 		}
 
 		private void DeleteIndexReplaceDocument(string documentKey)

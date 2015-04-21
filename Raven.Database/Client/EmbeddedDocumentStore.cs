@@ -252,7 +252,15 @@ namespace Raven.Database.Client
             return server.DocumentStore.OpenAsyncSession(database);
         }
 
-        /// <summary>
+		/// <summary>
+		///		Opens the async session with the specified options.
+		/// </summary>
+	    public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
+	    {
+			return server.DocumentStore.OpenAsyncSession(sessionOptions);
+	    }
+
+	    /// <summary>
         ///     Opens the session.
         /// </summary>
         /// <returns></returns>
