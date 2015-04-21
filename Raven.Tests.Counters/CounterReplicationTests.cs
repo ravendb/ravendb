@@ -44,8 +44,34 @@ namespace Raven.Tests.Counters
 					await client.Commands.ChangeAsync("group", "counter",2);
 				}
 				
-				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter",60));
+				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
 			}
+		}
+
+		//more complicated case
+		[Fact]
+		public async Task Multiple_replication_should_Work()
+		{
+			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
+			using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName + "C"))
+			{
+				await SetupReplicationAsync(storeA, storeB);
+				await SetupReplicationAsync(storeA, storeC);
+
+				using (var client = storeA.NewCounterClient())
+				{
+					await client.Commands.ChangeAsync("group", "counter", 2);
+				}
+
+				using (var client = storeA.NewCounterClient())
+				{
+					await client.Commands.ChangeAsync("group", "counter", -1);
+				}
+
+				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
+				Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
+			}			
 		}
 
 		private async Task<bool> WaitForReplicationBetween(ICounterStore source,ICounterStore destination, string groupName, string counterName, int timeoutInSec = 30)

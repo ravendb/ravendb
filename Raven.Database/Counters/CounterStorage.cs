@@ -254,6 +254,17 @@ namespace Raven.Database.Counters
 				return countersGroups.State.EntriesCount;
 			}
 
+			public bool CounterExists(string groupName, string counterName)
+			{
+				var name = MergeGroupAndName(groupName, counterName);
+				using (var it = counters.Iterate())
+				{
+					it.RequiredPrefix = name;
+					return it.Seek(name);
+				}				
+			}
+
+
 			public IEnumerable<string> GetFullCounterNames(string prefix)
 			{
 				using (var it = counters.Iterate())
@@ -327,7 +338,7 @@ namespace Raven.Database.Counters
 						result.CounterValues.Add(new CounterValue
 						{
 							Name = it.CurrentKey.ToString(),
-							Value = it.CreateReaderForCurrent().ReadLittleEndianInt64(),
+							Value = it.CreateReaderForCurrent().ReadBigEndianInt64(),
 						});
 					} while (it.MoveNext());
 					return result;
@@ -437,6 +448,9 @@ namespace Raven.Database.Counters
 			
 			public Writer(CounterStorage parent, Transaction transaction)
 			{
+				if (transaction.Flags != TransactionFlags.ReadWrite) //precaution
+					throw new InvalidOperationException(string.Format("Counters writer cannot be created with read-only transaction. (tx id = {0})", transaction.Id));
+
 				this.parent = parent;
 				this.transaction = transaction;
 				reader = new Reader(transaction);
@@ -482,7 +496,7 @@ namespace Raven.Database.Counters
 				//TODO: verify counter name stracture
 				Store(fullCounterName, counterKey =>
 				{
-					EndianBitConverter.Big.CopyBytes(counterValue.Value, counterValueBuffer, 0);
+					EndianBitConverter.Little.CopyBytes(counterValue.Value, counterValueBuffer, 0);
 					counters.Add(counterKey, counterValueBuffer);
 				});
 			}
