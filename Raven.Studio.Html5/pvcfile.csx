@@ -75,7 +75,14 @@ pvc.Task("optimized-build", () => {
 	.Pipe(streams => {
 		Console.WriteLine("views into modules...");
 		var inlineHtmlStreamName = "inlineHtmlResults.js";
-		var inlineHtmlPlugin = new PvcRequireJsInlineHtml(inlineHtmlStreamName);
+		
+		var viewModuleNameFetcher = new Func<string, string>(s => {
+			return "text!views/" + s
+				.Replace("App\\views\\", "") // Make it relative to the root
+				.Replace("\\", "/"); // Use forward slash: command\someCommand.js -> command/someCommand.js
+		});
+		
+		var inlineHtmlPlugin = new PvcRequireJsInlineHtml(inlineHtmlStreamName, viewModuleNameFetcher);
 		var htmlStreams = streams
 			.Where(s => s.StreamName.IndexOf("App\\Views\\", StringComparison.InvariantCultureIgnoreCase) >= 0)
 			.ToList();
