@@ -3,6 +3,22 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using ICSharpCode.NRefactory.CSharp;
+using ICSharpCode.NRefactory.PatternMatching;
+using Lucene.Net.Documents;
+using Microsoft.CSharp;
+using Raven.Abstractions;
+using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util.Encryptors;
+using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Indexing;
+using Raven.Database.Linq.Ast;
+using Raven.Database.Linq.PrivateExtensions;
+using Raven.Database.Plugins;
+using Raven.Database.Server;
+using Raven.Database.Storage;
+
 using System;
 using System.CodeDom.Compiler;
 using System.Collections;
@@ -14,33 +30,16 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using ICSharpCode.NRefactory;
-using ICSharpCode.NRefactory.CSharp;
-using ICSharpCode.NRefactory.PatternMatching;
-using Lucene.Net.Documents;
-using Microsoft.CSharp;
-using Raven.Abstractions;
-using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util;
-using Raven.Abstractions.Util.Encryptors;
-using Raven.Database.Config;
-using Raven.Database.Extensions;
-using Raven.Database.Indexing;
-using Raven.Database.Linq.Ast;
-using Raven.Database.Linq.PrivateExtensions;
-using Raven.Database.Plugins;
-using Raven.Database.Server;
-using Raven.Database.Storage;
-using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace Raven.Database.Linq
 {
 	public static class QueryParsingUtils
 	{
+		private static readonly ConcurrentDictionary<string, object> Locks = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
 		[CLSCompliant(false)]
 		public static string GenerateText(TypeDeclaration type, 
 			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
@@ -486,7 +485,13 @@ namespace Raven.Database.Linq
 			if (indexFilePath != null)
 			{
 				var sourceFileName = indexFilePath + ".cs";
-				File.WriteAllText(sourceFileName, source);
+
+				var locker = Locks.GetOrAdd(sourceFileName, new object());
+				lock (locker)
+				{
+					File.WriteAllText(sourceFileName, source);
+				}
+
 				compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, sourceFileName);
 			}
 			else
