@@ -51,9 +51,9 @@ namespace Raven.Database.Indexing.IndexMerging
         {
             get { return index.Analyzers; }
         }
-        public IDictionary<string, SuggestionOptions> Suggestions
+        public ISet<string> SuggestionsOptions
         {
-            get { return index.Suggestions; }
+            get { return index.SuggestionsOptions; }
         }
         public IDictionary<string, FieldTermVector> TermVectors
         {

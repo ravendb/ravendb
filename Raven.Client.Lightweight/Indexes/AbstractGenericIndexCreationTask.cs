@@ -26,7 +26,7 @@ namespace Raven.Client.Indexes
             IndexSortOptionsStrings = new Dictionary<string, SortOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
-			IndexSuggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
+			IndexSuggestions = new HashSet<Expression<Func<TReduceResult, object>>>();
 			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
 			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
 			SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>(); 
@@ -75,7 +75,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Index suggest options
 		/// </summary>
-		protected IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> IndexSuggestions { get; set; }
+		protected ISet<Expression<Func<TReduceResult, object>>> IndexSuggestions { get; set; }
 
 		/// <summary>
 		/// Index sort options
@@ -229,13 +229,9 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Register a field to be sorted
 		/// </summary>
-		protected void Suggestion(Expression<Func<TReduceResult, object>> field, SuggestionOptions suggestion = null)
+		protected void Suggestion(Expression<Func<TReduceResult, object>> field)
 		{
-			IndexSuggestions.Add(field, suggestion ?? new SuggestionOptions
-			{
-				Accuracy = 0.5f,
-				Distance = StringDistanceTypes.Levenshtein
-			});
+			IndexSuggestions.Add(field);
 		}
 	}
 }

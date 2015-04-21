@@ -535,13 +535,9 @@ namespace Raven.Database.Actions
 
 	    private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)
         {
-            foreach (var suggestion in definition.Suggestions)
+            foreach (var suggestion in definition.SuggestionsOptions)
             {
-                var field = suggestion.Key;
-                var suggestionOption = suggestion.Value;
-
-                if (suggestionOption.Distance == StringDistanceTypes.None)
-                    continue;
+                var field = suggestion;
 
                 var indexExtensionKey = MonoHttpUtility.UrlEncode(field);
 

@@ -20,7 +20,7 @@ namespace Raven.Tests.Core.Utils.Indexes
 
             Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
 
-            IndexSuggestions.Add(x => x.Name, new SuggestionOptions());
+            IndexSuggestions.Add(x => x.Name);
 
 			Analyzers.Add(x => x.Name, typeof(SimpleAnalyzer).FullName);
 

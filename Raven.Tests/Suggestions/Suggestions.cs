@@ -30,7 +30,7 @@ namespace Raven.Tests.Suggestions
 			documentStore.DatabaseCommands.PutIndex("Test", new IndexDefinition
 			{
 				Map = "from doc in docs select new { doc.Name }",
-				Suggestions = new Dictionary<string, SuggestionOptions> {{"Name", new SuggestionOptions()}}
+				SuggestionsOptions = new HashSet<string>{ "Name" }
 			});
 			using (var s = documentStore.OpenSession())
 			{
