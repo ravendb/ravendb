@@ -45,7 +45,7 @@ namespace Raven.Client.Counters
 		{
 			add { replicationInformer.FailoverStatusChanged += value; }
 			remove { replicationInformer.FailoverStatusChanged -= value; }
-		}
+		}		
 
 		/// <summary>
 		/// Allow access to the replication informer used to determine how we replicate requests
@@ -81,13 +81,13 @@ namespace Raven.Client.Counters
                 Dispose();
                 throw;
             }
-        }
+        }		
 
 		private void InitializeActions(string counterStorageName)
 	    {
 		    Stats = new CountersStats(parent, counterStorageName);
 		    Replication = new ReplicationClient(parent, counterStorageName);
-		    Commands = new CountersCommands(parent, counterStorageName);
+			Commands = new CountersCommands(parent,this, counterStorageName, replicationInformer);
 	    }
 
 	    public void Dispose()

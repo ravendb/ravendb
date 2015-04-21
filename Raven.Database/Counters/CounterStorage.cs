@@ -338,7 +338,7 @@ namespace Raven.Database.Counters
 						result.CounterValues.Add(new CounterValue
 						{
 							Name = it.CurrentKey.ToString(),
-							Value = it.CreateReaderForCurrent().ReadBigEndianInt64(),
+							Value = it.CreateReaderForCurrent().ReadLittleEndianInt64(),
 						});
 					} while (it.MoveNext());
 					return result;

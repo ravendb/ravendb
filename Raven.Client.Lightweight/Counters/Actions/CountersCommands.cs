@@ -11,9 +11,15 @@ namespace Raven.Client.Counters.Actions
 {
 	public class CountersCommands : CountersActionsBase
 	{
-		internal CountersCommands(ICounterStore parent, string counterStorageName)
+		private readonly CountersClient client;
+		private readonly ICountersReplicationInformer replicationInformer;
+
+		internal CountersCommands(ICounterStore parent, CountersClient client, string counterStorageName, ICountersReplicationInformer replicationInformer)
 			: base(parent, counterStorageName)
 		{
+			if (replicationInformer == null) throw new ArgumentNullException("replicationInformer"); //precaution
+			this.client = client;
+			this.replicationInformer = replicationInformer;
 		}
 
 		public async Task ChangeAsync(string groupName, string counterName, long delta, CancellationToken token = default(CancellationToken))
@@ -21,12 +27,16 @@ namespace Raven.Client.Counters.Actions
 			var requestUriString = String.Format(CultureInfo.InvariantCulture,"{0}/change/{1}/{2}?delta={3}",
 				counterStorageUrl, groupName, counterName, delta);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
-				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+			await replicationInformer.ExecuteWithReplicationAsync(HttpMethods.Post, client, metadata =>
+			{
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
+					return request.ReadResponseJsonAsync().WithCancellation(token);
+			});
 		}
 
 		public async Task IncrementAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
+			
 			await ChangeAsync(groupName, counterName, 1, token);
 		}
 
@@ -38,7 +48,7 @@ namespace Raven.Client.Counters.Actions
 		public async Task ResetAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
 			var requestUriString = String.Format("{0}/reset/{1}/{2}", counterStorageUrl, groupName, counterName);
-
+			
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 		}

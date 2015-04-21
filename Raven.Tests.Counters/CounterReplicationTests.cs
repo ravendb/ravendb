@@ -32,7 +32,7 @@ namespace Raven.Tests.Counters
 
 		//simple case
 		[Fact]
-		public async Task Two_node_replication_should_work()
+		public async Task Simple_replication_should_work()
 		{
 			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
 			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
@@ -67,6 +67,11 @@ namespace Raven.Tests.Counters
 				using (var client = storeA.NewCounterClient())
 				{
 					await client.Commands.ChangeAsync("group", "counter", -1);
+				}
+
+				using (var client = storeA.NewCounterClient())
+				{
+					await client.Commands.ChangeAsync("group", "counter", 4);
 				}
 
 				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));

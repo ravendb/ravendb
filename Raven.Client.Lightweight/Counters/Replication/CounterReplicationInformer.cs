@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Request;
@@ -15,10 +19,40 @@ namespace Raven.Client.Counters
 {
 	public class CounterReplicationInformer : ReplicationInformerBase<CountersClient>,ICountersReplicationInformer
 	{
+		private bool currentlyExecuting;
+		private int requestCount;
 
 		public CounterReplicationInformer(Client.Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000) : base(conventions, requestFactory, delayTime)
 		{
 		}
+
+		public async Task ExecuteWithReplicationAsync<T>(HttpMethod method,CountersClient client, Func<OperationMetadata, Task<T>> operation)
+		{
+			var currentRequest = Interlocked.Increment(ref requestCount);
+			if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
+				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
+			
+			currentlyExecuting = true;
+			try
+			{
+				var operationCredentials = new OperationCredentials(client.ApiKey, client.Credentials);
+				await ExecuteWithReplicationAsync(method, client.ServerUrl, operationCredentials, null, currentRequest, 0, operation)
+										.ConfigureAwait(false);
+			}
+			catch (AggregateException e)
+			{
+				var singleException = e.ExtractSingleInnerException();
+				if (singleException != null)
+					throw singleException;
+
+				throw;
+			}
+			finally
+			{
+				currentlyExecuting = false;
+			}
+		}
+
 
 		public override void RefreshReplicationInformation(CountersClient client)
 		{
