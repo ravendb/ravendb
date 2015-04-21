@@ -88,10 +88,6 @@ namespace Raven.Database
 
 		private volatile bool disposed;
 
-		private Task indexingBackgroundTask;
-
-		private Task reducingBackgroundTask;
-
 		private readonly DocumentDatabaseInitializer initializer;
 
 		private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
@@ -169,15 +165,6 @@ namespace Raven.Database
 				try
 				{
 					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-
-					MappingThreadPool = new RavenThreadPool(configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
-					{
-						new Action(()=> indexingExecuter.Execute())
-					});
-					ReducingThreadPool = new RavenThreadPool(configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
-					{
-						new Action(()=>ReducingExecuter.Execute())
-					});
 					
 					// Index codecs must be initialized before we try to read an index
 					InitializeIndexCodecTriggers();
@@ -791,13 +778,11 @@ namespace Raven.Database
 
 			exceptionAggregator.Execute(() =>
 			{
-				if (indexingBackgroundTask != null)
-					indexingBackgroundTask.Wait();
+				StopMappingThreadPool();
 			});
 			exceptionAggregator.Execute(() =>
 			{
-				if (reducingBackgroundTask != null)
-					reducingBackgroundTask.Wait();
+				StopReducingThreadPool();
 			});
 
 			exceptionAggregator.Execute(() =>
@@ -943,8 +928,8 @@ namespace Raven.Database
 			}
 		}
 
-		public readonly RavenThreadPool MappingThreadPool;
-		public readonly RavenThreadPool ReducingThreadPool;
+		public RavenThreadPool MappingThreadPool;
+		public RavenThreadPool ReducingThreadPool;
 
 		public void SpinBackgroundWorkers()
 		{
@@ -961,21 +946,48 @@ namespace Raven.Database
 
 			workContext.StartWork();
 
+			MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
+					{
+						new Action(()=> indexingExecuter.Execute())
+					});
+			ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
+					{
+						new Action(()=>ReducingExecuter.Execute())
+					});
+
 			MappingThreadPool.Start();
 			ReducingThreadPool.Start();
 
 			RaiseIndexingWiringComplete();
 
 		}
-		
+
+		private void StopMappingThreadPool()
+		{
+			if (MappingThreadPool != null)
+			{
+				MappingThreadPool.WaitForWorkToBeDone();
+				MappingThreadPool.Dispose();
+				MappingThreadPool = null;
+			}
+			MappingThreadPool = null;
+		}
+
+		private void StopReducingThreadPool()
+		{
+			if (ReducingThreadPool != null)
+			{
+				ReducingThreadPool.WaitForWorkToBeDone();
+				ReducingThreadPool.Dispose();
+				ReducingThreadPool = null;
+			}
+		}
+
 		public void StopBackgroundWorkers()
 		{
 			workContext.StopWork();
-			if (indexingBackgroundTask != null)
-				indexingBackgroundTask.Wait();
-
-			if (reducingBackgroundTask != null)
-				reducingBackgroundTask.Wait();
+			StopMappingThreadPool();
+			StopReducingThreadPool();
 
 			backgroundWorkersSpun = false;
 		}
@@ -985,7 +997,7 @@ namespace Raven.Database
 			workContext.StopIndexing();
 			try
 			{
-				indexingBackgroundTask.Wait();
+				StopMappingThreadPool();
 			}
 			catch (Exception e)
 			{
@@ -994,7 +1006,7 @@ namespace Raven.Database
 
 			try
 			{
-				reducingBackgroundTask.Wait();
+				StopReducingThreadPool();
 			}
 			catch (Exception e)
 			{

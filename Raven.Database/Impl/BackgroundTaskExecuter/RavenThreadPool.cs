@@ -121,6 +121,15 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 			return this;
 		}
 
+		public void WaitForWorkToBeDone()
+		{
+			do
+			{
+				ExecuteWorkOnce(true, false);
+			}
+			while (_tasks.Count>0);
+		}
+
 		private readonly object _locker = new object();
 		private ThreadData[] _threads;
 		private readonly BlockingCollection<ThreadTask> _tasks = new BlockingCollection<ThreadTask>();
