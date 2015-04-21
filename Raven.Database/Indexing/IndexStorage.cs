@@ -265,7 +265,7 @@ namespace Raven.Database.Indexing
 				{
 					try
 					{
-						documentDatabase.Indexes.DeleteIndex(indexName);
+						documentDatabase.Indexes.DeleteIndex(indexDefinition, removeIndexReplaceDocument: false);
 						documentDatabase.Indexes.PutNewIndexIntoStorage(indexName, indexDefinition);
 					}
 					catch (Exception e)
