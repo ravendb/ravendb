@@ -3,16 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.IO;
 using System.Linq;
-using System.Net;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
 
 using Xunit;
 
@@ -67,7 +63,5 @@ namespace Raven.Tests.Issues
 			Assert.Equal(SuggestionQuery.DefaultAccuracy, indexDefinition.Suggestions["Company"].Accuracy);
 			Assert.Equal("Company", indexDefinition.SuggestionsOptions.ToList()[0]);
 		}
-
-
 	}
 }

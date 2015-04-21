@@ -128,9 +128,15 @@ namespace Raven.Abstractions.Indexing
 		/// Index field suggestion settings.
 		/// </summary>
 		[Obsolete("Use SuggestionsOptions")]
-		public IDictionary<string, SuggestionOptions> Suggestions
+		public IReadOnlyDictionary<string, SuggestionOptions> Suggestions
 		{
-			get { return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions()); }
+			get
+			{
+				if (SuggestionsOptions.Count == 0) 
+					return null;
+				
+				return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions());
+			}
 			set { SuggestionsOptions = value.Keys.ToHashSet(); } 
 		}
 
