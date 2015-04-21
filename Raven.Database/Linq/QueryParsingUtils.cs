@@ -462,7 +462,7 @@ namespace Raven.Database.Linq
 				typeof (AbstractViewGenerator).Assembly.Location,
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
-				typeof (Binder).Assembly.Location,
+				typeof (Microsoft.CSharp.RuntimeBinder.Binder).Assembly.Location,
                 AssemblyExtractor.GetExtractedAssemblyLocationFor(typeof(Field), configuration),
 			};
 			foreach (var extension in extensions)
