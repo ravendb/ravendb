@@ -30,10 +30,7 @@ namespace Raven.Tests.Issues
 												new IndexDefinition
 												{
 													Map = "from doc in docs select new { doc.Name}",
-													Suggestions = new Dictionary<string, SuggestionOptions>
-													              {
-														              {"Name", new SuggestionOptions()}
-													              }
+													SuggestionsOptions = new HashSet<string> {"Name"}
 												});
 
 				WaitForIndexing(store);
@@ -76,14 +73,7 @@ namespace Raven.Tests.Issues
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name}",
-					Suggestions = new Dictionary<string, SuggestionOptions>
-													              {
-														              {"Name", new SuggestionOptions
-														              {
-															              Accuracy = 0.5f,
-																		  Distance = StringDistanceTypes.Default
-														              }}
-													              }
+					SuggestionsOptions = new HashSet<string> { "Name" }
 				});
 
 				WaitForIndexing(store);

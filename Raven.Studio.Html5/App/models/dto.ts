@@ -369,7 +369,7 @@ interface indexDefinitionDto {
     SortOptions: any;
     Analyzers: any;
     Fields: string[];
-    Suggestions: any;
+	SuggestionsOptions: any;
     TermVectors: any;
     SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
     InternalFieldsMapping: any;

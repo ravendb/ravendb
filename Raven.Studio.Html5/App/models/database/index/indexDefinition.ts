@@ -29,7 +29,7 @@ class indexDefinition {
     sortOptions: any;
     spatialIndexes: any;
     stores: any;
-    suggestions: any;
+    suggestionsOptions: any[];
     termVectors: any;
     type: string;
 
@@ -50,7 +50,7 @@ class indexDefinition {
         this.sortOptions = dto.SortOptions;
         this.spatialIndexes = dto.SpatialIndexes;
         this.stores = dto.Stores;
-        this.suggestions = dto.Suggestions;
+        this.suggestionsOptions = dto.SuggestionsOptions;
         this.termVectors = dto.TermVectors;
         this.type = dto.Type;
 
@@ -78,7 +78,7 @@ class indexDefinition {
             SortOptions: this.makeFieldObject(f => f.sort() !== "None", f => f.sort()),
             SpatialIndexes: this.makeSpatialIndexesObject(),
             Stores: this.makeFieldObject(f => f.stores() === "Yes", f => f.stores()),
-            Suggestions: this.makeFieldObject(f => f.suggestionDistance() !== "None", f => f.toSuggestionDto()),
+            SuggestionsOptions: this.luceneFields().filter(x => x.suggestionEnabled()).map(x => x.name()),
             TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
             Type: this.type,
             MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument() ? this.maxIndexOutputsPerDocument()> 0 ? this.maxIndexOutputsPerDocument() : null : null
@@ -103,7 +103,7 @@ class indexDefinition {
             SortOptions: {},
             SpatialIndexes: {},
             Stores: {},
-            Suggestions: {},
+            SuggestionsOptions: [],
             TermVectors: {},
             Type: "Map",
             MaxIndexOutputsPerDocument:null
@@ -126,10 +126,10 @@ class indexDefinition {
 
     private parseFields(): luceneField[] {
         return this.fields()
-            .filter(name => this.analyzers[name] != null || this.indexes[name] != null || this.sortOptions[name] != null || this.stores[name] != null || this.suggestions[name] != null || this.termVectors[name] != null) // A field is configured and shows up in the index edit UI as a field when it appears in one of the aforementioned objects.
+            .filter(name => this.analyzers[name] != null || this.indexes[name] != null || this.sortOptions[name] != null || this.stores[name] != null || this.suggestionsOptions.indexOf(name) >= 0 || this.termVectors[name] != null) // A field is configured and shows up in the index edit UI as a field when it appears in one of the aforementioned objects.
             .map(fieldName => {
-                var suggestion: any = this.suggestions && this.suggestions[fieldName] ? this.suggestions[fieldName] : {};
-                return new luceneField(fieldName, this.stores[fieldName], this.indexes[fieldName], this.sortOptions[fieldName], this.analyzers[fieldName], suggestion['Distance'], suggestion['Accuracy'], this.termVectors[fieldName], this.fields());
+				var suggestionsEnabled = this.suggestionsOptions && this.suggestionsOptions.indexOf(fieldName) >= 0;
+                return new luceneField(fieldName, this.stores[fieldName], this.indexes[fieldName], this.sortOptions[fieldName], this.analyzers[fieldName], suggestionsEnabled, this.termVectors[fieldName], this.fields());
             });        
     }
 

@@ -176,7 +176,7 @@ namespace Raven.Database.Indexing.IndexMerging
 				return false;
 			if (DataDictionaryCompare(index1Data.Analyzers, index2Data.Analyzers, intersectNames) == false)
 				return false;
-			if (DataDictionaryCompare(index1Data.Suggestions, index2Data.Suggestions, intersectNames) == false)
+			if (SetExtensions.ContentEquals(index1Data.SuggestionsOptions, index2Data.SuggestionsOptions) == false)
 				return false;
 			if (DataDictionaryCompare(index1Data.SortOptions, index2Data.SortOptions, intersectNames) == false)
 				return false;
@@ -303,6 +303,14 @@ namespace Raven.Database.Indexing.IndexMerging
 			}
 		}
 
+		private static void DataSetMerge(ISet<string> dest, ISet<string> src)
+		{
+			foreach (var val in src)
+			{
+				dest.Add(val);
+			}
+		}
+
 		private static bool AreSelectClausesCompatible(IndexData x, IndexData y)
 		{
 			foreach (var pair in x.SelectExpressions)
@@ -371,7 +379,7 @@ namespace Raven.Database.Indexing.IndexMerging
 					DataDictionaryMerge(mergeSuggestion.MergedIndex.Indexes, curProposedData.Indexes);
 					DataDictionaryMerge(mergeSuggestion.MergedIndex.Analyzers, curProposedData.Analyzers);
 					DataDictionaryMerge(mergeSuggestion.MergedIndex.SortOptions, curProposedData.SortOptions);
-					DataDictionaryMerge(mergeSuggestion.MergedIndex.Suggestions, curProposedData.Suggestions);
+					DataSetMerge(mergeSuggestion.MergedIndex.SuggestionsOptions, curProposedData.SuggestionsOptions);
 					DataDictionaryMerge(mergeSuggestion.MergedIndex.TermVectors, curProposedData.TermVectors);
 					DataDictionaryMerge(mergeSuggestion.MergedIndex.SpatialIndexes, curProposedData.SpatialIndexes);
 				    var fields1 = mergeSuggestion.MergedIndex.Fields;
@@ -391,7 +399,7 @@ namespace Raven.Database.Indexing.IndexMerging
 														DictionaryExtensions.ContentEquals(x.Indexes, mergeSuggestion.MergedIndex.Indexes) &&
 														DictionaryExtensions.ContentEquals(x.Analyzers, mergeSuggestion.MergedIndex.Analyzers) &&
 														DictionaryExtensions.ContentEquals(x.SortOptions, mergeSuggestion.MergedIndex.SortOptions) &&
-														DictionaryExtensions.ContentEquals(x.Suggestions, mergeSuggestion.MergedIndex.Suggestions) &&
+														SetExtensions.ContentEquals(x.SuggestionsOptions, mergeSuggestion.MergedIndex.SuggestionsOptions) && 
 														DictionaryExtensions.ContentEquals(x.TermVectors, mergeSuggestion.MergedIndex.TermVectors) &&
 														DictionaryExtensions.ContentEquals(x.SpatialIndexes, mergeSuggestion.MergedIndex.SpatialIndexes))
 						.OrderBy(x => x.IndexName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase))

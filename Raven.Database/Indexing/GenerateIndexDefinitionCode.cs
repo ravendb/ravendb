@@ -20,6 +20,7 @@ using Raven.Database.Plugins;
 
 namespace Raven.Database.Indexing
 {
+	//TODO: test me!
     public class IndexDefinitionCodeGenerator
     {
         private readonly IndexDefinition _indexDefinition;
@@ -108,9 +109,9 @@ namespace Raven.Database.Indexing
                 objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Analyzers", CreateAnalizersExpression(_indexDefinition)));
             }
 
-            if (_indexDefinition.Suggestions.Count > 0)
+            if (_indexDefinition.SuggestionsOptions.Count > 0)
             {
-                objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Suggestions", CreateSuggestionsExpression(_indexDefinition)));
+                objectCreateExpression.Initializer.Elements.Add(new NamedExpression("SuggestionsOptions", CreateSuggestionsExpression(_indexDefinition)));
             }
 
             if (_indexDefinition.SpatialIndexes.Count > 0)
@@ -183,21 +184,9 @@ namespace Raven.Database.Indexing
         {
             var suggestions = new ArrayInitializerExpression();
 
-            indexDefinition.Suggestions.ForEach(suggestion =>
+            indexDefinition.SuggestionsOptions.ForEach(suggestion =>
             {
-                var property = new ArrayInitializerExpression();
-                property.Elements.Add(new StringLiteralExpression(suggestion.Key));
-
-                var value = suggestion.Value;
-                property.Elements.Add(new ObjectCreateExpression
-                {
-                    Type = new PrimitiveType("SuggestionOptions"),
-                    Initializer = new ArrayInitializerExpression(
-                        new NamedExpression("Distance", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("StringDistanceTypes")), value.Distance.ToString())),
-                        new NamedExpression("Accuracy", new PrimitiveExpression(value.Accuracy))
-                    )
-                });
-                suggestions.Elements.Add(property);
+				suggestions.Elements.Add(new StringLiteralExpression(suggestion));
             });
 
             return suggestions;

@@ -272,6 +272,7 @@
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\Buffers.cs" />
     <Compile Include="Extensions\ConcurrentDictionaryExtensions.cs" />
+    <Compile Include="Extensions\Internal\SetExtensions.cs" />
     <Compile Include="Extensions\Internal\DictionaryExtensions.cs" />
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />

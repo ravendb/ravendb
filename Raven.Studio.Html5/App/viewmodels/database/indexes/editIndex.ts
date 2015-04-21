@@ -145,7 +145,7 @@ class editIndex extends viewModelBase {
 
     private initializeDirtyFlag() {
         var indexDef: indexDefinition = this.editedIndex();
-        var checkedFieldsArray = [this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
+        var checkedFieldsArray: KnockoutObservable<any>[] = [this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
 
         indexDef.luceneFields().forEach((lf: luceneField) => {
             checkedFieldsArray.push(lf.name);
@@ -154,8 +154,7 @@ class editIndex extends viewModelBase {
             checkedFieldsArray.push(lf.termVector);
             checkedFieldsArray.push(lf.indexing);
             checkedFieldsArray.push(lf.analyzer);
-            checkedFieldsArray.push(lf.suggestionDistance);
-            checkedFieldsArray.push(lf.suggestionAccuracy);
+            checkedFieldsArray.push(lf.suggestionEnabled);
         });
 
         indexDef.spatialFields().forEach((sf: spatialIndexField) => {
