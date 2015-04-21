@@ -6,7 +6,7 @@
 using ICSharpCode.NRefactory.CSharp;
 using ICSharpCode.NRefactory.PatternMatching;
 using Lucene.Net.Documents;
-using Lucene.Net.Store;
+
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
@@ -40,7 +40,7 @@ namespace Raven.Database.Linq
 {
 	public static class QueryParsingUtils
 	{
-		private static readonly ConcurrentDictionary<string, object> Locks = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+		private static readonly ConcurrentDictionary<int, object> Locks = new ConcurrentDictionary<int, object>();
 
 		[CLSCompliant(false)]
 		public static string GenerateText(TypeDeclaration type, 
@@ -295,9 +295,10 @@ namespace Raven.Database.Linq
 				Directory.CreateDirectory(indexCacheDir);
 			}
 
-			var indexFilePath = GetIndexFilePath(source, indexCacheDir);
+			int numberHash;
+			var indexFilePath = GetIndexFilePath(source, indexCacheDir, out numberHash);
 
-			var locker = Locks.GetOrAdd(indexFilePath, s => new object());
+			var locker = Locks.GetOrAdd(numberHash, s => new object());
 			lock (locker)
 			{
 				var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
@@ -409,12 +410,13 @@ namespace Raven.Database.Linq
 			return false;
 		}
 
-		private static string GetIndexFilePath(string source, string indexCacheDir)
+		private static string GetIndexFilePath(string source, string indexCacheDir, out int numberHash)
 		{
 			var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(source));
 			var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
+			numberHash = IndexingUtil.StableInvariantIgnoreCaseStringHash(source);
 			var indexFilePath = Path.Combine(indexCacheDir,
-				IndexingUtil.StableInvariantIgnoreCaseStringHash(source) + "." + sourceHashed + "." +
+				numberHash + "." + sourceHashed + "." +
 				(Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
 			return indexFilePath;
 		}
