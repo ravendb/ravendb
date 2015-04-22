@@ -541,6 +541,85 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
+		public void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false)
+		{
+			ushort version;
+			ushort? fileVersion;
+			var targetKey = CreateKey(targetFilename);
+
+			if (storage.Files.Contains(Snapshot, targetKey, writeBatch.Value, out fileVersion))
+				throw new FileExistsException(string.Format("Cannot copy '{0}' to '{1}'. File '{1}' exists.", sourceFilename, targetFilename));
+
+			var key = CreateKey(sourceFilename);
+			var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
+			if (file == null)
+				throw new FileNotFoundException("Could not find file: " + sourceFilename);
+
+			var newEtag = uuidGenerator.CreateSequentialUuid();
+			file["etag"] = newEtag.ToByteArray();
+			file.Value<RavenJObject>("metadata").Remove(RavenConstants.MetadataEtagField);
+
+			CopyUsage(sourceFilename, targetFilename, commitPeriodically);
+
+			file["name"] = targetFilename;
+			storage.Files.Add(writeBatch.Value, targetKey, file, fileVersion ?? 0);
+
+			var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+			fileCount.Add(writeBatch.Value, targetKey, targetKey);
+
+			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+			filesByEtag.Add(writeBatch.Value, CreateKey(Etag.Parse(file.Value<byte[]>("etag"))), targetKey);
+		}
+
+		private void CopyUsage(string sourceFilename, string targetFilename, bool commitPeriodically)
+		{
+			var oldKey = CreateKey(sourceFilename);
+			var newKey = CreateKey(targetFilename);
+
+			var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+			var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
+
+			using (var iterator = usageByFileName.MultiRead(Snapshot, oldKey))
+			{
+				if (!iterator.Seek(Slice.BeforeAllKeys))
+					return;
+
+				var count = 0;
+
+				do
+				{
+					var usageId = iterator.CurrentKey.ToString();
+					ushort version;
+					var usage = LoadJson(storage.Usage, usageId, writeBatch.Value, out version);
+					var newId = IdGenerator.GetNextIdForTable(storage.Usage);
+					var position = usage.Value<int>("file_pos");
+
+					var newUsage = new RavenJObject
+                        {
+                            { "id", newId },
+                            { "name", targetFilename }, 
+                            { "file_pos", position }, 
+                            { "page_id", usage.Value<int>("page_id") }, 
+                            { "page_size", usage.Value<int>("page_size") }
+                        };
+
+					var newUsageId = CreateKey(newId);
+
+					storage.Usage.Add(writeBatch.Value, newUsageId, newUsage);
+
+					usageByFileName.MultiAdd(writeBatch.Value, newKey, newUsageId);
+					usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(targetFilename, position), newUsageId);
+
+					if (commitPeriodically && count++ > 1000)
+					{
+						PulseTransaction();
+						count = 0;
+					}
+				}
+				while (iterator.MoveNext());
+			}
+		}
+
         public RavenJObject GetConfig(string name)
         {
             var key = CreateKey(name);

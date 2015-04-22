@@ -18,6 +18,7 @@ namespace Raven.Abstractions.Replication
 		/// conflicts if there are writes to the secondary when the primary node is down.
 		/// </remarks>
 		AllowReadsFromSecondaries = 1,
+
 		/// <summary>
 		/// Allow reads from and writes to secondary server(s).
 		/// </summary>
@@ -32,6 +33,12 @@ namespace Raven.Abstractions.Replication
 		/// conflicts in case of different writes to the same document across nodes.
 		/// </remarks>
 		AllowReadsFromSecondariesAndWritesToSecondaries = 3,
+
+		/// <summary>
+		/// Allow read from secondaries when request time threshold is surpassed (configurable in conventions). Average request time is calculated using 60 second exponentially-weighted moving average (EWMA).
+		/// </summary>
+		AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed = 5,
+
 		/// <summary>
 		/// Immediately fail the request, without attempting any failover. This is true for both 
 		/// reads and writes. The RavenDB client will not even check that you are using replication.

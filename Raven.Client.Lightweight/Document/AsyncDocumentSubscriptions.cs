@@ -6,10 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 using Raven.Database.Util;
@@ -51,7 +53,7 @@ namespace Raven.Client.Document
 				? documentStore.AsyncDatabaseCommands
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			using (var request = commands.CreateRequest("/subscriptions/create", "POST"))
+			using (var request = commands.CreateRequest("/subscriptions/create", HttpMethods.Post))
 			{
 				await request.WriteAsync(RavenJObject.FromObject(criteria)).ConfigureAwait(false);
 
@@ -91,7 +93,7 @@ namespace Raven.Client.Document
 
 		private static async Task SendOpenSubscriptionRequest(IAsyncDatabaseCommands commands, long id, SubscriptionConnectionOptions options)
 		{
-			using (var request = commands.CreateRequest(string.Format("/subscriptions/open?id={0}&connection={1}", id, options.ConnectionId), "POST"))
+			using (var request = commands.CreateRequest(string.Format("/subscriptions/open?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Post))
 			{
 				try
 				{
@@ -117,7 +119,7 @@ namespace Raven.Client.Document
 
 			List<SubscriptionConfig> configs;
 
-			using (var request = commands.CreateRequest("/subscriptions", "GET"))
+			using (var request = commands.CreateRequest("/subscriptions", HttpMethods.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
@@ -133,7 +135,7 @@ namespace Raven.Client.Document
 				? documentStore.AsyncDatabaseCommands
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			using (var request = commands.CreateRequest("/subscriptions?id=" + id, "DELETE"))
+			using (var request = commands.CreateRequest("/subscriptions?id=" + id, HttpMethods.Delete))
 			{
 				return request.ExecuteRequestAsync();
 			}
@@ -145,7 +147,7 @@ namespace Raven.Client.Document
 				? documentStore.AsyncDatabaseCommands
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			using (var request = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection=&force=true", id), "POST"))
+			using (var request = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection=&force=true", id), HttpMethods.Post))
 			{
 				return request.ExecuteRequestAsync();
 			}

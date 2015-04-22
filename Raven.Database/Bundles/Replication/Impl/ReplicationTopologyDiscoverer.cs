@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Net.Http;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Data;
-using Raven.Database.Config;
+using Raven.Database.Config.Retriever;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Impl
@@ -45,7 +46,16 @@ namespace Raven.Database.Bundles.Replication.Impl
 			if (ttl <= 0)
 				return root;
 
-			var destinations = database.Documents.Get(Constants.RavenReplicationDestinations, null);
+			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument = null;
+			try
+			{
+				configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
+			}
+			catch (Exception)
+			{
+				root.Errors.Add(string.Format("Could not deserialize '{0}'.", Constants.RavenReplicationDestinations));
+			}
+
 			var sources = database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, 0, int.MaxValue, database.WorkContext.CancellationToken, ref nextStart);
 
             if (@from.Contains(database.ServerUrl) == false)
@@ -53,7 +63,9 @@ namespace Raven.Database.Bundles.Replication.Impl
                 @from.Add(database.ServerUrl);
             }
 
-			root.Destinations = HandleDestinations(destinations, root);
+			if (configurationDocument != null)
+				root.Destinations = HandleDestinations(configurationDocument.MergedDocument);
+
 			root.Sources = HandleSources(sources, root);
 
 			return root;
@@ -117,28 +129,12 @@ namespace Raven.Database.Bundles.Replication.Impl
 			return offline;
 		}
 
-		private List<ReplicationTopologyDestinationNode> HandleDestinations(JsonDocument destinationsAsJson, ReplicationTopologyRootNode root)
+		private List<ReplicationTopologyDestinationNode> HandleDestinations(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> destinations)
 		{
-			var nodes = new List<ReplicationTopologyDestinationNode>();
-
-			if (destinationsAsJson == null)
-				return nodes;
-
-			ReplicationDocument destinations;
-			try
-			{
-				destinations = destinationsAsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
-			}
-			catch (Exception)
-			{
-				root.Errors.Add(string.Format("Could not deserialize '{0}'.", Constants.RavenReplicationDestinations));
-
-				return nodes;
-			}
-
-			nodes.AddRange(destinations.Destinations.Select(HandleDestination));
-
-			return nodes;
+			return destinations
+				.Destinations
+				.Select(HandleDestination)
+				.ToList();
 		}
 
 		private ReplicationTopologyDestinationNode HandleDestination(ReplicationDestination replicationDestination)
@@ -203,7 +199,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 
             try
             {
-                var request = requestFactory.Create(url, "GET", connectionStringOptions);
+                var request = requestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
                 error = null;
                 var ravenConfig = request.ExecuteRequest<RavenJObject>();
                 var serverUrlFromTargetConfig = ravenConfig.Value<string>("ServerUrl");
@@ -226,7 +222,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 
 			try
 			{
-				var request = requestFactory.Create(url, "POST", connectionStringOptions);
+				var request = requestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
                 request.Write(from);
 
 				error = null;
@@ -279,7 +275,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 			try
 			{
 				var url = string.Format("{0}/replication/heartbeat?&from={1}", serverUrl, Uri.EscapeDataString(database.ServerUrl));
-				var request = requestFactory.Create(url, "POST", connectionStringOptions);
+				var request = requestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
 				request.ExecuteRequest();
 			}
 			catch (Exception e)

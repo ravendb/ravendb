@@ -31,7 +31,7 @@ namespace Raven.Tests.Issues
 				RunReplication(store1, store2, clientConfiguration: new ReplicationClientConfiguration { FailoverBehavior = FailoverBehavior.ReadFromAllServers });
 
 				var serverClient = ((ServerClient)store1.DatabaseCommands);
-				serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+				GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 				Assert.Equal(FailoverBehavior.ReadFromAllServers, store1.Conventions.FailoverBehavior);
 			}
@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
 				if (store1 != null)
 				{
 					var serverClient = ((ServerClient)store1.DatabaseCommands);
-					serverClient.ReplicationInformer.ClearReplicationInformationLocalCache(serverClient);
+					GetReplicationInformer(serverClient).ClearReplicationInformationLocalCache(serverClient);
 
 					store1.Dispose();
 				}
@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
 				if (store2 != null)
 				{
 					var serverClient = ((ServerClient)store2.DatabaseCommands);
-					serverClient.ReplicationInformer.ClearReplicationInformationLocalCache(serverClient);
+					GetReplicationInformer(serverClient).ClearReplicationInformationLocalCache(serverClient);
 
 					store2.Dispose();
 				}

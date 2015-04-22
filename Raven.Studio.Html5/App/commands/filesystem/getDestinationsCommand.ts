@@ -1,8 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import synchronizationDestination = require("models/filesystem/synchronizationDestination");
-import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
-import document = require("models/document");
 
 class getDestinationsCommand extends commandBase {
 

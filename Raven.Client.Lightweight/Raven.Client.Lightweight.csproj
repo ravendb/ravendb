@@ -101,8 +101,14 @@
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />
     <Compile Include="Connection\AdminRequestCreator.cs" />
     <Compile Include="Connection\AdminServerClient.cs" />
+    <Compile Include="Connection\Request\AsyncOperationResult.cs" />
     <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
     <Compile Include="Connection\Async\AsyncServerClientBase.cs" />
+    <Compile Include="Connection\HttpConnectionHelper.cs" />
+    <Compile Include="Connection\Request\ClusterAwareRequestExecuter.cs" />
+    <Compile Include="Connection\Request\FailureCounters.cs" />
+    <Compile Include="Connection\Request\ReplicationAwareRequestExecuter.cs" />
+    <Compile Include="Connection\Request\IRequestExecuter.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\CompressedStreamContent.cs" />
     <Compile Include="Connection\HttpContentExtentions.cs" />
@@ -111,8 +117,18 @@
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\OperationMetadata.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
-    <Compile Include="Counters\Connections\CounterConvention.cs" />
-    <Compile Include="Counters\RavenCountersClient.cs" />
+    <Compile Include="Counters\Actions\CountersActionsBase.cs" />
+    <Compile Include="Counters\Actions\ICountersBatchOperation.cs" />
+    <Compile Include="Counters\CounterStore.cs" />
+    <Compile Include="Counters\Actions\CountersBatchOperation.cs" />
+    <Compile Include="Counters\Convention.cs" />
+    <Compile Include="Counters\CountersClient.cs" />
+    <Compile Include="Counters\Actions\CountersCommands.cs" />
+    <Compile Include="Counters\Actions\CountersStats.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Counters\Actions\CountersReplication.cs" />
+    <Compile Include="Counters\ICounterStore.cs" />
     <Compile Include="Document\AsyncDocumentSubscriptions.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
     <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
@@ -168,6 +184,13 @@
     <Compile Include="FileSystem\OpenFilesSessionOptions.cs" />
     <Compile Include="FileSystem\Shard\IShardAccessStrategy.cs" />
     <Compile Include="FileSystem\Shard\IShardResolutionStrategy.cs" />
+    <Compile Include="Smuggler\ServerValidation.cs" />
+    <Compile Include="Smuggler\SmugglerDatabaseBetweenOperation.cs" />
+    <Compile Include="Metrics\AtomicLong.cs" />
+    <Compile Include="Metrics\EWMA.cs" />
+    <Compile Include="Metrics\RequestTimeMetric.cs" />
+    <Compile Include="Metrics\TimeUnit.cs" />
+    <Compile Include="Metrics\VolatileDouble.cs" />
     <Compile Include="Util\HttpClientCache.cs" />
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />

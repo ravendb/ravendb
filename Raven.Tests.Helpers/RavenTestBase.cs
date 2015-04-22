@@ -16,17 +16,17 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-
+using Rachis.Transport;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
@@ -34,6 +34,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Raft;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -41,12 +42,11 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
-using Xunit;
 
 
 namespace Raven.Tests.Helpers
 {
-    public abstract class RavenTestBase : IDisposable
+	public abstract class RavenTestBase : IDisposable
 	{
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
@@ -56,7 +56,7 @@ namespace Raven.Tests.Helpers
 
 		private static int pathCount;
 
-	    private static bool checkedAsyncVoid;
+		private static bool checkedAsyncVoid;
 
 		protected RavenTestBase()
 		{
@@ -76,7 +76,7 @@ namespace Raven.Tests.Helpers
 		}
 
 
-	    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+		private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
 		{
 			if (assembly == null) throw new ArgumentNullException("assembly");
 			try
@@ -89,7 +89,7 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
-	    private static IEnumerable<MethodInfo> GetAsyncVoidMethods(Assembly assembly)
+		private static IEnumerable<MethodInfo> GetAsyncVoidMethods(Assembly assembly)
 		{
 			return GetLoadableTypes(assembly)
 			  .SelectMany(type => type.GetMethods(
@@ -110,7 +110,7 @@ namespace Raven.Tests.Helpers
 						method.DeclaringType.Name,
 						method.Name))
 				.ToList();
-			if(messages.Any())
+			if (messages.Any())
 				throw new InvalidConstraintException("async Task methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
 		}
 
@@ -214,8 +214,8 @@ namespace Raven.Tests.Helpers
 			var license = GetLicenseByReflection(database);
 			license.Error = false;
 			license.Status = "Commercial";
-		    license.Attributes["ravenfs"] = "true";
-            license.Attributes["counters"] = "true";
+			license.Attributes["ravenfs"] = "true";
+			license.Attributes["counters"] = "true";
 			// rerun this startup task
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
@@ -251,10 +251,10 @@ namespace Raven.Tests.Helpers
 			return store;
 		}
 
-        protected RavenDbServer GetServer(int port = 8079)
-        {
-            return servers.First(x => x.SystemDatabase.Configuration.Port == port);
-        }
+		protected RavenDbServer GetServer(int port = 8079)
+		{
+			return servers.First(x => x.SystemDatabase.Configuration.Port == port);
+		}
 
 		private static string GetServerUrl(bool fiddler, string serverUrl)
 		{
@@ -281,7 +281,7 @@ namespace Raven.Tests.Helpers
 
 		protected bool checkPorts = false;
 
-        protected RavenDbServer GetNewServer(int port = 8079,
+		protected RavenDbServer GetNewServer(int port = 8079,
 			string dataDirectory = null,
 			bool runInMemory = true,
 			string requestedStorage = null,
@@ -435,7 +435,7 @@ namespace Raven.Tests.Helpers
 				currentStatus = GetPeriodicBackupStatus(db);
 				return compareSelector(currentStatus) != compareSelector(previousStatus);
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-            if (!done) throw new Exception("WaitForPeriodicExport failed");
+			if (!done) throw new Exception("WaitForPeriodicExport failed");
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
 			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
@@ -446,13 +446,13 @@ namespace Raven.Tests.Helpers
 		public static void WaitForIndexing(DocumentDatabase db)
 		{
 			if (!SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)))
-                throw new Exception("WaitForIndexing failed");
+				throw new Exception("WaitForIndexing failed");
 		}
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
 			if (!SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)))
-                throw new Exception("WaitForAllRequestsToComplete failed");
+				throw new Exception("WaitForAllRequestsToComplete failed");
 		}
 
 		protected PeriodicExportStatus GetPeriodicBackupStatus(DocumentDatabase db)
@@ -495,7 +495,7 @@ namespace Raven.Tests.Helpers
 					   currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag ||
 					   currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag;
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-            if (!done) throw new Exception("WaitForPeriodicExport failed");
+			if (!done) throw new Exception("WaitForPeriodicExport failed");
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
 			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
@@ -537,7 +537,7 @@ namespace Raven.Tests.Helpers
 				}
 				return false;
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-            if (!done) throw new Exception("WaitForBackup failed");
+			if (!done) throw new Exception("WaitForBackup failed");
 		}
 
 		protected void WaitForRestore(IDatabaseCommands databaseCommands)
@@ -574,19 +574,26 @@ namespace Raven.Tests.Helpers
 				return restoreFinishMessages.Any(status.Messages.Contains);
 			}, TimeSpan.FromMinutes(5));
 
-            if (!done) throw new Exception("WaitForRestore failed");
+			if (!done) throw new Exception("WaitForRestore failed");
 		}
 
-		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id)
+		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id, Etag afterEtag = null)
+		{
+			WaitForDocument(databaseCommands, id, TimeSpan.FromMinutes(5), afterEtag);
+		}
+
+		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id, TimeSpan timeout, Etag afterEtag = null)
 		{
 			var done = SpinWait.SpinUntil(() =>
 			{
 				// We expect to get the doc from the <system> database
 				var doc = databaseCommands.Get(id);
-				return doc != null;
-			}, TimeSpan.FromMinutes(5));
+				if (afterEtag == null)
+					return doc != null;
+				return EtagUtil.IsGreaterThan(doc.Etag, afterEtag);
+			}, timeout);
 
-            if (!done) throw new Exception("WaitForDocument failed");
+			if (!done) throw new Exception("WaitForDocument failed");
 		}
 
 		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
@@ -594,14 +601,14 @@ namespace Raven.Tests.Helpers
 			if (debug && Debugger.IsAttached == false)
 				return;
 
-		    var databaseName = Constants.SystemDatabase;
+			var databaseName = Constants.SystemDatabase;
 
 			var embeddableDocumentStore = documentStore as EmbeddableDocumentStore;
 			OwinHttpServer server = null;
 			string url = documentStore.Url;
 			if (embeddableDocumentStore != null)
 			{
-			    databaseName = embeddableDocumentStore.DefaultDatabase;
+				databaseName = embeddableDocumentStore.DefaultDatabase;
 				embeddableDocumentStore.Configuration.Port = port;
 				SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
 				embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
@@ -610,19 +617,19 @@ namespace Raven.Tests.Helpers
 				url = embeddableDocumentStore.Configuration.ServerUrl;
 			}
 
-		    var remoteDocumentStore = documentStore as DocumentStore;
-            if (remoteDocumentStore != null)
-            {
-                databaseName = remoteDocumentStore.DefaultDatabase;
-            }
+			var remoteDocumentStore = documentStore as DocumentStore;
+			if (remoteDocumentStore != null)
+			{
+				databaseName = remoteDocumentStore.DefaultDatabase;
+			}
 
 			using (server)
 			{
 				try
 				{
-                    var databaseNameEncoded = Uri.EscapeDataString(databaseName ?? Constants.SystemDatabase);
-                    var documentsPage = url + "studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
-                    Process.Start(documentsPage); // start the server
+					var databaseNameEncoded = Uri.EscapeDataString(databaseName ?? Constants.SystemDatabase);
+					var documentsPage = url + "studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+					Process.Start(documentsPage); // start the server
 				}
 				catch (Win32Exception e)
 				{
@@ -671,9 +678,9 @@ namespace Raven.Tests.Helpers
 				Url = url ?? "http://localhost:8079"
 			}.Initialize())
 			{
-                var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
-                var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
-                Process.Start(documentsPage); // start the server
+				var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
+				var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+				Process.Start(documentsPage); // start the server
 
 				do
 				{
@@ -808,7 +815,7 @@ namespace Raven.Tests.Helpers
 
 			try
 			{
-                if (errors.Any()) throw new Exception("AssertNoIndexErrors Failed");
+				if (errors.Any()) throw new Exception("AssertNoIndexErrors Failed");
 			}
 			catch (Exception)
 			{
@@ -820,14 +827,14 @@ namespace Raven.Tests.Helpers
 		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
 		{
 			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (null == field) throw new Exception("LicensingStatus failed");
+			if (null == field) throw new Exception("LicensingStatus failed");
 			var initializer = field.GetValue(database);
 			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (null == validateLicenseField) throw new Exception("LicensingStatus failed");
+			if (null == validateLicenseField) throw new Exception("LicensingStatus failed");
 			var validateLicense = validateLicenseField.GetValue(initializer);
 
 			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
-            if (null == currentLicenseProp) throw new Exception("LicensingStatus failed");
+			if (null == currentLicenseProp) throw new Exception("LicensingStatus failed");
 
 			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
@@ -862,8 +869,59 @@ namespace Raven.Tests.Helpers
 			var url = store.Url.ForDatabase(string.IsNullOrEmpty(databaseName) == false ? databaseName : store.DefaultDatabase);
 
 			var requestFactory = store.JsonRequestFactory;
-			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", "POST", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", HttpMethods.Post, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
 			request.ExecuteRequest();
 		}
+
+
+		public static IEnumerable<object[]> InsertOptions
+		{
+			get
+			{
+				yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
+				yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
+				yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
+			}
+		}
+		protected RavenDbServer CreateServerWithWindowsCredentials(int port, string username, string password, string domain, out NodeConnectionInfo nodeConnectionInfo)
+		{
+			var server = GetNewServer(port, enableAuthentication: true);
+			nodeConnectionInfo = ClusterManagerFactory.CreateSelfConnection(server.SystemDatabase);
+			nodeConnectionInfo.Username = username;
+			nodeConnectionInfo.Password = password;
+			nodeConnectionInfo.Domain = domain;
+
+			EnableAuthentication(server.SystemDatabase);
+			NewRemoteDocumentStore(ravenDbServer: server);
+			return server;
+		}
+
+		protected RavenDbServer CreateServerWithOAuth(int port, string apiKey, out NodeConnectionInfo nodeConnectionInfo)
+		{
+			var server = GetNewServer(port, enableAuthentication: true);
+			nodeConnectionInfo = ClusterManagerFactory.CreateSelfConnection(server.SystemDatabase);
+			nodeConnectionInfo.ApiKey = apiKey;
+
+			EnableAuthentication(server.SystemDatabase);
+
+			var apiKeyTokens = apiKey.Split('/');
+
+			server.SystemDatabase.Documents.Put("Raven/ApiKeys/" + apiKeyTokens[0], null, RavenJObject.FromObject(new ApiKeyDefinition
+			{
+				Databases = new List<ResourceAccess>
+						            {
+							            new ResourceAccess { TenantId = "*", Admin = true }, 
+										new ResourceAccess { TenantId = "<system>", Admin = true },
+						            },
+				Enabled = true,
+				Name = apiKeyTokens[0],
+				Secret = apiKeyTokens[1]
+			}), new RavenJObject(), null);
+
+			NewRemoteDocumentStore(ravenDbServer: server);
+
+			return server;
+		}
+
 	}
 }

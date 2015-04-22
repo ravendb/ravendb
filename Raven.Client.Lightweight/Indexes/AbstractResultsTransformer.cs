@@ -1,4 +1,6 @@
-﻿using Raven.Abstractions.Indexing;
+﻿using System.Net.Http;
+
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -168,7 +170,7 @@ namespace Raven.Client.Indexes
 				return;
 
 			var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
+			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
 			{
 				try
 				{
@@ -188,7 +190,7 @@ namespace Raven.Client.Indexes
 				return;
 
 			var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
+			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
 			{
 				try
 				{

@@ -1,0 +1,210 @@
+﻿<section id="resources-page">
+	<div class="text-center" data-bind="visible: resources().length == 1">
+		<div class="row">
+			<div data-bind="css: { 'col-md-5' : !clusterMode(), 'col-md-12': clusterMode() }">
+				<h2 class="page-header text-info">
+					<i class="fa fa-database fa-5x"></i>
+					<br />
+					<br />
+					No databases and no filesystems are available. <br />
+					<small>
+						<span data-bind="visible: isGlobalAdmin">Go ahead and <a href="#" data-bind="click: newResource">create a database or distributed file system</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a></span>
+					</small>
+				</h2>
+			</div>
+			<div class="col-md-2" data-bind="visible: !clusterMode()">
+				<h2 class="page-header text-info" style="border-bottom: 0">
+					<i class="fa fa-5x">&nbsp;</i><br />
+					OR
+				</h2>
+			</div>
+			<div class="col-md-5" data-bind="visible: !clusterMode()">
+				<h2 class="page-header text-info">
+					<i class="fa fa-cubes fa-5x"></i>
+					<br />
+					<br />
+					Create cluster <br/>
+					<small>Go ahead and <a href="#" data-bind="click: navigateToCreateCluster">create cluster</a></small>
+				</h2>
+			</div>
+		</div>
+	</div>
+    <ul class="breadcrumb" data-bind="visible: resources().length > 1">
+        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+        <li>
+            <h3>
+                <a href="#resources">
+                    Databases &amp; File Systems
+                </a>
+            </h3>
+        </li>
+    </ul>
+    
+    <!-- ko if: alerts().length > 0 -->
+        <!-- ko foreach: alerts -->
+        <div class="alert alert-warning alert-dismissable" role="alert">
+            <button data-bind="click: $root.dismissAlert.bind($root, uniqueKey)" type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <a data-bind="attr: { href: $root.urlForAlert($data) }"><span data-bind="text: title"></span></a>
+        </div>
+        <!-- /ko -->
+    <!-- /ko -->
+
+	<div class="btn-toolbar" data-bind="visible: resources().length > 1">
+		<div class="btn-group">
+			<button type="button" class="btn btn-link" data-bind="click: toggleSelectAll" title="Select all or none">
+                <img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : isAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }, visible: isCheckboxVisible">
+			</button>
+		</div>
+		<div class="btn-group">
+            <button type="button" class="btn btn-primary" data-bind="click: newResource, visible: isGlobalAdmin" accesskey="n" title="Create a new resource. (Alt+N)">
+                <i class="fa fa-plus"></i> New Resource
+            </button>
+		</div>
+		<div class="btn-group">
+			<input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: resources().length > 0" title="Search for a database or file system (Alt+/)">
+		</div>
+		<div class="btn-group">
+			<button type="button" class="btn btn-danger" data-bind="click: deleteCheckedResources, visible: isAnyResourceSelected" title="Delete selected databases or file systems"><i class="fa fa-trash-o"></i></button>
+		</div>
+	    <div class="btn-group">
+	        <button type="button" class="btn btn-default" data-bind="click: toggleCheckedResources, visible: allCheckedResourcesDisabled() != null, attr: { title: allCheckedResourcesDisabled() ? 'Enable selected resources' : 'Disable selected resources' }">
+	            <i class="fa" data-bind="css: { 'fa-lock': !allCheckedResourcesDisabled(), 'fa-unlock': allCheckedResourcesDisabled }"></i>
+	        </button>
+	    </div>
+	    <div class="btn-group">
+            <select data-bind="value: visibleResources" class="form-control" id="storageEngine">
+                <option value="">Show all</option>
+                <option value="db">Show databases</option>
+                <option value="fs">Show file systems</option>
+            </select>
+	    </div>
+	    <div class="btn-group pull-right">
+            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: isGlobalAdmin">Manage Your Server</button>
+		</div>
+	</div>
+
+    <div class="resources-container" data-bind="foreach: resources">
+        <!--ko if: $data.isDatabase() -->
+        <div class="resource" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
+            <div class="checkbox" data-bind="click: function(){ checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
+                <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: $root.isGlobalAdmin()" />
+            </div>
+            <div class="details">
+                <h4>
+                    <!-- ko if: !$data.disabled() && $data.isLicensed() -->
+                    <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i data-bind="css: { 'fa-database': !clusterWide() , 'fa-cubes': clusterWide() }" class="fa"></i> db/<span data-bind="text: name"></span></a>
+                    <!-- /ko -->
+                    <!-- ko if: $data.disabled() || !$data.isLicensed() -->
+                    <a class="resource-name"><i class="fa fa-database"></i> db/<span data-bind="text: name"></span></a>
+                    <!-- /ko -->
+                </h4>
+                <br />                              
+                <!-- ko if: !$data.disabled() && $data.isLicensed() -->
+                <span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
+                <!-- /ko -->               
+                <!-- ko if: $data.disabled -->
+                <span class="stats-disabled">Disabled</span>
+                <!-- /ko -->
+                <!-- ko if: !$data.disabled() && !$data.isLicensed() -->
+                <span class="stats-disabled">Unlicensed</span>
+                <!-- /ko -->
+            </div>
+            <!-- ko if: $data.indexingDisabled -->
+            <span class="indexing-disabled"><i class="fa fa-warning text-warning" title="Indexing Disabled"></i></span>
+            <!-- /ko -->
+            <!-- ko if: $data.rejectClientsMode -->
+            <span class="clients-rejected"><i class="fa fa-warning text-warning" title="Clients rejected mode" ></i></span>
+            <!-- /ko -->
+            <div class="btn-group" data-bind="click: function(){ $root.optionsClicked(true); }, visible: $root.isGlobalAdmin()">
+                <a class="dropdown-toggle" data-toggle="dropdown">
+                    <i class="fa fa-cogs fa-lg"></i>
+                </a>
+                <ul class="dropdown-menu" role="menu">
+                    <li class="dropdown-submenu">
+                        <a tabindex="-1" href="#">
+                            <i class="fa fa-arrow-down"></i>
+                            <span>Takedowns</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li role="presentation">
+                                <a data-bind="click: function () { $root.toggleSelectedResources([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
+                                    <i class="fa fa-fw" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>
+                                    <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
+                                </a>
+                            </li>
+                            <li role="presentation">
+                                <a data-bind="click: function () { $root.disableDatabaseIndexing($data); return true; }, attr: { title: indexingDisabled() ? 'Enable Indexing' : 'Disable Indexing' }">
+                                    <i class="fa fa-fw fa-bolt" data-bind="style: { color: indexingDisabled() ?  'red' : 'green' }"></i>
+                                    <span data-bind="text: indexingDisabled() ? 'Enable indexing' : 'Disable indexing'"></span>
+                                </a>
+                            </li>
+                            <li role="presentation">
+                                <a data-bind="click: function () { $root.toggleRejectDatabaseClients($data); return true; }, attr: { title: rejectClientsMode() ? 'Accept clients mode' : 'Reject clients mode' }">
+                                    <i class="fa fa-fw fa-umbrella" data-bind="style: { color: rejectClientsMode() ? 'red' : 'green' }"></i>
+                                    <span data-bind="text: rejectClientsMode() ? 'Accept clients mode' : 'Reject clients mode'"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="divider"></li>
+                    <li role="presentation" class="delete-resource">
+                        <a title="Delete selected database" data-bind="click: function () { $root.deleteSelectedResources([$data]); return true; }">
+                            <i class="fa fa-fw fa-trash-o"></i>
+                            <span>Delete</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <!-- /ko -->
+
+        <!-- ko if: $data.isFilesystem() -->
+        <div class="resource fs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
+            <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
+                <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: $root.isGlobalAdmin()" />
+            </div>
+            <div class="details">
+                <h4>
+                    <!-- ko if: !$data.disabled() && $data.isLicensed() -->
+                    <a class="resource-name" data-bind="attr: { href: $root.getFilesystemFilesUrl($data) }"><i class="fa fa-file-image-o"></i> fs/<span data-bind="text: name"></span></a>
+                    <!-- /ko -->
+                    <!-- ko if: $data.disabled() || !$data.isLicensed() -->
+                    <a class="resource-name"><i class="fa fa-file-image-o"></i> fs/<span data-bind="text: name"></span></a>
+                    <!-- /ko -->
+                </h4>
+                <br />
+                <!-- ko if: !$data.disabled() && $data.isLicensed() -->
+                <span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
+                <!-- /ko -->
+                <!-- ko if: $data.disabled -->
+                <span class="stats-disabled">Disabled</span>
+                <!-- /ko -->
+                <!-- ko if: !$data.disabled() && !$data.isLicensed() -->
+                <span class="stats-disabled">Unlicensed</span>
+                <!-- /ko -->
+            </div>
+
+            <div class="btn-group" data-bind="click: function () { $root.optionsClicked(true); }, visible: $root.isGlobalAdmin()">
+                <a class="dropdown-toggle" data-toggle="dropdown">
+                    <i class="fa fa-cogs fa-lg"></i>
+                </a>
+                <ul class="dropdown-menu" role="menu">
+                    <li role="presentation">
+                        <a data-bind="click: function () { $root.toggleSelectedResources([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
+                            <i class="fa fa-fw" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>
+                            <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
+                        </a>
+                    </li>
+                    <li class="divider"></li>
+                    <li role="presentation" class="delete-resource">
+                        <a title="Delete selected filesystem" data-bind="click: function () { $root.deleteSelectedResources([$data]); return true; }">
+                            <i class="fa fa-fw fa-trash-o"></i>
+                            <span>Delete</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <!-- /ko -->
+    </div>
+</section>

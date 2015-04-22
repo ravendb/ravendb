@@ -10,10 +10,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Web.Http;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 
 namespace Raven.Database.Client.Aws
@@ -48,7 +48,7 @@ namespace Raven.Database.Client.Aws
 			var headers = ConvertToHeaders(bucketName, content.Headers);
 
 			var client = GetClient(TimeSpan.FromSeconds(timeoutInSeconds));
-			var authorizationHeaderValue = CalculateAuthorizationHeaderValue("PUT", url, now, headers);
+			var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
 			client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
 			var response = client.PutAsync(url, content).ResultUnwrap();
@@ -66,7 +66,7 @@ namespace Raven.Database.Client.Aws
 
 			var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
 
-			var requestMessage = new HttpRequestMessage(HttpMethod.Get, url)
+			var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
 								 {
 									 Headers =
 				                     {
@@ -78,7 +78,7 @@ namespace Raven.Database.Client.Aws
 			var headers = ConvertToHeaders(bucketName, requestMessage.Headers);
 
 			var client = GetClient();
-			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("GET", url, now, headers);
+			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
 
 			var response = client.SendAsync(requestMessage).ResultUnwrap();
 			if (response.StatusCode == HttpStatusCode.NotFound)

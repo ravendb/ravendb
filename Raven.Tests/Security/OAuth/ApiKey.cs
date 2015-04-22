@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
+﻿using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Server;
@@ -13,7 +10,6 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
-using Raven.Client.Extensions;
 
 namespace Raven.Tests.Security.OAuth
 {
@@ -120,10 +116,10 @@ namespace Raven.Tests.Security.OAuth
 					ApiKey = "dbadmin/ThisIsMySecret"
 				}.Initialize())
 				{
-					store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", "POST", new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions))
+					store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", HttpMethods.Post, new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions))
 						.ExecuteRequest();// can do admin stuff
 
-					var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/debug/user-info", "GET", new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions));
+					var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/debug/user-info", HttpMethods.Get, new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions));
 
 					var json = (RavenJObject)httpJsonRequest.ReadResponseJson();
 

@@ -37,11 +37,7 @@ namespace Raven.Tests.Suggestions
 				Map = users => from user in users
 				               select new {user.Name};
 
-				Suggestion(user => user.Name, new SuggestionOptions
-				{
-					Accuracy = 0.2f,
-					Distance = StringDistanceTypes.Levenshtein,
-				});
+				Suggestion(user => user.Name);
 			}
 		}
 

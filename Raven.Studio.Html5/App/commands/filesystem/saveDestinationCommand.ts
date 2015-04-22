@@ -1,7 +1,5 @@
-﻿import appUrl = require("common/appUrl");
-import commandBase = require("commands/commandBase");
+﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 
 class saveDestinationCommand extends commandBase {
 

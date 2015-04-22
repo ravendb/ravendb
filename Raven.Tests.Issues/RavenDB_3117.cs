@@ -17,6 +17,8 @@ namespace Raven.Tests.Issues
 		{
 			const string IndexName = "TestIndex";
 
+            var ravenDbServer = GetServer();
+
 			ravenDbServer.SystemDatabase.Indexes.PutIndex(IndexName,
 				new IndexDefinition
 				{

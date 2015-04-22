@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -17,7 +16,6 @@ using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -25,7 +23,6 @@ using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -39,7 +36,7 @@ namespace Raven.Database.Counters.Controllers
 		private CountersLandlord landlord;
 		private RequestManager requestManager;
         
-		public RequestManager RequestManager
+		new public RequestManager RequestManager
 		{
 			get
 			{
@@ -49,21 +46,23 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-
-
 	    public CounterStorage CounterStorage
 	    {
 	        get
 	        {
-                var counterStorage = CountersLandlord.GetCounterInternal(CountersName);
+		        if (string.IsNullOrWhiteSpace(CounterStorageName))
+			        throw new InvalidOperationException("Could not find counter storage name in path.. maybe it is missing or the request URL is malformed?");
+
+		        var counterStorage = CountersLandlord.GetCounterInternal(CounterStorageName);
                 if (counterStorage == null)
                 {
-                    throw new InvalidOperationException("Could not find a counter storage named: " + CountersName);
+                    throw new InvalidOperationException("Could not find a counter storage named: " + CounterStorageName);
                 }
 
                 return counterStorage.Result;
 	        }
 	    }
+
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
@@ -73,7 +72,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
-					RequestManager.SetThreadLocalState(ReadInnerHeaders, CountersName);
+					RequestManager.SetThreadLocalState(ReadInnerHeaders, CounterStorageName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 				}, httpException => GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable));
 			}
@@ -83,7 +82,6 @@ namespace Raven.Database.Counters.Controllers
 
 			return result;
 		}
-
 
 		private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
 			MixedModeRequestAuthorizer authorizer)
@@ -95,10 +93,10 @@ namespace Raven.Database.Counters.Controllers
             if (IsInternalRequest == false)
 				RequestManager.IncrementRequestCount();
 
-			var fileSystemInternal = await CountersLandlord.GetCounterInternal(CountersName);
+			var fileSystemInternal = await CountersLandlord.GetCounterInternal(CounterStorageName);
 			if (fileSystemInternal == null)
 			{
-				var msg = "Could not find a counters named: " + CountersName;
+				var msg = "Could not find a counters named: " + CounterStorageName;
 				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
 			}
 
@@ -111,7 +109,6 @@ namespace Raven.Database.Counters.Controllers
 			return result;
 		}
 
-
 		protected override void InnerInitialization(HttpControllerContext controllerContext)
 		{
 			base.InnerInitialization(controllerContext);
@@ -122,40 +119,24 @@ namespace Raven.Database.Counters.Controllers
 			if (values.ContainsKey("MS_SubRoutes"))
 			{
 				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("counterName"));
+				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("counterStorageName"));
 
 				if (selectedData != null)
-					CountersName = selectedData.Values["counterName"] as string;
+					CounterStorageName = selectedData.Values["counterStorageName"] as string;
 			}
 			else
 			{
 				if (values.ContainsKey("cou"))
-					CountersName = values["counterName"] as string;
-			}
-			if (CountersName == null)
-				throw new InvalidOperationException("Could not find counter name for this request");
-		}
-
-		public string CountersName { get; private set; }
-
-		public CountersLandlord CountersLandlord
-		{
-			get
-			{
-				if (Configuration == null)
-					return landlord;
-				return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
+					CounterStorageName = values["counterStorageName"] as string;
 			}
 		}
 
-
-	
+		public string CounterStorageName { get; private set; }
 
 		private NameValueCollection QueryString
 		{
 			get { return queryString ?? (queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query)); }
 		}
-
 
 		protected PagingInfo Paging
 		{
@@ -189,19 +170,17 @@ namespace Raven.Database.Counters.Controllers
 
 	    public override InMemoryRavenConfiguration ResourceConfiguration
 	    {
-	        get { throw new NotImplementedException(); }
+	        get { return CounterStorage.Configuration; }
 	    }
 
-	    public override bool SetupRequestToProperDatabase(RequestManager rm)
+	    public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
 		{
-			var tenantId = CountersName;
+			var tenantId = CounterStorageName;
 
-			if (string.IsNullOrWhiteSpace(tenantId))
-			{
-				throw new HttpException(503, "Could not find a counter with no name");
-			}
+		    if (string.IsNullOrWhiteSpace(tenantId))
+			    return true;
 
-			Task<CounterStorage> resourceStoreTask;
+		    Task<CounterStorage> resourceStoreTask;
 			bool hasDb;
 			try
 			{
@@ -209,7 +188,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 			catch (Exception e)
 			{
-				var msg = "Could open counter named: " + tenantId;
+				var msg = "Could not open counter named: " + tenantId;
 				Logger.WarnException(msg, e);
 				throw new HttpException(503, msg, e);
 			}
@@ -217,7 +196,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				try
 				{
-					if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
+                    if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
 					{
 						var msg = "The counter " + tenantId +
 								  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";
@@ -255,10 +234,12 @@ namespace Raven.Database.Counters.Controllers
 
 		public override string TenantName
 		{
-			get { return "counters/" + CountersName; }
+			get { return TenantNamePrefix + CounterStorageName; }
 		}
 
-        public override void MarkRequestDuration(long duration)
+		private const string TenantNamePrefix = "cs/";
+
+		public override void MarkRequestDuration(long duration)
         {
             if (Storage == null)
                 return;
@@ -270,22 +251,18 @@ namespace Raven.Database.Counters.Controllers
 			get { return CountersLandlord.SystemConfiguration; }
 		}
 
-       
-
 		public CounterStorage Storage
 		{
 			get
 			{
-				var counter = CountersLandlord.GetCounterInternal(CountersName);
+				var counter = CountersLandlord.GetCounterInternal(CounterStorageName);
 				if (counter == null)
 				{
-					throw new InvalidOperationException("Could not find a counter named: " + CountersName);
+					throw new InvalidOperationException("Could not find a counter storage named: " + CounterStorageName);
 				}
 
 				return counter.Result;
 			}
 		}
-
-	
 	}
 }

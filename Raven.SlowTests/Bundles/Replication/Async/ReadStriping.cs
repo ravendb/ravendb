@@ -47,7 +47,7 @@ namespace Raven.SlowTests.Bundles.Replication.Async
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient) store.AsyncDatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient) store.AsyncDatabaseCommands);
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
 				foreach (var ravenDbServer in servers)
@@ -104,7 +104,7 @@ namespace Raven.SlowTests.Bundles.Replication.Async
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinations.Count);
 
 				foreach (var ravenDbServer in servers)

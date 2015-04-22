@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
                 var urlsTried = new List<string>();
 
                 var webException = (WebException)Assert.Throws<AggregateException>(() => 
-					replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
+					replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), null, 1, 1, url =>
                 {
 	                urlsTried.Add(url.Url);
 	                throw new WebException("Timeout", WebExceptionStatus.Timeout);
@@ -73,7 +73,7 @@ namespace Raven.Tests.Issues
                 var urlsTried = new List<string>();
 
                 var webException = (WebException) Assert.Throws<AggregateException>(() => 
-					replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
+					replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), null, 1, 1, url =>
                 {
 	                urlsTried.Add(url.Url);
 	                throw new WebException("Timeout", WebExceptionStatus.Timeout);
@@ -106,7 +106,7 @@ namespace Raven.Tests.Issues
                 var urlsTried = new List<string>();
 
                 var aggregateException = Assert.Throws<AggregateException>(() =>
-                    replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
+                    replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), null, 1, 1, url =>
                     {
 	                    urlsTried.Add(url.Url);
 
@@ -143,7 +143,7 @@ namespace Raven.Tests.Issues
                 var urlsTried = new List<string>();
 
                 var aggregateException = Assert.Throws<AggregateException>(() =>
-                    replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
+                    replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), null, 1, 1, url =>
                     {
 	                    urlsTried.Add(url.Url);
 

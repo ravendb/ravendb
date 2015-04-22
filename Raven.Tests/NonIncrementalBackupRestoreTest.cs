@@ -50,7 +50,7 @@ namespace Raven.Tests
 	            {
 	                {"Raven/Esent/CircularLog", "false"}
 	            }
-	        });
+	        }, null);
 	        db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 	    }
 
@@ -88,7 +88,7 @@ namespace Raven.Tests
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
             var fetchedData = db.Documents.Get("Foo", null);
             Assert.NotNull(fetchedData);

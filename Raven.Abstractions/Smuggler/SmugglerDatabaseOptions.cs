@@ -24,7 +24,8 @@ namespace Raven.Abstractions.Smuggler
 	    private long? totalDocumentSizeInChunkLimitInBytes;
 
         public SmugglerDatabaseOptions()
-		{
+        {
+	        DisableCompressionOnImport = false;
 			Filters = new List<FilterSetting>();
             ConfigureDefaultFilters();
 		    ChunkSize = int.MaxValue;
@@ -93,6 +94,11 @@ namespace Raven.Abstractions.Smuggler
 				chunkSize = value;
 			}
 		}
+
+		/// <summary>
+		/// If this flag is true, during import of documents the smuggler won't use compression. False by default.
+		/// </summary>
+		public bool DisableCompressionOnImport { get; set; }
 
 	    public bool ExportDeletions { get; set; }
 

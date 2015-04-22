@@ -50,9 +50,7 @@ namespace Raven.Tests.Core.Streaming
 				using (var session = store.OpenSession())
 				{
 					var query = session.Advanced.DocumentQuery<User, Users_ByName>();
-
 					var reader = session.Advanced.Stream(query);
-
 					while (reader.MoveNext())
 					{
 						count++;

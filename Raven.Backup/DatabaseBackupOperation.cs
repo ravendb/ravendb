@@ -1,16 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System.Net.Http;
+
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using System;
 using System.Net;
-using System.Threading;
 
 namespace Raven.Backup
 {
-    using Raven.Abstractions.Connection;
+    using Abstractions.Connection;
 
     public class DatabaseBackupOperation : AbstractBackupOperation
     {
@@ -62,7 +63,7 @@ namespace Raven.Backup
                 url += "?incremental=true";
             try
             {
-	            using (var req = CreateRequest(url, "POST"))
+				using (var req = CreateRequest(url, HttpMethods.Post))
 	            {
 					req.WriteAsync(json).Wait();
 
@@ -81,7 +82,7 @@ namespace Raven.Backup
             return true;
         }
 
-        protected override HttpJsonRequest CreateRequest(string url, string method)
+        protected override HttpJsonRequest CreateRequest(string url, HttpMethod method)
         {
             var uriString = parameters.ServerUrl;
             if (string.IsNullOrWhiteSpace(parameters.Database) == false && !parameters.Database.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
@@ -91,12 +92,12 @@ namespace Raven.Backup
 
             uriString += url;
 
-            return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(parameters.ApiKey, CredentialCache.DefaultCredentials), store.Conventions, parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
+            return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(parameters.ApiKey, CredentialCache.DefaultCredentials), store.Conventions, timeout: parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
         }
 
         public override BackupStatus GetStatusDoc()
         {
-	        using (var req = CreateRequest("/docs/" + BackupStatus.RavenBackupStatusDocumentKey, "GET"))
+			using (var req = CreateRequest("/docs/" + BackupStatus.RavenBackupStatusDocumentKey, HttpMethods.Get))
 	        {
 		        try
 		        {

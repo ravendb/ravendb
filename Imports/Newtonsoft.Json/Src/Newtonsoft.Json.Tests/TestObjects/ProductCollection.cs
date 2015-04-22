@@ -27,7 +27,7 @@ using System.Collections.Generic;
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  public class ProductCollection : List<Product>
-  {
-  }
+    public class ProductCollection : List<Product>
+    {
+    }
 }

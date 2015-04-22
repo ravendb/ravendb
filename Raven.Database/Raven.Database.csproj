@@ -156,9 +156,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Newtonsoft.Json.6.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="NLog, Version=3.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+    <Reference Include="NLog, Version=3.2.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\NLog.3.1.0.0\lib\net45\NLog.dll</HintPath>
+      <HintPath>..\packages\NLog.3.2.0.0\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="Owin">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
@@ -224,6 +224,15 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Smuggler\Client\ChunkedBulkInsertOperation.cs">
+      <Link>Smuggler\SmugglerImports\ChunkedBulkInsertOperation.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs">
+      <Link>Smuggler\SmugglerImports\ChunkedRemoteBulkInsertOperation.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Smuggler\SmugglerRemoteDatabaseOperations.cs">
+      <Link>Smuggler\SmugglerImports\SmugglerRemoteDatabaseOperations.cs</Link>
+    </Compile>
     <Compile Include="Actions\ActionsBase.cs" />
     <Compile Include="Actions\AttachmentActions.cs" />
     <Compile Include="Actions\LastCollectionEtags.cs" />
@@ -240,6 +249,19 @@
     <Compile Include="Bundles\SqlReplication\SqlReplicationClassifier.cs" />
     <Compile Include="Bundles\Versioning\Data\FileVersioningConfiguration.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
+    <Compile Include="Config\GlobalSettingsDocument.cs" />
+    <Compile Include="Config\GlobalSettingsDocumentProtector.cs" />
+    <Compile Include="Config\Retriever\ConfigurationDocument.cs" />
+    <Compile Include="Config\Retriever\ConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\ConfigurationRetrieverBase.cs" />
+    <Compile Include="Config\Retriever\ConfigurationSettingRetriever.cs" />
+    <Compile Include="Config\Retriever\ConfigurationSettingsDocument.cs" />
+    <Compile Include="Config\Retriever\JavascriptFunctionsRetriever.cs" />
+    <Compile Include="Config\Retriever\ReplicationConflictResolutionConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\PeriodicExportConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\ReplicationConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\SqlReplicationConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\VersioningConfigurationRetriever.cs" />
     <Compile Include="Config\Settings\EnumSetting.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
     <Compile Include="FileSystem\Actions\ActionsBase.cs" />
@@ -253,6 +275,11 @@
     <Compile Include="FileSystem\Plugins\AbstractFileRenameTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractSynchronizationTrigger.cs" />
     <Compile Include="FileSystem\Plugins\Builtins\HideDeletingFilesTrigger.cs" />
+    <Compile Include="Counters\Controllers\CountersStatsController.cs" />
+    <Compile Include="Counters\CounterGroup.cs" />
+    <Compile Include="Counters\CounterValue.cs" />
+    <Compile Include="Counters\ReplicationCounter.cs" />
+    <Compile Include="Counters\ValueSign.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningMetadataUpdateTrigger.cs" />
@@ -270,6 +297,7 @@
     <Compile Include="Impl\BackgroundTaskExecuter\RavenThreadPool.cs" />
     <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From04To05.cs" />
+    <Compile Include="FileSystem\Storage\CopyFileOperation.cs" />
     <Compile Include="FileSystem\Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
@@ -277,6 +305,25 @@
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
+    <Compile Include="Raft\ClusterKeeperTask.cs" />
+    <Compile Include="Raft\ClusterManager.cs" />
+    <Compile Include="Raft\Commands\ClusterConfigurationUpdateCommand.cs" />
+    <Compile Include="Raft\Commands\DatabaseDeletedCommand.cs" />
+    <Compile Include="Raft\Commands\DatabaseUpdateCommand.cs" />
+    <Compile Include="Raft\ConnectivityStatus.cs" />
+    <Compile Include="Raft\Controllers\ClusterAdminController.cs" />
+    <Compile Include="Raft\Controllers\ClusterController.cs" />
+    <Compile Include="Raft\Dto\ClusterConfiguration.cs" />
+    <Compile Include="Raft\ClusterManagementHttpClient.cs" />
+    <Compile Include="Raft\Storage\ClusterStateMachine.cs" />
+    <Compile Include="Raft\Storage\Handlers\ClusterConfigurationUpdateCommandHandler.cs" />
+    <Compile Include="Raft\Storage\Handlers\CommandHandler.cs" />
+    <Compile Include="Raft\Storage\Handlers\DatabaseDeletedCommandHandler.cs" />
+    <Compile Include="Raft\Storage\Handlers\DatabaseUpdateCommandHandler.cs" />
+    <Compile Include="Raft\Util\RaftHelper.cs" />
+    <Compile Include="Raft\ClusterManagerFactory.cs" />
+    <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
+    <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Server\WebApi\ MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
@@ -352,6 +399,7 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ScheduledReductionFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
+    <Compile Include="Util\DatabaseHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\StopwatchScope.cs" />
@@ -377,8 +425,8 @@
     <Compile Include="Client\Azure\RavenAzureClient.cs" />
     <Compile Include="Client\RavenStorageClient.cs" />
     <Compile Include="Counters\Controllers\AdminCounterStorageController.cs" />
-    <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
-    <Compile Include="Counters\Controllers\CounterStorageController.cs" />
+    <Compile Include="Counters\Controllers\CountersReplicationController.cs" />
+    <Compile Include="Counters\Controllers\CountersController.cs" />
     <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
     <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
     <Compile Include="Counters\CountersMetricsManager.cs" />
@@ -405,7 +453,7 @@
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
-    <Compile Include="Counters\Controllers\CountersController.cs" />
+    <Compile Include="Counters\Controllers\CounterOperationsController.cs" />
     <Compile Include="Server\Connections\WebSocketsTransport.cs" />
     <EmbeddedResource Include="Server\Assets\EmbeddedData\NorthwindHelpData.cs" />
     <Compile Include="Server\RavenDbServer.cs" />
@@ -1183,6 +1231,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
     <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
@@ -1191,7 +1240,6 @@
     <EmbeddedResource Include="Server\WebUI\Raven.Studio.xap" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
-    <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Client\Aws\Amazon.AWS.endpoints.xml" />
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
@@ -1205,6 +1253,10 @@
     <EmbeddedResource Include="Server\Assets\EmbeddedData\Northwind.dump" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Rachis\Rachis\Rachis.csproj">
+      <Project>{f796f69f-d17b-4260-92d6-65cb94c0e05c}</Project>
+      <Name>Rachis</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

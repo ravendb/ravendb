@@ -28,14 +28,13 @@ namespace Raven.Database.Server.Tenancy
 	{
 		private bool initialized;
 
-        private const string COUNTERS_PREFIX = "Raven/Counters/";
-        public override string ResourcePrefix { get { return COUNTERS_PREFIX; } }
+		public override string ResourcePrefix { get { return Constants.Counter.Prefix; } }
 
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
 		public CountersLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
 		{
-		    Enabled = systemDatabase.Documents.Get("Raven/Counters/Enabled",null) != null;
+		    Enabled = systemDatabase.Documents.Get("Raven/Counters/Enabled", null) != null;
 			Init();
 		}
 
@@ -52,10 +51,9 @@ namespace Raven.Database.Server.Tenancy
             {
                 if (notification.Id == null)
                     return;
-                const string ravenDbPrefix = "Raven/Counters/";
-                if (notification.Id.StartsWith(ravenDbPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (notification.Id.StartsWith(ResourcePrefix, StringComparison.InvariantCultureIgnoreCase) == false)
                     return;
-                var dbName = notification.Id.Substring(ravenDbPrefix.Length);
+				var dbName = notification.Id.Substring(ResourcePrefix.Length);
                 Logger.Info("Shutting down counters {0} because the tenant counter document has been updated or removed", dbName);
 				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
@@ -75,7 +73,7 @@ namespace Raven.Database.Server.Tenancy
 
         protected InMemoryRavenConfiguration CreateConfiguration(
                         string tenantId,
-                        CountersDocument document,
+                        CounterStorageDocument document,
                         string folderPropName,
                         InMemoryRavenConfiguration parentConfiguration)
         {
@@ -115,20 +113,18 @@ namespace Raven.Database.Server.Tenancy
             return config;
         }
 
-
-
-        private CountersDocument GetTenantDatabaseDocument(string tenantId)
+        private CounterStorageDocument GetTenantDatabaseDocument(string tenantId)
 		{
 			JsonDocument jsonDocument;
 			using (systemDatabase.DisableAllTriggersForCurrentThread())
-				jsonDocument = systemDatabase.Documents.Get("Raven/Counters/" + tenantId, null);
+				jsonDocument = systemDatabase.Documents.Get(ResourcePrefix + tenantId, null);
 			if (jsonDocument == null ||
 				jsonDocument.Metadata == null ||
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
 				return null;
 
-            var document = jsonDocument.DataAsJson.JsonDeserialization<CountersDocument>();
+            var document = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
 			if (document.Settings.Keys.Contains("Raven/Counters/DataDir") == false)
 				throw new InvalidOperationException("Could not find Raven/Counters/DataDir");
 
@@ -145,10 +141,6 @@ namespace Raven.Database.Server.Tenancy
 			if (Locks.Contains(DisposingLock))
 				throw new ObjectDisposedException("CountersLandlord", "Server is shutting down, can't access any counters");
 
-		    if (Enabled == false)
-		    {
-                throw new InvalidOperationException("Counters are an experimental feature that is not enabled");
-		    }
 
 			if (Locks.Contains(tenantId))
 				throw new InvalidOperationException("Counters '" + tenantId + "' is currently locked and cannot be accessed");
@@ -196,7 +188,7 @@ namespace Raven.Database.Server.Tenancy
 			return true;
 		}
 
-        public void Unprotect(CountersDocument configDocument)
+        public void Unprotect(CounterStorageDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
@@ -223,7 +215,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void Protect(CountersDocument configDocument)
+        public void Protect(CounterStorageDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
@@ -253,7 +245,7 @@ namespace Raven.Database.Server.Tenancy
 
 					int nextPageStart = 0;
 					var databases =
-						systemDatabase.Documents.GetDocumentsWithIdStartingWith("Raven/Counters/", null, null, 0,
+						systemDatabase.Documents.GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
 							numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
 					if (databases.Count >= numberOfAllowedFileSystems)
 						throw new InvalidOperationException(
@@ -262,21 +254,23 @@ namespace Raven.Database.Server.Tenancy
 							"You can either upgrade your RavenDB license or delete a counter from the server");
 				}
 			}
+
+			//TODO: implement license validation for counters
 		}
 
 
 		public async Task<CounterStorage> GetCounterInternal(string name)
 		{
-			Task<CounterStorage> db;
-			if (TryGetOrCreateResourceStore(name, out db))
-				return await db;
+			Task<CounterStorage> cs;
+			if (TryGetOrCreateResourceStore(name, out cs))
+				return await cs;
 			return null;
 		}
 
 		public void ForAllCounters(Action<CounterStorage> action)
 		{
 			foreach (var value in ResourcesStoresCache
-				.Select(db => db.Value)
+				.Select(cs => cs.Value)
 				.Where(value => value.Status == TaskStatus.RanToCompletion))
 			{
 				action(value.Result);

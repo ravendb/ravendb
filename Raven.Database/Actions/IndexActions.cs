@@ -536,26 +536,18 @@ namespace Raven.Database.Actions
 
 	    private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)
         {
-            foreach (var suggestion in definition.Suggestions)
+            foreach (var suggestion in definition.SuggestionsOptions)
             {
-                var field = suggestion.Key;
-                var suggestionOption = suggestion.Value;
+                var field = suggestion;
 
-                if (suggestionOption.Distance == StringDistanceTypes.None)
-                    continue;
-
-                var indexExtensionKey =
-                    MonoHttpUtility.UrlEncode(field + "-" + suggestionOption.Distance + "-" +
-                                              suggestionOption.Accuracy);
+                var indexExtensionKey = MonoHttpUtility.UrlEncode(field);
 
                 var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
 					index,
                      WorkContext,
                      Path.Combine(Database.Configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
-                     SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
                      Database.Configuration.RunInMemory,
-                     field,
-                     suggestionOption.Accuracy);
+                     field);
 
                 Database.IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);
             }

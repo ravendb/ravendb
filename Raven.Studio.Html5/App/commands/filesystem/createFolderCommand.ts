@@ -1,6 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import collection = require("models/collection");
+import collection = require("models/database/documents/collection");
 
 class createFilesystemFolderCommand extends commandBase {
 

@@ -35,7 +35,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			return VetoResult.Allowed;
 		}
 
-		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			VersioningConfiguration versioningConfiguration;
 

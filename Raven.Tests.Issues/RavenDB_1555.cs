@@ -6,12 +6,11 @@
 using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
-using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -97,7 +96,7 @@ namespace Raven.Tests.Issues
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
                 sourceUrl.LastReplicatedEtagFor(destinationUrl, destinationStatistics.DatabaseId.ToString()),
-				"GET",
+				HttpMethods.Get,
 				new OperationCredentials(source.ApiKey, source.Credentials),
 				source.Conventions);
 			var httpJsonRequest = source.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);

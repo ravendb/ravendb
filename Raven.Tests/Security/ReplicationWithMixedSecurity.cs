@@ -125,7 +125,7 @@ namespace Raven.Tests.Security
 			Assert.Equal("Hibernating Rhinos", company.Name);
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			servers[0].Dispose();
 
@@ -154,7 +154,7 @@ namespace Raven.Tests.Security
 			Assert.Equal("Hibernating Rhinos", company.Name);
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			servers[0].Dispose();
 
@@ -183,7 +183,7 @@ namespace Raven.Tests.Security
 			Assert.Equal("Hibernating Rhinos", company.Name);
 
 			var serverClient = ((ServerClient)store2.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			servers[1].Dispose();
 
@@ -212,7 +212,7 @@ namespace Raven.Tests.Security
 			Assert.Equal("Hibernating Rhinos", company.Name);
 
 			var serverClient = ((ServerClient)store2.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 			servers[1].Dispose();
 

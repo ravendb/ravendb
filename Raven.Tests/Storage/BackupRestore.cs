@@ -36,7 +36,7 @@ namespace Raven.Tests.Storage
 			{
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
-			});
+			}, null);
 			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
@@ -64,7 +64,7 @@ namespace Raven.Tests.Storage
 		        Defrag = true
 		    }, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir});
+			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}, null);
 
 			var document = db.Documents.Get("ayende", null);
 			Assert.NotNull(document);
@@ -91,7 +91,7 @@ namespace Raven.Tests.Storage
 		        DatabaseLocation = DataDir
 		    }, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
@@ -134,7 +134,7 @@ namespace Raven.Tests.Storage
                 Defrag = true
 		    }, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
 			queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{

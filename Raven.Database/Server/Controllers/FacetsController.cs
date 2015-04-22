@@ -17,7 +17,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class FacetsController : RavenDbApiController
+    public class FacetsController : ClusterAwareRavenDbApiController
     {
         [HttpGet]
         [RavenRoute("facets/{*id}")]

@@ -13,7 +13,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
-
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 
 namespace Raven.Database.Client.Aws
@@ -42,7 +42,7 @@ namespace Raven.Database.Client.Aws
 			AwsRegion = GetAwsRegion(awsRegionEndpoint);
 		}
 
-		public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(string httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
+		public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
 		{
 			string signedHeaders;
 			var canonicalRequestHash = CalculateCanonicalRequestHash(httpMethod, url, httpHeaders, out signedHeaders);
@@ -77,10 +77,9 @@ namespace Raven.Database.Client.Aws
 
 		public abstract string GetHost(string bucketName);
 
-		private static string CalculateCanonicalRequestHash(string httpMethod, string url, IDictionary<string, string> httpHeaders, out string signedHeaders)
+		private static string CalculateCanonicalRequestHash(HttpMethod httpMethod, string url, IDictionary<string, string> httpHeaders, out string signedHeaders)
 		{
-			var httpMethodToUpper = httpMethod.ToUpper();
-			var isGet = httpMethodToUpper == "GET";
+			var isGet = httpMethod == HttpMethods.Get;
 
 			var uri = new Uri(url);
 			var queryStringCollection = uri.ParseQueryString();
@@ -115,7 +114,7 @@ namespace Raven.Database.Client.Aws
 			using (var hash = SHA256.Create())
 			{
 				var hashedPayload = httpHeaders["x-amz-content-sha256"];
-				var canonicalRequest = string.Format("{0}\n{1}\n{2}\n{3}\n{4}\n{5}", httpMethodToUpper, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, hashedPayload);
+				var canonicalRequest = string.Format("{0}\n{1}\n{2}\n{3}\n{4}\n{5}", httpMethod, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, hashedPayload);
 
 				return RavenAwsHelper.ConvertToHex(hash.ComputeHash(Encoding.UTF8.GetBytes(canonicalRequest)));
 			}

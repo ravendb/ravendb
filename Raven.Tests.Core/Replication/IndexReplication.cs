@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
@@ -258,7 +260,7 @@ namespace Raven.Tests.Core.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
@@ -300,6 +302,9 @@ namespace Raven.Tests.Core.Replication
 				// ReSharper disable once AccessToDisposedClosure
 				var destinationDocuments = SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
 
+				// index and transformer replication is forced if we are replicating for the first time, so replicating one document to bypass this
+				ReplicateOneDummyDocument(source, destination1, destination2, destination3);
+
 				//make sure not to replicate the index automatically
 				var userIndex = new UserIndex();
 				var anotherUserIndex = new AnotherUserIndex();
@@ -309,7 +314,7 @@ namespace Raven.Tests.Core.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all-to-destination", source.Url);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
@@ -361,7 +366,7 @@ namespace Raven.Tests.Core.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
@@ -409,7 +414,7 @@ namespace Raven.Tests.Core.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replication&indexName={1}", source.Url, userIndex.IndexName);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
@@ -505,7 +510,7 @@ namespace Raven.Tests.Core.Replication
 				Assert.False(indexStatsBeforeReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 
 				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?indexName={1}", source.Url, userIndex.IndexName);
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
@@ -588,6 +593,24 @@ namespace Raven.Tests.Core.Replication
 					{"Raven/ActiveBundles", "Replication"}
 				}
 			});
+		}
+
+		private void ReplicateOneDummyDocument(IDocumentStore source, IDocumentStore destination1, IDocumentStore destination2, IDocumentStore destination3)
+		{
+			string id;
+			using (var session = source.OpenSession("testDB"))
+			{
+				var dummy = new { Id = "" };
+
+				session.Store(dummy);
+				session.SaveChanges();
+
+				id = dummy.Id;
+			}
+
+			WaitForDocument(destination1.DatabaseCommands.ForDatabase("testDB"), id);
+			WaitForDocument(destination2.DatabaseCommands.ForDatabase("testDB"), id);
+			WaitForDocument(destination3.DatabaseCommands.ForDatabase("testDB"), id);
 		}
 	}
 }

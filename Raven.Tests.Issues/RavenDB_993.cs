@@ -9,6 +9,7 @@ using System.Net;
 using Lucene.Net.Support;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -63,7 +64,7 @@ namespace Raven.Tests.Issues
 
 				var replicationDocument = store1.DatabaseCommands.Get("Raven/Replication/Destinations");
 
-				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", "POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
+				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", HttpMethods.Post, new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 				request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
 				var result = request.ReadResponseJson() as RavenJArray;
@@ -116,7 +117,7 @@ namespace Raven.Tests.Issues
 
 				var replicationDocument = store1.DatabaseCommands.Get("Raven/Replication/Destinations");
 
-				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", "POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
+				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", HttpMethods.Post, new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 				request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
 				var result = request.ReadResponseJson() as RavenJArray;
@@ -153,7 +154,7 @@ namespace Raven.Tests.Issues
 
 				var replicationDocument = store1.DatabaseCommands.Get("Raven/Replication/Destinations");
 
-				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", "POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
+				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", HttpMethods.Post, new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 				request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
 				var result = request.ReadResponseJson() as RavenJArray;
@@ -189,7 +190,7 @@ namespace Raven.Tests.Issues
 
 				SetupReplication(store1.DatabaseCommands, "http://localhost:8078/databases/Northwind");
 
-				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", "POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
+				var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", HttpMethods.Post, new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 				request.WriteAsync(RavenJObject.FromObject(new ReplicationDocument { Destinations = new EquatableList<ReplicationDestination> { new ReplicationDestination { Url = "http://unknown.url/" } } }).ToString(Formatting.None)).Wait();
 				var result = request.ReadResponseJson() as RavenJArray;

@@ -25,11 +25,12 @@
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  [JsonObject(Id = "MyExplicitId")]
-  public class CircularReferenceWithIdClass
-  {
-    [JsonProperty(Required = Required.AllowNull)]
-    public string Name { get; set; }
-    public CircularReferenceWithIdClass Child { get; set; }
-  }
+    [JsonObject(Id = "MyExplicitId")]
+    public class CircularReferenceWithIdClass
+    {
+        [JsonProperty(Required = Required.AllowNull)]
+        public string Name { get; set; }
+
+        public CircularReferenceWithIdClass Child { get; set; }
+    }
 }

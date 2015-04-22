@@ -42,7 +42,7 @@ namespace Raven.Abstractions
 
         static Default ()
         {
-            Converters.Freeze();
+            //Converters.Freeze();
         }
 	}
 }

@@ -1,24 +1,17 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+﻿using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
+using Raven.Database.Server.WebApi.Attributes;
+using Raven.Json.Linq;
+
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using JetBrains.Annotations;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Database.Server.WebApi.Attributes;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class TransformersController : RavenDbApiController
+	public class TransformersController : ClusterAwareRavenDbApiController
 	{
 		[HttpGet]
 		[RavenRoute("transformers/{*id}")]

@@ -44,7 +44,7 @@ namespace Raven.SlowTests.Replication
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands)
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
 					.Wait();
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
@@ -101,7 +101,7 @@ namespace Raven.SlowTests.Replication
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands)
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
 					.Wait();
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 

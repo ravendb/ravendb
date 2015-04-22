@@ -1,214 +1,148 @@
-﻿using System.Threading;
-using Raven.Abstractions.Connection;
-using Raven.Client;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+
 using Xunit;
 
 namespace Raven.Tests.Core.ChangesApi
 {
-    public class ImplementingChangesClient : RavenCoreTestBase
-    {
-        private interface IUntypedConnectable : IConnectableChanges
-        { }
-
-        private class NoInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>
-        {
-            public NoInterfaceInheritanceChangesClient() :
-                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
-            {
-            }
-
-            protected override Task SubscribeOnServer()
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        [Fact]
-        public void ShouldFailWhenClientBaseDoesNotImplementConnectableTypeParameterInterface()
-        {
-            Assert.Throws<InvalidCastException>(() => new NoInterfaceInheritanceChangesClient());
-        }
-
-
-
-        private class UntypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>, IUntypedConnectable
-        {
-            public UntypedInterfaceInheritanceChangesClient() :
-                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
-            {
-            }
-
-            protected override Task SubscribeOnServer()
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        [Fact]
-        public void ClientImplementationShouldWorkWithUntypedInterface()
-        {
-            using (var untypedInterfaceInheritanceChangesClient = new UntypedInterfaceInheritanceChangesClient())
-            {
-                try
-                {
-                    untypedInterfaceInheritanceChangesClient.Task.Wait();
-                }
-                catch (Exception)
-                {
-                    
-                }
-            }
-        }
-
-
-        private interface ITypedConnectable : IConnectableChanges<ITypedConnectable>
-        {
-        }
-
-        class TypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<ITypedConnectable, MockConnectionState>, ITypedConnectable
-        {
-            public TypedInterfaceInheritanceChangesClient() :
-                base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), new MockReplicationInformerBase(), () => { })
-            {
-            }
-
-            protected override Task SubscribeOnServer()
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
-            {
-                throw new NotImplementedException();
-            }
-
-            public new Task<ITypedConnectable> Task
-            {
-                get { throw new NotImplementedException(); }
-            }
-        }
-
-        [Fact]
-        public void ClientImplementationShouldWorkWithTypedInterface()
-        {
-            new TypedInterfaceInheritanceChangesClient();
-        }
-
-
-        #region Mocks
-
-        private class MockConnectionState : IChangesConnectionState
-        {
-            public Task Task
-            {
-                get { throw new NotImplementedException(); }
-            }
-
-            public void Inc()
-            {
-                throw new NotImplementedException();
-            }
-
-            public void Dec()
-            {
-                throw new NotImplementedException();
-            }
-
-            public void Error(Exception e)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        private class MockReplicationInformerBase : IReplicationInformerBase
+	public class ImplementingChangesClient : RavenCoreTestBase
+	{
+		private interface ITypedConnectable : IConnectableChanges<ITypedConnectable>
 		{
-#pragma warning disable 67
-			public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
-#pragma warning restore 67
+		}
 
-			public int DelayTimeInMiliSec
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
+		private interface IUntypedConnectable : IConnectableChanges
+		{
+		}
 
-            public List<OperationMetadata> ReplicationDestinations
-            {
-                get { throw new NotImplementedException(); }
-            }
+		[Fact]
+		public void ClientImplementationShouldWorkWithTypedInterface()
+		{
+			Task task;
 
-            public List<OperationMetadata> ReplicationDestinationsUrls
-            {
-                get { throw new NotImplementedException(); }
-            }
+			using (var x = new TypedInterfaceInheritanceChangesClient())
+			{
+				task = x.Task;
+			}
 
-            public long GetFailureCount(string operationUrl)
-            {
-                throw new NotImplementedException();
-            }
+			try
+			{
+				task.Wait();
+			}
+			catch (Exception)
+			{
+			}
+		}
 
-            public DateTime GetFailureLastCheck(string operationUrl)
-            {
-                throw new NotImplementedException();
-            }
+		[Fact]
+		public void ClientImplementationShouldWorkWithUntypedInterface()
+		{
+			Task task;
 
-            public int GetReadStripingBase(bool increment)
-            {
-                throw new NotImplementedException();
-            }
+			using (var x = new UntypedInterfaceInheritanceChangesClient())
+			{
+				task = x.Task;
+			}
 
-            public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
-            {
-                throw new NotImplementedException();
-            }
+			try
+			{
+				task.Wait();
+			}
+			catch (Exception)
+			{
+			}
+		}
 
-            public void ForceCheck(string primaryUrl, bool shouldForceCheck)
-            {
-                throw new NotImplementedException();
-            }
+		[Fact]
+		public void ShouldFailWhenClientBaseDoesNotImplementConnectableTypeParameterInterface()
+		{
+			Assert.Throws<InvalidCastException>(() => new NoInterfaceInheritanceChangesClient());
+		}
 
-            public bool IsServerDown(Exception exception, out bool timeout)
-            {
-                throw new NotImplementedException();
-            }
+		private class MockConnectionState : IChangesConnectionState
+		{
+			public Task Task
+			{
+				get
+				{
+					throw new NotImplementedException();
+				}
+			}
 
-            public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
-            {
-                throw new NotImplementedException();
-            }
+			public void Dec()
+			{
+				throw new NotImplementedException();
+			}
 
-            public void Dispose()
-            {
-                throw new NotImplementedException();
-            }
-        }
+			public void Error(Exception e)
+			{
+				throw new NotImplementedException();
+			}
 
-        #endregion Mocks
-    }
+			public void Inc()
+			{
+				throw new NotImplementedException();
+			}
+		}
+
+		private class NoInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>
+		{
+			public NoInterfaceInheritanceChangesClient()
+				: base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
+			{
+			}
+
+			protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+			{
+				throw new NotImplementedException();
+			}
+
+			protected override Task SubscribeOnServer()
+			{
+				throw new NotImplementedException();
+			}
+		}
+
+		private class TypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<ITypedConnectable, MockConnectionState>, ITypedConnectable
+		{
+			public TypedInterfaceInheritanceChangesClient()
+				: base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
+			{
+			}
+
+			protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+			{
+				throw new NotImplementedException();
+			}
+
+			protected override Task SubscribeOnServer()
+			{
+				throw new NotImplementedException();
+			}
+		}
+
+		private class UntypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>, IUntypedConnectable
+		{
+			public UntypedInterfaceInheritanceChangesClient()
+				: base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
+			{
+			}
+
+			protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+			{
+				throw new NotImplementedException();
+			}
+
+			protected override Task SubscribeOnServer()
+			{
+				throw new NotImplementedException();
+			}
+		}
+	}
 }

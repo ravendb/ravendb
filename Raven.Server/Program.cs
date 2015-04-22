@@ -618,7 +618,7 @@ namespace Raven.Server
 
 		public static void DumpToCsv(RavenConfiguration ravenConfiguration)
 		{
-			using (var db = new DocumentDatabase(ravenConfiguration))
+			using (var db = new DocumentDatabase(ravenConfiguration, null))
 			{
 				db.TransactionalStorage.DumpAllStorageTables();
 			}

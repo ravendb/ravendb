@@ -1,7 +1,6 @@
-import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import commandBase = require("commands/commandBase");
-import database = require("models/database");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import database = require("models/resources/database");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
 
 class monitorCompactCommand extends commandBase {

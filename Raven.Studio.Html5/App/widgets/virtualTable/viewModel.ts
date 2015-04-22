@@ -1,20 +1,18 @@
 ﻿import router = require("plugins/router");
-import widget = require("plugins/widget");
 import app = require("durandal/app");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import document = require("models/document");
-import collection = require("models/collection");
-import database = require("models/database");
+import document = require("models/database/documents/document");
+import collection = require("models/database/documents/collection");
 import pagedResultSet = require("common/pagedResultSet");
-import deleteItems = require("viewmodels/deleteItems");
-import copyDocuments = require("viewmodels/copyDocuments");
+import deleteItems = require("viewmodels/common/deleteItems");
+import copyDocuments = require("viewmodels/database/documents/copyDocuments");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
-import customColumnParams = require('models/customColumnParams');
-import customColumns = require('models/customColumns');
-import customFunctions = require('models/customFunctions');
+import customColumnParams = require('models/database/documents/customColumnParams');
+import customColumns = require('models/database/documents/customColumns');
+import customFunctions = require('models/database/documents/customFunctions');
 
 class ctor {
 

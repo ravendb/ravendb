@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 
 using Raven.Abstractions.Replication;
@@ -91,7 +92,7 @@ namespace Raven.Tests.Issues
             for (int i = 0; i < 10; i++)
             {
                 var req = i + 1;
-                replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, req, url =>
+                replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), null, req, req, url =>
                 {
 	                urlsTried.Add(Tuple.Create(req, url.Url));
 	                return new CompletedTask<int>(1);

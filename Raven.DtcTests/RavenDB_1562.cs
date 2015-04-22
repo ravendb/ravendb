@@ -3,29 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Transactions;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
+using Raven.Client;
+using Raven.Client.Connection;
+using Raven.Client.Indexes;
+using Raven.Database.Extensions;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.DtcTests
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Transactions;
-
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Replication;
-    using Raven.Client;
-    using Raven.Client.Connection;
-    using Raven.Client.Indexes;
-    using Raven.Database.Extensions;
-    using Raven.Imports.Newtonsoft.Json;
-    using Raven.Json.Linq;
-
-    using Xunit;
-
-    public class RavenDB_1562 : ReplicationBase
+	public class RavenDB_1562 : ReplicationBase
     {
         public IDocumentStore PrimaryDocumentStore;
         public IDocumentStore SecondaryDocumentStore;
@@ -265,7 +263,7 @@ namespace Raven.Tests.Issues
             var doc = RavenJObject.FromObject(databaseDocument);
             doc.Remove("Id");
 
-			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
+			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
             req.WriteAsync(doc.ToString(Formatting.Indented)).Wait();
             req.ExecuteRequest();
 

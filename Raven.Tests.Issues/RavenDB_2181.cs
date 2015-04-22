@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-
+using Raven.Abstractions.Util;
 using Raven.Database.Client.Aws;
 using Raven.Database.Client.Azure;
 using Raven.Tests.Common;
@@ -137,7 +137,7 @@ namespace Raven.Tests.Issues
 								  { "Host", "examplebucket.s3.amazonaws.com" }
 				              };
 
-				var auth = client.CalculateAuthorizationHeaderValue("PUT", url, date, headers);
+				var auth = client.CalculateAuthorizationHeaderValue(HttpMethods.Put, url, date, headers);
 
 				Assert.Equal("AWS4-HMAC-SHA256", auth.Scheme);
 				Assert.Equal("Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=date;host;x-amz-content-sha256;x-amz-date;x-amz-storage-class,Signature=98ad721746da40c64f1a55b78f14c238d841ea1380cd77a1b5971af0ece108bd", auth.Parameter);
@@ -164,7 +164,7 @@ namespace Raven.Tests.Issues
 								  { "Range", "bytes=0-9"}
 				              };
 
-				var auth = client.CalculateAuthorizationHeaderValue("GET", url, date, headers);
+				var auth = client.CalculateAuthorizationHeaderValue(HttpMethods.Get, url, date, headers);
 
 				Assert.Equal("AWS4-HMAC-SHA256", auth.Scheme);
 				Assert.Equal("Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41", auth.Parameter);

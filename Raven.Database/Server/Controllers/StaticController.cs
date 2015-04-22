@@ -10,7 +10,7 @@ namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
     [Obsolete("Use RavenFS instead.")]
-	public class StaticController : RavenDbApiController
+	public class StaticController : ClusterAwareRavenDbApiController
 	{
 		[HttpGet]
 		[RavenRoute("static/")]

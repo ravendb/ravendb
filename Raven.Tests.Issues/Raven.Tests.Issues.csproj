@@ -120,6 +120,7 @@
     <Compile Include="RavenDB-3302.cs" />
     <Compile Include="RavenDB-3314.cs" />
     <Compile Include="RavenDB-3326.cs" />
+    <Compile Include="RavenDB_3199.cs" />
     <Compile Include="RavenDB_3230.cs" />
     <Compile Include="RavenDB_3271.cs" />
     <Compile Include="RavenDB_3276.cs" />
@@ -136,6 +137,14 @@
     <Compile Include="RavenDB-3301.cs" />
     <Compile Include="RavenDB3075.cs" />
     <Compile Include="RavenDB_2627.cs" />
+    <Compile Include="RavenDB_2712\GlobalConfigurationTest.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_JavascriptFunctions.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_PeriodicExport.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_Quotas.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_Replication.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_SqlReplication.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_Versioning.cs" />
     <Compile Include="RavenDB_2867.cs" />
     <Compile Include="RavenDB_2879.cs" />
     <Compile Include="RavenDB-2716.cs" />
@@ -374,6 +383,7 @@
     <Compile Include="RavenDB_3237.cs" />
     <Compile Include="RavenDB_3248.cs" />
     <Compile Include="RavenDB_3264.cs" />
+    <Compile Include="RavenDB_3286.cs" />
     <Compile Include="RavenDB_3298.cs" />
     <Compile Include="RavenDB_3335.cs" />
     <Compile Include="Ravendb_334.cs" />

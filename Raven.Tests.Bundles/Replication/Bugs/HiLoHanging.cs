@@ -25,10 +25,10 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 			var store2 = CreateStore();
 
 			((DocumentStore) store1).GetReplicationInformerForDatabase()
-			                        .UpdateReplicationInformationIfNeeded((AsyncServerClient) store1.AsyncDatabaseCommands)
+			                        .UpdateReplicationInformationIfNeededAsync((AsyncServerClient) store1.AsyncDatabaseCommands)
 			                        .Wait();
 			((DocumentStore) store2).GetReplicationInformerForDatabase()
-			                        .UpdateReplicationInformationIfNeeded((AsyncServerClient) store2.AsyncDatabaseCommands)
+			                        .UpdateReplicationInformationIfNeededAsync((AsyncServerClient) store2.AsyncDatabaseCommands)
 			                        .Wait();
 
 			TellFirstInstanceToReplicateToSecondInstance();

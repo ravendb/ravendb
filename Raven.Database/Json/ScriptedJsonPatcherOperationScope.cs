@@ -23,7 +23,7 @@ namespace Raven.Database.Json
 
 		protected DocumentDatabase Database { get; private set; }
 
-		public JsonDocument CustomFunctions { get; set; }
+		public RavenJObject CustomFunctions { get; set; }
 
 		public RavenJObject DebugActions { get; private set; }
 
@@ -38,7 +38,11 @@ namespace Raven.Database.Json
 			Database = database;
 
 			if (database != null)
-				CustomFunctions = database.Documents.Get(Constants.RavenJavascriptFunctions, null);
+			{
+				var configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<RavenJObject>(Constants.RavenJavascriptFunctions);
+				if(configurationDocument != null)
+					CustomFunctions = configurationDocument.MergedDocument;
+			}
 		}
 
 		protected virtual void ValidateDocument(JsonDocument newDocument)

@@ -3,24 +3,23 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Abstractions;
+using System.Net.Http;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
+using Raven.Client.Connection.Request;
+using Raven.Client.Metrics;
 using Raven.Imports.Newtonsoft.Json.Linq;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Client.Connection
 {
@@ -31,20 +30,30 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public abstract class ReplicationInformerBase<TClient> : IReplicationInformerBase<TClient>
 	{
-		protected readonly ILog log = LogManager.GetCurrentClassLogger();
+		protected readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-        protected bool firstTime = true;
-		protected readonly Convention conventions;
+		protected readonly Convention Conventions;
+
 	    private readonly HttpJsonRequestFactory requestFactory;
-	    protected DateTime lastReplicationUpdate = DateTime.MinValue;
-        protected readonly object replicationLock = new object();
+
 		private static readonly List<OperationMetadata> Empty = new List<OperationMetadata>();
-		protected static int readStripingBase;
+
+		private static int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
 		/// </summary>
-		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };
+		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
+		{
+			add
+			{
+				FailureCounters.FailoverStatusChanged += value;
+			}
+			remove
+			{
+				FailureCounters.FailoverStatusChanged -= value;
+			}
+		}
 
         public int DelayTimeInMiliSec { get;  set; }
 
@@ -58,7 +67,7 @@ namespace Raven.Client.Connection
 		{
 			get
 			{
-				if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 					return Empty;
 
 				return ReplicationDestinations
@@ -67,18 +76,18 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		///<summary>
-		/// Create a new instance of this class
-		///</summary>
-		protected ReplicationInformerBase(Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime=1000)
+		protected ReplicationInformerBase(Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000)
 		{
-			this.conventions = conventions;
-		    this.requestFactory = requestFactory;
-		    ReplicationDestinations = new List<OperationMetadata>();
-		    DelayTimeInMiliSec = delayTime;
+			Conventions = conventions;
+			this.requestFactory = requestFactory;
+			ReplicationDestinations = new List<OperationMetadata>();
+			DelayTimeInMiliSec = delayTime;
+			FailureCounters = new FailureCounters();
 		}
 
-        /// <summary>
+		public FailureCounters FailureCounters { get; private set; }
+
+		/// <summary>
         /// Refreshes the replication information.
         /// Expert use only.
         /// </summary>
@@ -88,60 +97,15 @@ namespace Raven.Client.Connection
 
 		protected abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
 
-		protected readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
-
-		protected Task refreshReplicationInformationTask;
-
-	    public class FailureCounter
-		{
-			public long Value;
-			public DateTime LastCheck;
-			public bool ForceCheck;
-
-	        public Task CheckDestination = new CompletedTask();
-
-	        public long Increment()
-	        {
-                ForceCheck = false;
-	            LastCheck = SystemTime.UtcNow;
-                return Interlocked.Increment(ref Value);
-	        }
-
-	        public long Reset()
-	        {
-                var oldVal = Interlocked.Exchange(ref Value, 0);
-                LastCheck = SystemTime.UtcNow;
-                ForceCheck = false;
-	            return oldVal;
-	        }
-		}
-
-
-		/// <summary>
-		/// Get the current failure count for the url
-		/// </summary>
-		public long GetFailureCount(string operationUrl)
-		{
-			return GetHolder(operationUrl).Value;
-		}
-
-		/// <summary>
-		/// Get failure last check time for the url
-		/// </summary>
-		public DateTime GetFailureLastCheck(string operationUrl)
-		{
-			return GetHolder(operationUrl).LastCheck;
-		}
-
 	    /// <summary>
 	    /// Should execute the operation using the specified operation URL
 	    /// </summary>
-	    public virtual bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, int currentRequest, string method, bool primary, Exception error, CancellationToken token)
+	    private bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, HttpMethod method, bool primary, Exception error, CancellationToken token)
 	    {
 	        if (primary == false)
 	            AssertValidOperation(method, error);
 
-	        var failureCounter = GetHolder(operationMetadata.Url);
+	        var failureCounter = FailureCounters.GetHolder(operationMetadata.Url);
 	        if (failureCounter.Value == 0)
 	            return true;
 
@@ -160,7 +124,7 @@ namespace Raven.Client.Connection
 	                    {
 	                        var r = await TryOperationAsync<object>(async metadata =>
 	                        {
-	                            var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, conventions);
+								var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), HttpMethods.Get, metadata.Credentials, Conventions);
 		                        using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 		                        {
 			                        await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -169,7 +133,7 @@ namespace Raven.Client.Connection
 	                        }, operationMetadata, primaryOperation, true, token).ConfigureAwait(false);
 	                        if (r.Success)
 	                        {
-	                            ResetFailureCount(operationMetadata.Url);
+	                            FailureCounters.ResetFailureCount(operationMetadata.Url);
 	                            return;
 	                        }
 	                    }
@@ -193,58 +157,26 @@ namespace Raven.Client.Connection
 
 	    protected abstract string GetServerCheckUrl(string baseUrl);
 
-	    protected void AssertValidOperation(string method, Exception e)
+	    protected void AssertValidOperation(HttpMethod method, Exception e)
 		{
-			switch (conventions.FailoverBehaviorWithoutFlags)
+			switch (Conventions.FailoverBehaviorWithoutFlags)
 			{
 				case FailoverBehavior.AllowReadsFromSecondaries:
-					if (method == "GET")
+				case FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed:
+					if (method == HttpMethods.Get)
 						return;
 					break;
 				case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
 					return;
 				case FailoverBehavior.FailImmediately:
-					var allowReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
-					if (allowReadFromAllServers && method == "GET")
+					var allowReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
+					if (allowReadFromAllServers && method == HttpMethods.Get)
 						return;
 					break;
 			}
 			throw new InvalidOperationException("Could not replicate " + method +
 												" operation to secondary node, failover behavior is: " +
-												conventions.FailoverBehavior, e);
-		}
-
-		protected FailureCounter GetHolder(string operationUrl)
-		{
-			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
-		}
-
-		/// <summary>
-		/// Determines whether this is the first failure on the specified operation URL.
-		/// </summary>
-		/// <param name="operationUrl">The operation URL.</param>
-		public bool IsFirstFailure(string operationUrl)
-		{
-			FailureCounter value = GetHolder(operationUrl);
-			return value.Value == 0;
-		}
-
-		/// <summary>
-		/// Increments the failure count for the specified operation URL
-		/// </summary>
-		/// <param name="operationUrl">The operation URL.</param>
-		public void IncrementFailureCount(string operationUrl)
-		{
-			var value = GetHolder(operationUrl);
-			
-			if (value.Increment() == 1)// first failure
-			{
-				FailoverStatusChanged(this, new FailoverStatusChangedEventArgs
-				{
-					Url = operationUrl,
-					Failing = true
-				});
-			}
+												Conventions.FailoverBehavior, e);
 		}
 
         protected static bool IsInvalidDestinationsDocument(JsonDocument document)
@@ -255,44 +187,33 @@ namespace Raven.Client.Connection
 				   document.DataAsJson["Destinations"].Type == JTokenType.Null;
 		}
 
-		/// <summary>
-		/// Resets the failure count for the specified URL
-		/// </summary>
-		/// <param name="operationUrl">The operation URL.</param>
-		public virtual void ResetFailureCount(string operationUrl)
-		{
-			var value = GetHolder(operationUrl);
-			if (value.Reset() != 0)
-			{
-				FailoverStatusChanged(this,
-					new FailoverStatusChangedEventArgs
-					{
-						Url = operationUrl,
-						Failing = false
-					});
-			}
-		}
-
 		public virtual int GetReadStripingBase(bool increment)
 		{
             return increment ? Interlocked.Increment(ref readStripingBase) : readStripingBase;
 		}
 
-		public async Task<T> ExecuteWithReplicationAsync<T>(string method, 
-			string primaryUrl, 
-			OperationCredentials primaryCredentials, 
-			int currentRequest, 
-			int currentReadStripingBase, 
-			Func<OperationMetadata, Task<T>> operation, 
+		public async Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method,
+			string primaryUrl,
+			OperationCredentials primaryCredentials,
+			RequestTimeMetric primaryRequestTimeMetric,
+			int currentRequest,
+			int currentReadStripingBase,
+			Func<OperationMetadata, Task<T>> operation,
 			CancellationToken token = default (CancellationToken))
-        {
-            var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
-            var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials);
+		{
+			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
+			var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials, null);
 
-            var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
-            var operationResult = new AsyncOperationResult<T>();
+			var operationResult = new AsyncOperationResult<T>();
+			var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 
-            if (shouldReadFromAllServers && method == "GET")
+			var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
+			if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && method == HttpMethods.Get && primaryRequestTimeMetric != null)
+			{
+				shouldReadFromAllServers = primaryRequestTimeMetric.RateSurpassed(Conventions);
+			}
+           
+            if (shouldReadFromAllServers && method == HttpMethods.Get)
             {
                 var replicationIndex = currentReadStripingBase%(localReplicationDestinations.Count + 1);
                 // if replicationIndex == destinations count, then we want to use the master
@@ -300,7 +221,7 @@ namespace Raven.Client.Connection
                 if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
                 {
                     // if it is failing, ignore that, and move to the master or any of the replicas
-                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, currentRequest, method, false, null,token))
+                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, method, false, null,token))
                     {
                         operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
                         if (operationResult.Success)
@@ -309,7 +230,7 @@ namespace Raven.Client.Connection
                 }
             }
 
-            if (ShouldExecuteUsing(primaryOperation,primaryOperation, currentRequest, method, true, null,token))
+            if (ShouldExecuteUsing(primaryOperation,primaryOperation, method, true, null,token))
             {
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
                     .ConfigureAwait(false);
@@ -317,14 +238,14 @@ namespace Raven.Client.Connection
                 if (operationResult.Success)
                     return operationResult.Result;
 
-                IncrementFailureCount(primaryOperation.Url);
-                if (!operationResult.WasTimeout && IsFirstFailure(primaryOperation.Url))
+				FailureCounters.IncrementFailureCount(primaryOperation.Url);
+				if (!operationResult.WasTimeout && FailureCounters.IsFirstFailure(primaryOperation.Url))
                 {
                     operationResult = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0, token).ConfigureAwait(false);
 
                     if (operationResult.Success)
                         return operationResult.Result;
-                    IncrementFailureCount(primaryOperation.Url);
+					FailureCounters.IncrementFailureCount(primaryOperation.Url);
                 }
             }
 
@@ -333,7 +254,7 @@ namespace Raven.Client.Connection
 				token.ThrowCancellationIfNotDefault();
 
                 var replicationDestination = localReplicationDestinations[i];
-                if (ShouldExecuteUsing(replicationDestination, primaryOperation, currentRequest, method, false, operationResult.Error,token) == false)
+                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, false, operationResult.Error,token) == false)
                     continue;
 
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;
@@ -342,15 +263,15 @@ namespace Raven.Client.Connection
                 if (operationResult.Success)
                     return operationResult.Result;
 
-                IncrementFailureCount(replicationDestination.Url);
-                if (!operationResult.WasTimeout && IsFirstFailure(replicationDestination.Url))
+				FailureCounters.IncrementFailureCount(replicationDestination.Url);
+				if (!operationResult.WasTimeout && FailureCounters.IsFirstFailure(replicationDestination.Url))
                 {
                     operationResult = await TryOperationAsync(operation, replicationDestination, primaryOperation, hasMoreReplicationDestinations, token).ConfigureAwait(false);
 
                     // tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1).ConfigureAwait(false);
                     if (operationResult.Success)
                         return operationResult.Result;
-                    IncrementFailureCount(replicationDestination.Url);
+					FailureCounters.IncrementFailureCount(replicationDestination.Url);
                 }
             }
 
@@ -359,14 +280,6 @@ namespace Raven.Client.Connection
 There is a high probability of a network problem preventing access to all the replicas.
 Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
         }
-
-	    protected class AsyncOperationResult<T>
-	    {
-	        public T Result;
-	        public bool WasTimeout;
-	        public bool Success;
-	        public Exception Error;
-	    }
 
 		protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
 			OperationMetadata primaryOperationMetadata, bool avoidThrowing)
@@ -377,14 +290,14 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
         protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
             OperationMetadata primaryOperationMetadata, bool avoidThrowing, CancellationToken cancellationToken)
         {
-            var tryWithPrimaryCredentials = IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
+			var tryWithPrimaryCredentials = FailureCounters.IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
             bool shouldTryAgain = false;
 
             try
             {
 				cancellationToken.ThrowCancellationIfNotDefault(); //canceling the task here potentially will stop the recursion
-                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata).ConfigureAwait(false);
-                ResetFailureCount(operationMetadata.Url);
+                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials, primaryOperationMetadata.ClusterInformation) : operationMetadata).ConfigureAwait(false);
+				FailureCounters.ResetFailureCount(operationMetadata.Url);
                 return new AsyncOperationResult<T>
                 {
                     Result = result,
@@ -405,7 +318,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                 }
                 if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && errorResponseException != null)
                 {
-                    IncrementFailureCount(operationMetadata.Url);
+					FailureCounters.IncrementFailureCount(operationMetadata.Url);
 
                     if (errorResponseException.StatusCode == HttpStatusCode.Unauthorized)
                     {
@@ -419,7 +332,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                         throw;
 
                     bool wasTimeout;
-                    if (IsServerDown(e, out wasTimeout))
+                    if (HttpConnectionHelper.IsServerDown(e, out wasTimeout))
                     {
                         return new AsyncOperationResult<T>
                         {
@@ -434,103 +347,8 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken);
         }
 
-		public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
-		{
-			var aggregateException = e as AggregateException;
-			if (aggregateException != null)
-			{
-				e = aggregateException.ExtractSingleInnerException();
-			}
-
-			var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
-		    if (ere != null)
-		    {
-			    return httpStatusCode.Contains(ere.StatusCode);
-		    }
-			var webException = (e as WebException) ?? (e.InnerException as WebException);
-			if (webException != null)
-			{
-				var httpWebResponse = webException.Response as HttpWebResponse;
-				if (httpWebResponse != null && httpStatusCode.Contains(httpWebResponse.StatusCode))
-					return true;
-			}
-
-			return false;
-		}
-
-		public virtual bool IsServerDown(Exception e, out bool timeout)
-		{
-			timeout = false;
-
-			var aggregateException = e as AggregateException;
-			if (aggregateException != null)
-			{
-				e = aggregateException.ExtractSingleInnerException();
-			}
-
-		    var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
-		    if (ere != null)
-		    {
-		        if (IsServerDown(ere.StatusCode, out timeout))
-		            return true;
-		    }
-
-			var webException = (e as WebException) ?? (e.InnerException as WebException);
-			if (webException != null)
-			{
-				switch (webException.Status)
-				{
-					case WebExceptionStatus.Timeout:
-						timeout = true;
-						return true;
-					case WebExceptionStatus.NameResolutionFailure:
-					case WebExceptionStatus.ReceiveFailure:
-					case WebExceptionStatus.PipelineFailure:
-					case WebExceptionStatus.ConnectionClosed:
-					case WebExceptionStatus.ConnectFailure:
-					case WebExceptionStatus.SendFailure:
-						return true;
-				}
-
-				var httpWebResponse = webException.Response as HttpWebResponse;
-				if (httpWebResponse != null)
-				{
-					if (IsServerDown(httpWebResponse.StatusCode, out timeout))
-                        return true;
-				}
-			}
-			return
- e.InnerException is SocketException ||
- e.InnerException is IOException;
-		}
-
-        private static bool IsServerDown(HttpStatusCode httpStatusCode, out bool timeout)
-	    {
-            timeout = false;
-            switch (httpStatusCode)
-	        {
-	            case HttpStatusCode.RequestTimeout:
-	            case HttpStatusCode.GatewayTimeout:
-	                timeout = true;
-	                return true;
-	            case HttpStatusCode.BadGateway:
-	            case HttpStatusCode.ServiceUnavailable:
-	                return true;
-	        }
-	        return false;
-	    }
-
 	    public virtual void Dispose()
 		{
-			var replicationInformationTaskCopy = refreshReplicationInformationTask;
-			if (replicationInformationTaskCopy != null)
-				replicationInformationTaskCopy.Wait();
-		}
-
-		public void ForceCheck(string primaryUrl, bool shouldForceCheck)
-		{
-			var failureCounter = this.GetHolder(primaryUrl);
-			failureCounter.ForceCheck = shouldForceCheck;
 		}
 	}
 

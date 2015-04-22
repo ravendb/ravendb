@@ -9,7 +9,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class SuggestionController : RavenDbApiController
+	public class SuggestionController : ClusterAwareRavenDbApiController
 	{
 		[HttpGet]
 		[RavenRoute("suggest/{*id}")]

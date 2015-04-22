@@ -385,7 +385,7 @@ namespace Raven.Tests.Bugs
 				{
 					Map = "from doc in docs.Images select new { doc.Tags, doc.Users }",
 					Indexes = { { "Tags", FieldIndexing.Analyzed } },
-					Suggestions = {{"Tags", new SuggestionOptions{Distance = StringDistanceTypes.Default, Accuracy = 0.5f}}}
+					SuggestionsOptions = new HashSet<string> { "Tags" }
 				});
 
 				using (var session = store.OpenSession())

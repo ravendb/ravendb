@@ -6,7 +6,7 @@
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -289,7 +289,7 @@ namespace Raven.Client.Indexes
             if (serverClient == null)
                 return;
             var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
-            using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
+			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, HttpMethods.Post))
             {
                 try
                 {
@@ -309,7 +309,7 @@ namespace Raven.Client.Indexes
             if (serverClient == null)
                 return;
             var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
-            using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
+			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, HttpMethods.Post))
             {
                 try
                 {
@@ -452,7 +452,7 @@ namespace Raven.Client.Indexes
                 Reduce = Reduce,
                 Stores = Stores,
                 StoresStrings = StoresStrings,
-                Suggestions = IndexSuggestions,
+                SuggestionsOptions = IndexSuggestions,
                 TermVectors = TermVectors,
                 TermVectorsStrings = TermVectorsStrings,
                 SpatialIndexes = SpatialIndexes,

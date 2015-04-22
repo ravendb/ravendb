@@ -87,7 +87,7 @@ namespace Raven.Database.Json
 		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size, string docId, ScriptedJsonPatcherOperationScope scope)
 		{
 			Engine jintEngine;
-			var customFunctions = scope.CustomFunctions != null ? scope.CustomFunctions.DataAsJson : null;
+			var customFunctions = scope.CustomFunctions;
 			try
 			{
 				jintEngine = ScriptsCache.CheckoutScript(CreateEngine, patch, customFunctions);
@@ -210,7 +210,7 @@ namespace Raven.Database.Json
 					jintEngine.SetValue(kvp.Key, jsInstance);
 				}
 			}
-
+			
 			jintEngine.ResetStatementsCount();
 		}
 
@@ -219,7 +219,7 @@ namespace Raven.Database.Json
 			var scriptWithProperLines = NormalizeLineEnding(patch.Script);
 			// NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
 			// This will all us to show proper line number using user lines locations.
-			var wrapperScript = String.Format(@"function ExecutePatchScript(docInner){{ (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
+			var wrapperScript = string.Format(@"function ExecutePatchScript(docInner){{ (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
 
 			var jintEngine = new Engine(cfg =>
 			{
@@ -229,12 +229,14 @@ namespace Raven.Database.Json
 				cfg.AllowDebuggerStatement(false);
 #endif
 				cfg.LimitRecursion(1024);
-				cfg.MaxStatements(maxSteps);
+				cfg.MaxStatements(int.MaxValue); // allow lodash to load
 			});
 
 			AddScript(jintEngine, "Raven.Database.Json.lodash.js");
 			AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
 			AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
+
+			jintEngine.Options.MaxStatements(maxSteps);
 
 			jintEngine.Execute(wrapperScript, new ParserOptions
 			{

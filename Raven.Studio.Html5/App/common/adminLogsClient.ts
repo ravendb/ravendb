@@ -1,17 +1,12 @@
 /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
-
-import database = require('models/database');
 import appUrl = require('common/appUrl');
-import changeSubscription = require('models/changeSubscription');
+import changeSubscription = require('common/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
-import folder = require("models/filesystem/folder");
 import changesApi = require("common/changesApi");
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
-import shell = require("viewmodels/shell");
 import idGenerator = require("common/idGenerator");
-import adminLogsConfigureCommand = require("commands/adminLogsConfigureCommand");
+import adminLogsConfigureCommand = require("commands/database/debug/adminLogsConfigureCommand");
 
 class adminLogsClient {
 

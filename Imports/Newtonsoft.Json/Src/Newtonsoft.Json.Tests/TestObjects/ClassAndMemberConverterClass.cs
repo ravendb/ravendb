@@ -25,10 +25,11 @@
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  public class ClassAndMemberConverterClass
-  {
-    public ConverterPrecedenceClass DefaultConverter { get; set; }
-    [JsonConverter(typeof(MemberConverterPrecedenceClassConverter))]
-    public ConverterPrecedenceClass MemberConverter { get; set; }
-  }
+    public class ClassAndMemberConverterClass
+    {
+        public ConverterPrecedenceClass DefaultConverter { get; set; }
+
+        [JsonConverter(typeof(MemberConverterPrecedenceClassConverter))]
+        public ConverterPrecedenceClass MemberConverter { get; set; }
+    }
 }

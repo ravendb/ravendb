@@ -656,6 +656,58 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		    }
 		}
 
+		public void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false)
+		{
+			try
+			{
+				var sourceFileInfo = GetFile(sourceFilename, 0, int.MaxValue);
+
+				using (var update = new Update(session, Files, JET_prep.Insert))
+				{
+					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], targetFilename, Encoding.Unicode);
+					if (sourceFileInfo.TotalSize != null)
+						Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["total_size"], BitConverter.GetBytes(sourceFileInfo.TotalSize.Value));
+
+					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"], sourceFileInfo.UploadedSize);
+
+					sourceFileInfo.Metadata.Remove(Constants.MetadataEtagField);
+					var newEtag = uuidGenerator.CreateSequentialUuid();
+
+					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newEtag.TransformToValueForEsentSorting());
+					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], ToQueryString(sourceFileInfo.Metadata), Encoding.Unicode);
+
+					update.Save();
+				}
+				
+				var count = 0;
+				foreach (var pageInfo in sourceFileInfo.Pages)
+				{
+					using (var update = new Update(session, Usage, JET_prep.Insert))
+					{
+						Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["name"], targetFilename, Encoding.Unicode);
+						Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["file_pos"], pageInfo.PositionInFile);
+						Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["page_id"], pageInfo.Id);
+						Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["page_size"], pageInfo.Size);
+
+						update.Save();
+					}
+
+					if (commitPeriodically && count++ > 1000)
+					{
+						PulseTransaction();
+						count = 0;
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				if (e is EsentKeyDuplicateException)
+					throw new FileExistsException(string.Format("Cannot copy '{0}' to '{1}'. File '{1}' already exists.", sourceFilename, targetFilename), e);
+
+				throw;
+			}
+		}
+
         public RavenJObject GetConfig(string name)
 		{
 			Api.JetSetCurrentIndex(session, Config, "by_name");

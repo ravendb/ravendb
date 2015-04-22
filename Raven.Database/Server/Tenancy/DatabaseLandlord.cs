@@ -21,8 +21,9 @@ namespace Raven.Database.Server.Tenancy
 {
     public class DatabasesLandlord : AbstractLandlord<DocumentDatabase>
     {
-
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+
+		public event Action<string> OnDatabaseLoaded = delegate { };
 
 	    private bool initialized;
         private const string DATABASES_PREFIX = "Raven/Databases/";
@@ -165,7 +166,7 @@ namespace Raven.Database.Server.Tenancy
 				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
                 AssertLicenseParameters(config);
-                var documentDatabase = new DocumentDatabase(config, transportState);
+                var documentDatabase = new DocumentDatabase(config, systemDatabase, transportState);
 
 				documentDatabase.SpinBackgroundWorkers();
 				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
@@ -176,9 +177,13 @@ namespace Raven.Database.Server.Tenancy
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+
                 return documentDatabase;
             }).ContinueWith(task =>
             {
+	            if (task.Status == TaskStatus.RanToCompletion) 
+					OnDatabaseLoaded(tenantId);
+
                 if (task.Status == TaskStatus.Faulted) // this observes the task exception
                 {
                     Logger.WarnException("Failed to create database " + tenantId, task.Exception);

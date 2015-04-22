@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -20,6 +22,7 @@ namespace Raven.Bundles.Replication.Tasks
 				Log.Debug(reason);
 				return false;
 			}
+
 			if (metadata.ContainsKey(Constants.NotForReplication) && metadata.Value<bool>(Constants.NotForReplication))
 				// not explicitly marked to skip
 			{
@@ -27,6 +30,7 @@ namespace Raven.Bundles.Replication.Tasks
 				Log.Debug(reason); 
 				return false;
 			}
+
 			if (metadata[Constants.RavenReplicationConflict] != null)
 				// don't replicate conflicted documents, that just propagate the conflict
 			{
@@ -42,6 +46,24 @@ namespace Raven.Bundles.Replication.Tasks
 				return false;
 			}
 
+			RavenJToken collectionNameToken;
+			if (CollectionsToReplicate != null &&
+				CollectionsToReplicate.Count > 0 &&
+				metadata.TryGetValue(Constants.RavenEntityName, out collectionNameToken))
+			{
+				var collectionName = collectionNameToken.Value<string>();
+
+				//precaution
+				Debug.Assert(String.IsNullOrWhiteSpace(collectionName) == false);
+
+				if (CollectionsToReplicate.Contains(collectionName) == false)
+				{
+					reason = string.Format("Will not replicate document '{0}' to '{1}' because the option to replicate only from specified collecitons is turned on and the document is not from the specified collection", key, destinationId);
+					Log.Debug(reason);
+					return false;
+				}
+			}
+			
 			switch (ReplicationOptionsBehavior)
 			{
 				case TransitiveReplicationOptions.None:
@@ -57,7 +79,6 @@ namespace Raven.Bundles.Replication.Tasks
 			reason = string.Format("Will replicate '{0}' to '{1}'", key, destinationId);
 			Log.Debug(reason);
 			return true;
-
 		}
 
 		public bool OriginsFromDestination(string destinationId, RavenJObject metadata)
@@ -102,6 +123,8 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 
 		}
+
+		public List<string> CollectionsToReplicate { get; set; }
 
 		public string CurrentDatabaseId { get; set; }
 

@@ -229,6 +229,58 @@ namespace Raven.Database.FileSystem.Controllers
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
+		[HttpPost]
+		[RavenRoute("fs/{fileSystemName}/files/copy/{*name}")]
+		public HttpResponseMessage Copy(string name, string targetFilename)
+		{
+			name = FileHeader.Canonize(name);
+			targetFilename = FileHeader.Canonize(targetFilename);
+			var etag = GetEtag();
+
+			Storage.Batch(accessor =>
+			{
+				FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
+
+				var existingFile = accessor.ReadFile(name);
+				if (existingFile == null || existingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker))
+					throw new FileNotFoundException();
+
+				var renamingFile = accessor.ReadFile(targetFilename);
+				if (renamingFile != null && renamingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker) == false)
+					throw new FileExistsException("Cannot copy because file " + targetFilename + " already exists");
+
+				var metadata = existingFile.Metadata;
+
+				if (etag != null && existingFile.Etag != etag)
+					throw new ConcurrencyException("Operation attempted on file '" + name + "' using a non current etag")
+					{
+						ActualETag = existingFile.Etag,
+						ExpectedETag = etag
+					};
+
+				Historian.UpdateLastModified(metadata);
+
+				var operation = new CopyFileOperation
+				{
+					FileSystem = FileSystem.Name,
+					SourceFilename = name,
+					TargetFilename = targetFilename,
+					MetadataAfterOperation = metadata
+				};
+
+				accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
+				accessor.PulseTransaction(); // commit rename operation config
+
+				Files.ExecuteCopyOperation(operation);
+			});
+
+			Log.Debug("File '{0}' was copied to '{1}'", name, targetFilename);
+
+			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+
+			return GetEmptyMessage(HttpStatusCode.NoContent);
+		}
+
 	    [HttpPatch]
         [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Patch(string name, string rename)

@@ -1,23 +1,29 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Database.Counters
 {
 	public class Counter
 	{
-		public long Etag;
-		public List<PerServerValue> ServerValues = new List<PerServerValue>();
+		public Counter()
+		{
+			CounterValues = new List<CounterValue>();
+		}
+
+		public long CalculateTotal()
+		{
+			return CounterValues.Sum(x => x.IsPositive ? x.Value : -x.Value);
+		}
+
+		public List<CounterValue> CounterValues { get; private set; }
 
 		public class PerServerValue
 		{
-			public int SourceId { get; set; }
+			public string ServerName { get; set; }
+			public Guid ServerId { get; set; }
 			public long Positive { get; set; }
 			public long Negative { get; set; }
 		}
-	}
-
-	public class Group
-	{
-		public string Name { get; set; }
-		public long NumOfCounters { get; set; }
 	}
 }

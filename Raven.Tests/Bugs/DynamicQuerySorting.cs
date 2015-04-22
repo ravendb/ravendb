@@ -4,9 +4,9 @@ using System.Collections.Specialized;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Database.Server;
 using Raven.Tests.Common;
@@ -143,7 +143,7 @@ namespace Raven.Tests.Bugs
 								 };
 
 				var url = store.Url.ForDatabase(store.DefaultDatabase).Indexes("dynamic/GameServers") + indexQuery.GetQueryString();
-				var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+				var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
 				var result = request.ReadResponseJson().JsonDeserialization<QueryResult>();
 
 				Assert.Equal(stats.IndexName, result.IndexName);

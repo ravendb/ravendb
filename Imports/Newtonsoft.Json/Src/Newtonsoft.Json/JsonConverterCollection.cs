@@ -36,7 +36,6 @@ namespace Raven.Imports.Newtonsoft.Json
     /// </summary>
     public class JsonConverterCollection : Collection<JsonConverter>
     {
-
         public static readonly JsonConverterCollection Empty = new JsonConverterCollection();
 
         static JsonConverterCollection()
@@ -49,11 +48,11 @@ namespace Raven.Imports.Newtonsoft.Json
             this.IsFrozen = false;
         }
 
-        public JsonConverterCollection(IEnumerable<JsonConverter> converters)          
+        public JsonConverterCollection(IEnumerable<JsonConverter> converters)
         {
             this.IsFrozen = false;
 
-            if ( converters != null )
+            if (converters != null)
             {
                 foreach (var item in converters)
                     this.Add(item);
@@ -77,7 +76,7 @@ namespace Raven.Imports.Newtonsoft.Json
         {
             if (IsFrozen)
                 throw new InvalidOperationException("Cannot modify a frozen collection.");
-          
+
             base.InsertItem(index, item);
         }
 
@@ -109,5 +108,6 @@ namespace Raven.Imports.Newtonsoft.Json
         {
             this.IsFrozen = true;
         }
+
     }
 }

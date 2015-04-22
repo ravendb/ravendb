@@ -309,8 +309,7 @@ namespace Raven.Database.FileSystem.Controllers
 	    {
 	        get { return FileSystem.Configuration; }
 	    }
-
-	    public override bool SetupRequestToProperDatabase(RequestManager rm)
+        public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
         {
             if (!RavenFileSystem.IsRemoteDifferentialCompressionInstalled)
                 throw new HttpException(503, "File Systems functionality is not supported. Remote Differential Compression is not installed.");
@@ -341,7 +340,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 try
                 {
-                    if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
+                    if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
                     {
                         var msg = "The filesystem " + tenantId +
                                   " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";

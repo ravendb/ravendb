@@ -1,6 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import getOperationStatusCommand = require("commands/getOperationStatusCommand");
+import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 
 class deleteFilesMatchingQueryCommand extends commandBase {
     constructor(private queryText: string, private fs: filesystem) {
