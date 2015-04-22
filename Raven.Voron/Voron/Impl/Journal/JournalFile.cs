@@ -159,8 +159,6 @@ namespace Voron.Impl.Journal
 
 	    private void UpdatePageTranslationTable(Transaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
 	    {
-		    var txPages = tx.GetTransactionPages();
-
 			foreach (var freedPageNumber in tx.GetFreedPagesNumbers())
 			{
 				// set freed page marker - note it can be overwritten below by later allocation
@@ -175,6 +173,7 @@ namespace Voron.Impl.Journal
 				};
 			}
 
+            var txPages = tx.GetTransactionPages();
             foreach ( var txPage in txPages )
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
