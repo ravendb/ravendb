@@ -11,7 +11,7 @@ namespace Voron.Util
 {
     public unsafe static class MemoryUtils
     {
-        public static SliceComparer MemoryComparerInstance = Compare;
+        public static PrefixedSliceComparer MemoryComparerInstance = Compare;
 
         [SuppressUnmanagedCodeSecurity]
         [SecurityCritical]
