@@ -91,7 +91,8 @@
     <Compile Include="Platform\Win32\Win32Helper.cs" />
     <Compile Include="PrefixComparisonCache.cs" />
     <Compile Include="PrefixedSlice.cs" />
-    <Compile Include="SliceComparisonMethods.cs" />
+    <Compile Include="PrefixedSliceComparisonMethods.cs" />
+    <Compile Include="SliceComparer.cs" />
     <Compile Include="SliceWriter.cs" />
     <Compile Include="StructReadResult.cs" />
     <Compile Include="Structure.cs" />
@@ -128,7 +129,6 @@
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferPool.cs" />
-    <Compile Include="Impl\SliceEqualityComparer.cs" />
     <Compile Include="Impl\SnapshotReader.cs" />
     <Compile Include="Impl\TransactionMergingWriter.cs" />
     <Compile Include="Impl\TreeAndSliceComparer.cs" />

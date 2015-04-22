@@ -10,7 +10,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client
 {
-	/// <summary>
+    /// <summary>
 	///     A query against a Raven index
 	/// </summary>
 	public interface IDocumentQueryBase<T, out TSelf>
@@ -57,7 +57,7 @@ namespace Raven.Client
 		/// <summary>
 		///     Callback to get the results of the stream
 		/// </summary>
-		void AfterStreamExecuted(Action<RavenJObject> afterStreamExecuted);
+        void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecuted);
 
 		/// <summary>
 		///     Add an AND to the query
@@ -270,7 +270,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		///     Called externally to raise the after query executed callback
 		/// </summary>
-		void InvokeAfterStreamExecuted(RavenJObject result);
+		void InvokeAfterStreamExecuted(ref RavenJObject result);
 
 		/// <summary>
 		///     Negate the next operation

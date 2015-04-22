@@ -263,8 +263,15 @@ namespace Raven.Database.Indexing
 				{
 					try
 					{
-						documentDatabase.Indexes.DeleteIndex(indexName);
+						documentDatabase.Indexes.DeleteIndex(indexDefinition, removeIndexReplaceDocument: false);
 						documentDatabase.Indexes.PutNewIndexIntoStorage(indexName, indexDefinition);
+
+						var indexReplaceDocumentKey = Constants.IndexReplacePrefix + indexName;
+						var indexReplaceDocument = documentDatabase.Documents.Get(indexReplaceDocumentKey, null);
+						if (indexReplaceDocument == null)
+							return;
+
+						documentDatabase.Documents.Put(indexReplaceDocumentKey, null, indexReplaceDocument.DataAsJson, indexReplaceDocument.Metadata, null);
 					}
 					catch (Exception e)
 					{

@@ -647,7 +647,7 @@ namespace Raven.Database.Actions
 	        return true;
         }
 
-		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true)
+		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true, bool removeIndexReplaceDocument = true)
 		{
 			using (IndexDefinitionStorage.TryRemoveIndexContext())
 			{
@@ -669,7 +669,7 @@ namespace Raven.Database.Actions
 				if (clearErrors)
 					WorkContext.ClearErrorsFor(instance.Name);
 
-                if (instance.IsSideBySideIndex)
+                if (removeIndexReplaceDocument && instance.IsSideBySideIndex)
                 {
                     Database.Documents.Delete(Constants.IndexReplacePrefix + instance.Name, null, null);
                 }

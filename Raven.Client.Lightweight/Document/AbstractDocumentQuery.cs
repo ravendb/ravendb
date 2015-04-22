@@ -265,7 +265,7 @@ namespace Raven.Client.Document
 		}
 
 		protected Action<QueryResult> afterQueryExecutedCallback;
-		protected Action<RavenJObject> afterStreamExecutedCallback;
+		protected AfterStreamExecutedDelegate afterStreamExecutedCallback;
 		protected Etag cutoffEtag;
 
 		private int? _defaultTimeout;
@@ -1826,7 +1826,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Callback to get the results of the stream
 		/// </summary>
-		public void AfterStreamExecuted(Action<RavenJObject> afterStreamExecutedCallback)
+        public void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecutedCallback)
 		{
 			this.afterStreamExecutedCallback += afterStreamExecutedCallback;
 		}
@@ -1844,11 +1844,11 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Called externally to raise the after stream executed callback
 		/// </summary>
-		public void InvokeAfterStreamExecuted(RavenJObject result)
+		public void InvokeAfterStreamExecuted(ref RavenJObject result)
 		{
 			var streamExecuted = afterStreamExecutedCallback;
 			if (streamExecuted != null)
-				streamExecuted(result);
+				streamExecuted(ref result);
 		}
 
 		#endregion

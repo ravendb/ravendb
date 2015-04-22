@@ -1640,14 +1640,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				var result = queryResult.Results[index];
 				var safeToModify = (RavenJObject)result.CreateSnapshot();
 
-				if (!RenameSingleResult(safeToModify))
+				if (!RenameSingleResult(ref safeToModify))
 					continue;
 				safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
 				queryResult.Results[index] = safeToModify;
 			}
 		}
 
-		public bool RenameSingleResult(RavenJObject doc)
+		public bool RenameSingleResult(ref RavenJObject doc)
 		{
 			var changed = false;
 			var values = new Dictionary<string, RavenJToken>();

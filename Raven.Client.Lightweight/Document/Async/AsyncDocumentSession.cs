@@ -472,9 +472,10 @@ namespace Raven.Client.Document.Async
 
 			protected override void SetCurrent()
 			{
-				query.InvokeAfterStreamExecuted(enumerator.Current);
+			    var ravenJObject = enumerator.Current;
+			    query.InvokeAfterStreamExecuted(ref ravenJObject);
 
-				var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
+				var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata);
 				string key = null;
 				Etag etag = null;
 				if (meta != null)
@@ -487,7 +488,7 @@ namespace Raven.Client.Document.Async
 
 				Current = new StreamResult<T>
 				{
-					Document = queryOperation.Deserialize<T>(enumerator.Current),
+					Document = queryOperation.Deserialize<T>(ravenJObject),
 					Etag = etag,
 					Key = key,
 					Metadata = meta
