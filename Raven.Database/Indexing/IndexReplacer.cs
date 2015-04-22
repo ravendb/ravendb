@@ -64,10 +64,15 @@ namespace Raven.Database.Indexing
 			int nextStart = 0;
 			var documents = Database.Documents.GetDocumentsWithIdStartingWith(Constants.IndexReplacePrefix, null, null, 0, int.MaxValue, Database.WorkContext.CancellationToken, ref nextStart);
 
+			var indexes = new List<int>();
 			foreach (RavenJObject document in documents)
 			{
-				HandleIndexReplaceDocument(document.ToJsonDocument());
+				var replaceIndexId = HandleIndexReplaceDocument(document.ToJsonDocument());
+				if (replaceIndexId.HasValue)
+					indexes.Add(replaceIndexId.Value);
 			}
+
+			ReplaceIndexes(indexes);
 		}
 
 		private int? HandleIndexReplaceDocument(JsonDocument document)
