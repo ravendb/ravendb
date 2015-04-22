@@ -57,7 +57,9 @@ namespace Voron.Impl
 		private int _allocatedPagesInTransaction;
 		private int _overflowPagesInTransaction;
 		private TransactionHeader* _txHeader;
-		private readonly List<PageFromScratchBuffer> _transactionPages = new List<PageFromScratchBuffer>();
+
+        private PageFromScratchBuffer _transactionHeaderPage;
+        private readonly HashSet<PageFromScratchBuffer> _transactionPages = new HashSet<PageFromScratchBuffer>();
 		private readonly HashSet<long> _freedPages = new HashSet<long>();
 		private readonly List<PageFromScratchBuffer> _unusedScratchPages = new List<PageFromScratchBuffer>();
 	    private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
@@ -174,7 +176,10 @@ namespace Voron.Impl
 		{
 			var allocation = _env.ScratchBufferPool.Allocate(this, 1);
 			var page = _env.ScratchBufferPool.ReadPage(allocation.ScratchFileNumber, allocation.PositionInScratchBuffer);
-			_transactionPages.Add(allocation);
+			
+            _transactionPages.Add(allocation);
+            _transactionHeaderPage = allocation;
+
 			StdLib.memset(page.Base, 0, AbstractPager.PageSize);
 			_txHeader = (TransactionHeader*)page.Base;
 			_txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
@@ -405,7 +410,7 @@ namespace Voron.Impl
 			}
 
 			// release scratch file page allocated for the transaction header
-			_env.ScratchBufferPool.Free(_transactionPages[0].ScratchFileNumber, _transactionPages[0].PositionInScratchBuffer, -1);
+            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
 
 			Committed = true;
 			AfterCommit(this);
@@ -561,7 +566,7 @@ namespace Voron.Impl
 
 		internal List<PageFromScratchBuffer> GetTransactionPages()
 		{
-			return _transactionPages;
+			return _transactionPages.ToList();
 		}
 
 		internal List<PageFromScratchBuffer> GetUnusedScratchPages()
