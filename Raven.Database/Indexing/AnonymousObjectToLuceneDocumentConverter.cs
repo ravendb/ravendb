@@ -175,9 +175,10 @@ namespace Raven.Database.Indexing
                 {
                     var sortOptions = indexDefinition.GetSortOption(name, query: null);
                     if (sortOptions == null ||
+						sortOptions.Value == SortOptions.None ||
                         sortOptions.Value == SortOptions.String ||
-                        sortOptions.Value == SortOptions.None ||
                         sortOptions.Value == SortOptions.StringVal ||
+						sortOptions.Value == SortOptions.AlphaNumeric ||
                         sortOptions.Value == SortOptions.Custom)
                     {
                         yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
@@ -394,6 +395,7 @@ namespace Raven.Database.Indexing
                 // to be able to sort on timestamps
                 case SortOptions.String:
                 case SortOptions.StringVal:
+				case SortOptions.AlphaNumeric:
                 case SortOptions.None:
                 case SortOptions.Custom:
                 // ReSharper restore RedundantCaseLabel

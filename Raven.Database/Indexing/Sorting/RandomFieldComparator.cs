@@ -11,7 +11,7 @@ namespace Raven.Database.Indexing.Sorting
 		private int bottom; // Value of bottom of queue
 		private int[] currentReaderValues;
 
-		internal RandomFieldComparator(int numHits, String field)
+		internal RandomFieldComparator(int numHits, string field)
 		{
 			values = new int[numHits];
 			random = new Random(field.GetHashCode());

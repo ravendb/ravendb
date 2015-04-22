@@ -137,7 +137,10 @@ namespace Raven.Abstractions.Indexing
 				
 				return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions());
 			}
-			set { SuggestionsOptions = value.Keys.ToHashSet(); } 
+			set
+			{
+				SuggestionsOptions = value != null ? value.Keys.ToHashSet() : new HashSet<string>();
+			} 
 		}
 
 		public ISet<string> SuggestionsOptions { get; set; }

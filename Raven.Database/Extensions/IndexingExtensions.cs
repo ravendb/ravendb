@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
+using Raven.Database.Indexing.Sorting.AlphaNumeric;
 using Raven.Database.Indexing.Sorting.Custom;
 using Raven.Database.Linq;
 using Spatial4n.Core.Shapes;
@@ -236,10 +237,16 @@ namespace Raven.Database.Extensions
                                     return new SortField(sortedField.Field, dsort, sortedField.Descending);
 								}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field, self);
-                                
+
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
-							    
+
+								if (sortOptions.Value == SortOptions.AlphaNumeric)
+								{
+									var anSort = new AlphaNumericComparatorSource();
+									return new SortField(sortedField.Field, anSort, sortedField.Descending);
+								}
+
                                 if (sortOptions.Value == SortOptions.Short)
 							        sortOptions = SortOptions.Int;
 							    return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);

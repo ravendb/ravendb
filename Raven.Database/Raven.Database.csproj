@@ -297,6 +297,8 @@
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="Indexing\PropertyAccessor.cs" />
+    <Compile Include="Indexing\Sorting\AlphaNumeric\AlphanumComparatorFast.cs" />
+    <Compile Include="Indexing\Sorting\AlphaNumeric\AlphaNumericComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
