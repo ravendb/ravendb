@@ -151,6 +151,10 @@
 										</label>
 									</h4>
 									<div class="pull-right">
+										<a data-bind="visible: willReplaceIndex(), click: $root.forceSideBySide.bind($root)" href="#" class="btn btn-danger" title="Force side-by-side replacement right now">
+											<i class="fa fa-bolt fa-fw"></i>
+										</a>
+
 										<a class="btn btn-default indexes-controls" data-placement="bottom" data-bind="attr: { href: editUrl }">
 											<i class="fa fa-pencil"></i>
 										</a>
