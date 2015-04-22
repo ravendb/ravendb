@@ -552,6 +552,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 				catch (Exception e)
 				{
 					logger.ErrorException(string.Format("Error occured while disposing RTP named {0}", this.Name), e);
+					throw;
 				}
 			}
 		}

@@ -30,14 +30,23 @@ namespace Raven.Database.Actions
 
         protected ILog Log { get; private set; }
 
-		[CLSCompliant(false)]
-        protected ITransactionalStorage TransactionalStorage { get; private set; }
+	    [CLSCompliant(false)]
+	    protected ITransactionalStorage TransactionalStorage
+	    {
+		    get { return Database.TransactionalStorage; }
+	    }
 
-        protected WorkContext WorkContext { get; private set; }
+	    protected WorkContext WorkContext
+	    {
+		    get { return Database.WorkContext; }
+	    }
 
-        protected IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
+	    protected IndexDefinitionStorage IndexDefinitionStorage
+	    {
+		    get { return Database.IndexDefinitionStorage; }
+	    }
 
-        protected IUuidGenerator UuidGenerator { get; private set; }
+	    protected IUuidGenerator UuidGenerator { get; private set; }
 
         protected ActionsBase(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
         {
@@ -45,9 +54,6 @@ namespace Raven.Database.Actions
             RecentTouches = recentTouches;
             UuidGenerator = uuidGenerator;
             Log = log;
-            TransactionalStorage = database.TransactionalStorage;
-            WorkContext = database.WorkContext;
-            IndexDefinitionStorage = database.IndexDefinitionStorage;
         }
     }
 }

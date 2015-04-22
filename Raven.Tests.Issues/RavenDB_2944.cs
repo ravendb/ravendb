@@ -136,6 +136,8 @@ namespace Raven.Tests.Issues
 					Thread.Sleep(100);
 				}
 
+				WaitForUserToContinueTheTest();
+
 				throw new InvalidOperationException("Should not happen.");
 			}
 		}

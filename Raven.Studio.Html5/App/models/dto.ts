@@ -91,6 +91,7 @@ interface databaseStatisticsDto {
     Prefetches: any[];
     StaleIndexes: string[];
     SupportsDtc: boolean;
+	Is64Bit: boolean;
 }
 
 interface indexStatisticsDto {
@@ -1216,7 +1217,8 @@ enum ResponseCodes {
     Forbidden = 403,
     NotFound = 404,
     PreconditionFailed = 412,
-    InternalServerError = 500
+    InternalServerError = 500,
+    ServiceUnavailable = 503
 }
 
 interface synchronizationConfigDto {

@@ -522,6 +522,12 @@ namespace Raven.Database.Indexing
 							precomputedBatch.Index.PublicName, precomputedBatch.Documents.Count);
 					}
 
+				        context.ReportIndexingBatchCompleted(batchInfo);
+
+
+
+			indexReplacer.ReplaceIndexes(new []{ indexToWorkOn.IndexId });
+        
 
 					performance = HandleIndexingFor(indexingBatchForIndex, precomputedBatch.LastIndexed, precomputedBatch.LastModified, token);
 				}
@@ -753,7 +759,14 @@ namespace Raven.Database.Indexing
 						lastEtag, lastModified);
 					// we use it this way to batch all the updates together
 					if (indexToWorkOn.LastIndexedEtag.CompareTo(lastEtag) < 0)
-						actions.Enqueue(accessor => { accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified); });
+						actions.Enqueue(accessor => { 
+accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified); 
+accessor.AfterStorageCommit += () =>
+						{
+							indexToWorkOn.Index.EnsureIndexWriter();
+							indexToWorkOn.Index.Flush(lastEtag);
+						};
+});
 					innerFilteredOutIndexes.Push(indexToWorkOn);
 					return;
 				}

@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
@@ -14,10 +13,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
 using Raven.Abstractions;
@@ -41,15 +38,10 @@ using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
-using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.Tenancy;
-using Raven.Database.Server.WebApi;
 using Raven.Database.Storage;
 using Raven.Database.Util;
-
-using metrics.Core;
 using Raven.Database.Plugins.Catalogs;
 
 namespace Raven.Database
@@ -109,6 +101,7 @@ namespace Raven.Database
 				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
 				initializer = new DocumentDatabaseInitializer(this, configuration);
+				initializer.ValidateStorage();
 
 				initializer.InitializeEncryption();
 				initializer.ValidateLicense();
@@ -165,23 +158,29 @@ namespace Raven.Database
 				try
 				{
 					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-					
+                    initializer.InitializeIndexDefinitionStorage();
+                    Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
+                    Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
+                    Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
+                    Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
+                    Subscriptions = new SubscriptionActions(this, Log);
+                    Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
+                    Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
+                    Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
+                    Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
+                    Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
+
+					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
+
+					InitializeTriggersExceptIndexCodecs();
+					// Second stage initializing before index storage for determining the hash algotihm for encrypted databases that were upgraded from 2.5
+					SecondStageInitialization();
+
 					// Index codecs must be initialized before we try to read an index
 					InitializeIndexCodecTriggers();
 					initializer.InitializeIndexStorage();
 
-					Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
-					Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
-					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
-					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
-					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
-					Subscriptions = new SubscriptionActions(this, Log);
-					Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
-					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
-					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
-					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
-
-					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
+				
 
 					CompleteWorkContextSetup();
 
@@ -191,8 +190,6 @@ namespace Raven.Database
 
 					
 
-					InitializeTriggersExceptIndexCodecs();
-					SecondStageInitialization();
 					ExecuteStartupTasks();
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
 					ReducingExecuter = new ReducingExecuter(workContext, IndexReplacer);
@@ -418,20 +415,20 @@ namespace Raven.Database
 					Type = "Put"
 				})
 				   .Concat(DeleteTriggers.Select(x => new TriggerInfo
-					{
-						Name = x.ToString(),
-						Type = "Delete"
-					}))
+				   {
+					   Name = x.ToString(),
+					   Type = "Delete"
+				   }))
 				   .Concat(ReadTriggers.Select(x => new TriggerInfo
-					{
-						Name = x.ToString(),
-						Type = "Read"
-					}))
+				   {
+					   Name = x.ToString(),
+					   Type = "Read"
+				   }))
 				   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
-						{
-							Name = x.ToString(),
-							Type = "Index Update"
-						})).ToList();
+				   {
+					   Name = x.ToString(),
+					   Type = "Index Update"
+				   })).ToList();
 
 				var types = new[]
 				{
@@ -456,13 +453,13 @@ namespace Raven.Database
 
 				var customBundles = FindPluginBundles(types);
 				return new PluginsInfo
-							{
-								Triggers = triggerInfos,
-								Extensions = extensions,
-								CustomBundles = customBundles
-							};
+				{
+					Triggers = triggerInfos,
+					Extensions = extensions,
+					CustomBundles = customBundles
+				};
 			}
-		}	
+		}
 
 		private List<string> FindPluginBundles(Type[] types)
 		{
@@ -520,20 +517,20 @@ namespace Raven.Database
 
 					result.StaleIndexes = IndexStorage.Indexes.Where(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags))
 					.Select(indexId =>
-		{
-			Index index = IndexStorage.GetIndexInstance(indexId);
-			return index == null ? null : index.PublicName;
-		}).ToArray();
+					{
+						Index index = IndexStorage.GetIndexInstance(indexId);
+						return index == null ? null : index.PublicName;
+					}).ToArray();
 
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-		{
-			Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-			if (indexInstance == null)
-				return null;
-			x.Name = indexInstance.PublicName;
-			x.SetLastDocumentEtag(result.LastDocEtag);
-			return x;
-		})
+					{
+						Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+						if (indexInstance == null)
+							return null;
+						x.Name = indexInstance.PublicName;
+						x.SetLastDocumentEtag(result.LastDocEtag);
+						return x;
+					})
 						.Where(x => x != null)
 						.ToArray();
 				});
@@ -663,20 +660,20 @@ namespace Raven.Database
 		{
 			MetricsCountersManager metrics = WorkContext.MetricsCounters;
 			return new DatabaseMetrics
-		{
-			RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
-			DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
-			IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
-			ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-			RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
-			Requests = metrics.ConcurrentRequests.CreateMeterData(),
-			Gauges = metrics.Gauges,
-			StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
-			StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
-			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
-			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
-			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
-		};
+			{
+				RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+				DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
+				IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
+				ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
+				RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+				Requests = metrics.ConcurrentRequests.CreateMeterData(),
+				Gauges = metrics.Gauges,
+				StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
+				StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
+				ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+				ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+				ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
+			};
 		}
 
 
@@ -733,19 +730,19 @@ namespace Raven.Database
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
 
 			exceptionAggregator.Execute(() =>
-							{
-								if (prefetcher != null)
-									prefetcher.Dispose();
-							});
+			{
+				if (prefetcher != null)
+					prefetcher.Dispose();
+			});
 
 			exceptionAggregator.Execute(() =>
-							{
-								initializer.UnsubscribeToDomainUnloadOrProcessExit();
-								disposed = true;
+			{
+				initializer.UnsubscribeToDomainUnloadOrProcessExit();
+				disposed = true;
 
-								if (workContext != null)
-									workContext.StopWorkRude();
-							});
+				if (workContext != null)
+					workContext.StopWorkRude();
+			});
 
 			if (initializer != null)
 			{
@@ -753,22 +750,22 @@ namespace Raven.Database
 			}
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (ExtensionsState == null)
-				return;
+			{
+				if (ExtensionsState == null)
+					return;
 
-			foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
-				exceptionAggregator.Execute(value.Dispose);
-		});
+				foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
+					exceptionAggregator.Execute(value.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (toDispose == null)
-				return;
+			{
+				if (toDispose == null)
+					return;
 
-			foreach (IDisposable shouldDispose in toDispose)
-				exceptionAggregator.Execute(shouldDispose.Dispose);
-		});
+				foreach (IDisposable shouldDispose in toDispose)
+					exceptionAggregator.Execute(shouldDispose.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
 			{
@@ -786,11 +783,11 @@ namespace Raven.Database
 			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			var disposable = backgroundTaskScheduler as IDisposable;
-			if (disposable != null)
-				disposable.Dispose();
-		});
+			{
+				var disposable = backgroundTaskScheduler as IDisposable;
+				if (disposable != null)
+					disposable.Dispose();
+			});
 
 
 			if (IndexStorage != null)
@@ -1177,6 +1174,17 @@ namespace Raven.Database
 				this.configuration = configuration;
 			}
 
+			public void ValidateStorage()
+			{
+				var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+				if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
+					&& configuration.Storage.Voron.AllowOn32Bits == false &&
+					Environment.Is64BitProcess == false)
+				{
+					throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
+				}
+			}
+
 			public void ValidateLicense()
 			{
 				if (configuration.IsTenantDatabase)
@@ -1244,17 +1252,21 @@ namespace Raven.Database
 			{
 				string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
 				database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications, () =>
-							{
-								if (database.StorageInaccessible != null)
-									database.StorageInaccessible(database, EventArgs.Empty);
+				{
+					if (database.StorageInaccessible != null)
+						database.StorageInaccessible(database, EventArgs.Empty);
 
-							});
+				});
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
+		    public void InitializeIndexDefinitionStorage()
+		    {
+                database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
+		    }
+
 			public void InitializeIndexStorage()
 			{
-				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 

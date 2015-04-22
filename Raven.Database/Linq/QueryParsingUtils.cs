@@ -3,6 +3,23 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using ICSharpCode.NRefactory.CSharp;
+using ICSharpCode.NRefactory.PatternMatching;
+using Lucene.Net.Documents;
+using Lucene.Net.Store;
+using Microsoft.CSharp;
+using Raven.Abstractions;
+using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util.Encryptors;
+using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Indexing;
+using Raven.Database.Linq.Ast;
+using Raven.Database.Linq.PrivateExtensions;
+using Raven.Database.Plugins;
+using Raven.Database.Server;
+using Raven.Database.Storage;
+
 using System;
 using System.CodeDom.Compiler;
 using System.Collections;
@@ -14,33 +31,17 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using ICSharpCode.NRefactory;
-using ICSharpCode.NRefactory.CSharp;
-using ICSharpCode.NRefactory.PatternMatching;
-using Lucene.Net.Documents;
-using Microsoft.CSharp;
-using Raven.Abstractions;
-using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util;
-using Raven.Abstractions.Util.Encryptors;
-using Raven.Database.Config;
-using Raven.Database.Extensions;
-using Raven.Database.Indexing;
-using Raven.Database.Linq.Ast;
-using Raven.Database.Linq.PrivateExtensions;
-using Raven.Database.Plugins;
-using Raven.Database.Server;
-using Raven.Database.Storage;
-using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
+using Directory = System.IO.Directory;
 
 namespace Raven.Database.Linq
 {
 	public static class QueryParsingUtils
 	{
+		private static readonly ConcurrentDictionary<string, object> Locks = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
 		[CLSCompliant(false)]
 		public static string GenerateText(TypeDeclaration type, 
 			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
@@ -296,29 +297,33 @@ namespace Raven.Database.Linq
 
 			var indexFilePath = GetIndexFilePath(source, indexCacheDir);
 
-			var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
-			if (shouldCachedIndexBeRecompiled == false)
+			var locker = Locks.GetOrAdd(indexFilePath, s => new object());
+			lock (locker)
 			{
-				// Look up the index in the in-memory cache.
-				CacheEntry entry;
-				if (cacheEntries.TryGetValue(source, out entry))
+				var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
+				if (shouldCachedIndexBeRecompiled == false)
 				{
-					Interlocked.Increment(ref entry.Usages);
-					return entry.Type;
+					// Look up the index in the in-memory cache.
+					CacheEntry entry;
+					if (cacheEntries.TryGetValue(source, out entry))
+					{
+						Interlocked.Increment(ref entry.Usages);
+						return entry.Type;
+					}
+
+					Type type;
+
+					if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
+						return type;
 				}
 
-				Type type;
+				var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath, configuration);
 
-				if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
-					return type;
+				// ReSharper disable once RedundantArgumentName
+				AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
+
+				return result;
 			}
-
-			var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath, configuration);
-
-			// ReSharper disable once RedundantArgumentName
-			AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
-
-			return result;
 		}
 
 		private static bool ShouldIndexCacheBeRecompiled(string indexFilePath)
@@ -457,7 +462,7 @@ namespace Raven.Database.Linq
 				typeof (AbstractViewGenerator).Assembly.Location,
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
-				typeof (Binder).Assembly.Location,
+				typeof (Microsoft.CSharp.RuntimeBinder.Binder).Assembly.Location,
                 AssemblyExtractor.GetExtractedAssemblyLocationFor(typeof(Field), configuration),
 			};
 			foreach (var extension in extensions)
@@ -486,7 +491,9 @@ namespace Raven.Database.Linq
 			if (indexFilePath != null)
 			{
 				var sourceFileName = indexFilePath + ".cs";
+				
 				File.WriteAllText(sourceFileName, source);
+
 				compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, sourceFileName);
 			}
 			else

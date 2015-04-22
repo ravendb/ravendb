@@ -41,6 +41,8 @@ namespace Raven.Database.Indexing
 			return list;
 		}
 
+
+
 		/// <summary>
 		/// Note that here we assume that  source may be very large (number of documents)
 		/// </summary>

@@ -11,6 +11,7 @@ namespace Raven.Database.Indexing
 		double MaxNumberOfParallelProcessingTasksRatio { get; }
 		void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action);
 		void ExecuteAllInterleaved<T>(WorkContext context, IList<T> result, Action<T> action);
+		void ExecuteAll<T>(WorkContext context, IList<T> source, Action<T, long> action);
 	}
 
 }
