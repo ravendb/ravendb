@@ -22,7 +22,7 @@ namespace Voron.Tests.Storage
 			var buffer = new byte[1024];
 			random.NextBytes(buffer);
 
-			List<PageFromScratchBuffer> scratchPagesOfUncommittedTransaction;
+            HashSet<PageFromScratchBuffer> scratchPagesOfUncommittedTransaction = new HashSet<PageFromScratchBuffer>();
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -31,12 +31,14 @@ namespace Voron.Tests.Storage
 					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
 				}
 
-				scratchPagesOfUncommittedTransaction = tx.GetTransactionPages();
+                // For optimization purposes the used scratch pages now do not include the transaction header, therefore we need to include it.
+                scratchPagesOfUncommittedTransaction = new HashSet<PageFromScratchBuffer>(tx.GetTransactionPages());
+                scratchPagesOfUncommittedTransaction.Add(tx.GetTransactionHeaderPage());
 
 				// tx.Commit() - intentionally not committing
 			}
 
-			List<PageFromScratchBuffer> scratchPagesOfCommittedTransaction;
+			HashSet<PageFromScratchBuffer> scratchPagesOfCommittedTransaction = new HashSet<PageFromScratchBuffer>();
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -46,7 +48,9 @@ namespace Voron.Tests.Storage
 					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
 				}
 
-				scratchPagesOfCommittedTransaction = tx.GetTransactionPages();
+                // For optimization purposes the used scratch pages now do not include the transaction header, therefore we need to include it.
+                scratchPagesOfCommittedTransaction = new HashSet<PageFromScratchBuffer>(tx.GetTransactionPages());
+                scratchPagesOfCommittedTransaction.Add(tx.GetTransactionHeaderPage());
 
 				tx.Commit();
 			}

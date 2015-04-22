@@ -177,7 +177,6 @@ namespace Voron.Impl
 			var allocation = _env.ScratchBufferPool.Allocate(this, 1);
 			var page = _env.ScratchBufferPool.ReadPage(allocation.ScratchFileNumber, allocation.PositionInScratchBuffer);
 			
-            _transactionPages.Add(allocation);
             _transactionHeaderPage = allocation;
 
 			StdLib.memset(page.Base, 0, AbstractPager.PageSize);
@@ -409,8 +408,8 @@ namespace Voron.Impl
 				FlushedToJournal = true;
 			}
 
-			// release scratch file page allocated for the transaction header
-            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
+            // release scratch file page allocated for the transaction header
+            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);            
 
 			Committed = true;
 			AfterCommit(this);
@@ -436,6 +435,9 @@ namespace Voron.Impl
 			{
 				_env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, -1);
 			}
+
+            // release scratch file page allocated for the transaction header
+            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);    
 
 			RolledBack = true;
             if (Environment.IsDebugRecording)
@@ -564,10 +566,15 @@ namespace Voron.Impl
 			JournalSnapshots.Add(snapshot);
 		}
 
-		internal List<PageFromScratchBuffer> GetTransactionPages()
-		{
-			return _transactionPages.ToList();
-		}
+        internal PageFromScratchBuffer GetTransactionHeaderPage()
+        {
+            return this._transactionHeaderPage;
+        }
+
+        internal HashSet<PageFromScratchBuffer> GetTransactionPages()
+        {
+            return _transactionPages;
+        }
 
 		internal List<PageFromScratchBuffer> GetUnusedScratchPages()
 		{

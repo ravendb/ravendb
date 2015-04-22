@@ -175,31 +175,30 @@ namespace Voron.Impl.Journal
 				};
 			}
 
-		    for (int index = 1; index < txPages.Count; index++)
-		    {
-			    var txPage = txPages[index];
-			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
-			    var pageNumber = scratchPage.PageNumber;
+            foreach ( var txPage in txPages )
+            {
+                var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                var pageNumber = scratchPage.PageNumber;
 
-				PagePosition value;
-			    if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
-			    {
-				    value.UnusedInPTT = true;
-				    unused.Add(value);
-			    }
+                PagePosition value;
+                if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
+                {
+                    value.UnusedInPTT = true;
+                    unused.Add(value);
+                }
 
-				PagePosition pagePosition;
-				if (ptt.TryGetValue(pageNumber, out pagePosition) && pagePosition.IsFreedPageMarker == false)
-					unused.Add(pagePosition);
+                PagePosition pagePosition;
+                if (ptt.TryGetValue(pageNumber, out pagePosition) && pagePosition.IsFreedPageMarker == false)
+                    unused.Add(pagePosition);
 
-				ptt[pageNumber] = new PagePosition
-				{
-					ScratchPos = txPage.PositionInScratchBuffer,
-					ScratchNumber = txPage.ScratchFileNumber,
-					TransactionId = tx.Id,
-					JournalNumber = Number
-				};
-			}
+                ptt[pageNumber] = new PagePosition
+                {
+                    ScratchPos = txPage.PositionInScratchBuffer,
+                    ScratchNumber = txPage.ScratchFileNumber,
+                    TransactionId = tx.Id,
+                    JournalNumber = Number
+                };
+            }
 
 		    foreach (var freedPage in tx.GetUnusedScratchPages())
 		    {
