@@ -637,15 +637,16 @@ namespace Raven.Client.Document
 				
                 while (enumerator.MoveNext())
                 {
-                    var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
-					query.InvokeAfterStreamExecuted(enumerator.Current);
+                    var ravenJObject = enumerator.Current;
+                    var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata);
+					query.InvokeAfterStreamExecuted(ref ravenJObject);
                     string key = null;
                     Etag etag = null;
                     if (meta != null)
                     {
                         key = meta.Value<string>("@id") ??
                               meta.Value<string>(Constants.DocumentIdFieldName) ??
-                              enumerator.Current.Value<string>(Constants.DocumentIdFieldName);
+                              ravenJObject.Value<string>(Constants.DocumentIdFieldName);
 
                         var value = meta.Value<string>("@etag");
                         if (value != null)
@@ -654,7 +655,7 @@ namespace Raven.Client.Document
 				
                     yield return new StreamResult<T>
                     {
-                        Document = queryOperation.Deserialize<T>(enumerator.Current),
+                        Document = queryOperation.Deserialize<T>(ravenJObject),
                         Etag = etag,
                         Key = key,
                         Metadata = meta
