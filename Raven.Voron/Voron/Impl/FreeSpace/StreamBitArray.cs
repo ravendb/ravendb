@@ -32,12 +32,18 @@
 //
 
 using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Text;
+using Voron.Util;
 
 namespace Voron.Impl.FreeSpace
 {
     public sealed class StreamBitArray
     {
+        private static UTF8Encoding _defaultEncoding = new UTF8Encoding(true, false);
+
         readonly int[] _inner = new int[64];
 
         public int SetCount { get; private set; }
@@ -49,10 +55,19 @@ namespace Voron.Impl.FreeSpace
 
         public StreamBitArray(ValueReader reader)
         {
+            if (!BitConverter.IsLittleEndian)
+                throw new NotSupportedException("Big endian conversion is not supported yet.");
+
             SetCount = reader.ReadLittleEndianInt32();
-            for (var i = 0; i < _inner.Length; i++)
+
+            unsafe
             {
-                _inner[i] = reader.ReadLittleEndianInt32();
+                fixed (int* i = _inner)
+                {
+                    int read = reader.Read((byte*)i, _inner.Length * sizeof(int));
+                    if (read < _inner.Length * sizeof(int))
+                        throw new EndOfStreamException();
+                }
             }
         }
 
@@ -141,14 +156,21 @@ namespace Voron.Impl.FreeSpace
         public Stream ToStream()
         {
             var ms = new MemoryStream(260);
-            var bw = new BinaryWriter(ms);
-            bw.Write(SetCount);
 
-            foreach (var i in _inner)
+            var tmpBuffer = new byte[(_inner.Length + 1) * sizeof(int)];
+            unsafe
             {
-                bw.Write(i);
+                fixed (int* src = _inner)
+                fixed (byte* dest = tmpBuffer)                
+                {
+                    *(int*)dest = SetCount;
+                    MemoryUtils.Copy(dest + sizeof(int), (byte*)src, tmpBuffer.Length - 1);
+                }
             }
 
+            Debug.Assert(BitConverter.ToInt32(tmpBuffer,0) == SetCount); 
+
+            ms.Write(tmpBuffer, 0, tmpBuffer.Length);
             ms.Position = 0;
             return ms;
         }
