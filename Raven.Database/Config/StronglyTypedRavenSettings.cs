@@ -34,6 +34,8 @@ namespace Raven.Database.Config
 
         public ClusterConfiguration Cluster { get; private set; }
 
+		public MonitoringConfiguration Monitoring { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
 			Replication = new ReplicationConfiguration();
@@ -44,6 +46,7 @@ namespace Raven.Database.Config
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
             Cluster = new ClusterConfiguration();
+			Monitoring = new MonitoringConfiguration();
 
 			this.settings = settings;
 		}
@@ -255,6 +258,15 @@ namespace Raven.Database.Config
 		    
             if (settings["Raven/MaxServicePointIdleTime"] != null) 
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
+
+			FillMonitoringSettings();
+		}
+
+		private void FillMonitoringSettings()
+		{
+			Monitoring.Snmp.Enabled = new BooleanSetting(settings["Raven/Monitoring/Snmp/Enabled"], true); // TODO [ppekrol] change to false
+			Monitoring.Snmp.Community = new StringSetting(settings["Raven/Monitoring/Snmp/Community"], "ravendb");
+			Monitoring.Snmp.Port = new IntegerSetting(settings["Raven/Monitoring/Snmp/Port"], 161);
 		}
 
 		private string GetDefaultWebDir()
@@ -492,6 +504,25 @@ namespace Raven.Database.Config
 			public IntegerSetting EncryptionKeyBitsPreference { get; set; }
 
 			public BooleanSetting UseSsl { get; set; }
+		}
+
+		public class MonitoringConfiguration
+		{
+			public MonitoringConfiguration()
+			{
+				Snmp = new SnmpConfiguration();
+			}
+
+			public SnmpConfiguration Snmp { get; private set; }
+
+			public class SnmpConfiguration
+			{
+				public BooleanSetting Enabled { get; set; }
+
+				public IntegerSetting Port { get; set; }
+
+				public StringSetting Community { get; set; }
+			}
 		}
 	}
 

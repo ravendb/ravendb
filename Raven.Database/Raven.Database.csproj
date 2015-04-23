@@ -163,6 +163,14 @@
     <Reference Include="Owin">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
+    <Reference Include="SharpSnmpLib.Full, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005, processorArchitecture=MSIL">
+      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Full.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="SharpSnmpLib.Portable, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005, processorArchitecture=MSIL">
+      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Portable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Spatial4n.Core.NTS">
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
     </Reference>
@@ -244,6 +252,16 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerConcurrentRequests.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerCpu.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerTotalMemory.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerPid.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerProductVersion.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerBuildVersion.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerName.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerTotalRequests.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerUpTime.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\SnmpTask.cs" />
     <Compile Include="Bundles\Replication\Triggers\RenameConflictDocumentIdIndexTrigger.cs" />
     <Compile Include="Bundles\Versioning\Data\FileVersioningConfiguration.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
@@ -1267,7 +1285,9 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="BeforeBuild">
