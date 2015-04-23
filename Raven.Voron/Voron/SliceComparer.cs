@@ -15,6 +15,12 @@ namespace Voron
        
         public int Compare(Slice x, Slice y)
         {
+            return CompareInline(x, y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareInline ( Slice x, Slice y )
+        {
             Debug.Assert(x.Options == SliceOptions.Key);
             Debug.Assert(y.Options == SliceOptions.Key);
 
