@@ -16,7 +16,7 @@ namespace Voron
 		public static Slice BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys);
 		public static Slice Empty = new Slice(new byte[0]);
 
-		internal byte[] Array;
+        internal byte[] Array;
 		internal byte* Pointer;
 
 		public Slice(SliceOptions options)
@@ -80,48 +80,30 @@ namespace Voron
 
 		public override int GetHashCode()
 		{
-			if (Array != null)
-				return ComputeHashArray();
-			return ComputeHashPointer();
+            // Given how the size of slices can vary it is better to lose a bit (10%) on smaller slices 
+            // (less than 20 bytes) and to win big on the bigger ones. 
+            //
+            // After 24 bytes the gain is 10%
+            // After 64 bytes the gain is 2x
+            // After 128 bytes the gain is 4x.
+            //
+            // We should control the distribution of this over time. 
+            unsafe
+            {
+                if (Array != null)
+                {
+                    fixed (byte* arrayPtr = Array)
+                    {
+                        return (int)Hashing.XXHash32.CalculateInline(arrayPtr, Size);
+                    }
+                }
+                else
+                {
+                    return (int)Hashing.XXHash32.CalculateInline(Pointer, Size);
+                }
+            }
 		}
 
-		private int ComputeHashPointer()
-		{
-			unchecked
-			{
-				const int p = 16777619;
-				int hash = (int)2166136261;
-
-				for (int i = 0; i < Size; i++)
-					hash = (hash ^ Pointer[i]) * p;
-
-				hash += hash << 13;
-				hash ^= hash >> 7;
-				hash += hash << 3;
-				hash ^= hash >> 17;
-				hash += hash << 5;
-				return hash;
-			}
-		}
-
-		private int ComputeHashArray()
-		{
-			unchecked
-			{
-				const int p = 16777619;
-				int hash = (int)2166136261;
-
-				for (int i = 0; i < Size; i++)
-					hash = (hash ^ Array[i]) * p;
-
-				hash += hash << 13;
-				hash ^= hash >> 7;
-				hash += hash << 3;
-				hash ^= hash >> 17;
-				hash += hash << 5;
-				return hash;
-			}
-		}
 
 		public override string ToString()
 		{
