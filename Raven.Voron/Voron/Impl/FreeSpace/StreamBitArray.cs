@@ -42,8 +42,6 @@ namespace Voron.Impl.FreeSpace
 {
     public sealed class StreamBitArray
     {
-        private static UTF8Encoding _defaultEncoding = new UTF8Encoding(true, false);
-
         readonly int[] _inner = new int[64];
 
         public int SetCount { get; private set; }
