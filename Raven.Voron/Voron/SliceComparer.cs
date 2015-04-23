@@ -22,7 +22,7 @@ namespace Voron
             var otherKey = y.KeyLength;
             var length = srcKey <= otherKey ? srcKey : otherKey;
 
-            var r = x.CompareSliceData(y, length);
+            var r = x.CompareDataInline(y, length);
             if (r != 0)
                 return r;
 
@@ -42,7 +42,7 @@ namespace Voron
 
             var length = srcKey <= otherKey ? srcKey : otherKey;
 
-            return x.CompareSliceData(y, length) == 0;
+            return x.CompareDataInline(y, length) == 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

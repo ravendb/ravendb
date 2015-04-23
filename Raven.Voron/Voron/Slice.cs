@@ -134,7 +134,7 @@ namespace Voron
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal int CompareSliceData(Slice other, ushort size)
+        internal int CompareDataInline(Slice other, ushort size)
         {
             if (Array != null)
             {
@@ -162,40 +162,13 @@ namespace Voron
             return MemoryUtils.Compare(Pointer, other.Pointer, size);
         }
 
-		protected override int CompareData(MemorySlice other, ushort size)
+        protected override int CompareData(MemorySlice other, ushort size)
 		{
-			var otherSlice =  other as Slice;
-
+            var otherSlice = other as Slice;
 			if (otherSlice != null)
-			{
-				if (Array != null)
-				{
-					fixed (byte* a = Array)
-					{
-						if (otherSlice.Array != null)
-						{
-							fixed (byte* b = otherSlice.Array)
-							{
-                                return MemoryUtils.Compare(a, b, size);
-							}
-						}
-                        return MemoryUtils.Compare(a, otherSlice.Pointer, size);
-					}
-				}
-
-				if (otherSlice.Array != null)
-				{
-					fixed (byte* b = otherSlice.Array)
-					{
-                        return MemoryUtils.Compare(Pointer, b, size);
-					}
-				}
-
-                return MemoryUtils.Compare(Pointer, otherSlice.Pointer, size);
-			}
+                return CompareDataInline(otherSlice, size);
 
 			var prefixedSlice = other as PrefixedSlice;
-
 			if (prefixedSlice != null)
 				return PrefixedSliceComparisonMethods.Compare(this, prefixedSlice, MemoryUtils.MemoryComparerInstance, size);
 
