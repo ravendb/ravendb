@@ -56,18 +56,40 @@ namespace Voron.Impl
 
 		public long Size()
 		{
-			long totalSize = 0;
+            long totalSize = 0;
 
 			if (_lastOperations.Count > 0)
-				totalSize += _lastOperations.Sum(
-					operation =>
-					operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+            {
+                foreach ( var opKey in _lastOperations )
+                {
+                    foreach ( var batchKey in opKey.Value )
+                    {
+                        var x = batchKey.Value;
+                        if (x.Type == BatchOperationType.Add)
+                            totalSize += x.ValueSize + x.Key.Size;
+                        else
+                            totalSize += x.Key.Size;
+                    }
+                }
+            }
 
 			if (_multiTreeOperations.Count > 0)
-				totalSize += _multiTreeOperations.Sum(
-					tree =>
-					tree.Value.Sum(
-						multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
+            {
+                foreach( var opKey in _multiTreeOperations )
+                {
+                    foreach( var treeKey in opKey.Value )
+                    {
+                        foreach (var x in treeKey.Value)
+                        {
+                            if (x.Type == BatchOperationType.Add)
+                                totalSize += x.ValueSize + x.Key.Size;
+                            else
+                                totalSize += x.Key.Size;
+                        }
+                    }
+                }
+            }
+
 			return totalSize;
 		}
 
@@ -396,14 +418,16 @@ namespace Voron.Impl
 
 			public int CompareTo(BatchOperation other)
 			{
-				var r = SliceComparer.Instance.Compare(Key, other.Key);
+				var r = SliceComparer.CompareInline(Key, other.Key);
 				if (r != 0)
 					return r;
+
 				if (ValueSlice != null)
 				{
 					if (other.ValueSlice == null)
 						return -1;
-					return ValueSlice.Compare(other.ValueSlice);
+
+					return SliceComparer.CompareInline(ValueSlice, other.ValueSlice);
 				}
 				else if (other.ValueSlice != null)
 				{

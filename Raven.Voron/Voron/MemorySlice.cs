@@ -50,7 +50,8 @@ namespace Voron
 		{
 			if (KeyLength < other.KeyLength)
 				return false;
-			return CompareData(other, other.KeyLength) == 0;
+			
+            return CompareData(other, other.KeyLength) == 0;
 		}
 
 		private ushort _matchedBytes;
