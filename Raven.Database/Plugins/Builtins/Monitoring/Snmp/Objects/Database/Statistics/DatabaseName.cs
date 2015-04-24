@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="ServerName.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="DatabaseOpenedCount.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -7,18 +7,18 @@
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Pipeline;
 
-using Raven.Database.Config;
+using Raven.Abstractions.Data;
 
-namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
+namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class ServerName : ScalarObject
+	public class DatabaseName : ScalarObject
 	{
 		private readonly OctetString name;
 
-		public ServerName(InMemoryRavenConfiguration configuration)
-			: base(new ObjectIdentifier("1.1.1"))
+		public DatabaseName(DocumentDatabase database, int index)
+			: base("1.5.2.{0}.1.1", index)
 		{
-			name = new OctetString(configuration.ServerName ?? string.Empty);
+			name = new OctetString(database.Name ?? Constants.SystemDatabase);
 		}
 
 		public override ISnmpData Data

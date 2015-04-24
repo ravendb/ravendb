@@ -11,19 +11,19 @@ using Raven.Database.Config;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerName : ScalarObject
+	public class ServerUrl : ScalarObject
 	{
-		private readonly OctetString name;
+		private readonly OctetString url;
 
-		public ServerName(InMemoryRavenConfiguration configuration)
-			: base(new ObjectIdentifier("1.1.1"))
+		public ServerUrl(InMemoryRavenConfiguration configuration)
+			: base(new ObjectIdentifier("1.1.9"))
 		{
-			name = new OctetString(configuration.ServerName ?? string.Empty);
+			url = new OctetString(configuration.ServerUrl);
 		}
 
 		public override ISnmpData Data
 		{
-			get { return name; }
+			get { return url; }
 			set { throw new AccessFailureException(); }
 		}
 	}

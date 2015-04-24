@@ -12,6 +12,9 @@ using Lextm.SharpSnmpLib.Pipeline;
 using Lextm.SharpSnmpLib.Security;
 
 using Raven.Abstractions.Logging;
+using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database;
+using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Requests;
+using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server;
 using Raven.Database.Server.Tenancy;
 using Raven.Server;
@@ -93,8 +96,38 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new ServerConcurrentRequests(server.Options.RequestManager));
 			store.Add(new ServerCpu());
 			store.Add(new ServerTotalMemory());
+			store.Add(new ServerUrl(server.SystemDatabase.Configuration));
+
+			store.Add(new DatabaseOpenedCount(server.Options.DatabaseLandlord));
+			store.Add(new DatabaseTotalCount(server.SystemDatabase));
+
+			AddDatabase(store, server.SystemDatabase);
 
 			return store;
+		}
+
+		private static void AddDatabase(ObjectStore store, DocumentDatabase database)
+		{
+			var index = 1;
+
+			store.Add(new DatabaseName(database, index));
+			store.Add(new DatabaseApproximateTaskCount(database, index));
+			store.Add(new DatabaseCountOfIndexes(database, index));
+			store.Add(new DatabaseCountOfTransformers(database, index));
+			store.Add(new DatabaseStaleIndexes(database, index));
+			store.Add(new DatabaseCountOfAttachments(database, index));
+			store.Add(new DatabaseCountOfDocuments(database, index));
+			store.Add(new DatabaseCurrentNumberOfItemsToIndexInSingleBatch(database, index));
+			store.Add(new DatabaseCurrentNumberOfItemsToReduceInSingleBatch(database, index));
+			store.Add(new DatabaseErrors(database, index));
+			store.Add(new DatabaseId(database, index));
+			store.Add(new DatabaseActiveBundles(database, index));
+
+			store.Add(new DatabaseDocsWritePerSecond(database, index));
+			store.Add(new DatabaseIndexedPerSecond(database, index));
+			store.Add(new DatabaseReducedPerSecond(database, index));
+			store.Add(new DatabaseRequestDurationMean(database, index));
+			store.Add(new DatabaseRequestsPerSecond(database, index));
 		}
 
 		private class Logger : ILogger
