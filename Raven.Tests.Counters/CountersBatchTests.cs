@@ -117,7 +117,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task CounterBatch_using_batch_store_for_default_store_should_work()
 		{
-			using (var store = NewRemoteCountersStore(createDefaultCounter:true))
+			using (var store = NewRemoteCountersStore())
 			{
 				store.Batch.ScheduleIncrement("FooGroup", "FooCounter");//schedule increment for default counter storage
 				await store.Batch.FlushAsync();

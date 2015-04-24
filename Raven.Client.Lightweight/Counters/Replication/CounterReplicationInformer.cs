@@ -11,7 +11,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Request;
-using Raven.Client.Counters.Actions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -25,6 +24,34 @@ namespace Raven.Client.Counters
 		public CounterReplicationInformer(Client.Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000) : base(conventions, requestFactory, delayTime)
 		{
 		}
+
+		public async Task<T> ExecuteWithReplicationAsyncWithReturnValue<T>(HttpMethod method, CountersClient client, Func<OperationMetadata, Task<T>> operation)
+		{
+			var currentRequest = Interlocked.Increment(ref requestCount);
+			if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
+				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
+
+			currentlyExecuting = true;
+			try
+			{
+				var operationCredentials = new OperationCredentials(client.ApiKey, client.Credentials);
+				return await ExecuteWithReplicationAsync(method, client.ServerUrl, operationCredentials, null, currentRequest, 0, operation)
+										.ConfigureAwait(false);
+			}
+			catch (AggregateException e)
+			{
+				var singleException = e.ExtractSingleInnerException();
+				if (singleException != null)
+					throw singleException;
+
+				throw;
+			}
+			finally
+			{
+				currentlyExecuting = false;
+			}
+		}
+
 
 		public async Task ExecuteWithReplicationAsync<T>(HttpMethod method,CountersClient client, Func<OperationMetadata, Task<T>> operation)
 		{
