@@ -8,6 +8,8 @@ import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import getPluginsInfoCommand = require("commands/getPluginsInfoCommand");
 import appUrl = require("common/appUrl");
+import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 
 class createDatabase extends viewModelBase {
 
@@ -25,7 +27,7 @@ class createDatabase extends viewModelBase {
     databaseTempPath = ko.observable('');
     tempCustomValidityError: KnockoutComputed<string>;
     storageEngine = ko.observable('');
-    tempPathVisible = ko.computed(() => "voron" == this.storageEngine());
+    tempPathVisible = ko.computed(() => "voron" === this.storageEngine());
     private maxNameLength = 200;
 
     isCompressionBundleEnabled = ko.observable(false);
@@ -43,6 +45,8 @@ class createDatabase extends viewModelBase {
 
 	customBundles = ko.observableArray<string>();
 	selectedCustomBundles = ko.observableArray<string>([]);
+	allowVoron = ko.observable<boolean>(true);
+	voronWarningVisible = ko.computed(() => !this.allowVoron() && "voron" === this.storageEngine());
 
     constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();
@@ -89,6 +93,7 @@ class createDatabase extends viewModelBase {
         });
 
 		this.fetchCustomBundles();
+	    this.fetchAllowVoron();
     }
 
 	attached() {
@@ -107,6 +112,14 @@ class createDatabase extends viewModelBase {
 			.execute()
 			.done((result: pluginsInfoDto) => {
 			this.customBundles(result.CustomBundles);
+		});
+	}
+
+	fetchAllowVoron() {
+		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
+			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
+		).done((stats: Array<databaseStatisticsDto>, config: any) => {
+			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
 		});
 	}
 

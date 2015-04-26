@@ -110,10 +110,15 @@ class query extends viewModelBase {
             var allIndexes = this.indexes();
             var selectedIndex = this.selectedIndex();
 
-            if (!!selectedIndex && selectedIndex.indexOf(this.dynamicPrefix) == -1) {
-                return allIndexes.filter((indexDto: indexDataDto) => indexDto.name != selectedIndex);
+	        var allIndexesCopy: Array<indexDataDto>;
+
+            if (!!selectedIndex && selectedIndex.indexOf(this.dynamicPrefix) === -1) {
+	            allIndexesCopy = allIndexes.filter((indexDto: indexDataDto) => indexDto.name !== selectedIndex);
+            } else {
+	            allIndexesCopy = allIndexes.slice(0); // make copy as sort works in situ
             }
-            return allIndexes;
+			allIndexesCopy.sort((l: indexDataDto, r: indexDataDto) => l.name.toLowerCase() > r.name.toLowerCase() ? 1 : -1);
+            return allIndexesCopy;
         });
 
         this.collectionNamesExceptCurrent = ko.computed(() => {

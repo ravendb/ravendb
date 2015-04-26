@@ -797,7 +797,7 @@ namespace Raven.Client.Document
 			});
 		}
 
-		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
+		public override IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
 			return OpenAsyncSessionInternal(options);
 		}

@@ -5,7 +5,7 @@ import file = require("models/filesystem/file");
 
 class searchByQueryCommand  extends commandBase {
 
-    constructor(private fs: filesystem, private queryParameter: string, private skip: number, private take: number, private sortParameter: string) {
+    constructor(private fs: filesystem, private queryParameter: string, private skip: number, private take: number) {
         super();
     }
 

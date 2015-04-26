@@ -2,8 +2,11 @@
 import collection = require("models/collection");
 import viewModelBase = require("viewmodels/viewModelBase");
 import dialog = require("plugins/dialog");
+import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem/filesystem");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 
 class createFilesystem extends viewModelBase {
 
@@ -21,6 +24,9 @@ class createFilesystem extends viewModelBase {
 
     isEncryptionBundleEnabled = ko.observable(false);
     isVersioningBundleEnabled = ko.observable(false);
+
+	allowVoron = ko.observable<boolean>(true);
+	voronWarningVisible = ko.computed(() => !this.allowVoron() && "voron" === this.storageEngine());
 
     constructor(private filesystems: KnockoutObservableArray<filesystem>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();
@@ -48,7 +54,17 @@ class createFilesystem extends viewModelBase {
             var errorMessage: string = this.isPathLegal(newPath, "Logs");
             return errorMessage;
         });
+
+		this.fetchAllowVoron();
     }
+
+	fetchAllowVoron() {
+		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
+			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
+			).done((stats: Array<databaseStatisticsDto>, config: any) => {
+			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
+		});
+	}
 
     deactivate() {
         // If we were closed via X button or other dialog dismissal, reject the deletion task since

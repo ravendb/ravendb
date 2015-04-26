@@ -22,15 +22,13 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
-
-using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -54,8 +52,8 @@ namespace Raven.Database.Bundles.SqlReplication
 		}
 
 		public const string RavenSqlReplicationStatus = "Raven/SqlReplication/Status";
-		private const string ConnectionsDocumentName = "Raven/SqlReplication/Connections";
-		private readonly static ILog log = LogManager.GetCurrentClassLogger();
+
+		private readonly static ILog Log = LogManager.GetCurrentClassLogger();
 
 		public event Action<int> AfterReplicationCompleted = delegate { };
 		readonly Metrics sqlReplicationMetrics = new Metrics();
@@ -68,14 +66,18 @@ namespace Raven.Database.Bundles.SqlReplication
 		{
 			get { return statistics; }
 		}
-		private PrefetchingBehavior prefetchingBehavior;
 
 		public readonly ConcurrentDictionary<string, SqlReplicationMetricsCountersManager> SqlReplicationMetricsCounters =
 			new ConcurrentDictionary<string, SqlReplicationMetricsCountersManager>();
 
+		private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
+
+		private PrefetchingBehavior defaultPrefetchingBehavior;
+
 		public void Execute(DocumentDatabase database)
 		{
-			prefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
+			defaultPrefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
+			prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
 
 			Database = database;
 			Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
@@ -96,7 +98,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					return;
 
 				replicationConfigs = null;
-				log.Debug(() => "Sql Replication configuration was changed.");
+				Log.Debug(() => "Sql Replication configuration was changed.");
 			};
 
 			GetReplicationStatus();
@@ -111,7 +113,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 					catch (Exception e)
 					{
-						log.ErrorException("Fatal failure when replicating to SQL. All SQL Replication activity STOPPED", e);
+						Log.ErrorException("Fatal failure when replicating to SQL. All SQL Replication activity STOPPED", e);
 					}
 				}
 			}, TaskCreationOptions.LongRunning);
@@ -144,8 +146,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				if (hasChanges)
 					Database.WorkContext.ShouldNotifyAboutWork(() => "recorded a deleted document " + id);
 			});
-			if (log.IsDebugEnabled)
-				log.Debug(() => "recorded a deleted document " + id);
+			if (Log.IsDebugEnabled)
+				Log.Debug(() => "recorded a deleted document " + id);
 		}
 
 		private SqlReplicationStatus GetReplicationStatus()
@@ -192,206 +194,261 @@ namespace Raven.Database.Bundles.SqlReplication
 				}) // have error or the timeout expired
 						.ToList();
 
-				if (relevantConfigs.Count == 0)
+				var configGroups = SqlReplicationClassifier.GroupConfigs(relevantConfigs, c => GetLastEtagFor(localReplicationStatus, c));
+
+				if (configGroups.Count == 0)
 				{
 					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					continue;
 				}
 
-				var leastReplicatedEtag = GetLeastReplicatedEtag(relevantConfigs, localReplicationStatus);
+				var usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 
-				if (leastReplicatedEtag == null)
-				{
-					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
-					continue;
-				}
-
-				List<JsonDocument> documents;
-
-				using (prefetchingBehavior.DocumentBatchFrom(leastReplicatedEtag, out documents))
-				{
-					Etag latestEtag = null, lastBatchEtag = null;
-					if (documents.Count != 0)
-						lastBatchEtag = documents[documents.Count - 1].Etag;
-
-					var replicationDuration = Stopwatch.StartNew();
-					documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
-
-					if (documents.Count != 0)
-						latestEtag = documents[documents.Count - 1].Etag;
-
-					documents.RemoveAll(x => prefetchingBehavior.FilterDocuments(x) == false);
-
-					var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
-
-					foreach (var relevantConfig in relevantConfigs)
+				var groupedConfigs = configGroups
+					.Select(x =>
 					{
-						var cfg = relevantConfig;
-						Database.TransactionalStorage.Batch(accessor =>
-						{
-							deletedDocsByConfig[cfg] = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
-															  GetLastEtagFor(localReplicationStatus, cfg),
-															  latestEtag,
-															  MaxNumberOfDeletionsToReplicate + 1)
-												  .ToList();
-						});
-					}
+						var result = new SqlConfigGroup
+									 {
+										 LastReplicatedEtag = x.Key,
+										 ConfigsToWorkOn = x.Value,
+										 PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
+									 };
 
-					// No documents AND there aren't any deletes to replicate
-					if (documents.Count == 0 && deletedDocsByConfig.Sum(x => x.Value.Count) == 0)
+						result.PrefetchingBehavior.AdditionalInfo = string.Format("Default prefetcher: {0}. For sql config group: [Configs: {1}, LastReplicatedEtag: {2}]", result.PrefetchingBehavior == defaultPrefetchingBehavior, string.Join(", ", result.ConfigsToWorkOn.Select(y => y.Name)), result.LastReplicatedEtag);
+
+						return result;
+					})
+					.ToList();
+
+				var successes = new ConcurrentQueue<Tuple<SqlReplicationConfigWithLastReplicatedEtag, Etag>>();
+				var waitForWork = new bool[groupedConfigs.Count];
+				try
+				{
+					BackgroundTaskExecuter.Instance.ExecuteAll(Database.WorkContext, groupedConfigs, (sqlConfigGroup, i) =>
 					{
-						if (latestEtag != null)
+						Database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+
+						var prefetchingBehavior = sqlConfigGroup.PrefetchingBehavior;
+						var configsToWorkOn = sqlConfigGroup.ConfigsToWorkOn;
+
+						List<JsonDocument> documents;
+						using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, out documents))
 						{
-							// so we filtered some documents, let us update the etag about that.
-							foreach (var lastReplicatedEtag in localReplicationStatus.LastReplicatedEtags)
+							Etag latestEtag = null, lastBatchEtag = null;
+							if (documents.Count != 0)
+								lastBatchEtag = documents[documents.Count - 1].Etag;
+
+							var replicationDuration = Stopwatch.StartNew();
+							documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
+
+							if (documents.Count != 0)
+								latestEtag = documents[documents.Count - 1].Etag;
+
+							documents.RemoveAll(x => prefetchingBehavior.FilterDocuments(x) == false);
+
+							var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
+
+							foreach (var configToWorkOn in configsToWorkOn)
 							{
-								if (lastReplicatedEtag.LastDocEtag.CompareTo(latestEtag) <= 0)
-									lastReplicatedEtag.LastDocEtag = latestEtag;
+								var cfg = configToWorkOn;
+								Database.TransactionalStorage.Batch(accessor =>
+								{
+									deletedDocsByConfig[cfg] = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
+																	  cfg.LastReplicatedEtag,
+																	  latestEtag,
+																	  MaxNumberOfDeletionsToReplicate + 1)
+														  .ToList();
+								});
 							}
 
-							latestEtag = Etag.Max(latestEtag, lastBatchEtag);
-							SaveNewReplicationStatus(localReplicationStatus);
+							// No documents AND there aren't any deletes to replicate
+							if (documents.Count == 0 && deletedDocsByConfig.Sum(x => x.Value.Count) == 0)
+							{
+								// so we filtered some documents, let us update the etag about that.
+								if (latestEtag != null)
+								{
+									foreach (var configToWorkOn in configsToWorkOn)
+										successes.Enqueue(Tuple.Create(configToWorkOn, latestEtag));
+								}
+								else
+								{
+									waitForWork[i] = true;
+								}
+
+								return;
+							}
+
+							var itemsToReplicate = documents.Select(x =>
+							{
+								JsonDocument.EnsureIdInMetadata(x);
+								var doc = x.ToJson();
+								doc[Constants.DocumentIdFieldName] = x.Key;
+
+								return new ReplicatedDoc
+								{
+									Document = doc,
+									Etag = x.Etag,
+									Key = x.Key,
+									SerializedSizeOnDisk = x.SerializedSizeOnDisk
+								};
+							}).ToList();
+
+							try
+							{
+								BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(Database.WorkContext, configsToWorkOn, replicationConfig =>
+								{
+									try
+									{
+										var startTime = SystemTime.UtcNow;
+										var spRepTime = new Stopwatch();
+										spRepTime.Start();
+										var lastReplicatedEtag = replicationConfig.LastReplicatedEtag;
+
+										var deletedDocs = deletedDocsByConfig[replicationConfig];
+										var docsToReplicate = itemsToReplicate
+											.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0) // haven't replicate the etag yet
+											.Where(document =>
+											{
+												var info = Database.Documents.GetRecentTouchesFor(document.Key);
+												if (info != null)
+												{
+													if (info.TouchedEtag.CompareTo(lastReplicatedEtag) > 0)
+													{
+														Log.Debug(
+															"Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
+															document.Key, replicationConfig.Name, info.TouchedEtag);
+														return false;
+													}
+												}
+												return true;
+											});
+
+										if (deletedDocs.Count >= MaxNumberOfDeletionsToReplicate + 1)
+											docsToReplicate = docsToReplicate.Where(x => EtagUtil.IsGreaterThan(x.Etag, deletedDocs[deletedDocs.Count - 1].Etag) == false);
+
+										var docsToReplicateAsList = docsToReplicate.ToList();
+
+										var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicateAsList);
+										if (currentLatestEtag == null && itemsToReplicate.Count > 0 && docsToReplicateAsList.Count == 0)
+											currentLatestEtag = lastBatchEtag;
+
+										int countOfReplicatedItems = 0;
+										if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
+																							ReplicateChangesToDestination(replicationConfig, docsToReplicateAsList, out countOfReplicatedItems))
+										{
+											if (deletedDocs.Count > 0)
+											{
+												Database.TransactionalStorage.Batch(accessor =>
+													accessor.Lists.RemoveAllBefore(GetSqlReplicationDeletionName(replicationConfig), deletedDocs[deletedDocs.Count - 1].Etag));
+											}
+											successes.Enqueue(Tuple.Create(replicationConfig, currentLatestEtag));
+										}
+
+										spRepTime.Stop();
+										var elapsedMicroseconds = (long)(spRepTime.ElapsedTicks * SystemTime.MicroSecPerTick);
+
+										var sqlReplicationMetricsCounters = GetSqlReplicationMetricsManager(replicationConfig);
+										sqlReplicationMetricsCounters.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
+										sqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.Update(countOfReplicatedItems);
+										sqlReplicationMetricsCounters.SqlReplicationDurationHistogram.Update(elapsedMicroseconds);
+
+										UpdateReplicationPerformance(replicationConfig, startTime, spRepTime.Elapsed, docsToReplicateAsList.Count);
+									}
+									catch (Exception e)
+									{
+										Log.WarnException("Error while replication to SQL destination: " + replicationConfig.Name, e);
+										Database.AddAlert(new Alert
+										{
+											AlertLevel = AlertLevel.Error,
+											CreatedAt = SystemTime.UtcNow,
+											Exception = e.ToString(),
+											Title = "Sql Replication failure to replication",
+											Message = "Sql Replication could not replicate to " + replicationConfig.Name,
+											UniqueKey = "Sql Replication could not replicate to " + replicationConfig.Name
+										});
+									}
+								});
+							}
+							finally
+							{
+								prefetchingBehavior.CleanupDocuments(lastBatchEtag);
+								prefetchingBehavior.UpdateAutoThrottler(documents, replicationDuration.Elapsed);
+							}
 						}
-						else // no point in waiting if we just saved a new doc
-						{
+					});
+
+					if (successes.Count == 0)
+					{
+						if (waitForWork.All(x => x))
 							Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
-						}
+
 						continue;
 					}
 
-					var successes = new ConcurrentQueue<Tuple<SqlReplicationConfig, Etag>>();
-					try
+					foreach (var t in successes)
 					{
-						var itemsToReplicate = documents.Select(x =>
+						var cfg = t.Item1;
+						var currentLatestEtag = t.Item2;
+						var destEtag = localReplicationStatus.LastReplicatedEtags.FirstOrDefault(x => string.Equals(x.Name, cfg.Name, StringComparison.InvariantCultureIgnoreCase));
+						if (destEtag == null)
 						{
-							JsonDocument.EnsureIdInMetadata(x);
-							var doc = x.ToJson();
-							doc[Constants.DocumentIdFieldName] = x.Key;
-
-							return new ReplicatedDoc
+							localReplicationStatus.LastReplicatedEtags.Add(new LastReplicatedEtag
 							{
-								Document = doc,
-								Etag = x.Etag,
-								Key = x.Key,
-								SerializedSizeOnDisk = x.SerializedSizeOnDisk
-							};
-						}).ToList();
-
-						BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(Database.WorkContext, relevantConfigs, replicationConfig =>
-						{
-							try
-							{
-								var startTime = SystemTime.UtcNow;
-								Stopwatch spRepTime = new Stopwatch();
-								spRepTime.Start();
-								var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
-
-								var deletedDocs = deletedDocsByConfig[replicationConfig];
-								var docsToReplicate = itemsToReplicate
-									.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0) // haven't replicate the etag yet
-									.Where(document =>
-									{
-										var info = Database.Documents.GetRecentTouchesFor(document.Key);
-										if (info != null)
-										{
-											if (info.TouchedEtag.CompareTo(lastReplicatedEtag) > 0)
-											{
-												log.Debug(
-													"Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
-													document.Key, replicationConfig.Name, info.TouchedEtag);
-												return false;
-											}
-										}
-										return true;
-									});
-
-								if (deletedDocs.Count >= MaxNumberOfDeletionsToReplicate + 1)
-									docsToReplicate = docsToReplicate.Where(x => EtagUtil.IsGreaterThan(x.Etag, deletedDocs[deletedDocs.Count - 1].Etag) == false);
-
-								var docsToReplicateAsList = docsToReplicate.ToList();
-
-								var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicateAsList);
-								if (currentLatestEtag == null && itemsToReplicate.Count > 0 && docsToReplicateAsList.Count == 0)
-									currentLatestEtag = lastBatchEtag;
-
-								int countOfReplicatedItems = 0;
-								if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-																					ReplicateChangesToDestination(replicationConfig, docsToReplicateAsList, out countOfReplicatedItems))
-								{
-									if (deletedDocs.Count > 0)
-									{
-										Database.TransactionalStorage.Batch(accessor =>
-											accessor.Lists.RemoveAllBefore(GetSqlReplicationDeletionName(replicationConfig), deletedDocs[deletedDocs.Count - 1].Etag));
-									}
-									successes.Enqueue(Tuple.Create(replicationConfig, currentLatestEtag));
-								}
-
-								spRepTime.Stop();
-								var elapsedMicroseconds = (long)(spRepTime.ElapsedTicks * SystemTime.MicroSecPerTick);
-
-								var sqlReplicationMetricsCounters = GetSqlReplicationMetricsManager(replicationConfig);
-								sqlReplicationMetricsCounters.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
-								sqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.Update(countOfReplicatedItems);
-								sqlReplicationMetricsCounters.SqlReplicationDurationHistogram.Update(elapsedMicroseconds);
-
-								UpdateReplicationPerformance(replicationConfig, startTime, spRepTime.Elapsed, docsToReplicateAsList.Count);
-
-							}
-							catch (Exception e)
-							{
-								log.WarnException("Error while replication to SQL destination: " + replicationConfig.Name, e);
-								Database.AddAlert(new Alert
-								{
-									AlertLevel = AlertLevel.Error,
-									CreatedAt = SystemTime.UtcNow,
-									Exception = e.ToString(),
-									Title = "Sql Replication failure to replication",
-									Message = "Sql Replication could not replicate to " + replicationConfig.Name,
-									UniqueKey = "Sql Replication could not replicate to " + replicationConfig.Name
-								});
-							}
-						});
-						if (successes.Count == 0)
-							continue;
-						foreach (var t in successes)
-						{
-							var cfg = t.Item1;
-							var currentLatestEtag = t.Item2;
-							var destEtag = localReplicationStatus.LastReplicatedEtags.FirstOrDefault(x => string.Equals(x.Name, cfg.Name, StringComparison.InvariantCultureIgnoreCase));
-							if (destEtag == null)
-							{
-								localReplicationStatus.LastReplicatedEtags.Add(new LastReplicatedEtag
-								{
-									Name = cfg.Name,
-									LastDocEtag = currentLatestEtag ?? Etag.Empty
-								});
-							}
-							else
-							{
-								var lastDocEtag = destEtag.LastDocEtag;
-								if (currentLatestEtag != null && EtagUtil.IsGreaterThan(currentLatestEtag, lastDocEtag))
-									lastDocEtag = currentLatestEtag;
-
-								destEtag.LastDocEtag = lastDocEtag;
-							}
+								Name = cfg.Name,
+								LastDocEtag = currentLatestEtag ?? Etag.Empty
+							});
 						}
-
-						SaveNewReplicationStatus(localReplicationStatus);
-					}
-					finally
-					{
-						AfterReplicationCompleted(successes.Count);
-						var min = localReplicationStatus.LastReplicatedEtags.Min(x => new ComparableByteArray(x.LastDocEtag.ToByteArray()));
-						if (min != null)
+						else
 						{
-							var lastMinReplicatedEtag = min.ToEtag();
-							prefetchingBehavior.CleanupDocuments(lastMinReplicatedEtag);
-							prefetchingBehavior.UpdateAutoThrottler(documents, replicationDuration.Elapsed);
+							var lastDocEtag = destEtag.LastDocEtag;
+							if (currentLatestEtag != null && EtagUtil.IsGreaterThan(currentLatestEtag, lastDocEtag))
+								lastDocEtag = currentLatestEtag;
+
+							destEtag.LastDocEtag = lastDocEtag;
 						}
 					}
 
+					SaveNewReplicationStatus(localReplicationStatus);
+				}
+				finally
+				{
+					AfterReplicationCompleted(successes.Count);
+					RemoveUnusedPrefetchers(usedPrefetchers);
 				}
 			}
+		}
+
+		private void RemoveUnusedPrefetchers(IEnumerable<PrefetchingBehavior> usedPrefetchingBehaviors)
+		{
+			var unused = prefetchingBehaviors.Except(usedPrefetchingBehaviors.Union(new[]
+			{
+				defaultPrefetchingBehavior
+			})).ToList();
+
+			if (unused.Count == 0)
+				return;
+
+			foreach (var unusedPrefetcher in unused)
+			{
+				prefetchingBehaviors.TryRemove(unusedPrefetcher);
+				Database.Prefetcher.RemovePrefetchingBehavior(unusedPrefetcher);
+			}
+		}
+
+		private PrefetchingBehavior GetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+		{
+			foreach (var prefetchingBehavior in prefetchingBehaviors)
+			{
+				if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
+					return prefetchingBehavior;
+			}
+
+			var newPrefetcher = Database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
+
+			prefetchingBehaviors.Add(newPrefetcher);
+			usedPrefetchers.Add(newPrefetcher);
+
+			return newPrefetcher;
 		}
 
 		private void UpdateReplicationPerformance(SqlReplicationConfig replicationConfig, DateTime startTime, TimeSpan elapsed, int batchSize)
@@ -490,7 +547,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled, identifiers);
 				}
 				writer.Commit();
-				log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", identifiers), cfg.Name);
+				Log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", identifiers), cfg.Name);
 			}
 
 			return true;
@@ -501,29 +558,14 @@ namespace Raven.Database.Bundles.SqlReplication
 			return "SqlReplication/Deletions/" + replicationConfig.Name;
 		}
 
-		private Etag GetLeastReplicatedEtag(IEnumerable<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
-		{
-			Etag leastReplicatedEtag = null;
-			foreach (var sqlReplicationConfig in config)
-			{
-				var lastEtag = GetLastEtagFor(localReplicationStatus, sqlReplicationConfig);
-				if (leastReplicatedEtag == null)
-					leastReplicatedEtag = lastEtag;
-				else if (lastEtag.CompareTo(leastReplicatedEtag) < 0)
-					leastReplicatedEtag = lastEtag;
-			}
-
-			return leastReplicatedEtag;
-		}
-
-		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs, out int countOfReplicatedItems)
+		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, ICollection<ReplicatedDoc> docs, out int countOfReplicatedItems)
 		{
 			countOfReplicatedItems = 0;
-            var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
+			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
 			var scriptResult = ApplyConversionScript(cfg, docs, replicationStats);
-			if (scriptResult.Data.Count == 0)
+			if (scriptResult.Ids.Count == 0)
 				return true;
-			
+
 			countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
 			try
 			{
@@ -531,12 +573,12 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					if (writer.Execute(scriptResult))
 					{
-						log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
+						Log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
 						replicationStats.CompleteSuccess(countOfReplicatedItems);
 					}
 					else
 					{
-						log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
+						Log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
 						replicationStats.Success(countOfReplicatedItems);
 					}
 				}
@@ -544,7 +586,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 			catch (Exception e)
 			{
-				log.WarnException("Failure to replicate changes to relational database for: " + cfg.Name, e);
+				Log.WarnException("Failure to replicate changes to relational database for: " + cfg.Name, e);
 				SqlReplicationStatistics replicationStatistics;
 				DateTime newTime;
 				if (statistics.TryGetValue(cfg.Name, out replicationStatistics) == false)
@@ -553,16 +595,16 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 				else
 				{
-                    if (replicationStatistics.LastErrorTime == DateTime.MinValue)
-                    {
-                        newTime = SystemTime.UtcNow.AddSeconds(5);
-                    }
-                    else
-                    {
-                        // double the fallback time (but don't cross 15 minutes)
-                        var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
-                        newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60*15, Math.Max(5, totalSeconds*2)));
-                    }
+					if (replicationStatistics.LastErrorTime == DateTime.MinValue)
+					{
+						newTime = SystemTime.UtcNow.AddSeconds(5);
+					}
+					else
+					{
+						// double the fallback time (but don't cross 15 minutes)
+						var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
+						newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60 * 15, Math.Max(5, totalSeconds * 2)));
+					}
 				}
 				replicationStats.RecordWriteError(e, Database, countOfReplicatedItems, newTime);
 				return false;
@@ -589,9 +631,9 @@ namespace Raven.Database.Bundles.SqlReplication
 					{
 						patcher.Apply(scope, replicatedDoc.Document, new ScriptedPatchRequest { Script = cfg.Script }, replicatedDoc.SerializedSizeOnDisk);
 
-						if (log.IsDebugEnabled && patcher.Debug.Count > 0)
+						if (Log.IsDebugEnabled && patcher.Debug.Count > 0)
 						{
-							log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, cfg.Name, string.Join("\r\n", patcher.Debug));
+							Log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, cfg.Name, string.Join("\r\n", patcher.Debug));
 
 							patcher.Debug.Clear();
 						}
@@ -602,14 +644,14 @@ namespace Raven.Database.Bundles.SqlReplication
 					{
 						replicationStats.MarkScriptAsInvalid(Database, cfg.Script);
 
-						log.WarnException("Could not parse SQL Replication script for " + cfg.Name, e);
+						Log.WarnException("Could not parse SQL Replication script for " + cfg.Name, e);
 
 						return result;
 					}
 					catch (Exception diffExceptionName)
 					{
 						replicationStats.RecordScriptError(Database, diffExceptionName);
-						log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
+						Log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
 					}
 				}
 			}
@@ -626,9 +668,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			return lastEtag;
 		}
 
-		public RelationalDatabaseWriter.TableQuerySummary[] SimulateSqlReplicationSQLQueries(string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert)
+		public RelationalDatabaseWriter.TableQuerySummary[] SimulateSqlReplicationSqlQueries(string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert)
 		{
-			alert = null;
 			RelationalDatabaseWriter.TableQuerySummary[] resutls = null;
 
 			try
@@ -652,7 +693,7 @@ namespace Raven.Database.Bundles.SqlReplication
                            };
 				var scriptResult = ApplyConversionScript(sqlReplication, docs, stats);
 
-				var connectionsDoc = Database.Documents.Get(ConnectionsDocumentName, null);
+				var connectionsDoc = Database.Documents.Get(Constants.RavenSqlReplicationConnectionsDocumentName, null);
 				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections();
 
 				if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections, false, false))
@@ -667,12 +708,12 @@ namespace Raven.Database.Bundles.SqlReplication
 					else
 					{
 						var simulatedwriter = new RelationalDatabaseWriterSimulator(Database, sqlReplication, stats);
-						resutls = new List<RelationalDatabaseWriter.TableQuerySummary>()
+						resutls = new List<RelationalDatabaseWriter.TableQuerySummary>
                         {
-                            new RelationalDatabaseWriter.TableQuerySummary()
+                            new RelationalDatabaseWriter.TableQuerySummary
                             {
                                 Commands = simulatedwriter.SimulateExecuteCommandText(scriptResult)
-                                    .Select(x => new RelationalDatabaseWriter.TableQuerySummary.CommandData()
+                                    .Select(x => new RelationalDatabaseWriter.TableQuerySummary.CommandData
                                     {
                                         CommandText = x
                                     }).ToArray()
@@ -687,7 +728,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 			catch (Exception e)
 			{
-				alert = new Alert()
+				alert = new Alert
 				{
 					AlertLevel = AlertLevel.Error,
 					CreatedAt = SystemTime.UtcNow,
@@ -709,16 +750,17 @@ namespace Raven.Database.Bundles.SqlReplication
 			sqlReplicationConfigs = new List<SqlReplicationConfig>();
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				const string prefix = "Raven/SqlReplication/Configuration/";
+				const string Prefix = "Raven/SqlReplication/Configuration/";
 
-				var connectionsDoc = accessor.Documents.DocumentByKey(ConnectionsDocumentName);
+				var connectionsDoc = accessor.Documents.DocumentByKey(Constants.RavenSqlReplicationConnectionsDocumentName);
 				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections(); // backward compatibility
 
-				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))
+				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(Prefix, 0, int.MaxValue, null))
 				{
 					var cfg = sqlReplicationConfigDocument.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
 					var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
-					if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections)) continue;
+					if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections)) 
+						continue;
 					sqlReplicationConfigs.Add(cfg);
 				}
 			});
@@ -731,8 +773,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			if (validateSqlReplicationName && string.IsNullOrWhiteSpace(cfg.Name))
 			{
 				if (writeToLog)
-					log.Warn("Could not find name for sql replication document {0}, ignoring", sqlReplicationConfigDocumentKey);
-				replicationStats.LastAlert = new Alert()
+					Log.Warn("Could not find name for sql replication document {0}, ignoring", sqlReplicationConfigDocumentKey);
+				replicationStats.LastAlert = new Alert
 				{
 					AlertLevel = AlertLevel.Error,
 					CreatedAt = DateTime.UtcNow,
@@ -752,10 +794,10 @@ namespace Raven.Database.Bundles.SqlReplication
 				else
 				{
 					if (writeToLog)
-						log.Warn("Could not find predefined connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+						Log.Warn("Could not find predefined connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
 							cfg.PredefinedConnectionStringSettingName,
 							sqlReplicationConfigDocumentKey);
-					replicationStats.LastAlert = new Alert()
+					replicationStats.LastAlert = new Alert
 					{
 						AlertLevel = AlertLevel.Error,
 						CreatedAt = DateTime.UtcNow,
@@ -773,10 +815,10 @@ namespace Raven.Database.Bundles.SqlReplication
 				if (connectionString == null)
 				{
 					if (writeToLog)
-						log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+						Log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
 							cfg.ConnectionStringName, sqlReplicationConfigDocumentKey);
 
-					replicationStats.LastAlert = new Alert()
+					replicationStats.LastAlert = new Alert
 					{
 						AlertLevel = AlertLevel.Error,
 						CreatedAt = DateTime.UtcNow,
@@ -795,10 +837,10 @@ namespace Raven.Database.Bundles.SqlReplication
 				if (string.IsNullOrWhiteSpace(setting))
 				{
 					if (writeToLog)
-						log.Warn("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+						Log.Warn("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
 			cfg.ConnectionStringSettingName,
 			sqlReplicationConfigDocumentKey);
-					replicationStats.LastAlert = new Alert()
+					replicationStats.LastAlert = new Alert
 					{
 						AlertLevel = AlertLevel.Error,
 						CreatedAt = DateTime.UtcNow,
@@ -815,8 +857,19 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public void Dispose()
 		{
-			if (prefetchingBehavior != null)
+			foreach (var prefetchingBehavior in prefetchingBehaviors)
+			{
 				prefetchingBehavior.Dispose();
+			}
+		}
+
+		private class SqlConfigGroup
+		{
+			public Etag LastReplicatedEtag { get; set; }
+
+			public List<SqlReplicationConfigWithLastReplicatedEtag> ConfigsToWorkOn { get; set; }
+
+			public PrefetchingBehavior PrefetchingBehavior { get; set; }
 		}
 	}
 }

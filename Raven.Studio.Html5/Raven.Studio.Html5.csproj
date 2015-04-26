@@ -9,7 +9,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>1.0</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>1.4</TypeScriptToolsVersion>
     <UseIISExpress>false</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
@@ -37,6 +37,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\deleteFilesMatchingQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSynchronizationConfigCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
@@ -91,6 +92,7 @@
     <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\forceIndexReplace.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
@@ -201,6 +203,7 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\exportFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\fileRenameDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\importFilesystem.ts" />
@@ -469,6 +472,7 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
     <Content Include="App\views\filesystem\exportFilesystem.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
     <Content Include="App\views\filesystem\fileRenameDialog.html" />

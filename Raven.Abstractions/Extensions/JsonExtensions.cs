@@ -231,11 +231,21 @@ namespace Raven.Abstractions.Extensions
     {
         private readonly Stream inner;
 
-        public int ActualHeaderSize { get; private set; }
+        public int ActualHeaderSize 
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get; 
+            private set; 
+        }
 
         private int headerSizePosition;
 
-        public byte[] Header { get; private set; }
+        public byte[] Header 
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get; 
+            private set; 
+        }
 
         private bool passedHeader;
 

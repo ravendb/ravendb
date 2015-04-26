@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
@@ -83,7 +82,14 @@ namespace Raven.Client.Document.Batches
 
         public void HandleResponse(GetResponse response)
 		{
-			if (response.Status == 404)
+	        if (response.ForceRetry)
+	        {
+		        Result = null;
+		        RequiresRetry = true;
+		        return;
+	        }
+
+	        if (response.Status == 404)
 				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
 			var json = (RavenJObject)response.Result;
 			var queryResult = SerializationHelper.ToQueryResult(json, response.GetEtagHeader(), response.Headers["Temp-Request-Time"], -1);

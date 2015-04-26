@@ -24,6 +24,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Database.Indexing
 {
@@ -36,8 +37,8 @@ namespace Raven.Database.Indexing
         private readonly DocumentDatabase database;
         private readonly IndexDefinition indexDefinition;
         private readonly List<int> multipleItemsSameFieldCount = new List<int>();
-        private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>();
-        private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>();
+        private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>(Comparer);
+        private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>(Comparer);
 
         public AnonymousObjectToLuceneDocumentConverter(DocumentDatabase database, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, ILog log)
         {
@@ -47,11 +48,11 @@ namespace Raven.Database.Indexing
             this.log = log;
         }
 
-        public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, Field.Store defaultStorage)
+		public IEnumerable<AbstractField> Index(object val, PropertyAccessor accessor, Field.Store defaultStorage)
         {
-            return from property in properties.Cast<PropertyDescriptor>()
-                   where property.Name != Constants.DocumentIdFieldName
-                   from field in CreateFields(property.Name, property.GetValue(val), defaultStorage)
+            return from property in accessor.Properies
+                   where property.Key != Constants.DocumentIdFieldName
+                   from field in CreateFields(property.Key, property.Value(val), defaultStorage)
                    select field;
         }
 
@@ -401,13 +402,12 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private IEnumerable<AbstractField> CreateNumericFieldWithCaching(string name, object value,
-            Field.Store defaultStorage, Field.TermVector termVector)
+        private IEnumerable<AbstractField> CreateNumericFieldWithCaching(string name, object value, Field.Store defaultStorage, Field.TermVector termVector)
         {
-
             var fieldName = name + "_Range";
             var storage = indexDefinition.GetStorage(name, defaultStorage);
             var cacheKey = new FieldCacheKey(name, null, storage, termVector, multipleItemsSameFieldCount.ToArray());
+            
             NumericField numericField;
             if (numericFieldsCache.TryGetValue(cacheKey, out numericField) == false)
             {
@@ -420,55 +420,60 @@ namespace Raven.Database.Indexing
             }
             else if (value is int)
             {
-                if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
+                var sortOption = indexDefinition.GetSortOption(name, query: null);
+                if (sortOption == SortOptions.Long)
                     yield return numericField.SetLongValue((int)value);
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
+                else if (sortOption == SortOptions.Float)
                     yield return numericField.SetFloatValue((int)value);
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
+                else if (sortOption == SortOptions.Double)
                     yield return numericField.SetDoubleValue((int)value);
                 else
                     yield return numericField.SetIntValue((int)value);
             }
             else if (value is long)
             {
-                if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
+                var sortOption = indexDefinition.GetSortOption(name, query: null);
+                if (sortOption == SortOptions.Double)
                     yield return numericField.SetDoubleValue((long)value);
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
+                else if (sortOption == SortOptions.Float)
                     yield return numericField.SetFloatValue((long)value);
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Int)
+                else if (sortOption == SortOptions.Int)
                     yield return numericField.SetIntValue(Convert.ToInt32((long)value));
                 else
                     yield return numericField.SetLongValue((long)value);
             }
             else if (value is decimal)
             {
-                if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
+                var sortOption = indexDefinition.GetSortOption(name, query: null);
+                if (sortOption == SortOptions.Float)
                     yield return numericField.SetFloatValue(Convert.ToSingle((decimal)value));
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Int)
+                else if (sortOption == SortOptions.Int)
                     yield return numericField.SetIntValue(Convert.ToInt32((decimal)value));
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
+                else if (sortOption == SortOptions.Long)
                     yield return numericField.SetLongValue(Convert.ToInt64((decimal)value));
                 else
                     yield return numericField.SetDoubleValue((double)(decimal)value);
             }
             else if (value is float)
             {
-                if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
+                var sortOption = indexDefinition.GetSortOption(name, query: null);
+                if (sortOption == SortOptions.Double)
                     yield return numericField.SetDoubleValue((float)value);
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Int)
+                else if (sortOption == SortOptions.Int)
                     yield return numericField.SetIntValue(Convert.ToInt32((float)value));
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
+                else if (sortOption == SortOptions.Long)
                     yield return numericField.SetLongValue(Convert.ToInt64((float)value));
                 else
                     yield return numericField.SetFloatValue((float)value);
             }
             else if (value is double)
             {
-                if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
+                var sortOption = indexDefinition.GetSortOption(name, query: null);
+                if (sortOption == SortOptions.Float)
                     yield return numericField.SetFloatValue(Convert.ToSingle((double)value));
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Int)
+                else if (sortOption == SortOptions.Int)
                     yield return numericField.SetIntValue(Convert.ToInt32((double)value));
-                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
+                else if (sortOption == SortOptions.Long)
                     yield return numericField.SetLongValue(Convert.ToInt64((double)value));
                 else
                     yield return numericField.SetDoubleValue((double)value);
@@ -519,13 +524,54 @@ namespace Raven.Database.Indexing
             return field;
         }
 
-        public class FieldCacheKey
+        private static FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
+
+        private class FieldCacheKeyEqualityComparer : IEqualityComparer<FieldCacheKey>
         {
-            private readonly string name;
-            private readonly Field.Index? index;
-            private readonly Field.Store store;
-            private readonly Field.TermVector termVector;
-            private readonly int[] multipleItemsSameField;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(FieldCacheKey x, FieldCacheKey y)
+            {
+                if (x.HashKey.Value != y.HashKey.Value)
+                    return false;
+                else // We are thinking it is possible to have collisions. This may not be true ever!
+                {
+                    if (string.Equals(x.name, y.name) &&
+                         Equals(x.index, y.index) &&
+                         Equals(x.store, y.store) &&
+                         Equals(x.termVector, y.termVector))
+                    {
+                        if (x.multipleItemsSameField.Length != y.multipleItemsSameField.Length)
+                            return false;
+
+                        int count = x.multipleItemsSameField.Length;
+                        for ( int i = 0; i < count; i++ )
+                        {
+                            if (x.multipleItemsSameField[i] != y.multipleItemsSameField[i])
+                                return false;
+                        }
+                        return true;
+                    }
+                    else return false;
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetHashCode(FieldCacheKey obj)
+            {
+                return obj.HashKey.Value;
+            }
+        }
+
+        private class FieldCacheKey
+        {
+            internal readonly string name;
+            internal readonly Field.Index? index;
+            internal readonly Field.Store store;
+            internal readonly Field.TermVector termVector;
+            internal readonly int[] multipleItemsSameField;
+
+            // We can precalculate the hash code because all fields involved are readonly.
+            internal readonly Lazy<int> HashKey;
 
             public FieldCacheKey(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
             {
@@ -534,27 +580,12 @@ namespace Raven.Database.Indexing
                 this.store = store;
                 this.termVector = termVector;
                 this.multipleItemsSameField = multipleItemsSameField;
+
+                this.HashKey = new Lazy<int>(CalculateHashCode);
             }
 
-
-            protected bool Equals(FieldCacheKey other)
-            {
-                return string.Equals(name, other.name) &&
-                    Equals(index, other.index) &&
-                    Equals(store, other.store) &&
-                    Equals(termVector, other.termVector) &&
-                    multipleItemsSameField.SequenceEqual(other.multipleItemsSameField);
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != typeof(FieldCacheKey)) return false;
-                return Equals((FieldCacheKey)obj);
-            }
-
-            public override int GetHashCode()
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private int CalculateHashCode ()
             {
                 unchecked
                 {
@@ -565,6 +596,11 @@ namespace Raven.Database.Indexing
                     hashCode = multipleItemsSameField.Aggregate(hashCode, (h, x) => h * 397 ^ x);
                     return hashCode;
                 }
+            }
+
+            public override int GetHashCode()
+            {
+                return this.HashKey.Value;
             }
         }
 

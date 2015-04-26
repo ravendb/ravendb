@@ -863,14 +863,13 @@ namespace Voron.Impl.Journal
 			var write = tempBuffer;
 			var txPages = tx.GetTransactionPages();
 
-			for (int index = 1; index < txPages.Count; index++)
-			{
-				var txPage = txPages[index];
-				var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
-				var count = txPage.NumberOfPages * AbstractPager.PageSize;
+            foreach( var txPage in txPages )
+            {
+                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                var count = txPage.NumberOfPages * AbstractPager.PageSize;
                 MemoryUtils.BulkCopy(write, scratchPage, count);
-				write += count;
-			}
+                write += count;
+            }
 
 			var len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBuffer);
 		    var remainder = len % AbstractPager.PageSize;
@@ -884,7 +883,8 @@ namespace Voron.Impl.Journal
 
 			var pages = new IntPtr[compressedPages + 1];
 
-			var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPages[0].ScratchFileNumber, txPages[0].PositionInScratchBuffer);
+            var txHeaderPage = tx.GetTransactionHeaderPage();
+            var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(txHeaderPage.ScratchFileNumber, txHeaderPage.PositionInScratchBuffer);
 			var txHeader = (TransactionHeader*)txHeaderBase;
 
 			txHeader->Compressed = true;

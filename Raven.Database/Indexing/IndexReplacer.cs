@@ -50,7 +50,10 @@ namespace Raven.Database.Indexing
 				}
 
 				var document = db.Documents.Get(notification.Id, null);
-				HandleIndexReplaceDocument(document);
+				var replaceIndexId = HandleIndexReplaceDocument(document);
+
+				if (replaceIndexId != null)
+					ReplaceIndexes(new []{ replaceIndexId.Value });
 			};
 
 			Initialize();
@@ -61,16 +64,21 @@ namespace Raven.Database.Indexing
 			int nextStart = 0;
 			var documents = Database.Documents.GetDocumentsWithIdStartingWith(Constants.IndexReplacePrefix, null, null, 0, int.MaxValue, Database.WorkContext.CancellationToken, ref nextStart);
 
+			var indexes = new List<int>();
 			foreach (RavenJObject document in documents)
 			{
-				HandleIndexReplaceDocument(document.ToJsonDocument());
+				var replaceIndexId = HandleIndexReplaceDocument(document.ToJsonDocument());
+				if (replaceIndexId.HasValue)
+					indexes.Add(replaceIndexId.Value);
 			}
+
+			ReplaceIndexes(indexes);
 		}
 
-		private void HandleIndexReplaceDocument(JsonDocument document)
+		private int? HandleIndexReplaceDocument(JsonDocument document)
 		{
 			if (document == null)
-				return;
+				return null;
 
 			var id = document.Key;
 			var replaceIndexName = id.Substring(Constants.IndexReplacePrefix.Length);
@@ -79,7 +87,7 @@ namespace Raven.Database.Indexing
 			if (replaceIndex == null)
 			{
 				DeleteIndexReplaceDocument(id);
-				return;
+				return null;
 			}
 
 			var replaceIndexId = replaceIndex.IndexId;
@@ -97,7 +105,7 @@ namespace Raven.Database.Indexing
 			if (string.Equals(replaceIndexName, indexReplaceInformation.IndexToReplace, StringComparison.OrdinalIgnoreCase))
 			{
 				DeleteIndexReplaceDocument(id);
-				return;
+				return null;
 			}
 
 			if (indexReplaceInformation.ReplaceTimeUtc.HasValue)
@@ -116,6 +124,8 @@ namespace Raven.Database.Indexing
 
 				return indexReplaceInformation;
 			});
+
+			return replaceIndexId;
 		}
 
 		private void DeleteIndexReplaceDocument(string documentKey)
@@ -149,8 +159,9 @@ namespace Raven.Database.Indexing
 				var shouldReplace = false;
 				Database.TransactionalStorage.Batch(accessor =>
 				{
-					if (Database.IndexStorage.IsIndexStale(indexId, Database.LastCollectionEtags) == false)
-						shouldReplace = true; // always replace non-stale indexes
+					if (indexReplaceInformation.Forced 
+						|| Database.IndexStorage.IsIndexStale(indexId, Database.LastCollectionEtags) == false)
+						shouldReplace = true; // always replace non-stale or forced indexes
 					else
 					{
 						var replaceIndex = Database.IndexStorage.GetIndexInstance(indexId);
@@ -177,6 +188,18 @@ namespace Raven.Database.Indexing
 			}
 
 			ReplaceIndexes(indexes);
+		}
+
+		public void ForceReplacement(IndexDefinition indexDefiniton)
+		{
+			var indexId = indexDefiniton.IndexId;
+			IndexReplaceInformation indexReplaceInformation;
+			if (indexesToReplace.TryGetValue(indexId, out indexReplaceInformation) == false)
+				return;
+
+			indexReplaceInformation.Forced = true;
+
+			ReplaceIndexes(new List<int> { indexId });
 		}
 
 		private void ReplaceIndexes(Dictionary<int, IndexReplaceInformation> indexes)
@@ -250,6 +273,8 @@ namespace Raven.Database.Indexing
 			public string ReplaceIndex { get; set; }
 
 			public int ErrorCount { get; set; }
+
+			public bool Forced { get; set; }
 		}
 	}
 }

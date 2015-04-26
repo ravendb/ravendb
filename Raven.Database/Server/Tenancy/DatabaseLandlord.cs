@@ -28,8 +28,23 @@ namespace Raven.Database.Server.Tenancy
         private const string DATABASES_PREFIX = "Raven/Databases/";
         public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
+		public int MaxIdleTimeForTenantDatabaseInSec { get; private set; }
+		
+		public int FrequencyToCheckForIdleDatabasesInSec { get; private set; }
+
         public DatabasesLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
+			int val;
+			if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
+				val = 900;
+
+	        MaxIdleTimeForTenantDatabaseInSec = val;
+
+			if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
+				val = 60;
+
+	        FrequencyToCheckForIdleDatabasesInSec = val;
+
 			string tempPath = Path.GetTempPath();
 			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
 	        if (File.Exists(fullTempPath))

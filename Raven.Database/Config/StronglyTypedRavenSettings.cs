@@ -46,6 +46,8 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			AllowScriptsToAdjustNumberOfSteps = new BooleanSetting(settings[Constants.AllowScriptsToAdjustNumberOfSteps], false);
+
 			IndexAndTransformerReplicationLatencyInSec = new IntegerSetting(settings[Constants.RavenIndexAndTransformerReplicationLatencyInSec], Constants.DefaultRavenIndexAndTransformerReplicationLatencyInSec);
 
 			PrefetchingDurationLimit = new IntegerSetting(settings[Constants.RavenPrefetchingDurationLimit], Constants.DefaultPrefetchingDurationLimit);
@@ -207,6 +209,7 @@ namespace Raven.Database.Config
             Voron.InitialFileSize = new NullableIntegerSetting(settings[Constants.Voron.InitialFileSize], (int?)null);
 			Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 1024);
             Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
+			Voron.AllowOn32Bits = new BooleanSetting(settings[Constants.Voron.AllowOn32Bits], false);
             Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
 
 			var txJournalPath = settings[Constants.RavenTxJournalPath];
@@ -263,6 +266,8 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public BooleanSetting AllowScriptsToAdjustNumberOfSteps { get; private set; }
 
 		public IntegerSetting IndexAndTransformerReplicationLatencyInSec { get; private set; }
 
@@ -417,6 +422,8 @@ namespace Raven.Database.Config
 			public StringSetting TempPath { get; set; }
 
 			public StringSetting JournalsStoragePath { get; set; }
+
+			public BooleanSetting AllowOn32Bits { get; set; }
 		}
 
 		public class EsentConfiguration

@@ -30,6 +30,7 @@ namespace Raven.Bundles.Encryption.Streams
 		private readonly object locker = new object();
 		private EncryptedFile.Block currentReadingBlock;
 		private EncryptedFile.Block currentWritingBlock;
+	    private long currentWritingBlockUsage;
 		private long currentPosition;
 
 		private readonly bool isReadonly;
@@ -104,7 +105,16 @@ namespace Raven.Bundles.Encryption.Streams
 					currentReadingBlock = underlyingStream.ReadBlock(startingBlock);
 				}
 
-				var blockRead = (int) Math.Min(underlyingStream.Header.TotalUnencryptedSize - Position, currentBlockSize - blockOffset);
+				int blockRead;
+				if (underlyingStream.Header.MagicNumber == EncryptedFile.DefaultMagicNumber)
+				{
+					blockRead = (int) Math.Min(currentReadingBlock.TotalEncryptedStreamLength - Position, currentBlockSize - blockOffset);
+				}
+				else
+				{
+					blockRead = (int) Math.Min(underlyingStream.Header.TotalUnencryptedSize - Position, currentBlockSize - blockOffset);
+				}
+				
 				var actualRead = Math.Min(count, blockRead);
 				Array.Copy(currentReadingBlock.Data, blockOffset, buffer, bufferOffset, actualRead);
 				// We use the fact that a stream doesn't have to read all data in one go to avoid a loop here.
@@ -147,6 +157,17 @@ namespace Raven.Bundles.Encryption.Streams
 						{
 							// Read the existing block from the underlying stream, as we're only changing part of it
 							currentWritingBlock = underlyingStream.ReadBlock(startingBlock);
+						    var lastBlock = underlyingStream.Header.GetBlockNumberFromLogicalPosition(Length);
+						    if (lastBlock == startingBlock)
+						    {
+						        // this is the last block, it may not be a full one, so we need to make sure that it
+                                // the actual size reflect that
+						        currentWritingBlockUsage = underlyingStream.Header.GetBlockOffsetFromLogicalPosition(Length);
+						    }
+						    else
+						    {
+						        currentWritingBlockUsage = currentWritingBlock.Data.Length;// full size
+						    }
 						}
 						else
 						{
@@ -157,18 +178,21 @@ namespace Raven.Bundles.Encryption.Streams
 								Data = new byte[currentBlockSize],
 								TotalEncryptedStreamLength = underlyingStream.Footer.TotalLength
 							};
+						    currentWritingBlockUsage = 0;
 						}
 					}
-
-					if (startingBlock == endingBlock)
+                  
+                    if (startingBlock == endingBlock)
 						// If the entire write is done to the same block
 					{
-						Array.Copy(buffer, bufferOffset, currentWritingBlock.Data, blockOffset, count);
+                        currentWritingBlockUsage = Math.Max(currentWritingBlockUsage, blockOffset + count);
+                        Array.Copy(buffer, bufferOffset, currentWritingBlock.Data, blockOffset, count);
 						Position += count;
 						break;
 					}
+                    var countInCurrentBlock = currentBlockSize - (int)blockOffset;
+                    currentWritingBlockUsage = Math.Max(currentWritingBlockUsage, blockOffset + countInCurrentBlock);
 					
-					var countInCurrentBlock = currentBlockSize - (int) blockOffset;
 					Array.Copy(buffer, bufferOffset, currentWritingBlock.Data, blockOffset, countInCurrentBlock);
 					Position += countInCurrentBlock;
 
@@ -183,7 +207,7 @@ namespace Raven.Bundles.Encryption.Streams
 		{
 			if (currentWritingBlock != null)
 			{
-				underlyingStream.WriteBlock(currentWritingBlock);
+				underlyingStream.WriteBlock(currentWritingBlock, currentWritingBlockUsage);
 				currentWritingBlock = null;
 				currentReadingBlock = null;
 			}

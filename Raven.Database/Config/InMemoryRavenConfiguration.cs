@@ -100,7 +100,10 @@ namespace Raven.Database.Config
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
 
+			AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
+
 			IndexAndTransformerReplicationLatencyInSec = ravenSettings.IndexAndTransformerReplicationLatencyInSec.Value;
+
 			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
 
 			// Important! this value is synchronized with the max sessions number in esent
@@ -278,6 +281,7 @@ namespace Raven.Database.Config
 			Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
 			Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
 			Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
+			Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
 
 			Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
 
@@ -330,6 +334,8 @@ namespace Raven.Database.Config
 		public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
 
 	    public int IndexAndTransformerReplicationLatencyInSec { get; internal set; }
+
+		public bool AllowScriptsToAdjustNumberOfSteps { get; set; }
 
 		/// <summary>
 		/// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
@@ -1291,6 +1297,11 @@ namespace Raven.Database.Config
 				public string TempPath { get; set; }
 
 				public string JournalsStoragePath { get; set; }
+
+				/// <summary>
+				/// Whether to allow Voron to run in 32 bits process.
+				/// </summary>
+				public bool AllowOn32Bits { get; set; }
 			}
 		}
 

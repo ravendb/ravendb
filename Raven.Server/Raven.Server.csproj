@@ -83,6 +83,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="metrics">
@@ -164,6 +165,7 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiDatabase.cs">
       <Link>Smuggler\Imports\MultiDatabase.cs</Link>
     </Compile>
+    <Compile Include="ConsoleText.cs" />
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs">

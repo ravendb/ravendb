@@ -405,8 +405,7 @@ namespace Raven.Client.Document.Async
             var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation, token).ConfigureAwait(false);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
 			queryOperation.DisableEntitiesTracking = true;
-
-			return new QueryYieldStream<T>(this, enumerator, queryOperation, token);
+			return new QueryYieldStream<T>(this, enumerator, queryOperation,query, token);
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
@@ -462,17 +461,21 @@ namespace Raven.Client.Document.Async
 		public class QueryYieldStream<T> : YieldStream<T>
 		{
 			private readonly QueryOperation queryOperation;
+			private IAsyncDocumentQuery<T> query;
 
-			public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation, CancellationToken token = default (CancellationToken))
+			public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation, IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
 				: base(parent, enumerator, token)
 			{
 				this.queryOperation = queryOperation;
+				this.query = query;
 			}
 
 			protected override void SetCurrent()
 			{
-				var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
+			    var ravenJObject = enumerator.Current;
+			    query.InvokeAfterStreamExecuted(ref ravenJObject);
 
+				var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata);
 				string key = null;
 				Etag etag = null;
 				if (meta != null)
@@ -485,7 +488,7 @@ namespace Raven.Client.Document.Async
 
 				Current = new StreamResult<T>
 				{
-					Document = queryOperation.Deserialize<T>(enumerator.Current),
+					Document = queryOperation.Deserialize<T>(ravenJObject),
 					Etag = etag,
 					Key = key,
 					Metadata = meta
@@ -503,7 +506,6 @@ namespace Raven.Client.Document.Async
 			protected override void SetCurrent()
 			{
 				var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
-
 				Current = new StreamResult<T>
 				{
 					Document = (T)parent.ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),

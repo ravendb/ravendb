@@ -37,6 +37,7 @@ using Raven.Database.Util;
 using Raven.Client.Connection;
 
 using Raven.Client.Extensions;
+using Raven.Database.FileSystem.Util;
 
 namespace Raven.Server
 {
@@ -443,13 +444,56 @@ namespace Raven.Server
 			actionToTake();
 		}
 
-		private static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
-		{
-			var previousColor = Console.ForegroundColor;
-			Console.ForegroundColor = color;
-			Console.WriteLine(message, args);
-			Console.ForegroundColor = previousColor;
-		}
+	    private static void ConsoleWriteWithColor(params ConsoleText[] consoleTexts)
+	    {
+            if (consoleTexts == null)
+	        {
+                throw new ArgumentNullException("consoleTexts");
+	        }
+
+	        var previousForegroundColor = Console.ForegroundColor;
+	        var previousBackgroundColor = Console.BackgroundColor;
+
+            foreach (var consoleText in consoleTexts)
+            {
+                Console.ForegroundColor = consoleText.ForegroundColor;
+                Console.BackgroundColor = consoleText.BackgroundColor;
+
+                Console.Write(consoleText.Message, consoleText.Args);
+
+                if (consoleText.IsNewLinePostPended)
+                {
+                    Console.WriteLine();
+                }
+            }
+
+            Console.ForegroundColor = previousForegroundColor;
+	        Console.BackgroundColor = previousBackgroundColor;
+	    }
+
+        private static void ConsoleWriteWithColor(ConsoleColor color, string message, params object[] args)
+        {
+            ConsoleWriteWithColor(new ConsoleText
+            {
+                ForegroundColor = color,
+                BackgroundColor = Console.BackgroundColor,
+                IsNewLinePostPended = false,
+                Message = message,
+                Args = args
+            });
+        }
+
+        private static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
+        {
+            ConsoleWriteWithColor(new ConsoleText
+            {
+                ForegroundColor = color,
+                BackgroundColor = Console.BackgroundColor,
+                IsNewLinePostPended = true,
+                Message = message,
+                Args = args
+            });
+        }
 
 		private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, bool disableReplicationDestionations, Uri uri, bool waitForRestore, int? timeout)
 		{
@@ -795,7 +839,10 @@ Configuration databaseOptions:
 		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool launchBrowser, Func<RavenDbServer, bool> afterOpen, bool useEmbeddedServer = true)
 		{
 			var sp = Stopwatch.StartNew();
-			using (var server = new RavenDbServer(ravenConfiguration) { UseEmbeddedHttpServer = useEmbeddedServer }.Initialize())
+			using (var server = new RavenDbServer(ravenConfiguration)
+			{
+			    UseEmbeddedHttpServer = useEmbeddedServer
+			}.Initialize())
 			{
 				sp.Stop();
 				var path = Path.Combine(Environment.CurrentDirectory, "default.raven");
@@ -805,16 +852,89 @@ Configuration databaseOptions:
 					//new SmugglerApi(new SmugglerDatabaseOptions(), new RavenConnectionStringOptions {Url = ravenConfiguration.ServerUrl}).ImportData(new SmugglerDatabaseOptions {BackupPath = path});
 				}
 
-				Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
-				Console.WriteLine("Server started in {0:#,#;;0} ms", sp.ElapsedMilliseconds);
-				ConsoleWriteLineWithColor(ConsoleColor.Green, "Working directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.WorkingDirectory);
-				ConsoleWriteLineWithColor(ConsoleColor.Green, "Data directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.DataDirectory);
-				ConsoleWriteLineWithColor(ConsoleColor.Green, "Index cache directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.CompiledIndexCacheDirectory);
-				ConsoleWriteLineWithColor(ConsoleColor.Green, "Plugins directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.PluginsDirectory);
-				Console.WriteLine("HostName: {0} Port: {1}, Storage: {2}", ravenConfiguration.HostName ?? "<any>",
-					ravenConfiguration.Port,
-					server.SystemDatabase.TransactionalStorage.FriendlyName);
-				Console.WriteLine("Server Url: {0}", ravenConfiguration.ServerUrl);
+                const string asciiHeader = @"        ____                       ____  _{0}       |  _ \ __ ___   _____ _ __ |  _ \| |__{0}       | |_) / _` \ \ / / _ \ '_ \| | | | '_ \{0}       |  _ < (_| |\ V /  __/ | | | |_| | |_) |{0}       |_| \_\__,_| \_/ \___|_| |_|____/|_.__/{0}{0}";
+                ConsoleWriteLineWithColor(ConsoleColor.DarkGray, asciiHeader, Environment.NewLine);
+                ConsoleWriteLineWithColor(ConsoleColor.Cyan, "      Safe by default, optimized for efficiency");
+                Console.WriteLine();
+                Console.WriteLine();
+
+			    const string lineBorder = "+-----------------------------------------------------------------------------------------------------+";
+
+                ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
+                ConsoleWriteLineWithColor(ConsoleColor.DarkCyan, " Source Code (git repo): https://github.com/ravendb/ravendb");
+                ConsoleWriteWithColor(new ConsoleText { Message = " Built with ", ForegroundColor = ConsoleColor.Gray},
+                    new ConsoleText { Message = "love ", ForegroundColor = ConsoleColor.Red },
+                    new ConsoleText { Message = "by ", ForegroundColor = ConsoleColor.Gray },
+                    new ConsoleText { Message = "Hibernating Rhinos ", ForegroundColor = ConsoleColor.Yellow },
+                    new ConsoleText { Message = "and awesome contributors!", ForegroundColor = ConsoleColor.Gray, IsNewLinePostPended = true });
+                Console.WriteLine(lineBorder);
+
+                Console.WriteLine("  Server started in {0:#,#;;0} ms", sp.ElapsedMilliseconds);
+
+			    ConsoleWriteWithColor(new ConsoleText {Message = "  Working directory    : "},
+			        new ConsoleText
+			        {
+			            Message = ravenConfiguration.RunInMemory ? " RAM " : ravenConfiguration.WorkingDirectory.TrimEnd('\\'),
+                        ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        IsNewLinePostPended = true
+			        });
+
+                ConsoleWriteWithColor(new ConsoleText { Message = "  Data directory       : " },
+                    new ConsoleText
+                    {
+                        Message = ravenConfiguration.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.WorkingDirectory, ravenConfiguration.DataDirectory),
+                        ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        IsNewLinePostPended = true
+                    }); 
+
+                ConsoleWriteWithColor(new ConsoleText { Message = "  Index cache directory: " },
+                    new ConsoleText
+                    {
+                        Message = ravenConfiguration.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.WorkingDirectory, ravenConfiguration.CompiledIndexCacheDirectory),
+                        ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        IsNewLinePostPended = true
+                    }); 
+                
+                ConsoleWriteWithColor(new ConsoleText { Message = "  Plugins directory    : " },
+                    new ConsoleText
+                    {
+                        Message = ravenConfiguration.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.WorkingDirectory, ravenConfiguration.PluginsDirectory),
+                        ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        IsNewLinePostPended = true
+                    }); 
+                
+                var hostName = ravenConfiguration.HostName ?? "<any>";
+                ConsoleWriteWithColor(new ConsoleText { Message = "  HostName             : " },
+                    new ConsoleText { Message = hostName, ForegroundColor = ConsoleColor.White });
+                ConsoleWriteWithColor(new ConsoleText { Message = " Port: " },
+                    new ConsoleText { Message = ravenConfiguration.Port.ToString(), ForegroundColor = ConsoleColor.White, IsNewLinePostPended = true });
+                
+                ConsoleWriteWithColor(new ConsoleText { Message = "  Storage              : " },
+                    new ConsoleText { Message = server.SystemDatabase.TransactionalStorage.FriendlyName, ForegroundColor = ConsoleColor.Red, IsNewLinePostPended = true });
+                ConsoleWriteWithColor(new ConsoleText { Message = "  Server Url           : " },
+                    new ConsoleText { Message = ravenConfiguration.ServerUrl, ForegroundColor = ConsoleColor.DarkCyan, IsNewLinePostPended = true }); 
+                
+                Console.WriteLine();
+                ConsoleWriteWithColor(new ConsoleText 
+                {
+                    ForegroundColor = ConsoleColor.Green, 
+                    BackgroundColor = ConsoleColor.Black, 
+                    Message = "  Raven is ready to process requests "
+                },
+                new ConsoleText
+                {
+                    ForegroundColor = ConsoleColor.Red,
+                    BackgroundColor = ConsoleColor.Black,
+                    Message = "\u2665 \u2665 \u2665", // heart heart heart
+                    IsNewLinePostPended = true
+                });
+
+                Console.WriteLine(lineBorder);
+
 
 				if (launchBrowser)
 				{
