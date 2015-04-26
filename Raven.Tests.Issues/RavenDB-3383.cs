@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -54,12 +55,11 @@ namespace Raven.Tests.Issues
 
 					using (var session = docStore.OpenSession())
 					{
+						docStore.GetObserveChangesAndEvictItemsFromCacheTask().Wait();
 						var car = session.Load<Car>("car/2");
 						car.Brand = "BMW";
 						session.SaveChanges();
 					}
-
-					Thread.Sleep(5000); // Give the client some time to receive the notification from the server.
 
 					using (var session = docStore.OpenSession("Foo"))
 					{
@@ -101,14 +101,18 @@ namespace Raven.Tests.Issues
 						Assert.True(car.Brand.Equals("Volvo", StringComparison.OrdinalIgnoreCase));
 					}
 
+
+					int numberOfCacheResets = docStore.JsonRequestFactory.NumberOfCacheResets;
+
 					using (var session = docStore.OpenSession())
 					{
+						docStore.GetObserveChangesAndEvictItemsFromCacheTask().Wait();
 						var car = session.Load<Car>("car/2");
 						car.Brand = "BMW";
 						session.SaveChanges();
 					}
 
-					Thread.Sleep(5000); // Give the client some time to receive the notification from the server.
+					Assert.True(SpinWait.SpinUntil(() => docStore.JsonRequestFactory.NumberOfCacheResets > numberOfCacheResets, 10000));
 
 					using (var session = docStore.OpenSession("Foo"))
 					{

@@ -16,6 +16,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 
 namespace Raven.Client.Shard
@@ -253,7 +254,7 @@ namespace Raven.Client.Shard
 			var sessionId = Guid.NewGuid();
             var session = new ShardedDocumentSession(database, this, Listeners, sessionId, ShardStrategy, shardDbCommands)
 				{
-					DatabaseName = database
+					DatabaseName = database ?? MultiDatabase.GetDatabaseName(Url)
 				};
 			AfterSessionCreated(session);
 			return session;
