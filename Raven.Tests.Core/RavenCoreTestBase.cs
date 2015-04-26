@@ -104,7 +104,7 @@ namespace Raven.Tests.Core
 			{
 				var statistics = databaseCommands.GetStatistics();
 				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
-				throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + Environment.NewLine + stats);
+				throw new TimeoutException("The indexes stayed stale for more than " + timeout + Environment.NewLine + stats);
 			}
 		}
 
