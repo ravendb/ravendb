@@ -282,6 +282,7 @@
     <Compile Include="FileSystem\SearchResults.cs" />
     <Compile Include="FileSystem\SynchronizationConfig.cs" />
     <Compile Include="FileSystem\SynchronizationDestinationsConfig.cs" />
+    <Compile Include="Indexing\DocCountWithSampleDocs.cs" />
     <Compile Include="Indexing\IndexLockMode.cs" />
     <Compile Include="Indexing\IndexMergeResults.cs" />
     <Compile Include="Indexing\IndexReplaceDocument.cs" />
