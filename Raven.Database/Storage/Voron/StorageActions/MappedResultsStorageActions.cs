@@ -1085,7 +1085,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
     {
         private readonly ConcurrentSet<object> innerSet;
 
-        private readonly IDictionary<Slice, object> state = new Dictionary<Slice, object>(new SliceEqualityComparer());
+        private readonly IDictionary<Slice, object> state = new Dictionary<Slice, object>(new SliceComparer());
 
         public ScheduledReductionDeleter(ConcurrentSet<object> set, Func<object, Slice> extractKey)
         {

@@ -3,12 +3,12 @@
 	using System;
 	using System.Runtime.CompilerServices;
 
-	public unsafe delegate int SliceComparer(byte* a, byte* b, int size);
+	public unsafe delegate int PrefixedSliceComparer(byte* a, byte* b, int size);
 
-	public unsafe static class SliceComparisonMethods
+	public unsafe static class PrefixedSliceComparisonMethods
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static int Compare(Slice x, PrefixedSlice y, SliceComparer cmp, ushort size)
+		public static int Compare(Slice x, PrefixedSlice y, PrefixedSliceComparer cmp, ushort size)
 		{
 			fixed (byte* p1 = x.Array)
 			fixed (byte* p2 = y.NonPrefixedData.Array)
@@ -65,7 +65,7 @@
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static int Compare(PrefixedSlice x, PrefixedSlice y, SliceComparer cmp, ushort size)
+		public static int Compare(PrefixedSlice x, PrefixedSlice y, PrefixedSliceComparer cmp, ushort size)
 		{
 			fixed (byte* p1 = x.NonPrefixedData.Array)
 			fixed (byte* p2 = y.NonPrefixedData.Array)
@@ -92,7 +92,7 @@
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int Compare(byte* prefix_x, ushort prefix_x_len, byte* prefix_y, ushort prefix_y_len, byte* x, ushort x_len, byte* y,
-		   ushort y_len, SliceComparer cmp, ushort size)
+		   ushort y_len, PrefixedSliceComparer cmp, ushort size)
 		{
 			if (size == 0) // empty slice before all keys
 				return 0;
