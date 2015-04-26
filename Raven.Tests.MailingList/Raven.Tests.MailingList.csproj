@@ -43,6 +43,12 @@
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
     </Reference>
+    <Reference Include="FluentAssertions">
+      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentAssertions.Core">
+      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net">
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
@@ -408,6 +414,18 @@
     <Compile Include="SuggestAsync.cs" />
     <Compile Include="SuggestionFail.cs" />
     <Compile Include="SumTests.cs" />
+    <Compile Include="SynonymAnalyzer\CanCallLastOnArray.cs" />
+    <Compile Include="SynonymAnalyzer\Comment.cs" />
+    <Compile Include="SynonymAnalyzer\CommentsFullTextIndex.cs" />
+    <Compile Include="SynonymAnalyzer\ISynonymEngine.cs" />
+    <Compile Include="SynonymAnalyzer\RavenStandardAnalyzerTests.cs" />
+    <Compile Include="SynonymAnalyzer\RavenSynonymAnalyzerTests.cs" />
+    <Compile Include="SynonymAnalyzer\SynonymAnalyzer.cs" />
+    <Compile Include="SynonymAnalyzer\SynonymFilter.cs" />
+    <Compile Include="SynonymAnalyzer\TestComment.cs" />
+    <Compile Include="SynonymAnalyzer\TestCommentsStandandAnalyzerIndex.cs" />
+    <Compile Include="SynonymAnalyzer\TestCommentsSynonymAnalyzerIndex.cs" />
+    <Compile Include="SynonymAnalyzer\XmlSynonymEngine.cs" />
     <Compile Include="Tamir.cs" />
     <Compile Include="tcoonfield.cs" />
     <Compile Include="TermVectorsInMultiMapIndexes.cs" />
@@ -508,6 +526,11 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Everett\DocumentWithBytes.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="SynonymAnalyzer\syn.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
