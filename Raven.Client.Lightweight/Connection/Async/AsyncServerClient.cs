@@ -959,8 +959,8 @@ namespace Raven.Client.Connection.Async
 						Url = "/facets/" + x.IndexName,
 						Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
 							x.Query.GetQueryString(),
-							x.Query.Start,
-							x.Query.PageSize,
+							x.PageStart,
+							x.PageSize,
 							addition)
 					};
 				}
@@ -974,8 +974,8 @@ namespace Raven.Client.Connection.Async
 						Url = "/facets/" + x.IndexName,
 						Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
 							x.Query.GetQueryString(),
-							x.Query.Start,
-							x.Query.PageSize,
+							x.PageStart,
+							x.PageSize,
 							addition)
 					};
 				}
