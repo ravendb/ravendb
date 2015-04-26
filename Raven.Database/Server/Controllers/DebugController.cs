@@ -402,48 +402,40 @@ namespace Raven.Database.Server.Controllers
 		}
 
 	    [HttpGet]
-	    [RavenRoute("debug/dump-ref-csv")]
-        [RavenRoute("databases/{databaseName}/debug/dump-ref-csv")]
-        public HttpResponseMessage DumpRefsToCsv(int SampleCount = 10,bool sort = false)
+	    [RavenRoute("debug/slow-dump-ref-csv")]
+		[RavenRoute("databases/{databaseName}/debug/slow-dump-ref-csv")]
+        public HttpResponseMessage DumpRefsToCsv(int sampleCount = 10)
 	    {
-            var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-            try
-            {
-                using (var file = new FileStream(tempFileName, FileMode.Create))
-                using (var package = new ZipArchive(file, ZipArchiveMode.Create))
-                {
-                    var refs = package.CreateEntry("refs.csv");
-                    using (var refStream = refs.Open())
-                    using (var refsWriter = new StreamWriter(refStream))
-                    {
-                        Database.TransactionalStorage.Batch(accessor =>
-                        {
-                            accessor.Indexing.DumpAllReferancesToCSV(refsWriter, SampleCount, sort);
-                        });
-                        refsWriter.Flush();
-                    }
-                }
-
-                var response = new HttpResponseMessage();
-
-                response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
-                {
-                    Headers =
-                    {
-                        ContentDisposition = new ContentDispositionHeaderValue("attachment")
-                        {
-                            FileName = "refs.zip",
-                        },
-                        ContentType = new MediaTypeHeaderValue("application/octet-stream")
-                    }
-                };
-
-                return response;
-            }
-            finally
-            {
-                IOExtensions.DeleteFile(tempFileName);
-            }
+		    return new HttpResponseMessage
+		    {
+			    Content = new PushStreamContent((stream, content, context) =>
+			    {
+				    using (var archive = new ZipArchive(stream, ZipArchiveMode.Create))
+				    {
+					    var refs = archive.CreateEntry("doc-refs.csv");
+					    using (var zipStream = refs.Open())
+					    using (var writer = new StreamWriter(zipStream))
+					    {
+							writer.WriteLine("ref count,document key,sample references");
+						    Database.TransactionalStorage.Batch(accessor =>
+						    {
+							    accessor.Indexing.DumpAllReferancesToCSV(writer, sampleCount);
+						    });
+						    writer.Flush();
+					    }
+				    }
+			    })
+			    {
+				    Headers =
+				    {
+					    ContentDisposition = new ContentDispositionHeaderValue("attachment")
+					    {
+						    FileName = "doc-refs.csv.zip",
+					    },
+					    ContentType = new MediaTypeHeaderValue("application/octet-stream")
+				    }
+			    }
+		    };
 	    }
 
 		[HttpGet]

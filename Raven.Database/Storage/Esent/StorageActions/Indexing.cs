@@ -432,47 +432,37 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			return QueryReferences(key, "by_key", "ref");
 		}
 
-        public void DumpAllReferancesToCSV(StreamWriter writer, int numberOfSampleDocs, bool sort = false)
+        public void DumpAllReferancesToCSV(StreamWriter writer, int numberOfSampleDocs)
         {
-            Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
-            Api.JetMove(session, IndexedDocumentsReferences, JET_Move.First, MoveGrbit.None);
-            var keysToRef = new Dictionary<string, DocCountWithSampleDocIds>();
+	        Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
+	        Api.JetMove(session, IndexedDocumentsReferences, JET_Move.First, MoveGrbit.None);
+	        var keysToRef = new Dictionary<string, DocCountWithSampleDocIds>();
 	        do
 	        {
-                var key = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
-                                                        tableColumnsCache.IndexedDocumentsReferencesColumns["key"], Encoding.Unicode);
-	            if (!keysToRef.ContainsKey(key))
-	            {
-	                keysToRef[key] = new DocCountWithSampleDocIds(){Count = 0, SampleDocsIds = new HashSet<string>()};
-	            }
-                var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
-                                                        tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], Encoding.Unicode);
-	            var docData = keysToRef[key];
-                if (docData.Count < numberOfSampleDocs) docData.SampleDocsIds.Add(item);
-	            docData.Count++;
+		        var key = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+			        tableColumnsCache.IndexedDocumentsReferencesColumns["key"], Encoding.Unicode);
+				DocCountWithSampleDocIds docData;
+				if (keysToRef.TryGetValue(key, out docData) == false)
+		        {
+					keysToRef[key] = docData = new DocCountWithSampleDocIds()
+			        {
+				        Count = 0,
+				        SampleDocsIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+			        };
+		        }
+		        var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+			        tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], Encoding.Unicode);
+		        if (docData.Count < numberOfSampleDocs)
+					docData.SampleDocsIds.Add(item);
+		        docData.Count++;
 	        } while (Api.TryMoveNext(session, IndexedDocumentsReferences));
-            if (sort)
-            {
-                List<KeyValuePair<string, DocCountWithSampleDocIds>> sortedDocByRef = keysToRef.ToList();
+	        
+	        foreach (var kvp in keysToRef.OrderByDescending(x=>x.Value.Count))
+	        {
+		        writer.WriteLine("{0},{1},\"{2}\"", kvp.Value.Count, kvp.Key, string.Join(", ", kvp.Value.SampleDocsIds));
+	        }
+        }
 
-                sortedDocByRef.Sort((firstPair, nextPair) =>
-                {
-                    return nextPair.Value.Count.CompareTo(firstPair.Value.Count);
-                });
-                foreach (var tuple in sortedDocByRef)
-                {
-                    writer.WriteLine(string.Format("{0},{1},\"{2}\"", tuple.Value.Count, tuple.Key, string.Join(", ", tuple.Value.SampleDocsIds)));
-                }
-            }
-            else
-            {
-                foreach (var key in keysToRef.Keys)
-                {
-                    writer.WriteLine(string.Format("{0},{1},\"{2}\"", keysToRef[key].Count, key, string.Join(", ", keysToRef[key].SampleDocsIds)));
-                }
-            }
-
-	    }
 		private IEnumerable<string> QueryReferences(string key, string id, string col)
 		{
 			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, id);            
