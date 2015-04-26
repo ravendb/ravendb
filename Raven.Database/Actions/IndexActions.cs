@@ -343,7 +343,7 @@ namespace Raven.Database.Actions
 
 	        Debug.Assert(index != null);
 
-	        Task precomputeTask = null;
+	        Action precomputeTask = null;
 	        if (WorkContext.RunIndexing &&
 				name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
 	            Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex))
@@ -364,15 +364,17 @@ namespace Raven.Database.Actions
 			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
 			// we start the precomuteTask _after_ we finished adding the index
-	        if (precomputeTask != null) 
-				precomputeTask.Start();
+	        if (precomputeTask != null)
+	        {
+		        precomputeTask();
+	        }
 
 	        WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             WorkContext.NotifyAboutWork();
         }
 
 
-        private Task TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
+        private Action TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
         {
             var generator = IndexDefinitionStorage.GetViewGenerator(definition.IndexId);
             if (generator.ForEntityNames.Count == 0 && index.IsTestIndex == false)
@@ -386,35 +388,52 @@ namespace Raven.Database.Actions
             try
             {
 				var cts = new CancellationTokenSource();
-
-				var task = new Task(() => ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts), TaskCreationOptions.LongRunning)
-					.ContinueWith(t =>
+			
+				var task = new Task(() =>
+				{
+					try
 					{
-						if (t.IsFaulted)
-						{
-							Log.Warn("Could not apply precomputed batch for index " + index, t.Exception);
-						}
+						ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts);
+					}
+					catch (Exception e)
+					{
+						Log.Warn("Could not apply precomputed batch for index " + index, e);
+					}
+					finally
+					{
 						index.IsMapIndexingInProgress = false;
 						WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
 						WorkContext.NotifyAboutWork();
-					}, cts.Token);
+					}
+				}, TaskCreationOptions.LongRunning);
 
-	            long id;
-				Database
-					.Tasks
-					.AddTask(
-						task, 
-						new TaskBasedOperationState(task), 
-						new TaskActions.PendingTaskDescription
-				        {
-					        StartTime = DateTime.UtcNow, 
-							Payload = index.PublicName, 
-							TaskType = TaskActions.PendingTaskType.NewIndexPrecomputedBatch
-				        }, 
-						out id,
-						cts);
+	            return () =>
+	            {
+		            try
+		            {
+			            task.Start();
 
-	            return task;
+			            long id;
+			            Database
+				            .Tasks
+				            .AddTask(
+					            task,
+					            new TaskBasedOperationState(task),
+					            new TaskActions.PendingTaskDescription
+					            {
+						            StartTime = DateTime.UtcNow,
+						            Payload = index.PublicName,
+						            TaskType = TaskActions.PendingTaskType.NewIndexPrecomputedBatch
+					            },
+					            out id,
+					            cts);
+		            }
+		            catch (Exception)
+		            {
+						index.IsMapIndexingInProgress = false;
+			            throw;
+		            }
+	            };
             }
             catch (Exception)
             {
