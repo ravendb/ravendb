@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System.Globalization;
+using System.IO;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 
@@ -432,9 +434,62 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-	    public void DumpAllReferancesToCSV(string dumpFilePath, int numberOfSampleDocs)
+        public void DumpAllReferancesToCSV(StreamWriter writer, int numberOfSampleDocs, bool sort = false)
 	    {
-	        throw new NotImplementedException();
+            var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);            
+	        using (var docRefIterator = documentReferencesByKey.Iterate(Snapshot, writeBatch.Value))
+	        {
+	            if (!docRefIterator.Seek(Slice.BeforeAllKeys))
+	            {
+                    // ref table empty
+	                return;
+	            }
+                var keysToRef = new Dictionary<string, DocCountWithSampleDocIds>();
+	            do
+	            {
+                    using (var iterator = documentReferencesByKey.MultiRead(Snapshot, CreateKey(docRefIterator.CurrentKey)))
+	                {
+	                    if (!iterator.Seek(Slice.BeforeAllKeys))
+	                        break;
+	                    do
+	                    {
+	                        ushort version;
+	                        var value = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
+                            var currentKeyStr = docRefIterator.CurrentKey.ToString();
+                            if (!keysToRef.ContainsKey(currentKeyStr))
+                            {
+                                keysToRef[currentKeyStr] = new DocCountWithSampleDocIds() { Count = 0, SampleDocsIds = new HashSet<string>() };
+                            }
+                            var docData = keysToRef[currentKeyStr];
+                            if (docData.Count < numberOfSampleDocs) docData.SampleDocsIds.Add(value.ReadString(DocumentReferencesFields.Reference));
+                            docData.Count++;
+	                    } while (iterator.MoveNext());
+	                }
+	                
+	            } while (docRefIterator.MoveNext());
+
+	            if (sort)
+	            {
+	                List<KeyValuePair<string, DocCountWithSampleDocIds>> sortedDocByRef = keysToRef.ToList();
+
+	                sortedDocByRef.Sort((firstPair, nextPair) =>
+	                {
+	                    return nextPair.Value.Count.CompareTo(firstPair.Value.Count);
+	                });
+	                foreach (var tuple in sortedDocByRef)
+	                {
+	                    writer.WriteLine(string.Format("{0},{1},\"{2}\"", tuple.Value.Count, tuple.Key, string.Join(", ", tuple.Value.SampleDocsIds)));
+	                }
+	            }
+	            else
+	            {
+                    foreach (var key in keysToRef.Keys)
+                    {
+                        writer.WriteLine(string.Format("{0},{1},\"{2}\"", keysToRef[key].Count, key, string.Join(", ", keysToRef[key].SampleDocsIds)));
+                    }
+	            }
+	            
+	        }
 	    }
 
 	    private StructureReader<T> LoadStruct<T>(TableOfStructures<T> table, string name, out ushort version) where T : struct

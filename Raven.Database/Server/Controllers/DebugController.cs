@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
@@ -400,22 +401,57 @@ namespace Raven.Database.Server.Controllers
 			};
 		}
 
+	    [HttpGet]
+	    [RavenRoute("debug/dump-ref-csv")]
+        [RavenRoute("databases/{databaseName}/debug/dump-ref-csv")]
+        public HttpResponseMessage DumpRefsToCsv(int SampleCount = 10,bool sort = false)
+	    {
+            var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            try
+            {
+                using (var file = new FileStream(tempFileName, FileMode.Create))
+                using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+                {
+                    var refs = package.CreateEntry("refs.csv");
+                    using (var refStream = refs.Open())
+                    using (var refsWriter = new StreamWriter(refStream))
+                    {
+                        Database.TransactionalStorage.Batch(accessor =>
+                        {
+                            accessor.Indexing.DumpAllReferancesToCSV(refsWriter, SampleCount, sort);
+                        });
+                        refsWriter.Flush();
+                    }
+                }
+
+                var response = new HttpResponseMessage();
+
+                response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
+                {
+                    Headers =
+                    {
+                        ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                        {
+                            FileName = "refs.zip",
+                        },
+                        ContentType = new MediaTypeHeaderValue("application/octet-stream")
+                    }
+                };
+
+                return response;
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(tempFileName);
+            }
+	    }
+
 		[HttpGet]
 		[RavenRoute("debug/docrefs")]
 		[RavenRoute("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage DocRefs(string id)
 		{
 		    var op = GetQueryStringValue("op");
-		    if (op == "dump")
-		    {
-		        int numberOfSample;
-		        if (!int.TryParse(GetQueryStringValue("SampleCount"), out numberOfSample)) numberOfSample = 10;
-		        Database.TransactionalStorage.Batch(accessor =>
-		        {
-		            accessor.Indexing.DumpAllReferancesToCSV(GetQueryStringValue("DumpPath"), numberOfSample);
-		        });
-		        return GetEmptyMessage();
-		    }
 			op = op == "from" ? "from" : "to";
 
 			var totalCountReferencing = -1;

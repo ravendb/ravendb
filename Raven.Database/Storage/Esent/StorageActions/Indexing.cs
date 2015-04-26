@@ -432,11 +432,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			return QueryReferences(key, "by_key", "ref");
 		}
 
-        public void DumpAllReferancesToCSV(string CsvDumpPath,int sizeOfSample = 10)
+        public void DumpAllReferancesToCSV(StreamWriter writer, int numberOfSampleDocs, bool sort = false)
         {
-            var actualPath = CsvDumpPath;
-            if (string.IsNullOrEmpty(CsvDumpPath) || !Directory.Exists(Path.GetDirectoryName(CsvDumpPath)))
-                actualPath = Path.Combine(Directory.GetCurrentDirectory(), "ref_dump.csv");
             Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
             Api.JetMove(session, IndexedDocumentsReferences, JET_Move.First, MoveGrbit.None);
             var keysToRef = new Dictionary<string, DocCountWithSampleDocIds>();
@@ -451,22 +448,30 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
                                                         tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], Encoding.Unicode);
 	            var docData = keysToRef[key];
-                if (docData.Count < sizeOfSample) docData.SampleDocsIds.Add(item);
+                if (docData.Count < numberOfSampleDocs) docData.SampleDocsIds.Add(item);
 	            docData.Count++;
 	        } while (Api.TryMoveNext(session, IndexedDocumentsReferences));
-            List<KeyValuePair<string, DocCountWithSampleDocIds>> sortedDocByRef = keysToRef.ToList();
+            if (sort)
+            {
+                List<KeyValuePair<string, DocCountWithSampleDocIds>> sortedDocByRef = keysToRef.ToList();
 
-            sortedDocByRef.Sort((firstPair, nextPair) =>
+                sortedDocByRef.Sort((firstPair, nextPair) =>
                 {
                     return nextPair.Value.Count.CompareTo(firstPair.Value.Count);
+                });
+                foreach (var tuple in sortedDocByRef)
+                {
+                    writer.WriteLine(string.Format("{0},{1},\"{2}\"", tuple.Value.Count, tuple.Key, string.Join(", ", tuple.Value.SampleDocsIds)));
                 }
-            );
-            var writer = File.CreateText(actualPath);
-            foreach (var tuple in sortedDocByRef)
-            {
-                writer.WriteLine(string.Format("{0},{1},\"{2}\"", tuple.Value.Count, tuple.Key, string.Join(", ", tuple.Value.SampleDocsIds)));
             }
-            writer.Close();
+            else
+            {
+                foreach (var key in keysToRef.Keys)
+                {
+                    writer.WriteLine(string.Format("{0},{1},\"{2}\"", keysToRef[key].Count, key, string.Join(", ", keysToRef[key].SampleDocsIds)));
+                }
+            }
+
 	    }
 		private IEnumerable<string> QueryReferences(string key, string id, string col)
 		{
