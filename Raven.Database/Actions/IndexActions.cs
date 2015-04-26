@@ -343,6 +343,7 @@ namespace Raven.Database.Actions
 
 	        Debug.Assert(index != null);
 
+	        Task precomputeTask = null;
 	        if (WorkContext.RunIndexing &&
 				name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
 	            Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex))
@@ -350,7 +351,7 @@ namespace Raven.Database.Actions
 		        // optimization of handling new index creation when the number of document in a database is significantly greater than
 		        // number of documents that this index applies to - let us use built-in RavenDocumentsByEntityName to get just appropriate documents
 
-		        TryApplyPrecomputedBatchForNewIndex(index, definition);
+		        precomputeTask  = TryCreateTaskForApplyingPrecomputedBatchForNewIndex(index, definition);
 	        }
 	        else
 	        {
@@ -361,13 +362,17 @@ namespace Raven.Database.Actions
 			// we have to do it in this way so first we prepare all the elements of the 
 			// index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
-			
-			WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+
+			// we start the precomuteTask _after_ we finished adding the index
+	        if (precomputeTask != null) 
+				precomputeTask.Start();
+
+	        WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             WorkContext.NotifyAboutWork();
         }
 
 
-        private void TryApplyPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
+        private Task TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
         {
             var generator = IndexDefinitionStorage.GetViewGenerator(definition.IndexId);
             if (generator.ForEntityNames.Count == 0 && index.IsTestIndex == false)
@@ -375,16 +380,14 @@ namespace Raven.Database.Actions
                 // we don't optimize if we don't have what to optimize _on_, we know this is going to return all docs.
                 // no need to try to optimize that, then
 				index.IsMapIndexingInProgress = false;
-				return;
+	            return null;
             }
 
             try
             {
 				var cts = new CancellationTokenSource();
 
-				var task = Task
-					.Factory
-					.StartNew(() => ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts), TaskCreationOptions.LongRunning)
+				var task = new Task(() => ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts), TaskCreationOptions.LongRunning)
 					.ContinueWith(t =>
 					{
 						if (t.IsFaulted)
@@ -394,7 +397,7 @@ namespace Raven.Database.Actions
 						index.IsMapIndexingInProgress = false;
 						WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
 						WorkContext.NotifyAboutWork();
-					});
+					}, cts.Token);
 
 	            long id;
 				Database
@@ -410,6 +413,8 @@ namespace Raven.Database.Actions
 				        }, 
 						out id,
 						cts);
+
+	            return task;
             }
             catch (Exception)
             {
