@@ -808,53 +808,70 @@ class shell extends viewModelBase {
     }
 
     private updateDbChangesApi(db: database) {
+        var previousConnectedResource = this.currentConnectedResource;
         if (this.currentConnectedResource.name != db.name || this.currentConnectedResource.name == db.name && (db.disabled() || !db.isLicensed())) {
             // disconnect from the current database changes api and set the current connected database
             shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = db;
         }
 
-        if (!db.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('databases')()) ||
-                db.name == "<system>" && this.currentConnectedResource.name == db.name) {
+        if (!db.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('databases')())
+                /*db.name == "<system>"*/ && previousConnectedResource.name != db.name) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
-            shell.currentResourceChangesApi(new changesApi(db, 5000));
-            shell.changeSubscriptionArray = [
-                shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
-                shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
-                shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db))
-            ];
+            var changes = new changesApi(db, 5000);
+            changes.connectToChangesApiTask.done(() => {
+                shell.fetchDbStats(db);
+                shell.currentResourceChangesApi(changes);
+                shell.changeSubscriptionArray = [
+                    shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
+                    shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
+                    shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db))
+                ];
+            });
         }
     }
 
     private updateFsChangesApi(fs: filesystem) {
+        var previousConnectedResource = this.currentConnectedResource;
         if (this.currentConnectedResource.name != fs.name || this.currentConnectedResource.name == fs.name && (fs.disabled() || !fs.isLicensed())) {
             // disconnect from the current filesystem changes api and set the current connected filesystem
             shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = fs;
         }
 
-        if (!fs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
+        if (!fs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())
+                && previousConnectedResource.name != fs.name) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
-            shell.currentResourceChangesApi(new changesApi(fs, 5000));
-            shell.changeSubscriptionArray = [
-                shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs))
-            ];
+            var changes = new changesApi(fs, 5000);
+            changes.connectToChangesApiTask.done(() => {
+                shell.fetchFsStats(fs);
+                shell.currentResourceChangesApi(changes);
+                shell.changeSubscriptionArray = [
+                    shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs))
+                ];
+            });
         }
     }
 
     private updateCsChangesApi(cs: counterStorage) {
+        var previousConnectedResource = this.currentConnectedResource;
         if (this.currentConnectedResource.name != cs.name || this.currentConnectedResource.name == cs.name && cs.disabled()) {
             // disconnect from the current filesystem changes api and set the current connected
             shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = cs;
         }
 
-        if (!cs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('counterstorages')())) {
+        if (!cs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('counterstorages')())
+                 && previousConnectedResource.name != cs.name) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
-            shell.currentResourceChangesApi(new changesApi(cs, 5000));
-            shell.changeSubscriptionArray = [
-                //TODO: enable changes api for counter storages, server side
-            ];
+            var changes = new changesApi(cs, 5000);
+            changes.connectToChangesApiTask.done(() => {
+                shell.fetchCsStats(cs);
+                shell.currentResourceChangesApi(changes);
+                shell.changeSubscriptionArray = [
+                    //TODO: enable changes api for counter storages, server side
+                ];
+            });
         }
     }
 

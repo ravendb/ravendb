@@ -105,7 +105,16 @@ namespace Raven.Bundles.Encryption.Streams
 					currentReadingBlock = underlyingStream.ReadBlock(startingBlock);
 				}
 
-				var blockRead = (int) Math.Min(underlyingStream.Header.TotalUnencryptedSize - Position, currentBlockSize - blockOffset);
+				int blockRead;
+				if (underlyingStream.Header.MagicNumber == EncryptedFile.DefaultMagicNumber)
+				{
+					blockRead = (int) Math.Min(currentReadingBlock.TotalEncryptedStreamLength - Position, currentBlockSize - blockOffset);
+				}
+				else
+				{
+					blockRead = (int) Math.Min(underlyingStream.Header.TotalUnencryptedSize - Position, currentBlockSize - blockOffset);
+				}
+				
 				var actualRead = Math.Min(count, blockRead);
 				Array.Copy(currentReadingBlock.Data, blockOffset, buffer, bufferOffset, actualRead);
 				// We use the fact that a stream doesn't have to read all data in one go to avoid a loop here.

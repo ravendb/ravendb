@@ -9,6 +9,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import getPluginsInfoCommand = require("commands/getPluginsInfoCommand");
 import appUrl = require("common/appUrl");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 
 class createDatabase extends viewModelBase {
 
@@ -92,7 +93,7 @@ class createDatabase extends viewModelBase {
         });
 
 		this.fetchCustomBundles();
-	    this.fetchGlobalStats();
+	    this.fetchAllowVoron();
     }
 
 	attached() {
@@ -114,9 +115,11 @@ class createDatabase extends viewModelBase {
 		});
 	}
 
-	fetchGlobalStats() {
-		new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute().done((stats) => {
-			this.allowVoron(stats.AllowVoronStorage);
+	fetchAllowVoron() {
+		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
+			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
+		).done((stats: Array<databaseStatisticsDto>, config: any) => {
+			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
 		});
 	}
 

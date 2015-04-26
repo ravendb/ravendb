@@ -5,6 +5,7 @@ using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
 
 using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 
 namespace Raven.Client.Document
 {
@@ -121,6 +122,7 @@ namespace Raven.Client.Document
 			{
 				if (entity is IDynamicMetaObjectProvider)
 				{
+					
 					TrySetIdOnDynamic(entity, id);
 				}
 				return;

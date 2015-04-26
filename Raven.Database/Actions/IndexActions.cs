@@ -127,7 +127,7 @@ namespace Raven.Database.Actions
 
 	        using (Database.TransactionalStorage.DisableBatchNesting())
 	        {
-				// in external tranasction number of references will be >= from current transaction references
+				// in external transaction number of references will be >= from current transaction references
 		        Database.TransactionalStorage.Batch(externalActions =>
 		        {
 					foreach (var referencing in externalActions.Indexing.GetDocumentsReferencing(key))
@@ -646,7 +646,7 @@ namespace Raven.Database.Actions
 	        return true;
         }
 
-		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true)
+		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true, bool removeIndexReplaceDocument = true)
 		{
 			using (IndexDefinitionStorage.TryRemoveIndexContext())
 			{
@@ -668,7 +668,7 @@ namespace Raven.Database.Actions
 				if (clearErrors)
 					WorkContext.ClearErrorsFor(instance.Name);
 
-                if (instance.IsSideBySideIndex)
+                if (removeIndexReplaceDocument && instance.IsSideBySideIndex)
                 {
                     Database.Documents.Delete(Constants.IndexReplacePrefix + instance.Name, null, null);
                 }

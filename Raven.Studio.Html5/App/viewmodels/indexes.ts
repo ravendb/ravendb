@@ -18,6 +18,7 @@ import indexesAndTransformersClipboardDialog = require("viewmodels/indexesAndTra
 import indexReplaceDocument = require("models/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/getPendingIndexReplacementsCommand");
 import d3 = require('d3/d3');
+import forceIndexReplace = require("commands/forceIndexReplace");
 
 class indexes extends viewModelBase {
 
@@ -387,6 +388,10 @@ class indexes extends viewModelBase {
     makeIndexPersistent(index: index) {
         new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
     }
+
+	forceSideBySide(idx: index) {
+		new forceIndexReplace(idx.name, this.activeDatabase()).execute();
+	}
 }
 
 export = indexes;
