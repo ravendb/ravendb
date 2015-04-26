@@ -4,30 +4,22 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
+
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Storage
 {
-	public class DatabaseTransactionalStorageAllocatedSize : ScalarObject
+	public class DatabaseTransactionalStorageAllocatedSize : DatabaseScalarObjectBase
 	{
-		private readonly DocumentDatabase database;
-
-		public DatabaseTransactionalStorageAllocatedSize(DocumentDatabase database, int index)
-			: base("1.5.2.{0}.2.1", index)
+		public DatabaseTransactionalStorageAllocatedSize(string databaseName, DatabasesLandlord landlord, string dots, int index)
+			: base(databaseName, landlord, "1.5.2.{0}.2.1", index)
 		{
-			this.database = database;
 		}
 
-		public override ISnmpData Data
-		{
-			get { return new Gauge32(GetCount()); }
-			set { throw new AccessFailureException(); }
-		}
-
-		private long GetCount()
+		protected override ISnmpData GetData(DocumentDatabase database)
 		{
 			var transactionalStorageSizeOnDisk = database.GetTransactionalStorageSizeOnDisk();
-			return transactionalStorageSizeOnDisk.AllocatedSizeInBytes / 1024L / 1024L;
+			return new Gauge32(transactionalStorageSizeOnDisk.AllocatedSizeInBytes / 1024L / 1024L);
 		}
 	}
 }

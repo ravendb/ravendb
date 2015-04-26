@@ -252,6 +252,7 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseScalarObjectBase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseDocsWritePerSecond.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -1319,7 +1320,9 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="BeforeBuild">

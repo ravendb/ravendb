@@ -4,25 +4,34 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
 using Lextm.SharpSnmpLib.Security;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Requests;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server;
 using Raven.Database.Server.Tenancy;
+using Raven.Json.Linq;
 using Raven.Server;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 {
 	public class SnmpTask : IServerStartupTask
 	{
+		private readonly Dictionary<string, object> loadedDatabases = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase); 
+
+		private readonly object locker = new object();
+
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private DocumentDatabase systemDatabase;
@@ -30,6 +39,8 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 		private DatabasesLandlord databaseLandlord;
 
 		private SnmpEngine snmpEngine;
+
+		private ObjectStore objectStore;
 
 		public void Dispose()
 		{
@@ -45,11 +56,39 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			systemDatabase = server.SystemDatabase;
 			databaseLandlord = server.Options.DatabaseLandlord;
 
-			snmpEngine = CreateSnmpEngine(server);
+			databaseLandlord.OnDatabaseLoaded += AddDatabaseIfNecessary;
+
+			objectStore = CreateStore(server);
+			snmpEngine = CreateSnmpEngine(server, objectStore);
 			snmpEngine.Start();
 		}
 
-		private SnmpEngine CreateSnmpEngine(RavenDbServer server)
+		private void AddDatabaseIfNecessary(string databaseName)
+		{
+			if (string.IsNullOrEmpty(databaseName))
+				return;
+
+			if (string.Equals(databaseName, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+				return;
+
+			if (loadedDatabases.ContainsKey(databaseName))
+				return;
+
+			Task.Factory.StartNew(() =>
+			{
+				lock (locker)
+				{
+					if (loadedDatabases.ContainsKey(databaseName))
+						return;
+
+					AddDatabase(objectStore, databaseName);
+
+					loadedDatabases.Add(databaseName, null);
+				}
+			});
+		}
+
+		private SnmpEngine CreateSnmpEngine(RavenDbServer server, ObjectStore store)
 		{
 			var configuration = server.Configuration;
 
@@ -61,11 +100,11 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			{
 				new HandlerMapping("V2,V3", "GET", new GetMessageHandler()),
 				new HandlerMapping("V2,V3", "GETNEXT", new GetNextMessageHandler()),
-				new HandlerMapping("V2,V3", "GETBULK", new GetBulkMessageHandler()),
+				new HandlerMapping("V2,V3", "GETBULK", new GetBulkMessageHandler())
 			};
-			var messageHandlerFactory = new MessageHandlerFactory(handlers);
 
-			var store = CreateStore(server);
+			var messageHandlerFactory = new MessageHandlerFactory(handlers);
+			
 			var factory = new SnmpApplicationFactory(new Logger(log), store, membershipProvider, messageHandlerFactory);
 
 			var userRegistry = new UserRegistry();
@@ -84,7 +123,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			return engine;
 		}
 
-		private static ObjectStore CreateStore(RavenDbServer server)
+		private ObjectStore CreateStore(RavenDbServer server)
 		{
 			var store = new ObjectStore();
 			store.Add(new ServerUpTime(server.Options.RequestManager));
@@ -101,33 +140,54 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new DatabaseOpenedCount(server.Options.DatabaseLandlord));
 			store.Add(new DatabaseTotalCount(server.SystemDatabase));
 
-			AddDatabase(store, server.SystemDatabase);
+			AddDatabase(store, Constants.SystemDatabase);
 
 			return store;
 		}
 
-		private static void AddDatabase(ObjectStore store, DocumentDatabase database)
+		private void AddDatabase(ObjectStore store, string databaseName)
 		{
-			var index = 1;
+			var index = (int)GetOrAddDatabaseIndex(databaseName);
 
-			store.Add(new DatabaseName(database, index));
-			store.Add(new DatabaseApproximateTaskCount(database, index));
-			store.Add(new DatabaseCountOfIndexes(database, index));
-			store.Add(new DatabaseCountOfTransformers(database, index));
-			store.Add(new DatabaseStaleIndexes(database, index));
-			store.Add(new DatabaseCountOfAttachments(database, index));
-			store.Add(new DatabaseCountOfDocuments(database, index));
-			store.Add(new DatabaseCurrentNumberOfItemsToIndexInSingleBatch(database, index));
-			store.Add(new DatabaseCurrentNumberOfItemsToReduceInSingleBatch(database, index));
-			store.Add(new DatabaseErrors(database, index));
-			store.Add(new DatabaseId(database, index));
-			store.Add(new DatabaseActiveBundles(database, index));
+			store.Add(new DatabaseName(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseApproximateTaskCount(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseCountOfIndexes(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseCountOfTransformers(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseStaleIndexes(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseCountOfAttachments(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseCountOfDocuments(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseCurrentNumberOfItemsToIndexInSingleBatch(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseCurrentNumberOfItemsToReduceInSingleBatch(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseErrors(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseId(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseActiveBundles(databaseName, databaseLandlord, index));
 
-			store.Add(new DatabaseDocsWritePerSecond(database, index));
-			store.Add(new DatabaseIndexedPerSecond(database, index));
-			store.Add(new DatabaseReducedPerSecond(database, index));
-			store.Add(new DatabaseRequestDurationMean(database, index));
-			store.Add(new DatabaseRequestsPerSecond(database, index));
+			store.Add(new DatabaseDocsWritePerSecond(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseIndexedPerSecond(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseReducedPerSecond(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseRequestDurationMean(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseRequestsPerSecond(databaseName, databaseLandlord, index));
+		}
+
+		private long GetOrAddDatabaseIndex(string databaseName)
+		{
+			if (databaseName == null || string.Equals(databaseName, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)) 
+				return 1;
+
+			var mappingDocument = systemDatabase.Documents.Get(Constants.Monitoring.Snmp.DatabaseMappingDocumentKey, null) ?? new JsonDocument();
+
+			RavenJToken value;
+			if (mappingDocument.DataAsJson.TryGetValue(databaseName, out value)) 
+				return value.Value<int>();
+
+			var index = 0L;
+			systemDatabase.TransactionalStorage.Batch(actions =>
+			{
+				mappingDocument.DataAsJson[databaseName] = index = actions.General.GetNextIdentityValue(Constants.Monitoring.Snmp.DatabaseMappingDocumentKey) + 1;
+				systemDatabase.Documents.Put(Constants.Monitoring.Snmp.DatabaseMappingDocumentKey, null, mappingDocument.DataAsJson, mappingDocument.Metadata, null);
+			});
+
+			return index;
 		}
 
 		private class Logger : ILogger

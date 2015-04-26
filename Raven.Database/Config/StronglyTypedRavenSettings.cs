@@ -264,9 +264,9 @@ namespace Raven.Database.Config
 
 		private void FillMonitoringSettings()
 		{
-			Monitoring.Snmp.Enabled = new BooleanSetting(settings["Raven/Monitoring/Snmp/Enabled"], true); // TODO [ppekrol] change to false
-			Monitoring.Snmp.Community = new StringSetting(settings["Raven/Monitoring/Snmp/Community"], "ravendb");
-			Monitoring.Snmp.Port = new IntegerSetting(settings["Raven/Monitoring/Snmp/Port"], 161);
+			Monitoring.Snmp.Enabled = new BooleanSetting(settings[Constants.Monitoring.Snmp.Enabled], true); // TODO [ppekrol] change to false
+			Monitoring.Snmp.Community = new StringSetting(settings[Constants.Monitoring.Snmp.Community], "ravendb");
+			Monitoring.Snmp.Port = new IntegerSetting(settings[Constants.Monitoring.Snmp.Port], 161);
 		}
 
 		private string GetDefaultWebDir()

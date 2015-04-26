@@ -8,23 +8,23 @@ using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Abstractions.Data;
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseName : ScalarObject
+	public class DatabaseName : DatabaseScalarObjectBase
 	{
 		private readonly OctetString name;
 
-		public DatabaseName(DocumentDatabase database, int index)
-			: base("1.5.2.{0}.1.1", index)
+		public DatabaseName(string databaseName, DatabasesLandlord landlord, int index)
+			: base(databaseName, landlord, "1.5.2.{0}.1.1", index)
 		{
-			name = new OctetString(database.Name ?? Constants.SystemDatabase);
+			name = new OctetString(databaseName ?? Constants.SystemDatabase);
 		}
 
-		public override ISnmpData Data
+		protected override ISnmpData GetData(DocumentDatabase database)
 		{
-			get { return name; }
-			set { throw new AccessFailureException(); }
+			return name;
 		}
 	}
 }

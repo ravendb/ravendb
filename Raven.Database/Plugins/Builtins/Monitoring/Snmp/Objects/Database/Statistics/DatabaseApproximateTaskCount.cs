@@ -4,27 +4,24 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
+
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseApproximateTaskCount : ScalarObject
+	public class DatabaseApproximateTaskCount : DatabaseScalarObjectBase
 	{
-		private readonly DocumentDatabase database;
-
-		public DatabaseApproximateTaskCount(DocumentDatabase database, int index)
-			: base("1.5.2.{0}.1.5", index)
+		public DatabaseApproximateTaskCount(string databaseName, DatabasesLandlord landlord, int index)
+			: base(databaseName, landlord, "1.5.2.{0}.1.5", index)
 		{
-			this.database = database;
 		}
 
-		public override ISnmpData Data
+		protected override ISnmpData GetData(DocumentDatabase database)
 		{
-			get { return new Gauge32(GetCount()); }
-			set { throw new AccessFailureException(); }
+			return new Gauge32(GetCount(database));
 		}
 
-		private long GetCount()
+		private static long GetCount(DocumentDatabase database)
 		{
 			var count = 0L;
 			database.TransactionalStorage.Batch(actions =>

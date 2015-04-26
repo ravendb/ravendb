@@ -5,24 +5,21 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
+
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseErrors : ScalarObject
+	public class DatabaseErrors : DatabaseScalarObjectBase
 	{
-		private readonly DocumentDatabase database;
-
-		public DatabaseErrors(DocumentDatabase database, int index)
-			: base("1.5.2.{0}.1.10", index)
+		public DatabaseErrors(string databaseName, DatabasesLandlord landlord, int index)
+			: base(databaseName, landlord, "1.5.2.{0}.1.10", index)
 		{
-			this.database = database;
 		}
 
-		public override ISnmpData Data
+		protected override ISnmpData GetData(DocumentDatabase database)
 		{
-			get { return new Integer32(database.WorkContext.Errors.Length); }
-			set { throw new AccessFailureException(); }
+			return new Integer32(database.WorkContext.Errors.Length);
 		}
 	}
 }

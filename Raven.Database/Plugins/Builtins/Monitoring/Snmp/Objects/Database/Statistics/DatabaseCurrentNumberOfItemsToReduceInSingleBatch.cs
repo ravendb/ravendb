@@ -4,24 +4,21 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
+
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseCurrentNumberOfItemsToReduceInSingleBatch : ScalarObject
+	public class DatabaseCurrentNumberOfItemsToReduceInSingleBatch : DatabaseScalarObjectBase
 	{
-		private readonly DocumentDatabase database;
-
-		public DatabaseCurrentNumberOfItemsToReduceInSingleBatch(DocumentDatabase database, int index)
-			: base("1.5.2.{0}.1.9", index)
+		public DatabaseCurrentNumberOfItemsToReduceInSingleBatch(string databaseName, DatabasesLandlord landlord, int index)
+			: base(databaseName, landlord, "1.5.2.{0}.1.9", index)
 		{
-			this.database = database;
 		}
 
-		public override ISnmpData Data
+		protected override ISnmpData GetData(DocumentDatabase database)
 		{
-			get { return new Gauge32(database.WorkContext.CurrentNumberOfItemsToReduceInSingleBatch); }
-			set { throw new AccessFailureException(); }
+			return new Gauge32(database.WorkContext.CurrentNumberOfItemsToReduceInSingleBatch);
 		}
 	}
 }

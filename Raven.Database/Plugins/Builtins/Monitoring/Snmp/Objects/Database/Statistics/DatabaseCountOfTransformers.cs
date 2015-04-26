@@ -4,29 +4,21 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
+
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseCountOfTransformers : ScalarObject
+	public class DatabaseCountOfTransformers : DatabaseScalarObjectBase
 	{
-		private readonly DocumentDatabase database;
-
-		public DatabaseCountOfTransformers(DocumentDatabase database, int index)
-			: base("1.5.2.{0}.1.4", index)
+		public DatabaseCountOfTransformers(string databaseName, DatabasesLandlord landlord, int index)
+			: base(databaseName, landlord, "1.5.2.{0}.1.4", index)
 		{
-			this.database = database;
 		}
 
-		public override ISnmpData Data
+		protected override ISnmpData GetData(DocumentDatabase database)
 		{
-			get { return new Gauge32(GetCount()); }
-			set { throw new AccessFailureException(); }
-		}
-
-		private long GetCount()
-		{
-			return database.IndexDefinitionStorage.ResultTransformersCount;
+			return new Gauge32(database.IndexDefinitionStorage.ResultTransformersCount);
 		}
 	}
 }

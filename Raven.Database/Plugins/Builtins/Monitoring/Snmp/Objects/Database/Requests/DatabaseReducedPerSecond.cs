@@ -4,27 +4,24 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
+
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Requests
 {
-	public class DatabaseReducedPerSecond : ScalarObject
+	public class DatabaseReducedPerSecond : DatabaseScalarObjectBase
 	{
-		private readonly DocumentDatabase database;
-
-		public DatabaseReducedPerSecond(DocumentDatabase database, int index)
-			: base("1.5.2.{0}.3.3", index)
+		public DatabaseReducedPerSecond(string databaseName, DatabasesLandlord landlord, int index)
+			: base(databaseName, landlord, "1.5.2.{0}.3.3", index)
 		{
-			this.database = database;
 		}
 
-		public override ISnmpData Data
+		protected override ISnmpData GetData(DocumentDatabase database)
 		{
-			get { return new Gauge32(GetCount()); }
-			set { throw new AccessFailureException(); }
+			return new Gauge32(GetCount(database));
 		}
 
-		private int GetCount()
+		private static int GetCount(DocumentDatabase database)
 		{
 			var metricsCounters = database.WorkContext.MetricsCounters;
 			return (int)metricsCounters.ReducedPerSecond.CurrentValue;
