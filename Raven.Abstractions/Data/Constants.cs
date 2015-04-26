@@ -219,6 +219,7 @@ namespace Raven.Abstractions.Data
             public const string Storage = "Raven/FileSystem/Storage";
 	        public const string UrlPrefix = "fs";
 	        public const string RavenFsSize = "RavenFS-Size";
+            public const string PreventSchemaUpdate = "Raven/PreventSchemaUpdate";
 
 	        public static class Versioning
 	        {
