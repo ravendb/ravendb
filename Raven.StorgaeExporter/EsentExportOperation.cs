@@ -9,6 +9,7 @@ using Raven.Database.Config;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Storage.Esent;
 
 namespace Raven.StorgaeExporter
 {
@@ -20,6 +21,15 @@ namespace Raven.StorgaeExporter
             try
             {
                 Api.JetCreateInstance(out instance, "instance");
+                var ravenConfiguration = new RavenConfiguration();
+                ravenConfiguration.DataDirectory = dataDirPath;
+                ravenConfiguration.Storage.PreventSchemaUpdate = true;
+                ITransactionalStorage storage;
+                var success = StorageExporter.TryToCreateTransactionalStorage(ravenConfiguration, out storage);
+                if (!success) ConsoleUtils.PrintErrorAndFail("Failed to create transactional storage");
+                var configurator = new TransactionalStorageConfigurator(ravenConfiguration, (TransactionalStorage)storage);
+                configurator.ConfigureInstance(instance, dataDirPath);
+                storage.Dispose();
                 Api.JetInit(ref instance);
                 Api.JetBeginSession(instance, out sesid, null, null);           
                 Api.JetAttachDatabase(sesid, dbFullPath, AttachDatabaseGrbit.None);
@@ -27,30 +37,7 @@ namespace Raven.StorgaeExporter
             }
             catch (Exception e)
             {
-                var ravenConfiguration = new RavenConfiguration();
-                ravenConfiguration.DataDirectory = dataDirPath;
-                ravenConfiguration.Storage.PreventSchemaUpdate = true;
-                ITransactionalStorage storage;
-                var success = StorageExporter.TryToCreateTransactionalStorage(ravenConfiguration, out storage);
-                if (!success)
-                {
-                    ConsoleUtils.PrintErrorAndFail(e.Message,e.StackTrace);
-                }
-                try
-                {
-                    storage.Dispose();
-                    Api.JetCreateInstance(out instance, "recovery_instance");
-                    Api.JetInit(ref instance);
-                    Api.JetBeginSession(instance, out sesid, null, null); 
-                    //Api.JetAttachDatabase(sesid, dbFullPath, AttachDatabaseGrbit.None);
-                    Api.JetOpenDatabase(sesid, dbFullPath, null, out dbid, OpenDatabaseGrbit.None);
-                }
-                catch (Exception ex)
-                {
-                    //Here we fail even after trying to recover using tansactional storage
-                    //This should not happen...
-                    ConsoleUtils.PrintErrorAndFail(ex.Message, ex.StackTrace);                   
-                }
+                ConsoleUtils.PrintErrorAndFail(e.Message, e.StackTrace);
             }
         }
 
@@ -146,14 +133,14 @@ namespace Raven.StorgaeExporter
 
         private IEnumerable<string> GetTablesNames(JET_DBID dbid)
         {
-            if (!databasesToTablesNames.ContainsKey(dbid))
+            if (tablesNames == null)
             {
-                databasesToTablesNames[dbid] = Api.GetTableNames(sesid, dbid);
+                tablesNames = Api.GetTableNames(sesid, dbid);
             }
-            return databasesToTablesNames[dbid];
+            return tablesNames;
         }
 
-        private Dictionary<JET_DBID, IEnumerable<string>> databasesToTablesNames = new Dictionary<JET_DBID, IEnumerable<string>>();
+        private IEnumerable<string> tablesNames;
         private JET_INSTANCE instance;
         private JET_SESID sesid;
         private JET_DBID dbid;
