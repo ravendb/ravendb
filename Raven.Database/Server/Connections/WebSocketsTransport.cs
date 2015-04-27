@@ -8,7 +8,6 @@ using Microsoft.Owin;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Server.Abstractions;
@@ -173,7 +172,9 @@ namespace Raven.Database.Server.Connections
 
 	    protected IResourceStore ActiveTenant { get; set; }
         public string ResourceName { get; set; }
-        
+
+		public ArraySegment<byte> PreAllocatedBuffer;
+
         public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
         {
             _options = options;
@@ -183,6 +184,7 @@ namespace Raven.Database.Server.Connections
             long waitTimeBetweenMessages = 0;
             long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
             CoolDownWithDataLossInMiliseconds = waitTimeBetweenMessages;
+	        PreAllocatedBuffer = options.WebSocketBufferPool.TakeBuffer();
         }
 
 	    protected virtual WebSocketsRequestParser CreateWebSocketsRequestParser()
@@ -324,6 +326,8 @@ namespace Raven.Database.Server.Connections
             Action onDisconnected = Disconnected;
             if (onDisconnected != null)
                 onDisconnected();
+
+			_options.WebSocketBufferPool.ReturnBuffer(PreAllocatedBuffer);
         }
 
         public virtual async Task<bool> TrySetupRequest()
