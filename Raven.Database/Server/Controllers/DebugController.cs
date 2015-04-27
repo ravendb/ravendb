@@ -410,27 +410,23 @@ namespace Raven.Database.Server.Controllers
 		    {
 			    Content = new PushStreamContent((stream, content, context) =>
 			    {
-				    using (var archive = new ZipArchive(stream, ZipArchiveMode.Create))
-				    {
-					    var refs = archive.CreateEntry("doc-refs.csv");
-					    using (var zipStream = refs.Open())
-					    using (var writer = new StreamWriter(zipStream))
-					    {
-							writer.WriteLine("ref count,document key,sample references");
-						    Database.TransactionalStorage.Batch(accessor =>
-						    {
-							    accessor.Indexing.DumpAllReferancesToCSV(writer, sampleCount);
-						    });
-						    writer.Flush();
-					    }
-				    }
+					using (var writer = new StreamWriter(stream))
+					{
+						writer.WriteLine("ref count,document key,sample references");
+						Database.TransactionalStorage.Batch(accessor =>
+						{
+							accessor.Indexing.DumpAllReferancesToCSV(writer, sampleCount);
+						});
+						writer.Flush();
+                        stream.Flush();
+					}
 			    })
 			    {
 				    Headers =
 				    {
 					    ContentDisposition = new ContentDispositionHeaderValue("attachment")
 					    {
-						    FileName = "doc-refs.csv.zip",
+						    FileName = "doc-refs.csv",
 					    },
 					    ContentType = new MediaTypeHeaderValue("application/octet-stream")
 				    }
