@@ -351,6 +351,7 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReducingWorkStatsFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ScheduledReductionFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
+    <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />

@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
@@ -400,12 +401,50 @@ namespace Raven.Database.Server.Controllers
 			};
 		}
 
+	    [HttpGet]
+	    [RavenRoute("debug/slow-dump-ref-csv")]
+		[RavenRoute("databases/{databaseName}/debug/slow-dump-ref-csv")]
+        public HttpResponseMessage DumpRefsToCsv(int sampleCount = 10)
+	    {
+		    return new HttpResponseMessage
+		    {
+			    Content = new PushStreamContent((stream, content, context) =>
+			    {
+				    using (var archive = new ZipArchive(stream, ZipArchiveMode.Create))
+				    {
+					    var refs = archive.CreateEntry("doc-refs.csv");
+					    using (var zipStream = refs.Open())
+					    using (var writer = new StreamWriter(zipStream))
+					    {
+							writer.WriteLine("ref count,document key,sample references");
+						    Database.TransactionalStorage.Batch(accessor =>
+						    {
+							    accessor.Indexing.DumpAllReferancesToCSV(writer, sampleCount);
+						    });
+						    writer.Flush();
+					    }
+				    }
+			    })
+			    {
+				    Headers =
+				    {
+					    ContentDisposition = new ContentDispositionHeaderValue("attachment")
+					    {
+						    FileName = "doc-refs.csv.zip",
+					    },
+					    ContentType = new MediaTypeHeaderValue("application/octet-stream")
+				    }
+			    }
+		    };
+	    }
+
 		[HttpGet]
 		[RavenRoute("debug/docrefs")]
 		[RavenRoute("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage DocRefs(string id)
 		{
-			var op = GetQueryStringValue("op") == "from" ? "from" : "to";
+		    var op = GetQueryStringValue("op");
+			op = op == "from" ? "from" : "to";
 
 			var totalCountReferencing = -1;
 			List<string> results = null;
@@ -425,7 +464,7 @@ namespace Raven.Database.Server.Controllers
 				Results = results
 			});
 		}
-
+        //DumpAllReferancesToCSV
 		[HttpGet]
 		[RavenRoute("debug/d0crefs-t0ps")]
 		[RavenRoute("databases/{databaseName}/debug/d0crefs-t0ps")]

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Indexing;
@@ -37,5 +38,6 @@ namespace Raven.Database.Storage
 		int GetCountOfDocumentsReferencing(string key);
 		Dictionary<string, int> GetDocumentReferencesStats();
 		IEnumerable<string> GetDocumentsReferencesFrom(string key);
+        void DumpAllReferancesToCSV(StreamWriter writer, int numberOfSampleDocs);
 	}
 }

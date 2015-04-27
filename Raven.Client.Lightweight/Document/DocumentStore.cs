@@ -319,7 +319,7 @@ namespace Raven.Client.Document
 				var session = new DocumentSession(options.Database, this, Listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
 					{
-						DatabaseName = options.Database ?? DefaultDatabase
+						DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
 					};
 				AfterSessionCreated(session);
 				return session;
@@ -684,7 +684,7 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(Url))
 				throw new InvalidOperationException("Changes API requires usage of server/client");
 
-			database = database ?? DefaultDatabase;
+			database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
 
 			var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 			if (string.IsNullOrEmpty(database) == false)
@@ -765,7 +765,7 @@ namespace Raven.Client.Document
 
 				var session = new AsyncDocumentSession(options.Database, this, asyncDatabaseCommands, Listeners, sessionId)
 				{
-					DatabaseName = options.Database ?? DefaultDatabase
+					DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
 				};
 				AfterSessionCreated(session);
 				return session;
@@ -831,9 +831,9 @@ namespace Raven.Client.Document
 		{
 			if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
 			{
-				var databaseName = session.DatabaseName;
-				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
-					_ => new EvictItemsFromCacheBasedOnChanges(databaseName ?? Constants.SystemDatabase,
+				var databaseName = session.DatabaseName ?? Constants.SystemDatabase;
+				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ,
+					_ => new EvictItemsFromCacheBasedOnChanges(databaseName,
 						Changes(databaseName),
 						jsonRequestFactory.ExpireItemsFromCache));
 			}
@@ -843,7 +843,8 @@ namespace Raven.Client.Document
 
 		public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
 		{
-			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? DefaultDatabase);
+			var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.SystemDatabase;
+			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
             return changes == null ? new CompletedTask() : changes.ConnectionTask;
 		}

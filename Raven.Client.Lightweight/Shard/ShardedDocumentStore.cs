@@ -16,6 +16,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 
 namespace Raven.Client.Shard

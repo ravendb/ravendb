@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -12,6 +13,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
@@ -430,9 +432,40 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			return QueryReferences(key, "by_key", "ref");
 		}
 
+        public void DumpAllReferancesToCSV(StreamWriter writer, int numberOfSampleDocs)
+        {
+	        Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
+	        Api.JetMove(session, IndexedDocumentsReferences, JET_Move.First, MoveGrbit.None);
+	        var keysToRef = new Dictionary<string, DocCountWithSampleDocIds>();
+	        do
+	        {
+		        var key = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+			        tableColumnsCache.IndexedDocumentsReferencesColumns["key"], Encoding.Unicode);
+				DocCountWithSampleDocIds docData;
+				if (keysToRef.TryGetValue(key, out docData) == false)
+		        {
+					keysToRef[key] = docData = new DocCountWithSampleDocIds()
+			        {
+				        Count = 0,
+				        SampleDocsIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+			        };
+		        }
+		        var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+			        tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], Encoding.Unicode);
+		        if (docData.Count < numberOfSampleDocs)
+					docData.SampleDocsIds.Add(item);
+		        docData.Count++;
+	        } while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+	        
+	        foreach (var kvp in keysToRef.OrderByDescending(x=>x.Value.Count))
+	        {
+		        writer.WriteLine("{0},{1},\"{2}\"", kvp.Value.Count, kvp.Key, string.Join(", ", kvp.Value.SampleDocsIds));
+	        }
+        }
+
 		private IEnumerable<string> QueryReferences(string key, string id, string col)
 		{
-			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, id);
+			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, id);            
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
 				return Enumerable.Empty<string>();

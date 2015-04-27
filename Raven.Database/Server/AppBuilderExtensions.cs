@@ -166,10 +166,15 @@ namespace Owin
 		        if (assembly.IsDynamic)
 		            return false;
 
-		        try
-		        {
-                    return assembly.ExportedTypes.Any(t => t.IsSubclassOf(typeof(RavenBaseApiController)));
-		        }
+			    try
+			    {
+				    return assembly.ExportedTypes.Any(t => t.IsSubclassOf(typeof (RavenBaseApiController)));
+			    }
+			    catch (FileLoadException)
+			    {
+					// if we can't figure out, this proably isn't it
+				    return false;
+			    }
 		        catch (FileNotFoundException)
 		        {
                     //ExportedTypes will throw a FileNotFoundException if the assembly references another assembly which cannot be loaded/found
