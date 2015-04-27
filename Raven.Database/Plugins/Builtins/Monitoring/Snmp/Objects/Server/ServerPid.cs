@@ -11,12 +11,12 @@ using Lextm.SharpSnmpLib.Pipeline;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerPid : ScalarObject
+	public class ServerPid : ScalarObjectBase
 	{
 		private readonly Integer32 pid;
 
 		public ServerPid()
-			: base(new ObjectIdentifier("1.1.5"))
+			: base("1.1.5")
 		{
 			pid = new Integer32(Process.GetCurrentProcess().Id);
 		}

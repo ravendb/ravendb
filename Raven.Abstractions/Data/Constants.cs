@@ -434,6 +434,8 @@ namespace Raven.Abstractions.Data
 				public const string Port = "Raven/Monitoring/Snmp/Port";
 
 				public const string DatabaseMappingDocumentKey = "Raven/Monitoring/Snmp/Databases";
+
+				public const string DatabaseIndexMappingDocumentPrefix = "Raven/Monitoring/Snmp/Databases/";
 			} 
 		}
 

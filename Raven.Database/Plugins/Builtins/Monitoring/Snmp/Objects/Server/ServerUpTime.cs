@@ -6,12 +6,12 @@ using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	internal class ServerUpTime : ScalarObject
+	internal class ServerUpTime : ScalarObjectBase
 	{
 		private readonly RequestManager requestManager;
 
 		public ServerUpTime(RequestManager requestManager)
-			: base(new ObjectIdentifier("1.1.2"))
+			: base("1.1.2")
 		{
 			this.requestManager = requestManager;
 		}

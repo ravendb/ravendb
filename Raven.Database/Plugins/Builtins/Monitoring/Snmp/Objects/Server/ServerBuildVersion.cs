@@ -8,12 +8,12 @@ using Lextm.SharpSnmpLib.Pipeline;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerBuildVersion : ScalarObject
+	public class ServerBuildVersion : ScalarObjectBase
 	{
 		private readonly OctetString buildVersion;
 
 		public ServerBuildVersion()
-			: base(new ObjectIdentifier("1.1.3"))
+			: base("1.1.3")
 		{
 			buildVersion = new OctetString(DocumentDatabase.BuildVersion);
 		}

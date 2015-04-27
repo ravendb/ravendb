@@ -252,7 +252,19 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
-    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseScalarObjectBase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexTimeSinceLastQuery.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexReduceErrors.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexReduceSuccesses.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexReduceAttempts.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexErrors.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexSuccesses.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexAttempts.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexExists.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexId.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexName.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexPriority.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseIndexScalarObjectBase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseDocsWritePerSecond.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -287,6 +299,7 @@
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseIndexStorageSize.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTransactionalStorageUsedSize.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTransactionalStorageAllocatedSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\ScalarObjectBase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerConcurrentRequests.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerCpu.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerUrl.cs" />
@@ -297,6 +310,7 @@
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerName.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerTotalRequests.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerUpTime.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\SnmpDatabase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\SnmpTask.cs" />
     <Compile Include="Bundles\Replication\Triggers\RenameConflictDocumentIdIndexTrigger.cs" />
     <Compile Include="Bundles\Versioning\Data\FileVersioningConfiguration.cs" />
@@ -1321,9 +1335,7 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="BeforeBuild">

@@ -10,10 +10,10 @@ using Lextm.SharpSnmpLib.Pipeline;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerTotalMemory : ScalarObject
+	public class ServerTotalMemory : ScalarObjectBase
 	{
 		public ServerTotalMemory()
-			: base(new ObjectIdentifier("1.1.8.1"))
+			: base("1.1.8.1")
 		{
 		}
 

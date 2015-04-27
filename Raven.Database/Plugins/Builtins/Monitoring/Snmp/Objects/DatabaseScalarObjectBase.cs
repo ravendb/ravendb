@@ -3,32 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Database.Server.Tenancy;
 
-namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database
+namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 {
-	public abstract class DatabaseScalarObjectBase : ScalarObject
+	public abstract class DatabaseScalarObjectBase : ScalarObjectBase
 	{
-		private static readonly Null Null = new Null();
+		protected static readonly Null Null = new Null();
 
-		private readonly string databaseName;
+		protected readonly string DatabaseName;
 
 		protected readonly DatabasesLandlord Landlord;
-
-		protected DatabaseScalarObjectBase(string databaseName, DatabasesLandlord landlord, ObjectIdentifier identifier)
-			: base(identifier)
-		{
-			this.databaseName = databaseName;
-			Landlord = landlord;
-		}
 
 		protected DatabaseScalarObjectBase(string databaseName, DatabasesLandlord landlord, string dots, int index)
 			: base(dots, index)
 		{
-			this.databaseName = databaseName;
+			DatabaseName = databaseName;
 			Landlord = landlord;
 		}
 
@@ -38,8 +32,8 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database
 		{
 			get
 			{
-				if (Landlord.IsDatabaseLoaded(databaseName)) 
-					return GetData(Landlord.GetDatabaseInternal(databaseName).Result);
+				if (Landlord.IsDatabaseLoaded(DatabaseName)) 
+					return GetData(Landlord.GetDatabaseInternal(DatabaseName).Result);
 
 				return Null;
 			}

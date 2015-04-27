@@ -28,7 +28,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 {
 	public class SnmpTask : IServerStartupTask
 	{
-		private readonly Dictionary<string, object> loadedDatabases = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase); 
+		private readonly Dictionary<string, SnmpDatabase> loadedDatabases = new Dictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase); 
 
 		private readonly object locker = new object();
 
@@ -71,19 +71,18 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			if (string.Equals(databaseName, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
 				return;
 
-			if (loadedDatabases.ContainsKey(databaseName))
-				return;
-
 			Task.Factory.StartNew(() =>
 			{
 				lock (locker)
 				{
-					if (loadedDatabases.ContainsKey(databaseName))
+					SnmpDatabase database;
+					if (loadedDatabases.TryGetValue(databaseName, out database))
+					{
+						database.Update();
 						return;
+					}
 
 					AddDatabase(objectStore, databaseName);
-
-					loadedDatabases.Add(databaseName, null);
 				}
 			});
 		}
@@ -149,25 +148,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 		{
 			var index = (int)GetOrAddDatabaseIndex(databaseName);
 
-			store.Add(new DatabaseName(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseApproximateTaskCount(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseCountOfIndexes(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseCountOfTransformers(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseStaleIndexes(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseCountOfAttachments(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseCountOfDocuments(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseCurrentNumberOfItemsToIndexInSingleBatch(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseCurrentNumberOfItemsToReduceInSingleBatch(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseErrors(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseId(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseActiveBundles(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseLoaded(databaseName, databaseLandlord, index));
-
-			store.Add(new DatabaseDocsWritePerSecond(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseIndexedPerSecond(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseReducedPerSecond(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseRequestDurationMean(databaseName, databaseLandlord, index));
-			store.Add(new DatabaseRequestsPerSecond(databaseName, databaseLandlord, index));
+			loadedDatabases.Add(databaseName, new SnmpDatabase(databaseLandlord, store, databaseName, index));
 		}
 
 		private long GetOrAddDatabaseIndex(string databaseName)

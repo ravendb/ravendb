@@ -11,12 +11,12 @@ using Raven.Database.Config;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerName : ScalarObject
+	public class ServerName : ScalarObjectBase
 	{
 		private readonly OctetString name;
 
 		public ServerName(InMemoryRavenConfiguration configuration)
-			: base(new ObjectIdentifier("1.1.1"))
+			: base("1.1.1")
 		{
 			name = new OctetString(configuration.ServerName ?? string.Empty);
 		}

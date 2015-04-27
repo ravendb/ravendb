@@ -11,10 +11,10 @@ using Raven.Database.Config;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerCpu : ScalarObject
+	public class ServerCpu : ScalarObjectBase
 	{
 		public ServerCpu()
-			: base(new ObjectIdentifier("1.1.7"))
+			: base("1.1.7")
 		{
 		}
 

@@ -11,12 +11,12 @@ using Raven.Database.Config;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerUrl : ScalarObject
+	public class ServerUrl : ScalarObjectBase
 	{
 		private readonly OctetString url;
 
 		public ServerUrl(InMemoryRavenConfiguration configuration)
-			: base(new ObjectIdentifier("1.1.9"))
+			: base("1.1.9")
 		{
 			url = new OctetString(configuration.ServerUrl);
 		}

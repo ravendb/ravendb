@@ -11,12 +11,12 @@ using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerTotalRequests : ScalarObject
+	public class ServerTotalRequests : ScalarObjectBase
 	{
 		private readonly RequestManager requestManager;
 
 		public ServerTotalRequests(RequestManager requestManager)
-			: base(new ObjectIdentifier("1.1.6.2"))
+			: base("1.1.6.2")
 		{
 			this.requestManager = requestManager;
 		}
