@@ -71,26 +71,10 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Database\Json\JintOperationScope.cs">
-      <Link>Imports\JintOperationScope.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Database\Smuggler\SmugglerJintHelper.cs">
-      <Link>Imports\SmugglerJintHelper.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
-    <Compile Include="Client\ChunkedBulkInsertOperation.cs" />
-    <Compile Include="Client\ChunkedRemoteBulkInsertOperation.cs" />
-    <Compile Include="SmugglerAbstractOperation.cs" />
-    <Compile Include="SmugglerDatabaseOperationDispatcher.cs" />
-    <Compile Include="SmugglerFilesOperationDispatcher.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="SmugglerDatabaseApi.cs" />
-    <Compile Include="SmugglerRemoteDatabaseOperations.cs" />
-    <Compile Include="SmugglerFilesApi.cs" />
-    <Compile Include="SmugglerOperationDispatcher.cs" />
-    <Compile Include="SmugglerRemoteFilesOperations.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Raven.Server\favicon.ico">
