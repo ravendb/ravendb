@@ -299,7 +299,7 @@ namespace Raven.Database.Indexing
 								context.AddError(indexBatchOperation.IndexingBatch.IndexId, indexBatchOperation.IndexingBatch.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message));
 							}
 						}
-					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5*context.Configuration.MemoryLimitForProcessingInMb, description: "Executing Map Indexing");
+					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5*context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes",indexBatchOperations.Count));
 				Interlocked.Increment(ref executedPartially);
 			}
 			catch (InvalidDataException e)
@@ -380,7 +380,7 @@ namespace Raven.Database.Indexing
 						indexingGroup.Indexes.ForEach(index =>
 							Log.ErrorException("Failed to index because of data corruption. ", e));
 					}
-				}, description: "Prefatching Index Groups");
+				}, description: string.Format("Prefatching Index Groups for {0} groups", groupedIndexes.Count));
 			return operationWasCancelled;
 		}
 
@@ -781,7 +781,7 @@ accessor.AfterStorageCommit += () =>
 					Index = indexToWorkOn.Index,
 					LastIndexedEtag = indexToWorkOn.LastIndexedEtag
 				});
-			});
+			}, description:string.Format("Filtering documents for {0} indexes", indexesToWorkOn.Count));
 
 			filteredOutIndexes = innerFilteredOutIndexes.ToList();
 			foreach (var action in actions)
