@@ -304,7 +304,47 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 			if (src.Count == 1)
 			{
 				using (var enumerator = src.GetEnumerator())
-					action(enumerator);
+				{
+					var threadTask = new ThreadTask()
+					{
+						Action = () =>
+						{
+							action(enumerator);		
+						},
+						BatchStats = new BatchStatistics()
+						{
+							Total = 1,
+							Completed = 0
+						},
+						EarlyBreak = false,
+						Description = new OperationDescription
+						{
+							From = 1,
+							To=1,
+							Total = 1,
+							PlainText = description
+						}
+					};
+					
+					object _;
+					try
+					{
+						threadTask.Action();
+						threadTask.BatchStats.Completed++;
+						_runningTasks.TryAdd(threadTask, null);
+					}
+					catch (Exception e)
+					{
+						logger.ErrorException(
+							string.Format(
+								"Error occured while executing RavenThreadPool task; ThreadPool name :{0} ; Task queued at: {1} ; Task Description: {2} ",
+							this.Name, threadTask.QueuedAt, threadTask.Description), e);
+					}
+					finally
+					{
+						_runningTasks.TryRemove(threadTask, out _);
+					}
+				}
 				return;
 			}
 			var ranges = new ConcurrentQueue<Tuple<int, int>>();
@@ -353,6 +393,11 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 							To = i*(pageSize + 1),
 							Total = src.Count
 						},
+						BatchStats = new BatchStatistics()
+						{
+							Total = rangeEnd - rangeStart,
+							Completed = 0
+						},
 						QueuedAt = now,
 						DoneEvent = totalTasks,
 					};
@@ -379,7 +424,47 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 
 			if (allowPartialBatchResumption && src.Count == 1)
 			{
-				action(src[0]);
+				var threadTask = new ThreadTask()
+				{
+					Action = () =>
+					{
+						action(src[0]);
+					},
+					BatchStats = new BatchStatistics()
+					{
+						Total = 1,
+						Completed = 0
+					},
+					EarlyBreak = false,
+					Description = new OperationDescription
+					{
+						From = 1,
+						To = 1,
+						Total = 1,
+						PlainText = description
+					}
+				};
+
+				object _;
+				try
+				{
+					threadTask.Action();
+					threadTask.BatchStats.Completed++;
+					_runningTasks.TryAdd(threadTask, null);
+				}
+				catch (Exception e)
+				{
+					logger.ErrorException(
+						string.Format(
+							"Error occured while executing RavenThreadPool task; ThreadPool name :{0} ; Task queued at: {1} ; Task Description: {2} ",
+						this.Name, threadTask.QueuedAt, threadTask.Description), e);
+				}
+				finally
+				{
+					_runningTasks.TryRemove(threadTask, out _);
+				}
+
+				
 				return;
 			}
 
@@ -389,7 +474,8 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 
 			var batch = new BatchStatistics
 			{
-				Total = src.Count
+				Total = src.Count,
+				Completed = 0
 			};
 
 			if (_concurrentEvents.TryDequeue(out lastEvent) == false)

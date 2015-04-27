@@ -432,7 +432,7 @@ namespace Raven.Database.Indexing
 
 						parallelOperations.Enqueue(parallelStats);
 					});
-				}, description: string.Format("Executing reduction for index: {0}", index.Index.PublicName));
+				}, description: string.Format("Performing Single Step Reduction for index {0} from Etag {1} for {2} keys", index.Index.PublicName, index.Index.GetLastEtagFromStats(), keysToReduce.Length));
 
 				reduceLevelStats.Operations.Add(new ParallelPerformanceStats
 				{
@@ -582,7 +582,7 @@ namespace Raven.Database.Indexing
 					{
 						context.NotifyAboutWork();
 					}
-				}, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: "Executing Indexex Reducing");
+				}, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Executing Indexex Reduction on {0} indexes", indexesToWorkOn.Count));
 				Interlocked.Increment(ref executedPartially);
 	        }
 	        finally

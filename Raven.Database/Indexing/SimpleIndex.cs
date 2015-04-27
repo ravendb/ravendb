@@ -230,7 +230,7 @@ namespace Raven.Database.Indexing
 
 							parallelOperations.Enqueue(parallelStats);
 						}
-					});
+					}, description: string.Format("Mapping index {0} from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
 
 					performanceStats.Add(new ParallelPerformanceStats
 					{
