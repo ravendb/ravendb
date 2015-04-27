@@ -23,6 +23,7 @@ using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
 using Raven.Client.Document.DTC;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -50,7 +51,11 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// The database name for this session
 		/// </summary>
-		public string DatabaseName { get; internal set; }
+		public virtual string DatabaseName
+		{
+			get { return databaseName ?? MultiDatabase.GetDatabaseName(DocumentStore.Url); }
+			internal set { databaseName = value; }
+		}
 
 		protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -1186,6 +1191,7 @@ more responsive application.
 		}
 
 		private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
+		protected string databaseName;
 		public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
 		public EntityToJson EntityToJson { get; private set; }
 

@@ -880,7 +880,7 @@ namespace Raven.Client.Document
 		{
 			if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
 			{
-				var databaseName = session.DatabaseName ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.SystemDatabase;
+				var databaseName = session.DatabaseName ?? Constants.SystemDatabase;
 				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ,
 					_ => new EvictItemsFromCacheBasedOnChanges(databaseName,
 						Changes(databaseName),
