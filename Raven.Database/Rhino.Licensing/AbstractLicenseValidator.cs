@@ -235,15 +235,15 @@ namespace Rhino.Licensing
 		/// <summary>
 		/// Validates loaded license
 		/// </summary>
-		public virtual void AssertValidLicense()
+		public virtual void AssertValidLicense(bool turnOffDiscoveryClient = false)
 		{
-			AssertValidLicense(() => { });
+            AssertValidLicense(() => { }, turnOffDiscoveryClient);
 		}
 
 		/// <summary>
 		/// Validates loaded license
 		/// </summary>
-		public virtual void AssertValidLicense(Action onValidLicense)
+		public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false)
 		{
 			LicenseAttributes.Clear();
 			if (IsLicenseValid())
@@ -263,10 +263,12 @@ namespace Rhino.Licensing
 					Logger.ErrorException("Could not setup node discovery", e);
 				}
 				nextLeaseTimer = new Timer(LeaseLicenseAgain);
-
-				discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
-				discoveryClient.PublishMyPresence();
-				return;
+			    if (!turnOffDiscoveryClient)
+			    {
+			        discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
+			        discoveryClient.PublishMyPresence();
+			    }
+			    return;
 			}
 
 			Logger.Warn("Could not validate existing license\r\n{0}", License);
