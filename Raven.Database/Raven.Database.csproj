@@ -224,15 +224,6 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Smuggler\Client\ChunkedBulkInsertOperation.cs">
-      <Link>Smuggler\SmugglerImports\ChunkedBulkInsertOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs">
-      <Link>Smuggler\SmugglerImports\ChunkedRemoteBulkInsertOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Smuggler\SmugglerRemoteDatabaseOperations.cs">
-      <Link>Smuggler\SmugglerImports\SmugglerRemoteDatabaseOperations.cs</Link>
-    </Compile>
     <Compile Include="Actions\ActionsBase.cs" />
     <Compile Include="Actions\AttachmentActions.cs" />
     <Compile Include="Actions\LastCollectionEtags.cs" />
@@ -379,8 +370,18 @@
     <Compile Include="Server\WebApi\RouteCacher.cs" />
     <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
     <Compile Include="FileSystem\Smuggler\FilesystemDataDumper.cs" />
+    <Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />
+    <Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />
+    <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
+    <Compile Include="Smuggler\SmugglerDatabaseApi.cs" />
+    <Compile Include="Smuggler\SmugglerDatabaseOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
+    <Compile Include="Smuggler\SmugglerFilesApi.cs" />
+    <Compile Include="Smuggler\SmugglerFilesOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
+    <Compile Include="Smuggler\SmugglerOperationDispatcher.cs" />
+    <Compile Include="Smuggler\SmugglerRemoteDatabaseOperations.cs" />
+    <Compile Include="Smuggler\SmugglerRemoteFilesOperations.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
