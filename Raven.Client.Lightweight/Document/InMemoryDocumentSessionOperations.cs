@@ -53,8 +53,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public virtual string DatabaseName
 		{
-			get { return databaseName ?? MultiDatabase.GetDatabaseName(DocumentStore.Url); }
-			internal set { databaseName = value; }
+			get { return _databaseName ?? MultiDatabase.GetDatabaseName(DocumentStore.Url); }
+			internal set { _databaseName = value; }
 		}
 
 		protected static readonly ILog log = LogManager.GetCurrentClassLogger();
@@ -1191,7 +1191,7 @@ more responsive application.
 		}
 
 		private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
-		protected string databaseName;
+		protected string _databaseName;
 		public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
 		public EntityToJson EntityToJson { get; private set; }
 
