@@ -161,6 +161,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new DatabaseErrors(databaseName, databaseLandlord, index));
 			store.Add(new DatabaseId(databaseName, databaseLandlord, index));
 			store.Add(new DatabaseActiveBundles(databaseName, databaseLandlord, index));
+			store.Add(new DatabaseLoaded(databaseName, databaseLandlord, index));
 
 			store.Add(new DatabaseDocsWritePerSecond(databaseName, databaseLandlord, index));
 			store.Add(new DatabaseIndexedPerSecond(databaseName, databaseLandlord, index));

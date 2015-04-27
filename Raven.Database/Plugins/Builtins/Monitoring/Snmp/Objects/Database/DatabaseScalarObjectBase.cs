@@ -16,20 +16,20 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database
 
 		private readonly string databaseName;
 
-		private readonly DatabasesLandlord landlord;
+		protected readonly DatabasesLandlord Landlord;
 
 		protected DatabaseScalarObjectBase(string databaseName, DatabasesLandlord landlord, ObjectIdentifier identifier)
 			: base(identifier)
 		{
 			this.databaseName = databaseName;
-			this.landlord = landlord;
+			Landlord = landlord;
 		}
 
 		protected DatabaseScalarObjectBase(string databaseName, DatabasesLandlord landlord, string dots, int index)
 			: base(dots, index)
 		{
 			this.databaseName = databaseName;
-			this.landlord = landlord;
+			Landlord = landlord;
 		}
 
 		protected abstract ISnmpData GetData(DocumentDatabase database);
@@ -38,8 +38,8 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database
 		{
 			get
 			{
-				if (landlord.IsDatabaseLoaded(databaseName)) 
-					return GetData(landlord.GetDatabaseInternal(databaseName).Result);
+				if (Landlord.IsDatabaseLoaded(databaseName)) 
+					return GetData(Landlord.GetDatabaseInternal(databaseName).Result);
 
 				return Null;
 			}
