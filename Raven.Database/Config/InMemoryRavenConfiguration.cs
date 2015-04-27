@@ -140,6 +140,7 @@ namespace Raven.Database.Config
 
 			MaxStepsForScript = ravenSettings.MaxStepsForScript.Value;
 			AdditionalStepsForScriptBasedOnDocumentSize = ravenSettings.AdditionalStepsForScriptBasedOnDocumentSize.Value;
+		    TurnOffDiscoveryClient = ravenSettings.TurnOffDiscoveryClient.Value;
 
 			// Index settings
 			MaxProcessingRunLatency = ravenSettings.MaxProcessingRunLatency.Value;
@@ -980,6 +981,11 @@ namespace Raven.Database.Config
 		/// </summary>
 		public bool DisableClusterDiscovery { get; set; }
 
+        /// <summary>
+        /// If True, turns off the discovery client.
+        /// </summary>
+        public bool TurnOffDiscoveryClient { get; set; }
+
 		/// <summary>
 		/// The server name
 		/// </summary>
@@ -1055,7 +1061,8 @@ namespace Raven.Database.Config
         ///     DoNothing (fields are not fetched from the document)
         ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
         /// </summary>
-        public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }	    
+        public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
+
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
