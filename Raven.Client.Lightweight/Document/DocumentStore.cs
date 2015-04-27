@@ -687,7 +687,8 @@ namespace Raven.Client.Document
 			database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
 
 			var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-			if (string.IsNullOrEmpty(database) == false)
+			if (string.IsNullOrEmpty(database) == false &&
+			    string.Equals(database, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
 			using (NoSynchronizationContext.Scope())
