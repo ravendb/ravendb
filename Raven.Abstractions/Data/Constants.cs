@@ -71,6 +71,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenIndexDeleteMarker = "Raven-Index-Delete-Marker";
 		public const string RavenTransformerDeleteMarker = "Raven-Transformer-Delete-Marker";
 
+		public const string TemporaryTransformerPrefix = "Temp/";
+
 		public const string ActiveBundles = "Raven/ActiveBundles";
 
 		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";

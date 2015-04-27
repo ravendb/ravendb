@@ -171,6 +171,7 @@
     <Content Include="App\views\database\documents\deleteCollection.html" />
     <Content Include="App\views\database\documents\documents.html" />
     <Content Include="App\views\database\documents\editDocument.html" />
+    <Content Include="App\views\database\exploration\exploration.html" />
     <Content Include="App\views\database\indexes\cancelSideBySizeConfirm.html" />
     <Content Include="App\views\database\indexes\copyIndexDialog.html" />
     <Content Include="App\views\database\indexes\deleteIndexesConfirm.html" />
@@ -730,6 +731,7 @@
     <TypeScriptCompile Include="App\commands\database\patch\savePatchCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\getKillQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryFacetsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\query\dataExplorationCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\replication\explainReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\replication\getAutomaticConflictResolutionDocumentCommand.ts" />
@@ -893,6 +895,7 @@
     <TypeScriptCompile Include="App\models\database\patch\patchDocuments.ts" />
     <TypeScriptCompile Include="App\models\database\patch\patchParam.ts" />
     <TypeScriptCompile Include="App\models\database\query\abstractQueryResult.ts" />
+    <TypeScriptCompile Include="App\models\database\query\dataExplorationRequest.ts" />
     <TypeScriptCompile Include="App\models\database\query\facet.ts" />
     <TypeScriptCompile Include="App\models\database\query\querySort.ts" />
     <TypeScriptCompile Include="App\models\database\replication\conflict.ts" />
@@ -957,6 +960,19 @@
     <TypeScriptCompile Include="App\viewmodels\database\documents\deleteCollection.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\documents\documents.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\documents\editDocument.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\exploration\exploration.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\cancelSideBySizeConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\copyIndexDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\deleteIndexesConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\editIndex.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\indexes.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\indexesAndTransformersClipboardDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\indexesShell.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\indexMergeSuggestions.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\indexTerms.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\replaceIndexDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\resetIndexConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\indexes\scriptedIndexes.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\patch\executePatchConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\patch\loadPatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\patch\patch.ts" />

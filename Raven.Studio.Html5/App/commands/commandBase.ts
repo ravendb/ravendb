@@ -46,8 +46,8 @@ class commandBase {
 		return longWait ? 60000 : 9000;
 	}
 
-    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, timeToAlert: number = 9000): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "GET", resource, null, timeToAlert);
+    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "GET", resource, options, timeToAlert);
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {

@@ -218,6 +218,7 @@ namespace Raven.Database.Storage
             get
             {
                 return transformDefinitions.Values
+										   .Where(x => !x.Temporary)
                                            .OrderBy(x => x.Name)
                                            .Select(x => x.Name)
                                            .ToArray();
@@ -260,15 +261,20 @@ namespace Raven.Database.Storage
         }
 
 		[CLSCompliant(false)]
-        public string CreateAndPersistTransform(TransformerDefinition transformerDefinition, AbstractTransformer transformer)
+        public string CreateTransform(TransformerDefinition transformerDefinition, AbstractTransformer transformer)
         {
 			transformCache.AddOrUpdate(transformerDefinition.TransfomerId, transformer, (s, viewGenerator) => transformer);
-            if (configuration.RunInMemory == false)
-            {
-                WriteTransformerDefinition(transformerDefinition);
-            }
             return transformer.Name;
         }
+
+		[CLSCompliant(false)]
+		public void PersistTransform(TransformerDefinition transformerDefinition)
+		{
+			if (configuration.RunInMemory == false)
+			{
+				WriteTransformerDefinition(transformerDefinition);
+			}
+		}
 
         public void UpdateIndexDefinitionWithoutUpdatingCompiledIndex(IndexDefinition definition)
         {
