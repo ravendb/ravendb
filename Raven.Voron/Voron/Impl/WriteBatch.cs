@@ -54,20 +54,10 @@ namespace Voron.Impl
 				yield return operation;
 		}
 
+        private long totalSize = 0;
+
 		public long Size()
 		{
-			long totalSize = 0;
-
-			if (_lastOperations.Count > 0)
-				totalSize += _lastOperations.Sum(
-					operation =>
-					operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
-
-			if (_multiTreeOperations.Count > 0)
-				totalSize += _multiTreeOperations.Sum(
-					tree =>
-					tree.Value.Sum(
-						multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
 			return totalSize;
 		}
 
@@ -239,6 +229,8 @@ namespace Voron.Impl
 					multiTreeOperationsOfTree[operation.Key] = specificMultiTreeOperations = new List<BatchOperation>();
 
 				specificMultiTreeOperations.Add(operation);
+
+                totalSize += operation.Key.Size;
 			}
 			else
 			{
@@ -247,15 +239,28 @@ namespace Voron.Impl
 				{
 					_lastOperations[treeName] = lastOpsForTree = new Dictionary<Slice, BatchOperation>(_sliceEqualityComparer);
 				}
+
 				BatchOperation old;
 				if (lastOpsForTree.TryGetValue(operation.Key, out old))
 				{
-					operation.SetVersionFrom(old);
+                    operation.SetVersionFrom(old);
+
+                    if (operation.Type == BatchOperationType.Add)
+                        totalSize -= operation.Key.Size + operation.ValueSize;
+                    else
+                        totalSize -= operation.Key.Size;
+
 					if (old.ValueStream != null)
-						old.ValueStream.Dispose();
+						old.ValueStream.Dispose();                    
 				}
+
 				lastOpsForTree[operation.Key] = operation;
-			}
+
+                if (operation.Type == BatchOperationType.Add)
+                    totalSize += operation.Key.Size + operation.ValueSize;
+                else
+                    totalSize += operation.Key.Size;
+            }
 		}
 
 		private void AssertValidKey(Slice key)
@@ -399,14 +404,16 @@ namespace Voron.Impl
 
 			public int CompareTo(BatchOperation other)
 			{
-				var r = SliceComparer.Instance.Compare(Key, other.Key);
+				var r = SliceComparer.CompareInline(Key, other.Key);
 				if (r != 0)
 					return r;
+
 				if (ValueSlice != null)
 				{
 					if (other.ValueSlice == null)
 						return -1;
-					return ValueSlice.Compare(other.ValueSlice);
+
+					return SliceComparer.CompareInline(ValueSlice, other.ValueSlice);
 				}
 				else if (other.ValueSlice != null)
 				{

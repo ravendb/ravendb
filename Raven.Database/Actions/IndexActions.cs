@@ -343,8 +343,7 @@ namespace Raven.Database.Actions
 
 	        Debug.Assert(index != null);
 
-		
-
+	        Action precomputeTask = null;
 	        if (WorkContext.RunIndexing &&
 				name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
 	            Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex))
@@ -352,7 +351,7 @@ namespace Raven.Database.Actions
 		        // optimization of handling new index creation when the number of document in a database is significantly greater than
 		        // number of documents that this index applies to - let us use built-in RavenDocumentsByEntityName to get just appropriate documents
 
-		        TryApplyPrecomputedBatchForNewIndex(index, definition);
+		        precomputeTask  = TryCreateTaskForApplyingPrecomputedBatchForNewIndex(index, definition);
 	        }
 	        else
 	        {
@@ -364,138 +363,161 @@ namespace Raven.Database.Actions
 			// index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 			
+			// we start the precomuteTask _after_ we finished adding the index
+	        if (precomputeTask != null)
+	        {
+		        precomputeTask();
+	        }
+
 			WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             WorkContext.NotifyAboutWork();
         }
 
-		private void TryApplyPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
-		{
-			var generator = IndexDefinitionStorage.GetViewGenerator(definition.IndexId);
-			if (generator.ForEntityNames.Count == 0 && index.IsTestIndex == false)
-			{
-				// we don't optimize if we don't have what to optimize _on_, we know this is going to return all docs.
-				// no need to try to optimize that, then
+        private Action TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
+        {
+            var generator = IndexDefinitionStorage.GetViewGenerator(definition.IndexId);
+            if (generator.ForEntityNames.Count == 0 && index.IsTestIndex == false)
+            {
+                // we don't optimize if we don't have what to optimize _on_, we know this is going to return all docs.
+                // no need to try to optimize that, then
 				index.IsMapIndexingInProgress = false;
-				return;
-			}
+	            return null;
+            }
 
-			try
-			{
+            try
+            {
 				var cts = new CancellationTokenSource();
 
-				var task = Task
-					.Factory
-					.StartNew(() => ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts), TaskCreationOptions.LongRunning)
-					.ContinueWith(t =>
+				var task = new Task(() =>
 					{
-						if (t.IsFaulted)
+					try
+					{
+						ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts);
+					}
+					catch (Exception e)
 						{
-							Log.Warn("Could not apply precomputed batch for index " + index, t.Exception);
+						Log.Warn("Could not apply precomputed batch for index " + index, e);
 						}
+					finally
+					{
 						index.IsMapIndexingInProgress = false;
 						WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
 						WorkContext.NotifyAboutWork();
-					});
+					}
+				}, TaskCreationOptions.LongRunning);
 
-				long id;
+	            return () =>
+	            {
+		            try
+		            {
+			            task.Start();
+
+	            long id;
 				Database
 					.Tasks
 					.AddTask(
-						task,
-						new TaskBasedOperationState(task),
+						task, 
+						new TaskBasedOperationState(task), 
 						new TaskActions.PendingTaskDescription
-						{
-							StartTime = DateTime.UtcNow,
-							Payload = index.PublicName,
+				        {
+					        StartTime = DateTime.UtcNow, 
+							Payload = index.PublicName, 
 							TaskType = TaskActions.PendingTaskType.NewIndexPrecomputedBatch
-						},
+				        }, 
 						out id,
 						cts);
-			}
-			catch (Exception)
-			{
-				index.IsMapIndexingInProgress = false;
-				throw;
-			}
-		}
+            }
+            catch (Exception)
+            {
+                index.IsMapIndexingInProgress = false;
+                throw;
+            }
+	            };
+        }
+            catch (Exception)
+            {
+                index.IsMapIndexingInProgress = false;
+                throw;
+            }
+        }
 
-		private void ApplyPrecomputedBatchForNewIndex(Index index, AbstractViewGenerator generator, int pageSize, CancellationTokenSource cts)
-		{
-			PrecomputedIndexingBatch result = null;
+	    private void ApplyPrecomputedBatchForNewIndex(Index index, AbstractViewGenerator generator, int pageSize, CancellationTokenSource cts)
+        {
+            PrecomputedIndexingBatch result = null;
 
-			var docsToIndex = new List<JsonDocument>();
-			TransactionalStorage.Batch(actions =>
-			{
-				var query = GetQueryForAllMatchingDocumentsForIndex(generator);
+            var docsToIndex = new List<JsonDocument>();
+            TransactionalStorage.Batch(actions =>
+            {
+	            var query = GetQueryForAllMatchingDocumentsForIndex(generator);
 
-				JsonDocument highestByEtag = null;
+	            JsonDocument highestByEtag = null;
 
 				using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
 				using (var op = new QueryActions.DatabaseQueryOperation(Database, Constants.DocumentsByEntityNameIndex, new IndexQuery
-				{
-					Query = query,
+                {
+                    Query = query,
 					PageSize = pageSize
-				}, actions, linked)
-				{
-					ShouldSkipDuplicateChecking = true
-				})
-				{
-					op.Init();
-					if (op.Header.TotalResults == 0 ||
-						(op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
-					{
-						// we don't apply this optimization if the total number of results 
+                }, actions, linked)
+                {
+                    ShouldSkipDuplicateChecking = true
+                })
+                {
+                    op.Init();
+                    if (op.Header.TotalResults == 0 ||
+                        (op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
+                    {
+                        // we don't apply this optimization if the total number of results 
 						// to index is more than the max numbers to index in a single batch. 
 						// The idea here is that we need to keep the amount
-						// of memory we use to a manageable level even when introducing a new index to a BIG 
-						// database
-						try
-						{
-							cts.Cancel();
-							// we have to run just a little bit of the query to properly setup the disposal
-							op.Execute(o => { });
-						}
-						catch (OperationCanceledException)
-						{
-						}
-						return;
-					}
+                        // of memory we use to a manageable level even when introducing a new index to a BIG 
+                        // database
+                        try
+                        {
+                            cts.Cancel();
+                            // we have to run just a little bit of the query to properly setup the disposal
+                            op.Execute(o => { });
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
+                        return;
+                    }
 
-					Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
-							  op.Header.TotalResults);
-					op.Execute(document =>
-					{
-						var metadata = document.Value<RavenJObject>(Constants.Metadata);
-						var key = metadata.Value<string>("@id");
-						var etag = Etag.Parse(metadata.Value<string>("@etag"));
-						var lastModified = DateTime.Parse(metadata.Value<string>(Constants.LastModified));
-						document.Remove(Constants.Metadata);
+                    Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
+                              op.Header.TotalResults);
+                    op.Execute(document =>
+                    {
+                        var metadata = document.Value<RavenJObject>(Constants.Metadata);
+                        var key = metadata.Value<string>("@id");
+                        var etag = Etag.Parse(metadata.Value<string>("@etag"));
+                        var lastModified = DateTime.Parse(metadata.Value<string>(Constants.LastModified));
+                        document.Remove(Constants.Metadata);
 
-						var doc = new JsonDocument
-						{
-							DataAsJson = document,
-							Etag = etag,
-							Key = key,
-							LastModified = lastModified,
-							SkipDeleteFromIndex = true,
-							Metadata = metadata
-						};
+	                    var doc = new JsonDocument
+	                    {
+		                    DataAsJson = document,
+		                    Etag = etag,
+		                    Key = key,
+		                    LastModified = lastModified,
+		                    SkipDeleteFromIndex = true,
+		                    Metadata = metadata
+	                    };
 
-						docsToIndex.Add(doc);
+	                    docsToIndex.Add(doc);
 
-						if (highestByEtag == null || doc.Etag.CompareTo(highestByEtag.Etag) > 0)
-							highestByEtag = doc;
-					});
-				}
+	                    if (highestByEtag == null || doc.Etag.CompareTo(highestByEtag.Etag) > 0)
+		                    highestByEtag = doc;
+                    });
+                }
 
-				result = new PrecomputedIndexingBatch
-				{
-					LastIndexed = highestByEtag.Etag,
-					LastModified = highestByEtag.LastModified.Value,
-					Documents = docsToIndex,
-					Index = index
-				};
-			});
+	            result = new PrecomputedIndexingBatch
+                {
+                    LastIndexed = highestByEtag.Etag,
+                    LastModified = highestByEtag.LastModified.Value,
+                    Documents = docsToIndex,
+                    Index = index
+                };
+            });
 
 			if (result != null && result.Documents != null && result.Documents.Count > 0)
 			{
@@ -503,12 +525,12 @@ namespace Raven.Database.Actions
 				{
 					Database.IndexingExecuter.IndexPrecomputedBatch(result, linked.Token);
 
-					if (index.IsTestIndex)
+					if (index.IsTestIndex) 
 						TransactionalStorage.Batch(accessor => accessor.Indexing.TouchIndexEtag(index.IndexId));
 				}
 			}
 
-		}
+        }
 
 	    private string GetQueryForAllMatchingDocumentsForIndex(AbstractViewGenerator generator)
 	    {

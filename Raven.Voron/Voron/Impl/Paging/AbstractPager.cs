@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Voron.Trees;
 using Voron.Util;
@@ -11,7 +10,9 @@ namespace Voron.Impl.Paging
 {
     public unsafe abstract class AbstractPager : IVirtualPager
     {
-        protected int MinIncreaseSize { get { return 16 * PageSize; } }
+        protected int MinIncreaseSize { get { return 16 * PageSize; } } // 64 KB
+		protected int MaxIncreaseSize { get { return 262144 * PageSize; } } // 1 GB
+
         private long _increaseSize;
         private DateTime _lastIncrease;
 
@@ -177,15 +178,17 @@ namespace Voron.Impl.Paging
                 _lastIncrease = now;
                 return MinIncreaseSize;
             }
+
             TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
             if (timeSinceLastIncrease.TotalSeconds < 30)
             {
-                _increaseSize = Math.Min(_increaseSize * 2, current + current / 4);
+                _increaseSize = Math.Min(_increaseSize * 2, MaxIncreaseSize);
             }
             else if (timeSinceLastIncrease.TotalMinutes > 2)
             {
                 _increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
             }
+
             _lastIncrease = now;
             // At any rate, we won't do an increase by over 25% of current size, to prevent huge empty spaces
             // 
