@@ -34,7 +34,7 @@ namespace Raven.Client.Shard
 
 		public override string DatabaseName
 		{
-			get { return databaseName; }
+			get { return _databaseName; }
 		}
 
 		#region Sharding support methods
