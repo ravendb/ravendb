@@ -45,13 +45,10 @@ namespace Raven.Client.Document
 	    private bool GetIdAsString(object entity, object value, out string id)
 	    {
 	        id = value as string;
-	        if (id == null && value != null) // need conversion
-	        {
-	            id = documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
-	            return true;
-	        }
+		    if (id == null && value != null) // need conversion
+			    id = documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
 
-	        return id != null;
+		    return id != null;
 	    }
 
 	    /// <summary>
