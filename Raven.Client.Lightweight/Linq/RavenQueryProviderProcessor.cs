@@ -1657,7 +1657,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				if (doc.TryGetValue(renamedField, out value) == false)
 					continue;
 				values[renamedField] = value;
-				doc.Remove(renamedField);
+				if (FieldsToFetch.Contains(renamedField) == false)
+				{
+					doc.Remove(renamedField);	
+				}
 			}
 			foreach (var rename in FieldsToRename)
 			{
