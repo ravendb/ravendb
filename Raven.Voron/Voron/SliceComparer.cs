@@ -19,16 +19,52 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int CompareInline ( Slice x, Slice y )
+        public static int CompareInline(Slice x, Slice y)
         {
             Debug.Assert(x.Options == SliceOptions.Key);
             Debug.Assert(y.Options == SliceOptions.Key);
 
             var srcKey = x.KeyLength;
             var otherKey = y.KeyLength;
-            var length = srcKey <= otherKey ? srcKey : otherKey;
+            var size = srcKey <= otherKey ? srcKey : otherKey;
 
-            var r = x.CompareDataInline(y, length);
+            int r = 0;
+
+            unsafe
+            {
+                if (x.Array != null)
+                {
+                    fixed (byte* a = x.Array)
+                    {
+                        if (y.Array != null)
+                        {
+                            fixed (byte* b = y.Array)
+                            {
+                                r = MemoryUtils.CompareInline(a, b, size);
+                            }
+                        }
+                        else
+                        {
+                            r = MemoryUtils.CompareInline(a, y.Pointer, size);
+                        }
+                    }
+                }
+                else
+                {
+                    if (y.Array != null)
+                    {
+                        fixed (byte* b = y.Array)
+                        {
+                            r = MemoryUtils.CompareInline(x.Pointer, b, size);
+                        }
+                    }
+                    else
+                    {
+                        r = MemoryUtils.CompareInline(x.Pointer, y.Pointer, size);
+                    }
+                }
+            }
+            
             if (r != 0)
                 return r;
 
@@ -46,9 +82,7 @@ namespace Voron
             if (srcKey != otherKey)
                 return false;
 
-            var length = srcKey <= otherKey ? srcKey : otherKey;
-
-            return x.CompareDataInline(y, length) == 0;
+            return CompareInline( x, y ) == 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
