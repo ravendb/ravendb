@@ -254,7 +254,7 @@ namespace Raven.Client.Shard
 			var sessionId = Guid.NewGuid();
             var session = new ShardedDocumentSession(database, this, Listeners, sessionId, ShardStrategy, shardDbCommands)
 				{
-					DatabaseName = database ?? MultiDatabase.GetDatabaseName(Url)
+					DatabaseName = database
 				};
 			AfterSessionCreated(session);
 			return session;
