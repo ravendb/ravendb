@@ -756,7 +756,7 @@ namespace Raven.Database.Server.Controllers
 				},
 				new
 				{
-					Database.MappingThreadPool.Name,
+					Database.ReducingThreadPool.Name,
 					WaitingTasks = Database.ReducingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
 					RunningTasks = Database.ReducingThreadPool.GetRunningTasks().Select(x => x.Description),
 					ThreadPoolStats = Database.ReducingThreadPool.GetThreadPoolStats()
