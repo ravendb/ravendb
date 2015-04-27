@@ -15,6 +15,12 @@ namespace Voron
        
         public int Compare(Slice x, Slice y)
         {
+            return CompareInline(x, y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareInline ( Slice x, Slice y )
+        {
             Debug.Assert(x.Options == SliceOptions.Key);
             Debug.Assert(y.Options == SliceOptions.Key);
 
@@ -22,7 +28,7 @@ namespace Voron
             var otherKey = y.KeyLength;
             var length = srcKey <= otherKey ? srcKey : otherKey;
 
-            var r = x.CompareSliceData(y, length);
+            var r = x.CompareDataInline(y, length);
             if (r != 0)
                 return r;
 
@@ -42,7 +48,7 @@ namespace Voron
 
             var length = srcKey <= otherKey ? srcKey : otherKey;
 
-            return x.CompareSliceData(y, length) == 0;
+            return x.CompareDataInline(y, length) == 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

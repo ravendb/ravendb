@@ -259,7 +259,8 @@ namespace Raven.Storage.Voron
 			var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
 			schemaCreator.CreateSchema();
 			schemaCreator.SetupDatabaseIdAndSchemaVersion();
-			schemaCreator.UpdateSchemaIfNecessary();
+            if (!configuration.Storage.PreventSchemaUpdate)
+			    schemaCreator.UpdateSchemaIfNecessary();
 
 		    SetupDatabaseId();
 		}
