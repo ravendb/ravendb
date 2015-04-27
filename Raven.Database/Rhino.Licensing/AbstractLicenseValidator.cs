@@ -253,18 +253,18 @@ namespace Rhino.Licensing
 				if (MultipleLicenseUsageBehavior == MultipleLicenseUsage.AllowSameLicense)
 					return;
 
-				try
-				{
-					discoveryHost.Start();
-				}
-				catch (Exception e)
-				{
-					// we explicitly don't want bad things to happen if we can't do that
-					Logger.ErrorException("Could not setup node discovery", e);
-				}
 				nextLeaseTimer = new Timer(LeaseLicenseAgain);
 			    if (!turnOffDiscoveryClient)
 			    {
+					try
+					{
+						discoveryHost.Start();
+					}
+					catch (Exception e)
+					{
+						// we explicitly don't want bad things to happen if we can't do that
+						Logger.ErrorException("Could not setup node discovery", e);
+					}
 			        discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
 			        discoveryClient.PublishMyPresence();
 			    }
