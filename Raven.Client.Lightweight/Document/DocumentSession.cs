@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Json.Linq;
@@ -29,8 +30,7 @@ namespace Raven.Client.Document
     public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
                                    ISyncAdvancedSessionOperation, IDocumentQueryGenerator
     {
-
-        /// <summary>
+	    /// <summary>
         /// Gets the database commands.
         /// </summary>
         /// <value>The database commands.</value>
