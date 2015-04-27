@@ -22,7 +22,7 @@ namespace Raven.Database.Server.Controllers
 			if (string.IsNullOrEmpty(transformer) == false && transformer != "/")
 			{
 				var transformerDefinition = Database.Transformers.GetTransformerDefinition(transformer);
-				if (transformerDefinition == null)
+				if (transformerDefinition == null || transformerDefinition.Temporary)
 					return GetEmptyMessage(HttpStatusCode.NotFound);
 
 				return GetMessageWithObject(new

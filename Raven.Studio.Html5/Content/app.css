@@ -7361,10 +7361,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   background-image: linear-gradient(#00c700, #c7009a);
 }
 .collection-style-17 {
-  background-image: linear-gradient(#c7009a, #ff0000);
+  background-image: linear-gradient(#c7009a, red);
 }
 .collection-style-18 {
-  background-image: linear-gradient(#ff0000, #0095ef);
+  background-image: linear-gradient(red, #0095ef);
 }
 .collection-style-19 {
   background-image: linear-gradient(#0095ef, #a70068);
@@ -8376,6 +8376,12 @@ a.global_help_link:focus {
 }
 .negative-margin {
   margin-top: -10px;
+}
+.padd-top-10 {
+  padding-top: 10px;
+}
+.padd-right-10 {
+  padding-right: 10px;
 }
 #indexingPerformance {
   background-color: white;

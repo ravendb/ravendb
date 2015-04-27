@@ -26,6 +26,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions.Util.Encryptors;
+using Voron.Impl.Journal;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -774,7 +776,5 @@ namespace Raven.Database.Server.Controllers
 			stats.SetLastDocumentEtag(lastEtag);
 			return GetMessageWithObject(stats);
 		}
-
-
 	}
 }

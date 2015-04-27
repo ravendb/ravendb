@@ -1329,3 +1329,10 @@ interface serverSmugglingDto {
 interface serverSmugglingOperationStateDto extends operationStatusDto {
 	Messages: Array<string>;
 }
+
+interface dataExplorationRequestDto {
+	Linq: string;
+	Collection: string;
+	TimeoutSeconds: number;
+	PageSize: number;
+}
