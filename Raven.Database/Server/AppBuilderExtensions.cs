@@ -101,7 +101,7 @@ namespace Owin
 				{
 					accept(new Dictionary<string, object>()
 					{
-						{"websocket.ReceiveBufferSize", 1024},
+						{"websocket.ReceiveBufferSize", 256},
 						{"websocket.Buffer", webSocketsTrasport.PreAllocatedBuffer},
 						{"websocket.KeepAliveInterval", WebSocket.DefaultKeepAliveInterval}
 					}, webSocketsTrasport.Run);

@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Connections
 	public class WebSocketBufferPool
 	{
 		private const int TakeRetries = 128;
-		private const int BufferSize = 4096;
+		private const int BufferSize = 1024;
 		private const int NumberOfBuffersToAllocate = 2048;
 		private readonly ConcurrentStack<ArraySegment<byte>> buffers = new ConcurrentStack<ArraySegment<byte>>();
 		private readonly Version dotNetVersion = Environment.Version;
