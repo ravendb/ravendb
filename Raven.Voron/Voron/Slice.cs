@@ -70,6 +70,10 @@ namespace Voron
 			Set(node);
 		}
 
+        public Slice(string key)
+            : this(Encoding.UTF8.GetBytes(key))
+        { }
+
 		public override bool Equals(object obj)
 		{
 			if (ReferenceEquals(null, obj)) return false;
