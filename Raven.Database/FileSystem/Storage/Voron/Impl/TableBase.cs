@@ -48,7 +48,7 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
             stream.Write(value, 0, value.Length);
 		    stream.Position = 0;
 
-			writeBatch.Add(key, stream, TableName, expectedVersion);
+            writeBatch.Add((Slice)key, stream, TableName, expectedVersion);
 		}
 
 		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value, ushort? expectedVersion = null, bool shouldIgnoreConcurrencyExceptions = false)
@@ -108,7 +108,7 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
 
 		public virtual void Delete(WriteBatch writeBatch, string key, ushort? expectedVersion = null)
 		{
-			writeBatch.Delete(key, TableName, expectedVersion);
+			writeBatch.Delete((Slice)key, TableName, expectedVersion);
 		}
 
 		public virtual void Delete(WriteBatch writeBatch, Slice key, ushort? expectedVersion = null)
