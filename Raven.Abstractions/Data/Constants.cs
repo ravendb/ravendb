@@ -71,6 +71,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenIndexDeleteMarker = "Raven-Index-Delete-Marker";
 		public const string RavenTransformerDeleteMarker = "Raven-Transformer-Delete-Marker";
 
+		public const string TemporaryTransformerPrefix = "Temp/";
+
 		public const string ActiveBundles = "Raven/ActiveBundles";
 
 		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
@@ -112,6 +114,7 @@ namespace Raven.Abstractions.Data
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
 
 		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
+		public const string MaxNumberOfStoredIndexingBatchInfoElements = "Raven/Indexing/MaxNumberOfStoredIndexingBatchInfoElements";
 
 		public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
 
@@ -309,6 +312,7 @@ namespace Raven.Abstractions.Data
 	        public const string UrlPrefix = "fs";
 
 	        public const string RavenFsSize = "RavenFS-Size";
+            public const string PreventSchemaUpdate = "Raven/PreventSchemaUpdate";
 
 	        public static class Versioning
 	        {

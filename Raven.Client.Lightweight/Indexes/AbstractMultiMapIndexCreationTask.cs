@@ -73,7 +73,7 @@ namespace Raven.Client.Indexes
 				Stores = Stores,
 				TermVectors = TermVectors,
 				SpatialIndexes = SpatialIndexes,
-				Suggestions = IndexSuggestions,
+				SuggestionsOptions = IndexSuggestions,
 				AnalyzersStrings = AnalyzersStrings,
 				IndexesStrings = IndexesStrings,
 				StoresStrings = StoresStrings,

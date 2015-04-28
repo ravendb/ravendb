@@ -205,10 +205,17 @@
                                     <div class="col-md-7 fieldControl" data-bind="visible: indexing() === 'Analyzed'">
                                         <input type="text" class="form-control fieldControl" data-bind="value: analyzer, valueUpdate: 'afterkeyup', attr: { title: analyzer }, enable: !$parent.isSideBySideIndex()" />
                                     </div>
-                                    <label class="control-label col-md-5  fieldControl" title="The suggestion distance algorithm"  >Suggestion</label>
+                                    <label class="control-label col-md-5  fieldControl" title="The suggestion distance algorithm">Suggestion</label>
                                     <div class="col-md-7 fieldControl">
-                                        <select class="form-control  fieldControl" data-bind="options: ['None', 'Default', 'Levenshtein', 'JaroWinkler', 'NGram'], value: suggestionDistance, enable: !$parent.isSideBySideIndex()"></select>
-                                        <input type="number" class="form-control  fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-bind="numericValue: suggestionAccuracy, valueUpdate: 'afterkeyup',enable: !$parent.isSideBySideIndex(), visible: suggestionDistance() !== 'None'" />
+										<button type="button" data-bind="enable: !$parent.isSideBySideIndex()" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+											<span data-bind="visible: suggestionEnabled()">Yes</span>
+											<span data-bind="visible: !suggestionEnabled()">No</span>
+											<span class="caret"></span>
+										</button>
+										<ul class="dropdown-menu" role="menu">
+											<li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, true)">Yes</a></li>
+											<li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, false)">No</a></li>
+										</ul>
                                     </div>
                                 </div>
                             </div>

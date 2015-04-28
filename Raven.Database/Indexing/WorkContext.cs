@@ -30,8 +30,8 @@ namespace Raven.Database.Indexing
 
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
 
-		private readonly SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(25);
-		private readonly SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(25);
+		private SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo;
+		private SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo;
 		private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
@@ -48,7 +48,7 @@ namespace Raven.Database.Indexing
             MetricsCounters = new MetricsCountersManager();
 	        InstallGauges();
 		    LastIdleTime = SystemTime.UtcNow;
-	    }
+		}
 
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
@@ -380,7 +380,7 @@ namespace Raven.Database.Indexing
 		public void ReportIndexingBatchCompleted(IndexingBatchInfo batchInfo)
 		{
 			batchInfo.BatchCompleted();
-			lastActualIndexingBatchInfo.Add(batchInfo);
+			LastActualIndexingBatchInfo.Add(batchInfo);
 		}
 
 		public ReducingBatchInfo ReportReducingBatchStarted(List<string> indexesToWorkOn)
@@ -396,7 +396,7 @@ namespace Raven.Database.Indexing
 		public void ReportReducingBatchCompleted(ReducingBatchInfo batchInfo)
 		{
 			batchInfo.BatchCompleted();
-			lastActualReducingBatchInfo.Add(batchInfo);
+			LastActualReducingBatchInfo.Add(batchInfo);
 		}
 
 		public ConcurrentSet<FutureBatchStats> FutureBatchStats
@@ -406,12 +406,26 @@ namespace Raven.Database.Indexing
 
 		public SizeLimitedConcurrentSet<IndexingBatchInfo> LastActualIndexingBatchInfo
 		{
-			get { return lastActualIndexingBatchInfo; }
+			get
+			{
+				if (lastActualIndexingBatchInfo == null)
+				{
+					lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
+				}
+				return lastActualIndexingBatchInfo;
+			}
 		}
 
 		public SizeLimitedConcurrentSet<ReducingBatchInfo> LastActualReducingBatchInfo
 		{
-			get { return lastActualReducingBatchInfo; }
+			get
+			{
+				if (lastActualReducingBatchInfo == null)
+				{
+					lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
+				}
+				return lastActualReducingBatchInfo;
+			}
 		}
 
 		public DocumentDatabase Database { get; set; }

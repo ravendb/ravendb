@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Raven.Bundles.Encryption.Streams
 {
@@ -29,14 +25,34 @@ namespace Raven.Bundles.Encryption.Streams
 
 			public static readonly int HeaderSize = Marshal.SizeOf(typeof(Header));
 
+			public int ActualHeaderSize
+			{
+				get
+				{
+					int headerSize;
+					switch (MagicNumber)
+					{
+						case DefaultMagicNumber: //old header struct --> without the last field
+							headerSize = HeaderSize - Marshal.SizeOf(typeof(long));
+							break;
+						case WithTotalSizeMagicNumber:
+							headerSize = HeaderSize;
+							break;
+						default:
+							throw new ApplicationException("Invalid magic number");
+					}
+					return headerSize;
+				}
+			}
+
 			public int DiskBlockSize
 			{
 				get { return EncryptedBlockSize + IVSize; }
 			}
 
-		    public long GetBlockNumberFromPhysicalPosition(long position)
+			public long GetBlockNumberFromPhysicalPosition(long position)
 			{
-				return (position - HeaderSize) / DiskBlockSize;
+				return (position - ActualHeaderSize) / DiskBlockSize;
 			}
 
 			public long GetBlockNumberFromLogicalPosition(long position)
@@ -46,7 +62,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 			public long GetPhysicalPositionFromBlockNumber(long number)
 			{
-				return DiskBlockSize * number + HeaderSize;
+				return DiskBlockSize * number + ActualHeaderSize;
 			}
 
 			public long GetLogicalPositionFromBlockNumber(long number)
@@ -63,9 +79,10 @@ namespace Raven.Bundles.Encryption.Streams
 		}
 
 		[StructLayout(LayoutKind.Sequential, Pack = 1)]
-		internal struct Footer {
+		internal struct Footer
+		{
 			public long TotalLength;
-		
+
 			public static readonly int FooterSize = Marshal.SizeOf(typeof(Footer));
 		}
 

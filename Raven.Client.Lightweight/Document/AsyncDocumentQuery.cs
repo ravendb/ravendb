@@ -757,6 +757,7 @@ namespace Raven.Client.Document
 											defaultField = defaultField,
 											beforeQueryExecutionAction = beforeQueryExecutionAction,
 											afterQueryExecutedCallback = afterQueryExecutedCallback,
+											afterStreamExecutedCallback = afterStreamExecutedCallback,
 											highlightedFields = new List<HighlightedField>(highlightedFields),
 											highlighterPreTags = highlighterPreTags,
 											highlighterPostTags = highlighterPostTags,

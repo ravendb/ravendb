@@ -198,6 +198,10 @@
       <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
+      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Name>Voron</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

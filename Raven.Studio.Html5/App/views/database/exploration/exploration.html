@@ -1,0 +1,95 @@
+﻿<div id="explorationContainer">
+    <ul class="breadcrumb">
+        <li>
+            <h3>
+          
+            <a href="#resources">
+                    Databases
+                </a>
+            </h3>
+        </li>
+        <li data-bind="with: activeDatabase">
+            <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+        </li>
+        <li>
+            <a data-bind="attr: { href: appUrls.exploration }">Data exploration</a>
+        </li>
+    </ul>
+	<div class="btn-toolbar" role="toolbar">
+		<div class="btn-group">
+			<button class="btn btn-primary" title="Run" accesskey="R" data-bind="click: runExploration, enable: runEnabled">
+				<i class="fa fa-play"></i>
+			</button>
+			<a href="#" target="_blank" data-bind="attr: { href: exportUrl }, click: exportCsv, visible: runEnabled" class=" btn btn-default" title="Export CSV" download>
+				<i class="fa fa-file-excel-o"></i>
+			</a>
+			<button class="btn btn-danger" data-bind="click: killTask, visible: isBusy"><i class="fa fa-bolt"></i> Cancel</button>
+		</div>
+		<div class="btn-group">
+			<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Collection" data-bind="disable: isBusy">
+				<span data-bind="text: selectedCollectionLabel"></span> <span class="caret"></span>
+			</button>
+			<ul class="dropdown-menu" role="menu" data-bind="foreach: collections">
+				<li data-bind="click: $root.explorationRequest.collection.bind($root, $data)">
+					<a href="#" data-bind="text: $data"></a>
+				</li>
+			</ul>
+		</div>
+		<div class="pull-right text-danger padd-top-10 padd-right-10">
+			<i class="fa fa-exclamation-triangle"></i> This operation is resource intensive!
+		</div>
+	</div>
+<br />
+
+	<form class="form-horizontal" role="form">
+
+		<div class="row">
+			<div class="col-md-4">
+				<div class="form-group">
+					<label class="col-sm-6 control-label">Timeout (seconds):</label>
+					<div class="col-md-4">
+						<input data-bind="value: explorationRequest.timeoutSeconds, disable: isBusy" type="number" required class="form-control"/>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label class="col-sm-6 control-label">Max documents to scan:</label>
+					<div class="col-md-4">
+						<input data-bind="value: explorationRequest.pageSize, disable: isBusy" type="number" required class="form-control" />
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="form-group">
+			<label class="col-md-1 control-label" data-placement="auto right" data-original-title="LINQ" data-trigger="hover">
+				LINQ
+			</label>
+			<div class="col-md-11">
+				<div class="row">
+					<div class="col-md-11">
+						<pre class="form-control editor" data-bind="aceEditor: { code: explorationRequest.linq, allowResize: true, minHeight: 100, maxHeight: 400, lang:'ace/mode/csharp'}, valueUpdate: 'afterkeydown'"></pre>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="form-group">
+			<div class="form-group col-md-12">
+				<label class="control-label col-md-1">
+					Results
+				</label>
+				<div class="col-md-11 exploration-results">
+					<div id="explorationResultsPanel" class="panel panel-default">
+						<div class="panel-body" data-bind="visible: isLoading">
+							<span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+						</div>
+						<div class="panel-body">
+							<div id="explorationResultsGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: queryResults, gridSelector: '#explorationResultsGrid', useContextMenu: false, noResultsMessage: 'No results were found.'}"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</form>
+</div>

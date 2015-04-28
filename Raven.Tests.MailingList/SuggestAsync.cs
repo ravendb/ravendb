@@ -34,11 +34,7 @@ namespace Raven.Tests.MailingList
                       from person in people
                       select new {person.Name};
 
-                Suggestion(x=>x.Name, new SuggestionOptions
-                {
-                    Accuracy = 0.5f,
-                    Distance = StringDistanceTypes.Default
-                });
+                Suggestion(x=>x.Name);
             }
         }
 

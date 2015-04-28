@@ -33,13 +33,15 @@ namespace Raven.Database.Indexing
 				.ToList();
 			for (int i = 0; i < list.Count; i++)
 			{
-				if(list[i] != null)
+				if (list[i] != null)
 					continue;
 				list.RemoveAt(i);
 				i--;
 			}
 			return list;
 		}
+
+
 
 		/// <summary>
 		/// Note that here we assume that  source may be very large (number of documents)

@@ -28,7 +28,7 @@ namespace Raven.Tests.Issues
 						   store.DatabaseCommands.PutIndex("Test", new IndexDefinition
 						   {
 							   Map = "from doc in docs select new { doc.Name, doc.Other }",
-							   Suggestions = new Dictionary<string, SuggestionOptions> { { "Name", new SuggestionOptions() } }
+							   SuggestionsOptions = new HashSet<string> { "Name" }
 						   });
 
 						   store.DatabaseCommands.Suggest("Test", new SuggestionQuery
@@ -51,7 +51,7 @@ namespace Raven.Tests.Issues
 							store.DatabaseCommands.PutIndex("Test", new IndexDefinition
 							{
 								Map = "from doc in docs select new { doc.Name, doc.Other }",
-								Suggestions = new Dictionary<string, SuggestionOptions> { { "Name", new SuggestionOptions() } }
+								SuggestionsOptions = new HashSet<string> { "Name"}
 							});
 
 							store.DatabaseCommands.Suggest("Test", new SuggestionQuery

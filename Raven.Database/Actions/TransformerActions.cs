@@ -6,7 +6,7 @@
 using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
-
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
@@ -19,6 +19,11 @@ namespace Raven.Database.Actions
 {
     public class TransformerActions : ActionsBase
     {
+		/// <summary>
+		/// For temporary transformers we assign negative indexes
+		/// </summary>
+		private int temporaryTransfomerIndex = -1;
+
         public TransformerActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
             : base(database, recentTouches, uuidGenerator, log)
         {
@@ -92,21 +97,38 @@ namespace Raven.Database.Actions
 			if (existingDefinition != null)
 				IndexDefinitionStorage.RemoveTransformer(existingDefinition.TransfomerId);
 
-            TransactionalStorage.Batch(accessor =>
-            {
-                definition.TransfomerId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("TransformerId", accessor);
-            });
+	        var temporary = definition.Temporary;
 
-			IndexDefinitionStorage.CreateAndPersistTransform(definition, generator);
-            IndexDefinitionStorage.AddTransform(definition.TransfomerId, definition);
+	        if (temporary)
+	        {
+		        definition.TransfomerId = Database.Transformers.GetNextTemporaryTransformerIndex();
+				IndexDefinitionStorage.CreateTransform(definition, generator);
+				IndexDefinitionStorage.AddTransform(definition.TransfomerId, definition);
+	        }
+	        else
+	        {
+				TransactionalStorage.Batch(accessor =>
+				{
+					definition.TransfomerId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("TransformerId", accessor);
+				});
 
-            TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new TransformerChangeNotification()
-            {
-                Name = name,
-                Type = TransformerChangeTypes.TransformerAdded,
-            }));
+				IndexDefinitionStorage.CreateTransform(definition, generator);
+				IndexDefinitionStorage.PersistTransform(definition);
+				IndexDefinitionStorage.AddTransform(definition.TransfomerId, definition);
+
+				TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new TransformerChangeNotification()
+				{
+					Name = name,
+					Type = TransformerChangeTypes.TransformerAdded,
+				}));
+	        }
 
             return name;
         }
+
+		public int GetNextTemporaryTransformerIndex()
+		{
+			return Interlocked.Decrement(ref temporaryTransfomerIndex);
+		}
     }
 }

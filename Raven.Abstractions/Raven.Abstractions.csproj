@@ -276,6 +276,7 @@
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\Buffers.cs" />
     <Compile Include="Extensions\ConcurrentDictionaryExtensions.cs" />
+    <Compile Include="Extensions\Internal\SetExtensions.cs" />
     <Compile Include="Extensions\Internal\DictionaryExtensions.cs" />
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
@@ -442,6 +443,7 @@
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />
     <Compile Include="Util\MD5.cs" />
+    <Compile Include="Util\ObjectPool.cs" />
     <Compile Include="Util\NetworkUtil.cs" />
     <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />

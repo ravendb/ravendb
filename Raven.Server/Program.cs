@@ -33,9 +33,7 @@ using Raven.Database.Config;
 using Raven.Database.DiskIO;
 using Raven.Database.Server;
 using Raven.Database.Util;
-
 using Raven.Client.Connection;
-
 using Raven.Client.Extensions;
 using Raven.Database.FileSystem.Util;
 

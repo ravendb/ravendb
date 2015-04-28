@@ -213,6 +213,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.AvailableMemoryForRaisingBatchSizeLimit.Value, actual => actual.AvailableMemoryForRaisingBatchSizeLimit);
 			configurationComparer.Assert(expected => expected.MaxProcessingRunLatency.Value, actual => actual.MaxProcessingRunLatency);
 			configurationComparer.Assert(expected => expected.DisableClusterDiscovery.Value, actual => actual.DisableClusterDiscovery);
+            configurationComparer.Assert(expected => expected.TurnOffDiscoveryClient.Value, actual => actual.TurnOffDiscoveryClient);            
 			configurationComparer.Assert(expected => expected.ServerName.Value, actual => actual.ServerName);
 			configurationComparer.Assert(expected => expected.MaxStepsForScript.Value, actual => actual.MaxStepsForScript);
 			configurationComparer.Assert(expected => expected.MaxRecentTouchesToRemember.Value, actual => actual.MaxRecentTouchesToRemember);
@@ -240,11 +241,13 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.Replication.ReplicationRequestTimeoutInMilliseconds.Value, actual => actual.Replication.ReplicationRequestTimeoutInMilliseconds);
             configurationComparer.Assert(expected => expected.Replication.ForceReplicationRequestBuffering.Value, actual => actual.Replication.ForceReplicationRequestBuffering);
 			configurationComparer.Assert(expected => expected.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value, actual => actual.Indexing.MaxNumberOfItemsToProcessInTestIndexes);
+			configurationComparer.Assert(expected => expected.Indexing.MaxNumberOfStoredIndexingBatchInfoElements.Value, actual => actual.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
 			configurationComparer.Assert(expected => expected.IndexAndTransformerReplicationLatencyInSec.Value, actual => actual.IndexAndTransformerReplicationLatencyInSec);
 			configurationComparer.Assert(expected => expected.MaxConcurrentRequestsForDatabaseDuringLoad.Value, actual => actual.MaxConcurrentRequestsForDatabaseDuringLoad);
 			configurationComparer.Assert(expected => expected.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value, actual => actual.Replication.MaxNumberOfItemsToReceiveInSingleBatch);
             configurationComparer.Assert(expected => expected.ImplicitFetchFieldsFromDocumentMode.Value, actual => actual.ImplicitFetchFieldsFromDocumentMode);
 			configurationComparer.Assert(expected => expected.AllowScriptsToAdjustNumberOfSteps.Value, actual => actual.AllowScriptsToAdjustNumberOfSteps);
+			configurationComparer.Assert(expected => expected.FileSystem.PreventSchemaUpdate.Value, actual => actual.Storage.PreventSchemaUpdate);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.WorkingDir.Value.ToFullPath(null)), actual => actual.WorkingDirectory);
 			configurationComparer.Assert(expected => expected.Cluster.HeartbeatTimeout.Value, actual => actual.Cluster.HeartbeatTimeout);
 			configurationComparer.Assert(expected => expected.Cluster.ElectionTimeout.Value, actual => actual.Cluster.ElectionTimeout);

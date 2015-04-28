@@ -66,7 +66,7 @@ namespace Raven.Client.Document
 			int toCheck = Math.Min(replicas, destinationsToCheck.Count);
 
 		    var cts = new CancellationTokenSource();
-            cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
+            cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(60));
 
             var sp = Stopwatch.StartNew();
 
