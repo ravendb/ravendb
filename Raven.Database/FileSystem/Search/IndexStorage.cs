@@ -522,7 +522,9 @@ namespace Raven.Database.FileSystem.Search
             while (directoryName != null);
 
             doc.Add(new Field("__modified", DateTime.UtcNow.ToString(DateIndexFormat, CultureInfo.InvariantCulture), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
-            doc.Add(new Field("__created", metadata.Value<string>(Constants.CreationDate), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
+            var value = metadata.Value<string>(Constants.CreationDate);
+            if (value != null)
+                doc.Add(new Field("__created", value, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
             doc.Add(new Field("__level", level.ToString(CultureInfo.InvariantCulture), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
             
             RavenJToken contentLen;
