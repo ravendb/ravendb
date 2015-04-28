@@ -170,8 +170,8 @@ namespace Raven.Database.Counters
 
 		private void Initialize()
 		{
-            var idSlice = (Slice)"id";
-            var nameSlice = (Slice)"name";
+            var idSlice = new Slice("id");
+            var nameSlice = new Slice("name");
 
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
