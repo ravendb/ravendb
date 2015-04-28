@@ -544,7 +544,6 @@ namespace Raven.Database.Queries
 					case SortOptions.None:
 					case SortOptions.String:
 					case SortOptions.StringVal:
-					case SortOptions.AlphaNumeric:
 					case SortOptions.Custom:
 						return text;
 					case SortOptions.Int:
@@ -605,7 +604,6 @@ namespace Raven.Database.Queries
 				{
 					case SortOptions.String:
 					case SortOptions.StringVal:
-					case SortOptions.AlphaNumeric:
 					case SortOptions.Byte:
 					case SortOptions.Short:
 					case SortOptions.Custom:

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Threading.Tasks;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
@@ -17,8 +18,8 @@ namespace Raven.Tests.Sorting
 		{
 			var titles = new List<string>
 			{
-				"C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce", "C# ballad", 
-				"A and G motor vehicles", "A B C", "Balzac, Honoré de", "Ambassador hotel"
+				"1", "a1", "a2", "a10", "C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce", 
+				"C# ballad", "A and G motor vehicles", "A B C", "Balzac, Honoré de", "Ambassador hotel"
 			};
 			var localTracks = new List<Track>();
 			titles.ForEach(x => localTracks.Add(CreateTrack(x)));
@@ -371,7 +372,7 @@ namespace Raven.Tests.Sorting
 				using (var session = store.OpenSession())
 				{
 					var titlesFromServer = session.Advanced.DocumentQuery<Track, TracksIndex>()
-						//.AlphaNumericOrdering<Track>(x => x.Title)
+						.AlphaNumericOrdering<Track>(x => x.Title)
 						.Take(1024)
 						.Select(x => x.Title)
 						.ToList();
@@ -387,6 +388,7 @@ namespace Raven.Tests.Sorting
 					var titlesFromServer = session.Advanced.DocumentQuery<Track, TracksIndex>()
 						.AlphaNumericOrdering<Track>(x => x.Title, true)
 						.Select(x => x.Title)
+						.Take(1024)
 						.ToList();
 
 					localTracks.Sort(new AlphaNumericTrackOrder(titleDescending: true));
@@ -397,7 +399,8 @@ namespace Raven.Tests.Sorting
 			}
 		}
 
-		/*public async void random_words_using_document_query_async()
+		[Fact]
+		public async Task random_words_using_document_query_async()
 		{
 			var localTracks = new List<Track>();
 			for (var i = 0; i < 1024; i++)
@@ -413,16 +416,16 @@ namespace Raven.Tests.Sorting
 					localTracks.ForEach(x => session.Store(x));
 				}
 
-				new TracksIndex().Execute(store);
+				await new TracksIndex().ExecuteAsync(store);
 				WaitForIndexing(store);
 
-				using (var session = store.OpenSession())
+				using (var session = store.OpenAsyncSession())
 				{
-					var titlesFromServer = session.Advanced.DocumentQuery<Track, TracksIndex>()
+					var titlesFromServer = await session.Advanced.AsyncDocumentQuery<Track, TracksIndex>()
 						.AlphaNumericOrdering<Track>(y => y.Title)
-						.Select(x => x.Title)
+						.SelectFields<string>(new[] { "Title" })
 						.Take(1024)
-						.ToList();
+						.ToListAsync();
 
 					localTracks.Sort(new AlphaNumericTrackOrder());
 
@@ -433,18 +436,18 @@ namespace Raven.Tests.Sorting
 				using (var session = store.OpenAsyncSession())
 				{
 					var titlesFromServer = await session.Advanced.AsyncDocumentQuery<Track, TracksIndex>()
-						.AlphaNumericOrdering<Track>(y => y.Title, true)
-						.SelectFields<Track>(new []{"Title"})
+						.AlphaNumericOrdering("Title", true)
+						.SelectFields<string>(new []{"Title"})
 						.Take(1024)
 						.ToListAsync();
 
 					localTracks.Sort(new AlphaNumericTrackOrder(titleDescending: true));
 
 					var expected = localTracks.Select(x => x.Title).ToList();
-					//Assert.Equal(expected, titlesFromServer);
+					Assert.Equal(expected, titlesFromServer);
 				}
 			}
-		}*/
+		}
 
 		private static Track CreateTrack(string title, string artist = null, int year = 0)
 		{
@@ -456,84 +459,11 @@ namespace Raven.Tests.Sorting
 			};
 		}
 
-		class AlphaNumericTrackOrder2 : IComparer<Track>
-		{
-			private readonly bool titleDescending;
-			private readonly bool artistDescending;
-			private readonly bool yearDescending;
-
-			private string Title { get; set; }
-			private string Artist { get; set; }
-			private int Year { get; set; }
-
-			public AlphaNumericTrackOrder2(bool titleDescending = false, bool artistDescending = false, bool yearDescending = false)
-			{
-				this.titleDescending = titleDescending;
-				this.artistDescending = artistDescending;
-				this.yearDescending = yearDescending;
-			}
-
-			[SuppressUnmanagedCodeSecurity]
-			private static class SafeNativeMethods
-			{
-				[DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
-				public static extern int StrCmpLogicalW(string psz1, string psz2);
-			}
-
-			public int Compare(Track track1, Track track2)
-			{
-				var result = yearDescending == false ? track1.Year.CompareTo(track2.Year) : track2.Year.CompareTo(track1.Year);;
-				if (result != 0)
-					return result;
-
-				if (track1.Title == null && track2.Title != null)
-					return -1;
-				else if (track1.Title != null && track2.Title == null)
-					return 1;
-
-				
-				if (track1.Title != null && track2.Title != null)
-				{
-					result = titleDescending == false ?
-						SafeNativeMethods.StrCmpLogicalW(track1.Title, track2.Title) :
-						SafeNativeMethods.StrCmpLogicalW(track2.Title, track1.Title);
-					if (result != 0)
-						return result;
-				}
-
-				if (track1.Artist == null && track2.Artist != null)
-					return -1;
-				else if (track1.Artist != null && track2.Artist == null)
-					return 1;
-
-				if (track1.Artist != null && track2.Artist != null)
-				{
-					result = artistDescending == false ?
-						SafeNativeMethods.StrCmpLogicalW(track1.Artist, track2.Artist) :
-						SafeNativeMethods.StrCmpLogicalW(track2.Artist, track1.Artist);
-					if (result != 0)
-						return result;
-				}
-
-				return 0;
-			}
-
-			public override string ToString()
-			{
-				// String representation.
-				return Title + ", " + Artist + ", " + Year;
-			}
-		}
-
 		class AlphaNumericTrackOrder : IComparer<Track>
 		{
 			private readonly bool titleDescending;
 			private readonly bool artistDescending;
 			private readonly bool yearDescending;
-
-			private string Title { get; set; }
-			private string Artist { get; set; }
-			private int Year { get; set; }
 
 			public AlphaNumericTrackOrder(bool titleDescending = false, bool artistDescending = false, bool yearDescending = false)
 			{
@@ -582,11 +512,64 @@ namespace Raven.Tests.Sorting
 
 				return yearDescending == false ? track1.Year.CompareTo(track2.Year) : track2.Year.CompareTo(track1.Year);
 			}
+		}
 
-			public override string ToString()
+		class AlphaNumericTrackOrder2 : IComparer<Track>
+		{
+			private readonly bool titleDescending;
+			private readonly bool artistDescending;
+			private readonly bool yearDescending;
+
+			public AlphaNumericTrackOrder2(bool titleDescending = false, bool artistDescending = false, bool yearDescending = false)
 			{
-				// String representation.
-				return Title + ", " + Artist + ", " + Year;
+				this.titleDescending = titleDescending;
+				this.artistDescending = artistDescending;
+				this.yearDescending = yearDescending;
+			}
+
+			[SuppressUnmanagedCodeSecurity]
+			private static class SafeNativeMethods
+			{
+				[DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
+				public static extern int StrCmpLogicalW(string psz1, string psz2);
+			}
+
+			public int Compare(Track track1, Track track2)
+			{
+				var result = yearDescending == false ? track1.Year.CompareTo(track2.Year) : track2.Year.CompareTo(track1.Year); ;
+				if (result != 0)
+					return result;
+
+				if (track1.Title == null && track2.Title != null)
+					return -1;
+				else if (track1.Title != null && track2.Title == null)
+					return 1;
+
+
+				if (track1.Title != null && track2.Title != null)
+				{
+					result = titleDescending == false ?
+						SafeNativeMethods.StrCmpLogicalW(track1.Title, track2.Title) :
+						SafeNativeMethods.StrCmpLogicalW(track2.Title, track1.Title);
+					if (result != 0)
+						return result;
+				}
+
+				if (track1.Artist == null && track2.Artist != null)
+					return -1;
+				else if (track1.Artist != null && track2.Artist == null)
+					return 1;
+
+				if (track1.Artist != null && track2.Artist != null)
+				{
+					result = artistDescending == false ?
+						SafeNativeMethods.StrCmpLogicalW(track1.Artist, track2.Artist) :
+						SafeNativeMethods.StrCmpLogicalW(track2.Artist, track1.Artist);
+					if (result != 0)
+						return result;
+				}
+
+				return 0;
 			}
 		}
 

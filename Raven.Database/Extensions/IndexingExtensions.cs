@@ -174,6 +174,14 @@ namespace Raven.Database.Extensions
 								{
 									return SortField.FIELD_SCORE;
 								}
+								if (sortedField.Field.StartsWith(Constants.AlphaNumericFieldName))
+								{
+									var parts = sortedField.Field.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+									if (parts.Length < 2)
+										throw new InvalidOperationException("Cannot figure out what to do in alphanumeric sort!");
+									var anSort = new AlphaNumericComparatorSource();
+									return new SortField(parts[1], anSort, IsDescending(parts));
+								}
 								if (sortedField.Field.StartsWith(Constants.RandomFieldName))
 								{
 									var parts = sortedField.Field.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
@@ -184,9 +192,9 @@ namespace Raven.Database.Extensions
 								if (sortedField.Field.StartsWith(Constants.CustomSortFieldName))
 								{
 									var parts = sortedField.Field.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-									if (parts.Length < 2) // truly random
+									if (parts.Length < 2)
 										throw new InvalidOperationException("Cannot figure out type for custom sort");
-									return new CustomSortField(parts[1], self, parts[0][parts[0].Length-1] == '-');
+									return new CustomSortField(parts[1], self, IsDescending(parts));
 								}
 								if (sortedField.Field.StartsWith(Constants.DistanceFieldName))
 								{
@@ -236,16 +244,11 @@ namespace Raven.Database.Extensions
 									var dsort = new SpatialDistanceFieldComparatorSource(spatialField, shape.GetCenter());
                                     return new SortField(sortedField.Field, dsort, sortedField.Descending);
 								}
+
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field, self);
 
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
-
-								if (sortOptions.Value == SortOptions.AlphaNumeric)
-								{
-									var anSort = new AlphaNumericComparatorSource();
-									return new SortField(sortedField.Field, anSort, sortedField.Descending);
-								}
 
                                 if (sortOptions.Value == SortOptions.Short)
 							        sortOptions = SortOptions.Int;
@@ -255,7 +258,12 @@ namespace Raven.Database.Extensions
 							.ToArray());
 		}
 
-        private const string _Range = "_Range";
+		private static bool IsDescending(string[] parts)
+		{
+			return parts[0][parts[0].Length - 1] == '-';
+		}
+
+		private const string _Range = "_Range";
         private const string _SortHint = "SortHint-";
         private static CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 

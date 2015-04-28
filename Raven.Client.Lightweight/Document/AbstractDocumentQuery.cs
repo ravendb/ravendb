@@ -813,11 +813,28 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Order the search results in alphanumeric order
+		/// </summary>
+		public void AlphaNumericOrdering(string fieldName, bool descending)
+		{
+			AddOrder(Constants.AlphaNumericFieldName + (descending ? "-" : "") + ";" + fieldName, false);
+		}
+
+		/// <summary>
 		/// Order the search results randomly
 		/// </summary>
 		public void RandomOrdering()
 		{
 			AddOrder(Constants.RandomFieldName + ";" + Guid.NewGuid(), false);
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		public void RandomOrdering(string seed)
+		{
+			AddOrder(Constants.RandomFieldName + ";" + seed, false);
 		}
 
 		public void CustomSortUsing(string typeName)
@@ -828,15 +845,6 @@ namespace Raven.Client.Document
 		public void CustomSortUsing(string typeName, bool descending)
 		{
 			AddOrder(Constants.CustomSortFieldName + (descending ? "-" : "") + ";" + typeName, false);
-		}
-
-		/// <summary>
-		/// Order the search results randomly using the specified seed
-		/// this is useful if you want to have repeatable random queries
-		/// </summary>
-		public void RandomOrdering(string seed)
-		{
-			AddOrder(Constants.RandomFieldName + ";" + seed, false);
 		}
 
 		public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
@@ -2231,12 +2239,52 @@ If you really want to do in memory filtering on the data returned from the query
 			rootTypes.Add(type);
 		}
 
+		IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending)
+		{
+			AddOrder(fieldName, descending);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
+		{
+			AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending, Type fieldType)
+		{
+			AddOrder(fieldName, descending, fieldType);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.AlphaNumericOrdering(string fieldName, bool descending)
+		{
+			AlphaNumericOrdering(fieldName, descending);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
+		{
+			AlphaNumericOrdering(GetMemberQueryPath(propertySelector.Body), descending);
+			return this;
+		}
+
 		/// <summary>
 		/// Order the search results randomly
 		/// </summary>
 		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()
 		{
 			RandomOrdering();
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering(string seed)
+		{
+			RandomOrdering(seed);
 			return this;
 		}
 
@@ -2249,16 +2297,6 @@ If you really want to do in memory filtering on the data returned from the query
 		IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName, bool descending)
 		{
 			CustomSortUsing(typeName, descending);
-			return this;
-		}
-
-		/// <summary>
-		/// Order the search results randomly using the specified seed
-		/// this is useful if you want to have repeatable random queries
-		/// </summary>
-		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering(string seed)
-		{
-			RandomOrdering(seed);
 			return this;
 		}
 
