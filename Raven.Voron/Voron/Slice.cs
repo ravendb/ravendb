@@ -144,10 +144,10 @@ namespace Voron
                     {
                         fixed (byte* b = other.Array)
                         {
-                            return MemoryUtils.Compare(a, b, size);
+                            return MemoryUtils.CompareInline(a, b, size);
                         }
                     }
-                    return MemoryUtils.Compare(a, other.Pointer, size);
+                    else return MemoryUtils.CompareInline(a, other.Pointer, size);
                 }
             }
 
@@ -155,11 +155,10 @@ namespace Voron
             {
                 fixed (byte* b = other.Array)
                 {
-                    return MemoryUtils.Compare(Pointer, b, size);
+                    return MemoryUtils.CompareInline(Pointer, b, size);
                 }
             }
-
-            return MemoryUtils.Compare(Pointer, other.Pointer, size);
+            else return MemoryUtils.CompareInline(Pointer, other.Pointer, size);
         }
 
         protected override int CompareData(MemorySlice other, ushort size)
@@ -354,13 +353,18 @@ namespace Voron
 			Array = null;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetInline(Slice slice, NodeHeader* node)
+        {
+            slice.Pointer = (byte*)node + Constants.NodeHeaderSize;
+            slice.Size = node->KeySize;
+            slice.KeyLength = node->KeySize;
+            slice.Array = null;
+        }
+		
 		public override void Set(NodeHeader* node)
 		{
-			Pointer = (byte*) node + Constants.NodeHeaderSize;
-			Size = node->KeySize;
-			KeyLength = node->KeySize;
-			Array = null;
+            SetInline(this, node);
 		}
 	}
 }

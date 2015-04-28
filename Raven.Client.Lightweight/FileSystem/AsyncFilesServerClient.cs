@@ -392,7 +392,7 @@ namespace Raven.Client.FileSystem
 						var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 						var operationId = json.Value<long>("OperationId");
 						var op = new Operation(GetOperationStatusAsync, operationId);
-						await op.WaitForCompletionAsync();
+						await op.WaitForCompletionAsync().ConfigureAwait(false);
         }
 					catch (Exception e)
 					{
@@ -442,7 +442,7 @@ namespace Raven.Client.FileSystem
                 var response = await request.ExecuteRawResponseAsync()
                                             .ConfigureAwait(false);
 
-                await response.AssertNotFailingResponse();
+				await response.AssertNotFailingResponse().ConfigureAwait(false);
 
                 return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
             }
@@ -497,7 +497,7 @@ namespace Raven.Client.FileSystem
                 var response = await request.ExecuteRawResponseAsync()
                                             .ConfigureAwait(false);
 
-                await response.AssertNotFailingResponse();
+				await response.AssertNotFailingResponse().ConfigureAwait(false);
 
                 currentPageCount = 0;
                 currentEtag = etag;
@@ -840,7 +840,7 @@ namespace Raven.Client.FileSystem
 
         internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string filename, FileHeader remote, string sourceServerUri, Action beforeConflictResolution)
         {
-            var files = await this.GetAsync(new[] { filename });
+			var files = await this.GetAsync(new[] { filename }).ConfigureAwait(false);
             FileHeader local = files.FirstOrDefault();
             
             // File does not exists anymore on the server.
@@ -873,10 +873,10 @@ namespace Raven.Client.FileSystem
                     try
                     {
                         var client = new SynchronizationClient(this, this.Conventions);
-                        await client.ResolveConflictAsync(filename, resolutionStrategy);
+						await client.ResolveConflictAsync(filename, resolutionStrategy).ConfigureAwait(false);
 
                         // Refreshing the file information.
-                        files = await this.GetAsync(new[] { filename });                        
+						files = await this.GetAsync(new[] { filename }).ConfigureAwait(false);                        
                         files.ApplyIfNotNull ( x => 
                         {
                             // We notify the listeners.
@@ -1232,9 +1232,10 @@ namespace Raven.Client.FileSystem
             }
 
             public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
-            {                
-                var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials, null));
-                await stream.CopyToAsync(destination);
+            
+				var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials)).ConfigureAwait(false);
+                await stream.CopyToAsync(destination).ConfigureAwait(false);
+            
             }
 
             public async Task<SignatureManifest> GetRdcManifestAsync(string path)
@@ -1508,11 +1509,11 @@ namespace Raven.Client.FileSystem
 							JsonExtensions.CreateDefaultJsonSerializer().Serialize(jw, sentFiles);
 							var bytes = Encoding.UTF8.GetBytes(sb.ToString());
 
-							await stream.WriteAsync(bytes, 0, bytes.Length);
+							await stream.WriteAsync(bytes, 0, bytes.Length).ConfigureAwait(false);
 							stream.Position = 0;
-							await request.WriteAsync(stream);
+							await request.WriteAsync(stream).ConfigureAwait(false);
 
-							var response = (RavenJArray)await request.ReadResponseJsonAsync();
+							var response = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 							return response.JsonDeserialization<SynchronizationConfirmation>();
 						}
 
@@ -1845,7 +1846,7 @@ namespace Raven.Client.FileSystem
 
             public async Task EnsureFileSystemExistsAsync(string fileSystem)
             {
-                var filesystems = await GetNamesAsync();
+				var filesystems = await GetNamesAsync().ConfigureAwait(false);
                 if (filesystems.Contains(fileSystem))
                     return;
 
@@ -1857,7 +1858,7 @@ namespace Raven.Client.FileSystem
                         {
                             { Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", fileSystem))}
                         }
-                    }, fileSystem);
+					}, fileSystem).ConfigureAwait(false);
             }
 
             public async Task<long> StartRestore(FilesystemRestoreRequest restoreRequest)

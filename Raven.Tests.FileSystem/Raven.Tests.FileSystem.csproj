@@ -91,6 +91,7 @@
     <Compile Include="Auth\SynchronizationWithOAuth.cs" />
     <Compile Include="Auth\SynchronizationWithWindowsAuth.cs" />
     <Compile Include="BigFileHandling.cs" />
+    <Compile Include="Bugs\Can_query_by_creation_date.cs" />
     <Compile Include="Bugs\CaseSensitiveFileDeletion.cs" />
     <Compile Include="Bugs\ReadingFileIfFileWithGreaterNameExists.cs" />
     <Compile Include="Bugs\GettingListOfFilesAfterSynchronization.cs" />
