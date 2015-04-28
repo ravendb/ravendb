@@ -199,10 +199,6 @@ namespace Raven.Client.Connection.Implementation
 					AssertServerVersionSupported();
 					ResponseStatusCode = Response.StatusCode;
 				}
-				catch (Exception e)
-				{
-					
-				}
 				finally
 				{
 					sp.Stop();

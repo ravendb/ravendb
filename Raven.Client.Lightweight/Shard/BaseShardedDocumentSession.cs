@@ -32,6 +32,11 @@ namespace Raven.Client.Shard
 			this.shardDbCommands = shardDbCommands;
 		}
 
+		public override string DatabaseName
+		{
+			get { return _databaseName; }
+		}
+
 		#region Sharding support methods
 
 		protected IList<Tuple<string, TDatabaseCommands>> GetShardsToOperateOn(ShardRequestData resultionData)

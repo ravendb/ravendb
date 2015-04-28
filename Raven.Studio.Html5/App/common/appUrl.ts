@@ -45,6 +45,7 @@ class appUrl {
         editTransformer: (transformerName?: string) => ko.computed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.computed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
+		exploration: ko.computed(() => appUrl.forExploration(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         replicationPerfStats: ko.computed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
@@ -548,6 +549,11 @@ class appUrl {
         var databasePart = appUrl.getEncodedDbPart(db);
         var indexPart = indexName ? "/" + encodeURIComponent(indexName) : "";
         return "#databases/query/reporting" + indexPart + "?" + databasePart;
+    }
+
+	static forExploration(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/query/exploration?" + databasePart;
     }
 
     static forTasks(db: database): string {

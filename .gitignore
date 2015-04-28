@@ -130,6 +130,8 @@ Raven.Studio.Html5/App/viewmodels/database/documents/*.js
 Raven.Studio.Html5/App/viewmodels/database/documents/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/indexes/*.js
 Raven.Studio.Html5/App/viewmodels/database/indexes/*.js.map
+Raven.Studio.Html5/App/viewmodels/database/exploration/*.js
+Raven.Studio.Html5/App/viewmodels/database/exploration/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/patch/*.js
 Raven.Studio.Html5/App/viewmodels/database/patch/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/transformers/*.js

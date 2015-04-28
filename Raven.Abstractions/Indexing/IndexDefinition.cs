@@ -132,14 +132,16 @@ namespace Raven.Abstractions.Indexing
 		{
 			get
 			{
-				if (SuggestionsOptions.Count == 0) 
+				if (SuggestionsOptions == null || SuggestionsOptions.Count == 0) 
 					return null;
 				
 				return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions());
 			}
 			set
 			{
-				SuggestionsOptions = value != null ? value.Keys.ToHashSet() : new HashSet<string>();
+				if (value == null)
+					return;
+				SuggestionsOptions = value.Keys.ToHashSet();
 			} 
 		}
 

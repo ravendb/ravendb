@@ -238,8 +238,8 @@ namespace Raven.Database.Extensions
                                         }
 
                                         spatialField = viewGenerator.GetSpatialField(spatialFieldName);
-                                        
-                                        shape = new PointImpl(lat, lng, spatialField.GetContext());    
+
+                                        shape = new PointImpl(lng, lat, spatialField.GetContext());    
                                     }
 									var dsort = new SpatialDistanceFieldComparatorSource(spatialField, shape.GetCenter());
                                     return new SortField(sortedField.Field, dsort, sortedField.Descending);

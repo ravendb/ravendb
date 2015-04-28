@@ -230,7 +230,8 @@ namespace Raven.Database.Queries
 								var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortedField.Field);
 							    if (normalizedFieldName.EndsWith("_Range"))
 							        normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
-							    if (normalizedFieldName.StartsWith(Constants.RandomFieldName) ||
+							    if (normalizedFieldName.StartsWith(Constants.AlphaNumericFieldName) ||
+									normalizedFieldName.StartsWith(Constants.RandomFieldName) ||
 									normalizedFieldName.StartsWith(Constants.CustomSortFieldName))
 							        continue; // virtual field that we don't sort by
 

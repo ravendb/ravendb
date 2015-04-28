@@ -94,7 +94,7 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
-
+		
 		[CLSCompliant(false)]
 		protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
@@ -113,6 +113,7 @@ namespace Raven.Database.Indexing
 			_indexCreationTime = SystemTime.UtcNow;
 			RecreateSearcher();
 		}
+		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
