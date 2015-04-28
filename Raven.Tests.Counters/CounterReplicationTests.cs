@@ -79,57 +79,5 @@ namespace Raven.Tests.Counters
 			}			
 		}
 
-		private async Task<bool> WaitForReplicationBetween(ICounterStore source,ICounterStore destination, string groupName, string counterName, int timeoutInSec = 30)
-		{
-			var waitStartingTime = DateTime.Now;
-			var hasReplicated = false;
-
-			if (Debugger.IsAttached)
-				timeoutInSec = 60*60; //1 hour timeout if debugging
-
-			while (true)
-			{
-				if ((DateTime.Now - waitStartingTime).TotalSeconds > timeoutInSec)
-					break;
-
-				using(var sourceClient = source.NewCounterClient())
-				using (var destinationClient = destination.NewCounterClient())
-				{
-					var sourceValue = await sourceClient.Commands.GetOverallTotalAsync(groupName, counterName);
-					var targetValue = await destinationClient.Commands.GetOverallTotalAsync(groupName, counterName);
-					if (sourceValue == targetValue)
-					{
-						hasReplicated = true;
-						break;
-					}
-				}
-
-				Thread.Sleep(50);
-			}
-
-			return hasReplicated;
-		}
-
-		private async Task SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
-		{
-			using (var client = source.NewCounterClient())
-			{
-				var replicationDocument = new CountersReplicationDocument();
-				foreach (var destStore in destinations)
-				{
-					using (var destClient = destStore.NewCounterClient())
-					{
-						replicationDocument.Destinations.Add(new CounterReplicationDestination
-						{
-							CounterStorageName = destClient.CounterStorageName,
-							ServerUrl = destClient.ServerUrl							
-						});
-
-					}
-				}
-
-				await client.Replication.SaveReplicationsAsync(replicationDocument);
-			}
-		}	
 	}
 }

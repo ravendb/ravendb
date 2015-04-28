@@ -11,6 +11,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Client.Counters;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Extensions;
@@ -43,6 +44,8 @@ namespace Raven.Database.Counters
 
 		public event Action CounterUpdated = () => { };
 
+		public event Action ReplicationUpdated;
+
 		public string Name { get; private set; }
 		public int ReplicationTimeoutInMs { get; private set; }
 
@@ -63,6 +66,8 @@ namespace Raven.Database.Counters
 			storageEnvironment = new StorageEnvironment(options);
 			replicationTask = new CountersReplicationTask(this);
 
+			replicationTask.ReplicationUpdate += OnReplicationUpdated;
+
 			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
 			metricsCounters = new CountersMetricsManager();
@@ -70,6 +75,12 @@ namespace Raven.Database.Counters
 			Configuration = configuration;
 			ExtensionsState = new AtomicDictionary<object>();
 			Initialize();
+		}
+
+		protected virtual void OnReplicationUpdated()
+		{
+			var replicationUpdated = ReplicationUpdated;
+			if (replicationUpdated != null) replicationUpdated();
 		}
 
 		private void Initialize()
@@ -589,6 +600,7 @@ namespace Raven.Database.Counters
 				parent.replicationTask.SignalCounterUpdate();
 			}
 
+
 			private bool DoesCounterExist(Slice name)
 			{
 				using (var it = counters.Iterate())
@@ -637,5 +649,6 @@ namespace Raven.Database.Counters
 		{
 			get { return Name; }
 		}
+
 	}
 }

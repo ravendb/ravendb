@@ -11,8 +11,6 @@ namespace Raven.Client.Counters
     {
 		private readonly ICounterStore parent;
 		
-		private readonly ICountersReplicationInformer replicationInformer;
-
 		private readonly int readStripingBase;
 
 	    internal readonly JsonSerializer JsonSerializer;
@@ -41,19 +39,19 @@ namespace Raven.Client.Counters
         /// <summary>
         /// Notify when the failover status changed
         /// </summary>
-		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
-		{
-			add { replicationInformer.FailoverStatusChanged += value; }
-			remove { replicationInformer.FailoverStatusChanged -= value; }
-		}		
-
-		/// <summary>
-		/// Allow access to the replication informer used to determine how we replicate requests
-		/// </summary>
-		public ICountersReplicationInformer ReplicationInformer
-		{
-			get { return replicationInformer; }
-		}
+//		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
+//		{
+//			add { replicationInformer.FailoverStatusChanged += value; }
+//			remove { replicationInformer.FailoverStatusChanged -= value; }
+//		}		
+//
+//		/// <summary>
+//		/// Allow access to the replication informer used to determine how we replicate requests
+//		/// </summary>
+//		public ICountersReplicationInformer ReplicationInformer
+//		{
+//			get { return replicationInformer; }
+//		}
 		 
 		public CountersClient(ICounterStore parent, string counterStorageName)
         {
@@ -68,14 +66,12 @@ namespace Raven.Client.Counters
 
 	            Credentials = parent.Credentials.Credentials;
                 ApiKey = parent.Credentials.ApiKey;
-
-				Conventions = new Convention();
-                replicationInformer = new CounterReplicationInformer(Conventions, JsonRequestFactory);
-                readStripingBase = replicationInformer.GetReadStripingBase(true);
-
+								
 		        CounterStorageName = counterStorageName;  
 				InitializeActions(counterStorageName);
-            }
+
+				parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync(this).Wait();
+			}
             catch (Exception)
             {
                 Dispose();
@@ -87,7 +83,7 @@ namespace Raven.Client.Counters
 	    {
 		    Stats = new CountersStats(parent, counterStorageName);
 		    Replication = new ReplicationClient(parent, counterStorageName);
-			Commands = new CountersCommands(parent,this, counterStorageName, replicationInformer);
+			Commands = new CountersCommands(parent,this, counterStorageName);
 	    }
 
 	    public void Dispose()

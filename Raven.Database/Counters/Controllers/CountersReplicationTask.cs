@@ -36,7 +36,13 @@ namespace Raven.Database.Counters.Controllers
 		private readonly CounterStorage storage;
 		private readonly CancellationTokenSource cancellation;
 
-        
+		public event Action ReplicationUpdate;
+
+		protected virtual void OnReplicationUpdate()
+		{
+			var handler = ReplicationUpdate;
+			if (handler != null) handler();
+		}
 
 		enum ReplicationResult
 		{
@@ -58,6 +64,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				Interlocked.Increment(ref actualWorkCounter);
 				Monitor.PulseAll(waitForCounterUpdate);
+				OnReplicationUpdate();
 			}
 		}
 

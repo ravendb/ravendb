@@ -4,11 +4,14 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Request;
 using Raven.Imports.Newtonsoft.Json;
@@ -20,9 +23,20 @@ namespace Raven.Client.Counters
 	{
 		private bool currentlyExecuting;
 		private int requestCount;
+		private bool firstTime;
+		private readonly object updateReplicationInformationSyncObj = new object();
+		private Task refreshReplicationInformationTask;
+		private DateTime lastReplicationUpdate;
 
 		public CounterReplicationInformer(Client.Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000) : base(conventions, requestFactory, delayTime)
 		{
+			firstTime = true;
+			lastReplicationUpdate = SystemTime.UtcNow;
+		}
+
+		internal void OnReplicationUpdate()
+		{
+			lastReplicationUpdate = SystemTime.UtcNow;
 		}
 
 		public async Task<T> ExecuteWithReplicationAsyncWithReturnValue<T>(HttpMethod method, CountersClient client, Func<OperationMetadata, Task<T>> operation)
@@ -109,6 +123,45 @@ namespace Raven.Client.Counters
 			ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 			UpdateReplicationInformationFromDocument(document);
+		}
+
+		public Task UpdateReplicationInformationIfNeededAsync(CountersClient client)
+		{
+			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				return new CompletedTask();
+			
+			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow && firstTime == false)
+				return new CompletedTask();
+
+			lock (updateReplicationInformationSyncObj)
+			{
+				if (firstTime)
+				{
+					var serverHash = ServerHash.GetServerHash(client.ServerUrl);
+
+					var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+					if (IsInvalidDestinationsDocument(document) == false)
+						UpdateReplicationInformationFromDocument(document);
+				}
+
+				firstTime = false;
+
+				var taskCopy = refreshReplicationInformationTask;
+				if (taskCopy != null)
+					return taskCopy;
+
+				return refreshReplicationInformationTask = 
+					Task.Factory.StartNew(() => RefreshReplicationInformation(client))
+					.ContinueWith(task =>
+					{
+						if (task.Exception != null)
+						{
+							Log.ErrorException("Failed to refresh replication information", task.Exception);
+						}
+						lastReplicationUpdate = SystemTime.UtcNow;
+						refreshReplicationInformationTask = null;
+					});
+			}			
 		}
 
 		public override void ClearReplicationInformationLocalCache(CountersClient client)
