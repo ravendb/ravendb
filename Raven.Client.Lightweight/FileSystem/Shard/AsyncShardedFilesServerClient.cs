@@ -129,10 +129,16 @@ namespace Raven.Client.FileSystem.Shard
 			return client.DeleteAsync(filename);
 		}
 
-		public Task RenameAsync(string filename, string rename)
+		public async Task<string> RenameAsync(string filename, string rename)
 		{
-			var client = TryGetClintFromFileName(filename);
-			return client.RenameAsync(filename, rename);
+			var shardId = Strategy.ShardResolutionStrategy.GetShardIdFromFileName(filename);
+			var client = TryGetClient(shardId);
+
+			rename = Strategy.ModifyFileName(Strategy.Conventions, shardId, rename);
+
+			await client.RenameAsync(filename, rename).ConfigureAwait(false);
+
+			return rename;
 		}
 
 		public async Task<FileHeader[]> BrowseAsync(int pageSize = 25, ShardPagingInfo pagingInfo = null)
