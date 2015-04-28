@@ -16,7 +16,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Database.Util;
 
-namespace Raven.StorgaeExporter
+namespace Raven.StorageExporter
 {
     public class StorageExporter
     {
