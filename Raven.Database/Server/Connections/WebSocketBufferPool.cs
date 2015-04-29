@@ -49,16 +49,24 @@ namespace Raven.Database.Server.Connections
 					newBuffers.Add(new byte[BufferSize]);
 				}
 
-				// force to move to Gen2
-				for (int i = 0; i < GC.MaxGeneration; i++)
+				while (true)
 				{
-					GC.Collect(i, GCCollectionMode.Forced, true);
-				}
-
-				foreach (var buffer in newBuffers)
-				{
-					if (GC.GetGeneration(buffer) == GC.MaxGeneration)
-						buffersOnGen2OrLoh.Push(new ArraySegment<byte>(buffer));
+					// force to move to Gen2
+					for (int i = 0; i < GC.MaxGeneration; i++)
+					{
+						GC.Collect(i, GCCollectionMode.Forced, true);
+					}
+					bool atLeastOneSentToGen2 = false;
+					foreach (var buffer in newBuffers)
+					{
+						if (GC.GetGeneration(buffer) == GC.MaxGeneration)
+						{
+							atLeastOneSentToGen2 = true;
+							buffersOnGen2OrLoh.Push(new ArraySegment<byte>(buffer));
+						}
+					}
+					if (atLeastOneSentToGen2)
+						break;
 				}
 			}
 		}
