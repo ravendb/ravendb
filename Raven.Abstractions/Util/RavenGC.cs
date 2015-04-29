@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 
@@ -32,6 +33,8 @@ namespace Raven.Abstractions.Util
 		{
 			ResetHistory();
 		}
+
+		public static ReaderWriterLockSlim GcCollectLock = new ReaderWriterLockSlim();
 
 		public static void ResetHistory()
 		{
@@ -109,18 +112,26 @@ namespace Raven.Abstractions.Util
 			if (!ShouldCollectNow() && !forceByUser)
 				return false;
 
-			ReleaseMemoryBeforeGC();
-			memoryBeforeLastForcedGC = GC.GetTotalMemory(false);
+			GcCollectLock.EnterWriteLock();
+			try
+			{
+				ReleaseMemoryBeforeGC();
+				memoryBeforeLastForcedGC = GC.GetTotalMemory(false);
 
-			if (compactLoh)
-				SetCompactLog.Value();
+				if (compactLoh)
+					SetCompactLog.Value();
 
-			GC.Collect(maxGeneration, gcCollectionMode);
-			if (afterCollect != null)
-				afterCollect();
+				GC.Collect(maxGeneration, gcCollectionMode);
+				if (afterCollect != null)
+					afterCollect();
 
-			if (waitForPendingFinalizers)
-				GC.WaitForPendingFinalizers();
+				if (waitForPendingFinalizers)
+					GC.WaitForPendingFinalizers();
+			}
+			finally
+			{
+				GcCollectLock.ExitWriteLock();
+			}
 
 			memoryAfterLastForcedGC = GC.GetTotalMemory(false);
 			memoryDifferenceLastGc = DifferenceAsDecimalPercents(MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
