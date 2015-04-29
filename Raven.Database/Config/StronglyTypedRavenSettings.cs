@@ -31,6 +31,8 @@ namespace Raven.Database.Config
 
 		public IndexingConfiguration Indexing { get; set; }
 
+		public WebSocketsConfiguration WebSockets { get; set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
 			Replication = new ReplicationConfiguration();
@@ -40,6 +42,7 @@ namespace Raven.Database.Config
 			FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
+			WebSockets = new WebSocketsConfiguration();
 
 			this.settings = settings;
 		}
@@ -247,6 +250,8 @@ namespace Raven.Database.Config
 		    
             if (settings["Raven/MaxServicePointIdleTime"] != null) 
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
+
+			WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
 		}
 
 		private string GetDefaultWebDir()
@@ -478,6 +483,11 @@ namespace Raven.Database.Config
 			public IntegerSetting EncryptionKeyBitsPreference { get; set; }
 
 			public BooleanSetting UseSsl { get; set; }
+		}
+
+		public class WebSocketsConfiguration
+		{
+			public IntegerSetting InitialBufferPoolSize { get; set; }
 		}
 	}
 

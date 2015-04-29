@@ -393,6 +393,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			});
 		}
 
+
 		[HttpPost]
 		[RavenRoute("admin/compact")]
 		public HttpResponseMessage Compact()
@@ -417,9 +418,28 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			        DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
 			        {
-			            compactStatus.Messages.Add(msg);
-			            DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
-			                                                           RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+			            bool skipProgressReport = false;
+                        bool isProgressReport = false;
+                        if(IsUpdateMessage(msg))
+                        {
+                            isProgressReport = true;
+			                var now = SystemTime.UtcNow;
+                            compactStatus.LastProgressMessageTime = compactStatus.LastProgressMessageTime ?? DateTime.MinValue;
+			                var timeFromLastUpdate = (now - compactStatus.LastProgressMessageTime.Value);
+                            if (timeFromLastUpdate >= ReportProgressInterval)
+                            {
+                                compactStatus.LastProgressMessageTime = now;
+                                compactStatus.LastProgressMessage = msg;
+                            }
+                            else skipProgressReport = true;
+			                
+			            }
+			            if (!skipProgressReport)
+			            {
+			                if (!isProgressReport) compactStatus.Messages.Add(msg);
+			                DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
+			                    RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+			            }
 
 			        }));
                     compactStatus.State = CompactStatusState.Completed;
@@ -450,6 +470,17 @@ namespace Raven.Database.Server.Controllers.Admin
 				OperationId = id
 			});
 		}
+
+	    private static bool IsUpdateMessage(string msg)
+	    {
+	        if(String.IsNullOrEmpty(msg)) return false;
+            if (msg.StartsWith("Copied")) return true;
+            if (msg.Length>42 && String.Compare(msg, 32, ProgressString, 0, 10) == 0) return true;
+	        return false;
+	    }
+
+        private static TimeSpan ReportProgressInterval = TimeSpan.FromSeconds(1);
+        private static string ProgressString = "JET_SNPROG";
 
 		[HttpGet]
 		[RavenRoute("admin/indexingStatus")]

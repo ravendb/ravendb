@@ -39,7 +39,7 @@ class startCompactCommand extends commandBase {
 
     private logError(response: JQueryXHR, result: JQueryDeferred<any>) {
         var r = JSON.parse(response.responseText);
-        var compactStatus: compactStatusDto = { Messages: [r.Error], State: "Faulted" };
+        var compactStatus: compactStatusDto = { Messages: [r.Error], LastProgressMessage:"", State: "Faulted" };
         this.updateCompactStatus(compactStatus);
         result.reject();
     }

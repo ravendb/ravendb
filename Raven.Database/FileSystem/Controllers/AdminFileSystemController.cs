@@ -366,9 +366,28 @@ namespace Raven.Database.FileSystem.Controllers
                     var targetFs = FileSystemsLandlord.GetFileSystemInternal(fs).ResultUnwrap();
                     FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration, msg =>
 			        {
-			            compactStatus.Messages.Add(msg);
-			            DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenFilesystemCompactStatusDocumentKey(fs), null,
-			                                                           RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+                        bool skipProgressReport = false;
+                        bool isProgressReport = false;
+                        if (IsUpdateMessage(msg))
+                        {
+                            isProgressReport = true;
+                            var now = SystemTime.UtcNow;
+                            compactStatus.LastProgressMessageTime = compactStatus.LastProgressMessageTime ?? DateTime.MinValue;
+                            var timeFromLastUpdate = (now - compactStatus.LastProgressMessageTime.Value);
+                            if (timeFromLastUpdate >= ReportProgressInterval)
+                            {
+                                compactStatus.LastProgressMessageTime = now;
+                                compactStatus.LastProgressMessage = msg;
+                            }
+                            else skipProgressReport = true;
+
+                        }
+                        if (!skipProgressReport)
+                        {
+                            if (!isProgressReport) compactStatus.Messages.Add(msg);
+                            DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenFilesystemCompactStatusDocumentKey(fs), null,
+                                RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+                        }
 			        }));
                     compactStatus.State = CompactStatusState.Completed;
                     compactStatus.Messages.Add("File system compaction completed.");
@@ -399,6 +418,16 @@ namespace Raven.Database.FileSystem.Controllers
                 OperationId = id
             });
         }
+
+        private static bool IsUpdateMessage(string msg)
+        {
+            if (String.IsNullOrEmpty(msg)) return false;
+            if (msg.StartsWith("Copied")) return true;
+            if (msg.Length > 42 && String.Compare(msg, 32, ProgressString, 0, 10) == 0) return true;
+            return false;
+        }
+        private static TimeSpan ReportProgressInterval = TimeSpan.FromSeconds(1);
+        private static string ProgressString = "JET_SNPROG";
 
         [HttpPost]
         [RavenRoute("admin/fs/restore")]
