@@ -5,8 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using System.IO.IsolatedStorage;
-using System.Threading;
 using System.Transactions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Document.DTC;

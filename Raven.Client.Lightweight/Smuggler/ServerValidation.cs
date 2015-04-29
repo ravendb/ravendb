@@ -8,7 +8,6 @@ using System.Net;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
 
 namespace Raven.Client.Smuggler

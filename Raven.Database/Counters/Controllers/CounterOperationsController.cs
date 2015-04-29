@@ -281,7 +281,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				var overallTotal = reader.GetCounterOverallTotal(groupName, counterName);
 				if (overallTotal == null)
-					return GetMessageWithObject(new {Message = "Specified counter not found within the specified group"}, HttpStatusCode.NotFound);
+					return Request.CreateResponse(HttpStatusCode.OK, 0);
 
 				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
 			}
@@ -290,9 +290,12 @@ namespace Raven.Database.Counters.Controllers
 		[RavenRoute("cs/{counterStorageName}/getCounterServersValues/{groupName}/{counterName}")]
         [HttpGet]
         public HttpResponseMessage GetCounterServersValues(string groupName, string counterName)
-        {
-            using (var reader = Storage.CreateReader())
-            {
+		{				
+			using (var reader = Storage.CreateReader())
+			{
+				if (reader.CounterExists(groupName, counterName) == false)
+					return Request.CreateResponse(HttpStatusCode.OK, new ServerValue[0]);
+
 				var countersByPrefix = reader.GetCounterValuesByPrefix(groupName, counterName);
                 if (countersByPrefix == null)
 				{
@@ -320,13 +323,13 @@ namespace Raven.Database.Counters.Controllers
                     }).ToList();
                 return Request.CreateResponse(HttpStatusCode.OK, serverValues);
             }
-        }
+		}
 
 		private class ServerValue
 		{
-			public long Positive { get; set; }
+			public long Positive { get; private set; }
 
-			public long Negative { get; set; }
+			public long Negative { get; private set; }
 
 			public void UpdateValue(bool isPositive, long value)
 			{

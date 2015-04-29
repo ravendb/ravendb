@@ -14,7 +14,6 @@ using Raven.Client.Listeners;
 using Raven.Client.Connection.Async;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
 {

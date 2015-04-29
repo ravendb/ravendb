@@ -551,7 +551,7 @@ namespace Raven.Tests.Core.Replication
 
 				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
-				replicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings= TimeSpan.Zero;
+				replicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.Zero;
 				replicationTask.ReplicateIndexesAndTransformersTask(null);
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName };

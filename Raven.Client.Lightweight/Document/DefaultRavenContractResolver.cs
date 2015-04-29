@@ -7,7 +7,6 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 

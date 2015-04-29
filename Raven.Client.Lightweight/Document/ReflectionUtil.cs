@@ -9,7 +9,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Linq;
-using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
