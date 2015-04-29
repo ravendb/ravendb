@@ -12,5 +12,6 @@ namespace Raven.Client.Counters
 
 		Task ExecuteWithReplicationAsync<T>(HttpMethod method, CountersClient client, Func<OperationMetadata, Task<T>> operation);
 		Task<T> ExecuteWithReplicationAsyncWithReturnValue<T>(HttpMethod method, CountersClient client, Func<OperationMetadata, Task<T>> operation);
+		double MaxIntervalBetweenUpdatesInMillisec { get; set; }
 	}
 }

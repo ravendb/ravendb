@@ -1,9 +1,8 @@
 ﻿using System;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
-using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Counters
@@ -60,7 +59,6 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Two_node_failover_should_work()
 		{
-
 			using (var serverA = GetNewServer(8077))
 			using (var serverB = GetNewServer(8076))
 			{
@@ -97,6 +95,7 @@ namespace Raven.Tests.Counters
 				}
 			}
 		}
+		
 
 		[Fact]
 		public async Task Multiple_node_failover_should_work()

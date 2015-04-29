@@ -32,6 +32,7 @@ namespace Raven.Client.Counters
 		{
 			firstTime = true;
 			lastReplicationUpdate = SystemTime.UtcNow;
+			MaxIntervalBetweenUpdatesInMillisec = TimeSpan.FromMinutes(5).TotalMilliseconds;
 		}
 
 		internal void OnReplicationUpdate()
@@ -65,7 +66,8 @@ namespace Raven.Client.Counters
 				currentlyExecuting = false;
 			}
 		}
-
+		
+		public double MaxIntervalBetweenUpdatesInMillisec { get; set; }
 
 		public async Task ExecuteWithReplicationAsync<T>(HttpMethod method,CountersClient client, Func<OperationMetadata, Task<T>> operation)
 		{
@@ -102,8 +104,10 @@ namespace Raven.Client.Counters
 			try
 			{
 				var replicationFetchTask = client.Replication.GetReplicationsAsync();
-				FailureCounters.FailureCounts[client.ServerUrl] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				replicationFetchTask.Wait();
+
+				if(replicationFetchTask.Status != TaskStatus.Faulted)
+					FailureCounters.ResetFailureCount(client.ServerUrl);
 
 				document = new JsonDocument
 				{
@@ -112,9 +116,8 @@ namespace Raven.Client.Counters
 			}
 			catch (Exception e)
 			{
-				Log.ErrorException("Could not contact master for fetching replication information",e);
+				Log.ErrorException("Could not contact master for fetching replication information. Something is wrong.",e);
 				document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
-
 			}
 
 			if (document == null || document.DataAsJson == null)
@@ -129,8 +132,9 @@ namespace Raven.Client.Counters
 		{
 			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
-			
-			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow && firstTime == false)
+
+			var updateInterval = TimeSpan.FromMilliseconds(MaxIntervalBetweenUpdatesInMillisec);
+			if (lastReplicationUpdate.AddMinutes(updateInterval.TotalMinutes) > SystemTime.UtcNow && firstTime == false)
 				return new CompletedTask();
 
 			lock (updateReplicationInformationSyncObj)

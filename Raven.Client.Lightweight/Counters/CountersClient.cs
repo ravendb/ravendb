@@ -39,19 +39,19 @@ namespace Raven.Client.Counters
         /// <summary>
         /// Notify when the failover status changed
         /// </summary>
-//		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
-//		{
-//			add { replicationInformer.FailoverStatusChanged += value; }
-//			remove { replicationInformer.FailoverStatusChanged -= value; }
-//		}		
-//
-//		/// <summary>
-//		/// Allow access to the replication informer used to determine how we replicate requests
-//		/// </summary>
-//		public ICountersReplicationInformer ReplicationInformer
-//		{
-//			get { return replicationInformer; }
-//		}
+		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
+		{
+			add { parent.ReplicationInformer.FailoverStatusChanged += value; }
+			remove { parent.ReplicationInformer.FailoverStatusChanged -= value; }
+		}		
+
+		/// <summary>
+		/// Allow access to the replication informer used to determine how we replicate requests
+		/// </summary>
+		public ICountersReplicationInformer ReplicationInformer
+		{
+			get { return parent.ReplicationInformer; }
+		}
 		 
 		public CountersClient(ICounterStore parent, string counterStorageName)
         {
