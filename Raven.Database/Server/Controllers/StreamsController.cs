@@ -24,6 +24,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Database.Server.Controllers
@@ -201,7 +202,21 @@ namespace Raven.Database.Server.Controllers
 					var queryOp = new QueryActions.DatabaseQueryOperation(Database, "Raven/DocumentsByEntityName", indexQuery, accessor, cts);
 					queryOp.Init();
 
-					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
+					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" },
+					    o =>
+					    {
+					        if (o.Count == 2 &&
+                                o.ContainsKey(Constants.DocumentIdFieldName) &&
+                                    o.ContainsKey(Constants.Metadata))
+					        {
+					            // this is the raw value out of the server, we don't want to get that
+					            var doc = queryOp.DocRetriever.Load(o.Value<string>(Constants.DocumentIdFieldName));
+                                var djo = doc as IDynamicJsonObject;
+					            if (djo != null)
+					                return djo.Inner;
+					        }
+					        return o;
+					    });
 					msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
 					msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
 					msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
@@ -243,15 +258,20 @@ namespace Raven.Database.Server.Controllers
 			private readonly IStorageActionsAccessor accessor;
 		    private readonly CancellationTimeout _timeout;
 		    private readonly Action<string> outputContentTypeSetter;
-
-			[CLSCompliant(false)]
-			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
+		    private readonly Func<RavenJObject, RavenJObject> modifyDocument;
+            
+		    [CLSCompliant(false)]
+			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor,
+                CancellationTimeout timeout,
+                Action<string> contentTypeSetter,
+                Func<RavenJObject,RavenJObject> modifyDocument = null)
 			{
 				this.req = req;
 				this.queryOp = queryOp;
 				this.accessor = accessor;
 			    _timeout = timeout;
 			    outputContentTypeSetter = contentTypeSetter;
+		        this.modifyDocument = modifyDocument;
 			}
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -269,6 +289,8 @@ namespace Raven.Database.Server.Controllers
 				        queryOp.Execute(o =>
 				        {
 				            _timeout.Delay();
+				            if (modifyDocument != null)
+				                o = modifyDocument(o);
 				            writer.Write(o);
 				        });
 				    }

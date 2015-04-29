@@ -62,9 +62,8 @@ namespace Raven.Client.FileSystem.Shard
 		public async Task<FileSystemStats> StatsAsync()
 		{
 			var applyAsync =
-				await
-				Strategy.ShardAccessStrategy.ApplyAsync(Clients.Values.ToList(), new ShardRequestData(),
-															 (client, i) => client.GetStatisticsAsync());
+				await Strategy.ShardAccessStrategy.ApplyAsync(Clients.Values.ToList(), new ShardRequestData(),
+															 (client, i) => client.GetStatisticsAsync()).ConfigureAwait(false);
 
 		    var activeSyncs = new List<SynchronizationDetails>();
 
@@ -129,10 +128,16 @@ namespace Raven.Client.FileSystem.Shard
 			return client.DeleteAsync(filename);
 		}
 
-		public Task RenameAsync(string filename, string rename)
+		public async Task<string> RenameAsync(string filename, string rename)
 		{
-			var client = TryGetClintFromFileName(filename);
-			return client.RenameAsync(filename, rename);
+			var shardId = Strategy.ShardResolutionStrategy.GetShardIdFromFileName(filename);
+			var client = TryGetClient(shardId);
+
+			rename = Strategy.ModifyFileName(Strategy.Conventions, shardId, rename);
+
+			await client.RenameAsync(filename, rename).ConfigureAwait(false);
+
+			return rename;
 		}
 
 		public async Task<FileHeader[]> BrowseAsync(int pageSize = 25, ShardPagingInfo pagingInfo = null)
@@ -151,7 +156,7 @@ namespace Raven.Client.FileSystem.Shard
 				pagingInfo.CurrentPage = lastPage;
 				while (pagingInfo.CurrentPage < originalPage)
 				{
-					await BrowseAsync(pageSize, pagingInfo);
+					await BrowseAsync(pageSize, pagingInfo).ConfigureAwait(false);
 					pagingInfo.CurrentPage++;
 				}
 
@@ -162,7 +167,8 @@ namespace Raven.Client.FileSystem.Shard
 
 			var applyAsync = await Strategy.ShardAccessStrategy.ApplyAsync(Clients.Values.ToList(), 
                                                                                 new ShardRequestData(),
-															                    (client, i) => client.BrowseAsync(indexes[i], pageSize));
+															                    (client, i) => client.BrowseAsync(indexes[i], pageSize))
+																				.ConfigureAwait(false);
 			var originalIndexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			while (results.Count < pageSize)
 			{
@@ -194,7 +200,7 @@ namespace Raven.Client.FileSystem.Shard
 				pagingInfo.CurrentPage = lastPage;
 				while (pagingInfo.CurrentPage < originalPage)
 				{
-					await GetSearchFieldsAsync(pageSize, pagingInfo);
+					await GetSearchFieldsAsync(pageSize, pagingInfo).ConfigureAwait(false);
 					pagingInfo.CurrentPage++;
 				}
 
@@ -206,7 +212,8 @@ namespace Raven.Client.FileSystem.Shard
 			var applyAsync =
 			   await
 			   Strategy.ShardAccessStrategy.ApplyAsync(Clients.Values.ToList(), new ShardRequestData(),
-															(client, i) => client.GetSearchFieldsAsync(indexes[i], pageSize));
+															(client, i) => client.GetSearchFieldsAsync(indexes[i], pageSize))
+															.ConfigureAwait(false);
 
 			var originalIndexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			while (results.Count < pageSize)
@@ -239,7 +246,7 @@ namespace Raven.Client.FileSystem.Shard
 				pagingInfo.CurrentPage = lastPage;
 				while (pagingInfo.CurrentPage < originalPage)
 				{
-					await SearchAsync(query, sortFields, pageSize, pagingInfo);
+					await SearchAsync(query, sortFields, pageSize, pagingInfo).ConfigureAwait(false);
 					pagingInfo.CurrentPage++;
 				}
 
@@ -250,7 +257,8 @@ namespace Raven.Client.FileSystem.Shard
 
 			var applyAsync = await Strategy.ShardAccessStrategy.ApplyAsync(
                                                             Clients.Values.ToList(), new ShardRequestData(),
-															(client, i) => client.SearchAsync(query, sortFields, indexes[i], pageSize));
+															(client, i) => client.SearchAsync(query, sortFields, indexes[i], pageSize))
+															.ConfigureAwait(false);
 
 			var originalIndexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			while (result.FileCount < pageSize)
@@ -288,7 +296,7 @@ namespace Raven.Client.FileSystem.Shard
         public async Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadataRef = null, long? from = null, long? to = null)
         {
             var client = TryGetClintFromFileName(filename);
-            return await client.DownloadAsync(filename, metadataRef, from, to);
+			return await client.DownloadAsync(filename, metadataRef, from, to).ConfigureAwait(false);
         }
 
         public Task<string> UploadAsync(string filename, Stream source, long? size = null)
@@ -302,7 +310,7 @@ namespace Raven.Client.FileSystem.Shard
 
             var client = TryGetClient(resolutionResult.ShardId);
 
-            await client.UploadAsync(resolutionResult.NewFileName, source, metadata, size);
+			await client.UploadAsync(resolutionResult.NewFileName, source, metadata, size).ConfigureAwait(false);
 
             return resolutionResult.NewFileName;
 		}
@@ -330,7 +338,7 @@ namespace Raven.Client.FileSystem.Shard
 				pagingInfo.CurrentPage = lastPage;
 				while (pagingInfo.CurrentPage < originalPage)
 				{
-					await GetFoldersAsync(from, pageSize, pagingInfo);
+					await GetFoldersAsync(from, pageSize, pagingInfo).ConfigureAwait(false);
 					pagingInfo.CurrentPage++;
 				}
 
@@ -342,7 +350,8 @@ namespace Raven.Client.FileSystem.Shard
 			var applyAsync =
 			   await
 			   Strategy.ShardAccessStrategy.ApplyAsync(Clients.Values.ToList(), new ShardRequestData(),
-															(client, i) => client.GetDirectoriesAsync(from, indexes[i], pageSize));
+															(client, i) => client.GetDirectoriesAsync(from, indexes[i], pageSize))
+															.ConfigureAwait(false);
 
 			var originalIndexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			while (results.Count < pageSize)

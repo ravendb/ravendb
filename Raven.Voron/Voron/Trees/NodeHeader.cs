@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Voron.Impl;
 using Voron.Util;
@@ -24,10 +25,10 @@ namespace Voron.Trees
 		[FieldOffset(11)]
 		public ushort Version;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public int GetNodeSize()
 		{
-			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + 
-				  (Flags == (NodeFlags.PageRef) ? 0 : DataSize);
+			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + (Flags == (NodeFlags.PageRef) ? 0 : DataSize);
 		}
 
 		public static byte* DirectAccess(Transaction tx, NodeHeader* node)
