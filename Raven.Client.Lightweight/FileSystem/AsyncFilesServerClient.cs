@@ -1232,10 +1232,10 @@ namespace Raven.Client.FileSystem
             }
 
             public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
-            
-				var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials)).ConfigureAwait(false);
+            {
+	            var operationMetadata = new OperationMetadata(client.BaseUrl, credentials.Credentials, credentials.ApiKey);
+	            var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, operationMetadata).ConfigureAwait(false);
                 await stream.CopyToAsync(destination).ConfigureAwait(false);
-            
             }
 
             public async Task<SignatureManifest> GetRdcManifestAsync(string path)
