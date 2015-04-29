@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Raven.Database.Server.Connections
 {
@@ -12,13 +13,15 @@ namespace Raven.Database.Server.Connections
 	{
 		private const int TakeRetries = 128;
 		private const int BufferSize = 1024;
-		private const int NumberOfBuffersToAllocate = 2048;
-		private readonly ConcurrentStack<ArraySegment<byte>> buffers = new ConcurrentStack<ArraySegment<byte>>();
+		private readonly int numberOfBuffersToAllocate = 128;
+		private readonly ConcurrentStack<ArraySegment<byte>> buffersOnGen2OrLoh = new ConcurrentStack<ArraySegment<byte>>();
 		private readonly Version dotNetVersion = Environment.Version;
 		private readonly Version dotNetVersion_4_5_2 = Version.Parse("4.0.30319.34000");
 
-		public WebSocketBufferPool()
+		public WebSocketBufferPool(int webSocketPoolSizeInBytes)
 		{
+			numberOfBuffersToAllocate = webSocketPoolSizeInBytes/BufferSize;
+
 			AllocateBuffers();
 		}
 
@@ -26,24 +29,37 @@ namespace Raven.Database.Server.Connections
 		{
 			if (dotNetVersion.CompareTo(dotNetVersion_4_5_2) > 0) // >= .NET 4.5.2
 			{
-				var bytes = new byte[NumberOfBuffersToAllocate * BufferSize];
+				var bytes = new byte[numberOfBuffersToAllocate * BufferSize];
 
-				for (var i = 0; i < NumberOfBuffersToAllocate; i++)
+				for (var i = 0; i < numberOfBuffersToAllocate; i++)
 				{
 					var buffer = new ArraySegment<byte>(bytes, i * BufferSize, BufferSize);
-					buffers.Push(buffer);
+					buffersOnGen2OrLoh.Push(buffer);
 				}
 			}
 			else
 			{
-				for (var i = 0; i < NumberOfBuffersToAllocate; i++)
+				// there was a bug (fixed in .NET 4.5.2) which doesn't allow us to specify non-zero offset in ArraySegment
+				// https://connect.microsoft.com/VisualStudio/feedback/details/812310/bug-websockets-can-only-use-0-offset-internal-buffer
+
+				var newBuffers = new List<byte[]>();
+
+				for (var i = 0; i < numberOfBuffersToAllocate; i++)
 				{
-					buffers.Push(new ArraySegment<byte>(new byte[BufferSize]));
+					newBuffers.Add(new byte[BufferSize]);
 				}
 
 				// force to move to Gen2
-				GC.Collect(0, GCCollectionMode.Forced);
-				GC.Collect(1, GCCollectionMode.Forced);
+				for (int i = 0; i < GC.MaxGeneration; i++)
+				{
+					GC.Collect(i, GCCollectionMode.Forced, true);
+				}
+
+				foreach (var buffer in newBuffers)
+				{
+					if (GC.GetGeneration(buffer) == GC.MaxGeneration)
+						buffersOnGen2OrLoh.Push(new ArraySegment<byte>(buffer));
+				}
 			}
 		}
 
@@ -55,7 +71,7 @@ namespace Raven.Database.Server.Connections
 				
 			while (retries++ < TakeRetries)
 			{
-				if (buffers.TryPop(out buffer))
+				if (buffersOnGen2OrLoh.TryPop(out buffer))
 					return buffer;
 				
 				AllocateBuffers();
@@ -66,7 +82,7 @@ namespace Raven.Database.Server.Connections
 
 		public void ReturnBuffer(ArraySegment<byte> buffer)
 		{
-			buffers.Push(buffer);
+			buffersOnGen2OrLoh.Push(buffer);
 		}
 	}
 }

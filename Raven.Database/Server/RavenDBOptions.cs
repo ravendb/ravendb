@@ -47,7 +47,7 @@ namespace Raven.Database.Server
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-				webSocketBufferPool = new WebSocketBufferPool();
+				webSocketBufferPool = new WebSocketBufferPool(configuration.WebSockets.InitialBufferPoolSize);
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}
 			catch
