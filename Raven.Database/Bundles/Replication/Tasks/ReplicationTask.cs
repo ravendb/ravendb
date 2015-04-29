@@ -119,7 +119,7 @@ namespace Raven.Bundles.Replication.Tasks
 			_replicationFrequency = TimeSpan.FromSeconds(database.Configuration.IndexAndTransformerReplicationLatencyInSec); //by default 10 min
 			_lastQueriedFrequency = TimeSpan.FromSeconds(database.Configuration.TimeToWaitBeforeRunningIdleIndexes.TotalSeconds / 2);
 
-			_indexReplicationTaskTimer = database.TimerManager.NewTimer(ReplicateIndexesAndTransformersTask, TimeSpan.Zero, _replicationFrequency);
+			_indexReplicationTaskTimer = database.TimerManager.NewTimer(x => ReplicateIndexesAndTransformersTask(x), TimeSpan.Zero, _replicationFrequency);
 			_lastQueriedTaskTimer = database.TimerManager.NewTimer(SendLastQueriedTask, TimeSpan.Zero, _lastQueriedFrequency);
 
 			task.Start();
@@ -980,6 +980,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 			if (Monitor.TryEnter(_indexReplicationTaskLock) == false)
 				return false;
+
 			try
 			{
 				var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
@@ -1058,11 +1059,14 @@ namespace Raven.Bundles.Replication.Tasks
 						log.ErrorException("Failed to replicate indexes and transformers to " + destination, e);
 					}
 				}
+
 				return true;
 			}
 			catch (Exception e)
 			{
 				log.ErrorException("Failed to replicate indexes and transformers", e);
+
+                return false;
 			}
 			finally
 			{
