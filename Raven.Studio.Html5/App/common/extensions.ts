@@ -379,6 +379,32 @@ class extensions {
                 element.setCustomValidity(errorMessage);
             }
         };
+
+        var firstInit = true;
+        ko.bindingHandlers['checkedProp'] = {
+            init: (element, valueAccessor) => {
+                Object.defineProperty(element, 'checked', {
+                    set: (newValue) => {
+                        var underlyingObservable = valueAccessor();
+                        underlyingObservable(newValue);
+                        if (newValue) {
+                            $(element.parentElement).addClass("btn-primary");
+                        } else {
+                            $(element.parentElement).removeClass("btn-primary");
+                        }
+                    }
+                });
+            },
+            update: (element, valueAccessor) => {
+                var value = ko.unwrap(valueAccessor());
+                element.checked = value;
+                if (value && firstInit) {
+                    firstInit = false;
+                    $(element.parentElement).addClass("active");
+                    $(element.parentElement).addClass("btn-primary");
+                }
+            }
+        };
     }
 }
 
