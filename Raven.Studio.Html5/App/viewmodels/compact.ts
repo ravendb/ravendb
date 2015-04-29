@@ -12,6 +12,7 @@ class resourceCompact {
     nameCustomValidityError: KnockoutComputed<string>;
 
     compactStatusMessages = ko.observableArray<string>();
+    compactStatusLastUpdate = ko.observable<string>();
 
     keepDown = ko.observable<boolean>(false);
 
@@ -46,6 +47,7 @@ class resourceCompact {
 
     updateCompactStatus(newCompactStatus: compactStatusDto) {
         this.compactStatusMessages(newCompactStatus.Messages);
+        this.compactStatusLastUpdate(newCompactStatus.LastProgressMessage);
         if (this.keepDown()) {
             var logsPre = document.getElementById(this.type + 'CompactLogPre');
             logsPre.scrollTop = logsPre.scrollHeight;
