@@ -67,6 +67,7 @@
   <ItemGroup>
     <Compile Include="AdminClientTests.cs" />
     <Compile Include="CounterFailoverTests.cs" />
+    <Compile Include="CounterLoadBalancingTests.cs" />
     <Compile Include="CounterReplicationTests.cs" />
     <Compile Include="CounterStatsTests.cs" />
     <Compile Include="RavenBaseCountersTest.cs" />
