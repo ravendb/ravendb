@@ -119,7 +119,7 @@ namespace Raven.Bundles.Replication.Tasks
 			_replicationFrequency = TimeSpan.FromSeconds(database.Configuration.IndexAndTransformerReplicationLatencyInSec); //by default 10 min
 			_lastQueriedFrequency = TimeSpan.FromSeconds(database.Configuration.TimeToWaitBeforeRunningIdleIndexes.TotalSeconds / 2);
 
-			_indexReplicationTaskTimer = database.TimerManager.NewTimer(ReplicateIndexesAndTransformersTask, TimeSpan.Zero, _replicationFrequency);
+			_indexReplicationTaskTimer = database.TimerManager.NewTimer(x => ReplicateIndexesAndTransformersTask(x), TimeSpan.Zero, _replicationFrequency);
 			_lastQueriedTaskTimer = database.TimerManager.NewTimer(SendLastQueriedTask, TimeSpan.Zero, _lastQueriedFrequency);
 
 			task.Start();
@@ -1068,6 +1068,8 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				Monitor.Exit(_indexReplicationTaskLock);
 			}
+
+			return false;
 		}
 
 		private string GetDebugInfomration()
