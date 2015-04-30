@@ -427,6 +427,22 @@ namespace Raven.Abstractions.Data
 			public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
 		}
 
+		public class Monitoring
+		{
+			public class Snmp
+			{
+				public const string Enabled = "Raven/Monitoring/Snmp/Enabled";
+
+				public const string Community = "Raven/Monitoring/Snmp/Community";
+
+				public const string Port = "Raven/Monitoring/Snmp/Port";
+
+				public const string DatabaseMappingDocumentKey = "Raven/Monitoring/Snmp/Databases";
+
+				public const string DatabaseMappingDocumentPrefix = "Raven/Monitoring/Snmp/Databases/";
+			} 
+		}
+
 		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";
 
 		public const string RequestFailedExceptionMarker = "ExceptionRequestFailed";

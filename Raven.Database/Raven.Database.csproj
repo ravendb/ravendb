@@ -166,6 +166,14 @@
     <Reference Include="Owin">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
+    <Reference Include="SharpSnmpLib.Full, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005, processorArchitecture=MSIL">
+      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Full.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="SharpSnmpLib.Portable, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005, processorArchitecture=MSIL">
+      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Portable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Spatial4n.Core.NTS">
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
     </Reference>
@@ -238,6 +246,66 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexTimeSinceLastQuery.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexReduceErrors.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexReduceSuccesses.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexReduceAttempts.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexErrors.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexSuccesses.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexAttempts.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexExists.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexId.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexName.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexPriority.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseIndexScalarObjectBase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseDocsWritePerSecond.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseIndexedPerSecond.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseReducedPerSecond.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseRequestDurationMean.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseRequestsPerSecond.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCurrentNumberOfItemsToReduceInSingleBatch.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCurrentNumberOfItemsToIndexInSingleBatch.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfAttachments.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfDocuments.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfTransformers.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseErrors.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseActiveBundles.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseId.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseLoaded.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseStaleIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseApproximateTaskCount.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseName.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseLoadedCount.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseTotalCount.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTotalStorageSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseIndexStorageSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTransactionalStorageUsedSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTransactionalStorageAllocatedSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\ScalarObjectBase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerConcurrentRequests.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerCpu.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerUrl.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerTotalMemory.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerPid.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerProductVersion.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerBuildVersion.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerName.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerTotalRequests.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerUpTime.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\SnmpDatabase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\SnmpTask.cs" />
     <Compile Include="Bundles\Replication\Controllers\ReplicationTopologyController.cs" />
     <Compile Include="Bundles\Replication\Triggers\RenameConflictDocumentIdIndexTrigger.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationClassifier.cs" />
@@ -1236,6 +1304,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Plugins\Builtins\Monitoring\Snmp\Templates\RAVENDB-MIB.txt" />
+    <Content Include="Plugins\Builtins\Monitoring\Snmp\Templates\zabbix_ravendb_template.xml" />
     <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
     <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
