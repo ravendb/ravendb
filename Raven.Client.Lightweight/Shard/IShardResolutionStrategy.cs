@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 
-using Raven.Abstractions.Data;
-
 namespace Raven.Client.Shard
 {
 	/// <summary>

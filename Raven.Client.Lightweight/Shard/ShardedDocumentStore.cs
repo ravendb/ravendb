@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -16,6 +15,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 
 namespace Raven.Client.Shard
@@ -128,6 +128,14 @@ namespace Raven.Client.Shard
 		public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
 			return OpenAsyncSessionInternal(databaseName, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(databaseName)));
+		}
+
+		/// <summary>
+		/// Opens the async session with the specified options.
+		/// </summary>
+		public override IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
+		{
+			return OpenAsyncSessionInternal(sessionOptions.Database, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(sessionOptions.Database).With(sessionOptions.Credentials)));
 		}
 
 		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName,Dictionary<string, IAsyncDatabaseCommands> shardDbCommands)

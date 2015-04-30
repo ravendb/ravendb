@@ -1243,7 +1243,8 @@ enum ResponseCodes {
     Forbidden = 403,
     NotFound = 404,
     PreconditionFailed = 412,
-    InternalServerError = 500
+    InternalServerError = 500,
+    ServiceUnavailable = 503
 }
 
 interface synchronizationConfigDto {
@@ -1327,4 +1328,11 @@ interface serverSmugglingDto {
 
 interface serverSmugglingOperationStateDto extends operationStatusDto {
 	Messages: Array<string>;
+}
+
+interface dataExplorationRequestDto {
+	Linq: string;
+	Collection: string;
+	TimeoutSeconds: number;
+	PageSize: number;
 }

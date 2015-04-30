@@ -95,9 +95,8 @@ namespace Raven.Database.Indexing
 					// a power outage while the server was running.
 					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
-
-				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,
-					indexDefinitionStorage.IndexNames, OpenIndexOnStartup);
+				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,indexDefinitionStorage.IndexNames, 
+					OpenIndexOnStartup);
 			}
 			catch (Exception e)
 			{
@@ -265,8 +264,15 @@ namespace Raven.Database.Indexing
 				{
 					try
 					{
-						documentDatabase.Indexes.DeleteIndex(indexName);
+						documentDatabase.Indexes.DeleteIndex(indexDefinition, removeIndexReplaceDocument: false);
 						documentDatabase.Indexes.PutNewIndexIntoStorage(indexName, indexDefinition);
+
+						var indexReplaceDocumentKey = Constants.IndexReplacePrefix + indexName;
+						var indexReplaceDocument = documentDatabase.Documents.Get(indexReplaceDocumentKey, null);
+						if (indexReplaceDocument == null)
+							return;
+
+						documentDatabase.Documents.Put(indexReplaceDocumentKey, null, indexReplaceDocument.DataAsJson, indexReplaceDocument.Metadata, null);
 					}
 					catch (Exception e)
 					{

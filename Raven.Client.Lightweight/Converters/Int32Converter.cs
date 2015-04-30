@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Linq;
 
 namespace Raven.Client.Converters
 {

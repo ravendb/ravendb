@@ -30,7 +30,7 @@ namespace Raven.Database.Counters.Controllers
 			return Request.CreateResponse(HttpStatusCode.OK,
 				new CounterStorageReplicationStats()
 				{
-					Stats = Storage.ReplicationTask.DestinationStats.Values.ToList()
+					Stats = Storage.replicationTask.DestinationStats.Values.ToList()
 				});
 		}
     }

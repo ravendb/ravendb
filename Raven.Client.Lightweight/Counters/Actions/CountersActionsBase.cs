@@ -20,6 +20,7 @@ namespace Raven.Client.Counters.Actions
 		protected readonly Convention convention;
 		protected readonly JsonSerializer jsonSerializer;
 		protected readonly string counterStorageUrl;
+		protected readonly ICounterStore parent;
 		protected readonly string counterStorageName;
 
 		public ProfilingInformation ProfilingInformation { get; private set; } //so far it is preparation for air conditioning
@@ -29,6 +30,7 @@ namespace Raven.Client.Counters.Actions
 			credentials = parent.Credentials;
 			jsonRequestFactory = parent.JsonRequestFactory;
 			serverUrl = parent.Url;
+			this.parent = parent;
 			this.counterStorageName = counterStorageName;
 			counterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}", serverUrl, counterStorageName);
 			jsonSerializer = parent.JsonSerializer;

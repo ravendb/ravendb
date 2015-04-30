@@ -42,7 +42,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
 
 			var id = generator.CreateSequentialUuid(UuidType.Queue);
-			var key = CreateKey(name, id);
+            var nameKey = CreateKey(name);
+			var key = AppendToKey(name, id);
 
 			tableStorage.Queues.Add(writeBatch.Value, key, new RavenJObject
 			{
@@ -52,7 +53,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}, 0);
 
 			queuesData.Add(writeBatch.Value, key, data, 0);
-			queuesByName.MultiAdd(writeBatch.Value, CreateKey(name), key);
+            queuesByName.MultiAdd(writeBatch.Value, nameKey, key);
 		}
 
 		public IEnumerable<Tuple<byte[], object>> PeekFromQueue(string name)
@@ -94,9 +95,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
-			var key = CreateKey(name, Etag.Parse((byte[])id));
+            var nameKey = CreateKey(name);
+
+			var key = AppendToKey(name, Etag.Parse((byte[])id));
 			tableStorage.Queues.Delete(writeBatch.Value, key);
-			queuesByName.MultiDelete(writeBatch.Value, CreateKey(name), key);
+            queuesByName.MultiDelete(writeBatch.Value, nameKey, key);
 		}
 
 		private void DeleteQueue(Slice key, string name)

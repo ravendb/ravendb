@@ -146,6 +146,7 @@ namespace Raven.Database.Config
 
 			MaxStepsForScript = ravenSettings.MaxStepsForScript.Value;
 			AdditionalStepsForScriptBasedOnDocumentSize = ravenSettings.AdditionalStepsForScriptBasedOnDocumentSize.Value;
+		    TurnOffDiscoveryClient = ravenSettings.TurnOffDiscoveryClient.Value;
 
 			// Index settings
 			MaxProcessingRunLatency = ravenSettings.MaxProcessingRunLatency.Value;
@@ -290,7 +291,7 @@ namespace Raven.Database.Config
 			Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
 
 			Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
-
+		    Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
@@ -309,6 +310,8 @@ namespace Raven.Database.Config
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
+			Indexing.MaxNumberOfStoredIndexingBatchInfoElements = ravenSettings.Indexing.MaxNumberOfStoredIndexingBatchInfoElements.Value;
+
 
 		    Cluster.ElectionTimeout = ravenSettings.Cluster.ElectionTimeout.Value;
 		    Cluster.HeartbeatTimeout = ravenSettings.Cluster.HeartbeatTimeout.Value;
@@ -1002,6 +1005,11 @@ namespace Raven.Database.Config
 		public bool DisableClusterDiscovery { get; set; }
 
 		/// <summary>
+        /// If True, turns off the discovery client.
+        /// </summary>
+        public bool TurnOffDiscoveryClient { get; set; }
+
+		/// <summary>
 		/// The server name
 		/// </summary>
 		public string ServerName { get; set; }
@@ -1077,6 +1085,7 @@ namespace Raven.Database.Config
         ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
         /// </summary>
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
+
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -1276,6 +1285,7 @@ namespace Raven.Database.Config
 				Voron = new VoronConfiguration();
 				Esent = new EsentConfiguration();
 	        }
+            public bool PreventSchemaUpdate { get; set; }
 
 			public VoronConfiguration Voron { get; private set; }
 
@@ -1430,6 +1440,7 @@ namespace Raven.Database.Config
 		public class IndexingConfiguration
 		{
 			public int MaxNumberOfItemsToProcessInTestIndexes { get; set; }
+			public int MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
 		}
 
 	    public class ClusterConfiguration

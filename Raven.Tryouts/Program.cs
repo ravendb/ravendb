@@ -1,18 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Client.FileSystem;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.MailingList;
+using Raven.Tests.Core.Replication;
 
 namespace Raven.Tryouts
 {
@@ -20,7 +7,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-           new FragmentFail().Fragment_Length_Should_Not_Be_More_Then_128();
+			for (int i = 0; i < 1000; i++)
+			{
+				Console.WriteLine(i);
+				using (var test = new IndexReplication())
+				{
+					test.Should_replicate_all_indexes_if_relevant_endpoint_is_hit();
+				}
+			}
 		}
 
 	}

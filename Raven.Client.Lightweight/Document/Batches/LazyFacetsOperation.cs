@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;

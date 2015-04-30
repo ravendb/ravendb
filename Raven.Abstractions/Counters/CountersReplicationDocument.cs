@@ -11,19 +11,19 @@ namespace Raven.Abstractions.Counters
 	/// <summary>
 	/// This class represent the list of replication destinations for the server
 	/// </summary>
-	public class CounterStorageReplicationDocument
+	public class CountersReplicationDocument
 	{
 		/// <summary>
 		/// Gets or sets the list of replication destinations.
 		/// </summary>
-		public List<CounterStorageReplicationDestination> Destinations { get; set; }
+		public List<CounterReplicationDestination> Destinations { get; set; }
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="CounterStorageReplicationDocument"/> class.
+		/// Initializes a new instance of the <see cref="CountersReplicationDocument"/> class.
 		/// </summary>
-		public CounterStorageReplicationDocument()
+		public CountersReplicationDocument()
 		{
-            Destinations = new List<CounterStorageReplicationDestination>();
+            Destinations = new List<CounterReplicationDestination>();
 		}
 	}
 }

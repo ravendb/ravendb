@@ -113,6 +113,11 @@ namespace Raven.Client
 		IAsyncDocumentSession OpenAsyncSession(string database);
 
 		/// <summary>
+		/// Opens the async session with the specified options.
+		/// </summary>
+		IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions);
+
+		/// <summary>
 		/// Opens the session.
 		/// </summary>
 		/// <returns></returns>

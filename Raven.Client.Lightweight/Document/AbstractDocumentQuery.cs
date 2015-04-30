@@ -265,6 +265,7 @@ namespace Raven.Client.Document
 		}
 
 		protected Action<QueryResult> afterQueryExecutedCallback;
+		protected AfterStreamExecutedDelegate afterStreamExecutedCallback;
 		protected Etag cutoffEtag;
 
 		private int? _defaultTimeout;
@@ -595,6 +596,7 @@ namespace Raven.Client.Document
 		protected internal QueryOperation InitializeQueryOperation()
 		{
 			var indexQuery = GetIndexQuery(isAsync: false);
+			this.afterStreamExecutedCallback = afterStreamExecutedCallback;
 
 			if (beforeQueryExecutionAction != null)
 				beforeQueryExecutionAction(indexQuery);
@@ -716,8 +718,8 @@ namespace Raven.Client.Document
 		{
 			if (DatabaseCommands != null)
 				return DatabaseCommands.OperationsHeaders;
-			
-			return AsyncDatabaseCommands != null ? 
+
+			return AsyncDatabaseCommands != null ?
 				AsyncDatabaseCommands.OperationsHeaders : new NameValueCollection(0);
 		}
 
@@ -750,7 +752,7 @@ namespace Raven.Client.Document
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
-			return ((AsyncDocumentSession) theSession).AddLazyOperation(lazyQueryOperation, onEval);
+			return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
 
 
@@ -1822,6 +1824,14 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
+		/// Callback to get the results of the stream
+		/// </summary>
+        public void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecutedCallback)
+		{
+			this.afterStreamExecutedCallback += afterStreamExecutedCallback;
+		}
+
+		/// <summary>
 		/// Called externally to raise the after query executed callback
 		/// </summary>
 		public void InvokeAfterQueryExecuted(QueryResult result)
@@ -1829,6 +1839,16 @@ If you really want to do in memory filtering on the data returned from the query
 			var queryExecuted = afterQueryExecutedCallback;
 			if (queryExecuted != null)
 				queryExecuted(result);
+		}
+
+		/// <summary>
+		/// Called externally to raise the after stream executed callback
+		/// </summary>
+		public void InvokeAfterStreamExecuted(ref RavenJObject result)
+		{
+			var streamExecuted = afterStreamExecutedCallback;
+			if (streamExecuted != null)
+				streamExecuted(ref result);
 		}
 
 		#endregion
@@ -1954,7 +1974,7 @@ If you really want to do in memory filtering on the data returned from the query
 					break;
 				case EscapeQueryOptions.AllowPostfixWildcard:
 					searchTerms = RavenQuery.Escape(searchTerms, false, false);
-                    searchTerms = escapePostfixWildcard.Replace(searchTerms, "*${1}");
+					searchTerms = escapePostfixWildcard.Replace(searchTerms, "*${1}");
 					break;
 				case EscapeQueryOptions.AllowAllWildcards:
 					searchTerms = RavenQuery.Escape(searchTerms, false, false);
@@ -1965,10 +1985,10 @@ If you really want to do in memory filtering on the data returned from the query
 				default:
 					throw new ArgumentOutOfRangeException("escapeQueryOptions", "Value: " + escapeQueryOptions);
 			}
-		    bool hasWhiteSpace = searchTerms.Any(char.IsWhiteSpace);
-		    lastEquality = new KeyValuePair<string, string>(fieldName,
-                hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
-                );
+			bool hasWhiteSpace = searchTerms.Any(char.IsWhiteSpace);
+			lastEquality = new KeyValuePair<string, string>(fieldName,
+				hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
+				);
 
 			queryText.Append(fieldName).Append(":").Append("(").Append(searchTerms).Append(")");
 		}

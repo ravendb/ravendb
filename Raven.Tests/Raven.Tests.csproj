@@ -44,7 +44,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>618, 612, 3016, 3005</NoWarn>
   </PropertyGroup>
@@ -155,6 +155,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Linq" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
@@ -793,6 +794,7 @@
     <Compile Include="Spatial\WktConverterTests.cs" />
     <Compile Include="Spatial\WktSanitizerTests.cs" />
     <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
+    <Compile Include="Storage\DocRefsDump.cs" />
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Storage\Voron\AttachmentActionsStorageTests.cs" />
     <Compile Include="Storage\Voron\GeneralStorageActionsTests.cs" />

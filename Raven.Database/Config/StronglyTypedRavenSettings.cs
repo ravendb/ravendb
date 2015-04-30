@@ -202,6 +202,8 @@ namespace Raven.Database.Config
 
 			DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
 
+            TurnOffDiscoveryClient = new BooleanSetting(settings["Raven/TurnOffDiscoveryClient"], false);
+
 			ServerName = new StringSetting(settings["Raven/ServerName"], (string)null);
 
 			MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10 * 1000);
@@ -235,12 +237,13 @@ namespace Raven.Database.Config
             FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
             FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
             FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
-
+            FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate],false);
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
 			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
+			Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 20);
 
             Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 5);		// 6000ms
             Cluster.HeartbeatTimeout = new IntegerSetting(settings["Raven/Cluster/HeartbeatTimeout"], RaftEngineOptions.DefaultHeartbeatTimeout * 5);	// 1500ms
@@ -378,6 +381,7 @@ namespace Raven.Database.Config
 		public StringSetting WebDir { get; private set; }
 
 		public BooleanSetting DisableClusterDiscovery { get; private set; }
+        public BooleanSetting TurnOffDiscoveryClient { get; private set; }
 
 		public StringSetting ServerName { get; private set; }
 
@@ -456,6 +460,7 @@ namespace Raven.Database.Config
 		public class IndexingConfiguration
 		{
 			public IntegerSetting MaxNumberOfItemsToProcessInTestIndexes { get; set; }
+			public IntegerSetting MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
 		}
 
 	    public class ClusterConfiguration
@@ -495,6 +500,8 @@ namespace Raven.Database.Config
 			public StringSetting IndexStoragePath { get; set; }
 
 			public StringSetting DefaultStorageTypeName { get; set; }
+
+            public BooleanSetting PreventSchemaUpdate { get; set; }
 		}
 
 		public class EncryptionConfiguration

@@ -43,6 +43,8 @@ namespace Raven.Client.Counters
 
 		CounterStore.BatchOperationsStore Batch { get; }
 
+		ICountersReplicationInformer ReplicationInformer { get; }
+
 		void Initialize(bool ensureDefaultCounterExists = false);
 	}
 }

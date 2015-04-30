@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.Http;
 using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Connection
@@ -17,6 +18,10 @@ namespace Raven.Abstractions.Connection
         {
             get { return Response.StatusCode; }
         }
+
+	    public ErrorResponseException()
+	    {				
+	    }
 
 	    public ErrorResponseException(ErrorResponseException e, string message)
             :base(message)
@@ -37,6 +42,20 @@ namespace Raven.Abstractions.Connection
             Response = response;
             ResponseString = responseString;
         }
+
+	    public static ErrorResponseException FromHttpRequestException(HttpRequestException exception)
+	    {
+		    var ex = new ErrorResponseException
+		    {
+				Response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
+				ResponseString = exception.Message
+		    };
+
+		    foreach (var key in exception.Data.Keys)
+			    ex.Data[key] = exception.Data[key];
+
+		    return ex;
+	    }
 
         public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
 		{

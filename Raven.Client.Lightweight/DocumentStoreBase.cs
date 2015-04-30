@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Linq;
-using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -83,6 +82,7 @@ namespace Raven.Client
 		public abstract IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
 		public abstract IAsyncDocumentSession OpenAsyncSession();
 		public abstract IAsyncDocumentSession OpenAsyncSession(string database);
+		public abstract IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions);
 
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);

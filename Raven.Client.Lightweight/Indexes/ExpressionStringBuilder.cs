@@ -15,7 +15,6 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 

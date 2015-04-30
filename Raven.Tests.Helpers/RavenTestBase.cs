@@ -197,10 +197,18 @@ namespace Raven.Tests.Helpers
 
 				return documentStore;
 			}
-			catch
+			catch (Exception e)
 			{
 				// We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
-				documentStore.Dispose();
+			    try
+			    {
+			        documentStore.Dispose();
+			    }
+			    catch (Exception exception)
+			    {
+                    // we don't want to hide the original error
+			        Console.WriteLine("Error when disposing of document store during error in initialization: " + exception);
+			    }
 				throw;
 			}
 			finally
