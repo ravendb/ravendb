@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
@@ -7,6 +8,10 @@ namespace Raven.Abstractions.Data
         public CompactStatusState State;
 
 		public List<string> Messages { get; set; }
+
+        public string LastProgressMessage { get; set; }
+
+        public DateTime? LastProgressMessageTime { get; set; }
 
         public static string RavenDatabaseCompactStatusDocumentKey(string databaseName)
         {

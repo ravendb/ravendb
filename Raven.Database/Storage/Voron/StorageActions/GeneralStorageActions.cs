@@ -62,7 +62,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (string.IsNullOrEmpty(name)) 
 				throw new ArgumentNullException("name");
 
-            var lowerKeyName = name.ToLowerInvariant();
+            var lowerKeyName = (Slice)name.ToLowerInvariant();
 
 			var readResult = storage.General.Read(Snapshot, lowerKeyName, writeBatch.Value); 
             if (readResult == null)
