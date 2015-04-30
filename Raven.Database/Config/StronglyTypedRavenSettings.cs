@@ -521,8 +521,8 @@ namespace Raven.Database.Config
 		public class WebSocketsConfiguration
 		{
 			public IntegerSetting InitialBufferPoolSize { get; set; }
-	}
-	}
+		}
+
 
 		public class MonitoringConfiguration
 		{
