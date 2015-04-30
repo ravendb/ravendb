@@ -579,16 +579,18 @@ namespace Raven.Database.Server.Controllers.Admin
 			});
 		}
 
-	    private static bool IsUpdateMessage(string msg)
-	    {
-	        if(String.IsNullOrEmpty(msg)) return false;
-            if (msg.StartsWith("Copied")) return true;
-            if (msg.Length>42 && String.Compare(msg, 32, ProgressString, 0, 10) == 0) return true;
-	        return false;
-	    }
-
+        private static bool IsUpdateMessage(string msg)
+        {
+            if (String.IsNullOrEmpty(msg)) return false;
+            //Here we check if we the message is in voron update format
+            if (msg.StartsWith(VoronProgressString)) return true;
+            //Here we check if we the messafe is in esent update format
+            if (msg.Length > 42 && String.Compare(msg, 32, EsentProgressString, 0, 10) == 0) return true;
+            return false;
+        }
         private static TimeSpan ReportProgressInterval = TimeSpan.FromSeconds(1);
-        private static string ProgressString = "JET_SNPROG";
+        private static string EsentProgressString = "JET_SNPROG";
+        private static string VoronProgressString = "Copied";
 
 		[HttpGet]
 		[RavenRoute("admin/indexingStatus")]
