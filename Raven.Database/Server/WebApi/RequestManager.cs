@@ -58,6 +58,10 @@ namespace Raven.Database.Server.WebApi
 			get { return Thread.VolatileRead(ref physicalRequestsCount); }
 		}
 
+		public long NumberOfConcurrentRequests
+		{
+			get { return Thread.VolatileRead(ref concurrentRequests); }
+		}
 
 		public event EventHandler<BeforeRequestWebApiEventArgs> BeforeRequest;
 

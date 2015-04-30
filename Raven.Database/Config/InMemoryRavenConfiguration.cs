@@ -53,6 +53,8 @@ namespace Raven.Database.Config
 
         public ClusterConfiguration Cluster { get; private set; }
 
+		public MonitoringConfiguration Monitoring { get; private set; }
+
 		public WebSocketsConfiguration WebSockets { get; set; }
 
 		public InMemoryRavenConfiguration()
@@ -65,6 +67,7 @@ namespace Raven.Database.Config
 			Indexing = new IndexingConfiguration();
 			WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
+			Monitoring = new MonitoringConfiguration();
 
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -327,9 +330,18 @@ namespace Raven.Database.Config
 
 			WebSockets.InitialBufferPoolSize = ravenSettings.WebSockets.InitialBufferPoolSize.Value;
 
+			FillMonitoringSettings(ravenSettings);
+
 			PostInit();
 
 			return this;
+		}
+
+		private void FillMonitoringSettings(StronglyTypedRavenSettings settings)
+		{
+			Monitoring.Snmp.Enabled = settings.Monitoring.Snmp.Enabled.Value;
+			Monitoring.Snmp.Community = settings.Monitoring.Snmp.Community.Value;
+			Monitoring.Snmp.Port = settings.Monitoring.Snmp.Port.Value;
 		}
 
 		private static string CalculateWorkingDirectory(string workingDirectory)
@@ -1444,6 +1456,25 @@ namespace Raven.Database.Config
             public TimeSpan MaxStepDownDrainTime { get; set; }
             public int MaxEntriesPerRequest { get; set; }
 	    }
+
+		public class MonitoringConfiguration
+		{
+			public MonitoringConfiguration()
+			{
+				Snmp = new SnmpConfiguration();
+			}
+
+			public SnmpConfiguration Snmp { get; private set; }
+
+			public class SnmpConfiguration
+			{
+				public bool Enabled { get; set; }
+
+				public int Port { get; set; }
+
+				public string Community { get; set; }
+			}
+		}
 
 		public class WebSocketsConfiguration
 		{
