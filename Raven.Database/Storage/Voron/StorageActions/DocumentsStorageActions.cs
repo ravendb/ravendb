@@ -110,7 +110,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 											.Iterate(Snapshot, writeBatch.Value))
 			{
-				Slice slice = etag.ToString();
+				var slice = (Slice) etag.ToString();
 				if (iterator.Seek(slice) == false)
 					yield break;
 
@@ -194,8 +194,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			using (var iterator = tableStorage.Documents.Iterate(Snapshot, writeBatch.Value))
 			{
-				iterator.RequiredPrefix = idPrefix.ToLowerInvariant();
-				var seekStart = skipAfter == null ? iterator.RequiredPrefix : skipAfter.ToLowerInvariant();
+                iterator.RequiredPrefix = (Slice)idPrefix.ToLowerInvariant();
+                var seekStart = skipAfter == null ? (Slice)iterator.RequiredPrefix : (Slice)skipAfter.ToLowerInvariant();
 				if (iterator.Seek(seekStart) == false || !iterator.Skip(start))
 					yield break;
 
@@ -224,7 +224,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public Stream RawDocumentByKey(string key)
 		{
-			var normalizedKey = CreateKey(key);
+            var normalizedKey = (Slice)CreateKey(key);
 
 			var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKey, writeBatch.Value);
 			if (documentReadResult == null) //non existing document
@@ -257,7 +257,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return null;
 			}
 
-			var metadataSize = metadataIndex.GetDataSize(Snapshot, normalizedKey);
+			var metadataSize = metadataIndex.GetDataSize(Snapshot, (Slice)normalizedKey);
 
 			return new JsonDocument
 			{
@@ -277,7 +277,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             var normalizedKey = CreateKey(key);
 
-			if (tableStorage.Documents.Contains(Snapshot, normalizedKey, writeBatch.Value))
+            if (tableStorage.Documents.Contains(Snapshot, (Slice)normalizedKey, writeBatch.Value))
                 return ReadDocumentMetadata(normalizedKey);
 
 			logger.Debug("Document with key='{0}' was not found", key);
@@ -290,12 +290,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new ArgumentNullException("key");
 
             var normalizedKey = CreateKey(key);
+            var normalizedKeyAsSlice = (Slice)normalizedKey;
 
 			if (etag != null)
 				EnsureDocumentEtagMatch(normalizedKey, etag, "DELETE");
 
 			ushort? existingVersion;
-			if (!tableStorage.Documents.Contains(Snapshot, normalizedKey, writeBatch.Value, out existingVersion))
+            if (!tableStorage.Documents.Contains(Snapshot, normalizedKeyAsSlice, writeBatch.Value, out existingVersion))
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				metadata = null;
@@ -303,7 +304,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return false;
 			}
 
-			if (!metadataIndex.Contains(Snapshot, normalizedKey, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
+            if (!metadataIndex.Contains(Snapshot, normalizedKeyAsSlice, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
 			{
 				var errorString = string.Format("Document with key '{0}' was found, but its metadata wasn't found --> possible data corruption", key);
 				throw new InvalidDataException(errorString);
@@ -354,7 +355,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			};
 		}
 
-        private bool PutDocumentMetadataInternal(string key, string normalizedKey, RavenJObject metadata, Etag newEtag, DateTime savedAt)
+        private bool PutDocumentMetadataInternal(string key, Slice normalizedKey, RavenJObject metadata, Etag newEtag, DateTime savedAt)
 		{
 			return WriteDocumentMetadata(new JsonDocumentMetadata
 			{
@@ -375,7 +376,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			if (!overwriteExisting && tableStorage.Documents.Contains(Snapshot, CreateKey(key), writeBatch.Value))
+            if (!overwriteExisting && tableStorage.Documents.Contains(Snapshot, (Slice)CreateKey(key), writeBatch.Value))
 			{
 				throw new ConcurrencyException(string.Format("InsertDocument() - overwriteExisting is false and document with key = '{0}' already exists", key));
 			}
@@ -389,8 +390,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new ArgumentNullException("key");
 
             var normalizedKey = CreateKey(key);
+            var normalizedKeySlice = (Slice)normalizedKey;
 
-			if (!tableStorage.Documents.Contains(Snapshot, normalizedKey, writeBatch.Value))
+            if (!tableStorage.Documents.Contains(Snapshot, normalizedKeySlice, writeBatch.Value))
 			{
 				logger.Debug("Document with dataKey='{0}' was not found", key);
 				preTouchEtag = null;
@@ -405,7 +407,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			preTouchEtag = metadata.Etag;
 			metadata.Etag = newEtag;
 
-			WriteDocumentMetadata(metadata, normalizedKey, shouldIgnoreConcurrencyExceptions: true);
+            WriteDocumentMetadata(metadata, normalizedKeySlice, shouldIgnoreConcurrencyExceptions: true);
 
 			var keyByEtagIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
 
@@ -423,7 +425,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			using (var iter = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 													.Iterate(Snapshot, writeBatch.Value))
 			{
-				if (!iter.Seek(etag.ToString()) &&
+                if (!iter.Seek((Slice)etag.ToString()) &&
 					!iter.Seek(Slice.BeforeAllKeys)) //if parameter etag not found, scan from beginning. if empty --> return original etag
 					return etag;
 
@@ -480,7 +482,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		}
 
 		//returns true if it was update operation
-		private bool WriteDocumentMetadata(JsonDocumentMetadata metadata, string normalizedKey, bool shouldIgnoreConcurrencyExceptions = false)
+		private bool WriteDocumentMetadata(JsonDocumentMetadata metadata, Slice key, bool shouldIgnoreConcurrencyExceptions = false)
 		{
 			var metadataStream = CreateStream();
 
@@ -497,8 +499,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			metadataStream.Position = 0;
 
 			ushort? existingVersion;
-			var isUpdate = metadataIndex.Contains(Snapshot, normalizedKey, writeBatch.Value, out existingVersion);
-			metadataIndex.Add(writeBatch.Value, normalizedKey, metadataStream, existingVersion, shouldIgnoreConcurrencyExceptions);
+			var isUpdate = metadataIndex.Contains(Snapshot, key, writeBatch.Value, out existingVersion);
+			metadataIndex.Add(writeBatch.Value, key, metadataStream, existingVersion, shouldIgnoreConcurrencyExceptions);
 
 			return isUpdate;
 		}
@@ -507,7 +509,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			try
 			{
-				var metadataReadResult = metadataIndex.Read(Snapshot, normalizedKey, writeBatch.Value);
+				var metadataReadResult = metadataIndex.Read(Snapshot, (Slice)normalizedKey, writeBatch.Value);
 				if (metadataReadResult == null)
 					return null;
 
@@ -541,10 +543,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private bool WriteDocumentData(string key, string normalizedKey, Etag etag, RavenJObject data, RavenJObject metadata, out Etag newEtag, out Etag existingEtag, out DateTime savedAt)
 		{
+            var normalizedKeySlice = (Slice)normalizedKey;
 			var keyByEtagDocumentIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
 
 			ushort? existingVersion;
-			var isUpdate = tableStorage.Documents.Contains(Snapshot, normalizedKey, writeBatch.Value, out existingVersion);
+            var isUpdate = tableStorage.Documents.Contains(Snapshot, normalizedKeySlice, writeBatch.Value, out existingVersion);
 			existingEtag = null;
 
 			if (isUpdate)
@@ -554,8 +557,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 			else if (etag != null && etag != Etag.Empty)
 			{
-				throw new ConcurrencyException("PUT attempted on document '" + key +
-													   "' using a non current etag (document deleted)")
+				throw new ConcurrencyException("PUT attempted on document '" + key + "' using a non current etag (document deleted)")
 				{
 					ExpectedETag = etag
 				};
@@ -571,12 +573,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
 			dataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch.Value, normalizedKey, dataStream, existingVersion ?? 0);
+            tableStorage.Documents.Add(writeBatch.Value, normalizedKeySlice, dataStream, existingVersion ?? 0);
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;
 
-			var isUpdated = PutDocumentMetadataInternal(key, normalizedKey, metadata, newEtag, savedAt);
+            var isUpdated = PutDocumentMetadataInternal(key, normalizedKeySlice, metadata, newEtag, savedAt);
 
 			keyByEtagDocumentIndex.Add(writeBatch.Value, newEtag, normalizedKey);
 
@@ -585,6 +587,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         private RavenJObject ReadDocumentData(string normalizedKey, Etag existingEtag, RavenJObject metadata, out int size)
 		{
+            var normalizedKeySlice = (Slice)normalizedKey;
+
 			try
 			{
 				size = -1;
@@ -596,7 +600,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					return existingCachedDocument.Document;
 				}
 
-				var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKey, writeBatch.Value);
+                var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKeySlice, writeBatch.Value);
 				if (documentReadResult == null) //non existing document
 					return null;
 
@@ -624,7 +628,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			    try
 			    {
                     size = -1;
-                    var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKey, writeBatch.Value);
+                    var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKeySlice, writeBatch.Value);
                     if (documentReadResult == null) //non existing document
                         return null;
 

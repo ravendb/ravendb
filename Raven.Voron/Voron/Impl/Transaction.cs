@@ -216,7 +216,7 @@ namespace Voron.Impl
 		    if (_trees.TryGetValue(treeName, out tree))
 		        return tree;
 
-            var header = (TreeRootHeader*)State.Root.DirectRead(treeName);
+            var header = (TreeRootHeader*)State.Root.DirectRead((Slice)treeName);
 		    if (header != null)
 		    {
 		        tree = Tree.Open(this, header);

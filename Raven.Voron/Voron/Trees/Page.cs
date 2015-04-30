@@ -250,6 +250,7 @@ namespace Voron.Trees
         }
 
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public NodeHeader* Search(MemorySlice key)
 		{
             if (KeysPrefixed)

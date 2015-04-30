@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 
-namespace Raven.StorgaeExporter
+namespace Raven.StorageExporter
 {
     public class Program
     {

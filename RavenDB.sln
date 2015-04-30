@@ -101,6 +101,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rachis.Tests", "Rachis\Rach
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Counters", "Raven.Tests.Counters\Raven.Tests.Counters.csproj", "{479222E7-C9DF-448E-B6C9-9E8EEBE1A51D}"
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.StorgaeExporter", "Raven.StorgaeExporter\Raven.StorgaeExporter.csproj", "{713C4EF5-E694-4B94-BCA5-66590338C0C2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.StorageExporter", "Raven.StorageExporter\Raven.StorageExporter.csproj", "{713C4EF5-E694-4B94-BCA5-66590338C0C2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

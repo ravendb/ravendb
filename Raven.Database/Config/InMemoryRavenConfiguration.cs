@@ -53,6 +53,8 @@ namespace Raven.Database.Config
 
         public ClusterConfiguration Cluster { get; private set; }
 
+		public WebSocketsConfiguration WebSockets { get; set; }
+
 		public InMemoryRavenConfiguration()
 		{
 			Replication = new ReplicationConfiguration();
@@ -61,6 +63,7 @@ namespace Raven.Database.Config
             FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
+			WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
 
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
@@ -321,6 +324,8 @@ namespace Raven.Database.Config
 		    ImplicitFetchFieldsFromDocumentMode = ravenSettings.ImplicitFetchFieldsFromDocumentMode.Value;
 
 			IgnoreSslCertificateErrors = GetIgnoreSslCertificateErrorModeMode();
+
+			WebSockets.InitialBufferPoolSize = ravenSettings.WebSockets.InitialBufferPoolSize.Value;
 
 			PostInit();
 
@@ -1439,6 +1444,11 @@ namespace Raven.Database.Config
             public TimeSpan MaxStepDownDrainTime { get; set; }
             public int MaxEntriesPerRequest { get; set; }
 	    }
+
+		public class WebSocketsConfiguration
+		{
+			public int InitialBufferPoolSize { get; set; }
+		}
 
 		public void UpdateDataDirForLegacySystemDb()
 		{

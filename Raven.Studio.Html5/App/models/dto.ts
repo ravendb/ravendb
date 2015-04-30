@@ -639,6 +639,7 @@ interface restoreStatusDto {
 
 interface compactStatusDto {
     Messages: string[];
+    LastProgressMessage: string;
     State: string;
 }
 
