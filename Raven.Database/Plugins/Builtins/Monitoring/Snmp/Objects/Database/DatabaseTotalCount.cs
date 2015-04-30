@@ -12,12 +12,12 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database
 {
-	public class DatabaseTotalCount : ScalarObject
+	public class DatabaseTotalCount : ScalarObjectBase
 	{
 		private readonly DocumentDatabase systemDatabase;
 
 		public DatabaseTotalCount(DocumentDatabase systemDatabase)
-			: base(new ObjectIdentifier("1.5.1.1"))
+			: base("5.1.1")
 		{
 			this.systemDatabase = systemDatabase;
 		}

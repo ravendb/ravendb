@@ -16,7 +16,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 		private readonly RequestManager requestManager;
 
 		public ServerConcurrentRequests(RequestManager requestManager)
-			: base("1.1.6.1")
+			: base("1.6.1")
 		{
 			this.requestManager = requestManager;
 		}

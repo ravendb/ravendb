@@ -16,7 +16,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 		private readonly Integer32 pid;
 
 		public ServerPid()
-			: base("1.1.5")
+			: base("1.5")
 		{
 			pid = new Integer32(Process.GetCurrentProcess().Id);
 		}

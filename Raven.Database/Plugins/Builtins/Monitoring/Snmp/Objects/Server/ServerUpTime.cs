@@ -11,7 +11,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 		private readonly RequestManager requestManager;
 
 		public ServerUpTime(RequestManager requestManager)
-			: base("1.1.2")
+			: base("1.2")
 		{
 			this.requestManager = requestManager;
 		}

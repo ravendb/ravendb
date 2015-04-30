@@ -9,7 +9,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 {
 	public abstract class ScalarObjectBase : ScalarObject
 	{
-		private const string RootOid = ""; //"1.3.6.1.4.1.12345.1.";
+		private const string RootOid = "1.3.6.1.4.1.45751.1.1.";
 
 		protected ScalarObjectBase(string dots)
 			: base(RootOid + dots)

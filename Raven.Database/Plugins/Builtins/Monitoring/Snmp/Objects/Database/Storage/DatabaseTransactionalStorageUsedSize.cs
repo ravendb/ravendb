@@ -11,8 +11,8 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stora
 {
 	public class DatabaseTransactionalStorageUsedSize : DatabaseScalarObjectBase
 	{
-		public DatabaseTransactionalStorageUsedSize(string databaseName, DatabasesLandlord landlord, string dots, int index)
-			: base(databaseName, landlord, "1.5.2.{0}.2.2", index)
+		public DatabaseTransactionalStorageUsedSize(string databaseName, DatabasesLandlord landlord, int index)
+			: base(databaseName, landlord, "5.2.{0}.2.2", index)
 		{
 		}
 

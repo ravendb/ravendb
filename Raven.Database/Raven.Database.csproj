@@ -293,7 +293,7 @@
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfIndexes.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseApproximateTaskCount.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseName.cs" />
-    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseOpenedCount.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseLoadedCount.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseTotalCount.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTotalStorageSize.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseIndexStorageSize.cs" />

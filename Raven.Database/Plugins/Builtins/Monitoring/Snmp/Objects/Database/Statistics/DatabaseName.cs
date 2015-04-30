@@ -17,7 +17,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stati
 		private readonly OctetString name;
 
 		public DatabaseName(string databaseName, DatabasesLandlord landlord, int index)
-			: base(databaseName, landlord, "1.5.2.{0}.1.1", index)
+			: base(databaseName, landlord, "5.2.{0}.1.1", index)
 		{
 			name = new OctetString(databaseName ?? Constants.SystemDatabase);
 		}

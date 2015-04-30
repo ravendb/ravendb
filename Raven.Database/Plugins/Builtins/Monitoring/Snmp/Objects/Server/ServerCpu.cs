@@ -14,7 +14,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 	public class ServerCpu : ScalarObjectBase
 	{
 		public ServerCpu()
-			: base("1.1.7")
+			: base("1.7")
 		{
 		}
 

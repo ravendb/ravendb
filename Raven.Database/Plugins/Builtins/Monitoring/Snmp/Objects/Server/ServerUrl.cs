@@ -16,7 +16,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 		private readonly OctetString url;
 
 		public ServerUrl(InMemoryRavenConfiguration configuration)
-			: base("1.1.9")
+			: base("1.9")
 		{
 			url = new OctetString(configuration.ServerUrl);
 		}

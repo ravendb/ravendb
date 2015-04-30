@@ -13,7 +13,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 	public class ServerTotalMemory : ScalarObjectBase
 	{
 		public ServerTotalMemory()
-			: base("1.1.8.1")
+			: base("1.8.1")
 		{
 		}
 

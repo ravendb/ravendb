@@ -12,7 +12,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Reque
 	public class DatabaseRequestDurationMean : DatabaseScalarObjectBase
 	{
 		public DatabaseRequestDurationMean(string databaseName, DatabasesLandlord landlord, int index)
-			: base(databaseName, landlord, "1.5.2.{0}.3.4.2.1", index)
+			: base(databaseName, landlord, "5.2.{0}.3.4.2.1", index)
 		{
 		}
 

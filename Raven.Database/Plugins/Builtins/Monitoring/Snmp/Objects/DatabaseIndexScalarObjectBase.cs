@@ -19,7 +19,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 		protected IndexDefinition IndexDefinition { get; private set; }
 
 		protected DatabaseIndexScalarObjectBase(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex, string dots)
-			: base(databaseName, landlord, string.Format("1.5.2.{0}.4.{{0}}.{1}", databaseIndex, dots), indexIndex)
+			: base(databaseName, landlord, string.Format("5.2.{0}.4.{{0}}.{1}", databaseIndex, dots), indexIndex)
 		{
 			IndexName = indexName;
 		}

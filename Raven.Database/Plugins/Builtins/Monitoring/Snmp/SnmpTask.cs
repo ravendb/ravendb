@@ -6,7 +6,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 
 using Lextm.SharpSnmpLib;
@@ -14,11 +16,11 @@ using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
 using Lextm.SharpSnmpLib.Security;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Commercial;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database;
-using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Requests;
-using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server;
 using Raven.Database.Server.Tenancy;
 using Raven.Json.Linq;
@@ -50,8 +52,11 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 		public void Execute(RavenDbServer server)
 		{
-			// TODO [ppekrol] Check if SNMP is turned on
-			// TODO [ppekrol] Validate license here
+			if (server.Configuration.Monitoring.Snmp.Enabled == false)
+				return;
+
+			if (IsLicenseValid() == false)
+				throw new InvalidOperationException("Your license does not allow you to use SNMP monitoring.");
 
 			systemDatabase = server.SystemDatabase;
 			databaseLandlord = server.Options.DatabaseLandlord;
@@ -61,6 +66,24 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			objectStore = CreateStore(server);
 			snmpEngine = CreateSnmpEngine(server, objectStore);
 			snmpEngine.Start();
+		}
+
+		private static bool IsLicenseValid()
+		{
+			if (SystemTime.UtcNow > new DateTime(2015, 6, 1))
+				throw new NotImplementedException("Time bomb. Enabled monitoring for development.");
+
+			return true;
+
+			string monitoring;
+			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("monitoring", out monitoring))
+			{
+				bool active;
+				if (bool.TryParse(monitoring, out active))
+					return true;
+			}
+
+			return false;
 		}
 
 		private void AddDatabaseIfNecessary(string databaseName)
@@ -108,8 +131,6 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 			var userRegistry = new UserRegistry();
 			userRegistry.Add(new OctetString("neither"), DefaultPrivacyProvider.DefaultPair);
-			//userRegistry.Add(new OctetString("authen"), new DefaultPrivacyProvider(new MD5AuthenticationProvider(new OctetString("authentication"))));
-			//userRegistry.Add(new OctetString("privacy"), new DESPrivacyProvider(new OctetString("privacyphrase"), new MD5AuthenticationProvider(new OctetString("authentication"))));
 
 			var listener = new Listener();
 
@@ -136,7 +157,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new ServerTotalMemory());
 			store.Add(new ServerUrl(server.SystemDatabase.Configuration));
 
-			store.Add(new DatabaseOpenedCount(server.Options.DatabaseLandlord));
+			store.Add(new DatabaseLoadedCount(server.Options.DatabaseLandlord));
 			store.Add(new DatabaseTotalCount(server.SystemDatabase));
 
 			AddDatabase(store, Constants.SystemDatabase);
@@ -183,7 +204,29 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 			public void Log(ISnmpContext context)
 			{
-				// TODO [ppekrol]
+				if (log.IsDebugEnabled == false)
+					return;
+
+				var builder = new StringBuilder();
+				builder.AppendLine("SNMP:");
+				var requestedOids = context.Request.Scope.Pdu.Variables.Select(x => x.Id);
+				foreach (var oid in requestedOids)
+				{
+					if (context.Response == null)
+					{
+						builder.AppendLine(string.Format("OID: {0}. Response: null", oid));
+						continue;
+					}
+
+					var responseData = context.Response.Scope.Pdu.Variables
+						.Where(x => x.Id == oid)
+						.Select(x => x.Data)
+						.FirstOrDefault();
+
+					builder.AppendLine(string.Format("OID: {0}. Response: {1}", oid, responseData != null ? responseData.ToString() : null));
+				}
+
+				log.Debug(builder.ToString);
 			}
 		}
 	}

@@ -12,12 +12,12 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database
 {
-	public class DatabaseOpenedCount : ScalarObject
+	public class DatabaseLoadedCount : ScalarObjectBase
 	{
 		private readonly DatabasesLandlord databasesLandlord;
 
-		public DatabaseOpenedCount(DatabasesLandlord databasesLandlord)
-			: base(new ObjectIdentifier("1.5.1.2"))
+		public DatabaseLoadedCount(DatabasesLandlord databasesLandlord)
+			: base("5.1.2")
 		{
 			this.databasesLandlord = databasesLandlord;
 		}

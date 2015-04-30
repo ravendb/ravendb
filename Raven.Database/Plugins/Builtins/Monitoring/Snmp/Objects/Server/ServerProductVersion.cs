@@ -13,7 +13,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 		private readonly OctetString productVersion;
 
 		public ServerProductVersion()
-			: base("1.1.4")
+			: base("1.4")
 		{
 			productVersion = new OctetString(DocumentDatabase.ProductVersion);
 		}

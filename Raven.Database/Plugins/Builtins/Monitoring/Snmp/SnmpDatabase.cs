@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Indexes;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Requests;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics;
+using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Storage;
 using Raven.Database.Server.Tenancy;
 using Raven.Json.Linq;
 
@@ -61,6 +62,11 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new DatabaseReducedPerSecond(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseRequestDurationMean(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseRequestsPerSecond(databaseName, databaseLandlord, databaseIndex));
+
+			store.Add(new DatabaseIndexStorageSize(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseTotalStorageSize(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseTransactionalStorageAllocatedSize(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseTransactionalStorageUsedSize(databaseName, databaseLandlord, databaseIndex));
 		}
 
 		public void Update()
@@ -108,7 +114,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 		private long GetOrAddIndexIndex(string indexName, DocumentDatabase systemDatabase)
 		{
-			var key = Constants.Monitoring.Snmp.DatabaseIndexMappingDocumentPrefix + databaseName;
+			var key = Constants.Monitoring.Snmp.DatabaseMappingDocumentPrefix + databaseName + "/Indexes";
 
 			var mappingDocument = systemDatabase.Documents.Get(key, null) ?? new JsonDocument();
 

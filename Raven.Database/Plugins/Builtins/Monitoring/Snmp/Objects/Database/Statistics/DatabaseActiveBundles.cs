@@ -13,7 +13,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stati
 	public class DatabaseActiveBundles : DatabaseScalarObjectBase
 	{
 		public DatabaseActiveBundles(string databaseName, DatabasesLandlord landlord, int index)
-			: base(databaseName, landlord, "1.5.2.{0}.1.12", index)
+			: base(databaseName, landlord, "5.2.{0}.1.12", index)
 		{
 		}
 

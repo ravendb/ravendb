@@ -15,7 +15,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stati
 	public class DatabaseStaleIndexes : DatabaseScalarObjectBase
 	{
 		public DatabaseStaleIndexes(string databaseName, DatabasesLandlord landlord, int index)
-			: base(databaseName, landlord, "1.5.2.{0}.1.3", index)
+			: base(databaseName, landlord, "5.2.{0}.1.3", index)
 		{
 		}
 

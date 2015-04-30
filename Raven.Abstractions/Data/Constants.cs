@@ -435,7 +435,7 @@ namespace Raven.Abstractions.Data
 
 				public const string DatabaseMappingDocumentKey = "Raven/Monitoring/Snmp/Databases";
 
-				public const string DatabaseIndexMappingDocumentPrefix = "Raven/Monitoring/Snmp/Databases/";
+				public const string DatabaseMappingDocumentPrefix = "Raven/Monitoring/Snmp/Databases/";
 			} 
 		}
 

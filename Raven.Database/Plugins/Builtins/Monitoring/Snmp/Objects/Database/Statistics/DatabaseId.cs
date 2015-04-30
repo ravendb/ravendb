@@ -15,7 +15,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stati
 		private OctetString id;
 
 		public DatabaseId(string databaseName, DatabasesLandlord landlord, int index)
-			: base(databaseName, landlord, "1.5.2.{0}.1.11", index)
+			: base(databaseName, landlord, "5.2.{0}.1.11", index)
 		{
 
 		}
