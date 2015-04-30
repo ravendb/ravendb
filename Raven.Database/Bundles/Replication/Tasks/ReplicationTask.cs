@@ -980,6 +980,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 			if (Monitor.TryEnter(_indexReplicationTaskLock) == false)
 				return false;
+
 			try
 			{
 				var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
@@ -1058,11 +1059,14 @@ namespace Raven.Bundles.Replication.Tasks
 						log.ErrorException("Failed to replicate indexes and transformers to " + destination, e);
 					}
 				}
+
 				return true;
 			}
 			catch (Exception e)
 			{
 				log.ErrorException("Failed to replicate indexes and transformers", e);
+
+                return false;
 			}
 			finally
 			{

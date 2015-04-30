@@ -26,7 +26,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public bool IsIndexStale(int id, DateTime? cutOff, Etag cutoffEtag)
 		{
-			var key = CreateKey(id);
+            var key = (Slice) CreateKey(id);
 
 			ushort version;
 
@@ -78,7 +78,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public bool IsIndexStaleByTask(int view, DateTime? cutOff)
 		{
 			ushort version;
-			var key = CreateKey(view);
+            var key = (Slice)CreateKey(view);
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
 			using (var iterator = tasksByIndex.MultiRead(Snapshot, key))
 			{
@@ -104,7 +104,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public bool IsReduceStale(int id)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateKey(id)))
+            using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, (Slice)CreateKey(id)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;
@@ -115,7 +115,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public bool IsMapStale(int id)
 		{
-			var key = CreateKey(id);
+            var key = (Slice)CreateKey(id);
 
 			ushort version;
 			var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
@@ -130,7 +130,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public Tuple<DateTime, Etag> IndexLastUpdatedAt(int id)
 		{
-			var key = CreateKey(id);
+            var key = (Slice)CreateKey(id);
 
 			ushort version;
 			var indexingStatsReader = LoadStruct(tableStorage.IndexingStats, key, writeBatch.Value, out version);
@@ -185,7 +185,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public int GetIndexTouchCount(int id)
 		{
-			var read = tableStorage.IndexingMetadata.Read(Snapshot, CreateKey(id, "touches"), writeBatch.Value);
+            var read = tableStorage.IndexingMetadata.Read(Snapshot, (Slice)CreateKey(id, "touches"), writeBatch.Value);
 			if (read == null)
 				return -1;
 
