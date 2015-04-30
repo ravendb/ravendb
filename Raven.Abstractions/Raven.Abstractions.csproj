@@ -98,6 +98,10 @@
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Web.Http, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.2\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -154,8 +158,8 @@
     <Compile Include="Counters\CounterStorageDocument.cs" />
     <Compile Include="Counters\CounterStorageStats.cs" />
     <Compile Include="Counters\CounterChange.cs" />
-    <Compile Include="Counters\CounterStorageReplicationDestination.cs" />
-    <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
+    <Compile Include="Counters\CounterReplicationDestination.cs" />
+    <Compile Include="Counters\CountersReplicationDocument.cs" />
     <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />

@@ -11,9 +11,13 @@ namespace Raven.Client.Counters.Actions
 {
 	public class CountersCommands : CountersActionsBase
 	{
-		internal CountersCommands(ICounterStore parent, string counterStorageName)
+		private readonly CountersClient client;
+
+		internal CountersCommands(ICounterStore parent, CountersClient client, string counterStorageName)
 			: base(parent, counterStorageName)
 		{
+			this.client = client;
+			
 		}
 
 		public async Task ChangeAsync(string groupName, string counterName, long delta, CancellationToken token = default(CancellationToken))
@@ -21,8 +25,11 @@ namespace Raven.Client.Counters.Actions
 			var requestUriString = String.Format(CultureInfo.InvariantCulture,"{0}/change/{1}/{2}?delta={3}",
 				counterStorageUrl, groupName, counterName, delta);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
-				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+			await parent.ReplicationInformer.ExecuteWithReplicationAsync(HttpMethods.Post, client, metadata =>
+			{
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
+					return request.ReadResponseJsonAsync().WithCancellation(token);
+			});
 		}
 
 		public async Task IncrementAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
@@ -39,30 +46,39 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/reset/{1}/{2}", counterStorageUrl, groupName, counterName);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
-				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+			await parent.ReplicationInformer.ExecuteWithReplicationAsync(HttpMethods.Post, client, metadata =>
+			{
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
+					return request.ReadResponseJsonAsync().WithCancellation(token);
+			});
 		}
 
 		public async Task<long> GetOverallTotalAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/getCounterOverallTotal/{1}/{2}", counterStorageUrl, groupName, counterName);
-
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+			
+			return await parent.ReplicationInformer.ExecuteWithReplicationAsyncWithReturnValue(HttpMethods.Get, client, async metadata =>
 			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false); ;
-				return response.Value<long>();
-			}
+				var requestUriString = String.Format("{0}/cs/{1}/getCounterOverallTotal/{2}/{3}", metadata.Url,counterStorageName, groupName, counterName);
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+				{
+					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+					return response.Value<long>();
+				}
+			});
 		}
 
 		public async Task<List<CounterView.ServerValue>> GetServersValuesAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
 			var requestUriString = String.Format("{0}/getCounterServersValues/{1}/{2}", counterStorageUrl, groupName, counterName);
-			
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+
+			return await parent.ReplicationInformer.ExecuteWithReplicationAsyncWithReturnValue(HttpMethods.Get, client, async metadata =>
 			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<List<CounterView.ServerValue>>();
-			}
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+				{
+					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+					return response.ToObject<List<CounterView.ServerValue>>();
+				}
+			});
 		}
 	}
 }

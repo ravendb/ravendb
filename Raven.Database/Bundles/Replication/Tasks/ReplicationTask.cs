@@ -985,13 +985,13 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		public void ReplicateIndexesAndTransformersTask(object state)
+		public bool ReplicateIndexesAndTransformersTask(object state)
 		{
 			if (docDb.Disposed)
-				return;
+				return false;
 
 			if (Monitor.TryEnter(_indexReplicationTaskLock) == false)
-				return;
+				return false;
 			try
 			{
 				var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
@@ -1069,6 +1069,7 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						log.ErrorException("Failed to replicate indexes and transformers to " + destination, e);
 				}
+				return true;
 			}
 			}
 			catch (Exception e)

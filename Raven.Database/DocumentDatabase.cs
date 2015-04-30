@@ -182,8 +182,6 @@ namespace Raven.Database
 					InitializeIndexCodecTriggers();
 					initializer.InitializeIndexStorage();
 
-				
-
 					CompleteWorkContextSetup();
 
 					prefetcher = new Prefetcher(workContext);

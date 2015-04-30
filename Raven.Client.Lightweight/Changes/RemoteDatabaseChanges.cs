@@ -1,18 +1,13 @@
-﻿using Raven.Abstractions;
-using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Changes

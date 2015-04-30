@@ -13,11 +13,17 @@ namespace Voron.Util
     {
         public static PrefixedSliceComparer MemoryComparerInstance = Compare;
 
-        [SuppressUnmanagedCodeSecurity]
+
         [SecurityCritical]
         [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static int Compare(byte* p1, byte* p2, int size)
+        {
+            return CompareInline(p1, p2, size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareInline(byte* p1, byte* p2, int size)
         {
             byte* bpx = p1, bpy = p2;
             int l = size;
@@ -86,12 +92,19 @@ namespace Voron.Util
             StdLib.memcpy(dest, src, n);            
         }
 
+        public unsafe static void Copy(byte* dest, byte* src, int n)
+        {
+            CopyInline(dest, src, n);
+        }
+
         /// <summary>
         /// Copy is optimized to handle copy operations where n is statistically small. 
         /// This method is optimized at the IL level to be extremely efficient for copies smaller than
         /// 4096 bytes or heterogeneous workloads with occasional big copies.         
         /// </summary>
-        public unsafe static void Copy(byte* dest, byte* src, int n)
+        /// <remarks>This is a forced inline version, use with care.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static void CopyInline(byte* dest, byte* src, int n)
         {
         SMALLTABLE:
             switch (n)

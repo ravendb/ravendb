@@ -4,9 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Diagnostics;
+
 namespace Raven.Abstractions.Counters
 {
-    public class CounterStorageReplicationDestination
+    public class CounterReplicationDestination
     {
         private string serverUrl;
 
@@ -23,7 +26,13 @@ namespace Raven.Abstractions.Counters
 
         public string CounterStorageUrl
         {
-            get { return string.Format("{0}/counters/{1}", ServerUrl, CounterStorageName); }
+	        get
+	        {
+				Debug.Assert(String.IsNullOrWhiteSpace(CounterStorageName) == false);
+				Debug.Assert(String.IsNullOrWhiteSpace(ServerUrl) == false);
+
+		        return string.Format("{0}/cs/{1}", ServerUrl, CounterStorageName);
+	        }
         }
 
         public string Username { get; set; }
@@ -36,7 +45,7 @@ namespace Raven.Abstractions.Counters
 
         public bool Disabled { get; set; }
 
-        protected bool Equals(CounterStorageReplicationDestination other)
+        protected bool Equals(CounterReplicationDestination other)
         {
             return string.Equals(serverUrl, other.serverUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
                 string.Equals(Password, other.Password) && string.Equals(Username, other.Username) && string.Equals(CounterStorageName, other.CounterStorageName);
@@ -47,7 +56,7 @@ namespace Raven.Abstractions.Counters
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((CounterStorageReplicationDestination)obj);
+            return Equals((CounterReplicationDestination)obj);
         }
 
         public override int GetHashCode()

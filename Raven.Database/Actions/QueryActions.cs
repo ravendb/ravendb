@@ -140,7 +140,11 @@ namespace Raven.Database.Actions
 			private bool stale;
 			private IEnumerable<RavenJObject> results;
 			private DocumentRetriever docRetriever;
-			private Stopwatch duration;
+		    internal DocumentRetriever DocRetriever
+		    {
+		        get { return docRetriever; }
+		    }
+		    private Stopwatch duration;
 			private List<string> transformerErrors;
 			private bool nonAuthoritativeInformation;
 			private Etag resultEtag;

@@ -27,6 +27,7 @@ namespace Raven.Client.Counters
 	/// </summary>
 	public class CounterStore : ICounterStore
 	{
+		private ICountersReplicationInformer replicationInformer;
 		private bool _isInitialized;
 		public CounterStore()
 		{
@@ -58,7 +59,9 @@ namespace Raven.Client.Counters
 						{"Raven/Counters/DataDir", @"~\Counters\" + DefaultCounterStorageName}
 					},
 				}, DefaultCounterStorageName).Wait();
-			}
+			}			
+
+			replicationInformer = new CounterReplicationInformer(Convention, JsonRequestFactory); // make sure it is initialized
 		}
 
 		private readonly Lazy<BatchOperationsStore> _batch;
@@ -163,6 +166,11 @@ namespace Raven.Client.Counters
 		}
 
 		public ProfilingInformation ProfilingInformation { get; private set; }
+		
+		public ICountersReplicationInformer ReplicationInformer
+		{
+			get { return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(Convention, JsonRequestFactory)); }
+		}
 
 
 		private void InitializeSecurity()

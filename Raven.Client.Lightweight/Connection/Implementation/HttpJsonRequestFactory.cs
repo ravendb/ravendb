@@ -3,7 +3,6 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
