@@ -128,6 +128,7 @@
     <Compile Include="RavenFilesTestWithLogs.cs" />
     <Compile Include="RavenFilesWebApiTest.cs" />
     <Compile Include="Issues\RavenDB_2784.cs" />
+    <Compile Include="Shard\CustomShardResolutionStrategy.cs" />
     <Compile Include="Shard\SimpleSharding.cs" />
     <Compile Include="Smuggler\SmugglerBetweenOperationTests.cs" />
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
