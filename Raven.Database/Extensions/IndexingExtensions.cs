@@ -19,6 +19,7 @@ using Raven.Database.Indexing.Sorting;
 using Raven.Database.Indexing.Sorting.AlphaNumeric;
 using Raven.Database.Indexing.Sorting.Custom;
 using Raven.Database.Linq;
+using Raven.Database.Util;
 using Spatial4n.Core.Shapes;
 using Spatial4n.Core.Shapes.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -176,25 +177,31 @@ namespace Raven.Database.Extensions
 								}
 								if (sortedField.Field.StartsWith(Constants.AlphaNumericFieldName))
 								{
-									var parts = sortedField.Field.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-									if (parts.Length < 2)
-										throw new InvalidOperationException("Cannot figure out what to do in alphanumeric sort!");
+									var customField = SortFieldHelper.CustomField(sortedField.Field);
+									if (string.IsNullOrEmpty(customField.Name))
+										throw new InvalidOperationException("Alphanumeric sort: cannot figure out what field to sort on!");
+
 									var anSort = new AlphaNumericComparatorSource();
-									return new SortField(parts[1], anSort, IsDescending(parts));
+									return new SortField(customField.Name, anSort, sortedField.Descending);
 								}
 								if (sortedField.Field.StartsWith(Constants.RandomFieldName))
 								{
-									var parts = sortedField.Field.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-									if (parts.Length < 2) // truly random
+									var customField = SortFieldHelper.CustomField(sortedField.Field);
+									
+									if (string.IsNullOrEmpty(customField.Name)) // truly random
 										return new RandomSortField(Guid.NewGuid().ToString());
-									return new RandomSortField(parts[1]);
+
+									return new RandomSortField(customField.Name);
 								}
 								if (sortedField.Field.StartsWith(Constants.CustomSortFieldName))
 								{
-									var parts = sortedField.Field.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-									if (parts.Length < 2)
-										throw new InvalidOperationException("Cannot figure out type for custom sort");
-									return new CustomSortField(parts[1], self, IsDescending(parts));
+									var customField = SortFieldHelper.CustomField(sortedField.Field);
+									if (string.IsNullOrEmpty(customField.Name))
+										throw new InvalidOperationException("Custom sort: cannot figure out what field to sort on!");
+
+									//backward compatibility for old clients
+									var isDescending = sortedField.Descending || customField.Type[customField.Type.Length - 1] == '-';
+									return new CustomSortField(customField.Name, self, isDescending);
 								}
 								if (sortedField.Field.StartsWith(Constants.DistanceFieldName))
 								{
@@ -256,11 +263,6 @@ namespace Raven.Database.Extensions
 
 							})
 							.ToArray());
-		}
-
-		private static bool IsDescending(string[] parts)
-		{
-			return parts[0][parts[0].Length - 1] == '-';
 		}
 
 		private const string _Range = "_Range";

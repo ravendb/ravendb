@@ -819,7 +819,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public void AlphaNumericOrdering(string fieldName, bool descending)
 		{
-			AddOrder(Constants.AlphaNumericFieldName + (descending ? "-" : "") + ";" + fieldName, false);
+			AddOrder(Constants.AlphaNumericFieldName + ";" + fieldName, descending);
 		}
 
 		/// <summary>
@@ -839,14 +839,9 @@ namespace Raven.Client.Document
 			AddOrder(Constants.RandomFieldName + ";" + seed, false);
 		}
 
-		public void CustomSortUsing(string typeName)
-		{
-			CustomSortUsing(typeName, false);
-		}
-
 		public void CustomSortUsing(string typeName, bool descending)
 		{
-			AddOrder(Constants.CustomSortFieldName + (descending ? "-" : "") + ";" + typeName, false);
+			AddOrder(Constants.CustomSortFieldName + ";" + typeName, descending);
 		}
 
 		public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)

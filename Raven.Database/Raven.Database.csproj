@@ -409,6 +409,7 @@
     <Compile Include="Util\DatabaseHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
+    <Compile Include="Util\SortFieldHelper.cs" />
     <Compile Include="Util\StopwatchScope.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />

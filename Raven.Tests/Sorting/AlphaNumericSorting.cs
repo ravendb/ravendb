@@ -387,8 +387,8 @@ namespace Raven.Tests.Sorting
 				{
 					var titlesFromServer = session.Advanced.DocumentQuery<Track, TracksIndex>()
 						.AlphaNumericOrdering<Track>(x => x.Title, true)
-						.Select(x => x.Title)
 						.Take(1024)
+						.Select(x => x.Title)
 						.ToList();
 
 					localTracks.Sort(new AlphaNumericTrackOrder(titleDescending: true));
@@ -511,6 +511,55 @@ namespace Raven.Tests.Sorting
 				}
 
 				return yearDescending == false ? track1.Year.CompareTo(track2.Year) : track2.Year.CompareTo(track1.Year);
+			}
+		}
+
+		[Fact]
+		public void dynamic_query_should_work()
+		{
+			var titles = new List<string>
+			{
+				"1", "a1", "a2", "a10", "C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce", 
+				"C# ballad", "A and G motor vehicles", "A B C", "Balzac, Honoré de", "Ambassador hotel"
+			};
+			var localTracks = new List<Track>();
+			titles.ForEach(x => localTracks.Add(CreateTrack(x)));
+
+			using (var store = NewRemoteDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					localTracks.ForEach(session.Store);
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var titlesFromServer = session.Query<Track>()
+						.Customize(x =>
+						{
+							x.AlphaNumericOrdering<Track>(y => y.Title);
+							x.WaitForNonStaleResultsAsOfNow();
+						})
+						.Select(x => x.Title)
+						.ToList();
+
+					localTracks.Sort(new AlphaNumericTrackOrder());
+
+					Assert.Equal(localTracks.Select(x => x.Title), titlesFromServer);
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var titlesFromServer = session.Query<Track>()
+						.Customize(x => x.AlphaNumericOrdering("Title"))
+						.Select(x => x.Title)
+						.ToList();
+
+					localTracks.Sort(new AlphaNumericTrackOrder());
+
+					Assert.Equal(localTracks.Select(x => x.Title), titlesFromServer);
+				}
 			}
 		}
 

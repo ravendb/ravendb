@@ -51,7 +51,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Sort using custom sorter on the server
 		/// </summary>
-		void CustomSortUsing(string typeName, bool descending);
+		void CustomSortUsing(string typeName, bool descending = false);
 
 		/// <summary>
 		///   Adds an ordering for a specific field to the query
