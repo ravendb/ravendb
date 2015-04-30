@@ -9,6 +9,7 @@ using Raven.Database.Storage.Voron.Impl;
 
 using Voron;
 using Voron.Impl;
+using System.Text;
 
 namespace Raven.Database.Storage.Voron.Schema.Updates
 {
@@ -24,7 +25,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 		{
 			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.ReadTree(Tables.Details.TableName).Add("schema_version", ToSchemaVersion);
+                tx.ReadTree(Tables.Details.TableName).Add("schema_version", ToSchemaVersion);
 				tx.Commit();
 			}
 

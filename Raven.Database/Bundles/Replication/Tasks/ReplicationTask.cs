@@ -1072,6 +1072,8 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				Monitor.Exit(_indexReplicationTaskLock);
 			}
+
+			return false;
 		}
 
 		private string GetDebugInfomration()

@@ -273,10 +273,10 @@ namespace Voron
 		    Tree fromTree = tx.ReadTree(fromName);
 		    if (fromTree == null)
 			    throw new ArgumentException("Tree " + fromName + " does not exists");
-			
-		    Slice key = toName;
 
-	        tx.State.Root.Delete(fromName);
+            Slice key = (Slice)toName;
+
+	        tx.State.Root.Delete((Slice)fromName);
 			var ptr = tx.State.Root.DirectAdd(key, sizeof(TreeRootHeader));
 		    fromTree.State.CopyTo((TreeRootHeader*) ptr);
 		    fromTree.Name = toName;
@@ -288,7 +288,7 @@ namespace Voron
 			tx.AddTree(toName, fromTree);
 
 			if (IsDebugRecording)
-				DebugJournal.RecordWriteAction(DebugActionType.RenameTree, tx, toName, fromName, Stream.Null);
+                DebugJournal.RecordWriteAction(DebugActionType.RenameTree, tx, (Slice)toName, fromName, Stream.Null);
 	    }
 
         public unsafe Tree CreateTree(Transaction tx, string name, bool keysPrefixing = false)
@@ -306,7 +306,7 @@ namespace Voron
 		        throw new InvalidOperationException("Cannot create a tree with reserved name: " + name);
 
 
-            Slice key = name;
+            Slice key = (Slice)name;
 
             // we are in a write transaction, no need to handle locks
             var header = (TreeRootHeader*)tx.State.Root.DirectRead(key);
