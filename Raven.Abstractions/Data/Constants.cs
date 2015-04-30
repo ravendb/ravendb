@@ -32,6 +32,8 @@ namespace Raven.Abstractions.Data
 
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 
+		public const string AlphaNumericFieldName = "__alphaNumeric";
+
 		public const string RandomFieldName = "__random";
 
 		public const string CustomSortFieldName = "__customSort";

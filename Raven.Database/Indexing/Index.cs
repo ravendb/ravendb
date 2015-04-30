@@ -1101,25 +1101,32 @@ namespace Raven.Database.Indexing
 			}
 			if (indexQuery.SortedFields != null)
 			{
-				foreach (SortedField field in indexQuery.SortedFields)
+				foreach (SortedField sortedField in indexQuery.SortedFields)
 				{
-					string f = field.Field;
-					if (f == Constants.TemporaryScoreValue)
+					string field = sortedField.Field;
+					if (field == Constants.TemporaryScoreValue)
 						continue;
-					if (f.EndsWith("_Range"))
+					if (field.EndsWith("_Range"))
 					{
-						f = f.Substring(0, f.Length - "_Range".Length);
+						field = field.Substring(0, field.Length - "_Range".Length);
 					}
-					if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
-						continue;
-					if (viewGenerator.ContainsField(f) == false && !f.StartsWith(Constants.DistanceFieldName)
+
+					/*if (f.StartsWith(Constants.AlphaNumericFieldName) || f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
+						continue;*/
+
+					if (field.StartsWith(Constants.AlphaNumericFieldName) ||
+						field.StartsWith(Constants.RandomFieldName) ||
+						field.StartsWith(Constants.CustomSortFieldName))
+					{
+						field = SortFieldHelper.CustomField(field).Name;
+					}
+
+					if (viewGenerator.ContainsField(field) == false && !field.StartsWith(Constants.DistanceFieldName)
 							&& viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
-						throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
+						throw new ArgumentException("The field '" + field + "' is not indexed, cannot sort on fields that are not indexed");
 				}
 			}
 		}
-
-
 
 		#region Nested type: IndexQueryOperation
 

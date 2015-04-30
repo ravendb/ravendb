@@ -14,6 +14,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Database.Indexing;
 using Raven.Database.Server;
+using Raven.Database.Util;
 
 namespace Raven.Database.Data
 {
@@ -168,12 +169,16 @@ namespace Raven.Database.Data
 				foreach (var sortedField in query.SortedFields)
 				{
 					var field = sortedField.Field;
-					if (field.StartsWith(Constants.RandomFieldName))
-						continue;
-					if (field.StartsWith(Constants.CustomSortFieldName))
-						continue;
+
 					if (field == Constants.TemporaryScoreValue)
 						continue;
+
+					if (field.StartsWith(Constants.AlphaNumericFieldName) ||
+						field.StartsWith(Constants.RandomFieldName) ||
+						field.StartsWith(Constants.CustomSortFieldName))
+					{
+						field = SortFieldHelper.CustomField(field).Name;
+					}
 
 					if (field.EndsWith("_Range"))
 						field = field.Substring(0, field.Length - "_Range".Length);

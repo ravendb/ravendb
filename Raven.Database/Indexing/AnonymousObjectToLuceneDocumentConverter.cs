@@ -175,8 +175,8 @@ namespace Raven.Database.Indexing
                 {
                     var sortOptions = indexDefinition.GetSortOption(name, query: null);
                     if (sortOptions == null ||
+						sortOptions.Value == SortOptions.None ||
                         sortOptions.Value == SortOptions.String ||
-                        sortOptions.Value == SortOptions.None ||
                         sortOptions.Value == SortOptions.StringVal ||
                         sortOptions.Value == SortOptions.Custom)
                     {

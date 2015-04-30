@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Lucene.Net.Index;
 using Raven.Abstractions.Data;
 using Raven.Database.Indexing.Sorting.Custom;
-using Raven.Tests.Bugs.Stacey;
 
 namespace Raven.Tests.Sorting
 {

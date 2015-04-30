@@ -422,6 +422,47 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AlphaNumericOrdering(string fieldName, bool descending)
+		{
+			AlphaNumericOrdering(fieldName, descending);
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
+		{
+			var fieldName = GetMemberQueryPath(propertySelector);
+			AlphaNumericOrdering(fieldName, descending);
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RandomOrdering()
+		{
+			RandomOrdering();
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RandomOrdering(string seed)
+		{
+			RandomOrdering(seed);
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
+		{
+			CustomSortUsing(typeName, descending);
+			return this;
+		}
+
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>
@@ -850,34 +891,6 @@ namespace Raven.Client.Document
 		public IAsyncDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
 		{
 			AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
-			return this;
-		}
-
-		/// <summary>
-		/// Order the search results randomly
-		/// </summary>
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RandomOrdering()
-		{
-			RandomOrdering();
-			return this;
-		}
-
-        /// <summary>
-        /// Order the search results randomly
-        /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
-        {
-            CustomSortUsing(typeName, descending);
-            return this;
-        }
-
-		/// <summary>
-		/// Order the search results randomly using the specified seed
-		/// this is useful if you want to have repeatable random queries
-		/// </summary>
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RandomOrdering(string seed)
-		{
-			RandomOrdering(seed);
 			return this;
 		}
 
