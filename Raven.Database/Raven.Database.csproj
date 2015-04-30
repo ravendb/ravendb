@@ -1296,6 +1296,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Plugins\Builtins\Monitoring\Snmp\Templates\RAVENDB-MIB.txt" />
+    <Content Include="Plugins\Builtins\Monitoring\Snmp\Templates\zabbix_ravendb_template.xml" />
     <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
     <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
