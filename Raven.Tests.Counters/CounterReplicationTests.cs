@@ -16,8 +16,8 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Replication_setup_should_work()
 		{
-			using (var storeA = NewRemoteCountersStore())
-			using (var storeB = NewRemoteCountersStore())
+			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
 			{
 				await SetupReplicationAsync(storeA, storeB);
 

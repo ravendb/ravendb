@@ -11,7 +11,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Storage.Esent;
 
-namespace Raven.StorgaeExporter
+namespace Raven.StorageExporter
 {
     public class EsentExportOperation : IDisposable
     {

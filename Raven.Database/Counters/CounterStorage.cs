@@ -56,10 +56,10 @@ namespace Raven.Database.Counters
 
 		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
 		{
-            CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, storageName);
-            Name = storageName;
+			CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, storageName);
+			Name = storageName;
 			ResourceName = string.Concat(Constants.Counter.UrlPrefix, "/", storageName);
-                
+
 			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
 
@@ -272,7 +272,7 @@ namespace Raven.Database.Counters
 				{
 					it.RequiredPrefix = name;
 					return it.Seek(name);
-				}				
+				}
 			}
 
 
@@ -426,7 +426,7 @@ namespace Raven.Database.Counters
 			public CountersReplicationDocument GetReplicationData()
 			{
 				var readResult = metadata.Read("replication");
-				if (readResult == null) 
+				if (readResult == null)
 					return null;
 
 				var stream = readResult.Reader.AsStream();
@@ -456,7 +456,7 @@ namespace Raven.Database.Counters
 			private byte[] fullCounterNameBuffer = new byte[0];
 			private readonly byte[] counterValueBuffer = new byte[sizeof(long)];
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
-			
+
 			public Writer(CounterStorage parent, Transaction transaction)
 			{
 				if (transaction.Flags != TransactionFlags.ReadWrite) //precaution

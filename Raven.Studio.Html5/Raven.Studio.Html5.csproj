@@ -103,7 +103,6 @@
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\counterStorageCounters.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorages.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageStats.ts" />
@@ -1074,7 +1073,6 @@
     <TypeScriptCompile Include="App\viewmodels\common\upgrade.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\viewSystemDatabaseConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\counterStorageCounters.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorages.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageStats.ts" />

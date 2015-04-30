@@ -5,7 +5,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.StorgaeExporter
+namespace Raven.StorageExporter
 {
     public class StorgaeExporterConfiguration
     {

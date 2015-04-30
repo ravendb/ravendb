@@ -55,6 +55,8 @@ namespace Raven.Database.Config
 
 		public MonitoringConfiguration Monitoring { get; private set; }
 
+		public WebSocketsConfiguration WebSockets { get; set; }
+
 		public InMemoryRavenConfiguration()
 		{
 			Replication = new ReplicationConfiguration();
@@ -63,6 +65,7 @@ namespace Raven.Database.Config
             FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
+			WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
 			Monitoring = new MonitoringConfiguration();
 
@@ -324,6 +327,8 @@ namespace Raven.Database.Config
 		    ImplicitFetchFieldsFromDocumentMode = ravenSettings.ImplicitFetchFieldsFromDocumentMode.Value;
 
 			IgnoreSslCertificateErrors = GetIgnoreSslCertificateErrorModeMode();
+
+			WebSockets.InitialBufferPoolSize = ravenSettings.WebSockets.InitialBufferPoolSize.Value;
 
 			FillMonitoringSettings(ravenSettings);
 
@@ -1469,6 +1474,11 @@ namespace Raven.Database.Config
 
 				public string Community { get; set; }
 			}
+		}
+
+		public class WebSocketsConfiguration
+		{
+			public int InitialBufferPoolSize { get; set; }
 		}
 
 		public void UpdateDataDirForLegacySystemDb()
