@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
-using Lextm.SharpSnmpLib.Security;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -129,11 +128,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			
 			var factory = new SnmpApplicationFactory(new Logger(log), store, membershipProvider, messageHandlerFactory);
 
-			var userRegistry = new UserRegistry();
-			userRegistry.Add(new OctetString("neither"), DefaultPrivacyProvider.DefaultPair);
-
 			var listener = new Listener();
-
 			var engineGroup = new EngineGroup();
 
 			var engine = new SnmpEngine(factory, listener, engineGroup);

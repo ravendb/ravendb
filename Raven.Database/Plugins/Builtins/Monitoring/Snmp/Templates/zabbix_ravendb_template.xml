@@ -34,7 +34,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.12</snmp_oid>
                     <key>2databaseActiveBundles</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -77,7 +77,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.5</snmp_oid>
                     <key>2databaseApproximateTaskCount</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -120,7 +120,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.7</snmp_oid>
                     <key>2databaseCountOfAttachments</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -163,7 +163,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.6</snmp_oid>
                     <key>2databaseCountOfDocuments</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -206,7 +206,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.10</snmp_oid>
                     <key>2databaseCountOfErrors</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -249,7 +249,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.2</snmp_oid>
                     <key>2databaseCountOfIndexes</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -292,7 +292,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.3</snmp_oid>
                     <key>2databaseCountOfStaleIndexes</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -335,7 +335,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.4</snmp_oid>
                     <key>2databaseCountOfTransformers</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -378,7 +378,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.11</snmp_oid>
                     <key>2databaseId</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -421,7 +421,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.13</snmp_oid>
                     <key>2databaseLoaded</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -464,7 +464,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.1</snmp_oid>
                     <key>2databaseName</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -507,7 +507,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.8</snmp_oid>
                     <key>2databaseNumberOfItemsToIndexInSingleBatch</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -550,7 +550,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.1.9</snmp_oid>
                     <key>2databaseNumberOfItemsToReduceInSingleBatch</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -593,7 +593,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.1</snmp_oid>
                     <key>2database1IndexExists</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -636,7 +636,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.3</snmp_oid>
                     <key>2database1IndexId</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -679,7 +679,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.5</snmp_oid>
                     <key>2database1IndexAttempts</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -722,7 +722,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.7</snmp_oid>
                     <key>2database1IndexErrors</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -765,7 +765,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.6</snmp_oid>
                     <key>2database1IndexSuccesses</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -808,7 +808,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.2</snmp_oid>
                     <key>2database1IndexName</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -851,7 +851,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.4</snmp_oid>
                     <key>2database1IndexPriority</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -894,7 +894,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.8</snmp_oid>
                     <key>2database1IndexReduceAttempts</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -937,7 +937,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.10</snmp_oid>
                     <key>2database1IndexReduceErrors</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -980,7 +980,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.9</snmp_oid>
                     <key>2database1IndexReduceSuccesses</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1023,7 +1023,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.4.1.11</snmp_oid>
                     <key>2database1IndexTimeSinceLastQuery</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1066,7 +1066,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.3.1</snmp_oid>
                     <key>2databaseDocsWritePerSecond</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1109,7 +1109,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.3.2</snmp_oid>
                     <key>2databaseIndexedPerSecond</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1152,7 +1152,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.3.3</snmp_oid>
                     <key>2databaseReducedPerSecond</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1195,7 +1195,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.3.4.2.1</snmp_oid>
                     <key>2databaseRequestsDurationMean</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1238,7 +1238,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.3.4.1</snmp_oid>
                     <key>2databaseRequestsPerSecond</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1281,7 +1281,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.2.3</snmp_oid>
                     <key>2databaseIndexStorageSize</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1324,7 +1324,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.2.4</snmp_oid>
                     <key>2databaseTotalSize</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1367,7 +1367,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.2.1</snmp_oid>
                     <key>2databaseTransactionalStorageAllocatedSize</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1410,7 +1410,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.2.2.2</snmp_oid>
                     <key>2databaseTransactionalStorageUsedSize</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1453,7 +1453,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseActiveBundles</snmp_oid>
                     <key>systemDatabaseActiveBundles</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -1496,7 +1496,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseApproximateTaskCount</snmp_oid>
                     <key>systemDatabaseApproximateTaskCount</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1539,7 +1539,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseCountOfAttachments</snmp_oid>
                     <key>systemDatabaseCountOfAttachments</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1582,7 +1582,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseCountOfDocuments</snmp_oid>
                     <key>systemDatabaseCountOfDocuments</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1625,7 +1625,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseCountOfErrors</snmp_oid>
                     <key>systemDatabaseCountOfErrors</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1668,7 +1668,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseCountOfIndexes</snmp_oid>
                     <key>systemDatabaseCountOfIndexes</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1711,7 +1711,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseCountOfStaleIndexes</snmp_oid>
                     <key>systemDatabaseCountOfStaleIndexes</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1754,7 +1754,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseCountOfTransformers</snmp_oid>
                     <key>systemDatabaseCountOfTransformers</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1797,7 +1797,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseId</snmp_oid>
                     <key>systemDatabaseId</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -1840,7 +1840,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseLoaded</snmp_oid>
                     <key>systemDatabaseLoaded</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -1883,7 +1883,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseName</snmp_oid>
                     <key>systemDatabaseName</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -1926,7 +1926,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseNumberOfItemsToIndexInSingleBatch</snmp_oid>
                     <key>systemDatabaseNumberOfItemsToIndexInSingleBatch</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -1969,7 +1969,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStatistics.systemDatabaseNumberOfItemsToReduceInSingleBatch</snmp_oid>
                     <key>systemDatabaseNumberOfItemsToReduceInSingleBatch</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2012,7 +2012,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexExists</snmp_oid>
                     <key>systemDatabase1IndexExists</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -2055,7 +2055,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexId</snmp_oid>
                     <key>systemDatabase1IndexId</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2098,7 +2098,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexAttempts</snmp_oid>
                     <key>systemDatabase1IndexAttempts</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2141,7 +2141,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexErrors</snmp_oid>
                     <key>systemDatabase1IndexErrors</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2184,7 +2184,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexSuccesses</snmp_oid>
                     <key>systemDatabase1IndexSuccesses</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2227,7 +2227,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexName</snmp_oid>
                     <key>systemDatabase1IndexName</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -2270,7 +2270,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexPriority</snmp_oid>
                     <key>systemDatabase1IndexPriority</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -2313,7 +2313,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexReduceAttempts</snmp_oid>
                     <key>systemDatabase1IndexReduceAttempts</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2356,7 +2356,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexReduceErrors</snmp_oid>
                     <key>systemDatabase1IndexReduceErrors</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2399,7 +2399,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexReduceSuccesses</snmp_oid>
                     <key>systemDatabase1IndexReduceSuccesses</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2442,7 +2442,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseIndexes.systemDatabase1Index.systemDatabase1IndexTimeSinceLastQuery</snmp_oid>
                     <key>systemDatabase1IndexTimeSinceLastQuery</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2485,7 +2485,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseMetrics.systemDatabaseDocsWritePerSecond</snmp_oid>
                     <key>systemDatabaseDocsWritePerSecond</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2528,7 +2528,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseMetrics.systemDatabaseIndexedPerSecond</snmp_oid>
                     <key>systemDatabaseIndexedPerSecond</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2571,7 +2571,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseMetrics.systemDatabaseReducedPerSecond</snmp_oid>
                     <key>systemDatabaseReducedPerSecond</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2614,7 +2614,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseMetrics.systemDatabaseRequests.systemDatabaseRequestsDuration.systemDatabaseRequestsDurationMean</snmp_oid>
                     <key>systemDatabaseRequestsDurationMean</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2657,7 +2657,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseMetrics.systemDatabaseRequests.systemDatabaseRequestsPerSecond</snmp_oid>
                     <key>systemDatabaseRequestsPerSecond</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2700,7 +2700,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStorageStatistics.systemDatabaseIndexStorageSize</snmp_oid>
                     <key>systemDatabaseIndexStorageSize</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2743,7 +2743,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStorageStatistics.systemDatabaseTotalSize</snmp_oid>
                     <key>systemDatabaseTotalSize</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2786,7 +2786,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStorageStatistics.systemDatabaseTransactionalStorageAllocatedSize</snmp_oid>
                     <key>systemDatabaseTransactionalStorageAllocatedSize</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2829,7 +2829,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.databases.systemDatabase.systemDatabaseStorageStatistics.systemDatabaseTransactionalStorageUsedSize</snmp_oid>
                     <key>systemDatabaseTransactionalStorageUsedSize</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2872,7 +2872,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.resourcesCounts.databaseLoadedCount</snmp_oid>
                     <key>databaseLoadedCount</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2915,7 +2915,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.resources.resourcesCounts.databaseTotalCount</snmp_oid>
                     <key>databaseTotalCount</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -2958,7 +2958,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverBuildVersion</snmp_oid>
                     <key>serverBuildVersion</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -3001,7 +3001,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverRequests.serverConcurrentRequests</snmp_oid>
                     <key>serverConcurrentRequests</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -3044,7 +3044,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverCpu</snmp_oid>
                     <key>serverCpu</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -3087,7 +3087,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverName</snmp_oid>
                     <key>serverName</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -3130,7 +3130,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverPid</snmp_oid>
                     <key>serverPid</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -3173,7 +3173,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverProductVersion</snmp_oid>
                     <key>serverProductVersion</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
@@ -3216,7 +3216,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverMemory.serverTotalMemory</snmp_oid>
                     <key>serverTotalMemory</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -3259,7 +3259,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverRequests.serverTotalRequests</snmp_oid>
                     <key>serverTotalRequests</key>
                     <delay>300</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -3302,7 +3302,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverUpTime</snmp_oid>
                     <key>serverUpTime</key>
                     <delay>60</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>3</value_type>
@@ -3345,7 +3345,7 @@
                     <snmp_oid>RAVENDB-MIB::ravendb.server.serverUrl</snmp_oid>
                     <key>serverNameserverUrl</key>
                     <delay>1800</delay>
-                    <history>90</history>
+                    <history>7</history>
                     <trends>365</trends>
                     <status>0</status>
                     <value_type>1</value_type>
