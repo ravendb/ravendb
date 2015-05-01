@@ -181,7 +181,11 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.TimeToWaitBeforeRunningIdleIndexes.Value, actual => actual.TimeToWaitBeforeRunningIdleIndexes);
 			configurationComparer.Assert(expected => expected.TimeToWaitBeforeRunningAbandonedIndexes.Value, actual => actual.TimeToWaitBeforeRunningAbandonedIndexes);
 			configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value, actual => actual.TimeToWaitBeforeMarkingIdleIndexAsAbandoned);
-			configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value, actual => actual.TimeToWaitBeforeMarkingAutoIndexAsIdle);
+
+            configurationComparer.Assert(expected => expected.WebSockets.InitialBufferPoolSize.Value, actual => actual.WebSockets.InitialBufferPoolSize);
+			
+
+            configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value, actual => actual.TimeToWaitBeforeMarkingAutoIndexAsIdle);
 			configurationComparer.Assert(expected => expected.RedirectStudioUrl.Value, actual => actual.RedirectStudioUrl);
 			configurationComparer.Assert(expected => expected.ResetIndexOnUncleanShutdown.Value, actual => actual.ResetIndexOnUncleanShutdown);
 			configurationComparer.Assert(expected => expected.MaxPageSize.Value, actual => actual.MaxPageSize);
