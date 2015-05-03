@@ -369,7 +369,7 @@ interface indexDefinitionDto {
     SortOptions: any;
     Analyzers: any;
     Fields: string[];
-    Suggestions: any;
+	SuggestionsOptions: any;
     TermVectors: any;
     SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
     InternalFieldsMapping: any;
@@ -639,6 +639,7 @@ interface restoreStatusDto {
 
 interface compactStatusDto {
     Messages: string[];
+    LastProgressMessage: string;
     State: string;
 }
 
@@ -1274,7 +1275,8 @@ enum ResponseCodes {
     Forbidden = 403,
     NotFound = 404,
     PreconditionFailed = 412,
-    InternalServerError = 500
+    InternalServerError = 500,
+    ServiceUnavailable = 503
 }
 
 interface synchronizationConfigDto {
@@ -1358,4 +1360,11 @@ interface serverSmugglingDto {
 
 interface serverSmugglingOperationStateDto extends operationStatusDto {
 	Messages: Array<string>;
+}
+
+interface dataExplorationRequestDto {
+	Linq: string;
+	Collection: string;
+	TimeoutSeconds: number;
+	PageSize: number;
 }

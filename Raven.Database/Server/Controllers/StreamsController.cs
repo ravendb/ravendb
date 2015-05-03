@@ -23,6 +23,9 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -149,6 +152,93 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
+		[HttpGet]
+		[RavenRoute("streams/exploration")]
+		[RavenRoute("databases/{databaseName}/streams/exploration")]
+		public async Task<HttpResponseMessage> Exploration()
+		{
+			var linq = GetQueryStringValue("linq");
+			var collection = GetQueryStringValue("collection");
+			int timeoutSeconds;
+			if (int.TryParse(GetQueryStringValue("timeoutSeconds"), out timeoutSeconds) == false)
+				timeoutSeconds = 60;
+			int pageSize;
+			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
+				pageSize = 100000;
+
+			var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(linq));
+			var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
+			var transformerName = Constants.TemporaryTransformerPrefix + sourceHashed;
+
+			var transformerDefinition = Database.IndexDefinitionStorage.GetTransformerDefinition(transformerName);
+			if (transformerDefinition == null)
+			{
+				transformerDefinition = new TransformerDefinition
+				{
+					Name = transformerName,
+					Temporary = true,
+					TransformResults = linq
+				};
+				Database.Transformers.PutTransform(transformerName, transformerDefinition);
+			}
+
+			var msg = GetEmptyMessage();
+
+			using (var cts = new CancellationTokenSource())
+			{
+				var timeout = cts.TimeoutAfter(TimeSpan.FromSeconds(timeoutSeconds));
+				var indexQuery = new IndexQuery
+				{
+					PageSize = pageSize,
+					Start = 0,
+					Query = "Tag:" + collection,
+					ResultsTransformer = transformerName
+				};
+
+				var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
+
+				try
+				{
+					var queryOp = new QueryActions.DatabaseQueryOperation(Database, "Raven/DocumentsByEntityName", indexQuery, accessor, cts);
+					queryOp.Init();
+
+					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" },
+					    o =>
+					    {
+					        if (o.Count == 2 &&
+                                o.ContainsKey(Constants.DocumentIdFieldName) &&
+                                    o.ContainsKey(Constants.Metadata))
+					        {
+					            // this is the raw value out of the server, we don't want to get that
+					            var doc = queryOp.DocRetriever.Load(o.Value<string>(Constants.DocumentIdFieldName));
+                                var djo = doc as IDynamicJsonObject;
+					            if (djo != null)
+					                return djo.Inner;
+					        }
+					        return o;
+					    });
+					msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
+					msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
+					msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
+					msg.Headers.Add("Raven-Index", queryOp.Header.Index);
+					msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
+					msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.GetDefaultRavenFormat());
+
+					if (IsCsvDownloadRequest(InnerRequest))
+					{
+						msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+					}
+				}
+				catch (Exception)
+				{
+					accessor.Dispose();
+					throw;
+				}
+
+				return msg;
+			}
+		}
+
 		[HttpPost]
 		[RavenRoute("streams/query/{*id}")]
 		[RavenRoute("databases/{databaseName}/streams/query/{*id}")]
@@ -168,15 +258,20 @@ namespace Raven.Database.Server.Controllers
 			private readonly IStorageActionsAccessor accessor;
 		    private readonly CancellationTimeout _timeout;
 		    private readonly Action<string> outputContentTypeSetter;
-
-			[CLSCompliant(false)]
-			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
+		    private readonly Func<RavenJObject, RavenJObject> modifyDocument;
+            
+		    [CLSCompliant(false)]
+			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor,
+                CancellationTimeout timeout,
+                Action<string> contentTypeSetter,
+                Func<RavenJObject,RavenJObject> modifyDocument = null)
 			{
 				this.req = req;
 				this.queryOp = queryOp;
 				this.accessor = accessor;
 			    _timeout = timeout;
 			    outputContentTypeSetter = contentTypeSetter;
+		        this.modifyDocument = modifyDocument;
 			}
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -194,6 +289,8 @@ namespace Raven.Database.Server.Controllers
 				        queryOp.Execute(o =>
 				        {
 				            _timeout.Delay();
+				            if (modifyDocument != null)
+				                o = modifyDocument(o);
 				            writer.Write(o);
 				        });
 				    }

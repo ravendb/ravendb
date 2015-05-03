@@ -115,6 +115,7 @@ namespace Raven.Client.Document
 				rootTypes = {typeof(T)},
 				beforeQueryExecutionAction = beforeQueryExecutionAction,
 				afterQueryExecutedCallback = afterQueryExecutedCallback,
+				afterStreamExecutedCallback = afterStreamExecutedCallback,
 				defaultField = defaultField,
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,

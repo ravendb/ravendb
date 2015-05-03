@@ -51,6 +51,7 @@
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -65,6 +66,7 @@
     </DocumentationFile>
     <NoWarn>1607, 1591</NoWarn>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -81,6 +83,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Esent.Interop">
@@ -163,6 +166,14 @@
     <Reference Include="Owin">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
+    <Reference Include="SharpSnmpLib.Full, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005, processorArchitecture=MSIL">
+      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Full.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="SharpSnmpLib.Portable, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005, processorArchitecture=MSIL">
+      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Portable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Spatial4n.Core.NTS">
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
     </Reference>
@@ -224,15 +235,6 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Smuggler\Client\ChunkedBulkInsertOperation.cs">
-      <Link>Smuggler\SmugglerImports\ChunkedBulkInsertOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs">
-      <Link>Smuggler\SmugglerImports\ChunkedRemoteBulkInsertOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Smuggler\SmugglerRemoteDatabaseOperations.cs">
-      <Link>Smuggler\SmugglerImports\SmugglerRemoteDatabaseOperations.cs</Link>
-    </Compile>
     <Compile Include="Actions\ActionsBase.cs" />
     <Compile Include="Actions\AttachmentActions.cs" />
     <Compile Include="Actions\LastCollectionEtags.cs" />
@@ -244,7 +246,69 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexTimeSinceLastQuery.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexReduceErrors.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexReduceSuccesses.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexReduceAttempts.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexErrors.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexSuccesses.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexAttempts.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexExists.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexId.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexName.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Indexes\DatabaseIndexPriority.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseIndexScalarObjectBase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseDocsWritePerSecond.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseIndexedPerSecond.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseReducedPerSecond.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseRequestDurationMean.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseRequestsPerSecond.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCurrentNumberOfItemsToReduceInSingleBatch.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCurrentNumberOfItemsToIndexInSingleBatch.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfAttachments.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfDocuments.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfTransformers.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseErrors.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseActiveBundles.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseId.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseLoaded.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseStaleIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseApproximateTaskCount.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseName.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseLoadedCount.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseTotalCount.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTotalStorageSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseIndexStorageSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTransactionalStorageUsedSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTransactionalStorageAllocatedSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\ScalarObjectBase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerConcurrentRequests.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerCpu.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerUrl.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerTotalMemory.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerPid.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerProductVersion.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerBuildVersion.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerName.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerTotalRequests.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerUpTime.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\SnmpDatabase.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\SnmpTask.cs" />
+    <Compile Include="Bundles\Replication\Controllers\ReplicationTopologyController.cs" />
     <Compile Include="Bundles\Replication\Triggers\RenameConflictDocumentIdIndexTrigger.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationClassifier.cs" />
     <Compile Include="Bundles\Versioning\Data\FileVersioningConfiguration.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\GlobalSettingsDocument.cs" />
@@ -292,6 +356,9 @@
     <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
+    <Compile Include="Impl\BackgroundTaskExecuter\DefaultBackgroundTaskExecuter.cs" />
+    <Compile Include="Impl\BackgroundTaskExecuter\IBackgroundTaskExecuter.cs" />
+    <Compile Include="Impl\BackgroundTaskExecuter\RavenThreadPool.cs" />
     <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From04To05.cs" />
     <Compile Include="FileSystem\Storage\CopyFileOperation.cs" />
@@ -299,6 +366,8 @@
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="Indexing\PropertyAccessor.cs" />
+    <Compile Include="Indexing\Sorting\AlphaNumeric\AlphaNumericComparatorSource.cs" />
+    <Compile Include="Indexing\Sorting\AlphaNumeric\AlphaNumericFieldComparator.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
@@ -324,6 +393,7 @@
     <Compile Include="Server\Connections\FileSystemConnectionState.cs" />
     <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
+    <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
     <Compile Include="Server\WebApi\ MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
@@ -379,8 +449,18 @@
     <Compile Include="Server\WebApi\RouteCacher.cs" />
     <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
     <Compile Include="FileSystem\Smuggler\FilesystemDataDumper.cs" />
+    <Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />
+    <Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />
+    <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
+    <Compile Include="Smuggler\SmugglerDatabaseApi.cs" />
+    <Compile Include="Smuggler\SmugglerDatabaseOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
+    <Compile Include="Smuggler\SmugglerFilesApi.cs" />
+    <Compile Include="Smuggler\SmugglerFilesOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
+    <Compile Include="Smuggler\SmugglerOperationDispatcher.cs" />
+    <Compile Include="Smuggler\SmugglerRemoteDatabaseOperations.cs" />
+    <Compile Include="Smuggler\SmugglerRemoteFilesOperations.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
@@ -398,10 +478,12 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReducingWorkStatsFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ScheduledReductionFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
+    <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DatabaseHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
+    <Compile Include="Util\SortFieldHelper.cs" />
     <Compile Include="Util\StopwatchScope.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
@@ -427,7 +509,7 @@
     <Compile Include="Counters\Controllers\AdminCounterStorageController.cs" />
     <Compile Include="Counters\Controllers\CountersReplicationController.cs" />
     <Compile Include="Counters\Controllers\CountersController.cs" />
-    <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
+    <Compile Include="Counters\Controllers\ReplicationTask.cs" />
     <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
     <Compile Include="Counters\CountersMetricsManager.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />
@@ -814,8 +896,6 @@
     <Compile Include="Indexing\BaseBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\LuceneCodecDirectory.cs" />
     <Compile Include="Indexing\ReduceBatchSizeAutoTuner.cs" />
-    <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
-    <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\BackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IIndexingClassifier.cs" />
     <Compile Include="Indexing\IndexBatchSizeAutoTuner.cs" />
@@ -1233,6 +1313,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Plugins\Builtins\Monitoring\Snmp\Templates\RAVENDB-MIB.txt" />
+    <Content Include="Plugins\Builtins\Monitoring\Snmp\Templates\zabbix_ravendb_template.xml" />
     <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
     <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />

@@ -28,7 +28,7 @@ namespace Raven.Abstractions.Indexing
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
 			SortOptions = new Dictionary<string, SortOptions>();
-			Suggestions = new Dictionary<string, SuggestionOptions>();
+			SuggestionsOptions = new HashSet<string>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
 			SpatialIndexes = new Dictionary<string, SpatialOptions>();
 
@@ -127,7 +127,25 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Index field suggestion settings.
 		/// </summary>
-		public IDictionary<string, SuggestionOptions> Suggestions { get; set; }
+		[Obsolete("Use SuggestionsOptions")]
+		public IReadOnlyDictionary<string, SuggestionOptions> Suggestions
+		{
+			get
+			{
+				if (SuggestionsOptions == null || SuggestionsOptions.Count == 0) 
+					return null;
+				
+				return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions());
+			}
+			set
+			{
+				if (value == null)
+					return;
+				SuggestionsOptions = value.Keys.ToHashSet();
+			} 
+		}
+
+		public ISet<string> SuggestionsOptions { get; set; }
 
 		/// <summary>
 		/// Index field term vector settings.
@@ -172,7 +190,7 @@ namespace Raven.Abstractions.Indexing
 					DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
 					DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
 					DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
-					DictionaryExtensions.ContentEquals(other.Suggestions, Suggestions) &&
+					SetExtensions.ContentEquals(other.SuggestionsOptions, SuggestionsOptions) &&
 					DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
 					DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
 		}
@@ -186,6 +204,16 @@ namespace Raven.Abstractions.Indexing
 			{
 				result = (result * 397) ^ kvp.Key.GetHashCode();
 				result = (result * 397) ^ (!Equals(kvp.Value, default(TValue)) ? kvp.Value.GetHashCode() : 0);
+			}
+			return result;
+		}
+
+		private static int SetHashCode<TKey>(IEnumerable<TKey> x)
+		{
+			int result = 0;
+			foreach (var kvp in x)
+			{
+				result = (result * 397) ^ kvp.GetHashCode();
 			}
 			return result;
 		}
@@ -241,7 +269,7 @@ namespace Raven.Abstractions.Indexing
 				result = (result * 397) ^ DictionaryHashCode(Indexes);
 				result = (result * 397) ^ DictionaryHashCode(Analyzers);
 				result = (result * 397) ^ DictionaryHashCode(SortOptions);
-				result = (result * 397) ^ DictionaryHashCode(Suggestions);
+				result = (result * 397) ^ SetHashCode(SuggestionsOptions);
 				result = (result * 397) ^ DictionaryHashCode(TermVectors);
 				result = (result * 397) ^ DictionaryHashCode(SpatialIndexes);
 				return result;
@@ -299,10 +327,6 @@ namespace Raven.Abstractions.Indexing
 			foreach (var toRemove in Analyzers.Where(x => string.IsNullOrEmpty(x.Value)).ToArray())
 			{
 				Analyzers.Remove(toRemove);
-			}
-			foreach (var toRemove in Suggestions.Where(x => x.Value.Distance == StringDistanceTypes.None).ToArray())
-			{
-				Suggestions.Remove(toRemove);
 			}
 			foreach (var toRemove in TermVectors.Where(x => x.Value == FieldTermVector.No).ToArray())
 			{

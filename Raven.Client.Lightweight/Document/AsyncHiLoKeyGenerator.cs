@@ -11,7 +11,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;

@@ -143,7 +143,7 @@ namespace Raven.Database.Indexing
 
 			var parallelProcessingStart = SystemTime.UtcNow;
 
-			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
+			context.Database.ReducingThreadPool.ExecuteBatch(documentsWrapped, (IEnumerator<dynamic> partition) =>
 			{
                 token.ThrowIfCancellationRequested();
 				var parallelStats = new ParallelBatchStats
@@ -235,7 +235,7 @@ namespace Raven.Database.Indexing
 					allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 					allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
 				}
-			});
+			}, description: string.Format("Reducing index {0} up to Etag {1}, for {2} documents", this.PublicName, batch.HighestEtagBeforeFiltering, documentsWrapped.Count));
 
 			performanceStats.Add(new ParallelPerformanceStats
 			{
@@ -261,20 +261,20 @@ namespace Raven.Database.Indexing
 										 .Select(g => new { g.Key, Count = g.Sum(x => x.Value) })
 										 .ToList();
 
-			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
+			context.Database.ReducingThreadPool.ExecuteBatch(reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
 			{
 				while (enumerator.MoveNext())
 				{
 					var reduceKeyStat = enumerator.Current;
 					accessor.MapReduce.IncrementReduceKeyCounter(indexId, reduceKeyStat.Key, reduceKeyStat.Count);
 				}
-			}));
+			}), description: string.Format("Incrementing Reducing key counter fo index {0} for operation from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
 
 
 			var parallelReductionOperations = new ConcurrentQueue<ParallelBatchStats>();
 			var parallelReductionStart = SystemTime.UtcNow;
 
-			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, changed, enumerator => context.TransactionalStorage.Batch(accessor =>
+			context.Database.ReducingThreadPool.ExecuteBatch(changed, enumerator => context.TransactionalStorage.Batch(accessor =>
 			{
 				var parallelStats = new ParallelBatchStats
 				{
@@ -294,7 +294,7 @@ namespace Raven.Database.Indexing
 
 				parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
 				parallelReductionOperations.Enqueue(parallelStats);
-			}));
+			}), description: string.Format("Map Scheduling Reducitions for index {0} after operation from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
 
 			performanceStats.Add(new ParallelPerformanceStats
 			{

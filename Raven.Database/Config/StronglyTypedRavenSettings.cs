@@ -34,6 +34,10 @@ namespace Raven.Database.Config
 
         public ClusterConfiguration Cluster { get; private set; }
 
+		public WebSocketsConfiguration WebSockets { get; set; }
+
+		public MonitoringConfiguration Monitoring { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
 			Replication = new ReplicationConfiguration();
@@ -43,7 +47,9 @@ namespace Raven.Database.Config
 			FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
+			WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
+			Monitoring = new MonitoringConfiguration();
 
 			this.settings = settings;
 		}
@@ -199,6 +205,8 @@ namespace Raven.Database.Config
 
 			DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
 
+            TurnOffDiscoveryClient = new BooleanSetting(settings["Raven/TurnOffDiscoveryClient"], false);
+
 			ServerName = new StringSetting(settings["Raven/ServerName"], (string)null);
 
 			MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10 * 1000);
@@ -232,12 +240,13 @@ namespace Raven.Database.Config
             FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
             FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
             FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
-
+            FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate],false);
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
 			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
+			Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 20);
 
             Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 5);		// 6000ms
             Cluster.HeartbeatTimeout = new IntegerSetting(settings["Raven/Cluster/HeartbeatTimeout"], RaftEngineOptions.DefaultHeartbeatTimeout * 5);	// 1500ms
@@ -255,6 +264,17 @@ namespace Raven.Database.Config
 		    
             if (settings["Raven/MaxServicePointIdleTime"] != null) 
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
+
+			WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
+
+			FillMonitoringSettings();
+		}
+
+		private void FillMonitoringSettings()
+		{
+			Monitoring.Snmp.Enabled = new BooleanSetting(settings[Constants.Monitoring.Snmp.Enabled], false);
+			Monitoring.Snmp.Community = new StringSetting(settings[Constants.Monitoring.Snmp.Community], "ravendb");
+			Monitoring.Snmp.Port = new IntegerSetting(settings[Constants.Monitoring.Snmp.Port], 161);
 		}
 
 		private string GetDefaultWebDir()
@@ -366,6 +386,7 @@ namespace Raven.Database.Config
 		public StringSetting WebDir { get; private set; }
 
 		public BooleanSetting DisableClusterDiscovery { get; private set; }
+        public BooleanSetting TurnOffDiscoveryClient { get; private set; }
 
 		public StringSetting ServerName { get; private set; }
 
@@ -444,6 +465,7 @@ namespace Raven.Database.Config
 		public class IndexingConfiguration
 		{
 			public IntegerSetting MaxNumberOfItemsToProcessInTestIndexes { get; set; }
+			public IntegerSetting MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
 		}
 
 	    public class ClusterConfiguration
@@ -483,6 +505,8 @@ namespace Raven.Database.Config
 			public StringSetting IndexStoragePath { get; set; }
 
 			public StringSetting DefaultStorageTypeName { get; set; }
+
+            public BooleanSetting PreventSchemaUpdate { get; set; }
 		}
 
 		public class EncryptionConfiguration
@@ -492,6 +516,31 @@ namespace Raven.Database.Config
 			public IntegerSetting EncryptionKeyBitsPreference { get; set; }
 
 			public BooleanSetting UseSsl { get; set; }
+		}
+
+		public class WebSocketsConfiguration
+		{
+			public IntegerSetting InitialBufferPoolSize { get; set; }
+		}
+
+
+		public class MonitoringConfiguration
+		{
+			public MonitoringConfiguration()
+			{
+				Snmp = new SnmpConfiguration();
+			}
+
+			public SnmpConfiguration Snmp { get; private set; }
+
+			public class SnmpConfiguration
+			{
+				public BooleanSetting Enabled { get; set; }
+
+				public IntegerSetting Port { get; set; }
+
+				public StringSetting Community { get; set; }
+			}
 		}
 	}
 

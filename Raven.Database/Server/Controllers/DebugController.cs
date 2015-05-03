@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
@@ -400,12 +401,46 @@ namespace Raven.Database.Server.Controllers
 			};
 		}
 
+	    [HttpGet]
+	    [RavenRoute("debug/slow-dump-ref-csv")]
+		[RavenRoute("databases/{databaseName}/debug/slow-dump-ref-csv")]
+        public HttpResponseMessage DumpRefsToCsv(int sampleCount = 10)
+	    {
+		    return new HttpResponseMessage
+		    {
+			    Content = new PushStreamContent((stream, content, context) =>
+			    {
+					using (var writer = new StreamWriter(stream))
+					{
+						writer.WriteLine("ref count,document key,sample references");
+						Database.TransactionalStorage.Batch(accessor =>
+						{
+							accessor.Indexing.DumpAllReferancesToCSV(writer, sampleCount);
+						});
+						writer.Flush();
+                        stream.Flush();
+					}
+			    })
+			    {
+				    Headers =
+				    {
+					    ContentDisposition = new ContentDispositionHeaderValue("attachment")
+					    {
+						    FileName = "doc-refs.csv",
+					    },
+					    ContentType = new MediaTypeHeaderValue("application/octet-stream")
+				    }
+			    }
+		    };
+	    }
+
 		[HttpGet]
 		[RavenRoute("debug/docrefs")]
 		[RavenRoute("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage DocRefs(string id)
 		{
-			var op = GetQueryStringValue("op") == "from" ? "from" : "to";
+		    var op = GetQueryStringValue("op");
+			op = op == "from" ? "from" : "to";
 
 			var totalCountReferencing = -1;
 			List<string> results = null;
@@ -425,7 +460,7 @@ namespace Raven.Database.Server.Controllers
 				Results = results
 			});
 		}
-
+        //DumpAllReferancesToCSV
 		[HttpGet]
 		[RavenRoute("debug/d0crefs-t0ps")]
 		[RavenRoute("databases/{databaseName}/debug/d0crefs-t0ps")]
@@ -702,6 +737,30 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new
 			{
 				PreparedTransactions = Database.TransactionalStorage.GetPreparedTransactions()
+			});
+		}
+
+		[HttpGet]
+		[RavenRoute("databases/{databaseName}/debug/thread-pool")]
+		[RavenRoute("debug/thread-pool")]
+		public HttpResponseMessage ThreadPool()
+		{
+			return GetMessageWithObject(new[]
+			{
+				new
+				{
+					Database.MappingThreadPool.Name,
+					WaitingTasks = Database.MappingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
+					RunningTasks = Database.MappingThreadPool.GetRunningTasks().Select(x => x.Description),
+					ThreadPoolStats = Database.MappingThreadPool.GetThreadPoolStats()
+				},
+				new
+				{
+					Database.ReducingThreadPool.Name,
+					WaitingTasks = Database.ReducingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
+					RunningTasks = Database.ReducingThreadPool.GetRunningTasks().Select(x => x.Description),
+					ThreadPoolStats = Database.ReducingThreadPool.GetThreadPoolStats()
+				}
 			});
 		}
 	}

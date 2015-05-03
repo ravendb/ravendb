@@ -3,12 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System;
-
 using Jint;
 using Jint.Native;
-
 using Raven.Abstractions.Smuggler;
 using Raven.Database.Json;
 using Raven.Json.Linq;

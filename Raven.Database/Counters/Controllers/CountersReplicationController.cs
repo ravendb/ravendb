@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -59,6 +60,10 @@ namespace Raven.Database.Counters.Controllers
 						continue;
 
 					wroteCounter = true;
+
+					if (String.IsNullOrWhiteSpace(counter.FullCounterName))
+						return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
+					
 					var counterChangeAction = writer.Store(counter.FullCounterName, counter.CounterValue);
 					counterChangeNotifications.Add(new CounterChangeNotification
 					{
@@ -67,9 +72,12 @@ namespace Raven.Database.Counters.Controllers
 						Action = counterChangeAction,
 						Type = CounterChangeType.Replication | CounterChangeType.All
 					});
-	            }
+				}
 
-				var serverId = replicationMessage.SendingServerName;
+				var serverId = replicationMessage.ServerId;
+	            if (String.IsNullOrWhiteSpace(serverId))
+		            return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty server Id");
+
 				if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
                 {
 					//TODO: fix this
@@ -87,14 +95,13 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
         public HttpResponseMessage HeartbeatPost(string sourceServer)
         {
-            var replicationTask = Storage.ReplicationTask;
+			var replicationTask = Storage.ReplicationTask;
             if (replicationTask == null)
             {
                 return GetMessageWithObject(new
                 {
                     Error = "Cannot find replication task setup in the database"
                 }, HttpStatusCode.NotFound);
-
             }
 
 			replicationTask.HandleHeartbeat(sourceServer);
@@ -122,7 +129,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public async Task<HttpResponseMessage> ReplicationsSave()
 		{
-			var newReplicationDocument = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
+			var newReplicationDocument = await ReadJsonObjectAsync<CountersReplicationDocument>();
 			using (var writer = Storage.CreateWriter())
 			{
 				writer.UpdateReplications(newReplicationDocument);

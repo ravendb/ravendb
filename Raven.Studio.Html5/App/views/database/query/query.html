@@ -47,9 +47,11 @@
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
             <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
-            <button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
-                <span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
+            <button class="btn btn-default" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable, attr: { title:isCacheDisable() ? 'Enable Cache' : 'Disable Cache' }">
+                <span data-bind="text: isCacheDisable() ? 'Cache Disabled' : 'Cache Enabled'"></span>
             </button>
+        </div>
+        <div class="btn-group">
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom" data-bind="enable: hasSelectedIndex">
                     <i class="fa fa-plus"></i> Add <span class="caret"></span>
@@ -164,6 +166,11 @@
                 <div class="col-xs-12 col-sm-9 col-md-6 col-lg-5" style="padding-left: 0">
                     <div class="panel panel-default">
                         <div class="panel-body">
+                            <div>
+                                <button type="button" class="close" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
                             <div class="col-md-11">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -182,17 +189,20 @@
                                         <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu" role="menu">
-                                        <li><a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(false); }">Ascending</a></li>
-                                        <li><a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(false); }">Descending</a></li>
-                                        <li><a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(true); }">Range Ascending</a></li>
-                                        <li><a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(true); }">Range Descending</a></li>
+                                        <li data-bind="if: !(isAscending() && isRange() == false)">
+                                            <a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(false); }">Ascending</a>
+                                        </li>
+                                        <li data-bind="if: !(isAscending() == false && isRange() == false)">
+                                            <a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(false); }">Descending</a>
+                                        </li>
+                                        <li data-bind="if: !(isAscending() && isRange()) ">
+                                            <a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(true); }">Range Ascending</a>
+                                        </li>
+                                        <li data-bind="if: !(isAscending() == false && isRange())">
+                                            <a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(true); }">Range Descending</a>
+                                        </li>
                                     </ul>
                                 </div>
-                            </div>
-                            <div>
-                                <button type="button" class="close" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query">
-                                    <i class="fa fa-times"></i>
-                                </button>
                             </div>
                             <div class="clearfix"></div>
                         </div>

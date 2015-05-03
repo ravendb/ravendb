@@ -82,15 +82,16 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
-    <Reference Include="System.Web.Http">
+    <Reference Include="System.Web.Http, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.1.2\lib\net45\System.Web.Http.dll</HintPath>
+      <HintPath>..\Rachis\Rachis.Tests\bin\Debug\System.Web.Http.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="AfterStreamExecutedDelegate.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="Changes\IConnectableChanges.cs" />
@@ -118,6 +119,7 @@
     <Compile Include="Connection\ReplicationInformer.cs" />
     <Compile Include="Counters\Actions\CountersActionsBase.cs" />
     <Compile Include="Counters\Actions\ICountersBatchOperation.cs" />
+    <Compile Include="Counters\Replication\CounterReplicationInformer.cs" />
     <Compile Include="Counters\CounterStore.cs" />
     <Compile Include="Counters\Actions\CountersBatchOperation.cs" />
     <Compile Include="Counters\Convention.cs" />
@@ -126,7 +128,8 @@
     <Compile Include="Counters\Actions\CountersStats.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Counters\Actions\CountersReplication.cs" />
+    <Compile Include="Counters\Replication\CountersReplication.cs" />
+    <Compile Include="Counters\Replication\ICountersReplicationInformer.cs" />
     <Compile Include="Counters\ICounterStore.cs" />
     <Compile Include="Document\AsyncDocumentSubscriptions.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />

@@ -4,12 +4,10 @@ using System.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Shard
@@ -30,6 +28,11 @@ namespace Raven.Client.Shard
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardDbCommands = shardDbCommands;
+		}
+
+		public override string DatabaseName
+		{
+			get { return _databaseName; }
 		}
 
 		#region Sharding support methods

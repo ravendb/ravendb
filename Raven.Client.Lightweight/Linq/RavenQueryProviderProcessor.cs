@@ -10,14 +10,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
-using System.Threading.Tasks;
 
 namespace Raven.Client.Linq
 {
@@ -32,6 +30,7 @@ namespace Raven.Client.Linq
 		/// </summary>
 		protected readonly IDocumentQueryGenerator queryGenerator;
 		private readonly Action<QueryResult> afterQueryExecuted;
+		private readonly Action<RavenJObject> afterStreamExcuted;
 		private bool chainedWhere;
 		private int insideWhere;
 		private IAbstractDocumentQuery<T> documentQuery;
@@ -62,13 +61,14 @@ namespace Raven.Client.Linq
 	    /// <param name="queryGenerator">The document query generator.</param>
 	    /// <param name="customizeQuery">The customize query.</param>
 	    /// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
+		/// <param name="afterStreamExecuted">Executed after the stream run, allow access to the stream results</param>
 	    /// <param name="indexName">The name of the index the query is executed against.</param>
 	    /// <param name="fieldsToFetch">The fields to fetch in this query</param>
 	    /// <param name="fieldsTRename">The fields to rename for the results of this query</param>
 	    /// <param name="isMapReduce"></param>
 	    /// <param name="resultsTransformer"></param>
 		/// <param name="transformerParameters"></param>
-		public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> transformerParameters)
+		public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, Action<RavenJObject> afterStreamExcuted,  string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> transformerParameters)
 		{
 			FieldsToFetch = fieldsToFetch;
 			FieldsToRename = fieldsTRename;
@@ -77,7 +77,8 @@ namespace Raven.Client.Linq
 			this.indexName = indexName;
 			this.isMapReduce = isMapReduce;
 			this.afterQueryExecuted = afterQueryExecuted;
-			this.customizeQuery = customizeQuery;
+		    this.afterStreamExcuted = afterStreamExcuted;
+		    this.customizeQuery = customizeQuery;
 		    this.resultsTransformer = resultsTransformer;
 			this.transformerParameters = transformerParameters;
 	        linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
@@ -1636,41 +1637,50 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				var result = queryResult.Results[index];
 				var safeToModify = (RavenJObject)result.CreateSnapshot();
-				bool changed = false;
-				var values = new Dictionary<string, RavenJToken>();
-				foreach (var renamedField in FieldsToRename.Select(x => x.OriginalField).Distinct())
-				{
-					RavenJToken value;
-					if (safeToModify.TryGetValue(renamedField, out value) == false) 
-						continue;
-					values[renamedField] = value;
-					safeToModify.Remove(renamedField);
-				}
-				foreach (var rename in FieldsToRename)
-				{
-					RavenJToken val;
-					if (values.TryGetValue(rename.OriginalField, out val) == false)
-						continue;
-					changed = true;
-					var ravenJObject = val as RavenJObject;
-					if (rename.NewField == null && ravenJObject != null)
-					{
-						safeToModify = ravenJObject;
-					}
-					else if (rename.NewField != null)
-					{
-						safeToModify[rename.NewField] = val;
-					}
-					else
-					{
-						safeToModify[rename.OriginalField] = val;
-					}
-				}
-				if (!changed)
+
+				if (!RenameSingleResult(ref safeToModify))
 					continue;
 				safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
 				queryResult.Results[index] = safeToModify;
 			}
+		}
+
+		public bool RenameSingleResult(ref RavenJObject doc)
+		{
+			var changed = false;
+			var values = new Dictionary<string, RavenJToken>();
+			foreach (var renamedField in FieldsToRename.Select(x => x.OriginalField).Distinct())
+			{
+				RavenJToken value;
+				if (doc.TryGetValue(renamedField, out value) == false)
+					continue;
+				values[renamedField] = value;
+				if (FieldsToFetch.Contains(renamedField) == false)
+				{
+					doc.Remove(renamedField);	
+				}
+			}
+			foreach (var rename in FieldsToRename)
+			{
+				RavenJToken val;
+				if (values.TryGetValue(rename.OriginalField, out val) == false)
+					continue;
+				changed = true;
+				var ravenJObject = val as RavenJObject;
+				if (rename.NewField == null && ravenJObject != null)
+				{
+					doc = ravenJObject;
+				}
+				else if (rename.NewField != null)
+				{
+					doc[rename.NewField] = val;
+				}
+				else
+				{
+					doc[rename.OriginalField] = val;
+				}
+			}
+			return changed;
 		}
 
 		private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)

@@ -13,7 +13,6 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Shard;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
 
@@ -26,6 +25,7 @@ namespace Raven.Client.Linq
 	public class RavenQueryProvider<T> : IRavenQueryProvider
 	{
 		private Action<QueryResult> afterQueryExecuted;
+		private Action<RavenJObject> afterStreamExecuted;
 		private Action<IDocumentQueryCustomization> customizeQuery;
 		private readonly string indexName;
 		private readonly IDocumentQueryGenerator queryGenerator;
@@ -33,11 +33,10 @@ namespace Raven.Client.Linq
 		private readonly RavenQueryHighlightings highlightings;
 		private readonly IDatabaseCommands databaseCommands;
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
-		
         private readonly bool isMapReduce;
         private readonly Dictionary<string, RavenJToken> transformerParamaters = new Dictionary<string, RavenJToken>();
- 
-	    /// <summary>
+	
+		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
 		/// </summary>
 		public RavenQueryProvider(
@@ -220,6 +219,13 @@ namespace Raven.Client.Linq
 			this.afterQueryExecuted = afterQueryExecutedCallback;
 		}
 
+		public void AfterStreamExecuted(Action<RavenJObject> afterStreamExecutedCallback)
+		{
+			this.afterStreamExecuted = afterStreamExecutedCallback;
+		}
+
+		
+
 		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
@@ -262,10 +268,12 @@ namespace Raven.Client.Linq
             var processor = GetQueryProviderProcessor<T>();
             var documentQuery = (IAsyncDocumentQuery<TResult>)processor.GetAsyncDocumentQueryFor(expression);
 
-            if (FieldsToRename.Count > 0)
-                documentQuery.AfterQueryExecuted(processor.RenameResults);
-
-            return documentQuery;
+	        if (FieldsToRename.Count > 0)
+	        {
+		        documentQuery.AfterQueryExecuted(processor.RenameResults);
+				documentQuery.AfterStreamExecuted(processor.RenameSingleResult);
+	        }
+	        return documentQuery;
         }
 
 		/// <summary>
@@ -349,7 +357,7 @@ namespace Raven.Client.Linq
 
 		protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
 		{
-			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName,
+			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, afterStreamExecuted, indexName,
 				FieldsToFetch, 
 				FieldsToRename,
 				isMapReduce, ResultTransformer, transformerParamaters);
@@ -371,10 +379,19 @@ namespace Raven.Client.Linq
         {
             var processor = GetQueryProviderProcessor<T>();
             var result = (IDocumentQuery<TResult>)processor.GetDocumentQueryFor(expression);
-            result.SetResultTransformer(ResultTransformer);
+            
+			result.SetResultTransformer(ResultTransformer);
+			var renamedFields = FieldsToFetch.Select(field =>
+			{
+				var renamedField = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
+				if (renamedField != null)
+					return renamedField.NewField ?? field;
+				return field;
+			}).ToArray();
+
+			if (renamedFields.Length > 0)
+				result.AfterStreamExecuted(processor.RenameSingleResult);
             return result;
         }
-
-
     }
 }

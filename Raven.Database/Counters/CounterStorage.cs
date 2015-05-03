@@ -25,7 +25,6 @@ using Voron.Trees;
 using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Raven.Abstractions.Data.Constants;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Raven.Database.Counters
 {
@@ -37,36 +36,38 @@ namespace Raven.Database.Counters
 		private readonly TransportState transportState;
 		private readonly CountersMetricsManager metricsCounters;
 		private readonly NotificationPublisher notificationPublisher;
+		private readonly ReplicationTask replicationTask;
 
 		private long lastEtag;
-		public readonly RavenCounterReplication ReplicationTask;
-		
 		public event Action CounterUpdated = () => { };
 
 		public string CounterStorageUrl { get; private set; }
 
 		public DateTime LastWrite { get; private set; }
 
-		public string ServerId { get; set; }
+		public string ServerId { get; private set; }
 
 		public string Name { get; private set; }
 
+		public string ResourceName { get; private set; }
+
+		public event Action ReplicationUpdated;
+
 		public int ReplicationTimeoutInMs { get; private set; }
 
-		public string ResourceName { get; private set; }
-		
 		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
 		{
-            CounterStorageUrl = string.Format("{0}counters/{1}", serverUrl, storageName);
-            Name = storageName;
+			CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, storageName);
+			Name = storageName;
 			ResourceName = string.Concat(Constants.Counter.UrlPrefix, "/", storageName);
-                
+
 			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
 			notificationPublisher = new NotificationPublisher(transportState);
-			ReplicationTask = new RavenCounterReplication(this);
+			replicationTask = new ReplicationTask(this);
+			replicationTask.ReplicationUpdate += OnReplicationUpdated;
 
 			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
@@ -75,6 +76,13 @@ namespace Raven.Database.Counters
 			Configuration = configuration;
 			ExtensionsState = new AtomicDictionary<object>();
 			Initialize();
+		}
+
+		protected virtual void OnReplicationUpdated()
+		{
+			var replicationUpdated = ReplicationUpdated;
+			if (replicationUpdated != null)
+				replicationUpdated();
 		}
 
 		private void Initialize()
@@ -114,7 +122,7 @@ namespace Raven.Database.Counters
 					}
 				}
 
-				ReplicationTask.StartReplication();
+				replicationTask.StartReplication();
 			}
 		}
 
@@ -134,6 +142,11 @@ namespace Raven.Database.Counters
 			get { return notificationPublisher; }
 		}
 
+		public ReplicationTask ReplicationTask
+		{
+			get { return replicationTask; }
+		}
+
 		public AtomicDictionary<object> ExtensionsState { get; private set; }
 
 		public InMemoryRavenConfiguration Configuration { get; private set; }
@@ -148,7 +161,7 @@ namespace Raven.Database.Counters
 					Url = CounterStorageUrl,
 					CountersCount = reader.GetCountersCount(),
 					LastCounterEtag = lastEtag,
-					TasksCount = ReplicationTask.GetActiveTasksCount(),
+					TasksCount = replicationTask.GetActiveTasksCount(),
 					CounterStorageSize = SizeHelper.Humane(storageEnvironment.Stats().UsedDataFileSizeInBytes),
 					GroupsCount = reader.GetGroupsCount(),
 				};
@@ -224,8 +237,8 @@ namespace Raven.Database.Counters
 		{
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of CounterStorage: " + Name);
 
-			if (ReplicationTask != null)
-				exceptionAggregator.Execute(ReplicationTask.Dispose);
+			if (replicationTask != null)
+				exceptionAggregator.Execute(replicationTask.Dispose);
 
 			if (storageEnvironment != null)
 				exceptionAggregator.Execute(storageEnvironment.Dispose);
@@ -264,6 +277,17 @@ namespace Raven.Database.Counters
 			{
 				return countersGroups.State.EntriesCount;
 			}
+
+			public bool CounterExists(string groupName, string counterName)
+			{
+				var name = MergeGroupAndName(groupName, counterName);
+				using (var it = counters.Iterate())
+				{
+					it.RequiredPrefix = name;
+					return it.Seek(name);
+				}
+			}
+
 
 			public IEnumerable<string> GetFullCounterNames(string prefix)
 			{
@@ -412,10 +436,10 @@ namespace Raven.Database.Counters
 				return result != null ? result.Reader.ReadLittleEndianInt64() : 0;
 			}
 
-			public CounterStorageReplicationDocument GetReplicationData()
+			public CountersReplicationDocument GetReplicationData()
 			{
 				var readResult = metadata.Read("replication");
-				if (readResult == null) 
+				if (readResult == null)
 					return null;
 
 				var stream = readResult.Reader.AsStream();
@@ -423,7 +447,7 @@ namespace Raven.Database.Counters
 				using (var streamReader = new StreamReader(stream))
 				using (var jsonTextReader = new JsonTextReader(streamReader))
 				{
-					return new JsonSerializer().Deserialize<CounterStorageReplicationDocument>(jsonTextReader);
+					return new JsonSerializer().Deserialize<CountersReplicationDocument>(jsonTextReader);
 				}
 			}
 
@@ -445,9 +469,12 @@ namespace Raven.Database.Counters
 			private byte[] fullCounterNameBuffer = new byte[0];
 			private readonly byte[] counterValueBuffer = new byte[sizeof(long)];
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
-			
+
 			public Writer(CounterStorage parent, Transaction transaction)
 			{
+				if (transaction.Flags != TransactionFlags.ReadWrite) //precaution
+					throw new InvalidOperationException(string.Format("Counters writer cannot be created with read-only transaction. (tx id = {0})", transaction.Id));
+
 				this.parent = parent;
 				this.transaction = transaction;
 				reader = new Reader(transaction);
@@ -500,7 +527,7 @@ namespace Raven.Database.Counters
 				//TODO: verify counter name stracture
 				var doesCounterExist = Store(fullCounterName, counterKey =>
 				{
-					EndianBitConverter.Big.CopyBytes(counterValue.Value, counterValueBuffer, 0);
+					EndianBitConverter.Little.CopyBytes(counterValue.Value, counterValueBuffer, 0);
 					counters.Add(counterKey, counterValueBuffer);
 				});
 
@@ -589,7 +616,7 @@ namespace Raven.Database.Counters
 				serversLastEtag.Add(serverId, EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 
-			public void UpdateReplications(CounterStorageReplicationDocument newReplicationDocument)
+			public void UpdateReplications(CountersReplicationDocument newReplicationDocument)
 			{
 				using (var memoryStream = new MemoryStream())
 				using (var streamWriter = new StreamWriter(memoryStream))
@@ -601,8 +628,9 @@ namespace Raven.Database.Counters
 					metadata.Add("replication", memoryStream);
 				}
 
-				parent.ReplicationTask.SignalCounterUpdate();
+				parent.replicationTask.SignalCounterUpdate();
 			}
+
 
 			private bool DoesCounterExist(Slice name)
 			{
@@ -652,5 +680,6 @@ namespace Raven.Database.Counters
 		{
 			get { return Name; }
 		}
+
 	}
 }

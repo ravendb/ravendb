@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Abstractions.Data;
-using Raven.Client.Linq;
 
 namespace Raven.Client.Document
 {
@@ -35,20 +33,25 @@ namespace Raven.Client.Document
 		IEnumerable<string> GetProjectionFields();
 
 		/// <summary>
+		/// Order the search results in alphanumeric order
+		/// </summary>
+		void AlphaNumericOrdering(string fieldName, bool descending = false);
+
+		/// <summary>
 		/// Order the search results randomly
 		/// </summary>
 		void RandomOrdering();
-
-		/// <summary>
-		/// Sort using custom sorter on the server
-		/// </summary>
-		void CustomSortUsing(string typeName, bool descending);
 
 		/// <summary>
 		/// Order the search results randomly using the specified seed
 		/// this is useful if you want to have repeatable random queries
 		/// </summary>
 		void RandomOrdering(string seed);
+
+		/// <summary>
+		/// Sort using custom sorter on the server
+		/// </summary>
+		void CustomSortUsing(string typeName, bool descending = false);
 
 		/// <summary>
 		///   Adds an ordering for a specific field to the query

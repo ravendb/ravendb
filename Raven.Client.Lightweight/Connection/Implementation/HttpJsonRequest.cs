@@ -16,7 +16,7 @@ using System.Net.Http.Headers;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
@@ -201,7 +201,11 @@ namespace Raven.Client.Connection.Implementation
 				}
 				catch (Exception e)
 				{
-					
+					if (Response == null && e is HttpRequestException) //something bad happened and httpClient.SendAsync failed -> i.e. server down, network down
+					{
+						e.Data.Add(Constants.RequestFailedExceptionMarker, true);
+						throw ErrorResponseException.FromHttpRequestException((HttpRequestException)e);
+					}
 				}
 				finally
 				{
@@ -300,7 +304,7 @@ namespace Raven.Client.Connection.Implementation
 
 		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync(bool readErrorString)
 		{
-		    if (Response.IsSuccessStatusCode) 
+			if (Response.IsSuccessStatusCode) 
                 return null;
 		    if (Response.StatusCode == HttpStatusCode.Unauthorized ||
 		        Response.StatusCode == HttpStatusCode.NotFound ||

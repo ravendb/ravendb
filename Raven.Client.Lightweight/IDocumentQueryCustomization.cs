@@ -99,6 +99,44 @@ namespace Raven.Client
 		IDocumentQueryCustomization NoTracking();
 
 		/// <summary>
+		///     Adds an ordering for a specific field to the query
+		///		<param name="fieldName">Name of the field.</param>
+		///		<param name="descending">if set to <c>true</c> [descending].</param>
+		/// </summary>
+		IDocumentQueryCustomization AddOrder(string fieldName, bool descending = false);
+
+		/// <summary>
+		///     Adds an ordering for a specific field to the query
+		///		<typeparam name="TResult">The type of the object that holds the property that you want to order by.</typeparam>
+		///		<param name="propertySelector">Property selector for the field.</param>
+		///		<param name="descending">if set to <c>true</c> [descending].</param>
+		/// </summary>
+		IDocumentQueryCustomization AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
+
+		/// <summary>
+		///     Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
+		///		<param name="fieldName">Name of the field.</param>
+		///		<param name="descending">if set to <c>true</c> [descending].</param>
+		///		<param name="fieldType">the type of the field to be sorted.</param>
+		/// </summary>
+		IDocumentQueryCustomization AddOrder(string fieldName, bool descending, Type fieldType);
+
+		/// <summary>
+		///		Order the search results in alphanumeric order
+		///		<param name="fieldName">The order by field name.</param>
+		///		<param name="descending">Should be ordered by descending.</param>
+		/// </summary>
+		IDocumentQueryCustomization AlphaNumericOrdering(string fieldName, bool descending = false);
+
+		/// <summary>
+		///		Order the search results in alphanumeric order
+		///		<typeparam name="TResult">The type of the object that holds the property that you want to order by.</typeparam>
+		///		<param name="propertySelector">Property selector for the field.</param>
+		///		<param name="descending">if set to <c>true</c> [descending].</param>
+		/// </summary>
+		IDocumentQueryCustomization AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
+
+		/// <summary>
 		///     Order the search results randomly
 		/// </summary>
 		IDocumentQueryCustomization RandomOrdering();
@@ -108,6 +146,16 @@ namespace Raven.Client
 		///     this is useful if you want to have repeatable random queries
 		/// </summary>
 		IDocumentQueryCustomization RandomOrdering(string seed);
+
+		/// <summary>
+		/// Sort using custom sorter on the server
+		/// </summary>
+		IDocumentQueryCustomization CustomSortUsing(string typeName);
+
+		/// <summary>
+		/// Sort using custom sorter on the server
+		/// </summary>
+		IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
 
 		/// <summary>
 		///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
@@ -168,16 +216,6 @@ namespace Raven.Client
 		///     This shouldn't be used outside of unit tests unless you are well aware of the implications
 		/// </summary>
 		IDocumentQueryCustomization WaitForNonStaleResults();
-
-        /// <summary>
-        /// Sort using custom sorter on the server
-        /// </summary>
-        IDocumentQueryCustomization CustomSortUsing(string typeName);
-
-		/// <summary>
-		/// Sort using custom sorter on the server
-		/// </summary>
-        IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
 
 		/// <summary>
 		///     EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.

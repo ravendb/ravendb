@@ -52,7 +52,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var type = task.GetType().FullName;
 			var index = task.Index;
 			var id = generator.CreateSequentialUuid(UuidType.Tasks);
-			var idAsString = id.ToString();
+            var idAsString = (Slice)id.ToString();
 
 			var taskStructure = new Structure<TaskFields>(tableStorage.Tasks.Schema)
 				.Set(TaskFields.IndexId, index)
@@ -65,9 +65,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             var indexKey = CreateKey(index);
 
-			tasksByType.MultiAdd(writeBatch.Value, CreateKey(type), idAsString);
-            tasksByIndex.MultiAdd(writeBatch.Value, indexKey, idAsString);
-			tasksByIndexAndType.MultiAdd(writeBatch.Value, AppendToKey(indexKey, type), idAsString);
+            tasksByType.MultiAdd(writeBatch.Value, (Slice)CreateKey(type), idAsString);
+            tasksByIndex.MultiAdd(writeBatch.Value, (Slice)indexKey, idAsString);
+            tasksByIndexAndType.MultiAdd(writeBatch.Value, (Slice)AppendToKey(indexKey, type), idAsString);
 		}
 
 		public bool HasTasks
@@ -88,7 +88,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var type = CreateKey(typeof(T).FullName);
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
 
-			using (var iterator = tasksByType.MultiRead(Snapshot, type))
+            using (var iterator = tasksByType.MultiRead(Snapshot, (Slice)type))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return null;
@@ -128,7 +128,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var type = task.GetType().FullName;
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
-			using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, CreateKey(task.Index, type)))
+			using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, (Slice)CreateKey(task.Index, type)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -179,9 +179,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             var indexKey = CreateKey(index);
 
-			tasksByType.MultiDelete(writeBatch.Value, CreateKey(type), taskId);
-            tasksByIndex.MultiDelete(writeBatch.Value, indexKey, taskId);
-			tasksByIndexAndType.MultiDelete(writeBatch.Value, AppendToKey(indexKey, type), taskId);
+            tasksByType.MultiDelete(writeBatch.Value, (Slice)CreateKey(type), taskId);
+            tasksByIndex.MultiDelete(writeBatch.Value, (Slice)indexKey, taskId);
+            tasksByIndexAndType.MultiDelete(writeBatch.Value, (Slice)AppendToKey(indexKey, type), taskId);
 		}
 
 

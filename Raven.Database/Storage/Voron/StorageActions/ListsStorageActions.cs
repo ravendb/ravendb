@@ -50,12 +50,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
 			var etag = generator.CreateSequentialUuid(type);
-			var etagAsString = etag.ToString();
+            var etagAsString = etag.ToString();
+            var etagAsSlice = (Slice)etagAsString;
 			var createdAt = SystemTime.UtcNow;
 
 			tableStorage.Lists.Add(
 				writeBatch.Value,
-				etagAsString,
+				etagAsSlice,
 				new RavenJObject
 				{
 					{ "name", name }, 
@@ -67,8 +68,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             var nameKey = CreateKey(name);
 
-            listsByName.MultiAdd(writeBatch.Value, nameKey, etagAsString);
-			listsByNameAndKey.Add(writeBatch.Value, AppendToKey(nameKey, key), etagAsString);
+            listsByName.MultiAdd(writeBatch.Value, (Slice)nameKey, etagAsSlice);
+            listsByNameAndKey.Add(writeBatch.Value, (Slice)AppendToKey(nameKey, key), etagAsString);
 		}
 
 		public void Remove(string name, string key)
@@ -76,9 +77,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			var nameAndKey = CreateKey(name, key);
+            var nameKey = CreateKey(name);
+            var nameKeySlice = (Slice)nameKey;
+            var nameAndKeySlice = (Slice)AppendToKey(nameKey, key);
 
-			var read = listsByNameAndKey.Read(Snapshot, nameAndKey, writeBatch.Value);
+			var read = listsByNameAndKey.Read(Snapshot, nameAndKeySlice, writeBatch.Value);
 			if (read == null)
 				return;
 
@@ -86,11 +89,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				using (var reader = new StreamReader(stream))
 				{
-					var etag = reader.ReadToEnd();
+                    var etag = (Slice)reader.ReadToEnd();
 
 					tableStorage.Lists.Delete(writeBatch.Value, etag);
-					listsByName.MultiDelete(writeBatch.Value, CreateKey(name), etag);
-					listsByNameAndKey.Delete(writeBatch.Value, nameAndKey);
+                    listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etag);
+					listsByNameAndKey.Delete(writeBatch.Value, nameAndKeySlice);
 				}
 			}
 		}
@@ -99,9 +102,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 
-			using (var iterator = listsByName.MultiRead(Snapshot, CreateKey(name)))
+            using (var iterator = listsByName.MultiRead(Snapshot, (Slice)CreateKey(name)))
 			{
-				if (!iterator.Seek(start.ToString()))
+                if (!iterator.Seek((Slice)start.ToString()))
 					yield break;
 
 				int count = 0;
@@ -126,7 +129,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 
-			using (var iterator = listsByName.MultiRead(Snapshot, CreateKey(name)))
+            using (var iterator = listsByName.MultiRead(Snapshot, (Slice)CreateKey(name)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					yield break;
@@ -155,7 +158,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public ListItem Read(string name, string key)
 		{
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
-			var nameAndKey = CreateKey(name, key);
+            var nameAndKey = (Slice)CreateKey(name, key);
 
 			var read = listsByNameAndKey.Read(Snapshot, nameAndKey, writeBatch.Value);
 			if (read == null)
@@ -174,7 +177,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	    public ListItem ReadLast(string name)
 	    {
             var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
-	        var nameKey = CreateKey(name);
+            var nameKey = (Slice)CreateKey(name);
 
 	        using (var iterator = listsByName.MultiRead(Snapshot, nameKey))
 	        {
@@ -192,9 +195,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			var nameKey = CreateKey(name);
+            var nameKey = CreateKey(name);
+            var nameKeySlice = (Slice)nameKey;
 
-			using (var iterator = listsByName.MultiRead(Snapshot, nameKey))
+            using (var iterator = listsByName.MultiRead(Snapshot, nameKeySlice))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -209,10 +213,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
 
 						var key = value.Value<string>("key");
+                        var etagSlice = (Slice)currentEtag.ToString();
 
-						tableStorage.Lists.Delete(writeBatch.Value, currentEtag.ToString());
-                        listsByName.MultiDelete(writeBatch.Value, CreateKey(nameKey), currentEtag.ToString());
-						listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
+                        tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
+                        listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
+                        listsByNameAndKey.Delete(writeBatch.Value, (Slice)AppendToKey(nameKey, key));
 					}
 				}
 				while (iterator.MoveNext());
@@ -224,9 +229,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			var nameKey = CreateKey(name);
+            var nameKey = CreateKey(name);
+            var nameKeySlice = (Slice)nameKey;
 
-			using (var iterator = listsByName.MultiRead(Snapshot, nameKey))
+            using (var iterator = listsByName.MultiRead(Snapshot, nameKeySlice))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -242,10 +248,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					var key = value.Value<string>("key");
 					var etag = Etag.Parse(iterator.CurrentKey.ToString());
+                    var etagSlice = (Slice)etag.ToString();
 
-					tableStorage.Lists.Delete(writeBatch.Value, etag.ToString());
-					listsByName.MultiDelete(writeBatch.Value, nameKey, etag.ToString());
-					listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
+                    tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
+                    listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
+                    listsByNameAndKey.Delete(writeBatch.Value, AppendToKey(nameKey, key));
 
 					generalStorageActions.MaybePulseTransaction();
 				}
@@ -256,7 +263,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private ListItem ReadInternal(string id)
 		{
 			ushort version;
-			var value = LoadJson(tableStorage.Lists, id, writeBatch.Value, out version);
+            var value = LoadJson(tableStorage.Lists, (Slice)id, writeBatch.Value, out version);
 			if (value == null)
 				return null;
 

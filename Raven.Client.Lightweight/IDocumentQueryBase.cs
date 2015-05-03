@@ -6,10 +6,11 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
-	/// <summary>
+    /// <summary>
 	///     A query against a Raven index
 	/// </summary>
 	public interface IDocumentQueryBase<T, out TSelf>
@@ -30,14 +31,14 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
 		/// <param name="descending">if set to <c>true</c> [descending].</param>
-		TSelf AddOrder(string fieldName, bool descending);
+		TSelf AddOrder(string fieldName, bool descending = false);
 
 		/// <summary>
 		///     Adds an ordering for a specific field to the query
 		/// </summary>
 		/// <param name="propertySelector">Property selector for the field.</param>
 		/// <param name="descending">if set to <c>true</c> [descending].</param>
-		TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending);
+		TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending = false);
 
 		/// <summary>
 		///     Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
@@ -51,6 +52,12 @@ namespace Raven.Client
 		///     Callback to get the results of the query
 		/// </summary>
 		void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
+
+
+		/// <summary>
+		///     Callback to get the results of the stream
+		/// </summary>
+        void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecuted);
 
 		/// <summary>
 		///     Add an AND to the query
@@ -261,6 +268,11 @@ If you really want to do in memory filtering on the data returned from the query
 		void InvokeAfterQueryExecuted(QueryResult result);
 
 		/// <summary>
+		///     Called externally to raise the after query executed callback
+		/// </summary>
+		void InvokeAfterStreamExecuted(ref RavenJObject result);
+
+		/// <summary>
 		///     Negate the next operation
 		/// </summary>
 		void NegateNext();
@@ -338,6 +350,21 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf Proximity(int proximity);
 
 		/// <summary>
+		///		Order the search results in alphanumeric order
+		///		<param name="fieldName">The order by field name.</param>
+		///		<param name="descending">if set to <c>true</c> [descending].</param>
+		/// </summary>
+		TSelf AlphaNumericOrdering(string fieldName, bool descending = false);
+
+		/// <summary>
+		///		Order the search results in alphanumeric order
+		///		<typeparam name="TResult">The type of the object that holds the property that you want to order by.</typeparam>
+		///		<param name="propertySelector">Property selector for the field.</param>
+		///		<param name="descending">if set to <c>true</c> [descending].</param>
+		/// </summary>
+		TSelf AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
+
+		/// <summary>
 		///     Order the search results randomly
 		/// </summary>
 		TSelf RandomOrdering();
@@ -347,6 +374,11 @@ If you really want to do in memory filtering on the data returned from the query
 		///     this is useful if you want to have repeatable random queries
 		/// </summary>
 		TSelf RandomOrdering(string seed);
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		TSelf CustomSortUsing(string typeName, bool descending);
 
 		/// <summary>
 		///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
@@ -767,11 +799,6 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
 
 	    /// <summary>
-	    /// Order the search results randomly
-	    /// </summary>
-        TSelf CustomSortUsing(string typeName, bool descending);
-
-	    /// <summary>
 	    /// Sorts the query results by distance.
 	    /// </summary>
         TSelf SortByDistance(double lat, double lng);
@@ -779,6 +806,5 @@ If you really want to do in memory filtering on the data returned from the query
         /// Sorts the query results by distance.
         /// </summary>
         TSelf SortByDistance(double lat, double lng, string fieldName);
-
 	}
 }

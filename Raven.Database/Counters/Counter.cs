@@ -18,12 +18,6 @@ namespace Raven.Database.Counters
 
 		public List<CounterValue> CounterValues { get; private set; }
 
-		public class PerServerValue
-		{
-			public string ServerName { get; set; }
-			public Guid ServerId { get; set; }
-			public long Positive { get; set; }
-			public long Negative { get; set; }
-		}
+		public long Etag { get; set; }
 	}
 }
