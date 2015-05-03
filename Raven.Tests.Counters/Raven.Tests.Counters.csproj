@@ -100,6 +100,10 @@
       <Project>{267ac60c-751e-42e9-aa18-66035deff63a}</Project>
       <Name>Raven.Tests</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
+      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Name>Voron</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
