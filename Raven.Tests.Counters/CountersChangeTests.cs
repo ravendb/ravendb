@@ -93,7 +93,6 @@ namespace Raven.Tests.Counters
 				total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(-25);
 			}
-			
 		}
 	}
 }

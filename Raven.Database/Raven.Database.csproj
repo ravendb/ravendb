@@ -262,6 +262,8 @@
     <Compile Include="Config\Retriever\VersioningConfigurationRetriever.cs" />
     <Compile Include="Config\Settings\EnumSetting.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
+    <Compile Include="Counters\Controllers\CountersChangesController.cs" />
+    <Compile Include="Counters\Notifications\NotificationPublisher.cs" />
     <Compile Include="FileSystem\Actions\ActionsBase.cs" />
     <Compile Include="FileSystem\Actions\FileActions.cs" />
     <Compile Include="FileSystem\Actions\ReadFileToDatabase.cs" />
@@ -317,6 +319,9 @@
     <Compile Include="Raft\Storage\Handlers\DatabaseUpdateCommandHandler.cs" />
     <Compile Include="Raft\Util\RaftHelper.cs" />
     <Compile Include="Raft\ClusterManagerFactory.cs" />
+    <Compile Include="Server\Connections\CounterStorageConnectionState.cs" />
+    <Compile Include="Server\Connections\DocumentsConnectionState.cs" />
+    <Compile Include="Server\Connections\FileSystemConnectionState.cs" />
     <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Server\WebApi\ MultiGetSafeStringContent.cs" />

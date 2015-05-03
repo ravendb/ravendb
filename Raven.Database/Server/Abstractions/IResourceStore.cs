@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Util;
+﻿using System.Configuration;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Server.Connections;
 

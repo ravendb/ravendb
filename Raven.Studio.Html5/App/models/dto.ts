@@ -803,6 +803,9 @@ interface statusStorageOnDiskDto {
 interface statusDebugChangesDto {
     Id: string;
     Connected: boolean;
+    DocumentStore: statusDebugChangesDocumentStoreDto;
+    FileSystem: statusDebugChangesFileSystemDto;
+    CounterStorage: statusDebugChangesCounterStorageDto;
     WatchAllDocuments: boolean;
     WatchAllIndexes: boolean;
     WatchConfig: boolean;
@@ -814,6 +817,34 @@ interface statusDebugChangesDto {
     WatchIndexes: Array<string>;
     WatchDocuments: Array<string>;
     WatchedFolders: Array<string>;
+}
+
+interface statusDebugChangesDocumentStoreDto {
+    WatchAllDocuments: boolean;
+    WatchAllIndexes: boolean;
+    WatchAllTransformers: boolean;
+    WatchAllReplicationConflicts: boolean;
+    WatchedIndexes: Array<string>;
+    WatchedDocuments: Array<string>;
+    WatchedDocumentPrefixes: Array<string>;
+    WatchedDocumentsInCollection: Array<string>;
+    WatchedDocumentsOfType: Array<string>;
+    WatchedBulkInserts: Array<string>;
+}
+
+interface statusDebugChangesFileSystemDto {
+    WatchConflicts: boolean;
+    WatchSync: boolean;
+    WatchCancellations: boolean;
+    WatchConfig: boolean;
+    WatchedFolders: Array<string>;
+}
+
+interface statusDebugChangesCounterStorageDto {
+    WatchedChanges: Array<string>;
+    WatchedLocalChanges: Array<string>;
+    WatchedReplicationChanges: Array<string>;
+    WatchedBulkOperationsChanges: Array<string>;
 }
 
 interface statusDebugMetricsDto {

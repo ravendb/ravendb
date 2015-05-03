@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.Controllers;
@@ -15,13 +16,13 @@ namespace Raven.Database.Server.Connections
 {
 	public class TransportState : IDisposable
 	{
-	    private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+	    private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
 		readonly TimeSensitiveStore<string> timeSensitiveStore = new TimeSensitiveStore<string>(TimeSpan.FromSeconds(45));
 
 		readonly ConcurrentDictionary<string, ConnectionState> connections = new ConcurrentDictionary<string, ConnectionState>();
 
-		public TimeSensitiveStore<string> TimeSensitiveStore
+		private TimeSensitiveStore<string> TimeSensitiveStore
 		{
 			get { return timeSensitiveStore; }
 		}
@@ -62,7 +63,7 @@ namespace Raven.Database.Server.Connections
 			OnIndexChangeNotification(this, indexChangeNotification);
 			foreach (var connectionState in connections)
 			{
-				connectionState.Value.Send(indexChangeNotification);
+				connectionState.Value.DocumentStore.Send(indexChangeNotification);
 			}
 		}
 
@@ -73,7 +74,7 @@ namespace Raven.Database.Server.Connections
             OnTransformerChangeNotification(this, transformerChangeNotification);
             foreach (var connectionState in connections)
             {
-                connectionState.Value.Send(transformerChangeNotification);
+				connectionState.Value.DocumentStore.Send(transformerChangeNotification);
             }
         }
 
@@ -84,18 +85,7 @@ namespace Raven.Database.Server.Connections
 			OnDocumentChangeNotification(this, documentChangeNotification);
 			foreach (var connectionState in connections)
 			{
-				connectionState.Value.Send(documentChangeNotification);
-			}
-		}
-
-		public event Action<object, Notification> OnNotification = delegate { };
-
-		public void Send(Notification notification)
-		{
-			OnNotification(this, notification);
-			foreach (var connectionState in connections)
-			{
-				connectionState.Value.Send(notification);
+				connectionState.Value.DocumentStore.Send(documentChangeNotification);
 			}
 		}
 
@@ -106,7 +96,7 @@ namespace Raven.Database.Server.Connections
 			OnBulkInsertChangeNotification(this, bulkInsertChangeNotification);
 			foreach (var connectionState in connections)
 			{
-				connectionState.Value.Send(bulkInsertChangeNotification);
+				connectionState.Value.DocumentStore.Send(bulkInsertChangeNotification);
 			}
 		}
 
@@ -117,7 +107,40 @@ namespace Raven.Database.Server.Connections
 			OnReplicationConflictNotification(this, replicationConflictNotification);
 			foreach (var connectionState in connections)
 			{
-				connectionState.Value.Send(replicationConflictNotification);
+				connectionState.Value.DocumentStore.Send(replicationConflictNotification);
+			}
+		}
+
+		public event Action<object, FileSystemNotification> OnFileSystemNotification = delegate { };
+
+		public void Send(FileSystemNotification fileSystemNotification)
+		{
+			OnFileSystemNotification(this, fileSystemNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.FileSystem.Send(fileSystemNotification);
+			}
+		}
+
+		public event Action<object, CounterChangeNotification> OnCounterChangeNotification = delegate { };
+
+		public void Send(CounterChangeNotification counterChangeNotification)
+		{
+			OnCounterChangeNotification(this, counterChangeNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.CounterStorage.Send(counterChangeNotification);
+			}
+		}
+
+		public event Action<object, CounterBulkOperationNotification> OnCounterBulkOperationNotification = delegate { };
+
+		public void Send(CounterBulkOperationNotification counterBulkOperationNotification)
+		{
+			OnCounterBulkOperationNotification(this, counterBulkOperationNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.CounterStorage.Send(counterBulkOperationNotification);
 			}
 		}
 
@@ -137,7 +160,7 @@ namespace Raven.Database.Server.Connections
 
 	    public object[] DebugStatuses
 	    {
-	        get { return connections.Values.Select(x=>x.DebugStatus).ToArray(); }
+	        get { return connections.Values.Select(x => x.DebugStatus).ToArray(); }
 	    }
 
 	    public void Dispose()
@@ -150,7 +173,7 @@ namespace Raven.Database.Server.Connections
 	            }
 	            catch (Exception e)
 	            {
-	                logger.InfoException("Could not disconnect transport connection", e);
+	                Logger.InfoException("Could not disconnect transport connection", e);
 	            }
 	        }    
 	    }

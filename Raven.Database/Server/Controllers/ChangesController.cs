@@ -3,9 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
-using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
@@ -29,9 +27,10 @@ namespace Raven.Database.Server.Controllers
             }
 
             var name = (!String.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : String.Empty;
+			var globalConnectionState = Database.TransportState.For(id, this);
+			var connectionState = globalConnectionState.DocumentStore;
 
-            var connectionState = Database.TransportState.For(id, this);
-            var cmd = GetQueryStringValue("command");
+			var cmd = GetQueryStringValue("command");
             if (Match(cmd, "disconnect"))
             {
                 Database.TransportState.Disconnect(id);
@@ -54,11 +53,11 @@ namespace Raven.Database.Server.Controllers
 			}
             else if (Match(cmd, "watch-transformers"))
             {
-                connectionState.WatchTransformers();
+				connectionState.WatchTransformers();
             } 
             else if (Match(cmd, "unwatch-transformers"))
             {
-                connectionState.UnwatchTransformers();
+				connectionState.UnwatchTransformers();
             }
 			else if (Match(cmd, "watch-doc"))
 			{
@@ -124,7 +123,7 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			return GetMessageWithObject(connectionState);
+			return GetMessageWithObject(globalConnectionState);
 		}
 
 		[HttpGet]
@@ -137,10 +136,5 @@ namespace Raven.Database.Server.Controllers
 			Database.TransportState.Register(eventsTransport);
 			return new HttpResponseMessage {Content = eventsTransport};
 		}
-
-        private bool Match(string x, string y)
-        {
-            return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
-        }
 	}
 }

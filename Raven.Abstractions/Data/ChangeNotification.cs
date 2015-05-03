@@ -7,13 +7,6 @@ using System;
 
 namespace Raven.Abstractions.Data
 {
-	public class CountersBatchChangeNotification
-	{
-		public Guid OperationId { get; set; }		
-
-		public CountersChangeTypes ChangeType { get; set; }
-	}
-
 	public class BulkInsertChangeNotification : DocumentChangeNotification
 	{
 		/// <summary>
@@ -58,18 +51,6 @@ namespace Raven.Abstractions.Data
 		{
 			return string.Format("{0} on {1}", Type, Id);
 		}
-	}
-
-	[Flags]
-	public enum CountersChangeTypes
-	{
-		Increased = 1,
-
-		Decreased = 2,
-
-		CounterPut = 4,
-
-		CounterDelete = 8
 	}
 
 	[Flags]

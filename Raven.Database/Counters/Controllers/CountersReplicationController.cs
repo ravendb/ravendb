@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Counters.Notifications;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Counters.Controllers
@@ -46,6 +48,7 @@ namespace Raven.Database.Counters.Controllers
             bool wroteCounter = false;
             using (var writer = Storage.CreateWriter())
             {
+				var counterChangeNotifications = new List<CounterChangeNotification>();
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
@@ -56,7 +59,14 @@ namespace Raven.Database.Counters.Controllers
 						continue;
 
 					wroteCounter = true;
-					writer.Store(counter.FullCounterName, counter.CounterValue);
+					var counterChangeAction = writer.Store(counter.FullCounterName, counter.CounterValue);
+					counterChangeNotifications.Add(new CounterChangeNotification
+					{
+						GroupName = counter.GroupName,
+						CounterName = counter.CounterName,
+						Action = counterChangeAction,
+						Type = CounterChangeType.Replication | CounterChangeType.All
+					});
 	            }
 
 				var serverId = replicationMessage.SendingServerName;
@@ -65,6 +75,8 @@ namespace Raven.Database.Counters.Controllers
 					//TODO: fix this
 					writer.RecordLastEtagFor(serverId, lastEtag);
                     writer.Commit();
+
+					counterChangeNotifications.ForEach(Storage.Publisher.RaiseNotification);
                 }
 
 	            return new HttpResponseMessage(HttpStatusCode.OK);

@@ -743,7 +743,7 @@ namespace Raven.Database.Server.Controllers
 
 		public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
 
-		public void AddRequestTraceInfo(Action<StringBuilder> info)
+	    protected void AddRequestTraceInfo(Action<StringBuilder> info)
 		{
 			if (info == null)
 				return;
@@ -754,11 +754,15 @@ namespace Raven.Database.Server.Controllers
 			CustomRequestTraceInfo.Add(info);
 		}
 
-        public void IncrementInnerRequestsCount()
+	    protected void IncrementInnerRequestsCount()
         {
             Interlocked.Increment(ref innerRequestsCount);
         }
 
+		protected static bool Match(string x, string y)
+		{
+			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+		}
 
 	    public abstract void MarkRequestDuration(long duration);
 
