@@ -426,7 +426,7 @@ interface indexResultsDto<T extends metadataAwareDto> {
 }
 
 interface indexQueryResultsDto extends indexResultsDto<documentDto> {
-
+	Error?: string;
 }
 
 interface versioningEntryDto extends documentDto {

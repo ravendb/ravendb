@@ -9,7 +9,7 @@ import pagedResultSet = require("common/pagedResultSet");
 import pagedList = require("common/pagedList");
 import document = require("models/database/documents/document");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-
+import messagePublisher = require("common/messagePublisher");
 
 class exploration extends viewModelBase {
 
@@ -76,13 +76,19 @@ class exploration extends viewModelBase {
 		var command = new dataExplorationCommand(requestDto, this.activeDatabase());
 		command.execute()
 			.done((results: indexQueryResultsDto) => {
-				var mainSelector = new pagedResultSet(results.Results.map(d => new document(d)), results.Results.length, results);
-				var resultsFetcher = (skip: number, take: number) => {
-					var slicedResult = new pagedResultSet(mainSelector.items.slice(skip, Math.min(skip + take, mainSelector.totalResultCount)), mainSelector.totalResultCount);
-					return $.Deferred().resolve(slicedResult).promise();
-				};
-				var resultsList = new pagedList(resultsFetcher);
-				this.queryResults(resultsList);
+				if (results.Error) {
+					messagePublisher.reportError("Unable to execute query", results.Error, 500);
+				} else {
+					var mainSelector = new pagedResultSet(results.Results.map(d => new document(d)), results.Results.length, results);
+					var resultsFetcher = (skip: number, take: number) => {
+						var slicedResult = new pagedResultSet(mainSelector.items.slice(skip, Math.min(skip + take, mainSelector.totalResultCount)), mainSelector.totalResultCount);
+						return $.Deferred().resolve(slicedResult).promise();
+					};
+					var resultsList = new pagedList(resultsFetcher);
+					this.queryResults(resultsList);
+				}
+			})
+			.always(() => {
 				this.isBusy(false);
 			});
 
