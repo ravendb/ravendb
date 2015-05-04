@@ -66,7 +66,6 @@ namespace Voron.Impl
 	    private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
 		private readonly Dictionary<int, PagerState> _scratchPagerStates;
 
-
 	    public bool Committed { get; private set; }
 
 		public bool RolledBack { get; private set; }
@@ -237,15 +236,14 @@ namespace Voron.Impl
 			_env.AssertFlushingNotFailed();
 
 			page = page ?? GetReadOnlyPage(num);
-		    if (page.Dirty)
-			    return page;
+			if (page.Dirty)
+				return page;
 
 			if (_dirtyPages.Contains(num))
 			{
 				page.Dirty = true;
 				return page;
 			}
-
 
 		    var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
@@ -275,7 +273,7 @@ namespace Voron.Impl
 		public Page GetReadOnlyPage(long pageNumber)
 		{
 			PageFromScratchBuffer value;
-		    Page p;            
+			Page p;
 
             if (_scratchPages.Contains(pageNumber))
             {
