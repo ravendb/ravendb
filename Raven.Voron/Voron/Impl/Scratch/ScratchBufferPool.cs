@@ -113,14 +113,14 @@ namespace Voron.Impl.Scratch
 
 			if (sizeAfterAllocation >= (_sizeLimit * 3) / 4 && oldestActiveTransaction > _oldestTransactionWhenFlushWasForced)
 			{
-				// We are starting to force a flush to free scratch pages. We are doing it at this point (80% of the max scratch size)
-				// to make sure that next transactions will be able to allocate pages that we are going to free in the current transaction.
-				// Important notice: all pages freed by this run will get ValidAfterTransactionId == tx.Id (so only next ones can use it)
-
-				bool flushLockTaken = false;
-				using (tx.Environment.Journal.Applicator.TryTakeFlushingLock(ref flushLockTaken))
+				// we may get recursive flushing, so we want to avoid it
+				if (tx.Environment.Journal.Applicator.IsCurrentThreadInFlushOperation == false)
 				{
-					if (flushLockTaken) // if we are already flushing, we don't need to force a flush
+					// We are starting to force a flush to free scratch pages. We are doing it at this point (80% of the max scratch size)
+					// to make sure that next transactions will be able to allocate pages that we are going to free in the current transaction.
+					// Important notice: all pages freed by this run will get ValidAfterTransactionId == tx.Id (so only next ones can use it)
+
+					using (tx.Environment.Journal.Applicator.TakeFlushingLock())
 					{
 						try
 						{
