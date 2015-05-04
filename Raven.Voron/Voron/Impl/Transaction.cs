@@ -24,13 +24,13 @@ namespace Voron.Impl
 
 		private readonly WriteAheadJournal _journal;
 		private Dictionary<Tuple<Tree, MemorySlice>, Tree> _multiValueTrees;
-        private readonly HashSet<long> _dirtyPages = new HashSet<long>();
-		private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>();
+        private readonly HashSet<long> _dirtyPages = new HashSet<long>(LongEqualityComparer.Instance);
+		private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(LongEqualityComparer.Instance);
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
-        private readonly HashSet<long> _scratchPages = new HashSet<long>();
-        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>();
+        private readonly HashSet<long> _scratchPages = new HashSet<long>(LongEqualityComparer.Instance);
+        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(LongEqualityComparer.Instance);
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
@@ -257,15 +257,46 @@ namespace Voron.Impl
 			return newPage;
 		}
 
+        private class PagerStateCacheItem
+        {
+            public readonly int FileNumber;
+            public readonly PagerState State;
+
+            public PagerStateCacheItem( int file, PagerState state )
+            {
+                this.FileNumber = file;
+                this.State = state;
+            }
+        }
+
+        private const int InvalidScratchFile = -1;
+        private PagerStateCacheItem lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
+
 		public Page GetReadOnlyPage(long pageNumber)
 		{
 			PageFromScratchBuffer value;
-		    Page p;
+		    Page p;            
 
             if (_scratchPages.Contains(pageNumber))
             {
                 value = _scratchPagesTable[pageNumber];
-                p = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer, _scratchPagerStates != null ? _scratchPagerStates[value.ScratchFileNumber] : null);
+
+                PagerState state = null;
+                if ( _scratchPagerStates != null )
+                {
+                    var lastUsed = lastScratchFileUsed;
+                    if (lastUsed.FileNumber == value.ScratchFileNumber)
+                    {
+                        state = lastUsed.State;
+                    }
+                    else
+                    {
+                        state = _scratchPagerStates[value.ScratchFileNumber];
+                        lastScratchFileUsed = new PagerStateCacheItem(value.ScratchFileNumber, state);
+                    }
+                }
+               
+                p = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer, state);
             }
             else
             {

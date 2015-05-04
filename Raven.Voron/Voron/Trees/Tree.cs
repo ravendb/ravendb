@@ -170,8 +170,12 @@ namespace Voron.Trees
 					var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
 					if (read == 0)
 						break;
-                    MemoryUtils.Copy(pos, tempPagePointer, read);
-					pos += read;
+
+                    MemoryUtils.CopyInline(pos, tempPagePointer, read);
+                    pos += read;
+
+                    if ( read != tempPageBuffer.Length )
+                        break;
 				}
 			}
 		}
@@ -462,18 +466,16 @@ namespace Voron.Trees
 			cursor = null;
 
 			var recentPages = RecentlyFoundPages;
-
 			if (recentPages == null)
 				return false;
 
 			var foundPage = recentPages.Find(key);
-
 			if (foundPage == null)
 				return false;
 
 			var lastFoundPageNumber = foundPage.Number;
-			page = _tx.GetReadOnlyPage(lastFoundPageNumber);
 
+			page = _tx.GetReadOnlyPage(lastFoundPageNumber);
 			if (page.IsLeaf == false)
 				throw new DataException("Index points to a non leaf page");
 
@@ -487,7 +489,9 @@ namespace Voron.Trees
 				foreach (var p in cursorPath)
 				{
 					if (p == lastFoundPageNumber)
-						c.Push(pageCopy);
+                    {
+                        c.Push(pageCopy);
+                    }						
 					else
 					{
 						var cursorPage = _tx.GetReadOnlyPage(p);

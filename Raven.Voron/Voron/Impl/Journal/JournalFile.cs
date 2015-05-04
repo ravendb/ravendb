@@ -136,7 +136,7 @@ namespace Voron.Impl.Journal
 		/// </summary>
 		public long Write(Transaction tx, IntPtr[] pages)
 		{
-			var ptt = new Dictionary<long, PagePosition>();
+			var ptt = new Dictionary<long, PagePosition>(LongEqualityComparer.Instance);
 			var unused = new HashSet<PagePosition>();
 			var pageWritePos = _writePage;
 
