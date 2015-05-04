@@ -398,7 +398,7 @@ namespace Voron.Impl.Journal
 			private JournalFile _lastFlushedJournal;
 			private long? forcedIterateJournalsAsOf = null;
 			private bool forcedFlushOfOldPages = false;
-			private volatile bool ignoreLockAlreadyTaken = false;
+			private bool ignoreLockAlreadyTaken = false;
 
 			public JournalApplicator(WriteAheadJournal waj)
 			{
@@ -773,10 +773,25 @@ namespace Voron.Impl.Journal
 				}
 			}
 
+			public IDisposable TryTakeFlushingLock(ref bool lockTaken)
+			{
+				Monitor.TryEnter(_flushingLock, ref lockTaken);
+				bool localLockTaken = lockTaken;
+
+				ignoreLockAlreadyTaken = true;
+
+				return new DisposableAction(() =>
+				{
+					ignoreLockAlreadyTaken = false;
+					if (localLockTaken)
+						Monitor.Exit(_flushingLock);
+				});
+			}
+
 			public IDisposable TakeFlushingLock()
 			{
 				bool lockTaken = false;
-				Monitor.TryEnter(_flushingLock, ref lockTaken);
+				Monitor.Enter(_flushingLock, ref lockTaken);
 				ignoreLockAlreadyTaken = true;
 
 				return new DisposableAction(() =>
