@@ -78,6 +78,8 @@ systemDatabase1Index			OBJECT IDENTIFIER ::= { systemDatabaseIndexes 1 }
 --5.2.X.2.2. Database transactional storage used size
 --5.2.X.2.3. Database index storage size
 --5.2.X.3.4. Database total size
+--5.2.X.2.5. Database transactional storage drive remaining space
+--5.2.X.2.6. Database index storage drive remaining space
 --5.2.X.3. Database metrics
 --5.2.X.3.1. Database docs write per second
 --5.2.X.3.2. Database indexed per second
@@ -348,6 +350,22 @@ systemDatabaseTotalSize OBJECT-TYPE
    DESCRIPTION
       "total # of MB used by database"
    ::= { systemDatabaseStorageStatistics 4 }
+
+systemDatabaseTransactionalStorageDiskRemainingSpace OBJECT-TYPE
+   SYNTAX Gauge32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of MB left on disk used by transactional storage"
+   ::= { systemDatabaseStorageStatistics 5 }
+
+systemDatabaseIndexStorageDiskRemainingSpace OBJECT-TYPE
+   SYNTAX Gauge32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of MB left on disk used by index storage"
+   ::= { systemDatabaseStorageStatistics 6 }
 
 --database metrics
 

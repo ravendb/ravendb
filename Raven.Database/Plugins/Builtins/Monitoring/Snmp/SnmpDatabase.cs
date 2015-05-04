@@ -67,6 +67,8 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new DatabaseTotalStorageSize(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseTransactionalStorageAllocatedSize(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseTransactionalStorageUsedSize(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseIndexStorageDiskRemainingSpace(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseTransactionalStorageDiskRemainingSpace(databaseName, databaseLandlord, databaseIndex));
 		}
 
 		public void Update()

@@ -291,6 +291,8 @@
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\DatabaseTotalCount.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTotalStorageSize.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseIndexStorageSize.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseIndexStorageDiskRemainingSpace.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTransactionalStorageDiskRemainingSpace.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTransactionalStorageUsedSize.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Storage\DatabaseTransactionalStorageAllocatedSize.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\ScalarObjectBase.cs" />
