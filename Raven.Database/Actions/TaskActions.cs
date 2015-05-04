@@ -54,6 +54,17 @@ namespace Raven.Database.Actions
 	            var taskStatus = x.Value.Task.Status;
 	            if (taskStatus == TaskStatus.WaitingForActivation)
 					taskStatus = TaskStatus.Running; //aysnc task status is always WaitingForActivation
+
+	            if (ex == null && x.Value.Task.IsCompleted && x.Value.State != null)
+	            {
+		            // alternatively try to override task status based on stored status
+		            if (x.Value.State.Faulted)
+		            {
+			            taskStatus = TaskStatus.Faulted;
+			            ex = new Exception(x.Value.State.State.Value<string>("Error"));
+		            }
+	            }
+
                 return new PendingTaskDescriptionAndStatus
                        {
                            Id = x.Key,
