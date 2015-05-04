@@ -112,7 +112,7 @@ namespace Voron.Impl.Scratch
 				}
 			}
 
-			if (sizeAfterAllocation >= (_sizeLimit * 3) / 4 && oldestActiveTransaction > _oldestTransactionWhenFlushWasForced)
+			if (sizeAfterAllocation >= (_sizeLimit*3)/4 && oldestActiveTransaction > _oldestTransactionWhenFlushWasForced)
 			{
 				// we may get recursive flushing, so we want to avoid it
 				if (tx.Environment.Journal.Applicator.IsCurrentThreadInFlushOperation == false)
@@ -121,20 +121,24 @@ namespace Voron.Impl.Scratch
 					// to make sure that next transactions will be able to allocate pages that we are going to free in the current transaction.
 					// Important notice: all pages freed by this run will get ValidAfterTransactionId == tx.Id (so only next ones can use it)
 
-					using (tx.Environment.Journal.Applicator.TakeFlushingLock())
+					bool flushLockTaken = false;
+					using (tx.Environment.Journal.Applicator.TryTakeFlushingLock(ref flushLockTaken))
 					{
-						try
+						if (flushLockTaken) // if we are already flushing, we don't need to force a flush
 						{
-							tx.Environment.ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages: true);
-							_oldestTransactionWhenFlushWasForced = oldestActiveTransaction;
-						}
-						catch (TimeoutException)
-						{
-							// we'll try next time
-						}
-						catch (InvalidJournalFlushRequest)
-						{
-							// journals flushing already in progress
+							try
+							{
+								tx.Environment.ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages: true);
+								_oldestTransactionWhenFlushWasForced = oldestActiveTransaction;
+							}
+							catch (TimeoutException)
+							{
+								// we'll try next time
+							}
+							catch (InvalidJournalFlushRequest)
+							{
+								// journals flushing already in progress
+							}
 						}
 					}
 				}
