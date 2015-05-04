@@ -904,7 +904,10 @@ namespace Raven.SlowTests.Issues
                 }
                 catch (AggregateException e)
                 {
-                    var inner = (SmugglerExportException)e.ExtractSingleInnerException();
+	                var extractSingleInnerException = e.ExtractSingleInnerException() as SmugglerExportException;
+	                if (extractSingleInnerException == null)
+		                throw;
+	                var inner = extractSingleInnerException;
                     exportResult = new OperationState
                     {
                         FilePath = inner.File
