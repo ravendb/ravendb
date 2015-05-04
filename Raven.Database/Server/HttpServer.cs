@@ -1176,7 +1176,7 @@ namespace Raven.Database.Server
 				ResourcesStoresCache.Set(database.Name, (dbName) =>
 				{
 					var tcs = new TaskCompletionSource<DocumentDatabase>();
-					tcs.SetException(new ObjectDisposedException(dbName, "Database named " + dbName + " is being disposed right now and cannot be accessed.\r\n" +
+					tcs.SetException(new ObjectDisposedException(dbName, "Database named " + database.Name + " is being disposed right now and cannot be accessed.\r\n" +
 																 "Access will be available when the dispose process will end")
 					{
 						Data =
@@ -1184,6 +1184,8 @@ namespace Raven.Database.Server
 							{"Raven/KeepInResourceStore", "true"}
 						}
 					});
+					// we need to observe this task exception in case no one is actually looking at it during disposal
+					GC.KeepAlive(tcs.Task.Exception);
 					return tcs.Task;
 				});
 			}
