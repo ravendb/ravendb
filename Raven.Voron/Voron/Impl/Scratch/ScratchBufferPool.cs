@@ -117,18 +117,25 @@ namespace Voron.Impl.Scratch
 				// to make sure that next transactions will be able to allocate pages that we are going to free in the current transaction.
 				// Important notice: all pages freed by this run will get ValidAfterTransactionId == tx.Id (so only next ones can use it)
 
-				try
+				bool flushLockTaken = false;
+				using (tx.Environment.Journal.Applicator.TryTakeFlushingLock(ref flushLockTaken))
 				{
-					tx.Environment.ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages: true);
-					_oldestTransactionWhenFlushWasForced = oldestActiveTransaction;
-				}
-				catch (TimeoutException)
-				{
-					// we'll try next time
-				}
-				catch (InvalidJournalFlushRequest)
-				{
-					// journals flushing already in progress
+					if (flushLockTaken) // if we are already flushing, we don't need to force a flush
+					{
+						try
+						{
+							tx.Environment.ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages: true);
+							_oldestTransactionWhenFlushWasForced = oldestActiveTransaction;
+						}
+						catch (TimeoutException)
+						{
+							// we'll try next time
+						}
+						catch (InvalidJournalFlushRequest)
+						{
+							// journals flushing already in progress
+						}
+					}
 				}
 			}
 
