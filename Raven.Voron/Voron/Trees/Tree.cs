@@ -413,43 +413,44 @@ namespace Voron.Trees
 	    }
 
 	    private void AddToRecentlyFoundPages(Cursor c, Page p, bool? leftmostPage, bool? rightmostPage)
-	    {
-	        var foundPage = new RecentlyFoundPages.FoundPage(c.Pages.Count)
-	        {
-	            Number = p.PageNumber
-	        };
-
+	    {            	       
+            MemorySlice firstKey;
 		    if (leftmostPage == true)
 		    {
 				if(p.KeysPrefixed)
-					foundPage.FirstKey = PrefixedSlice.BeforeAllKeys;
+                    firstKey = PrefixedSlice.BeforeAllKeys;
 				else
-					foundPage.FirstKey = Slice.BeforeAllKeys;
+                    firstKey = Slice.BeforeAllKeys;
 		    }
 		    else
 		    {
-			    foundPage.FirstKey = p.GetNodeKey(0);
+                firstKey = p.GetNodeKey(0);
 		    }
 
+            MemorySlice lastKey;
 			if (rightmostPage == true)
 			{
 				if (p.KeysPrefixed)
-					foundPage.LastKey = PrefixedSlice.AfterAllKeys;
+                    lastKey = PrefixedSlice.AfterAllKeys;
 				else
-					foundPage.LastKey = Slice.AfterAllKeys;
+                    lastKey = Slice.AfterAllKeys;
 			}
 			else
 			{
-				foundPage.LastKey = p.GetNodeKey(p.NumberOfEntries - 1);
+                lastKey = p.GetNodeKey(p.NumberOfEntries - 1);
 			}
 
+            var cursorPath = new long[c.Pages.Count];
+
 	        var cur = c.Pages.First;
-	        int pos = foundPage.CursorPath.Length - 1;
+            int pos = cursorPath.Length - 1;
 	        while (cur != null)
 	        {
-	            foundPage.CursorPath[pos--] = cur.Value.PageNumber;
+                cursorPath[pos--] = cur.Value.PageNumber;
 	            cur = cur.Next;
 	        }
+
+            var foundPage = new RecentlyFoundPages.FoundPage(p.PageNumber, firstKey, lastKey, cursorPath);
 
 			RecentlyFoundPages.Add(foundPage);
 	    }
