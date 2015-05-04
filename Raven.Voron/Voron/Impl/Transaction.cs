@@ -233,17 +233,19 @@ namespace Voron.Impl
 		{
 			_env.AssertFlushingNotFailed();
 
+			page = page ?? GetReadOnlyPage(num);
+		    if (page.Dirty)
+			    return page;
+
 			if (_dirtyPages.Contains(num))
 			{
-				page = GetPageForModification(num, page);
 				page.Dirty = true;
 
 				return page;
 			}
 
-			page = GetPageForModification(num, page);
 
-			var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
+		    var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
             MemoryUtils.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
@@ -252,12 +254,7 @@ namespace Voron.Impl
 			return newPage;
 		}
 
-		private Page GetPageForModification(long p, Page page)
-		{
-		    return page ?? GetReadOnlyPage(p);
-		}
-
-	    public Page GetReadOnlyPage(long pageNumber)
+		public Page GetReadOnlyPage(long pageNumber)
 		{
 			PageFromScratchBuffer value;
 		    Page p;

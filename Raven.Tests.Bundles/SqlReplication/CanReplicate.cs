@@ -447,6 +447,9 @@ var nameArr = this.StepName.split('.');");
 
                 var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
                 var foo = databaseMemoryTarget[Constants.SystemDatabase].WarnLog.First(x => x.LoggerName == typeof(SqlReplicationTask).FullName);
+                if ("Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1" != foo.FormattedMessage)
+                    throw new InvalidOperationException("Got bad message", foo.Exception);
+          
                 Assert.Equal("Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1", foo.FormattedMessage);
             }
         }

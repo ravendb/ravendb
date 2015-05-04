@@ -242,6 +242,11 @@ namespace Raven.Smuggler
 							while (await documentsEnumerator.MoveNextAsync())
 							{
 								var document = documentsEnumerator.Current;
+								var metadata = document.Value<RavenJObject>("@metadata");
+								var id = metadata.Value<string>("@id");
+								var etag = Etag.Parse(metadata.Value<string>("@etag"));
+
+								lastEtag = etag;
 
 								if (!databaseOptions.MatchFilters(document))
 									continue;
@@ -254,9 +259,6 @@ namespace Raven.Smuggler
 								if(databaseOptions.ShouldDisableVersioningBundle)
 									document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
 
-								var metadata = document.Value<RavenJObject>("@metadata");
-								var id = metadata.Value<string>("@id");
-								var etag = Etag.Parse(metadata.Value<string>("@etag"));
 								document.Remove("@metadata");
 								bulkInsertOperation.Store(document, metadata, id);
 								totalCount++;
@@ -266,8 +268,6 @@ namespace Raven.Smuggler
 									ShowProgress("Exported {0} documents", totalCount);
 									lastReport = SystemTime.UtcNow;
 								}
-
-								lastEtag = etag;
 							}
 						}
 					}
@@ -293,9 +293,7 @@ namespace Raven.Smuggler
 										var metadata = document.Value<RavenJObject>("@metadata");
 										var id = metadata.Value<string>("@id");
 										var etag = Etag.Parse(metadata.Value<string>("@etag"));
-										document.Remove("@metadata");
-										metadata.Remove("@id");
-										metadata.Remove("@etag");
+										lastEtag = etag;
 
 										if (!databaseOptions.MatchFilters(document))
 											continue;
@@ -308,6 +306,10 @@ namespace Raven.Smuggler
 										if (databaseOptions.ShouldDisableVersioningBundle)
 											document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
 
+										document.Remove("@metadata");
+										metadata.Remove("@id");
+										metadata.Remove("@etag");
+
 										bulkInsertOperation.Store(document, metadata, id);
 										totalCount++;
 
@@ -316,7 +318,6 @@ namespace Raven.Smuggler
 											ShowProgress("Exported {0} documents", totalCount);
 											lastReport = SystemTime.UtcNow;
 										}
-										lastEtag = etag;
 									}
 									break;
 								}
