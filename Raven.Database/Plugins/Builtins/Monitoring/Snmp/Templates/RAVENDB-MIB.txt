@@ -11,12 +11,12 @@ IMPORTS
       FROM SNMPv2-TC;
 
 ravendb MODULE-IDENTITY
-    LAST-UPDATED "201504300000Z"
+    LAST-UPDATED "201505040000Z"
     ORGANIZATION "Hibernating Rhinos Ltd"
     CONTACT-INFO "http://www.hibernatingrhinos.com/about"
     DESCRIPTION "MIB for the RavenDB"
-    REVISION "201504300000Z"
-    DESCRIPTION "created MIB"
+    REVISION "201505040000Z"
+    DESCRIPTION "updated MIB"
     ::= { software 1 }
 	  
 hibernatingRhinos      			OBJECT IDENTIFIER ::= { enterprises 45751 }
@@ -87,7 +87,9 @@ systemDatabase1Index			OBJECT IDENTIFIER ::= { systemDatabaseIndexes 1 }
 --5.2.X.3.4. Database requests
 --5.2.X.3.4.1. Database requests per second
 --5.2.X.3.4.2. Database requests duration
---5.2.X.3.4.2.1. Database requests duration mean
+--5.2.X.3.4.2.1. Database requests duration last minute avg
+--5.2.X.3.4.2.2. Database requests duration last minute max
+--5.2.X.3.4.2.3. Database requests duration last minute min
 
 --5.2.X.4. Database indexes
 --5.2.X.4.Y. Index
@@ -401,14 +403,30 @@ systemDatabaseRequestsPerSecond OBJECT-TYPE
       "# of requests per second"
    ::= { systemDatabaseRequests 1 }
 
-systemDatabaseRequestsDurationMean OBJECT-TYPE
+systemDatabaseRequestsDurationLastMinuteAvg OBJECT-TYPE
    SYNTAX Gauge32
    MAX-ACCESS read-only
    STATUS current
    DESCRIPTION
       "requests duration mean"
    ::= { systemDatabaseRequestsDuration 1 }
+
+systemDatabaseRequestsDurationLastMinuteMin OBJECT-TYPE
+   SYNTAX Gauge32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "requests duration min"
+   ::= { systemDatabaseRequestsDuration 2 }
    
+systemDatabaseRequestsDurationLastMinuteMax OBJECT-TYPE
+   SYNTAX Gauge32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "requests duration max"
+   ::= { systemDatabaseRequestsDuration 3 }
+
 --database indexes
 
 systemDatabase1IndexExists OBJECT-TYPE

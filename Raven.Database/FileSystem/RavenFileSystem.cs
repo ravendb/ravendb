@@ -360,7 +360,7 @@ namespace Raven.Database.FileSystem
                 RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
                 FilesWritesPerSecond = Math.Round(metrics.FilesPerSecond.CurrentValue, 3),
 
-                RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+                RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
                 Requests = metrics.ConcurrentRequests.CreateMeterData()
             };
         }

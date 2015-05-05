@@ -268,7 +268,9 @@
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseReducedPerSecond.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseRequestDurationMean.cs">
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseRequestDurationLastMinuteMax.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseRequestDurationLastMinuteMin.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseRequestDurationLastMinuteAvg.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Requests\DatabaseRequestsPerSecond.cs">
