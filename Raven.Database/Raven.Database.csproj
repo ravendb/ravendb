@@ -301,6 +301,7 @@
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerConcurrentRequests.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerIndexingErrors.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerCpu.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerLastRequestTime.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerUrl.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerTotalMemory.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Server\ServerPid.cs" />

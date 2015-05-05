@@ -198,6 +198,14 @@ serverIndexingErrors OBJECT-TYPE
       "# of indexing errors for all loaded databases"
    ::= { server 10 }
 
+serverLastRequestTime OBJECT-TYPE
+   SYNTAX TimeTicks
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "time since last request"
+   ::= { server 11 }
+
 -----------
 --resources
 -----------
