@@ -1,0 +1,38 @@
+﻿<div class="messageBox" tabindex="-1">
+
+    <form data-bind="submit: applyFilter">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="false">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title">Add in method filter </h4>
+        </div>
+        <div class="modal-body">
+
+            <div class="form-group" data-bind="foreach: elements">
+                <div class="col-sm-9">
+                    <input type="text" class="form-control" data-bind="value: $rawData, valueUpdate: 'afterkeydown', hasFocus: $parent.isLastElement.bind($parent, $index)" required />
+                </div>
+                <label class="control-label col-sm-3" style="margin-top: 5px">
+                    <a href="#" type="button" data-bind="click: $parent.removeElement.bind($parent, $index), visible: $parent.elements().length > 1">
+                        x
+                    </a>
+                </label>
+            </div>
+
+            <div class="clearfix"></div>
+
+            <div class="form-group form-horizontal col-sm-12 center-block">
+                <a href="#" data-bind="click: $root.addElement.bind($root,'')"><i class="fa fa-plus"> Add Search Value</i></a>
+                <!--<button class="btn btn-default" type="button"></button>-->
+            </div>
+            
+        </div>
+
+        <div class="modal-footer">
+            <button type="submit" data-bind="enable: enabled()" class="btn btn-primary">Apply</button>
+            <button type="button" class="btn btn-default" data-bind="click: close">Cancel</button>
+        </div>
+    </form>
+
+</div>

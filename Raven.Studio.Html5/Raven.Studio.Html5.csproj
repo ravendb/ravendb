@@ -203,6 +203,8 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\fieldRangeFilter.ts" />
+    <TypeScriptCompile Include="App\viewmodels\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\exportFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\fileRenameDialog.ts" />
@@ -245,6 +247,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConflicts.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationDestinations.ts" />
+    <TypeScriptCompile Include="App\viewmodels\inMethodFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
@@ -472,6 +475,8 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\fieldRangeFilter.html" />
+    <Content Include="App\views\fieldStringFilter.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
     <Content Include="App\views\filesystem\exportFilesystem.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
@@ -481,6 +486,7 @@
     <Content Include="App\views\filesystem\tasks.html" />
     <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
     <Content Include="App\views\filesystem\versioning.html" />
+    <Content Include="App\views\inMethodFilter.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />
