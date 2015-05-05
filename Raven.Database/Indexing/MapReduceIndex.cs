@@ -270,6 +270,7 @@ namespace Raven.Database.Indexing
 				}
 			}));
 
+			actions.General.MaybePulseTransaction();
 
 			var parallelReductionOperations = new ConcurrentQueue<ParallelBatchStats>();
 			var parallelReductionStart = SystemTime.UtcNow;
@@ -288,7 +289,7 @@ namespace Raven.Database.Indexing
 					while (enumerator.MoveNext())
 					{
 						accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
-						actions.General.MaybePulseTransaction();
+						accessor.General.MaybePulseTransaction();
 					}
 				}
 
