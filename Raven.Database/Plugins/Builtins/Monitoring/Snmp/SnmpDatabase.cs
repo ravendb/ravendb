@@ -65,6 +65,14 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new DatabaseRequestDurationLastMinuteMax(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseRequestDurationLastMinuteMin(databaseName, databaseLandlord, databaseIndex));
 
+			store.Add(new DatabaseNumberOfAbandonedIndexes(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseNumberOfAutoIndexes(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseNumberOfDisabledIndexes(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseNumberOfErrorIndexes(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseNumberOfIdleIndexes(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseNumberOfIndexes(databaseName, databaseLandlord, databaseIndex));
+			store.Add(new DatabaseNumberOfStaticIndexes(databaseName, databaseLandlord, databaseIndex));
+
 			store.Add(new DatabaseIndexStorageSize(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseTotalStorageSize(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseTransactionalStorageAllocatedSize(databaseName, databaseLandlord, databaseIndex));

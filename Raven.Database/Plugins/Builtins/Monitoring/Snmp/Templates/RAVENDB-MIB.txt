@@ -34,6 +34,7 @@ systemDatabase                  OBJECT IDENTIFIER ::= { databases 1 }
 systemDatabaseStatistics		OBJECT IDENTIFIER ::= { systemDatabase 1 }
 systemDatabaseStorageStatistics	OBJECT IDENTIFIER ::= { systemDatabase 2 }
 systemDatabaseMetrics			OBJECT IDENTIFIER ::= { systemDatabase 3 }
+systemDatabaseIndexStatistics	OBJECT IDENTIFIER ::= { systemDatabase 5 }
 systemDatabaseRequests			OBJECT IDENTIFIER ::= { systemDatabaseMetrics 4 }
 systemDatabaseRequestsDuration	OBJECT IDENTIFIER ::= { systemDatabaseRequests 2 }
 
@@ -105,6 +106,14 @@ systemDatabase1Index			OBJECT IDENTIFIER ::= { systemDatabaseIndexes 1 }
 --5.2.X.4.Y.9. Reduce indexing successes
 --5.2.X.4.Y.10. Reduce indexing errors
 --5.2.X.4.Y.11. Time since last query
+--5.2.X.5. Database index statistics
+--5.2.X.5.1. Number of indexes
+--5.2.X.5.2. Number of static indexes
+--5.2.X.5.3. Number of auto indexes
+--5.2.X.5.4. Number of idle indexes
+--5.2.X.5.5. Number of abandoned indexes
+--5.2.X.5.6. Number of disabled indexes
+--5.2.X.5.7. Number of error indexes
 
 --------
 --server
@@ -443,6 +452,64 @@ systemDatabaseRequestsDurationLastMinuteMax OBJECT-TYPE
    DESCRIPTION
       "requests duration max"
    ::= { systemDatabaseRequestsDuration 3 }
+
+--database index statistics
+
+systemDatabaseNumberOfIndexes OBJECT-TYPE
+   SYNTAX Integer32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of indexes in database"
+   ::= { systemDatabaseIndexStatistics 1 }
+
+systemDatabaseNumberOfStaticIndexes OBJECT-TYPE
+   SYNTAX Integer32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of static indexes in database"
+   ::= { systemDatabaseIndexStatistics 2 }
+
+systemDatabaseNumberOfAutoIndexes OBJECT-TYPE
+   SYNTAX Integer32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of auto indexes in database"
+   ::= { systemDatabaseIndexStatistics 3 }
+
+systemDatabaseNumberOfIdleIndexes OBJECT-TYPE
+   SYNTAX Integer32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of idle indexes in database"
+   ::= { systemDatabaseIndexStatistics 4 }
+
+systemDatabaseNumberOfAbandonedIndexes OBJECT-TYPE
+   SYNTAX Integer32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of abandoned indexes in database"
+   ::= { systemDatabaseIndexStatistics 5 }
+
+systemDatabaseNumberOfDisabledIndexes OBJECT-TYPE
+   SYNTAX Integer32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of disabled indexes in database"
+   ::= { systemDatabaseIndexStatistics 6 }
+
+systemDatabaseNumberOfErrorIndexes OBJECT-TYPE
+   SYNTAX Integer32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of idle indexes in database"
+   ::= { systemDatabaseIndexStatistics 7 }
 
 --database indexes
 

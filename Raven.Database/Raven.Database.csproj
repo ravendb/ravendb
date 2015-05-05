@@ -281,6 +281,13 @@
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfAttachments.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfDocuments.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfTransformers.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseNumberOfErrorIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseNumberOfDisabledIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseNumberOfAbandonedIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseNumberOfIdleIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseNumberOfStaticIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseNumberOfAutoIndexes.cs" />
+    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseNumberOfIndexes.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseErrors.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseActiveBundles.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseId.cs" />
