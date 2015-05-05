@@ -53,10 +53,11 @@ systemDatabase1Index			OBJECT IDENTIFIER ::= { systemDatabaseIndexes 1 }
 --1.7. Server CPU
 --1.8.1 Server total memory
 --1.9. Server url
+--1.10 Server indexing errors (global)
 
 --5. Resources
 --5.1.1 Database total count
---5.1.2 Database opened count
+--5.1.2 Database loaded count
 
 --5.2.X Database
 --5.2.X.1. Database statistics
@@ -188,6 +189,14 @@ serverUrl OBJECT-TYPE
    DESCRIPTION
       "url"
    ::= { server 9 }
+
+serverIndexingErrors OBJECT-TYPE
+   SYNTAX Gauge32
+   MAX-ACCESS read-only
+   STATUS current
+   DESCRIPTION
+      "# of indexing errors for all loaded databases"
+   ::= { server 10 }
 
 -----------
 --resources

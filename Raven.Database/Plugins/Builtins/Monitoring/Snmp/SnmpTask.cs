@@ -151,6 +151,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new ServerCpu());
 			store.Add(new ServerTotalMemory());
 			store.Add(new ServerUrl(server.SystemDatabase.Configuration));
+			store.Add(new ServerIndexingErrors(server.Options.DatabaseLandlord));
 
 			store.Add(new DatabaseLoadedCount(server.Options.DatabaseLandlord));
 			store.Add(new DatabaseTotalCount(server.SystemDatabase));
