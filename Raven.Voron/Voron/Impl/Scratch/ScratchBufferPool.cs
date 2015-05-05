@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Voron.Exceptions;
@@ -27,7 +28,7 @@ namespace Voron.Impl.Scratch
 		private StorageEnvironmentOptions _options;
 		private int _currentScratchNumber = -1;
 		private long _oldestTransactionWhenFlushWasForced = -1;
-		private readonly Dictionary<int, ScratchBufferFile> _scratchBuffers = new Dictionary<int, ScratchBufferFile>();
+		private readonly Dictionary<int, ScratchBufferFile> _scratchBuffers = new Dictionary<int, ScratchBufferFile>(IntEqualityComparer.Instance);
 
 		public ScratchBufferPool(StorageEnvironment env)
 		{
@@ -38,7 +39,7 @@ namespace Voron.Impl.Scratch
 
 		public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
 		{
-			return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.PagerState);
+			return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.PagerState, IntEqualityComparer.Instance);
 		}
 
 		internal long GetNumberOfAllocations(int scratchNumber)
@@ -261,9 +262,37 @@ namespace Voron.Impl.Scratch
 			}
 		}
 
+        private class ScratchBufferCacheItem
+        {
+            public readonly int Number;
+            public readonly ScratchBufferFile File;
+
+            public ScratchBufferCacheItem(int number, ScratchBufferFile file)
+            {
+                this.Number = number;
+                this.File = file;
+            }
+        }
+
+        private const int InvalidScratchFileNumber = -1;
+        private ScratchBufferCacheItem lastScratchBuffer = new ScratchBufferCacheItem( InvalidScratchFileNumber, null );
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public Page ReadPage(int scratchNumber, long p, PagerState pagerState = null)
 		{
-			return _scratchBuffers[scratchNumber].ReadPage(p, pagerState);
+            ScratchBufferFile bufferFile;
+            ScratchBufferCacheItem item = lastScratchBuffer;
+            if ( item.Number == scratchNumber )
+            {
+                bufferFile = item.File;
+            }
+            else
+            {
+                bufferFile = _scratchBuffers[scratchNumber];
+                lastScratchBuffer = new ScratchBufferCacheItem( scratchNumber, bufferFile );
+            }
+
+			return bufferFile.ReadPage(p, pagerState);
 		}
 
 		public byte* AcquirePagePointer(int scratchNumber, long p)

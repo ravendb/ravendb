@@ -19,55 +19,39 @@ namespace Voron
         internal byte[] Array;
 		internal byte* Pointer;
 
-		public Slice(SliceOptions options)
+		public Slice(SliceOptions options) : base( options )
+		{}
+
+		public Slice(byte* key, ushort size) 
+            : base( SliceOptions.Key, size, size )
 		{
-			Options = options;
-			Pointer = null;
-			Array = null;
-			Size = 0;
-			KeyLength = 0;
+			this.Pointer = key;
 		}
 
-		public Slice(byte* key, ushort size)
+        public Slice(byte[] key)
+            : base(SliceOptions.Key, (ushort)key.Length)
 		{
-			Size = size;
-			KeyLength = size;
-			Options = SliceOptions.Key;
-			Array = null;
-			Pointer = key;
+            this.Array = key;
 		}
 
-		public Slice(byte[] key) : this(key, (ushort)key.Length)
+		public Slice(Slice other, ushort size) 
+            : base ( other.Options, size, size )
 		{
-			
+            Array = other.Array;
+            Pointer = other.Pointer;
 		}
 
-		public Slice(Slice other, ushort size)
+		public Slice(byte[] key, ushort size) 
+            : base ( SliceOptions.Key, size, size )
 		{
-			if (other.Array != null)
-				Array = other.Array;
-			else
-				Pointer = other.Pointer;
-
-			Options = other.Options;
-			Size = size;
-			KeyLength = size;
-		}
-
-		public Slice(byte[] key, ushort size)
-		{
-			if (key == null) throw new ArgumentNullException("key");
-			Size = size;
-			KeyLength = size;
-			Options = SliceOptions.Key;
-			Pointer = null;
+            Debug.Assert(key != null);
 			Array = key;
 		}
 
 		public Slice(NodeHeader* node)
 		{
 			Options = SliceOptions.Key;
-			Set(node);
+            SetInline(this, node);
 		}
 
         public Slice(string key)
