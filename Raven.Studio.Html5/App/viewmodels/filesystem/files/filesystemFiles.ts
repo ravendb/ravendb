@@ -20,8 +20,8 @@ import uploadQueueHelper = require("common/uploadQueueHelper");
 import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFilesMatchingQueryConfirm");
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
-import filesystemEditFile = require("viewmodels/filesystem/filesystemEditFile");
-import filerenamedialog = require("viewmodels/filesystem/filerenamedialog");
+import filesystemEditFile = require("viewmodels/filesystem/files/filesystemEditFile");
+import filerenamedialog = require("viewmodels/filesystem/files/filerenamedialog");
 import renameFileCommand = require("commands/filesystem/renameFileCommand");
 
 class filesystemFiles extends viewModelBase {

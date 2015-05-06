@@ -1,4 +1,4 @@
-﻿import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewModel");
+﻿import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
 
 class inMethodFilter extends searchDialogViewModel {
     

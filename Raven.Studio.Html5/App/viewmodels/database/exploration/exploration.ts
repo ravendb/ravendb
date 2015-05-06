@@ -77,7 +77,7 @@ class exploration extends viewModelBase {
 		command.execute()
 			.done((results: indexQueryResultsDto) => {
 				if (results.Error) {
-					messagePublisher.reportError("Unable to execute query", results.Error, 500);
+					messagePublisher.reportError("Unable to execute query", results.Error);
 				} else {
 					var mainSelector = new pagedResultSet(results.Results.map(d => new document(d)), results.Results.length, results);
 					var resultsFetcher = (skip: number, take: number) => {

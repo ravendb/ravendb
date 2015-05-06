@@ -1,5 +1,5 @@
-﻿import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewModel");
-import datePickerBindingHandler = require("common/datePickerBindingHandler");
+﻿import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
+import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import moment = require("moment");
 import dialog = require("plugins/dialog");
 

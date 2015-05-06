@@ -255,7 +255,7 @@
         </ul>-->
         <!-- Warning should apear here-->
         <div class="form-group" data-bind="visible:containsAsterixQuery()">
-            <span class="fa fa-warning col-md-offset-1 text-danger">  The Query contains *.* that may result in a large number of results.</span>
+            <span class="fa fa-warning col-md-offset-1 text-danger">  The Query contains '*.*', did you intend to use '*:*' ?</span>
         </div>
         <div class="form-group" data-bind="visible:isWarning()">
             <span class="fa fa-warning col-md-offset-1 text-danger" data-bind="text:warningText()"></span>
