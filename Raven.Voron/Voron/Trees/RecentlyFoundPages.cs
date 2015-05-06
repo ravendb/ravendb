@@ -13,14 +13,17 @@ namespace Voron.Trees
     {
         public class FoundPage
         {
-            public long Number;
-			public MemorySlice FirstKey;
-			public MemorySlice LastKey;
+            public readonly long Number;
+			public readonly MemorySlice FirstKey;
+			public readonly MemorySlice LastKey;
             public readonly long[] CursorPath;
 
-            public FoundPage(int size)
+            public FoundPage(long number, MemorySlice firstKey, MemorySlice lastKey, long[] cursorPath)
             {
-                CursorPath = new long[size];
+                Number = number;
+                FirstKey = firstKey;
+                LastKey = lastKey;
+                CursorPath = cursorPath;
             }
         }
 

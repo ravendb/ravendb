@@ -16,8 +16,7 @@ namespace Voron.Util
 	/// </summary>
 	public class PageTable
 	{
-		private readonly ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>> _values =
-			new ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>>();
+		private readonly ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>> _values = new ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>>( LongEqualityComparer.Instance );
 
 		private long _maxSeenTransaction;
 

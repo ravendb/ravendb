@@ -270,6 +270,7 @@ namespace Raven.Database.Indexing
 				}
 			}), description: string.Format("Incrementing Reducing key counter fo index {0} for operation from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
 
+			actions.General.MaybePulseTransaction();
 
 			var parallelReductionOperations = new ConcurrentQueue<ParallelBatchStats>();
 			var parallelReductionStart = SystemTime.UtcNow;
@@ -288,7 +289,7 @@ namespace Raven.Database.Indexing
 					while (enumerator.MoveNext())
 					{
 						accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
-						actions.General.MaybePulseTransaction();
+						accessor.General.MaybePulseTransaction();
 					}
 				}
 

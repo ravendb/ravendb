@@ -185,8 +185,12 @@ namespace Voron.Trees
 					var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
 					if (read == 0)
 						break;
-                    MemoryUtils.Copy(pos, tempPagePointer, read);
-					pos += read;
+
+                    MemoryUtils.CopyInline(pos, tempPagePointer, read);
+                    pos += read;
+
+                    if ( read != tempPageBuffer.Length )
+                        break;
 				}
 			}
 		}
@@ -428,43 +432,44 @@ namespace Voron.Trees
 	    }
 
 	    private void AddToRecentlyFoundPages(Cursor c, Page p, bool? leftmostPage, bool? rightmostPage)
-	    {
-	        var foundPage = new RecentlyFoundPages.FoundPage(c.Pages.Count)
-	        {
-	            Number = p.PageNumber
-	        };
-
+	    {            	       
+            MemorySlice firstKey;
 		    if (leftmostPage == true)
 		    {
 				if(p.KeysPrefixed)
-					foundPage.FirstKey = PrefixedSlice.BeforeAllKeys;
+                    firstKey = PrefixedSlice.BeforeAllKeys;
 				else
-					foundPage.FirstKey = Slice.BeforeAllKeys;
+                    firstKey = Slice.BeforeAllKeys;
 		    }
 		    else
 		    {
-			    foundPage.FirstKey = p.GetNodeKey(0);
+                firstKey = p.GetNodeKey(0);
 		    }
 
+            MemorySlice lastKey;
 			if (rightmostPage == true)
 			{
 				if (p.KeysPrefixed)
-					foundPage.LastKey = PrefixedSlice.AfterAllKeys;
+                    lastKey = PrefixedSlice.AfterAllKeys;
 				else
-					foundPage.LastKey = Slice.AfterAllKeys;
+                    lastKey = Slice.AfterAllKeys;
 			}
 			else
 			{
-				foundPage.LastKey = p.GetNodeKey(p.NumberOfEntries - 1);
+                lastKey = p.GetNodeKey(p.NumberOfEntries - 1);
 			}
 
+            var cursorPath = new long[c.Pages.Count];
+
 	        var cur = c.Pages.First;
-	        int pos = foundPage.CursorPath.Length - 1;
+            int pos = cursorPath.Length - 1;
 	        while (cur != null)
 	        {
-	            foundPage.CursorPath[pos--] = cur.Value.PageNumber;
+                cursorPath[pos--] = cur.Value.PageNumber;
 	            cur = cur.Next;
 	        }
+
+            var foundPage = new RecentlyFoundPages.FoundPage(p.PageNumber, firstKey, lastKey, cursorPath);
 
 			RecentlyFoundPages.Add(foundPage);
 	    }
@@ -476,18 +481,16 @@ namespace Voron.Trees
 			cursor = null;
 
 			var recentPages = RecentlyFoundPages;
-
 			if (recentPages == null)
 				return false;
 
 			var foundPage = recentPages.Find(key);
-
 			if (foundPage == null)
 				return false;
 
 			var lastFoundPageNumber = foundPage.Number;
-			page = _tx.GetReadOnlyPage(lastFoundPageNumber);
 
+			page = _tx.GetReadOnlyPage(lastFoundPageNumber);
 			if (page.IsLeaf == false)
 				throw new DataException("Index points to a non leaf page");
 
@@ -501,7 +504,9 @@ namespace Voron.Trees
 				foreach (var p in cursorPath)
 				{
 					if (p == lastFoundPageNumber)
-						c.Push(pageCopy);
+                    {
+                        c.Push(pageCopy);
+                    }						
 					else
 					{
 						var cursorPage = _tx.GetReadOnlyPage(p);
