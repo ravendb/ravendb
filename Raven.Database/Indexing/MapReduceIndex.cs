@@ -696,7 +696,7 @@ namespace Raven.Database.Indexing
 								return x;
 							});
 
-							foreach (var doc in parent.RobustEnumerationReduce(input.GetEnumerator(), ViewGenerator.ReduceDefinition, Actions, stats,
+							foreach (var doc in parent.RobustEnumerationReduce(input.GetEnumerator(), ViewGenerator.ReduceDefinition, stats,
 								linqExecutionDuration))
 							{
 								count++;
