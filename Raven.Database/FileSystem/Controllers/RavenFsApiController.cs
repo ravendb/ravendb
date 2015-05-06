@@ -384,7 +384,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 	    public override void MarkRequestDuration(long duration)
 	    {
-	        FileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
+	        FileSystem.MetricsCounters.RequestDurationMetric.Update(duration);
 	    }
 
 		protected FileSystemInfo GetSourceFileSystemInfo()

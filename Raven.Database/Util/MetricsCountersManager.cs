@@ -4,18 +4,18 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Linq;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
 
 using metrics;
 using metrics.Core;
-
-using System.Linq;
-using Raven.Database.Bundles.SqlReplication;
-using Raven.Database.Extensions;
 
 namespace Raven.Database.Util
 {
@@ -28,7 +28,9 @@ namespace Raven.Database.Util
 
         public HistogramMetric StaleIndexReduces { get; private set; }
 
-        public HistogramMetric RequestDuationMetric { get; private set; }
+        public HistogramMetric RequestDurationMetric { get; private set; }
+		public OneMinuteMetric RequestDurationLastMinute { get; set; }
+
         public PerSecondCounterMetric DocsPerSecond { get; private set; }
         public PerSecondCounterMetric FilesPerSecond { get; private set; }
 
@@ -37,8 +39,6 @@ namespace Raven.Database.Util
         public PerSecondCounterMetric ReducedPerSecond { get; private set; }
 
         public MeterMetric ConcurrentRequests { get; private set; }
-
-        public MeterMetric RequestsMeter { get; private set; }
         public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
 
         public ConcurrentDictionary<string, MeterMetric> ReplicationBatchSizeMeter { get; private set; }
@@ -57,7 +57,9 @@ namespace Raven.Database.Util
 
             ConcurrentRequests = dbMetrics.Meter("metrics", "req/sec", "Concurrent Requests Meter", TimeUnit.Seconds);
 
-            RequestDuationMetric = dbMetrics.Histogram("metrics", "req duration");
+	        RequestDurationLastMinute = new OneMinuteMetric();
+
+            RequestDurationMetric = dbMetrics.Histogram("metrics", "req duration");
 
             DocsPerSecond = dbMetrics.TimedCounter("metrics", "docs/sec", "Docs Per Second Counter");
             FilesPerSecond = dbMetrics.TimedCounter("metrics", "files/sec", "Files Per Second Counter");
@@ -68,11 +70,9 @@ namespace Raven.Database.Util
             ReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();
             ReplicationDurationHistogram = new ConcurrentDictionary<string, HistogramMetric>();
             ReplicationPerformanceStats = new ConcurrentDictionary<string, ConcurrentQueue<ReplicationPerformanceStats>>();
-            
-
         }
 
-        public void AddGauge<T>(Type type, string name, Func<T> function)
+		public void AddGauge<T>(Type type, string name, Func<T> function)
         {
             dbMetrics.Gauge(type, name, function);
         }
@@ -118,4 +118,75 @@ namespace Raven.Database.Util
                                                         s => new ConcurrentQueue<ReplicationPerformanceStats>());
         }
     }
+
+	public class OneMinuteMetric
+	{
+		private readonly ConcurrentQueue<OneMinuteMetricRecord> records;
+
+		private class OneMinuteMetricRecord
+		{
+			public long Value { get; set; }
+
+			public DateTime TimeAdded { get; set; }
+		}
+
+		public OneMinuteMetric()
+		{
+			records = new ConcurrentQueue<OneMinuteMetricRecord>();
+			Task.Factory.StartNew(async () =>
+			{
+				while (true)
+				{
+					await Task.Delay(TimeSpan.FromSeconds(15));
+					CleanupQueue();
+				}
+			});
+		}
+
+		private void CleanupQueue()
+		{
+			var now = SystemTime.UtcNow;
+			OneMinuteMetricRecord record;
+			while (records.TryPeek(out record))
+			{
+				if ((now - record.TimeAdded).TotalSeconds < 60)
+					return;
+
+				records.TryDequeue(out record);
+			}
+		}
+
+		public void AddRecord(long value)
+		{
+			records.Enqueue(new OneMinuteMetricRecord
+			{
+				Value = value, 
+				TimeAdded = SystemTime.UtcNow
+			});
+		}
+
+		public OneMinuteMetricData GetData()
+		{
+			var now = SystemTime.UtcNow;
+			var values = records
+				.Where(x => (now - x.TimeAdded).TotalSeconds <= 60)
+				.ToList();
+
+			var min = 0L;
+			var max = 0L;
+			var sum = 0L;
+			double avg = 0;
+			foreach (var value in values.Select(v => v.Value))
+			{
+				min = Math.Min(min, value);
+				max = Math.Max(max, value);
+				sum += value;
+			}
+
+			if (values.Count > 0)
+				avg = sum / (double)values.Count;
+
+			return new OneMinuteMetricData { Count = values.Count, Min = min, Max = max, Avg = avg };
+		}
+	}
 }

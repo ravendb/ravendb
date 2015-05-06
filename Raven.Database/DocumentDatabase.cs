@@ -664,20 +664,21 @@ namespace Raven.Database
 		{
 			MetricsCountersManager metrics = WorkContext.MetricsCounters;
 			return new DatabaseMetrics
-		{
-			RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
-			DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
-			IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
-			ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-			RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
-			Requests = metrics.ConcurrentRequests.CreateMeterData(),
-			Gauges = metrics.Gauges,
-			StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
-			StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
-			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
-			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
-			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
-		};
+			{
+				RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+				DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
+				IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
+				ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
+				RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
+				RequestDurationLastMinute = metrics.RequestDurationLastMinute.GetData(),
+				Requests = metrics.ConcurrentRequests.CreateMeterData(),
+				Gauges = metrics.Gauges,
+				StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
+				StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
+				ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+				ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+				ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
+			};
 		}
 
 
