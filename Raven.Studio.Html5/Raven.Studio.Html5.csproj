@@ -968,7 +968,6 @@
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\autoCompleteBindingHandler.ts" />
-    <TypeScriptCompile Include="App\common\bindingHelpers\datePickerBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\fileUploadBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\helpBindingHandler.ts" />
