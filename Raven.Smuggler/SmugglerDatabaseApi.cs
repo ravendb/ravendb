@@ -27,9 +27,9 @@ namespace Raven.Smuggler
 			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported, () => IsIdentitiesSmugglingSupported);
 		}
 
-		private BulkInsertOperation operation;
+		protected BulkInsertOperation operation;
 
-		private DocumentStore store;
+		protected DocumentStore store;
 
         public override Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
 		{
