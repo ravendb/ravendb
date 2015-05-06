@@ -174,12 +174,21 @@ namespace Voron
         }
 
         public long OldestTransaction
-        {
-            get
-            {
-                return Math.Min(_activeTransactions.OrderBy(x => x.Id).Select(x => x.Id).FirstOrDefault(), _transactionsCounter);
-            }
-        }
+		{
+			get
+			{
+				var largestTx = long.MaxValue;
+				// ReSharper disable once LoopCanBeConvertedToQuery
+				foreach (var activeTransaction in _activeTransactions)
+				{
+					if (largestTx > activeTransaction.Id)
+						largestTx = activeTransaction.Id;
+				}
+				if (largestTx == long.MaxValue)
+					return 0;
+				return largestTx;
+			}
+		}
 
         public long NextPageNumber
         {
