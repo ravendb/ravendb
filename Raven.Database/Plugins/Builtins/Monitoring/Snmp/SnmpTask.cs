@@ -60,11 +60,13 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			systemDatabase = server.SystemDatabase;
 			databaseLandlord = server.Options.DatabaseLandlord;
 
-			databaseLandlord.OnDatabaseLoaded += AddDatabaseIfNecessary;
-
 			objectStore = CreateStore(server);
+
 			snmpEngine = CreateSnmpEngine(server, objectStore);
 			snmpEngine.Start();
+
+			databaseLandlord.OnDatabaseLoaded += AddDatabaseIfNecessary;
+			AddDatabases();
 		}
 
 		private static bool IsLicenseValid()
@@ -151,13 +153,18 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new ServerCpu());
 			store.Add(new ServerTotalMemory());
 			store.Add(new ServerUrl(server.SystemDatabase.Configuration));
+			store.Add(new ServerIndexingErrors(server.Options.DatabaseLandlord));
+			store.Add(new ServerLastRequestTime(server.Options.RequestManager));
 
 			store.Add(new DatabaseLoadedCount(server.Options.DatabaseLandlord));
 			store.Add(new DatabaseTotalCount(server.SystemDatabase));
 
-			AddDatabase(store, Constants.SystemDatabase);
-
 			return store;
+		}
+
+		private void AddDatabases()
+		{
+			databaseLandlord.ForAllDatabases(database => AddDatabase(objectStore, database.Name ?? Constants.SystemDatabase));
 		}
 
 		private void AddDatabase(ObjectStore store, string databaseName)
