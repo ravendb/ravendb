@@ -3,9 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System;
-using System.Diagnostics;
 
 namespace Voron.Trees
 {
@@ -14,13 +12,15 @@ namespace Voron.Trees
         public class FoundPage
         {
             public readonly long Number;
+			public Page Page;
 			public readonly MemorySlice FirstKey;
 			public readonly MemorySlice LastKey;
             public readonly long[] CursorPath;
 
-            public FoundPage(long number, MemorySlice firstKey, MemorySlice lastKey, long[] cursorPath)
+            public FoundPage(long number, Page page, MemorySlice firstKey, MemorySlice lastKey, long[] cursorPath)
             {
                 Number = number;
+                Page = page;
                 FirstKey = firstKey;
                 LastKey = lastKey;
                 CursorPath = cursorPath;
@@ -52,10 +52,11 @@ namespace Voron.Trees
             int position = current + _cacheSize;
             while (itemsLeft > 0)
             {
-                var item = _cache[position % _cacheSize];
+	            var itemIndex = position % _cacheSize;
+	            var item = _cache[itemIndex];
                 if (item == null || item.Number == page.Number)
                 {
-                    _cache[position % _cacheSize] = page;
+                    _cache[itemIndex] = page;
                     return;
                 }
 
@@ -117,5 +118,18 @@ namespace Voron.Trees
         {
             Array.Clear(_cache, 0, _cacheSize);
         }
+
+	    public void Reset(long num)
+	    {
+		    for (int i = 0; i < _cache.Length; i++)
+		    {
+			    var page = _cache[i];
+			    if (page != null && page.Number == num)
+			    {
+				    page.Page = null;
+				    return;
+			    }
+		    }
+	    }
     }
 }
