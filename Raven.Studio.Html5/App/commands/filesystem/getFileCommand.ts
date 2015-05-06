@@ -14,7 +14,7 @@ class getFileCommand extends commandBase {
         var url = "/files/" + this.name;
         var resultsSelector = metadata => {
             var fileHeaders = new file();
-            fileHeaders.id = this.name;
+            fileHeaders.id(this.name);
 
             for (var property in metadata) {
                 var value: string = metadata[property];

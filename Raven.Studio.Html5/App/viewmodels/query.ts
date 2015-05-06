@@ -1,4 +1,7 @@
 /// <reference path="../../Scripts/typings/ace/ace.d.ts" />
+import InMethodFilter = require("viewmodels/inMethodFilter");
+import fieldStringFilter = require("viewmodels/fieldStringFilter");
+import fieldRangeFilter = require("viewmodels/fieldRangeFilter");
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
@@ -70,7 +73,10 @@ class query extends viewModelBase {
     isCacheDisable = ko.observable<boolean>(false);
 	enableDeleteButton: KnockoutComputed<boolean>;
     token = ko.observable<singleAuthToken>();
-
+    warningText = ko.observable<string>();
+    isWarning = ko.observable<boolean>(false);
+    containsAsterixQuery: KnockoutComputed<boolean>;
+    searchField = ko.observable<string>("Select field");
     contextName = ko.observable<string>();
     didDynamicChangeIndex: KnockoutComputed<boolean>;
     dynamicPrefix = "dynamic/";
@@ -94,6 +100,7 @@ class query extends viewModelBase {
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);
         this.rawJsonUrl.subscribe((value: string) => ko.postbox.publish("SetRawJSONUrl", value));
         this.selectedIndexLabel = ko.computed(() => this.selectedIndex() === "dynamic" ? "All Documents" : this.selectedIndex());
+        this.containsAsterixQuery = ko.computed(() => this.queryText().contains("*.*"));
         this.isStaticIndexSelected = ko.computed(() => this.selectedIndex() == null || this.selectedIndex().indexOf(this.dynamicPrefix) == -1);
         this.selectedIndexEditUrl = ko.computed(() => {
             if (this.queryStats()) {
@@ -371,9 +378,10 @@ class query extends viewModelBase {
         this.isCacheDisable(!this.isCacheDisable());
     }
 
-    runQuery(): pagedList {
+    runQuery(): pagedList {        
         var selectedIndex = this.selectedIndex();
         if (selectedIndex) {
+            this.isWarning(false);
             this.isLoading(true);
             this.focusOnQuery();
             var queryText = this.queryText();
@@ -427,11 +435,26 @@ class query extends viewModelBase {
                         this.indexSuggestions([]);
                         if (queryResults.totalResultCount == 0) {
                             var queryFields = this.extractQueryFields();
+                            var alreadyLookedForNull = false;
                             if (this.selectedIndex().indexOf(this.dynamicPrefix) !== 0) {
+                                alreadyLookedForNull = true;
                                 for (var i = 0; i < queryFields.length; i++) {
-                                    this.getIndexSuggestions(selectedIndex, queryFields[i]);
+                                    this.getIndexSuggestions(selectedIndex, queryFields[i]);  
+                                    if (queryFields[i].FieldValue == 'null') {
+                                        this.isWarning(true);
+                                        this.warningText(<any>("The Query contains '" + queryFields[i].FieldName + ": null', this will check if the field contains the string 'null', is this what you meant?"));
+                                    }                                  
                                 }
                             }
+                            if (!alreadyLookedForNull) {
+                                for (var i = 0; i < queryFields.length; i++) {;
+                                    if (queryFields[i].FieldValue == 'null') {
+                                        this.isWarning(true);
+                                        this.warningText(<any>("The Query contains '" + queryFields[i].FieldName + ": null', this will check if the field contains the string 'null', is this what you meant?"));
+                                    }
+                                }
+                            }
+
                         }
                     })
                     .fail(() => {
@@ -778,6 +801,81 @@ class query extends viewModelBase {
         // schedule token update (to properly handle subseqent downloads)
         setTimeout(() => this.updateAuthToken(), 50);
         return true;
+    }
+
+    fieldNameStartsWith() {
+        var fieldStartsWithViewModel: fieldStringFilter = new fieldStringFilter("Field sub text");
+        fieldStartsWithViewModel
+            .applyFilterTask
+            .done((input: string, option: string) => {
+            if (this.queryText().length !== 0) {
+                this.queryText(this.queryText() + " AND ");
+            }
+            if (option === "Starts with") {
+                this.queryText(this.queryText() + this.searchField() + ":" + this.escapeQueryString(input) + "*");
+            }
+            else if (option === "Ends with") {
+                this.queryText(this.queryText() + this.searchField() + ":" + "*" + this.escapeQueryString(input) );
+            }
+            else if (option === "Contains") {
+                this.queryText(this.queryText() + this.searchField() + ":" + "*" + this.escapeQueryString(input) + "*");
+            }
+            else if (option === "Exact") {
+                this.queryText(this.queryText() + this.searchField() + ":" + this.escapeQueryString(input));
+            }
+        });
+        app.showDialog(fieldStartsWithViewModel);
+    }
+
+    fieldValueRange() {
+        var fieldRangeFilterViewModel: fieldRangeFilter = new fieldRangeFilter("Field range filter");
+        fieldRangeFilterViewModel
+            .applyFilterTask
+            .done((fromStr: string, toStr: string, option: string) => {
+            var from = !fromStr || fromStr.length === 0 ? "*" : fromStr;
+            var to = !toStr || toStr.length === 0 ? "*" : toStr;
+            var fromPrefix = "";
+            var toPrefix = "";
+            if (this.queryText().length !== 0) {
+                this.queryText(this.queryText() + " AND ");
+            }
+            if (option === "Numeric Double") {
+                if (from !== "*") fromPrefix = "Dx";
+                if (to !== "*") toPrefix = "Dx";
+                this.queryText(this.queryText() + this.searchField() + "_Range:[" + fromPrefix + from + " TO " + toPrefix + to + "]");
+            }
+            else if (option === "Numeric Int") {
+                if (from !== "*") fromPrefix = "Ix";
+                if (to !== "*") toPrefix = "Ix";
+                this.queryText(this.queryText() + this.searchField() + "_Range:[" + fromPrefix + from + " TO " + toPrefix+ to + "]");
+            }
+            else if (option === "Alphabetical") {
+                this.queryText(this.queryText() + this.searchField() + ":[" + from + " TO " + to + "]");
+            }
+            else if (option === "Datetime") {
+                this.queryText(this.queryText() + this.searchField() + ":[" + from + " TO " + to + "]");
+            }
+
+        });
+        app.showDialog(fieldRangeFilterViewModel);  
+    }
+
+    fieldValueInMethod() {
+        var inMethodFilterViewModel: InMethodFilter = new InMethodFilter("Field in method filter");
+        inMethodFilterViewModel
+            .applyFilterTask
+            .done((inputs: string[]) => { 
+                if (this.queryText().length !== 0) {
+                    this.queryText(this.queryText() + " AND ");
+                }
+                var escapedStrings = inputs.map((s: string) => this.escapeQueryString(s)).join();
+                this.queryText(this.queryText() + "@in<" + this.searchField() + ">:(" + escapedStrings + ")");
+            });
+        app.showDialog(inMethodFilterViewModel);        
+    }
+
+    private escapeQueryString(query: string): string {
+        return query.replace(/([ \-\_\.])/g, '\\$1');
     }
 }
 

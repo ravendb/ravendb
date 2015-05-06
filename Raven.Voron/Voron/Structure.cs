@@ -39,7 +39,11 @@ namespace Voron
 		internal class VariableSizeWrite
 		{
 			public byte[] Value;
+            public string ValueString;
+
+            public int ValueSize;
 			public byte ValueSizeLength;
+
 			public int Index;
 		}
 
@@ -93,29 +97,30 @@ namespace Voron
 				if (type != variableSizeField.Type)
 					throw new InvalidDataException(string.Format("Attempt to set a field value which type is different than defined in the structure schema. Expected: {0}, got: {1}", variableSizeField.Type, type));
 
-				var stringValue = value as string;
-				var bytesValue = value as byte[];
+                if (VariableSizeWrites == null)
+                    VariableSizeWrites = new VariableSizeWrite[_schema.VariableFieldsCount];
 
-				byte[] bytes;
-				if (stringValue != null)
-				{
-					bytes = Encoding.UTF8.GetBytes(stringValue);
-				}
-				else if (bytesValue != null)
-				{
-					bytes = bytesValue;
-				}
-				else
-					throw new NotSupportedException("Unexpected variable size value type: " + type);
+                var variableSizeWrite = new VariableSizeWrite
+                {
+                    ValueString = value as string,
+                    Value = value as byte[],                    
+                };
 
-				if (VariableSizeWrites == null)
-					VariableSizeWrites = new VariableSizeWrite[_schema.VariableFieldsCount];
+                if ( variableSizeWrite.ValueString == null && variableSizeWrite.Value == null )
+                    throw new NotSupportedException("Unexpected variable size value type: " + type);
 
-				VariableSizeWrites[variableSizeField.Index] = new VariableSizeWrite
-				{
-					Value = bytes,
-					ValueSizeLength = SizeOf7BitEncodedInt(bytes.Length),
-				};
+                if (variableSizeWrite.Value != null )
+                {
+                    variableSizeWrite.ValueSize = variableSizeWrite.Value.Length;                    
+                }
+                else
+                {
+                    variableSizeWrite.ValueSize = Encoding.UTF8.GetByteCount(variableSizeWrite.ValueString);
+                }
+                variableSizeWrite.ValueSizeLength = SizeOf7BitEncodedInt(variableSizeWrite.ValueSize);
+
+
+                VariableSizeWrites[variableSizeField.Index] = variableSizeWrite;              
 			}
 			else
 				throw new NotSupportedException("Unexpected structure field type: " + type);
@@ -325,18 +330,29 @@ namespace Voron
 			{
 				var write = VariableSizeWrites[i];
 
-				var valueLength = write.Value.Length;
+                int valueLength = write.ValueSize;
 
-				offsets[i] = (uint) (fieldPointer - ptr);
+                offsets[i] = (uint)(fieldPointer - ptr);                
 
-				Write7BitEncodedInt(fieldPointer, valueLength);
-				fieldPointer += write.ValueSizeLength;
+                Write7BitEncodedInt(fieldPointer, valueLength);
+                fieldPointer += write.ValueSizeLength;
 
-				fixed (byte* valuePtr = write.Value)
-				{
-					MemoryUtils.Copy(fieldPointer, valuePtr, valueLength);
-				}
-				fieldPointer += valueLength;
+                if ( write.Value != null ) // We have an array of bytes
+                {
+                    fixed (byte* valuePtr = write.Value)
+                    {
+                        MemoryUtils.Copy(fieldPointer, valuePtr, valueLength);
+                    }
+                }
+                else // We have an string
+                {
+                    fixed (char* valuePtr = write.ValueString)
+                    {
+                        Encoding.UTF8.GetBytes(valuePtr, write.ValueString.Length, fieldPointer, valueLength);
+                    }                        
+                }
+
+                fieldPointer += valueLength;
 			}
 
 			fixed (uint* p = offsets)
@@ -352,7 +368,7 @@ namespace Voron
 
 			return _schema.FixedSize + // fixed size fields 
 				   (VariableSizeWrites == null ? 0 : VariableFieldOffsetSize * VariableSizeWrites.Length + // offsets of variable size fields 
-					   VariableSizeWrites.Sum(x => x.Value.Length + x.ValueSizeLength)); // variable size fields
+					   VariableSizeWrites.Sum(x => x.ValueSize + x.ValueSizeLength)); // variable size fields
 		}
 
 		private static byte SizeOf7BitEncodedInt(int value)
