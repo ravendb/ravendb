@@ -438,7 +438,6 @@ namespace Raven.Database.Indexing
 				});
 
 				var getMappedResultsDuration = new Stopwatch();
-				var storageCommitDuration = new Stopwatch();
 
 				var keysLeftToReduce = new HashSet<string>(keysToReduce);
 
@@ -446,47 +445,42 @@ namespace Raven.Database.Indexing
 
 				while (keysLeftToReduce.Count > 0)
 				{
-					context.TransactionalStorage.Batch(
-						actions =>
+					List<MappedResultInfo> mappedResults = null;
+					var keysReturned = new HashSet<string>();
+
+					context.TransactionalStorage.Batch(actions =>
+					{
+						context.CancellationToken.ThrowIfCancellationRequested();
+						var take = context.CurrentNumberOfItemsToReduceInSingleBatch;
+
+						using (StopwatchScope.For(getMappedResultsDuration))
 						{
-							actions.BeforeStorageCommit += storageCommitDuration.Start;
-							actions.AfterStorageCommit += storageCommitDuration.Stop;
-						
-							context.CancellationToken.ThrowIfCancellationRequested();
-							var take = context.CurrentNumberOfItemsToReduceInSingleBatch;
-							var keysReturned = new HashSet<string>();
+							mappedResults = actions.MapReduce.GetMappedResults(
+								index.IndexId,
+								keysLeftToReduce,
+								true,
+								take,
+								keysReturned
+								).ToList();
+						}
+					});
 
-							List<MappedResultInfo> mappedResults;
+					var count = mappedResults.Count;
+					var size = mappedResults.Sum(x => x.Size);
 
-							using (StopwatchScope.For(getMappedResultsDuration))
-							{
-								mappedResults = actions.MapReduce.GetMappedResults(
-									index.IndexId,
-									keysLeftToReduce,
-									true,
-									take,
-									keysReturned
-									).ToList();
-							}
+					mappedResults.ApplyIfNotNull(x => x.Bucket = 0);
 
-							var count = mappedResults.Count;
-							var size = mappedResults.Sum(x => x.Size);
+					var results = mappedResults.Where(x => x.Data != null).GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data)).ToArray();
 
-							mappedResults.ApplyIfNotNull(x => x.Bucket = 0);
+					context.MetricsCounters.ReducedPerSecond.Mark(results.Length);
 
-							var results =
-								mappedResults.Where(x => x.Data != null).GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data)).ToArray();
+					context.CancellationToken.ThrowIfCancellationRequested();
 
-							context.MetricsCounters.ReducedPerSecond.Mark(results.Length);
+					var performance = context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, 2, context, null, keysReturned, mappedResults.Count);
 
-							context.CancellationToken.ThrowIfCancellationRequested();
+					reductionPerformanceStats.Add(performance);
 
-							var performance = context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, 2, context, actions, keysReturned, mappedResults.Count);
-
-							reductionPerformanceStats.Add(performance);
-
-							autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
-						});
+					autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
 				}
 
 				var needToMoveToSingleStep = new HashSet<string>();
@@ -506,7 +500,7 @@ namespace Raven.Database.Indexing
 				reduceLevelStats.Completed = SystemTime.UtcNow;
 				reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
 				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_GetMappedResults, getMappedResultsDuration.ElapsedMilliseconds));
-				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.StorageCommit, storageCommitDuration.ElapsedMilliseconds));
+				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.StorageCommit, 0)); // in single step we write directly to Lucene index
 
 				foreach (var stats in reductionPerformanceStats)
 				{
