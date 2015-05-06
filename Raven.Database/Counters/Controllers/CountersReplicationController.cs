@@ -49,7 +49,7 @@ namespace Raven.Database.Counters.Controllers
             bool wroteCounter = false;
             using (var writer = Storage.CreateWriter())
             {
-				var counterChangeNotifications = new List<CounterChangeNotification>();
+				var counterChangeNotifications = new List<ReplicationChangeNotification>();
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
@@ -65,12 +65,11 @@ namespace Raven.Database.Counters.Controllers
 						return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
 					
 					var counterChangeAction = writer.Store(counter.FullCounterName, counter.CounterValue);
-					counterChangeNotifications.Add(new CounterChangeNotification
+					counterChangeNotifications.Add(new ReplicationChangeNotification
 					{
 						GroupName = counter.GroupName,
 						CounterName = counter.CounterName,
 						Action = counterChangeAction,
-						Type = CounterChangeType.Replication | CounterChangeType.All
 					});
 				}
 

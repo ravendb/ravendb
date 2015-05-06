@@ -40,12 +40,11 @@ namespace Raven.Database.Counters.Controllers
 				writer.Commit(delta != 0);
 
 				Storage.MetricsCounters.ClientRequests.Mark();
-				Storage.Publisher.RaiseNotification(new CounterChangeNotification()
+				Storage.Publisher.RaiseNotification(new LocalChangeNotification
 				{
 					GroupName = groupName,
 					CounterName = counterName,
-					Action = counterChangeAction,
-					Type = CounterChangeType.Local | CounterChangeType.All
+					Action = counterChangeAction
 				});
 
 				return new HttpResponseMessage(HttpStatusCode.OK);
@@ -105,7 +104,7 @@ namespace Raven.Database.Counters.Controllers
 				var changeBatches = YieldChangeBatches(inputStream, timeout, countOfChanges => counterChanges += countOfChanges);
 	            try
 	            {
-					Storage.Publisher.RaiseNotification(new CounterBulkOperationNotification
+					Storage.Publisher.RaiseNotification(new BulkOperationNotification
 					{
 						Type = BatchType.Started,
 						OperationId = operationId
@@ -121,7 +120,7 @@ namespace Raven.Database.Counters.Controllers
 							}
 							writer.Commit();
 
-							Storage.Publisher.RaiseNotification(new CounterBulkOperationNotification
+							Storage.Publisher.RaiseNotification(new BulkOperationNotification
 							{
 								Type = BatchType.Ended,
 								OperationId = operationId
@@ -132,7 +131,7 @@ namespace Raven.Database.Counters.Controllers
 	            catch (OperationCanceledException)
 	            {
 					// happens on timeout
-		            Storage.Publisher.RaiseNotification(new CounterBulkOperationNotification
+		            Storage.Publisher.RaiseNotification(new BulkOperationNotification
 		            {
 			            Type = BatchType.Error,
 			            OperationId = operationId,
@@ -146,7 +145,7 @@ namespace Raven.Database.Counters.Controllers
 	            catch (Exception e)
 	            {
 		            var errorMessage = e.SimplifyException().Message;
-					Storage.Publisher.RaiseNotification(new CounterBulkOperationNotification
+					Storage.Publisher.RaiseNotification(new BulkOperationNotification
 					{
 						Type = BatchType.Error,
 						OperationId = operationId,
@@ -264,12 +263,11 @@ namespace Raven.Database.Counters.Controllers
 					writer.Commit();
 
 					Storage.MetricsCounters.Resets.Mark();
-					Storage.Publisher.RaiseNotification(new CounterChangeNotification
+					Storage.Publisher.RaiseNotification(new LocalChangeNotification
 					{
 						GroupName = groupName,
 						CounterName = counterName,
 						Action = counterChangeAction,
-						Type = CounterChangeType.Local | CounterChangeType.All
 					});
 				}
 

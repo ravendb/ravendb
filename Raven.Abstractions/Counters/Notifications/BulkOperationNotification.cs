@@ -2,7 +2,7 @@
 
 namespace Raven.Abstractions.Counters.Notifications
 {
-	public class CounterBulkOperationNotification : CounterStorageNotification
+	public class BulkOperationNotification : CounterStorageNotification
 	{
 		public Guid OperationId { get; set; }
 

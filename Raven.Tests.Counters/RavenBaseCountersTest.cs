@@ -90,7 +90,7 @@ namespace Raven.Tests.Counters
 			return hasReplicated;
 		}
 
-		protected async Task SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
+		protected static async Task SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
 		{
 			using (var client = source.NewCounterClient())
 			{

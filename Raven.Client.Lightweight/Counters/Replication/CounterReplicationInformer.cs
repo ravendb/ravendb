@@ -17,7 +17,7 @@ using Raven.Client.Connection.Request;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Counters
+namespace Raven.Client.Counters.Replication
 {
 	public class CounterReplicationInformer : ReplicationInformerBase<CountersClient>,ICountersReplicationInformer
 	{

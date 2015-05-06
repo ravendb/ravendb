@@ -1,4 +1,6 @@
-﻿namespace Raven.Abstractions.Counters.Notifications
+﻿using System;
+
+namespace Raven.Abstractions.Counters.Notifications
 {
 	public class CounterStorageNotification
 	{

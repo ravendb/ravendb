@@ -7,7 +7,8 @@ using Raven.Tests.Core.Utils.Indexes;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Xunit;using Raven.Tests.Core.Utils.Transformers;
+using Xunit;
+using Raven.Tests.Core.Utils.Transformers;
 
 namespace Raven.Tests.Core.ChangesApi
 {

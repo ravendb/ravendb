@@ -17,6 +17,9 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Counters.Actions;
+using Raven.Client.Counters.Changes;
+using Raven.Client.Counters.Replication;
+using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -27,8 +30,10 @@ namespace Raven.Client.Counters
 	/// </summary>
 	public class CounterStore : ICounterStore
 	{
+		private readonly AtomicDictionary<ICountersChanges> counterStorageChanges = new AtomicDictionary<ICountersChanges>(StringComparer.OrdinalIgnoreCase);
 		private ICountersReplicationInformer replicationInformer;
-		private bool _isInitialized;
+		private bool isInitialized;
+
 		public CounterStore()
 		{
 			JsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
@@ -37,14 +42,15 @@ namespace Raven.Client.Counters
 			Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
 			Advanced = new CounterStoreAdvancedOperations(this);
 			_batch = new Lazy<BatchOperationsStore>(() => new BatchOperationsStore(this));
-			_isInitialized = false;
+			isInitialized = false;
 		}
 
 		public void Initialize(bool ensureDefaultCounterExists = false)
 		{
-			if(_isInitialized)
+			if(isInitialized)
 				throw new InvalidOperationException("CounterStore already initialized.");
-			_isInitialized = true;
+
+			isInitialized = true;
 			InitializeSecurity();
 
 			if (ensureDefaultCounterExists && !string.IsNullOrWhiteSpace(DefaultCounterStorageName))
@@ -58,10 +64,53 @@ namespace Raven.Client.Counters
 					{
 						{"Raven/Counters/DataDir", @"~\Counters\" + DefaultCounterStorageName}
 					},
-				}, DefaultCounterStorageName).Wait();
+				}, DefaultCounterStorageName).ConfigureAwait(false).GetAwaiter().GetResult();
 			}			
 
 			replicationInformer = new CounterReplicationInformer(Convention, JsonRequestFactory); // make sure it is initialized
+		}
+
+		public ICountersChanges Changes(string counterStorage = null)
+		{
+			AssertInitialized();
+
+			if (string.IsNullOrWhiteSpace(counterStorage))
+				counterStorage = DefaultCounterStorageName;
+
+			return counterStorageChanges.GetOrAdd(counterStorage, CreateCounterStorageChanges);
+		}
+
+		private ICountersChanges CreateCounterStorageChanges(string counterStorage)
+		{
+			if (string.IsNullOrEmpty(Url))
+				throw new InvalidOperationException("Changes API requires usage of server/client");
+
+			var tenantUrl = Url + "/cs/" + counterStorage;
+
+			using (NoSynchronizationContext.Scope())
+			{
+				var client = new CountersChangesClient(tenantUrl,
+					Credentials.ApiKey,
+					Credentials.Credentials,
+					JsonRequestFactory,
+					Convention,
+					() =>
+					{
+						counterStorageChanges.Remove(counterStorage);
+					});
+
+				return client;
+			}
+		}
+
+		public event EventHandler AfterDispose;
+
+		public bool WasDisposed { get; private set; }
+
+		private void AssertInitialized()
+		{
+			if (!isInitialized)
+				throw new InvalidOperationException("You cannot open a session or access the counters commands before initializing the counter store. Did you forget calling Initialize()?");
 		}
 
 		private readonly Lazy<BatchOperationsStore> _batch;
@@ -245,7 +294,7 @@ namespace Raven.Client.Counters
 			}
 		}
 
-		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, ICredentials credentials)
+		private static void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, ICredentials credentials)
 		{
 			if (credentials == null)
 				return;
@@ -274,16 +323,16 @@ namespace Raven.Client.Counters
 
 		public class BatchOperationsStore : ICountersBatchOperation
 		{
-			private readonly ICounterStore _parent;
-			private readonly Lazy<CountersBatchOperation> _defaultBatchOperation;
-			private readonly ConcurrentDictionary<string, CountersBatchOperation> _batchOperations;
+			private readonly ICounterStore parent;
+			private readonly Lazy<CountersBatchOperation> defaultBatchOperation;
+			private readonly ConcurrentDictionary<string, CountersBatchOperation> batchOperations;
 
 			public BatchOperationsStore(ICounterStore parent)
 			{				
-				_batchOperations = new ConcurrentDictionary<string, CountersBatchOperation>();
-				_parent = parent;
-				if(String.IsNullOrWhiteSpace(parent.DefaultCounterStorageName) == false)
-					_defaultBatchOperation = new Lazy<CountersBatchOperation>(() => new CountersBatchOperation(parent, parent.DefaultCounterStorageName));
+				batchOperations = new ConcurrentDictionary<string, CountersBatchOperation>();
+				this.parent = parent;
+				if(string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName) == false)
+					defaultBatchOperation = new Lazy<CountersBatchOperation>(() => new CountersBatchOperation(parent, parent.DefaultCounterStorageName));
 			}
 
 			public ICountersBatchOperation this[string storageName]
@@ -293,47 +342,47 @@ namespace Raven.Client.Counters
 
 			private ICountersBatchOperation GetOrCreateBatchOperation(string storageName)
 			{
-				return _batchOperations.GetOrAdd(storageName, arg => new CountersBatchOperation(_parent, storageName));
+				return batchOperations.GetOrAdd(storageName, arg => new CountersBatchOperation(parent, storageName));
 			}
 
 			public void Dispose()
 			{
-				_batchOperations.Values
+				batchOperations.Values
 					.ForEach(operation => operation.Dispose());
-				if (_defaultBatchOperation != null && _defaultBatchOperation.IsValueCreated)
-					_defaultBatchOperation.Value.Dispose();
+				if (defaultBatchOperation != null && defaultBatchOperation.IsValueCreated)
+					defaultBatchOperation.Value.Dispose();
 			}
 
 			public void ScheduleChange(string groupName, string counterName, long delta)
 			{
-				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+				if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				_defaultBatchOperation.Value.ScheduleChange(groupName, counterName, delta);
+				defaultBatchOperation.Value.ScheduleChange(groupName, counterName, delta);
 			}
 
 			public void ScheduleIncrement(string groupName, string counterName)
 			{
-				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+				if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				_defaultBatchOperation.Value.ScheduleIncrement(groupName, counterName);
+				defaultBatchOperation.Value.ScheduleIncrement(groupName, counterName);
 			}
 
 			public void ScheduleDecrement(string groupName, string counterName)
 			{
-				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+				if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				_defaultBatchOperation.Value.ScheduleDecrement(groupName, counterName);
+				defaultBatchOperation.Value.ScheduleDecrement(groupName, counterName);
 			}
 
 			public async Task FlushAsync()
 			{
-				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+				if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				await _defaultBatchOperation.Value.FlushAsync();
+				await defaultBatchOperation.Value.FlushAsync();
 			}
 
 
@@ -341,9 +390,9 @@ namespace Raven.Client.Counters
 			{
 				get
 				{
-					if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+					if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
 						throw new InvalidOperationException("Default counter storage name cannot be empty!");
-					return _defaultBatchOperation.Value.Options;
+					return defaultBatchOperation.Value.Options;
 				}
 			}
 		}

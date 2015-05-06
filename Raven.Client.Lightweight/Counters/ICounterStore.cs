@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Counters.Actions;
+using Raven.Client.Counters.Changes;
+using Raven.Client.Counters.Replication;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.Counters
 {
-	public interface ICounterStore : IHoldProfilingInformation, IDisposable
+	public interface ICounterStore : IHoldProfilingInformation, IDisposalNotification
 	{
 		
 		OperationCredentials Credentials { get; set; }
@@ -46,5 +45,10 @@ namespace Raven.Client.Counters
 		ICountersReplicationInformer ReplicationInformer { get; }
 
 		void Initialize(bool ensureDefaultCounterExists = false);
+
+		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		ICountersChanges Changes(string counterStorage = null);
 	}
 }

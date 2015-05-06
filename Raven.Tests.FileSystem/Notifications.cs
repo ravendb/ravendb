@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.IO;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
-using Raven.Tests.Helpers;
-using Xunit;
-using Raven.Json.Linq;
-using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Json.Linq;
+using Xunit;
 
 namespace Raven.Tests.FileSystem
 {

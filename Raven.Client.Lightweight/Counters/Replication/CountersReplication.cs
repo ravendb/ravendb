@@ -4,9 +4,10 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Counters.Actions;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Counters.Actions
+namespace Raven.Client.Counters.Replication
 {
 	public class ReplicationClient : CountersActionsBase
 	{

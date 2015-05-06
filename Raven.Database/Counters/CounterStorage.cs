@@ -65,6 +65,7 @@ namespace Raven.Database.Counters
 				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
+			transportState = recievedTransportState ?? new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			replicationTask = new ReplicationTask(this);
 			replicationTask.ReplicationUpdate += OnReplicationUpdated;
@@ -72,7 +73,6 @@ namespace Raven.Database.Counters
 			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
 			metricsCounters = new CountersMetricsManager();
-			transportState = recievedTransportState ?? new TransportState();
 			Configuration = configuration;
 			ExtensionsState = new AtomicDictionary<object>();
 			Initialize();

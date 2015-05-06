@@ -1,26 +1,23 @@
-﻿using Raven.Abstractions.Extensions;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
 using Raven.Database.Util;
 using Raven.Json.Linq;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Net;
-using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Changes
 {
 
-    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState>,
-                                        IFilesChanges,
-                                        IHoldProfilingInformation
+    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState>, IFilesChanges
     {
-        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
 		private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -30,8 +27,6 @@ namespace Raven.Client.FileSystem.Changes
         private bool watchAllCancellations;
 
         private readonly Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
-
-        public ProfilingInformation ProfilingInformation { get; private set; }
 
         public FilesChangesClient(string url, string apiKey,
                                        ICredentials credentials,
@@ -243,7 +238,7 @@ namespace Raven.Client.FileSystem.Changes
 
                                 if (t.Result)
                                 {
-                                    logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners", conflictNotification.FileName);
+                                    Logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners", conflictNotification.FileName);
                                 }
                             }).ConfigureAwait(false);
                     }

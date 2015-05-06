@@ -9,17 +9,10 @@ namespace Raven.Database.Server.Connections
 	{
 		private readonly Action<object> enqueue;
 
-		private readonly ConcurrentSet<string> matchingChanges =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingLocalChanges =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingReplicationChanges =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingBulkOperations =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingLocalChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingReplicationChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingBulkOperations = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
 		public object DebugStatus
 		{
@@ -52,7 +45,7 @@ namespace Raven.Database.Server.Connections
 
 		public void WatchLocalChange(string name)
 		{
-			matchingLocalChanges.TryRemove(name);
+			matchingLocalChanges.TryAdd(name);
 		}
 
 		public void UnwatchLocalChange(string name)
@@ -67,7 +60,7 @@ namespace Raven.Database.Server.Connections
 
 		public void UnwatchReplicationChange(string name)
 		{
-			matchingReplicationChanges.TryAdd(name);
+			matchingReplicationChanges.TryRemove(name);
 		}
 
 		public void WatchCounterBulkOperation(string operationId)
@@ -77,34 +70,44 @@ namespace Raven.Database.Server.Connections
 
 		public void UnwatchCounterBulkOperation(string operationId)
 		{
-			matchingBulkOperations.TryAdd(operationId);
+			matchingBulkOperations.TryRemove(operationId);
 		}
 
-		public void Send(CounterChangeNotification notification)
+		public void Send(LocalChangeNotification notification)
 		{
-			var value = new {Value = notification, Type = notification.GetType().Name};
 			var counterPrefix = string.Concat(notification.GroupName, "/", notification.CounterName);
 
-			var hasChanges = (notification.Type.HasFlag(CounterChangeType.All) && matchingChanges.Contains(counterPrefix));
-			if (hasChanges)
+			if (matchingLocalChanges.Contains(counterPrefix))
 			{
+				var value = new { Value = notification, Type = typeof(LocalChangeNotification).Name };
 				enqueue(value);
 			}
 
-			var hasLocalChanges = (notification.Type.HasFlag(CounterChangeType.Local) && matchingLocalChanges.Contains(counterPrefix));
-			if (hasLocalChanges)
+			if (matchingChanges.Contains(counterPrefix))
 			{
-				enqueue(value);
-			}
-
-			var hasReplicationChanges = (notification.Type.HasFlag(CounterChangeType.Replication) && matchingReplicationChanges.Contains(counterPrefix));
-			if (hasReplicationChanges)
-			{
+				var value = new { Value = notification, Type = typeof(ChangeNotification).Name };
 				enqueue(value);
 			}
 		}
 
-		public void Send(CounterBulkOperationNotification notification)
+		public void Send(ReplicationChangeNotification notification)
+		{
+			var counterPrefix = string.Concat(notification.GroupName, "/", notification.CounterName);
+
+			if (matchingReplicationChanges.Contains(counterPrefix))
+			{
+				var value = new { Value = notification, Type = typeof(ReplicationChangeNotification).Name };
+				enqueue(value);
+			}
+
+			if (matchingChanges.Contains(counterPrefix))
+			{
+				var value = new { Value = notification, Type = typeof(ChangeNotification).Name };
+				enqueue(value);
+			}
+		}
+
+		public void Send(BulkOperationNotification notification)
 		{
 			if (matchingBulkOperations.Contains(string.Empty) == false &&
 				matchingBulkOperations.Contains(notification.OperationId.ToString()) == false)

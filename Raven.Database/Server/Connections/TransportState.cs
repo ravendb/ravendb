@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.Controllers;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 
 namespace Raven.Database.Server.Connections
 {
@@ -118,29 +119,44 @@ namespace Raven.Database.Server.Connections
 			OnFileSystemNotification(this, fileSystemNotification);
 			foreach (var connectionState in connections)
 			{
+				if (fileSystemNotification is FileChangeNotification)
+				{
+					
+				}
 				connectionState.Value.FileSystem.Send(fileSystemNotification);
 			}
 		}
 
-		public event Action<object, CounterChangeNotification> OnCounterChangeNotification = delegate { };
+		public event Action<object, LocalChangeNotification> OnLocalChangeNotification = delegate { };
 
-		public void Send(CounterChangeNotification counterChangeNotification)
+		public void Send(LocalChangeNotification localChangeNotification)
 		{
-			OnCounterChangeNotification(this, counterChangeNotification);
+			OnLocalChangeNotification(this, localChangeNotification);
 			foreach (var connectionState in connections)
 			{
-				connectionState.Value.CounterStorage.Send(counterChangeNotification);
+				connectionState.Value.CounterStorage.Send(localChangeNotification);
 			}
 		}
 
-		public event Action<object, CounterBulkOperationNotification> OnCounterBulkOperationNotification = delegate { };
+		public event Action<object, CounterStorageNotification> OnReplicationChangeNotification = delegate { };
 
-		public void Send(CounterBulkOperationNotification counterBulkOperationNotification)
+		public void Send(ReplicationChangeNotification replicationChangeNotification)
 		{
-			OnCounterBulkOperationNotification(this, counterBulkOperationNotification);
+			OnReplicationChangeNotification(this, replicationChangeNotification);
 			foreach (var connectionState in connections)
 			{
-				connectionState.Value.CounterStorage.Send(counterBulkOperationNotification);
+				connectionState.Value.CounterStorage.Send(replicationChangeNotification);
+			}
+		}
+
+		public event Action<object, BulkOperationNotification> OnCounterBulkOperationNotification = delegate { };
+
+		public void Send(BulkOperationNotification bulkOperationNotification)
+		{
+			OnCounterBulkOperationNotification(this, bulkOperationNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.CounterStorage.Send(bulkOperationNotification);
 			}
 		}
 

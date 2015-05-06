@@ -1,12 +1,5 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FluentAssertions;
-using Raven.Abstractions.Counters;
-using Raven.Client.Counters;
-using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.Counters

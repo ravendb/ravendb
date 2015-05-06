@@ -3,6 +3,7 @@ using System.Net;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Counters.Actions;
+using Raven.Client.Counters.Replication;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.Counters

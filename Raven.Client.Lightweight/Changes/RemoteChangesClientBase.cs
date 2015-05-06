@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -11,7 +11,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
-using System.Collections.Generic;
 
 namespace Raven.Client.Changes
 {
@@ -36,9 +35,9 @@ namespace Raven.Client.Changes
         private static int connectionCounter;
         private readonly string id;
 
-        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);        
+        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
 
-        public RemoteChangesClientBase(
+	    protected RemoteChangesClientBase(
             string url,
             string apiKey,
             ICredentials credentials,
@@ -296,6 +295,15 @@ namespace Raven.Client.Changes
             }
         }
 
+		protected Task AfterConnection(Func<Task> action)
+		{
+			return Task.ContinueWith(task =>
+			{
+				task.AssertNotFailed();
+				return action();
+			})
+			.Unwrap();
+		}
 
         protected abstract Task SubscribeOnServer();
         protected abstract void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TConnectionState>> connections);

@@ -470,15 +470,5 @@ namespace Raven.Client.Changes
 
             return taskedObservable;
         }
-
-        private Task AfterConnection(Func<Task> action)
-        {
-            return Task.ContinueWith(task =>
-            {
-                task.AssertNotFailed();
-                return action();
-            })
-            .Unwrap();
-        }
     }
 }

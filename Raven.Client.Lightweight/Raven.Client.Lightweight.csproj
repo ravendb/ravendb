@@ -119,6 +119,8 @@
     <Compile Include="Connection\ReplicationInformer.cs" />
     <Compile Include="Counters\Actions\CountersActionsBase.cs" />
     <Compile Include="Counters\Actions\ICountersBatchOperation.cs" />
+    <Compile Include="Counters\Changes\CountersChangesClient.cs" />
+    <Compile Include="Counters\Changes\CountersConnectionState.cs" />
     <Compile Include="Counters\Replication\CounterReplicationInformer.cs" />
     <Compile Include="Counters\CounterStore.cs" />
     <Compile Include="Counters\Actions\CountersBatchOperation.cs" />
@@ -163,6 +165,7 @@
     <Compile Include="FileSystem\IAbstractFilesQuery.cs" />
     <Compile Include="FileSystem\IAsyncFilesQuery.cs" />
     <Compile Include="FileSystem\IAsyncFilesQueryBase.cs" />
+    <Compile Include="FileSystem\IFilesChanges.cs" />
     <Compile Include="FileSystem\Impl\DeleteFileOperation.cs" />
     <Compile Include="FileSystem\Impl\IFilesOperation.cs" />
     <Compile Include="FileSystem\FilesQueryStatistics.cs" />
@@ -173,7 +176,7 @@
     <Compile Include="FileSystem\IAsyncAdvancedFilesSessionOperations.cs" />
     <Compile Include="FileSystem\IAsyncFilesCommands.cs" />
     <Compile Include="FileSystem\IAsyncFilesSession.cs" />
-    <Compile Include="FileSystem\IFilesChanges.cs" />
+    <Compile Include="Counters\Changes\ICountersChanges.cs" />
     <Compile Include="FileSystem\Impl\RenameFileOperation.cs" />
     <Compile Include="FileSystem\Impl\UpdateMetadataOperation.cs" />
     <Compile Include="FileSystem\Impl\DeleteByQueryOperation.cs" />
@@ -401,9 +404,7 @@
   <ItemGroup>
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Counters\Changes\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
