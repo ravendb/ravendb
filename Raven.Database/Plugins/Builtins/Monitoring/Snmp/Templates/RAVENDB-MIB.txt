@@ -115,6 +115,14 @@ systemDatabase1Index			OBJECT IDENTIFIER ::= { systemDatabaseIndexes 1 }
 --5.2.X.5.6. Number of disabled indexes
 --5.2.X.5.7. Number of error indexes
 
+--5.2.X.6. Database bundles
+--5.2.X.6.1. Replication bundle
+--5.2.X.6.1.1. Replication active
+--5.2.X.6.1.2.Y. Replication destinations
+--5.2.X.6.1.2.Y.1. Replication destination enabled
+--5.2.X.6.1.2.Y.2. Replication destination url
+--5.2.X.6.1.2.Y.3. Time since last replication
+
 --------
 --server
 --------
