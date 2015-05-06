@@ -805,9 +805,7 @@ namespace Raven.Database.Indexing
 			}.RobustEnumeration(input, funcs);
 		}
 
-		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func,
-															IStorageActionsAccessor actions,
-			IndexingWorkStats stats, Stopwatch linqExecutionDuration)
+		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func, IndexingWorkStats stats, Stopwatch linqExecutionDuration)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
@@ -1111,14 +1109,14 @@ namespace Raven.Database.Indexing
 						field = field.Substring(0, field.Length - "_Range".Length);
 					}
 
-					/*if (f.StartsWith(Constants.AlphaNumericFieldName) || f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
-						continue;*/
+					if (field.StartsWith(Constants.RandomFieldName) || field.StartsWith(Constants.CustomSortFieldName))
+						continue;
 
-					if (field.StartsWith(Constants.AlphaNumericFieldName) ||
-						field.StartsWith(Constants.RandomFieldName) ||
-						field.StartsWith(Constants.CustomSortFieldName))
+					if (field.StartsWith(Constants.AlphaNumericFieldName))
 					{
 						field = SortFieldHelper.CustomField(field).Name;
+						if(string.IsNullOrEmpty(field))
+							throw new ArgumentException("Alpha numeric sorting requires a field name");
 					}
 
 					if (viewGenerator.ContainsField(field) == false && !field.StartsWith(Constants.DistanceFieldName)

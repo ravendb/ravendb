@@ -101,6 +101,8 @@
     <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
     <TypeScriptCompile Include="App\models\counter\counterServerValue.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
+    <TypeScriptCompile Include="App\viewmodels\fieldRangeFilter.ts" />
+    <TypeScriptCompile Include="App\viewmodels\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageReplication.ts" />
@@ -109,6 +111,7 @@
     <TypeScriptCompile Include="App\viewmodels\counter\createCounterStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\inMethodFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
@@ -260,6 +263,8 @@
     <Content Include="App\views\database\status\alerts.html" />
     <Content Include="App\views\manage\apiKeys.html" />
     <Content Include="App\views\counter\counterStorageCounters.html" />
+    <Content Include="App\views\fieldRangeFilter.html" />
+    <Content Include="App\views\fieldStringFilter.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
     <Content Include="App\views\filesystem\exportFilesystem.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
@@ -269,6 +274,7 @@
     <Content Include="App\views\filesystem\tasks.html" />
     <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
     <Content Include="App\views\filesystem\versioning.html" />
+    <Content Include="App\views\inMethodFilter.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
@@ -962,7 +968,6 @@
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\autoCompleteBindingHandler.ts" />
-    <TypeScriptCompile Include="App\common\bindingHelpers\datePickerBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\fileUploadBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\helpBindingHandler.ts" />

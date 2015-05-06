@@ -13,8 +13,6 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 {
 	public abstract class DatabaseScalarObjectBase : ScalarObjectBase
 	{
-		protected static readonly Null Null = new Null();
-
 		protected readonly string DatabaseName;
 
 		protected readonly DatabasesLandlord Landlord;
