@@ -805,9 +805,7 @@ namespace Raven.Database.Indexing
 			}.RobustEnumeration(input, funcs);
 		}
 
-		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func,
-															IStorageActionsAccessor actions,
-			IndexingWorkStats stats, Stopwatch linqExecutionDuration)
+		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func, IndexingWorkStats stats, Stopwatch linqExecutionDuration)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
