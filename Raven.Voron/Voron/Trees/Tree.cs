@@ -195,7 +195,7 @@ namespace Voron.Trees
 			NodeHeader* node;
 			var foundPage = FindPageFor(key, out node, out lazy);
 
-			var page = _tx.ModifyPage(foundPage.PageNumber, foundPage);
+			var page = _tx.ModifyPage(foundPage.PageNumber, this, foundPage);
 
 			ushort nodeVersion = 0;
 			bool? shouldGoToOverflowPage = null;
@@ -348,10 +348,10 @@ namespace Voron.Trees
 		        return p;
 		    }
 
-			return SearchForPage(key, ref cursor, ref node);
+			return SearchForPage(key, out cursor, out node);
 		}
 
-	    private Page SearchForPage(MemorySlice key, ref Lazy<Cursor> cursor, ref NodeHeader* node)
+		private Page SearchForPage(MemorySlice key, out Lazy<Cursor> cursor, out NodeHeader* node)
 	    {
 			var p = _tx.GetReadOnlyPage(State.RootPageNumber);
 	        var c = new Cursor();
@@ -454,7 +454,7 @@ namespace Voron.Trees
 	            cur = cur.Next;
 	        }
 
-            var foundPage = new RecentlyFoundPages.FoundPage(p.PageNumber, firstKey, lastKey, cursorPath);
+            var foundPage = new RecentlyFoundPages.FoundPage(p.PageNumber, p, firstKey, lastKey, cursorPath);
 
 			RecentlyFoundPages.Add(foundPage);
 	    }
@@ -473,9 +473,9 @@ namespace Voron.Trees
 			if (foundPage == null)
 				return false;
 
-			var lastFoundPageNumber = foundPage.Number;
+		    var lastFoundPageNumber = foundPage.Number;
 
-			page = _tx.GetReadOnlyPage(lastFoundPageNumber);
+		    page = foundPage.Page ?? _tx.GetReadOnlyPage(lastFoundPageNumber);
 			if (page.IsLeaf == false)
 				throw new DataException("Index points to a non leaf page");
 
@@ -489,9 +489,9 @@ namespace Voron.Trees
 				foreach (var p in cursorPath)
 				{
 					if (p == lastFoundPageNumber)
-                    {
-                        c.Push(pageCopy);
-                    }						
+					{
+						c.Push(pageCopy);
+					}
 					else
 					{
 						var cursorPage = _tx.GetReadOnlyPage(p);
@@ -541,7 +541,7 @@ namespace Voron.Trees
 			if (page.LastMatch != 0)
 				return; // not an exact match, can't delete
 
-			page = _tx.ModifyPage(page.PageNumber, page);
+			page = _tx.ModifyPage(page.PageNumber, this, page);
 
 			State.EntriesCount--;
 			ushort nodeVersion;
