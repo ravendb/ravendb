@@ -144,6 +144,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 		{
 			var store = new ObjectStore();
 			store.Add(new ServerUpTime(server.Options.RequestManager));
+			store.Add(new ServerUpTimeGlobal(server.Options.RequestManager));
 			store.Add(new ServerName(server.SystemDatabase.Configuration));
 			store.Add(new ServerBuildVersion());
 			store.Add(new ServerProductVersion());
