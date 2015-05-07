@@ -42,10 +42,17 @@ namespace Raven.Tests.Common
             checkPorts = true;
         }
 
-        public DocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string requestedStorageType = "voron", bool useFiddler = false, [CallerMemberName] string databaseName = null)
+		public DocumentStore CreateStore(bool enableCompressionBundle = false, 
+			Action<DocumentStore> configureStore = null, 
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
+			bool enableAuthorization = false, 
+			string requestedStorageType = "voron", 
+			bool useFiddler = false, 
+			[CallerMemberName] string databaseName = null, 
+			bool runInMemory = true)
         {
             var port = PortRangeStart - stores.Count;
-            return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType, useFiddler, databaseName);
+            return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType, useFiddler, databaseName, runInMemory);
         }
 
         public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false,
@@ -57,7 +64,7 @@ namespace Raven.Tests.Common
 
         private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false,
             Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false,
-			string storeTypeName = "voron", bool useFiddler = false, string databaseName = null)
+			string storeTypeName = "voron", bool useFiddler = false, string databaseName = null, bool runInMemory = true)
         {
             var ravenDbServer = GetNewServer(port,
                 requestedStorage: storeTypeName,
@@ -65,7 +72,8 @@ namespace Raven.Tests.Common
                 enableAuthentication: anonymousUserAccessMode == AnonymousUserAccessMode.None,
                 databaseName: databaseName, 
 				configureConfig: ConfigureConfig, 
-                configureServer: ConfigureServer);
+                configureServer: ConfigureServer,
+				runInMemory: runInMemory);
 
             if (enableAuthorization)
             {
@@ -74,7 +82,11 @@ namespace Raven.Tests.Common
 
 			ConfigureDatabase(ravenDbServer.SystemDatabase, databaseName: databaseName);
 
-			var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, configureStore: configureStore, fiddler: useFiddler, databaseName: databaseName);
+			var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, 
+				configureStore: configureStore, 
+				fiddler: useFiddler, 
+				databaseName: databaseName, 
+				runInMemory: runInMemory);
 
             return documentStore;
         }
@@ -201,7 +213,7 @@ namespace Raven.Tests.Common
 					replicationDestination.Username = username;
 					replicationDestination.Password = password;
 					replicationDestination.Domain = domain;
-				}
+				}	         
 
                 SetupDestination(replicationDestination);
 	            Console.WriteLine("writing rep dests for " + db + " " + source.Url);

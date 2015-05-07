@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Mono.CSharp;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -19,7 +18,6 @@ using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using System.Globalization;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -65,8 +63,8 @@ namespace Raven.Bundles.Replication.Tasks
 		private TimeSpan _lastQueriedFrequency;
 		private Timer _indexReplicationTaskTimer;
 		private Timer _lastQueriedTaskTimer;
-		private object _indexReplicationTaskLock = new object();
-		private object _lastQueriedTaskLock = new object();
+		private readonly object _indexReplicationTaskLock = new object();
+		private readonly object _lastQueriedTaskLock = new object();
 
 		private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>();
 
@@ -74,6 +72,12 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			get { return destinationStats; }
 		}
+
+		
+		[Obsolete("Use for debugging only!")]
+		public bool ShouldWaitForWork { get; set; }
+
+		public event Action ReplicationExecuted;
 
 		public ConcurrentDictionary<string, DateTime> Heartbeats
 		{
@@ -91,6 +95,7 @@ namespace Raven.Bundles.Replication.Tasks
 		public ReplicationTask()
 		{
 			TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromMinutes(1);
+			ShouldWaitForWork = true;
 		}
 
 		public void Execute(DocumentDatabase database)
@@ -289,10 +294,16 @@ namespace Raven.Bundles.Replication.Tasks
 						}
 					}
 
-					runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
-					timeToWaitInMinutes = runningBecauseOfDataModifications
-											? TimeSpan.FromSeconds(30)
-											: TimeSpan.FromMinutes(5);
+					OnReplicationExecuted();
+
+					if (ShouldWaitForWork)
+					{
+						runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
+
+						timeToWaitInMinutes = runningBecauseOfDataModifications
+							? TimeSpan.FromSeconds(30)
+							: TimeSpan.FromMinutes(5);
+					}
 				}
 
 				IsRunning = false;
@@ -1694,6 +1705,13 @@ namespace Raven.Bundles.Replication.Tasks
 			metadata[Constants.RavenReplicationVersion] = 0;
 			metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(database.TransactionalStorage.Id);
 		}
+
+		protected void OnReplicationExecuted()
+		{
+			var replicationExecuted = ReplicationExecuted;
+			if (replicationExecuted != null) replicationExecuted();
+		}
+
 	}
 
 	internal class ReplicationStatisticsRecorder : IDisposable
@@ -1810,4 +1828,5 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 	}
+
 }
