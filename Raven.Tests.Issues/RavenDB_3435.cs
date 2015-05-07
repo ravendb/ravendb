@@ -98,8 +98,8 @@ namespace Raven.Tests.Issues
 				Name = TestUsername1
 			};
 
-			using (var storeA = CreateStore(databaseName:TestDatabaseName, runInMemory:false, configureStore: store => store.RegisterListener(new TestDocumentConflictListener())))
-			using (var storeB = CreateStore(databaseName: TestDatabaseName, runInMemory: false))
+			using (var storeA = CreateStore(useFiddler:true,databaseName:TestDatabaseName, runInMemory:false, configureStore: store => store.RegisterListener(new TestDocumentConflictListener())))
+			using (var storeB = CreateStore(useFiddler:true,databaseName: TestDatabaseName, runInMemory: false))
 			{				
 				storeA.DatabaseCommands.GlobalAdmin.DeleteDatabase(TestDatabaseName);
 				storeB.DatabaseCommands.GlobalAdmin.DeleteDatabase(TestDatabaseName);
@@ -132,28 +132,30 @@ namespace Raven.Tests.Issues
 
 				ExecuteReplicationOnAllServers();			
 
-				Assert.True(HasConflictDocuments(storeA));
-				Assert.True(HasConflictDocuments(storeB));							
+				Assert.True(HasConflictDocuments(storeA, user.Id));
+				Assert.True(HasConflictDocuments(storeB, user.Id));							
 
 				using (var session = storeA.OpenSession())
 					session.Load<User>(user.Id); //resolve conflict on A (resolver listener registered)
-				Assert.False(HasConflictDocuments(storeA));
 
 				ExecuteReplicationOnAllServers();
+
+				//sanity check
+				Assert.False(HasConflictDocuments(storeA, user.Id));
+				Assert.False(HasConflictDocuments(storeB, user.Id));
 
 				//storeB has no conflict resolver listeners, but since
 				//the conflict was resolved on A, it should be resolved on B as well
 				using (var session = storeB.OpenSession())
 					Assert.DoesNotThrow(() => session.Load<User>(user.Id));
-				
-				Assert.False(HasConflictDocuments(storeB));
+
 			}
 		}
 
-		private bool HasConflictDocuments(IDocumentStore store)
+		private bool HasConflictDocuments(IDocumentStore store, string id)
 		{
 			var docs = store.DatabaseCommands.ForDatabase(TestDatabaseName).GetDocuments(0, 1024);
-			return docs.Any(d => d.Key.Contains("/conflicts"));
+			return docs.Any(d => d.Key.Contains(id + "/conflicts"));
 		}
 
 		private void PauseAllReplicationTasks()
@@ -171,11 +173,9 @@ namespace Raven.Tests.Issues
 
 		private void ExecuteReplicationOnAllServers()
 		{
-			var countdown = new CountdownEvent(2);
+			var countdown = new CountdownEvent(servers.Count);
 			Parallel.ForEach(servers, srv =>
 			{
-				countdown.Signal();
-				countdown.Wait(); //make sure that replication will start as close to simultaneously as possible
 				var documentDatabaseTask = srv.Server.GetDatabaseInternal(TestDatabaseName);
 				documentDatabaseTask.Wait();
 				var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
@@ -183,8 +183,12 @@ namespace Raven.Tests.Issues
 				if (replicationTask != null)
 				{
 					replicationTask.ShouldWaitForWork = false;
-					replicationTask.ReplicationExecuted += documentDatabaseTask.Result.WorkContext.StopWork;
+					replicationTask.ReplicationExecuted +=  documentDatabaseTask.Result.WorkContext.StopWork;
 					var executeMethod = typeof(ReplicationTask).GetMethod("Execute", BindingFlags.NonPublic | BindingFlags.Instance);
+
+					countdown.Signal();
+					countdown.Wait(); //make sure that replication will start as simultaneously as possible
+		
 					executeMethod.Invoke(replicationTask, new object[0]);
 					replicationTask.ReplicationExecuted -= documentDatabaseTask.Result.WorkContext.StopWork;
 					documentDatabaseTask.Result.WorkContext.StartWork();

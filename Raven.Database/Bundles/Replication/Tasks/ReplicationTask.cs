@@ -284,7 +284,7 @@ namespace Raven.Bundles.Replication.Tasks
 													prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
 												}
 											}
-										}).AssertNotFailed();
+										}).ContinueWith(t => OnReplicationExecuted()).AssertNotFailed();
 								}
 							}
 						}
@@ -294,16 +294,11 @@ namespace Raven.Bundles.Replication.Tasks
 						}
 					}
 
-					OnReplicationExecuted();
+					runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
 
-					if (ShouldWaitForWork)
-					{
-						runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
-
-						timeToWaitInMinutes = runningBecauseOfDataModifications
-							? TimeSpan.FromSeconds(30)
-							: TimeSpan.FromMinutes(5);
-					}
+					timeToWaitInMinutes = runningBecauseOfDataModifications
+						? TimeSpan.FromSeconds(30)
+						: TimeSpan.FromMinutes(5);
 				}
 
 				IsRunning = false;
