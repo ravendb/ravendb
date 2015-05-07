@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 
 namespace Voron.Trees
 {
@@ -42,13 +41,6 @@ namespace Voron.Trees
 
         public void Add(FoundPage page)
         {
-#if DEBUG
-            if ((page.FirstKey.Options == SliceOptions.BeforeAllKeys) && (page.LastKey.Options == SliceOptions.AfterAllKeys))
-            {
-                Debug.Assert(page.CursorPath.Length == 1);
-            }
-#endif
-
             int itemsLeft = _cacheSize;
             int position = current + _cacheSize;
             while (itemsLeft > 0)
