@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Jint.Parser.Ast;
 using Raven.Abstractions.Data;
@@ -140,11 +141,12 @@ namespace Raven.Tests.Issues
 
 				ExecuteReplicationOnAllServers();
 
-				Assert.False(HasConflictDocuments(storeB));
 				//storeB has no conflict resolver listeners, but since
 				//the conflict was resolved on A, it should be resolved on B as well
 				using (var session = storeB.OpenSession())
-					Assert.DoesNotThrow(() => session.Load<User>(user.Id)); 
+					Assert.DoesNotThrow(() => session.Load<User>(user.Id));
+				
+				Assert.False(HasConflictDocuments(storeB));
 			}
 		}
 
@@ -169,8 +171,11 @@ namespace Raven.Tests.Issues
 
 		private void ExecuteReplicationOnAllServers()
 		{
+			var countdown = new CountdownEvent(2);
 			Parallel.ForEach(servers, srv =>
 			{
+				countdown.Signal();
+				countdown.Wait(); //make sure that replication will start as close to simultaneously as possible
 				var documentDatabaseTask = srv.Server.GetDatabaseInternal(TestDatabaseName);
 				documentDatabaseTask.Wait();
 				var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
