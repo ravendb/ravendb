@@ -106,7 +106,7 @@ namespace Raven.Abstractions.MEF
 
 		public void Apply(Action<T> action)
 		{
-			foreach (var item in this)
+			foreach (var item in this.ToList())
 			{
 				action(item.Value);
 			}

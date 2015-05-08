@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -130,19 +131,19 @@ namespace Raven.Tests.Issues
 				
 				StartDatabase(0);
 
-				ExecuteReplicationOnAllServers();			
+				ExecuteReplicationOnAllServers();
 
-				Assert.True(HasConflictDocuments(storeA, user.Id));
-				Assert.True(HasConflictDocuments(storeB, user.Id));							
-
+				//it might take some time for controller to process the replication and generate conflicts
+				Assert.True(WaitForConflictDocuments(storeA, user.Id));
+				Assert.True(WaitForConflictDocuments(storeB, user.Id));					
+		
 				using (var session = storeA.OpenSession())
 					session.Load<User>(user.Id); //resolve conflict on A (resolver listener registered)
 
 				ExecuteReplicationOnAllServers();
 
-				//sanity check
-				Assert.False(HasConflictDocuments(storeA, user.Id));
-				Assert.False(HasConflictDocuments(storeB, user.Id));
+				Assert.True(CheckIfConflictDocumentsRemoved(storeA, user.Id));
+				Assert.True(CheckIfConflictDocumentsRemoved(storeB, user.Id));
 
 				//storeB has no conflict resolver listeners, but since
 				//the conflict was resolved on A, it should be resolved on B as well
@@ -152,11 +153,44 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		private bool HasConflictDocuments(IDocumentStore store, string id)
+		private bool CheckIfConflictDocumentsRemoved(IDocumentStore store, string id, int timeoutMs = 60000)
 		{
-			var docs = store.DatabaseCommands.ForDatabase(TestDatabaseName).GetDocuments(0, 1024);
-			return docs.Any(d => d.Key.Contains(id + "/conflicts"));
+			var beginningTime = DateTime.UtcNow;
+			var timeouted = false;
+			JsonDocument[] docs;
+			do
+			{
+				var currentTime = DateTime.UtcNow;
+				if ((currentTime - beginningTime).TotalMilliseconds >= timeoutMs)
+				{
+					timeouted = true;
+					break;
+				}
+				docs = store.DatabaseCommands.ForDatabase(TestDatabaseName).GetDocuments(0, 1024);
+			} while (docs.Any(d => d.Key.Contains(id + "/conflicts")));
+
+			return !timeouted;
 		}
+
+		private bool WaitForConflictDocuments(IDocumentStore store, string id, int timeoutMs = 60000)
+		{
+			var beginningTime = DateTime.UtcNow;
+			var timeouted = false;
+			JsonDocument[] docs;
+			do
+			{
+				var currentTime = DateTime.UtcNow;
+				if ((currentTime - beginningTime).TotalMilliseconds >= timeoutMs)
+				{
+					timeouted = true;
+					break;
+				}
+				docs = store.DatabaseCommands.ForDatabase(TestDatabaseName).GetDocuments(0, 1024);
+			} while (!docs.Any(d => d.Key.Contains(id + "/conflicts")));
+
+			return !timeouted;
+		}
+
 
 		private void PauseAllReplicationTasks()
 		{
@@ -174,26 +208,40 @@ namespace Raven.Tests.Issues
 		private void ExecuteReplicationOnAllServers()
 		{
 			var countdown = new CountdownEvent(servers.Count);
-			Parallel.ForEach(servers, srv =>
+			var allThreadsDone = new CountdownEvent(servers.Count);
+			var replicationThreads = new List<Thread>();
+			foreach(var srv in servers)
 			{
-				var documentDatabaseTask = srv.Server.GetDatabaseInternal(TestDatabaseName);
-				documentDatabaseTask.Wait();
-				var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
-
-				if (replicationTask != null)
+				var server = srv;
+				var t = new Thread(() =>
 				{
-					replicationTask.ShouldWaitForWork = false;
-					replicationTask.ReplicationExecuted +=  documentDatabaseTask.Result.WorkContext.StopWork;
-					var executeMethod = typeof(ReplicationTask).GetMethod("Execute", BindingFlags.NonPublic | BindingFlags.Instance);
+					var documentDatabaseTask = server.Server.GetDatabaseInternal(TestDatabaseName);
+					documentDatabaseTask.Wait();
+					var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 
-					countdown.Signal();
-					countdown.Wait(); //make sure that replication will start as simultaneously as possible
-		
-					executeMethod.Invoke(replicationTask, new object[0]);
-					replicationTask.ReplicationExecuted -= documentDatabaseTask.Result.WorkContext.StopWork;
-					documentDatabaseTask.Result.WorkContext.StartWork();
-				}
-			});
+					if (replicationTask != null)
+					{
+						replicationTask.ShouldWaitForWork = false;
+						replicationTask.ReplicationExecuted += documentDatabaseTask.Result.WorkContext.StopWork;
+						var executeMethod = typeof (ReplicationTask).GetMethod("Execute", BindingFlags.NonPublic | BindingFlags.Instance);
+
+						countdown.Signal();
+						countdown.Wait(); //make sure that replication will start as simultaneously as possible
+
+						executeMethod.Invoke(replicationTask, new object[0]);
+						replicationTask.ReplicationExecuted -= documentDatabaseTask.Result.WorkContext.StopWork;
+						documentDatabaseTask.Result.WorkContext.StartWork();
+
+						while (server.Server.HasPendingRequests)
+							Thread.Sleep(100);
+						allThreadsDone.Signal();
+					}
+				});
+				replicationThreads.Add(t);
+			}
+
+			replicationThreads.ForEach(t => t.Start());
+			allThreadsDone.Wait();
 		}
 
 		private static void ChangeDocument(DocumentStore store, string id, string newName)
