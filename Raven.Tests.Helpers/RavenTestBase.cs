@@ -163,7 +163,7 @@ namespace Raven.Tests.Helpers
 					DataDirectory = Path.Combine(dataDirectory, "System"),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-					Port = port == null ? 8079 : port.Value,
+					Port = port ?? 8079,
 					AnonymousUserAccessMode = anonymousUserAccessMode,
 				}
 			};
@@ -176,14 +176,19 @@ namespace Raven.Tests.Helpers
 				documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
 			}
 
-			if (catalog != null)
-				documentStore.Configuration.Catalog.Catalogs.Add(catalog);
+		    if (catalog != null)
+		    {
+		        documentStore.Configuration.Catalog.Catalogs.Add(catalog);
+		    }
 
 			try
 			{
-				if (configureStore != null)
-					configureStore(documentStore);
-				ModifyStore(documentStore);
+			    if (configureStore != null)
+			    {
+			        configureStore(documentStore);
+			    }
+
+			    ModifyStore(documentStore);
 				ModifyConfiguration(documentStore.Configuration);
 				documentStore.Configuration.PostInit();
 				documentStore.Initialize();
@@ -220,7 +225,9 @@ namespace Raven.Tests.Helpers
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
 
-		public DocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
+		public DocumentStore NewRemoteDocumentStore(bool fiddler = false, 
+            RavenDbServer ravenDbServer = null, 
+            [CallerMemberName] string databaseName = null,
 			bool runInMemory = true,
 			string dataDirectory = null,
 			string requestedStorage = null,
