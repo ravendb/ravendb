@@ -114,6 +114,7 @@ namespace Raven.Tests.Issues
 				WaitForReplication(storeB, user.Id);
 
 				TellSecondInstanceToReplicateToFirstInstance();
+				PauseAllReplicationTasks();
 
 				StopDatabase(1);
 
@@ -168,7 +169,7 @@ namespace Raven.Tests.Issues
 			return !timeouted;
 		}
 
-		private bool WaitForConflictDocuments(IDocumentStore store, string id, int timeoutMs = 60000)
+		private bool WaitForConflictDocuments(IDocumentStore store, string id, int timeoutMs = 15000)
 		{
 			var beginningTime = DateTime.UtcNow;
 			var timeouted = false;
