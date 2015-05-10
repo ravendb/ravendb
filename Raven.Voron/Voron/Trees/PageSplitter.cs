@@ -42,7 +42,7 @@ namespace Voron.Trees
             _cursor = cursor;
             _treeState = treeState;
             Page page = _cursor.Pages.First.Value;
-            _page = tx.ModifyPage(page.PageNumber, page);
+            _page = tx.ModifyPage(page.PageNumber, _tree, page);
             _cursor.Pop();
         }
 
@@ -74,13 +74,13 @@ namespace Voron.Trees
 					// can cause a delete of a free space section resulting in a run of the tree rebalancer
 					// and here the parent page that exists in cursor can be outdated
 
-					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, null); // pass _null_ to make sure we'll get the most updated parent page
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, null); // pass _null_ to make sure we'll get the most updated parent page
 					_parentPage.LastSearchPosition = _cursor.CurrentPage.LastSearchPosition;
 					_parentPage.LastMatch = _cursor.CurrentPage.LastMatch;
 	            }
 	            else
 	            {
-					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor.CurrentPage);
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, _cursor.CurrentPage);
 	            }
 
                 _cursor.Update(_cursor.Pages.First, _parentPage);

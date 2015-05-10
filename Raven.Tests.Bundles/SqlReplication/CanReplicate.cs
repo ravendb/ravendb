@@ -443,7 +443,7 @@ CREATE TABLE [dbo].[Orders]
                 SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
 
                 var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
                 var foo = databaseMemoryTarget[Constants.SystemDatabase].WarnLog.First(x => x.LoggerName == typeof(SqlReplicationTask).FullName);
