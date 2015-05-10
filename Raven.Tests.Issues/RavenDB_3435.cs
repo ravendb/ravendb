@@ -107,16 +107,13 @@ namespace Raven.Tests.Issues
 
 				storeA.DatabaseCommands.GlobalAdmin.CreateDatabase(MultiDatabase.CreateDatabaseDocument(TestDatabaseName));
 				storeB.DatabaseCommands.GlobalAdmin.CreateDatabase(MultiDatabase.CreateDatabaseDocument(TestDatabaseName));
-
-				//setup master-master
+				
 				TellFirstInstanceToReplicateToSecondInstance();			
-				StoreDataDocWithConflictDocs(user, storeA);
+				StoreDataDoc(user, storeA);
 
 				WaitForReplication(storeB, user.Id);
 
 				TellSecondInstanceToReplicateToFirstInstance();
-
-				PauseAllReplicationTasks();
 
 				StopDatabase(1);
 
@@ -149,11 +146,10 @@ namespace Raven.Tests.Issues
 				//the conflict was resolved on A, it should be resolved on B as well
 				using (var session = storeB.OpenSession())
 					Assert.DoesNotThrow(() => session.Load<User>(user.Id));
-
 			}
 		}
 
-		private bool CheckIfConflictDocumentsRemoved(IDocumentStore store, string id, int timeoutMs = 60000)
+		private bool CheckIfConflictDocumentsRemoved(IDocumentStore store, string id, int timeoutMs = 15000)
 		{
 			var beginningTime = DateTime.UtcNow;
 			var timeouted = false;
@@ -194,51 +190,48 @@ namespace Raven.Tests.Issues
 
 		private void PauseAllReplicationTasks()
 		{
-			Parallel.ForEach(servers, srv =>
-			{
-				var documentDatabaseTask = srv.Server.GetDatabaseInternal(TestDatabaseName);
-				documentDatabaseTask.Wait();
-				var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+			Parallel.ForEach(servers, PauseReplication);
+		}
 
-				if (replicationTask != null)
-					replicationTask.Pause();
-			});
+		private static void PauseReplication(RavenDbServer srv)
+		{
+			var documentDatabaseTask = srv.Server.GetDatabaseInternal(TestDatabaseName);
+			documentDatabaseTask.Wait();
+			var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+
+			if (replicationTask != null)
+				replicationTask.Pause();
 		}
 
 		private void ExecuteReplicationOnAllServers()
 		{
 			var countdown = new CountdownEvent(servers.Count);
 			var allThreadsDone = new CountdownEvent(servers.Count);
-			var replicationThreads = new List<Thread>();
-			foreach(var srv in servers)
+			var replicationThreads = servers.Where(server => !server.Disposed)
+											.Select(server => new Thread(() =>
 			{
-				var server = srv;
-				var t = new Thread(() =>
+				var documentDatabaseTask = server.Server.GetDatabaseInternal(TestDatabaseName);
+				documentDatabaseTask.Wait();
+				var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+
+				if (replicationTask != null)
 				{
-					var documentDatabaseTask = server.Server.GetDatabaseInternal(TestDatabaseName);
-					documentDatabaseTask.Wait();
-					var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+					replicationTask.ShouldWaitForWork = false;
+					replicationTask.ReplicationExecuted += documentDatabaseTask.Result.WorkContext.StopWork;
+					var executeMethod = typeof (ReplicationTask).GetMethod("Execute", BindingFlags.NonPublic | BindingFlags.Instance);
 
-					if (replicationTask != null)
-					{
-						replicationTask.ShouldWaitForWork = false;
-						replicationTask.ReplicationExecuted += documentDatabaseTask.Result.WorkContext.StopWork;
-						var executeMethod = typeof (ReplicationTask).GetMethod("Execute", BindingFlags.NonPublic | BindingFlags.Instance);
+					countdown.Signal();
+					countdown.Wait(); //make sure that replication will start as simultaneously as possible
 
-						countdown.Signal();
-						countdown.Wait(); //make sure that replication will start as simultaneously as possible
+					executeMethod.Invoke(replicationTask, new object[0]);
+					replicationTask.ReplicationExecuted -= documentDatabaseTask.Result.WorkContext.StopWork;
+					documentDatabaseTask.Result.WorkContext.StartWork();
 
-						executeMethod.Invoke(replicationTask, new object[0]);
-						replicationTask.ReplicationExecuted -= documentDatabaseTask.Result.WorkContext.StopWork;
-						documentDatabaseTask.Result.WorkContext.StartWork();
-
-						while (server.Server.HasPendingRequests)
-							Thread.Sleep(100);
-						allThreadsDone.Signal();
-					}
-				});
-				replicationThreads.Add(t);
-			}
+					while (server.Server.HasPendingRequests)
+						Thread.Sleep(100);
+					allThreadsDone.Signal();
+				}
+			})).ToList();
 
 			replicationThreads.ForEach(t => t.Start());
 			allThreadsDone.Wait();
@@ -254,7 +247,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		private static void StoreDataDocWithConflictDocs(User user, DocumentStore store)
+		private static void StoreDataDoc(User user, DocumentStore store)
 		{
 			using (var session = store.OpenSession())
 			{

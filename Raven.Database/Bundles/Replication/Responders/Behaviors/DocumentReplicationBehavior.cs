@@ -1,7 +1,10 @@
+using System;
+using System.Diagnostics;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Responders.Behaviors;
+using Raven.Database.Bundles.Replication.Triggers;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -32,7 +35,7 @@ namespace Raven.Bundles.Replication.Responders
 		protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, RavenJObject incoming)
 		{
 			Database.Documents.Put(id, etag, incoming, metadata, null);
-			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
+			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);			
 		}
 
 		protected override CreatedConflict CreateConflict(string id, string newDocumentConflictId, 
