@@ -129,7 +129,7 @@ namespace Raven.Client.Document
 			return configs;
 		}
 
-		public Task DeleteAsync(long id, string database = null)
+		public async Task DeleteAsync(long id, string database = null)
 		{
 			var commands = database == null
 				? documentStore.AsyncDatabaseCommands
@@ -137,11 +137,11 @@ namespace Raven.Client.Document
 
 			using (var request = commands.CreateRequest("/subscriptions?id=" + id, "DELETE"))
 			{
-				return request.ExecuteRequestAsync();
+				await request.ExecuteRequestAsync().ConfigureAwait(false);
 			}
 		}
 
-		public Task ReleaseAsync(long id, string database = null)
+		public async Task ReleaseAsync(long id, string database = null)
 		{
 			var commands = database == null
 				? documentStore.AsyncDatabaseCommands
@@ -149,7 +149,7 @@ namespace Raven.Client.Document
 
 			using (var request = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection=&force=true", id), "POST"))
 			{
-				return request.ExecuteRequestAsync();
+				await request.ExecuteRequestAsync().ConfigureAwait(false);
 			}
 		}
 
