@@ -208,12 +208,26 @@ namespace Raven.Client.Document
 			{
 				await PullingTask.ConfigureAwait(false);
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
 				if (cts.Token.IsCancellationRequested)
 					return;
 
 				PullingTask = null;
+
+				SubscriptionException subscriptionEx;
+				var ere = ex as ErrorResponseException;
+
+				if (ere != null && AsyncDocumentSubscriptions.TryGetSubscriptionException(ere, out subscriptionEx))
+				{
+					if (subscriptionEx is SubscriptionClosedException)
+					{
+						// someone forced us to drop the connection by calling Subscriptions.Release
+						OnCompletedNotification();
+						IsClosed = true;
+						return;
+					}
+				}
 
 				RestartPullingTask().ConfigureAwait(false);
 			}

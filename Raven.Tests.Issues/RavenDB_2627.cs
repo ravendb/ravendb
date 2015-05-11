@@ -876,5 +876,48 @@ namespace Raven.Tests.Issues
 				}
 			}
 		}
+
+		[Fact]
+		public void RavenDB_3452_ShouldStopPullingDocsIfReleased()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+				store.Changes().WaitForAllPendingSubscriptions();
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User(), "users/1");
+					session.Store(new User(), "users/2");
+					session.SaveChanges();
+				}
+
+				var docs = new BlockingCollection<RavenJObject>();
+				var subscribe = subscription.Subscribe(docs.Add);
+
+				RavenJObject doc;
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+
+				store.Subscriptions.Release(id);
+				store.Changes().WaitForAllPendingSubscriptions();
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User(), "users/3");
+					session.Store(new User(), "users/4");
+					session.SaveChanges();
+				}
+
+				Thread.Sleep(TimeSpan.FromSeconds(5));
+
+				Assert.False(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.False(docs.TryTake(out doc, waitForDocTimeout));
+
+				subscription.Dispose();
+			}
+		}
 	}
 }
