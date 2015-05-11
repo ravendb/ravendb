@@ -184,9 +184,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
             var viewKey = CreateKey(view);
-			var viewAndDocumentId = (Slice) AppendToKey(viewKey, documentId);
+            var viewKeySlice = new Slice(viewKey);
+			var viewAndDocumentId = new Slice(AppendToKey(viewKey, documentId));
 
-			var mappedResultsByViewAndDocumentId = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndDocumentId);
+            var mappedResultsByViewAndDocumentId = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndDocumentId);
+            var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
+            var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
+            var mappedResultsByViewAndReduceKeyAndSourceBucket = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket);
+            var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
+
 			using (var iterator = mappedResultsByViewAndDocumentId.MultiRead(Snapshot, viewAndDocumentId))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
@@ -194,14 +200,25 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
-					var id = iterator.CurrentKey.Clone();
+					// TODO: Check if we can relax the clone.
+                    var id = iterator.CurrentKey.Clone();
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, id, writeBatch.Value, out version);
 					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
 					var bucket = value.ReadInt(MappedResultFields.Bucket);
 
-                    DeleteMappedResult(id, view, viewKey, documentId, reduceKey, bucket.ToString(CultureInfo.InvariantCulture));
+                    var reduceKeyHash = HashKey(reduceKey);                  
+                    var viewAndReduceKey = AppendToKey(viewKey, ReduceKeySizeLimited(reduceKey), reduceKeyHash);
+                    var viewAndReduceKeyAndSourceBucket = AppendToKey(viewAndReduceKey, bucket);
+
+                    tableStorage.MappedResults.Delete(writeBatch.Value, id);
+
+                    mappedResultsByViewAndDocumentId.MultiDelete(writeBatch.Value, viewAndDocumentId, id);
+                    mappedResultsByView.MultiDelete(writeBatch.Value, viewKeySlice, id);
+                    mappedResultsByViewAndReduceKey.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKey, id);
+                    mappedResultsByViewAndReduceKeyAndSourceBucket.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndSourceBucket, id);
+                    mappedResultsData.Delete(writeBatch.Value, id);
 
 					var reduceKeyAndBucket = new ReduceKeyAndBucket(bucket, reduceKey);
 					removed[reduceKeyAndBucket] = removed.GetOrDefault(reduceKeyAndBucket) + 1;
@@ -222,7 +239,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public void DeleteMappedResultsForView(int view)
 		{
 			var deletedReduceKeys = new List<string>();
-			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
+
+            var mappedResultsByViewAndDocumentId = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndDocumentId);
+            var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
+            var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
+            var mappedResultsByViewAndReduceKeyAndSourceBucket = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket);
+            var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
 
             var viewKey = CreateKey(view);
 
@@ -233,16 +255,28 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
-					var id = (Slice) iterator.CurrentKey.Clone();
+					var id = iterator.CurrentKey.Clone();
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, id, writeBatch.Value, out version);
 					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
 					var bucket = value.ReadInt(MappedResultFields.Bucket);
-					var docId = value.ReadString(MappedResultFields.DocId);
+					var documentId = value.ReadString(MappedResultFields.DocId);
 
-					DeleteMappedResult(id, view, viewKey, docId, reduceKey, bucket.ToString(CultureInfo.InvariantCulture));
+                    var reduceKeyHash = HashKey(reduceKey);
 
+                    var viewAndDocumentId = AppendToKey(viewKey, documentId);
+                    var viewAndReduceKey = AppendToKey(viewKey, ReduceKeySizeLimited(reduceKey), reduceKeyHash);
+                    var viewAndReduceKeyAndSourceBucket = AppendToKey(viewAndReduceKey, bucket);
+
+                    tableStorage.MappedResults.Delete(writeBatch.Value, id);
+
+                    mappedResultsByViewAndDocumentId.MultiDelete(writeBatch.Value, (Slice)viewAndDocumentId, id);
+                    mappedResultsByView.MultiDelete(writeBatch.Value, (Slice)viewKey, id);
+                    mappedResultsByViewAndReduceKey.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKey, id);
+                    mappedResultsByViewAndReduceKeyAndSourceBucket.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndSourceBucket, id);
+                    mappedResultsData.Delete(writeBatch.Value, id);
+					
 					deletedReduceKeys.Add(reduceKey);
 					storageActionsAccessor.General.MaybePulseTransaction();
 				}
@@ -1023,30 +1057,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		}
 
-        private void DeleteMappedResult(Slice id, int view, string viewKey, string documentId, string reduceKey, string bucket)
-		{
-		    var reduceKeyHash = HashKey(reduceKey);
-           
-            var viewAndDocumentId = AppendToKey(viewKey, documentId);
-			var viewAndReduceKey = AppendToKey(viewKey, ReduceKeySizeLimited(reduceKey), reduceKeyHash);
-            var viewAndReduceKeyAndSourceBucket = AppendToKey(viewAndReduceKey, bucket);
-
-			var mappedResultsByViewAndDocumentId = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndDocumentId);
-			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
-			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
-			var mappedResultsByViewAndReduceKeyAndSourceBucket = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket);
-			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
-
-			tableStorage.MappedResults.Delete(writeBatch.Value, id);
-            mappedResultsByViewAndDocumentId.MultiDelete(writeBatch.Value, (Slice)viewAndDocumentId, id);
-            mappedResultsByView.MultiDelete(writeBatch.Value, (Slice)viewKey, id);
-            mappedResultsByViewAndReduceKey.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKey, id);
-            mappedResultsByViewAndReduceKeyAndSourceBucket.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndSourceBucket, id);
-			mappedResultsData.Delete(writeBatch.Value, id);
-		}
-
 		private void RemoveReduceResult(Slice id)
 		{
+            var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
+            var reduceResultsByViewAndReduceKeyAndLevel = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
+            var reduceResultsByViewAndReduceKeyAndLevelAndBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
+            var reduceResultsByView = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
+            var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
+
 			ushort version;
 			var value = LoadStruct(tableStorage.ReduceResults, id, writeBatch.Value, out version);
 
@@ -1055,6 +1073,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var level = value.ReadInt(ReduceResultFields.Level);
 			var bucket = value.ReadInt(ReduceResultFields.Bucket);
 			var sourceBucket = value.ReadInt(ReduceResultFields.SourceBucket);
+
 		    var reduceKeyHash = HashKey(reduceKey);
 
             var viewKey = CreateKey(view);
@@ -1062,17 +1081,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var viewAndReduceKeyAndLevelAndSourceBucket = AppendToKey(viewAndReduceKeyAndLevel, sourceBucket);
             var viewAndReduceKeyAndLevelAndBucket = AppendToKey(viewAndReduceKeyAndLevel, bucket);
 
-			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
-			var reduceResultsByViewAndReduceKeyAndLevel = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
-			var reduceResultsByViewAndReduceKeyAndLevelAndBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
-			var reduceResultsByView = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
-			var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
-
 			tableStorage.ReduceResults.Delete(writeBatch.Value, id);
+
             reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndLevelAndSourceBucket, id);
             reduceResultsByViewAndReduceKeyAndLevel.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndLevel, id);
             reduceResultsByViewAndReduceKeyAndLevelAndBucket.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndLevelAndBucket, id);
             reduceResultsByView.MultiDelete(writeBatch.Value, (Slice)viewKey, id);
+
 			reduceResultsData.Delete(writeBatch.Value, id);
 		}
 
