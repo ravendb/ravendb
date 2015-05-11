@@ -13,6 +13,7 @@ using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -153,21 +154,41 @@ namespace Raven.Client.Document
 
 		public static bool TryGetSubscriptionException(ErrorResponseException ere, out SubscriptionException subscriptionException)
 		{
+			var text = ere.ResponseString;
+
 			if (ere.StatusCode == SubscriptionDoesNotExistExeption.RelevantHttpStatusCode)
 			{
-				subscriptionException = new SubscriptionDoesNotExistExeption(ere.ResponseString);
+				var errorResult = JsonConvert.DeserializeAnonymousType(text, new
+				{
+					url = (string)null,
+					error = (string)null
+				});
+
+				subscriptionException = new SubscriptionDoesNotExistExeption(errorResult.error);
 				return true;
 			}
 
 			if (ere.StatusCode == SubscriptionInUseException.RelavantHttpStatusCode)
 			{
-				subscriptionException = new SubscriptionInUseException(ere.Message);
+				var errorResult = JsonConvert.DeserializeAnonymousType(text, new
+				{
+					url = (string)null,
+					error = (string)null
+				});
+
+				subscriptionException = new SubscriptionInUseException(errorResult.error);
 				return true;
 			}
 
 			if (ere.StatusCode == SubscriptionClosedException.RelevantHttpStatusCode)
 			{
-				subscriptionException = new SubscriptionClosedException(ere.Message);
+				var errorResult = JsonConvert.DeserializeAnonymousType(text, new
+				{
+					url = (string)null,
+					error = (string)null
+				});
+
+				subscriptionException = new SubscriptionClosedException(errorResult.error);
 				return true;
 			}
 

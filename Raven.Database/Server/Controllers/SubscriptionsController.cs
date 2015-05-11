@@ -59,23 +59,16 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/subscriptions/open")]
 		public async Task<HttpResponseMessage> Open(long id)
 		{
-			try
-			{
-				Database.Subscriptions.GetSubscriptionConfig(id);
+			Database.Subscriptions.GetSubscriptionConfig(id);
 
-				var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
+			var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
 
-				if (options == null)
-					throw new InvalidOperationException("Options cannot be null");
+			if (options == null)
+				throw new InvalidOperationException("Options cannot be null");
 
-				Database.Subscriptions.OpenSubscription(id, options);
+			Database.Subscriptions.OpenSubscription(id, options);
 
-				return GetEmptyMessage();
-			}
-			catch (SubscriptionException e)
-			{
-				return GetMessageWithString(e.Message, e.ResponseStatusCode);
-			}
+			return GetEmptyMessage();
 		}
 
 		[HttpGet]
