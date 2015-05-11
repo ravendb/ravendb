@@ -902,7 +902,6 @@ namespace Raven.Tests.Issues
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
 
 				store.Subscriptions.Release(id);
-				store.Changes().WaitForAllPendingSubscriptions();
 
 				using (var session = store.OpenSession())
 				{
@@ -916,7 +915,45 @@ namespace Raven.Tests.Issues
 				Assert.False(docs.TryTake(out doc, waitForDocTimeout));
 				Assert.False(docs.TryTake(out doc, waitForDocTimeout));
 
+				Assert.True(subscription.IsClosed);
+
 				subscription.Dispose();
+			}
+		}
+
+		[Fact]
+		public void RavenDB_3453_ShouldDeserializeTheWholeDocumentsAfterTypedSubscription()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create<User>(new SubscriptionCriteria<User>());
+				var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions());
+
+				var users = new BlockingCollection<User>();
+
+				subscription.Subscribe(x => users.Add(x));
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Age = 31 }, "users/1");
+					session.Store(new User { Age = 27 }, "users/12");
+					session.Store(new User { Age = 25 }, "users/3");
+
+					session.SaveChanges();
+				}
+
+				User user;
+				Assert.True(users.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/1", user.Id);
+				Assert.Equal(31, user.Age);
+
+				Assert.True(users.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/12", user.Id);
+				Assert.Equal(27, user.Age);
+
+				Assert.True(users.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/3", user.Id);
+				Assert.Equal(25, user.Age);
 			}
 		}
 	}

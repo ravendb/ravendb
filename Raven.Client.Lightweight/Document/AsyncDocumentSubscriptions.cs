@@ -11,6 +11,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Client.Connection.Async;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -82,7 +83,7 @@ namespace Raven.Client.Document
 
 			await SendOpenSubscriptionRequest(commands, id, options).ConfigureAwait(false);
 
-			var subscription = new Subscription<T>(id, options, commands, documentStore.Changes(database), documentStore.Conventions, () => 
+			var subscription = new Subscription<T>(id, database ?? MultiDatabase.GetDatabaseName(documentStore.Url), options, commands, documentStore.Changes(database), documentStore.Conventions, () => 
 				SendOpenSubscriptionRequest(commands, id, options)); // to ensure that subscription is open try to call it with the same connection id
 
 			subscriptions.Add(subscription);
