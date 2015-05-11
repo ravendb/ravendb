@@ -10,25 +10,25 @@
         <div class="modal-body">
             <div class="form-group">
                 <label class="col-sm-4 control-label">Between: </label>
-                <div class="col-sm-8">
-                    <div class="input-group">
-                        <input id="fromDate" type="text" class="form-control" data-bind="value: inputs[0]" />
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" id="fromDateButton" data-bind="clickBubble: false, datePicker: fromDate, datepickerOptions: { endDateElement: 'toDateButton' }"><i class="fa fa-calendar"></i></button>    
-                        </span>
-                    </div>
-                </div>
+	            <div class="col-sm-8">
+					<div class="input-group date" id="fromDate" data-bind="datePicker: fromDate, datepickerOptions: { endDateElement: 'toDate' }">
+						<input type="text" class="form-control" data-bind="value: inputs[0]" />
+						<span class="input-group-addon">
+							<span class="fa fa-calendar"></span>
+						</span>
+					</div>
+	            </div>
             </div>
             <div class="form-group">
                 <label class="col-sm-4 control-label"> and: </label>
-                <div class="col-sm-8">
-                    <div class="input-group">
-                        <input id="toDate" type="text" class="form-control" data-bind="value: inputs[1]" />
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" id="toDateButton" data-bind="clickBubble: false, datePicker: toDate, datepickerOptions: { startDateElement: 'fromDateButton' }"><i class="fa fa-calendar"></i></button>                                                
-                        </span>
-                    </div>
-                </div>
+	            <div class="col-sm-8">
+					<div class="input-group date" id="toDate" data-bind="datePicker: toDate, datepickerOptions: { startDateElement: 'fromDate' }">
+						<input type="text" class="form-control" data-bind="value: inputs[1]" />
+						<span class="input-group-addon">
+							<span class="fa fa-calendar"></span>
+						</span>
+					</div>
+	            </div>
             </div>
         </div>
         <div class="modal-footer">
