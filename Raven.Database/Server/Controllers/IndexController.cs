@@ -278,6 +278,22 @@ namespace Raven.Database.Server.Controllers
 		    return GetMessageWithObject(text);
 		}
 
+		[HttpGet]
+		[RavenRoute("indexes/indexing-perf-stats")]
+		[RavenRoute("databases/{databaseName}/indexes/indexing-perf-stats")]
+		public HttpResponseMessage IndexingPerfStats()
+		{
+			var stats = from pair in Database.IndexDefinitionStorage.IndexDefinitions
+						let performance = Database.IndexStorage.GetIndexingPerformance(pair.Key)
+						select new
+						       {
+							       IndexId = pair.Key,
+								   IndexName = pair.Value.Name,
+								   Performance = performance
+						       };
+
+			return GetMessageWithObject(stats);
+		}
 	
 		private HttpResponseMessage GetIndexDefinition(string index)
 		{
@@ -772,7 +788,6 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(instance.indexId);
-			stats.Performance = Database.IndexStorage.GetIndexingPerformance(instance.indexId);
 			stats.SetLastDocumentEtag(lastEtag);
 			return GetMessageWithObject(stats);
 		}

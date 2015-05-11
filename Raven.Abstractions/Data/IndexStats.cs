@@ -121,11 +121,6 @@ namespace Raven.Abstractions.Data
 		public string[] ForEntityName { get; set; } 
 
 		/// <summary>
-		/// Performance statistics for this index.
-		/// </summary>
-		public IndexingPerformanceStats[] Performance { get; set; }
-
-		/// <summary>
 		/// Total number of entries in this index.
 		/// </summary>
 		public int DocsCount { get; set; }
