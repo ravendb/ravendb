@@ -763,11 +763,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
 
-				do
-				{
-					RemoveReduceResult(iterator.CurrentKey.Clone());
-				}
-				while (iterator.MoveNext());
+                RemoveReduceResult(iterator);
 			}
 		}
 
@@ -1016,30 +1012,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					DeleteScheduledReduction(id, v, CreateKey(v), level, reduceKey);
 					storageActionsAccessor.General.MaybePulseTransaction();
-
 				}
 				while (iterator.MoveNext());
 			}
 		}
 
+
+
 		public void RemoveReduceResultsForView(int view)
 		{
-			var reduceResultsByView =
-				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
+			var reduceResultsByView = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
 
             using (var iterator = reduceResultsByView.MultiRead(Snapshot, (Slice)CreateKey(view)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
 
-				do
-				{
-					var id = iterator.CurrentKey.Clone();
-
-					RemoveReduceResult(id);
-					storageActionsAccessor.General.MaybePulseTransaction();
-				}
-				while (iterator.MoveNext());
+                RemoveReduceResult(iterator, PulseTransaction);
 			}
 		}
 
@@ -1054,42 +1043,56 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             scheduledReductionsByView.MultiDelete(writeBatch.Value, (Slice)viewKey, id);
             scheduledReductionsByViewAndLevelAndReduceKey.MultiDelete(writeBatch.Value, (Slice)AppendToKey(viewKey, level, ReduceKeySizeLimited(reduceKey), reduceKeyHash), id);
-
 		}
 
-		private void RemoveReduceResult(Slice id)
-		{
+        private void RemoveReduceResult(global::Voron.Trees.IIterator iterator, Action afterRecordDeleted = null)
+        {
             var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
             var reduceResultsByViewAndReduceKeyAndLevel = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
             var reduceResultsByViewAndReduceKeyAndLevelAndBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
             var reduceResultsByView = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
             var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
 
-			ushort version;
-			var value = LoadStruct(tableStorage.ReduceResults, id, writeBatch.Value, out version);
+            do
+            {
+                // TODO: Check if we can avoid the clone.
+                Slice id = iterator.CurrentKey.Clone();
 
-			var view = value.ReadInt(ReduceResultFields.IndexId);
-			var reduceKey = value.ReadString(ReduceResultFields.ReduceKey);
-			var level = value.ReadInt(ReduceResultFields.Level);
-			var bucket = value.ReadInt(ReduceResultFields.Bucket);
-			var sourceBucket = value.ReadInt(ReduceResultFields.SourceBucket);
+                ushort version;
+                var value = LoadStruct(tableStorage.ReduceResults, id, writeBatch.Value, out version);
 
-		    var reduceKeyHash = HashKey(reduceKey);
+                var view = value.ReadInt(ReduceResultFields.IndexId);
+                var reduceKey = value.ReadString(ReduceResultFields.ReduceKey);
+                var level = value.ReadInt(ReduceResultFields.Level);
+                var bucket = value.ReadInt(ReduceResultFields.Bucket);
+                var sourceBucket = value.ReadInt(ReduceResultFields.SourceBucket);
 
-            var viewKey = CreateKey(view);
-            var viewAndReduceKeyAndLevel = AppendToKey(viewKey, ReduceKeySizeLimited(reduceKey), reduceKeyHash, level);
-            var viewAndReduceKeyAndLevelAndSourceBucket = AppendToKey(viewAndReduceKeyAndLevel, sourceBucket);
-            var viewAndReduceKeyAndLevelAndBucket = AppendToKey(viewAndReduceKeyAndLevel, bucket);
+                var reduceKeyHash = HashKey(reduceKey);
 
-			tableStorage.ReduceResults.Delete(writeBatch.Value, id);
+                var viewKey = CreateKey(view);
+                var viewAndReduceKeyAndLevel = AppendToKey(viewKey, ReduceKeySizeLimited(reduceKey), reduceKeyHash, level);
+                var viewAndReduceKeyAndLevelAndSourceBucket = AppendToKey(viewAndReduceKeyAndLevel, sourceBucket);
+                var viewAndReduceKeyAndLevelAndBucket = AppendToKey(viewAndReduceKeyAndLevel, bucket);
 
-            reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndLevelAndSourceBucket, id);
-            reduceResultsByViewAndReduceKeyAndLevel.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndLevel, id);
-            reduceResultsByViewAndReduceKeyAndLevelAndBucket.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndLevelAndBucket, id);
-            reduceResultsByView.MultiDelete(writeBatch.Value, (Slice)viewKey, id);
+                tableStorage.ReduceResults.Delete(writeBatch.Value, id);
 
-			reduceResultsData.Delete(writeBatch.Value, id);
-		}
+                reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndLevelAndSourceBucket, id);
+                reduceResultsByViewAndReduceKeyAndLevel.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndLevel, id);
+                reduceResultsByViewAndReduceKeyAndLevelAndBucket.MultiDelete(writeBatch.Value, (Slice)viewAndReduceKeyAndLevelAndBucket, id);
+                reduceResultsByView.MultiDelete(writeBatch.Value, (Slice)viewKey, id);
+
+                reduceResultsData.Delete(writeBatch.Value, id);
+
+                if (afterRecordDeleted != null)
+                    afterRecordDeleted();
+            }
+            while (iterator.MoveNext());
+        }
+
+        private void PulseTransaction()
+        {
+            storageActionsAccessor.General.MaybePulseTransaction();
+        }
 
         private static string HashKey(string key)
         {
