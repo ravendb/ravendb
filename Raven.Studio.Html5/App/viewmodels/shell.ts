@@ -224,7 +224,7 @@ class shell extends viewModelBase {
             { route: "databases/edit", title: "Edit Document", moduleId: "viewmodels/database/documents/editDocument", nav: false },
             { route: "filesystems/files", title: "Files", moduleId: "viewmodels/filesystem/files/filesystemFiles", nav: true, hash: this.appUrls.filesystemFiles },
             { route: "filesystems/search", title: "Search", moduleId: "viewmodels/filesystem/search/search", nav: true, hash: this.appUrls.filesystemSearch },
-            { route: "filesystems/synchronization*details", title: "Synchronization", moduleId: "viewmodels/filesystem/synchoronization/synchronization", nav: true, hash: this.appUrls.filesystemSynchronization },
+            { route: "filesystems/synchronization*details", title: "Synchronization", moduleId: "viewmodels/filesystem/synchronization/synchronization", nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: "filesystems/status*details", title: "Status", moduleId: "viewmodels/filesystem/status/status", nav: true, hash: this.appUrls.filesystemStatus },
             { route: "filesystems/tasks*details", title: "Tasks", moduleId: "viewmodels/filesystem/tasks/tasks", nav: true, hash: this.appUrls.filesystemTasks },
             { route: "filesystems/settings*details", title: "Settings", moduleId: "viewmodels/filesystem/settings/settings", nav: true, hash: this.appUrls.filesystemSettings },
