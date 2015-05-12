@@ -489,6 +489,21 @@ namespace Raven.Database
 				.ToList();
 		}
 
+		public IndexingPerformanceStatistics[] IndexingPerformanceStatistics
+		{
+			get
+			{
+				return (from pair in IndexDefinitionStorage.IndexDefinitions
+					   let performance = IndexStorage.GetIndexingPerformance(pair.Key)
+					   select new IndexingPerformanceStatistics
+					   {
+						   IndexId = pair.Key,
+						   IndexName = pair.Value.Name,
+						   Performance = performance
+					   }).ToArray();
+			}
+		}
+
 		public DatabaseStatistics Statistics
 		{
 			get
