@@ -26,8 +26,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Abstractions.Util.Encryptors;
-using Voron.Impl.Journal;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -69,6 +67,9 @@ namespace Raven.Database.Server.Controllers
 
                 if (string.IsNullOrEmpty(GetQueryStringValue("explain")) == false) 
                     return GetExplanation(index);
+
+				if (string.Equals(id, "indexing-perf-stats", StringComparison.OrdinalIgnoreCase))
+					return GetIndexingPerformanceStatistics();
 
                 return GetIndexQueryResult(index, cts.Token);
             }
@@ -277,7 +278,6 @@ namespace Raven.Database.Server.Controllers
 
 		    return GetMessageWithObject(text);
 		}
-
 	
 		private HttpResponseMessage GetIndexDefinition(string index)
 		{
@@ -772,8 +772,21 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(instance.indexId);
-			stats.Performance = Database.IndexStorage.GetIndexingPerformance(instance.indexId);
 			stats.SetLastDocumentEtag(lastEtag);
+			return GetMessageWithObject(stats);
+		}
+
+		private HttpResponseMessage GetIndexingPerformanceStatistics()
+		{
+			var stats = from pair in Database.IndexDefinitionStorage.IndexDefinitions 
+						let performance = Database.IndexStorage.GetIndexingPerformance(pair.Key) 
+						select new IndexingPerformanceStatistics
+						       {
+							       IndexId = pair.Key, 
+								   IndexName = pair.Value.Name, 
+								   Performance = performance
+						       };
+
 			return GetMessageWithObject(stats);
 		}
 	}

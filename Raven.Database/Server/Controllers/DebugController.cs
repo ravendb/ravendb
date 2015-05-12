@@ -201,25 +201,25 @@ namespace Raven.Database.Server.Controllers
 			var now = SystemTime.UtcNow;
 			var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
 
-			var databaseStatistics = Database.Statistics;
-			var stats = from index in databaseStatistics.Indexes
-						from perf in index.Performance
+			var stats = from pair in Database.IndexDefinitionStorage.IndexDefinitions
+						let performance = Database.IndexStorage.GetIndexingPerformance(pair.Key)
+						from perf in performance
 						where (perf.Operation == "Map" || perf.Operation == "Index") && perf.Started < nowTruncToSeconds
-						let k = new { index, perf }
-						group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond into g
+						let k = new { IndexDefinition = pair.Value, Performance = perf }
+						group k by k.Performance.Started.Ticks / TimeSpan.TicksPerSecond into g
 						orderby g.Key
 						select new
 						{
 							Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
 							Stats = from k in g
-									group k by k.index.Name into gg
+									group k by k.IndexDefinition.Name into gg
 									select new
 									{
 										Index = gg.Key,
-										DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
-										InputCount = gg.Sum(x => x.perf.InputCount),
-										OutputCount = gg.Sum(x => x.perf.OutputCount),
-										ItemsCount = gg.Sum(x => x.perf.ItemsCount)
+										DurationMilliseconds = gg.Sum(x => x.Performance.DurationMilliseconds),
+										InputCount = gg.Sum(x => x.Performance.InputCount),
+										OutputCount = gg.Sum(x => x.Performance.OutputCount),
+										ItemsCount = gg.Sum(x => x.Performance.ItemsCount)
 									}
 						};
 

@@ -7,8 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+
 using Raven.Abstractions.Indexing;
-using System.Linq.Expressions;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
@@ -121,11 +121,6 @@ namespace Raven.Abstractions.Data
 		public string[] ForEntityName { get; set; } 
 
 		/// <summary>
-		/// Performance statistics for this index.
-		/// </summary>
-		public IndexingPerformanceStats[] Performance { get; set; }
-
-		/// <summary>
 		/// Total number of entries in this index.
 		/// </summary>
 		public int DocsCount { get; set; }
@@ -182,33 +177,6 @@ namespace Raven.Abstractions.Data
 
         Forced = 512,
     }
-
-    public class IndexingPerformanceStats
-	{
-	    public string Operation { get; set; }
-	    public int ItemsCount { get; set; }
-	    public int InputCount { get; set; }
-	    public int OutputCount { get; set; }
-		public DateTime Started { get; set; }
-		public DateTime Completed { get; set; }
-	    public TimeSpan Duration { get; set; }
-	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-		[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
-
-		public BasePerformanceStats[] Operations { get; set; }
-
-	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
-		[JsonIgnore]
-	    public Action OnCompleted = delegate { };
-
-        public void RunCompleted()
-        {
-            var onCompleted = OnCompleted;
-            OnCompleted = null;
-            if (onCompleted != null)
-                onCompleted();
-        }
-	}
 
 	public enum IndexingOperation
 	{
