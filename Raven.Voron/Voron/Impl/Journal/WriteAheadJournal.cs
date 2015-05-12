@@ -778,6 +778,21 @@ namespace Voron.Impl.Journal
 				get { return Monitor.IsEntered(_flushingLock); }
 			}
 
+			public IDisposable TryTakeFlushingLock(ref bool lockTaken)
+			{
+				Monitor.TryEnter(_flushingLock, ref lockTaken);
+				bool localLockTaken = lockTaken;
+
+				ignoreLockAlreadyTaken = true;
+
+				return new DisposableAction(() =>
+				{
+					ignoreLockAlreadyTaken = false;
+					if (localLockTaken)
+						Monitor.Exit(_flushingLock);
+				});
+			}
+
 			public IDisposable TakeFlushingLock()
 			{
 				bool lockTaken = false;

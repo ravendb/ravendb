@@ -29,7 +29,6 @@ namespace Voron.Impl
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
-        private readonly HashSet<long> _scratchPages = new HashSet<long>(LongEqualityComparer.Instance);
         private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(LongEqualityComparer.Instance);
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
@@ -65,7 +64,6 @@ namespace Voron.Impl
 		private readonly List<PageFromScratchBuffer> _unusedScratchPages = new List<PageFromScratchBuffer>();
 	    private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
 		private readonly Dictionary<int, PagerState> _scratchPagerStates;
-
 
 	    public bool Committed { get; private set; }
 
@@ -197,7 +195,6 @@ namespace Voron.Impl
 			_allocatedPagesInTransaction = 0;
 			_overflowPagesInTransaction = 0;
 
-            _scratchPages.Clear();
 			_scratchPagesTable.Clear();
 		}
 
@@ -232,27 +229,26 @@ namespace Voron.Impl
 		    return null;
 		}
 
-	    internal Page ModifyPage(long num, Page page)
+		internal Page ModifyPage(long num, Tree tree, Page page)
 		{
 			_env.AssertFlushingNotFailed();
 
 			page = page ?? GetReadOnlyPage(num);
-		    if (page.Dirty)
-			    return page;
+			if (page.Dirty)
+				return page;
 
 			if (_dirtyPages.Contains(num))
 			{
 				page.Dirty = true;
-
 				return page;
 			}
-
 
 		    var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
             MemoryUtils.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
 			newPage.LastMatch = page.LastMatch;
+			tree.RecentlyFoundPages.Reset(num);
 
 			return newPage;
 		}
@@ -273,14 +269,12 @@ namespace Voron.Impl
         private PagerStateCacheItem lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
 
 		public Page GetReadOnlyPage(long pageNumber)
-		{
-			PageFromScratchBuffer value;
-		    Page p;            
+		{			
+			Page p;
 
-            if (_scratchPages.Contains(pageNumber))
+            PageFromScratchBuffer value;
+            if ( _scratchPagesTable.TryGetValue(pageNumber, out value))
             {
-                value = _scratchPagesTable[pageNumber];
-
                 PagerState state = null;
                 if ( _scratchPagerStates != null )
                 {
@@ -348,7 +342,6 @@ namespace Voron.Impl
 				_overflowPagesInTransaction += (numberOfPages - 1);
 			}
 
-            _scratchPages.Add(pageNumber.Value);
 			_scratchPagesTable[pageNumber.Value] = pageFromScratchBuffer;
 
 			page.Lower = (ushort)Constants.PageHeaderSize;
@@ -527,7 +520,6 @@ namespace Voron.Impl
 				_transactionPages.Remove(scratchPage);
 				_unusedScratchPages.Add(scratchPage);
                 
-                _scratchPages.Remove(pageNumber);
 				_scratchPagesTable.Remove(pageNumber);
 			}
 
