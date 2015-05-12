@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
@@ -41,6 +42,30 @@ namespace Raven.Tests.Counters
 			}
 		}
 
+		//2 way replication
+		[Fact]
+		public async Task Two_way_replication_should_work2()
+		{
+			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
+			{
+				await SetupReplicationAsync(storeA, storeB);
+				await SetupReplicationAsync(storeB, storeA);
+
+				using (var client = storeA.NewCounterClient())
+				{
+					await client.Commands.ChangeAsync("group", "counter", 2);
+				}
+
+				using (var client = storeB.NewCounterClient())
+				{
+					await client.Commands.ChangeAsync("group", "counter", 3);
+				}
+
+				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
+			}
+		}
+
 		//more complicated case
 		[Fact]
 		public async Task Multiple_replication_should_Work()
@@ -51,6 +76,10 @@ namespace Raven.Tests.Counters
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				await SetupReplicationAsync(storeA, storeC);
+				await SetupReplicationAsync(storeB, storeA);
+				await SetupReplicationAsync(storeB, storeC);
+				await SetupReplicationAsync(storeC, storeA);
+				await SetupReplicationAsync(storeC, storeB);
 
 				using (var client = storeA.NewCounterClient())
 				{
@@ -63,6 +92,11 @@ namespace Raven.Tests.Counters
 				}
 
 				using (var client = storeA.NewCounterClient())
+				{
+					await client.Commands.ChangeAsync("group", "counter", 4);
+				}
+
+				using (var client = storeB.NewCounterClient())
 				{
 					await client.Commands.ChangeAsync("group", "counter", 4);
 				}

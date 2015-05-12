@@ -110,11 +110,12 @@ namespace Raven.Tests.Counters
 			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
 			{
 				await SetupReplicationAsync(storeA, storeB);
+				await SetupReplicationAsync(storeB, storeA);
 
 				var changesB = storeB.Changes();
 				var notificationTask = changesB.Task.Result
 					.ForReplicationChange(GroupName, CounterName)
-					.Timeout(TimeSpan.FromSeconds(10))
+					.Timeout(TimeSpan.FromSeconds(30))
 					.Take(1).ToTask();
 
 				using (var client = storeA.NewCounterClient())
@@ -133,7 +134,7 @@ namespace Raven.Tests.Counters
 				var changesA = storeA.Changes();
 				notificationTask = changesA.Task.Result
 					.ForReplicationChange(GroupName, CounterName)
-					.Timeout(TimeSpan.FromSeconds(10))
+					.Timeout(TimeSpan.FromSeconds(30))
 					.Take(1).ToTask();
 
 				changesA.WaitForAllPendingSubscriptions();

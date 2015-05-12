@@ -290,7 +290,7 @@ namespace Raven.Database.Counters.Controllers
 			try
 			{
 				long etag = 0;
-				var url = string.Format("{0}/lastEtag?serverId={1}", counterStorageUrl, storage.CounterStorageUrl);
+				var url = string.Format("{0}/lastEtag?serverId={1}", counterStorageUrl, storage.ServerId);
 				var request = httpRavenRequestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
 				
 				request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));

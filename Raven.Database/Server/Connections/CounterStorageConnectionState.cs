@@ -13,6 +13,9 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentSet<string> matchingLocalChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ConcurrentSet<string> matchingReplicationChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ConcurrentSet<string> matchingBulkOperations = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly string localChangeNotificationType = typeof(LocalChangeNotification).Name;
+		private readonly string changeNotificationType = typeof(ChangeNotification).Name;
+		private readonly string replicaitonChangeNotificationType = typeof(ReplicationChangeNotification).Name;
 
 		public object DebugStatus
 		{
@@ -75,36 +78,41 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(LocalChangeNotification notification)
 		{
-			var counterPrefix = string.Concat(notification.GroupName, "/", notification.CounterName);
+			var counterPrefix = GetCounterPrefix(notification.GroupName, notification.CounterName);
 
 			if (matchingLocalChanges.Contains(counterPrefix))
 			{
-				var value = new { Value = notification, Type = typeof(LocalChangeNotification).Name };
+				var value = new { Value = notification, Type = localChangeNotificationType };
 				enqueue(value);
 			}
 
 			if (matchingChanges.Contains(counterPrefix))
 			{
-				var value = new { Value = notification, Type = typeof(ChangeNotification).Name };
+				var value = new { Value = notification, Type = changeNotificationType };
 				enqueue(value);
 			}
 		}
 
 		public void Send(ReplicationChangeNotification notification)
 		{
-			var counterPrefix = string.Concat(notification.GroupName, "/", notification.CounterName);
-
+			var counterPrefix = GetCounterPrefix(notification.GroupName, notification.CounterName);
+			
 			if (matchingReplicationChanges.Contains(counterPrefix))
 			{
-				var value = new { Value = notification, Type = typeof(ReplicationChangeNotification).Name };
+				var value = new  { Value = notification, Type = replicaitonChangeNotificationType };
 				enqueue(value);
 			}
 
 			if (matchingChanges.Contains(counterPrefix))
 			{
-				var value = new { Value = notification, Type = typeof(ChangeNotification).Name };
+				var value = new { Value = notification, Type = changeNotificationType };
 				enqueue(value);
 			}
+		}
+
+		private static string GetCounterPrefix(string groupName, string counterName)
+		{
+			return string.Concat(groupName, "/", counterName);
 		}
 
 		public void Send(BulkOperationNotification notification)

@@ -117,7 +117,7 @@ namespace Raven.Database.Counters
 					{
 						if (it.Seek(Slice.AfterAllKeys))
 						{
-							lastEtag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+							lastEtag = it.CurrentKey.CreateReader().ReadLittleEndianInt64();
 						}
 					}
 				}
@@ -374,7 +374,7 @@ namespace Raven.Database.Counters
 				using (var it = etagsToCounters.Iterate())
 				{
 					var buffer = new byte[sizeof(long)];
-					EndianBitConverter.Big.CopyBytes(etag, buffer, 0);
+					EndianBitConverter.Little.CopyBytes(etag, buffer, 0);
 					var slice = new Slice(buffer);
 					if (it.Seek(slice) == false)
 						yield break;
@@ -391,7 +391,7 @@ namespace Raven.Database.Counters
 						var fullCounterName = Encoding.UTF8.GetString(buffer, 0, currentDataSize);
 
 						var etagResult = countersToEtags.Read(fullCounterName);
-						var counterEtag = etagResult == null ? 0 : etagResult.Reader.ReadBigEndianInt64();
+						var counterEtag = etagResult == null ? 0 : etagResult.Reader.ReadLittleEndianInt64();
 
 						var counterValue = GetCounterValue(fullCounterName);
 						yield return new ReplicationCounter
@@ -423,7 +423,7 @@ namespace Raven.Database.Counters
 						yield return new ServerEtag
 						{
 							ServerId = EndianBitConverter.ToString(serverIdBytes),
-							Etag = EndianBitConverter.Big.ToInt64(buffer, 0),
+							Etag = EndianBitConverter.Little.ToInt64(buffer, 0),
 						};
 
 					} while (it.MoveNext());
@@ -432,8 +432,8 @@ namespace Raven.Database.Counters
 
 			public long GetLastEtagFor(string serverId)
 			{
-				var result = serversLastEtag.Read(serverId);
-				return result != null ? result.Reader.ReadLittleEndianInt64() : 0;
+				var lastEtagBytes = serversLastEtag.Read(serverId);
+				return lastEtagBytes != null ? lastEtagBytes.Reader.ReadLittleEndianInt64() : 0;
 			}
 
 			public CountersReplicationDocument GetReplicationData()
@@ -580,7 +580,7 @@ namespace Raven.Database.Counters
 				}
 
 				parent.lastEtag++;
-				EndianBitConverter.Big.CopyBytes(parent.lastEtag, etagBuffer, 0);
+				EndianBitConverter.Little.CopyBytes(parent.lastEtag, etagBuffer, 0);
 				var newEtagSlice = new Slice(etagBuffer);
 				etagsToCounters.Add(newEtagSlice, counterKey);
 				countersToEtag.Add(counterKey, newEtagSlice);
@@ -613,7 +613,7 @@ namespace Raven.Database.Counters
 			public void RecordLastEtagFor(string serverId, long lastEtag)
 			{
 				//TODO: remove server name
-				serversLastEtag.Add(serverId, EndianBitConverter.Big.GetBytes(lastEtag));
+				serversLastEtag.Add(serverId, EndianBitConverter.Little.GetBytes(lastEtag));
 			}
 
 			public void UpdateReplications(CountersReplicationDocument newReplicationDocument)
