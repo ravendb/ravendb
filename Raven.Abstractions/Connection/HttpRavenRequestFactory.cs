@@ -21,12 +21,9 @@ namespace Raven.Abstractions.Connection
 			if (RequestTimeoutInMs.HasValue)
 				request.Timeout = RequestTimeoutInMs.Value;
 
-			if (AllowWriteStreamBuffering.HasValue)
-			{
-				request.AllowWriteStreamBuffering = AllowWriteStreamBuffering.Value;
-				if(AllowWriteStreamBuffering.Value == false)
-					request.SendChunked = true;
-			}
+			var allowWriteStreamBuffering = (AllowWriteStreamBuffering.HasValue && AllowWriteStreamBuffering.Value) || options.ApiKey == null;
+			request.AllowWriteStreamBuffering = allowWriteStreamBuffering;
+			request.SendChunked = allowWriteStreamBuffering == false;
 
 			if (options.ApiKey == null)
 			{
