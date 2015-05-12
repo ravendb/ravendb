@@ -1,65 +1,39 @@
-﻿// Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Contracts;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 
 namespace Raven.Database.Embedded
 {
-	// This steam accepts writes from the server/app, buffers them internally, and returns the data via Reads
-	// when requested by the client.
 	internal class ResponseStream : Stream
 	{
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		private volatile bool _disposed;
-		private bool _aborted;
-		private Exception _abortException;
-		private ConcurrentQueue<byte[]> _bufferedData;
-		private byte[] _topBuffer;
-		private int _topBufferOffset;
-		private int _topBufferCount;
-		private SemaphoreSlim _readLock;
-		private SemaphoreSlim _writeLock;
-		private TaskCompletionSource<object> _readWaitingForData;
-		private object _signalReadLock;
+		private readonly SemaphoreSlim tryTakeDataLock = new SemaphoreSlim(1, 1);
+		private readonly CancellationTokenSource abort = new CancellationTokenSource();
+		private readonly BlockingCollection<byte[]> blocks = new BlockingCollection<byte[]>();
+		private readonly Guid id = Guid.NewGuid();
 
-		private Action _onFirstWrite;
-
-		private readonly bool _enableLogging;
-
-		private bool _firstWrite;
-
-		private bool _wroteZero;
-
-		private Guid _id;
+		private volatile bool disposed;
+		private readonly Action onFirstWrite;
+		private bool firstWrite = true;
+		private readonly bool enableLogging;
+		private byte[] currentBlock;
+		private int currentBlockIndex;
+		private Exception abortException;
 
 		internal ResponseStream(Action onFirstWrite, bool enableLogging)
 		{
 			if (onFirstWrite == null)
-			{
 				throw new ArgumentNullException("onFirstWrite");
-			}
-			_onFirstWrite = onFirstWrite;
-			_enableLogging = enableLogging;
-			_firstWrite = true;
-			_id = Guid.NewGuid();
-
-			_readLock = new SemaphoreSlim(1, 1);
-			_writeLock = new SemaphoreSlim(1, 1);
-			_bufferedData = new ConcurrentQueue<byte[]>();
-			_readWaitingForData = new TaskCompletionSource<object>();
-			_signalReadLock = new object();
+			
+			this.onFirstWrite = onFirstWrite;
+			this.enableLogging = enableLogging;
 		}
 
 		public override bool CanRead
@@ -104,19 +78,12 @@ namespace Raven.Database.Embedded
 
 		public override void Flush()
 		{
-			CheckDisposed();
-
-			_writeLock.Wait();
-			try
+			if (disposed) // check disposed
 			{
-				FirstWrite();
-			}
-			finally
-			{
-				_writeLock.Release();
+				throw new ObjectDisposedException(GetType().FullName);
 			}
 
-			// TODO: Wait for data to drain?
+			FirstWrite();
 		}
 
 		public override Task FlushAsync(CancellationToken cancellationToken)
@@ -130,113 +97,133 @@ namespace Raven.Database.Embedded
 
 			Flush();
 
-			// TODO: Wait for data to drain?
-
 			return new CompletedTask();
 		}
 
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			VerifyBuffer(buffer, offset, count, allowEmpty: false);
-			_readLock.Wait();
-			try
+
+			var bytesRead = 0;
+
+			while (true)
 			{
-				int totalRead = 0;
-				do
+				try
 				{
-					// Don't drain buffered data when signaling an abort.
-					CheckAborted();
-					if (_topBufferCount <= 0)
+					abort.Token.ThrowIfCancellationRequested();
+
+					if (currentBlock != null)
 					{
-						byte[] topBuffer;
-						while (!_bufferedData.TryDequeue(out topBuffer))
+						int copy = Math.Min(count - bytesRead, currentBlock.Length - currentBlockIndex);
+						Buffer.BlockCopy(currentBlock, currentBlockIndex, buffer, offset + bytesRead, copy);
+						currentBlockIndex += copy;
+						bytesRead += copy;
+
+						if (currentBlock.Length <= currentBlockIndex)
 						{
-							if (_disposed)
-							{
-								CheckAborted();
-								// Graceful close
-								return totalRead;
-							}
-							WaitForDataAsync().Wait();
+							currentBlock = null;
+							currentBlockIndex = 0;
 						}
-						_topBuffer = topBuffer;
-						_topBufferOffset = 0;
-						_topBufferCount = topBuffer.Length;
+
+						try
+						{
+							if (bytesRead == count || blocks.Count == 0)
+								return bytesRead;
+						}
+						catch (ObjectDisposedException)
+						{
+							return bytesRead;
+						}
 					}
-					int actualCount = Math.Min(count, _topBufferCount);
-					Buffer.BlockCopy(_topBuffer, _topBufferOffset, buffer, offset, actualCount);
-					_topBufferOffset += actualCount;
-					_topBufferCount -= actualCount;
-					totalRead += actualCount;
-					offset += actualCount;
-					count -= actualCount;
+
+					tryTakeDataLock.Wait();
+					try
+					{
+						if (disposed)
+							return bytesRead;
+
+						if (blocks.TryTake(out currentBlock, Timeout.Infinite, abort.Token) == false)
+							return bytesRead;
+					}
+					finally
+					{
+						tryTakeDataLock.Release();
+					}
 				}
-				while (count > 0 && (_topBufferCount > 0 || _bufferedData.Count > 0));
-				// Keep reading while there is more data available and we have more space to put it in.
-				return totalRead;
-			}
-			finally
-			{
-				_readLock.Release();
+				catch (OperationCanceledException)
+				{
+					throw new IOException("Read operation has been aborted", abortException);
+				}
 			}
 		}
 
 		public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
 		{
 			VerifyBuffer(buffer, offset, count, allowEmpty: false);
-			CancellationTokenRegistration registration = cancellationToken.Register(Abort);
-			await _readLock.WaitAsync(cancellationToken);
+
+			var linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(abort.Token, cancellationToken).Token;
+
+			await tryTakeDataLock.WaitAsync(linkedCancelToken);
 			try
 			{
-				int totalRead = 0;
-				do
+				var bytesRead = 0;
+
+				while (true)
 				{
-					// Don't drained buffered data on abort.
-					CheckAborted();
-					if (_topBufferCount <= 0)
+					try
 					{
-						byte[] topBuffer;
-						while (!_bufferedData.TryDequeue(out topBuffer))
+						abort.Token.ThrowIfCancellationRequested();
+
+						if (currentBlock != null)
 						{
-							if (_disposed)
+							int copy = Math.Min(count - bytesRead, currentBlock.Length - currentBlockIndex);
+							Buffer.BlockCopy(currentBlock, currentBlockIndex, buffer, offset + bytesRead, copy);
+							currentBlockIndex += copy;
+							bytesRead += copy;
+
+							if (currentBlock.Length <= currentBlockIndex)
 							{
-								CheckAborted();
-								// Graceful close
-								return totalRead;
+								currentBlock = null;
+								currentBlockIndex = 0;
 							}
-							await WaitForDataAsync();
+
+							try
+							{
+								if (bytesRead == count || blocks.Count == 0)
+									return bytesRead;
+							}
+							catch (ObjectDisposedException)
+							{
+								return bytesRead;
+							}
 						}
-						_topBuffer = topBuffer;
-						_topBufferOffset = 0;
-						_topBufferCount = topBuffer.Length;
+
+						await tryTakeDataLock.WaitAsync(linkedCancelToken).ConfigureAwait(false);
+						try
+						{
+							if (disposed)
+								return bytesRead;
+
+							if (blocks.TryTake(out currentBlock, Timeout.Infinite, linkedCancelToken) == false)
+								return bytesRead;
+						}
+						finally
+						{
+							tryTakeDataLock.Release();
+						}
 					}
-					int actualCount = Math.Min(count, _topBufferCount);
-					Buffer.BlockCopy(_topBuffer, _topBufferOffset, buffer, offset, actualCount);
-					_topBufferOffset += actualCount;
-					_topBufferCount -= actualCount;
-					totalRead += actualCount;
-					offset += actualCount;
-					count -= actualCount;
+					catch (OperationCanceledException)
+					{
+						if (abort.IsCancellationRequested)
+							throw new IOException("Read operation has been aborted", abortException);
+
+						throw;
+					}
 				}
-				while (count > 0 && (_topBufferCount > 0 || _bufferedData.Count > 0));
-				// Keep reading while there is more data available and we have more space to put it in.
-				return totalRead;
 			}
 			finally
 			{
-				registration.Dispose();
-				_readLock.Release();
-			}
-		}
-
-		// Called under write-lock.
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void FirstWrite()
-		{
-			if (_firstWrite)
-			{
-				_firstWrite = false;
-				_onFirstWrite();
+				tryTakeDataLock.Release();
 			}
 		}
 
@@ -245,35 +232,21 @@ namespace Raven.Database.Embedded
 		{
 			VerifyBuffer(buffer, offset, count, allowEmpty: true);
 
-			_writeLock.Wait();
-			try
+			if (count == 0)
 			{
-				CheckDisposed();
-				if (count == 0)
-				{
-					_wroteZero = true;
-					FirstWrite();
-					return;
-				}
-
-				Debug.Assert(_wroteZero == false);
-
-				// Copies are necessary because we don't know what the caller is going to do with the buffer afterwards.
-				var internalBuffer = new byte[count];
-				Buffer.BlockCopy(buffer, offset, internalBuffer, 0, count);
-
-				if (_enableLogging)
-					log.Info("ResponseStream ({0}). Write. Content: {1}", _id, Encoding.UTF8.GetString(internalBuffer));
-
-				_bufferedData.Enqueue(internalBuffer);
-
-				SignalDataAvailable();
 				FirstWrite();
+				return;
 			}
-			finally
-			{
-				_writeLock.Release();
-			}
+
+			var newBuf = new byte[count];
+			Buffer.BlockCopy(buffer, offset, newBuf, 0, count);
+
+			if (enableLogging)
+				log.Info("ResponseStream ({0}). Write. Content: {1}", id, Encoding.UTF8.GetString(newBuf));
+
+			blocks.Add(newBuf);
+
+			FirstWrite();
 		}
 
 		public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
@@ -308,6 +281,16 @@ namespace Raven.Database.Embedded
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void FirstWrite()
+		{
+			if (firstWrite)
+			{
+				firstWrite = false;
+				onFirstWrite();
+			}
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void VerifyBuffer(byte[] buffer, int offset, int count, bool allowEmpty)
 		{
 			if (buffer == null)
@@ -325,89 +308,34 @@ namespace Raven.Database.Embedded
 			}
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void SignalDataAvailable()
-		{
-			// Dispatch, as TrySetResult will synchronously execute the waiters callback and block our Write.
-			Task.Factory.StartNew(() => _readWaitingForData.TrySetResult(null));
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private Task WaitForDataAsync()
-		{
-			// Prevent race with Dispose
-			lock (_signalReadLock)
-			{
-				_readWaitingForData = new TaskCompletionSource<object>();
-
-				if (!_bufferedData.IsEmpty || _disposed)
-				{
-					// Race, data could have arrived before we created the TCS.
-					_readWaitingForData.TrySetResult(null);
-				}
-
-				return _readWaitingForData.Task;
-			}
-		}
-
-		internal void Abort()
-		{
-			Abort(new OperationCanceledException());
-		}
-
-		internal void Abort(Exception innerException)
-		{
-			Contract.Requires(innerException != null);
-			_aborted = true;
-			_abortException = innerException;
-			Dispose();
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void CheckAborted()
-		{
-			if (_aborted)
-			{
-				throw new IOException(string.Empty, _abortException);
-			}
-		}
-
-		[SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_writeLock", Justification = "ODEs from the locks would mask IOEs from abort.")]
-		[SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_readLock", Justification = "Data can still be read unless we get aborted.")]
 		protected override void Dispose(bool disposing)
 		{
-			if (_disposed)
+			if (disposed)
 				return;
 
-			if (disposing)
-			{
-				_writeLock.Wait();
-				try
-				{
-					// Prevent race with WaitForDataAsync
-					lock (_signalReadLock)
-					{
-						// Throw for further writes, but not reads.  Allow reads to drain the buffered data and then return 0 for further reads.
-						_disposed = true;
-						_readWaitingForData.TrySetResult(null);
-					}
-				}
-				finally
-				{
-					_writeLock.Release();
-				}
-			}
+			blocks.CompleteAdding();
 
 			base.Dispose(disposing);
+
+			if (disposing == false || blocks.IsCompleted == false) // do not dispose until the collection of blocks is empty
+				return;
+
+			tryTakeDataLock.Wait();
+			try
+			{
+				blocks.Dispose();
+				disposed = true;
+			}
+			finally
+			{
+				tryTakeDataLock.Release();
+			}
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void CheckDisposed()
+		internal void Abort(Exception exception)
 		{
-			if (_disposed)
-			{
-				throw new ObjectDisposedException(GetType().FullName);
-			}
+			abortException = exception;
+			abort.Cancel();
 		}
 	}
 }
