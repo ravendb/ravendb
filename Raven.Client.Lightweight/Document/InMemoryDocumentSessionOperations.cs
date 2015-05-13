@@ -264,7 +264,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected abstract JsonDocument GetJsonDocument(string documentKey);
 
-		public DocumentMetadata GetDocumentMetadataValue<T>(T instance, string id, JsonDocument jsonDocument)
+	    protected DocumentMetadata GetDocumentMetadataValue<T>(T instance, string id, JsonDocument jsonDocument)
 		{
 			entitiesByKey[id] = instance;
 			return entitiesAndMetadata[instance] = new DocumentMetadata
