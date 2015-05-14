@@ -30,6 +30,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Impl.Generators;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
@@ -210,7 +211,7 @@ for(var customFunction in customFunctions) {{
 	    {
             public string SmugglerOptions { get; set; }
 	    }
-        
+
 		[HttpPost]
 		[RavenRoute("studio-tasks/exportDatabase")]
 		[RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]

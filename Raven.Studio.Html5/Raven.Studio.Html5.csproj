@@ -61,6 +61,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeNowCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\getClientBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCSharpIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
@@ -475,6 +476,7 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\generateCode.html" />
     <Content Include="App\views\fieldRangeFilter.html" />
     <Content Include="App\views\fieldStringFilter.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />

@@ -31,6 +31,7 @@
                 <button class="btn btn-default" title="Toggle auto-collapse" data-toggle="button" data-bind="enable: $root.isEditingMetadata() === false, click: toggleAutoCollapse">
                     <span class="fa fa-plus-square-o"></span>
                 </button>
+                <button type="button" class="btn btn-danger" data-bind="click: generateCode, visible: lodaedDocumentName" title= "Generate Class"><i class="fa">C#</i></button>
                 <button type="button" class="btn btn-danger" data-bind="click: deleteDocument, visible: lodaedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
 
             </div>

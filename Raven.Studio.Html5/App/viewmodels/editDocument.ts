@@ -28,6 +28,9 @@ import pagedResultSet = require("common/pagedResultSet");
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
 
+import generateClassCommand = require("commands/generateClassCommand");
+
+
 class editDocument extends viewModelBase {
 
     isConflictDocument = ko.observable<boolean>();
@@ -904,6 +907,12 @@ class editDocument extends viewModelBase {
         }
 
         return "";
+    }
+
+    generateCode() {
+        var doc: document = this.document();
+        var generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
+        generate.execute();
     }
 }
 
