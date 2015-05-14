@@ -30,6 +30,10 @@ namespace Raven.Client.Shard
 			if (shards == null) throw new ArgumentNullException("shards");
 			if (shards.Count == 0)
 				throw new ArgumentException("Shards collection must have at least one item", "shards");
+            var dbWithMultipleKeys = shards.GroupBy(x => x.Value.Identifier, x => x.Key).Where(x => x.Distinct().Count() > 1).Select(x => x.Key).FirstOrDefault();
+            if(dbWithMultipleKeys != null)
+                throw new ArgumentException(string.Format("Multiple keys in shard dictionary for {0} are not allowed.", dbWithMultipleKeys), "shards");
+
 
 			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.OrdinalIgnoreCase);
 
