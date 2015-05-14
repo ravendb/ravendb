@@ -107,7 +107,6 @@ namespace Raven.Tests.Issues
 					}
 
                     store.GetObserveChangesAndEvictItemsFromCacheTask().Wait();
-                    int numberOfCacheResets = store.JsonRequestFactory.NumberOfCacheResets;
                     // change object
 					using (var session = store.OpenSession())
 					{
@@ -119,8 +118,6 @@ namespace Raven.Tests.Issues
 						session.SaveChanges();
 					}
 
-
-                    Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > numberOfCacheResets, 10000));
 
 					using (var session = store.OpenSession())
 					{

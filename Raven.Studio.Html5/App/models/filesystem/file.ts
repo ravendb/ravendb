@@ -1,7 +1,7 @@
 ﻿import fileMetadata = require("models/filesystem/fileMetadata");
 
 class file implements documentBase {
-    id: string;
+    id = ko.observable<string>();
     Size: string;
     LastModified: Date;
     directory: string;
@@ -15,10 +15,10 @@ class file implements documentBase {
                 dto.FullPath = dto.FullPath.replace("/", "");
             }
             if (excludeDirectoryInId) {
-                this.id = dto.Name
+                this.id(dto.Name);
             }
             else {
-                this.id = dto.FullPath;
+                this.id(dto.FullPath);
             }
             if (dto.HumaneTotalSize === " Bytes") {
                 dto.HumaneTotalSize = "0 Bytes";
@@ -34,11 +34,15 @@ class file implements documentBase {
     }
 
     getId() {
-        return this.id;
+        return this.id();
+    }
+
+    setId(newName: string) {
+        this.id(newName);
     }
 
     getUrl() {
-        return this.fullPath ? this.fullPath : this.id;
+        return this.fullPath ? this.fullPath : this.id();
     }
 
     getDocumentPropertyNames(): Array<string> {

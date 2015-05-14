@@ -7,6 +7,7 @@ using System.Xml.Linq;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.FileSystem;
 using Raven.Client.Indexes;
@@ -16,11 +17,23 @@ using Raven.Tests.MailingList;
 
 namespace Raven.Tryouts
 {
+	public class Item2
+	{
+		public double Price;
+	}
 	public class Program
 	{
 		private static void Main()
 		{
-           new FragmentFail().Fragment_Length_Should_Not_Be_More_Then_128();
+			var x= new DocumentStore
+			{
+				Url = "http://live-test.ravendb.net",
+				DefaultDatabase = "maxim"
+			}.Initialize();
+			using (var s = x.OpenSession())
+			{
+				s.Query<Item2>().Where(a => a.Price == 100).ToList();
+			}
 		}
 
 	}

@@ -37,6 +37,7 @@ namespace Raven.Client.Document
 		private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
 		private readonly SubscriptionConnectionOptions options;
 		private readonly CancellationTokenSource cts = new CancellationTokenSource();
+		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
 		private readonly bool isStronglyTyped;
 		private bool completed;
 		private readonly long id;
@@ -46,7 +47,7 @@ namespace Raven.Client.Document
 		public event Action BeforeBatch = delegate { };
 		public event Action AfterBatch = delegate { };
 
-		internal Subscription(long id, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, Func<Task> ensureOpenSubscription)
+		internal Subscription(long id, string database, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, Func<Task> ensureOpenSubscription)
 		{
 			this.id = id;
 			this.options = options;
@@ -56,7 +57,10 @@ namespace Raven.Client.Document
 			this.ensureOpenSubscription = ensureOpenSubscription;
 
 			if (typeof (T) != typeof (RavenJObject))
+			{
 				isStronglyTyped = true;
+				generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => conventions.GenerateDocumentKeyAsync(database, commands, entity).ResultUnwrap());
+			}
 
 			StartWatchingDocs();
 			StartPullingTask = StartPullingDocs();
@@ -118,7 +122,14 @@ namespace Raven.Client.Document
 											if (isStronglyTyped)
 											{
 												if (instance == null)
+												{
 													instance = jsonDoc.Deserialize<T>(conventions);
+
+													var docId = jsonDoc[Constants.Metadata].Value<string>("@id");
+
+													if (string.IsNullOrEmpty(docId) == false)
+														generateEntityIdOnTheClient.TrySetIdentity(instance, docId);
+												}
 												
 												subscriber.OnNext(instance);
 											}
@@ -208,12 +219,26 @@ namespace Raven.Client.Document
 			{
 				await PullingTask.ConfigureAwait(false);
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
 				if (cts.Token.IsCancellationRequested)
 					return;
 
 				PullingTask = null;
+
+				SubscriptionException subscriptionEx;
+				var ere = ex as ErrorResponseException;
+
+				if (ere != null && AsyncDocumentSubscriptions.TryGetSubscriptionException(ere, out subscriptionEx))
+				{
+					if (subscriptionEx is SubscriptionClosedException)
+					{
+						// someone forced us to drop the connection by calling Subscriptions.Release
+						OnCompletedNotification();
+						IsClosed = true;
+						return;
+					}
+				}
 
 				RestartPullingTask().ConfigureAwait(false);
 			}
