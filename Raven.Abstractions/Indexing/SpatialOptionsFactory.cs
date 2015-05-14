@@ -30,7 +30,9 @@ namespace Raven.Abstractions.Indexing
 				case SpatialSearchStrategy.QuadPrefixTree:
 					options = factory.QuadPrefixTreeIndex(maxTreeLevel);
 					break;
-
+				case SpatialSearchStrategy.BoundingBox:
+					options = factory.BoundingBoxIndex();
+					break;
 				default:
 					options = factory.GeohashPrefixTreeIndex(maxTreeLevel);
 					break;
