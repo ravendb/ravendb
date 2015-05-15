@@ -51,7 +51,7 @@ namespace Raven.Abstractions.Extensions
 			return type;
 		}
 
-		public static PropertyInfo ToProperty(this LambdaExpression expr)
+		public static MemberInfo ToProperty(this LambdaExpression expr)
 		{
 			var expression = expr.Body;
 
@@ -74,7 +74,7 @@ namespace Raven.Abstractions.Extensions
 				throw new InvalidOperationException("No idea how to convert " + expr.Body.NodeType + ", " + expr.Body +
 													" to a member expression");
 
-			return me.Member as PropertyInfo;
+			return me.Member;
 		}
 
 		///<summary>

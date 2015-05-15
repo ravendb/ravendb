@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -11,30 +12,53 @@ using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.FileSystem;
 using Raven.Client.Indexes;
+using Raven.Client.Shard;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.MailingList;
 
 namespace Raven.Tryouts
 {
-	public class Item2
-	{
-		public double Price;
-	}
-	public class Program
-	{
-		private static void Main()
-		{
-			var x= new DocumentStore
-			{
-				Url = "http://live-test.ravendb.net",
-				DefaultDatabase = "maxim"
-			}.Initialize();
-			using (var s = x.OpenSession())
-			{
-				s.Query<Item2>().Where(a => a.Price == 100).ToList();
-			}
-		}
+    public class Customer
+    {
+        public string Region;
+        public string Id;
+    }
 
-	}
+    public class Invoice
+    {
+        public string Customer;
+    }
+    public class Program
+    {
+        private static void Main()
+        {
+            var shards = new Dictionary<string, IDocumentStore>
+            {
+                {"_", new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "Shop"}}, //existing data
+                {"ME", new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "Shop_ME"}},
+                {"US", new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "Shop_US"}},
+            };
+
+            var shardStrategy = new ShardStrategy(shards)
+                .ShardingOn<Customer>(c => c.Region)
+                .ShardingOn<Invoice>(i => i.Customer);
+
+            var x = new ShardedDocumentStore(shardStrategy).Initialize();
+            using (var s = x.OpenSession())
+            {
+                var customer = new Customer
+                {
+                    Region = "US"
+                };
+                s.Store(customer);
+                s.Store(new Invoice
+                {
+                    Customer = customer.Id
+                });
+                s.SaveChanges();
+            }
+        }
+
+    }
 }
