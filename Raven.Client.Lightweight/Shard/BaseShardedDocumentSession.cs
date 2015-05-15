@@ -120,7 +120,8 @@ namespace Raven.Client.Shard
 				var entity = data.Entities[index];
 				var metadata = GetMetadataFor(entity);
 				var shardId = metadata.Value<string>(Constants.RavenShardId);
-
+			    if (shardId == null)
+			        throw new InvalidOperationException("Cannot save a document when the shard id isn't defined. Missing Raven-Shard-Id in the metadata");
 				var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
 				shardSaveChangesData.Entities.Add(entity);
 				shardSaveChangesData.Commands.Add(data.Commands[index]);
