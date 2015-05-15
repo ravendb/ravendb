@@ -246,6 +246,8 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="JsConsole\AdminJsConsole.cs" />
+    <Compile Include="JsConsole\AdminJsScript.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseBundleScalarObjectBase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Bundles\Replication\ReplicationBundleEnabled.cs" />
@@ -405,6 +407,7 @@
     <Compile Include="Raft\Storage\Handlers\DatabaseUpdateCommandHandler.cs" />
     <Compile Include="Raft\Util\RaftHelper.cs" />
     <Compile Include="Raft\ClusterManagerFactory.cs" />
+    <Compile Include="Server\Controllers\Admin\AdminJsConsoleController.cs" />
     <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
