@@ -531,7 +531,7 @@ namespace Raven.Database.Counters
 				if (endOfGroupNameIndex == -1)
 					throw new InvalidOperationException("Could not find group name in counter, no separator");
 
-				var counterKey = sliceWriter.CreateSlice(fullCounterNameSize);
+				var counterKey = sliceWriter.CreateSlice();
 				if (DoesCounterExist(counterKey) == false) //it's a new counter
 				{
 					Slice groupKey = fullCounterName.Substring(0, endOfGroupNameIndex);

@@ -18,6 +18,7 @@ using Jint.Runtime.Environments;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Json
@@ -216,7 +217,7 @@ namespace Raven.Database.Json
 
 		private Engine CreateEngine(ScriptedPatchRequest patch)
 		{
-			var scriptWithProperLines = NormalizeLineEnding(patch.Script);
+			var scriptWithProperLines = patch.Script.NormalizeLineEnding();
 			// NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
 			// This will all us to show proper line number using user lines locations.
 			var wrapperScript = string.Format(@"function ExecutePatchScript(docInner){{ (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
@@ -244,21 +245,6 @@ namespace Raven.Database.Json
 			});
 
 			return jintEngine;
-		}
-
-		private static string NormalizeLineEnding(string script)
-		{
-			var sb = new StringBuilder();
-			using (var reader = new StringReader(script))
-			{
-				while (true)
-				{
-					var line = reader.ReadLine();
-					if (line == null)
-						return sb.ToString();
-					sb.AppendLine(line);
-				}
-			}
 		}
 
 		private static void AddScript(Engine jintEngine, string ravenDatabaseJsonMapJs)
