@@ -287,18 +287,8 @@ namespace Raven.Client.Shard
 						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
 						(dbCmd, i) =>
 						{
-							var items = (dbCmd.Get(currentShardIds, includePaths, transformer, transformerParameters))
-								.Results
-								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
-								.Select(JsonExtensions.ToJObject)
-								.Select(
-										x =>
-										{
-											HandleInternalMetadata(x);
-											return ConvertToEntity(typeof(T),null, x, new RavenJObject());
-										})
-								.Cast<T>()
-								.ToArray();
+							var multiLoadResult = dbCmd.Get(currentShardIds, includePaths, transformer, transformerParameters);
+							var items = new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
 
 							if (items.Length > currentShardIds.Length)
 							{
