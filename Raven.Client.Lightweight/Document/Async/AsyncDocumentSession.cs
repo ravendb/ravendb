@@ -20,6 +20,7 @@ using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Client.Document.Batches;
 using System.Diagnostics;
+using System.Dynamic;
 
 namespace Raven.Client.Document.Async
 {
@@ -975,5 +976,44 @@ namespace Raven.Client.Document.Async
 			RefreshInternal(entity, jsonDocument, value);
 		}
 
+		public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
+		{
+			 var metadata = await GetDocumentMetadataAsync(instance);
+			return metadata.Metadata;
+		}
+		private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
+			{
+				string id;
+				if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
+					|| (instance is IDynamicMetaObjectProvider &&
+					   GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
+				{
+					AssertNoNonUniqueInstance(instance, id);
+
+					var jsonDocument = await GetJsonDocumentAsync(id);
+
+					value =  GetDocumentMetadataValue(instance, id, jsonDocument);
+				}
+				else
+				{
+					throw new InvalidOperationException("Could not find the document key for " + instance);
+				}
+			}
+			return value;
+		}
+
+		/// <summary>
+		/// Get the json document by key from the store
+		/// </summary>
+		public async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
+		{
+			var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey);
+			if (jsonDocument == null)
+				throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+			return jsonDocument;
+		}
 	}
 }

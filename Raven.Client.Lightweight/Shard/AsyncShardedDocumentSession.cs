@@ -622,6 +622,11 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
+		public Task<RavenJObject> GetMetadataForAsync<T>(T instance)
+		{
+			throw new NotImplementedException("GetMetadataForAsync currently not supported by sharded document store");
+		}
+
 		public async Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken))
 		{
 			DocumentMetadata value;

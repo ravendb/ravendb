@@ -122,7 +122,9 @@
     <Compile Include="RavenDB-3314.cs" />
     <Compile Include="RavenDB-3326.cs" />
     <Compile Include="RavenDB-3383.cs" />
+    <Compile Include="RavenDB-3393.cs" />
     <Compile Include="RavenDB-3401.cs" />
+    <Compile Include="RavenDB-3451.cs" />
     <Compile Include="RavenDB_3230.cs" />
     <Compile Include="RavenDB_3271.cs" />
     <Compile Include="RavenDB_3276.cs" />
@@ -386,6 +388,7 @@
     <Compile Include="RavenDB_3381.cs" />
     <Compile Include="RavenDB_3418.cs" />
     <Compile Include="RavenDB_3422.cs" />
+    <Compile Include="RavenDB_3462.cs" />
     <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_381.cs" />
