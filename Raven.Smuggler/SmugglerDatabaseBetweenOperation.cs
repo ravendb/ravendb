@@ -15,6 +15,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler
@@ -229,7 +230,8 @@ namespace Raven.Smuggler
 				                                                       OverwriteExisting = true,
 			                                                       });
 			bulkInsertOperation.Report += text => ShowProgress(text);
-
+			var jintHelper = new SmugglerJintHelper();
+			jintHelper.Initialize(databaseOptions);
 			try
 			{
 				while (true)
@@ -258,6 +260,14 @@ namespace Raven.Smuggler
 
 								if(databaseOptions.ShouldDisableVersioningBundle)
 									document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
+
+								if (!string.IsNullOrEmpty(databaseOptions.TransformScript))
+								{
+									document = jintHelper.Transform(databaseOptions.TransformScript, document);
+									if(document == null)
+										continue;
+									metadata = document.Value<RavenJObject>("@metadata");
+								}
 
 								document.Remove("@metadata");
 								bulkInsertOperation.Store(document, metadata, id);
