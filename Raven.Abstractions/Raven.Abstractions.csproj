@@ -184,6 +184,8 @@
     <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\Etag.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
+    <Compile Include="Data\IndexingPerformanceStatistics.cs" />
+    <Compile Include="Data\IndexingPerformanceStats.cs" />
     <Compile Include="Data\IOperationState.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />

@@ -29,6 +29,11 @@ namespace Raven.Client.Connection
 			return url + "/indexes/" + index + "?definition=yes";
 		}
 
+		public static string IndexingPerformanceStatistics(this string url)
+		{
+			return url + "/debug/indexing-perf-stats";
+		}
+
 		public static string Transformer(this string url, string transformer)
 		{
 			return url + "/transformers/" + transformer;

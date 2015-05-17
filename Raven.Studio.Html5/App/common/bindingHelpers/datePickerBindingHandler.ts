@@ -19,19 +19,23 @@ class datePickerBindingHandler {
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var options = allBindings().datepickerOptions || {};
-        var dpicker = $(element).datetimepicker(options);
+		var endDateElement = options.endDateElement;
+		var startDateElement = options.startDateElement;
+		delete options.endDateElement;
+		delete options.startDateElement;
+		var dpicker = $(element).datetimepicker(options);
 
-        dpicker.on('dp.change', function (ev) {
-            if (options.endDateElement) {
-                $("#" + options.endDateElement).data("DateTimePicker").setMinDate(ev.date);
-            }
-            if (options.startDateElement) {
-                $("#" + options.startDateElement).data("DateTimePicker").setMaxDate(ev.date);
-            }
+        dpicker.on('dp.change', ev => {
+	        if (endDateElement) {
+		        $("#" + endDateElement).data("DateTimePicker").minDate(ev.date);
+	        }
+	        if (startDateElement) {
+		        $("#" + startDateElement).data("DateTimePicker").maxDate(ev.date);
+	        }
 
-            var newDate = moment(ev.date);
-            var value = valueAccessor();
-            value(newDate);
+	        var newDate = moment(ev.date);
+	        var value = valueAccessor();
+	        value(newDate);
         });
     }
 
@@ -39,7 +43,7 @@ class datePickerBindingHandler {
     update(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var date : Moment =  ko.unwrap(valueAccessor());
         if (date) {
-            $(element).data("DateTimePicker").setDate(date);
+            $(element).data("DateTimePicker").date(date);
         }
     }
 }

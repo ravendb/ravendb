@@ -46,6 +46,12 @@ namespace Voron
 			_pos += sizeof(char);
 		}
 
+		public void WriteBigEndian(double d)
+		{
+			EndianBitConverter.Big.CopyBytes(d, _buffer, _pos);
+			_pos += sizeof(double);
+		}
+
         public void WriteBigEndian(int i)
         {
             EndianBitConverter.Big.CopyBytes(i, _buffer, _pos);
@@ -64,9 +70,9 @@ namespace Voron
             _pos += sizeof(short);
         }
 
-        public Slice CreateSlice(int requiredBufferSize)
+        public Slice CreateSlice()
         {
-			return new Slice(_buffer, (ushort)requiredBufferSize);
+			return new Slice(_buffer, (ushort)_pos);
         }
     }
 }

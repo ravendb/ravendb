@@ -489,6 +489,21 @@ namespace Raven.Database
 				.ToList();
 		}
 
+		public IndexingPerformanceStatistics[] IndexingPerformanceStatistics
+		{
+			get
+			{
+				return (from pair in IndexDefinitionStorage.IndexDefinitions
+					   let performance = IndexStorage.GetIndexingPerformance(pair.Key)
+					   select new IndexingPerformanceStatistics
+					   {
+						   IndexId = pair.Key,
+						   IndexName = pair.Value.Name,
+						   Performance = performance
+					   }).ToArray();
+			}
+		}
+
 		public DatabaseStatistics Statistics
 		{
 			get
@@ -547,7 +562,6 @@ namespace Raven.Database
 						{
 							IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
 							index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
-							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
 							index.IsTestIndex = indexDefinition.IsTestIndex;
 							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
 							index.LockMode = indexDefinition.LockMode;
