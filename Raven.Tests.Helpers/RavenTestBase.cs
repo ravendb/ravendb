@@ -141,20 +141,20 @@ namespace Raven.Tests.Helpers
         /// <summary>
         /// Creates a new Embeddable document store.
         /// </summary>
-        /// <param name="runInMemory">The document store is all stored in RAM. Nothing hits the file system. (Default is True).</param>
-        /// <param name="requestedStorage"></param>
+        /// <param name="runInMemory">Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost.<br/>Default: <b>true</b></param>
+        /// <param name="requestedStorage">What storage type to use (see: RavenDB Storage engines).<br/>Allowed values: <b>esent</b>, <b>munin</b>.<br/>Default: <b>esent</b></param>
         /// <param name="catalog"></param>
-        /// <param name="dataDir"></param>
+        /// <param name="dataDir">The path for the database directory. Can use ~\ as the root, in which case the path will start from the server base directory. <br/>Default: <b>~\Data</b></param>
         /// <param name="enableAuthentication"></param>
         /// <param name="activeBundles"></param>
-        /// <param name="port"></param>
-        /// <param name="anonymousUserAccessMode"></param>
+        /// <param name="port">The port to use when creating the http listener. Allowed: 1 - 65,536 or * (find first available port from 8079 and upward).<br/>Default: <b>8079</b></param>
+        /// <param name="anonymousUserAccessMode">Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users, Admin - all (including administrative actions).<br/>Default: <b>Get</b></param>
         /// <param name="configureStore"></param>
-        /// <param name="databaseName"></param>
+        /// <param name="databaseName">Name of the server that will show up on /admin/stats endpoint.</param>
         /// <param name="indexes">A collection of indexes to execute.</param>
         /// <param name="transformers">A collection of transformers to execute.</param>
         /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
-        /// <remarks>Besides the document store being instansiated, it is also Initialized. Also, any indexes or transfomers that are provided, the process will not wait for them to be completed/not stale. You need to explicity call the WaitForIndexing(..) method.</remarks>
+        /// <remarks>Besides the document store being instansiated, it is also Initialized.<br/>Also, any indexes or transfomers that are provided, the process will not wait for them to be completed/not stale. You need to explicity call the <code>WaitForIndexing(..)</code> method.<br/>For further info, please goto: http://ravendb.net/docs/article-page/2.5/csharp/server/administration/configuration</remarks>
         /// <returns>A new instance of an EmbeddableDocumentStore.</returns>
 		public EmbeddableDocumentStore NewDocumentStore(
 			bool runInMemory = true,
