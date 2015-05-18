@@ -14,14 +14,14 @@ namespace Raven.Client.Counters.Actions
 	/// </summary>
 	public abstract class CountersActionsBase : IHoldProfilingInformation
  	{
-		protected readonly OperationCredentials credentials;
-		protected readonly HttpJsonRequestFactory jsonRequestFactory;
-		protected readonly string serverUrl;
-		protected readonly Convention convention;
-		protected readonly JsonSerializer jsonSerializer;
-		protected readonly string counterStorageUrl;
-		protected readonly ICounterStore parent;
-		protected readonly string counterStorageName;
+		private readonly OperationCredentials credentials;
+		private readonly HttpJsonRequestFactory jsonRequestFactory;
+		private readonly Convention convention;
+		protected readonly string ServerUrl;
+		protected readonly JsonSerializer JsonSerializer;
+		protected readonly string CounterStorageUrl;
+		protected readonly ICounterStore Parent;
+		protected readonly string CounterStorageName;
 
 		public ProfilingInformation ProfilingInformation { get; private set; } //so far it is preparation for air conditioning
 
@@ -29,11 +29,11 @@ namespace Raven.Client.Counters.Actions
 		{
 			credentials = parent.Credentials;
 			jsonRequestFactory = parent.JsonRequestFactory;
-			serverUrl = parent.Url;
-			this.parent = parent;
-			this.counterStorageName = counterStorageName;
-			counterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}", serverUrl, counterStorageName);
-			jsonSerializer = parent.JsonSerializer;
+			ServerUrl = parent.Url;
+			this.Parent = parent;
+			this.CounterStorageName = counterStorageName;
+			CounterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}", ServerUrl, counterStorageName);
+			JsonSerializer = parent.JsonSerializer;
 			convention = parent.Convention;
 			ProfilingInformation = parent.ProfilingInformation;
 		}
@@ -60,7 +60,6 @@ namespace Raven.Client.Counters.Actions
 			}
 			var request = jsonRequestFactory.CreateHttpJsonRequest(@params);
 		
-
 			return request;
 		}
 	}

@@ -78,7 +78,7 @@ namespace Raven.Database.Counters
 			Initialize();
 		}
 
-		protected virtual void OnReplicationUpdated()
+		private void OnReplicationUpdated()
 		{
 			var replicationUpdated = ReplicationUpdated;
 			if (replicationUpdated != null)

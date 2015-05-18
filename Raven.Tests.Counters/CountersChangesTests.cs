@@ -3,21 +3,17 @@ using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Counters
 {
 	public class CountersChangesTests : RavenBaseCountersTest
 	{
-		private volatile string output;
 		private const string GroupName = "Foo";
 		private const string CounterName = "Bar";
-
-		private void WaitUntilOutput(string expected)
-		{
-			Assert.True(SpinWait.SpinUntil(() => output == expected, 225000));
-		}
 
 		[Fact]
 		public async Task NotificationReceivedWhenCounterAddedAndIncremented()
@@ -149,6 +145,55 @@ namespace Raven.Tests.Counters
 				Assert.Equal(CounterName, counterChange.CounterName);
 				Assert.Equal(CounterChangeAction.Increment, counterChange.Action);
 			}
+		}
+
+		[Theory]
+		[InlineData(1, 200)]
+		[InlineData(3, 3)]
+		[InlineData(50, 30)]
+		[InlineData(50, 30)]
+		[InlineData(50, 130)]
+		public void NotificationReceivedWhenBatchOperation(int batchSizeLimit, int actionsCount)
+		{
+			int startCount = 0, endCount = 0;
+			using (var store = NewRemoteCountersStore())
+			{
+				using (var batchOperation = store.Advanced.NewBatch(store.DefaultCounterStorageName,
+														new CountersBatchOptions { BatchSizeLimit = batchSizeLimit }))
+				{
+					store.Changes().Task.Result
+						.ForBulkOperation(batchOperation.OperationId).Task.Result
+						.Subscribe(changes =>
+						{
+							switch (changes.Type)
+							{
+								case BatchType.Started:
+									startCount++;
+									break;
+								case BatchType.Ended:
+									endCount++;
+									break;
+							}
+						});
+
+					for (var i = 0; i < actionsCount; i++)
+					{
+						if (i % 2 == 0)
+							batchOperation.ScheduleIncrement("FooGroup", "FooCounter");
+						else
+							batchOperation.ScheduleDecrement("FooGroup", "FooCounter");
+					}
+				}
+
+				var ratio = (int)Math.Ceiling((double)actionsCount/batchSizeLimit);
+				WaitUntilCount(startCount, ratio);
+				WaitUntilCount(endCount, ratio);
+			}
+		}
+
+		private static void WaitUntilCount(int count, int expected)
+		{
+			Assert.True(SpinWait.SpinUntil(() => count == expected, 5000));
 		}
 	}
 }

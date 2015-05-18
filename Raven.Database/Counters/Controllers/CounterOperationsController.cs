@@ -104,16 +104,16 @@ namespace Raven.Database.Counters.Controllers
 				var changeBatches = YieldChangeBatches(inputStream, timeout, countOfChanges => counterChanges += countOfChanges);
 	            try
 	            {
-					Storage.Publisher.RaiseNotification(new BulkOperationNotification
-					{
-						Type = BatchType.Started,
-						OperationId = operationId
-					});
-
 		            foreach (var changeBatch in changeBatches)
 		            {
 						using (var writer = Storage.CreateWriter())
 						{
+							Storage.Publisher.RaiseNotification(new BulkOperationNotification
+							{
+								Type = BatchType.Started,
+								OperationId = operationId
+							});
+
 							foreach (var counterChange in changeBatch)
 							{
 								writer.Store(counterChange.Group, counterChange.Name, counterChange.Delta);

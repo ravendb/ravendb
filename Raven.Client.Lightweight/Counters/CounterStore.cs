@@ -41,7 +41,7 @@ namespace Raven.Client.Counters
 			Convention = new Convention();
 			Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
 			Advanced = new CounterStoreAdvancedOperations(this);
-			_batch = new Lazy<BatchOperationsStore>(() => new BatchOperationsStore(this));
+			batch = new Lazy<BatchOperationsStore>(() => new BatchOperationsStore(this));
 			isInitialized = false;
 		}
 
@@ -113,11 +113,11 @@ namespace Raven.Client.Counters
 				throw new InvalidOperationException("You cannot open a session or access the counters commands before initializing the counter store. Did you forget calling Initialize()?");
 		}
 
-		private readonly Lazy<BatchOperationsStore> _batch;
+		private readonly Lazy<BatchOperationsStore> batch;
 
 		public BatchOperationsStore Batch
 		{
-			get { return _batch.Value; }
+			get { return batch.Value; }
 		}
 
 		public OperationCredentials Credentials { get; set; }
@@ -315,8 +315,8 @@ namespace Raven.Client.Counters
 
 		public void Dispose()
 		{
-			if(_batch.IsValueCreated)
-				_batch.Value.Dispose();
+			if(batch.IsValueCreated)
+				batch.Value.Dispose();
 
 			
 		}
@@ -333,6 +333,8 @@ namespace Raven.Client.Counters
 				this.parent = parent;
 				if(string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName) == false)
 					defaultBatchOperation = new Lazy<CountersBatchOperation>(() => new CountersBatchOperation(parent, parent.DefaultCounterStorageName));
+
+				OperationId = Guid.NewGuid();
 			}
 
 			public ICountersBatchOperation this[string storageName]
@@ -385,6 +387,7 @@ namespace Raven.Client.Counters
 				await defaultBatchOperation.Value.FlushAsync();
 			}
 
+			public Guid OperationId { get; private set; }
 
 			public CountersBatchOptions Options
 			{
@@ -406,8 +409,19 @@ namespace Raven.Client.Counters
 				this.parent = parent;
 			}
 
+			public ICountersBatchOperation NewBatch(CountersBatchOptions options = null)
+			{
+				if (parent.DefaultCounterStorageName == null)
+					throw new ArgumentException("Default Counter Storage isn't set!");
+
+				return new CountersBatchOperation(parent, parent.DefaultCounterStorageName, options);
+			}
+
 			public ICountersBatchOperation NewBatch(string counterStorageName, CountersBatchOptions options = null)
 			{
+				if (string.IsNullOrWhiteSpace(counterStorageName))
+					throw new ArgumentException("Counter Storage name isn't set!");
+
 				return new CountersBatchOperation(parent, counterStorageName, options);
 			}
 		}

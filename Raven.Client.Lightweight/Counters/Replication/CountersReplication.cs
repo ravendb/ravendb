@@ -18,18 +18,18 @@ namespace Raven.Client.Counters.Replication
 
 		public async Task<CountersReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/replications/get", counterStorageUrl);
+			var requestUriString = String.Format("{0}/replications/get", CounterStorageUrl);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<CountersReplicationDocument>(jsonSerializer);
+				return response.ToObject<CountersReplicationDocument>(JsonSerializer);
 			}
 		}
 
 		public async Task SaveReplicationsAsync(CountersReplicationDocument newReplicationDocument,CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/replications/save", counterStorageUrl);
+			var requestUriString = String.Format("{0}/replications/save", CounterStorageUrl);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 			{
@@ -40,7 +40,7 @@ namespace Raven.Client.Counters.Replication
 
 		public async Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/lastEtag?serverId={1}", counterStorageUrl, serverId);
+			var requestUriString = String.Format("{0}/lastEtag?serverId={1}", CounterStorageUrl, serverId);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
