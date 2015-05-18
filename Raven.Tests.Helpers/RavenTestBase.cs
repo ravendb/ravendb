@@ -156,101 +156,101 @@ namespace Raven.Tests.Helpers
         /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
         /// <remarks>Besides the document store being instansiated, it is also Initialized.<br/>Also, any indexes or transfomers that are provided, the process will not wait for them to be completed/not stale. You need to explicity call the <code>WaitForIndexing(..)</code> method.<br/>For further info, please goto: http://ravendb.net/docs/article-page/2.5/csharp/server/administration/configuration</remarks>
         /// <returns>A new instance of an EmbeddableDocumentStore.</returns>
-		public EmbeddableDocumentStore NewDocumentStore(
-			bool runInMemory = true,
-			string requestedStorage = null,
-			ComposablePartCatalog catalog = null,
-			string dataDir = null,
-			bool enableAuthentication = false,
-			string activeBundles = null,
-			int? port = null,
-			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-			Action<EmbeddableDocumentStore> configureStore = null,
-			[CallerMemberName] string databaseName = null,
+        public EmbeddableDocumentStore NewDocumentStore(
+            bool runInMemory = true,
+            string requestedStorage = null,
+            ComposablePartCatalog catalog = null,
+            string dataDir = null,
+            bool enableAuthentication = false,
+            string activeBundles = null,
+            int? port = null,
+            AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+            Action<EmbeddableDocumentStore> configureStore = null,
+            [CallerMemberName] string databaseName = null,
             IEnumerable<AbstractIndexCreationTask> indexes = null,
             IEnumerable<AbstractTransformerCreationTask> transformers = null,
             IEnumerable<IEnumerable> seedData = null)
-		{
-			databaseName = NormalizeDatabaseName(databaseName);
+        {
+            databaseName = NormalizeDatabaseName(databaseName);
 
-			var storageType = GetDefaultStorageType(requestedStorage);
-			var dataDirectory = dataDir ?? NewDataPath(databaseName);
-			var documentStore = new EmbeddableDocumentStore
-			{
-				UseEmbeddedHttpServer = port.HasValue,
-				Configuration =
-				{
-					DefaultStorageTypeName = storageType,
-					DataDirectory = Path.Combine(dataDirectory, "System"),
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-					Port = port ?? 8079,
-					AnonymousUserAccessMode = anonymousUserAccessMode,
-				}
-			};
+            var storageType = GetDefaultStorageType(requestedStorage);
+            var dataDirectory = dataDir ?? NewDataPath(databaseName);
+            var documentStore = new EmbeddableDocumentStore
+            {
+                UseEmbeddedHttpServer = port.HasValue,
+                Configuration =
+                {
+                    DefaultStorageTypeName = storageType,
+                    DataDirectory = Path.Combine(dataDirectory, "System"),
+                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+                    RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+                    Port = port ?? 8079,
+                    AnonymousUserAccessMode = anonymousUserAccessMode,
+                }
+            };
 
-			documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
-			documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
+            documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
 
-			if (activeBundles != null)
-			{
-				documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
-			}
+            if (activeBundles != null)
+            {
+                documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
+            }
 
-		    if (catalog != null)
-		    {
-		        documentStore.Configuration.Catalog.Catalogs.Add(catalog);
-		    }
+            if (catalog != null)
+            {
+                documentStore.Configuration.Catalog.Catalogs.Add(catalog);
+            }
 
-			try
-			{
-			    if (configureStore != null)
-			    {
-			        configureStore(documentStore);
-			    }
+            try
+            {
+                if (configureStore != null)
+                {
+                    configureStore(documentStore);
+                }
 
-			    ModifyStore(documentStore);
-				ModifyConfiguration(documentStore.Configuration);
-				documentStore.Configuration.PostInit();
-				documentStore.Initialize();
+                ModifyStore(documentStore);
+                ModifyConfiguration(documentStore.Configuration);
+                documentStore.Configuration.PostInit();
+                documentStore.Initialize();
 
-				if (enableAuthentication)
-				{
-					EnableAuthentication(documentStore.SystemDatabase);
-				}
+                if (enableAuthentication)
+                {
+                    EnableAuthentication(documentStore.SystemDatabase);
+                }
 
-				CreateDefaultIndexes(documentStore);
+                CreateDefaultIndexes(documentStore);
 
-			    if (indexes != null)
-			    {
-			        ExecuteIndexes(indexes, documentStore);
-			    }
+                if (indexes != null)
+                {
+                    ExecuteIndexes(indexes, documentStore);
+                }
 
                 if (transformers != null)
                 {
                     ExecuteTransformers(transformers, documentStore);
                 }
 
-			    if (seedData != null)
-			    {
-			        StoreSeedData(seedData, documentStore);
-			    }
+                if (seedData != null)
+                {
+                    StoreSeedData(seedData, documentStore);
+                }
 
-				return documentStore;
-			}
-			catch
-			{
-				// We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
-				documentStore.Dispose();
-				throw;
-			}
-			finally
-			{
-				stores.Add(documentStore);
-			}
-		}
+                return documentStore;
+            }
+            catch
+            {
+                // We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
+                documentStore.Dispose();
+                throw;
+            }
+            finally
+            {
+                stores.Add(documentStore);
+            }
+        }
 
-		public static void EnableAuthentication(DocumentDatabase database)
+        public static void EnableAuthentication(DocumentDatabase database)
 		{
 			var license = GetLicenseByReflection(database);
 			license.Error = false;
