@@ -568,7 +568,7 @@ namespace Raven.Database.Counters
 				}
 
 				//save counter full name and its value into the counters tree
-				var counterKey = sliceWriter.CreateSlice(fullCounterNameSize);
+				var counterKey = sliceWriter.CreateSlice();
 				storeAction(counterKey);
 
 				var readResult = countersToEtag.Read(counterKey);
