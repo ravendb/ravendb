@@ -823,7 +823,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var sp = Stopwatch.StartNew();
 				using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
 				{
-                                        var request = nonBufferedHttpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+                                        var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 
 					request.WriteBson(jsonAttachments);
 					request.ExecuteRequest(docDb.WorkContext.CancellationToken);
@@ -897,7 +897,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 				using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
 				{
-                                        var request = nonBufferedHttpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+					var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 					request.Write(jsonDocuments);
 					request.ExecuteRequest(docDb.WorkContext.CancellationToken);
 
@@ -972,7 +972,7 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						string url = destination.ConnectionStringOptions.Url + "/indexes/last-queried";
 
-                                                var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+						var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 						replicationRequest.Write(RavenJObject.FromObject(relevantIndexLastQueries));
 						replicationRequest.ExecuteRequest();
 					}
@@ -1026,7 +1026,7 @@ namespace Raven.Bundles.Replication.Tasks
 								try
 								{
 									var url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
-                                                                        var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+									var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 									replicationRequest.Write(RavenJObject.FromObject(definition));
 									replicationRequest.ExecuteRequest();
 								}
@@ -1049,7 +1049,7 @@ namespace Raven.Bundles.Replication.Tasks
 									clonedTransformer.TransfomerId = 0;
 
 									string url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
-                                                                        var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+									var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 									replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
 									replicationRequest.ExecuteRequest();
 								}
@@ -1120,7 +1120,7 @@ namespace Raven.Bundles.Replication.Tasks
 				try
 				{
 					var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInfomration());
-                                        var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, HttpMethods.Delete, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+					var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Delete, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated index deletion (index name = {0})", tombstone.Key);
@@ -1145,7 +1145,7 @@ namespace Raven.Bundles.Replication.Tasks
 				try
 				{
 					var url = string.Format("{0}/transformers/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInfomration());
-                                        var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(url, HttpMethods.Delete, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+					var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Delete, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated transformer deletion (transformer name = {0})", tombstone.Key);
