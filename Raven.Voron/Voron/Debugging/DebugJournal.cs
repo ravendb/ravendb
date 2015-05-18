@@ -225,9 +225,8 @@ namespace Voron.Debugging
 					throw new NotSupportedException(string.Format("Given value type is not supported ({0}).", Value.GetType()));
 				}
 
-                var line = string.Format("{0},{1},{2},{3},{4}", ActionType, TransactionId, TreeName, Key, Convert.ToBase64String(entryValue));
-				Debug.Assert(line.Count(x => x == ',') == 4);
-	            
+                var line = string.Format("{0},{1},{2},\"{3}\",{4}", ActionType, TransactionId, TreeName, Key, Convert.ToBase64String(entryValue));
+				
 				return line;
             }
 
