@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Primitives;
@@ -75,7 +76,6 @@ namespace Raven.Tests.Helpers
 			pathsToDelete.Add(dataFolder);
 		}
 
-
 	    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
 		{
 			if (assembly == null) throw new ArgumentNullException("assembly");
@@ -138,6 +138,24 @@ namespace Raven.Tests.Helpers
 			return newDataDir;
 		}
 
+        /// <summary>
+        /// Creates a new Embeddable document store.
+        /// </summary>
+        /// <param name="runInMemory">The document store is all stored in RAM. Nothing hits the file system. (Default is True).</param>
+        /// <param name="requestedStorage"></param>
+        /// <param name="catalog"></param>
+        /// <param name="dataDir"></param>
+        /// <param name="enableAuthentication"></param>
+        /// <param name="activeBundles"></param>
+        /// <param name="port"></param>
+        /// <param name="anonymousUserAccessMode"></param>
+        /// <param name="configureStore"></param>
+        /// <param name="databaseName"></param>
+        /// <param name="indexes">A collection of indexes to execute.</param>
+        /// <param name="transformers">A collection of transformers to execute.</param>
+        /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
+        /// <remarks>Besides the document store being instansiated, it is also Initialized. Also, any indexes or transfomers that are provided, the process will not wait for them to be completed/not stale. You need to explicity call the WaitForIndexing(..) method.</remarks>
+        /// <returns>A new instance of an EmbeddableDocumentStore.</returns>
 		public EmbeddableDocumentStore NewDocumentStore(
 			bool runInMemory = true,
 			string requestedStorage = null,
@@ -148,7 +166,10 @@ namespace Raven.Tests.Helpers
 			int? port = null,
 			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
 			Action<EmbeddableDocumentStore> configureStore = null,
-			[CallerMemberName] string databaseName = null)
+			[CallerMemberName] string databaseName = null,
+            IEnumerable<AbstractIndexCreationTask> indexes = null,
+            IEnumerable<AbstractTransformerCreationTask> transformers = null,
+            IEnumerable<IEnumerable> seedData = null)
 		{
 			databaseName = NormalizeDatabaseName(databaseName);
 
@@ -200,6 +221,21 @@ namespace Raven.Tests.Helpers
 
 				CreateDefaultIndexes(documentStore);
 
+			    if (indexes != null)
+			    {
+			        ExecuteIndexes(indexes, documentStore);
+			    }
+
+                if (transformers != null)
+                {
+                    ExecuteTransformers(transformers, documentStore);
+                }
+
+			    if (seedData != null)
+			    {
+			        StoreSeedData(seedData, documentStore);
+			    }
+
 				return documentStore;
 			}
 			catch
@@ -234,28 +270,43 @@ namespace Raven.Tests.Helpers
 			bool enableAuthentication = false,
 			bool ensureDatabaseExists = true,
 			Action<DocumentStore> configureStore = null,
-			string activeBundles = null)
+			string activeBundles = null,
+            IEnumerable<IEnumerable> seedData = null)
 		{
 			databaseName = NormalizeDatabaseName(databaseName);
 
 			checkPorts = true;
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName, activeBundles: activeBundles);
+		    ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory,
+		        dataDirectory: dataDirectory,
+		        requestedStorage: requestedStorage,
+		        enableAuthentication: enableAuthentication,
+		        databaseName: databaseName,
+		        activeBundles: activeBundles);
 			ModifyServer(ravenDbServer);
-			var store = new DocumentStore
+			var documentStore = new DocumentStore
 			{
 				Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
 				DefaultDatabase = databaseName
 			};
 			pathsToDelete.Add(Path.Combine(ravenDbServer.SystemDatabase.Configuration.DataDirectory, @"..\Databases"));
-			stores.Add(store);
-			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+			stores.Add(documentStore);
+			documentStore.AfterDispose += (sender, args) => ravenDbServer.Dispose();
 
-			if (configureStore != null)
-				configureStore(store);
-			ModifyStore(store);
+		    if (configureStore != null)
+		    {
+		        configureStore(documentStore);
+		    }
 
-			store.Initialize(ensureDatabaseExists);
-			return store;
+		    ModifyStore(documentStore);
+
+			documentStore.Initialize(ensureDatabaseExists);
+
+		    if (seedData != null)
+		    {
+		        StoreSeedData(seedData, documentStore);
+		    }
+
+			return documentStore;
 		}
 
         protected RavenDbServer GetServer(int port = 8079)
@@ -418,21 +469,38 @@ namespace Raven.Tests.Helpers
 			new RavenDocumentsByEntityName().Execute(documentStore.DatabaseCommands, documentStore.Conventions);
 		}
 
-		public static void WaitForIndexing(IDocumentStore store, string db = null, TimeSpan? timeout = null)
+        /// <summary>
+        /// The current process is paused until all the indexes stop being stale.
+        /// </summary>
+        /// <param name="store">The document store where the indexes exist.</param>
+        /// <param name="database">The name of the database where the commands exist.</param>
+        /// <param name="timeout">The maximum time you'll wait for the indexes to complete.</param>
+		public static void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
 		{
 			var databaseCommands = store.DatabaseCommands;
-			if (db != null)
-				databaseCommands = databaseCommands.ForDatabase(db);
-			timeout = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20));
-			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
-			if (!spinUntil)
-			{
-				var statistics = databaseCommands.GetStatistics();
-				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
-				throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + Environment.NewLine + stats);
-			}
-		}
+		    if (database != null)
+		    {
+		        databaseCommands = databaseCommands.ForDatabase(database);
+		    }
+		    
+            timeout = timeout ?? (Debugger.IsAttached
+		        ? TimeSpan.FromMinutes(5)
+		        : TimeSpan.FromSeconds(20));
 
+			var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
+		    if (spinUntil)
+		    {
+		        return;
+		    }
+
+		    var statistics = databaseCommands.GetStatistics();
+		    var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
+		    var errorMessage = string.Format("The indexes stayed stale for more than {0}{1}{2}",
+		        timeout.Value,
+		        Environment.NewLine,
+		        stats);
+		    throw new TimeoutException(errorMessage);
+		}
 
 		public void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus, Func<PeriodicExportStatus, Etag> compareSelector)
 		{
@@ -450,6 +518,10 @@ namespace Raven.Tests.Helpers
 
 		}
 
+        /// <summary>
+        /// The current process is paused until all the indexes stop being stale.
+        /// </summary>
+        /// <param name="db">The document database where the indexes exist.</param>
 		public static void WaitForIndexing(DocumentDatabase db)
 		{
 			if (!SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)))
@@ -458,8 +530,10 @@ namespace Raven.Tests.Helpers
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
-			if (!SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)))
-                throw new Exception("WaitForAllRequestsToComplete failed");
+		    if (!SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)))
+		    {
+		        throw new Exception("WaitForAllRequestsToComplete failed");
+		    }
 		}
 
 		protected PeriodicExportStatus GetPeriodicBackupStatus(DocumentDatabase db)
@@ -642,7 +716,6 @@ namespace Raven.Tests.Helpers
 				} while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
 			}
 		}
-
 
 		/// <summary>
 		///     Let the studio knows that it shouldn't display the warning about sys db access
@@ -841,8 +914,10 @@ namespace Raven.Tests.Helpers
 
 		protected string NormalizeDatabaseName(string databaseName)
 		{
-			if (string.IsNullOrEmpty(databaseName))
-				return null;
+		    if (string.IsNullOrEmpty(databaseName))
+		    {
+		        return null;
+		    }
 
 			if (databaseName.Length < 50)
 			{
@@ -872,5 +947,65 @@ namespace Raven.Tests.Helpers
 			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", "POST", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
 			request.ExecuteRequest();
 		}
+
+        private static void StoreSeedData(IEnumerable<IEnumerable> seedData,
+            IDocumentStore documentStore)
+        {
+            if (seedData == null)
+            {
+                throw new ArgumentNullException("seedData");
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                foreach (var collection in seedData)
+                {
+                    foreach (var item in collection)
+                    {
+                        session.Store(item);
+                    }
+                }
+
+                session.SaveChanges();
+            }
+        }
+
+        private static void ExecuteIndexes(IEnumerable<AbstractIndexCreationTask> indexes,
+            IDocumentStore documentStore)
+        {
+            if (indexes == null)
+            {
+                throw new ArgumentNullException("indexes");
+            }
+
+            if (documentStore == null)
+            {
+                throw new ArgumentNullException("documentStore");
+            }
+
+            foreach (var index in indexes)
+            {
+                index.Execute(documentStore);
+            }
+        }
+
+        private static void ExecuteTransformers(IEnumerable<AbstractTransformerCreationTask> transformers,
+            IDocumentStore documentStore)
+        {
+            if (transformers == null)
+            {
+                throw new ArgumentNullException("transformers");
+            }
+
+            if (documentStore == null)
+            {
+                throw new ArgumentNullException("documentStore");
+            }
+
+            foreach (var transformer in transformers)
+            {
+                transformer.Execute(documentStore);
+            }
+        }
 	}
 }

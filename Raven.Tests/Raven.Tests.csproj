@@ -902,6 +902,10 @@
     <Compile Include="Suggestions\SuggestionsLazy.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="TestBase\Animal_Search.cs" />
+    <Compile Include="TestBase\FakeModelHelpers.cs" />
+    <Compile Include="TestBase\FakeModels.cs" />
+    <Compile Include="TestBase\RavenTestBaseTests.cs" />
     <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />
