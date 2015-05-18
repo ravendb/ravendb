@@ -3,8 +3,8 @@ pvc.Task("optimized-build", () => {
 	if (Directory.Exists(outputDirectory))
 		Directory.Delete(outputDirectory, true);
 
-	pvc.Source(
-		"Scripts/typings/**/*.d.ts", 
+	var list = new List<string> {
+		"Scripts/typings/**/*.d.ts",
 		"App/**/*.ts",
 		"App/views/**/*.html",
 		"App/widgets/**/*.html",
@@ -15,7 +15,9 @@ pvc.Task("optimized-build", () => {
 		"Scripts/**/*.css",
 		"index.html",
 		"version.json"
-	)
+	};
+		
+	pvc.Source(list.ToArray())
 
 	// Compile all the TypeScript files into JavaScript.
 	.Pipe(new PvcTypeScript("--module amd --target ES5"))
@@ -65,10 +67,13 @@ pvc.Task("optimized-build", () => {
 		var newMainjs = PvcUtil.StringToStream(newMainjsContents, mainjs.StreamName);
 		newMainjs.ResetStreamPosition();
 
+		var except = new List<PvcStream> { mainjs };
+		var concat = new List<PvcStream> { newMainjs };
+		
 		return streams
 			.Except(durandalFiles) // We're done with the Durandal files; we've now moved them inline.
-			.Except(new[] { mainjs }) // Get rid of the old main.js
-			.Concat(new[] { newMainjs }); // Add the new main.js
+			.Except(except) // Get rid of the old main.js
+			.Concat(concat); // Add the new main.js
 	})
 		
 	// Convert all the HTML views into RequireJS modules.
@@ -130,9 +135,12 @@ pvc.Task("optimized-build", () => {
 		var indexHtmlWithInlinedScripts = indexHtml.Replace(vendorScriptLinesString, vendorScriptBlockString);
 		var indexHtmlWithInlinedScriptsStream = PvcUtil.StringToStream(indexHtmlWithInlinedScripts, "index.html");
 
+		var except = new List<PvcStream> { indexHtmlStream };
+		var concat = new List<PvcStream> { indexHtmlWithInlinedScriptsStream };
+		
 		return streams
-			.Except(new[] { indexHtmlStream }) // Get rid of the old index.html
-			.Concat(new[] { indexHtmlWithInlinedScriptsStream }); // Add the new index.html
+			.Except(except) // Get rid of the old index.html
+			.Concat(concat); // Add the new index.html
 	})
 
 	// Concatenate all RequireJS loaded files into a single main.js file.

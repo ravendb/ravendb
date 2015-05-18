@@ -22,6 +22,8 @@ namespace Raven.Abstractions.Connection
 		private readonly Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse;
 		private readonly RavenConnectionStringOptions connectionStringOptions;
 
+		private readonly bool? allowWriteStreamBuffering;
+
 		private HttpWebRequest webRequest;
 
 		private Stream postedStream;
@@ -38,13 +40,14 @@ namespace Raven.Abstractions.Connection
 			set { webRequest = value; }
 		}
 
-		public HttpRavenRequest(string url, HttpMethod httpMethod, Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions)
+                public HttpRavenRequest(string url, HttpMethod httpMethod, Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering)
 		{
 			this.url = url;
 			this.httpMethod = httpMethod;
 			this.configureRequest = configureRequest;
 			this.handleUnauthorizedResponse = handleUnauthorizedResponse;
 			this.connectionStringOptions = connectionStringOptions;
+			this.allowWriteStreamBuffering = allowWriteStreamBuffering;
 		}
 
 		private HttpWebRequest CreateRequest()
@@ -56,7 +59,15 @@ namespace Raven.Abstractions.Connection
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
 			request.ContentType = "application/json; charset=utf-8";
 
+			if (allowWriteStreamBuffering.HasValue)
+			{
+				request.AllowWriteStreamBuffering = allowWriteStreamBuffering.Value;
+				if (allowWriteStreamBuffering.Value == false)
+					request.SendChunked = true;
+			}
+
 			configureRequest(connectionStringOptions, request);
+
 			return request;
 		}
 

@@ -189,7 +189,7 @@ namespace Voron.Trees
                     MemoryUtils.CopyInline(pos, tempPagePointer, read);
                     pos += read;
 
-                    if ( read != tempPageBuffer.Length )
+                    if (read != tempPageBuffer.Length)
                         break;
 				}
 			}
@@ -385,7 +385,7 @@ namespace Voron.Trees
 	            }
 	            else if (key.Options == SliceOptions.AfterAllKeys)
 	            {
-	                p.LastSearchPosition = nodePos = (ushort) (p.NumberOfEntries - 1);
+                    p.LastSearchPosition = nodePos = (ushort)(p.NumberOfEntries - 1);
 	                leftmostPage = false;
 	            }
 	            else
@@ -406,7 +406,7 @@ namespace Voron.Trees
 	                }
 	                else
 	                {
-	                    nodePos = (ushort) (p.LastSearchPosition - 1);
+                        nodePos = (ushort)(p.LastSearchPosition - 1);
 
 	                    leftmostPage = false;
 	                }
@@ -436,7 +436,7 @@ namespace Voron.Trees
             MemorySlice firstKey;
 		    if (leftmostPage == true)
 		    {
-				if(p.KeysPrefixed)
+                if (p.KeysPrefixed)
                     firstKey = PrefixedSlice.BeforeAllKeys;
 				else
                     firstKey = Slice.BeforeAllKeys;
@@ -490,7 +490,17 @@ namespace Voron.Trees
 
 		    var lastFoundPageNumber = foundPage.Number;
 
-		    page = foundPage.Page ?? _tx.GetReadOnlyPage(lastFoundPageNumber);
+            if (foundPage.Page != null)
+            {
+                // we can't share the same instance, Page instance may be modified by
+                // concurrently run iterators
+                page = new Page(foundPage.Page.Base, foundPage.Page.Source, foundPage.Page.PageSize);
+            }
+            else
+            {
+                page = _tx.GetReadOnlyPage(lastFoundPageNumber);
+            }
+
 			if (page.IsLeaf == false)
 				throw new DataException("Index points to a non leaf page");
 
@@ -635,7 +645,7 @@ namespace Voron.Trees
 				return overFlowPage.Base + Constants.PageHeaderSize;
 			}
 
-			return (byte*) node + node->KeySize + Constants.NodeHeaderSize;
+            return (byte*)node + node->KeySize + Constants.NodeHeaderSize;
 		}
 
 		public List<long> AllPages()
