@@ -70,7 +70,6 @@ class index {
         this.lastReducedTimestamp = dto.LastReducedTimestamp;
         this.lockMode(dto.LockMode);
         this.name = dto.Name;
-        this.performance = dto.Performance;
         this.priority = dto.Priority;
         this.reduceIndexingAttempts = dto.ReduceIndexingAttempts;
         this.reduceIndexingErrors = dto.ReduceIndexingErrors;

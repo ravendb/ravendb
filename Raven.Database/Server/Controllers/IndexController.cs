@@ -26,8 +26,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Abstractions.Util.Encryptors;
-using Voron.Impl.Journal;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -73,8 +71,6 @@ namespace Raven.Database.Server.Controllers
                 return GetIndexQueryResult(index, cts.Token);
             }
 		}
-
-		
 
 		[HttpPost]
 		[RavenRoute("indexes/last-queried")]
@@ -277,7 +273,6 @@ namespace Raven.Database.Server.Controllers
 
 		    return GetMessageWithObject(text);
 		}
-
 	
 		private HttpResponseMessage GetIndexDefinition(string index)
 		{
@@ -772,7 +767,6 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(instance.indexId);
-			stats.Performance = Database.IndexStorage.GetIndexingPerformance(instance.indexId);
 			stats.SetLastDocumentEtag(lastEtag);
 			return GetMessageWithObject(stats);
 		}

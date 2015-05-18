@@ -232,7 +232,6 @@
     <Content Include="App\views\database\status\sqlReplicationStatsDialog.html" />
     <Content Include="App\views\common\latestBuildReminder.html" />
     <Content Include="App\views\database\status\debug\statusDebugIdentities.html" />
-    <Content Include="App\views\filesystem\configurations\createConfigurationKey.html" />
     <Content Include="App\views\filesystem\configurations\deleteConfigurationKeys.html" />
     <Content Include="App\views\database\status\debug\statusDebugIndexFields.html" />
     <Content Include="App\views\database\status\debug\statusDebugSqlReplication.html" />
@@ -266,16 +265,7 @@
     <Content Include="App\views\fieldRangeFilter.html" />
     <Content Include="App\views\fieldStringFilter.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
-    <Content Include="App\views\filesystem\exportFilesystem.html" />
-    <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
-    <Content Include="App\views\filesystem\fileRenameDialog.html" />
-    <Content Include="App\views\filesystem\importFilesystem.html" />
-    <Content Include="App\views\filesystem\settings.html" />
-    <Content Include="App\views\filesystem\tasks.html" />
-    <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
-    <Content Include="App\views\filesystem\versioning.html" />
     <Content Include="App\views\inMethodFilter.html" />
-    <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
     <Content Include="App\views\common\deleteDocuments.html" />
@@ -390,10 +380,6 @@
     <Content Include="App\views\dialog.html" />
     <Content Include="App\views\filesystem\configurations\configuration.html" />
     <Content Include="App\views\filesystem\configurations\createConfigurationKey.html" />
-    <Content Include="App\views\filesystem\configurations\deleteConfigurationKeys.html" />
-    <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
-    <Content Include="App\views\filesystem\files\createFolderInFilesystem.html" />
-    <Content Include="App\views\filesystem\files\fileRenameDialog.html" />
     <Content Include="App\views\filesystem\files\filesystemEditFile.html" />
     <Content Include="App\views\filesystem\files\filesystemFiles.html" />
     <Content Include="App\views\filesystem\files\searchFileSizeRangeClause.html" />
@@ -401,16 +387,8 @@
     <Content Include="App\views\filesystem\files\searchLastModifiedBetweenClause.html" />
     <Content Include="App\views\filesystem\files\searchSingleInputClause.html" />
     <Content Include="App\views\filesystem\search\search.html" />
-    <Content Include="App\views\filesystem\settings\settings.html" />
-    <Content Include="App\views\filesystem\settings\versioning.html" />
-    <Content Include="App\views\filesystem\status\resetIndexConfirm.html" />
-    <Content Include="App\views\filesystem\status\status.html" />
-    <Content Include="App\views\filesystem\synchronization.html.rej" />
     <Content Include="App\views\filesystem\synchronization\resolveConflict.html" />
     <Content Include="App\views\filesystem\synchronization\synchronization.html" />
-    <Content Include="App\views\filesystem\synchronization\synchronizationConfiguration.html" />
-    <Content Include="App\views\filesystem\synchronization\synchronizationConflicts.html" />
-    <Content Include="App\views\filesystem\synchronization\synchronizationDestinations.html" />
     <Content Include="App\views\filesystem\tasks\exportFilesystem.html" />
     <Content Include="App\views\filesystem\tasks\importFilesystem.html" />
     <Content Include="App\views\filesystem\tasks\tasks.html" />
@@ -457,6 +435,7 @@
       <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
+    <Content Include="Content\bootstrap-datetimepicker.min.css" />
     <Content Include="Content\bootstrap.css">
       <DependentUpon>bootstrap.less</DependentUpon>
     </Content>
@@ -719,6 +698,8 @@
     <Content Include="Scripts\durandal\system.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
+    <Content Include="Content\less\bootstrap-datetimepicker-build.less" />
+    <Content Include="Content\less\_bootstrap-datetimepicker.less" />
     <None Include="Scripts\jquery-2.1.3.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.3.js" />
     <Content Include="Scripts\jquery-2.1.3.min.js" />

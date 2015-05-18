@@ -22,4 +22,21 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 			set { throw new AccessFailureException(); }
 		}
 	}
+
+	internal class ServerUpTimeGlobal : ScalarObject
+	{
+		private readonly RequestManager requestManager;
+
+		public ServerUpTimeGlobal(RequestManager requestManager)
+			: base("1.3.6.1.2.1.1.3.0")
+		{
+			this.requestManager = requestManager;
+		}
+
+		public override ISnmpData Data
+		{
+			get { return new TimeTicks(SystemTime.UtcNow - requestManager.StartUpTime); }
+			set { throw new AccessFailureException(); }
+		}
+	}
 }

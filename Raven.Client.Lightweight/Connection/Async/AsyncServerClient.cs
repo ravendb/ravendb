@@ -67,7 +67,7 @@ namespace Raven.Client.Connection.Async
 		private readonly IRequestExecuter requestExecuter;
 
 		internal readonly DocumentConvention convention;
-		
+
 		internal readonly HttpJsonRequestFactory jsonRequestFactory;
 
 		private int requestCount;
@@ -195,7 +195,7 @@ namespace Raven.Client.Connection.Async
 					request.AddOperationHeaders(OperationsHeaders);
 					request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
-					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false   );
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
 			}, token);
 		}
@@ -646,6 +646,26 @@ namespace Raven.Client.Connection.Async
 				}
 
 			}, token);
+		}
+
+		public Task<IndexingPerformanceStatistics[]> GetIndexingPerformanceStatisticsAsync()
+		{
+			return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
+			{
+				var url = operationMetadata.Url.IndexingPerformanceStatistics();
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+				{
+					var indexingPerformanceStatisticsJson = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+					var results = new IndexingPerformanceStatistics[indexingPerformanceStatisticsJson.Length];
+					for (var i = 0; i < indexingPerformanceStatisticsJson.Length; i++)
+					{
+						var stats = (RavenJObject)indexingPerformanceStatisticsJson[i];
+						results[i] = stats.Deserialize<IndexingPerformanceStatistics>(convention);
+					}
+
+					return results;
+				}
+			});
 		}
 
 		private async Task<JsonDocument> DirectGetAsync(OperationMetadata operationMetadata, string key, CancellationToken token)
@@ -1298,9 +1318,9 @@ namespace Raven.Client.Connection.Async
 						var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
 
 						var docResults = queryResult.Results.Concat(queryResult.Includes);
-	                    return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, () => 
-							QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token), conflictedResultId => 
-								new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) + 
+						return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, () =>
+							QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token), conflictedResultId =>
+								new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
 									", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } }, token).ConfigureAwait(false);
 					}
 					catch (ErrorResponseException e)

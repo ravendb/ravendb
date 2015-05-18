@@ -55,7 +55,7 @@ class getIndexingBatchStatsCommand extends commandBase {
     }
 
     private getQueryUrlFragment(): string {
-        return "/debug/indexing-perf-stats";
+        return "/debug/indexing-perf-stats-with-timings";
     }
 }
 

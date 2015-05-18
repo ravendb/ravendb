@@ -10,11 +10,11 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -194,32 +194,32 @@ namespace Raven.Database.Server.Controllers
 		/// <param name="format"></param>
 		/// <returns></returns>
 		[HttpGet]
-		[RavenRoute("debug/indexing-perf-stats")]
-		[RavenRoute("databases/{databaseName}/debug/indexing-perf-stats")]
-		public HttpResponseMessage IndexingPerfStats(string format = "json")
+		[RavenRoute("debug/indexing-perf-stats-with-timings")]
+		[RavenRoute("databases/{databaseName}/debug/indexing-perf-stats-with-timings")]
+		public HttpResponseMessage IndexingPerfStatsWthTimings(string format = "json")
 		{
 			var now = SystemTime.UtcNow;
 			var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
 
-			var databaseStatistics = Database.Statistics;
-			var stats = from index in databaseStatistics.Indexes
-						from perf in index.Performance
+			var stats = from pair in Database.IndexDefinitionStorage.IndexDefinitions
+						let performance = Database.IndexStorage.GetIndexingPerformance(pair.Key)
+						from perf in performance
 						where (perf.Operation == "Map" || perf.Operation == "Index") && perf.Started < nowTruncToSeconds
-						let k = new { index, perf }
-						group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond into g
+						let k = new { IndexDefinition = pair.Value, Performance = perf }
+						group k by k.Performance.Started.Ticks / TimeSpan.TicksPerSecond into g
 						orderby g.Key
 						select new
 						{
 							Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
 							Stats = from k in g
-									group k by k.index.Name into gg
+									group k by k.IndexDefinition.Name into gg
 									select new
 									{
 										Index = gg.Key,
-										DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
-										InputCount = gg.Sum(x => x.perf.InputCount),
-										OutputCount = gg.Sum(x => x.perf.OutputCount),
-										ItemsCount = gg.Sum(x => x.perf.ItemsCount)
+										DurationMilliseconds = gg.Sum(x => x.Performance.DurationMilliseconds),
+										InputCount = gg.Sum(x => x.Performance.InputCount),
+										OutputCount = gg.Sum(x => x.Performance.OutputCount),
+										ItemsCount = gg.Sum(x => x.Performance.ItemsCount)
 									}
 						};
 
@@ -381,7 +381,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				Content = new PushStreamContent((stream, content, transportContext) => Database.TransactionalStorage.Batch(accessor =>
 				{
-					using(stream)
+					using (stream)
 					using (var docContent = accessor.Documents.RawDocumentByKey(docId))
 					{
 						docContent.CopyTo(stream);
@@ -394,22 +394,22 @@ namespace Raven.Database.Server.Controllers
 						ContentType = new MediaTypeHeaderValue("application/octet-stream"),
 						ContentDisposition = new ContentDispositionHeaderValue("attachment")
 						{
-							FileName = docId +".raw-doc"
+							FileName = docId + ".raw-doc"
 						}
 					}
 				}
 			};
 		}
 
-	    [HttpGet]
-	    [RavenRoute("debug/slow-dump-ref-csv")]
+		[HttpGet]
+		[RavenRoute("debug/slow-dump-ref-csv")]
 		[RavenRoute("databases/{databaseName}/debug/slow-dump-ref-csv")]
-        public HttpResponseMessage DumpRefsToCsv(int sampleCount = 10)
-	    {
-		    return new HttpResponseMessage
-		    {
-			    Content = new PushStreamContent((stream, content, context) =>
-			    {
+		public HttpResponseMessage DumpRefsToCsv(int sampleCount = 10)
+		{
+			return new HttpResponseMessage
+			{
+				Content = new PushStreamContent((stream, content, context) =>
+				{
 					using (var writer = new StreamWriter(stream))
 					{
 						writer.WriteLine("ref count,document key,sample references");
@@ -418,28 +418,28 @@ namespace Raven.Database.Server.Controllers
 							accessor.Indexing.DumpAllReferancesToCSV(writer, sampleCount);
 						});
 						writer.Flush();
-                        stream.Flush();
+						stream.Flush();
 					}
-			    })
-			    {
-				    Headers =
-				    {
-					    ContentDisposition = new ContentDispositionHeaderValue("attachment")
-					    {
-						    FileName = "doc-refs.csv",
-					    },
-					    ContentType = new MediaTypeHeaderValue("application/octet-stream")
-				    }
-			    }
-		    };
-	    }
+				})
+				{
+					Headers =
+					{
+						ContentDisposition = new ContentDispositionHeaderValue("attachment")
+						{
+							FileName = "doc-refs.csv",
+						},
+						ContentType = new MediaTypeHeaderValue("application/octet-stream")
+					}
+				}
+			};
+		}
 
 		[HttpGet]
 		[RavenRoute("debug/docrefs")]
 		[RavenRoute("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage DocRefs(string id)
 		{
-		    var op = GetQueryStringValue("op");
+			var op = GetQueryStringValue("op");
 			op = op == "from" ? "from" : "to";
 
 			var totalCountReferencing = -1;
@@ -460,7 +460,7 @@ namespace Raven.Database.Server.Controllers
 				Results = results
 			});
 		}
-        //DumpAllReferancesToCSV
+		//DumpAllReferancesToCSV
 		[HttpGet]
 		[RavenRoute("debug/d0crefs-t0ps")]
 		[RavenRoute("databases/{databaseName}/debug/d0crefs-t0ps")]
@@ -762,6 +762,14 @@ namespace Raven.Database.Server.Controllers
 					ThreadPoolStats = Database.ReducingThreadPool.GetThreadPoolStats()
 				}
 			});
+		}
+
+		[HttpGet]
+		[RavenRoute("debug/indexing-perf-stats")]
+		[RavenRoute("databases/{databaseName}/debug/indexing-perf-stats")]
+		public HttpResponseMessage IndexingPerfStats()
+		{
+			return GetMessageWithObject(Database.IndexingPerformanceStatistics);
 		}
 	}
 

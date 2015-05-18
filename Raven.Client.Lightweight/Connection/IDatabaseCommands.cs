@@ -239,6 +239,11 @@ namespace Raven.Client.Connection
 		IndexDefinition GetIndex(string name);
 
 		/// <summary>
+		///     Retrieves indexing performance statistics for all indexes
+		/// </summary>
+		IndexingPerformanceStatistics[] GetIndexingPerformanceStatistics();
+
+		/// <summary>
 		///     Retrieves all suggestions for an index merging
 		/// </summary>
 		IndexMergeResults GetIndexMergeSuggestions();

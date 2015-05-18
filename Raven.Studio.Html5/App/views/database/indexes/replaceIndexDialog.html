@@ -23,12 +23,14 @@
             </div>
             <div class="form-group" data-bind="visible: dateMode()">
                 <label class="col-md-4 control-label">Replacement date (UTC):</label>
-                <div class="col-md-8">
-                    <div class="btn-group">
-                        <input id="replaceDate" disabled="disabled" type="datetime" class="form-control" data-bind="value: replaceDateText" />
-                        <button class="btn btn-default" id="replaceDateButton" data-bind="clickBubble: false, datePicker: replaceDate"><i class="fa fa-calendar"></i></button>
-                    </div>
-                </div>
+	            <div class="col-md-8">
+					<div class="input-group date" data-bind="datePicker: replaceDate">
+						<input id="replaceDate" type="text"  class="form-control" data-bind="value: replaceDateText" />
+						<span class="input-group-addon">
+							<span class="fa fa-calendar"></span>
+						</span>
+					</div>
+	            </div>
             </div>
         </form>
     </div>
