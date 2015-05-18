@@ -22,60 +22,52 @@ namespace Voron
 	    }
 
 
-	    public SliceWriter WriteString(string s)
+		public void WriteString(string s)
 	    {
 		    var stringBytes = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, _pos);
 		    _pos += stringBytes;
-			return this;
 	    }
 
-		public SliceWriter WriteBytes(byte[] bytes)
+		public void WriteBytes(byte[] bytes)
 	    {
 			Array.Copy(bytes, _buffer, bytes.Length);
 			_pos += (bytes.Length);
-			return this;
 		}
 
-		public SliceWriter WriteBigEndian(byte b)
+		public void WriteBigEndian(byte b)
 		{
 			_buffer[_pos] = b;
 			_pos += sizeof(byte);
-			return this;
 		}
 
-		public SliceWriter WriteBigEndian(char i)
+		public void WriteBigEndian(char i)
 		{
 			EndianBitConverter.Big.CopyBytes(i, _buffer, _pos);
 			_pos += sizeof(char);
-			return this;
 		}
 
-		public SliceWriter WriteBigEndian(double d)
+		public void WriteBigEndian(double d)
 		{
 			EndianBitConverter.Big.CopyBytes(d, _buffer, _pos);
 			_pos += sizeof(double);
-			return this;
 		}
 
-        public SliceWriter WriteBigEndian(int i)
+		public void WriteBigEndian(int i)
         {
             EndianBitConverter.Big.CopyBytes(i, _buffer, _pos);
             _pos += sizeof (int);
-			return this;
 		}
 
-        public SliceWriter WriteBigEndian(long l)
+		public void WriteBigEndian(long l)
         {
             EndianBitConverter.Big.CopyBytes(l, _buffer, _pos);
             _pos += sizeof(long);
-			return this;
 		}
 
-        public SliceWriter WriteBigEndian(short s)
+        public void WriteBigEndian(short s)
         {
             EndianBitConverter.Big.CopyBytes(s, _buffer, _pos);
             _pos += sizeof(short);
-			return this;
 		}
 
         public Slice CreateSlice()
