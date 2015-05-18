@@ -885,7 +885,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 				using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
 				{
-					var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions, destinationForceBuffering.GetOrAdd(destination.ConnectionStringOptions.Url, docDb.Configuration.Replication.ForceReplicationRequestBuffering));
+					var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions, GetRequestBuffering(destination));
 					request.Write(jsonDocuments);
 					request.ExecuteRequest(docDb.WorkContext.CancellationToken);
 
