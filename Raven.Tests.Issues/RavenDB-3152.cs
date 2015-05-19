@@ -1,6 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.IO;
 using System.Linq;
-using System.Security.Policy;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -10,12 +9,8 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
-using Raven.Json.Linq;
-using Raven.Server;
 using Raven.Smuggler;
-using Raven.Tests.Core.Commands;
 using Raven.Tests.Helpers;
-using Raven.Tests.MailingList;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -121,6 +116,306 @@ namespace Raven.Tests.Issues
 						Assert.Equal("WorkerByName", index1.Name);
 						Assert.Equal("WorkerByAge", index2.Name);
 						Assert.Equal("WorkerAccountNumber", index3.Name);
+					}
+				}
+			}
+		}
+
+		[Fact]
+		public async Task Smuggler_filtering_next_etag_incremental_between()
+		{
+			using (var server = GetNewServer())
+			{
+				using (var store = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
+				{
+					store
+						.DatabaseCommands
+						.GlobalAdmin
+						.CreateDatabase(new DatabaseDocument
+						{
+							Id = "Dba1",
+							Settings =
+							{
+								{"Raven/DataDir", "Dba1"}
+							}
+						});
+					store.DatabaseCommands.EnsureDatabaseExists("Dba1");
+
+					store
+						.DatabaseCommands
+						.GlobalAdmin
+						.CreateDatabase(new DatabaseDocument
+						{
+							Id = "Dba2",
+							Settings =
+							{
+								{"Raven/DataDir", "Dba2"}
+							}
+						});
+					store.DatabaseCommands.EnsureDatabaseExists("Dba2");
+				}
+				using (var store1 = new DocumentStore
+				{
+					Url = server.SystemDatabase.Configuration.ServerUrl,
+					DefaultDatabase = "Dba1"
+				}.Initialize())
+				{
+					StoreWorkerseDba1(store1);
+					using (var session = store1.OpenSession())
+					{
+						var workers = session.Query<Worker>().ToList();
+						Assert.Equal(3, workers.Count);
+
+						var index1 = store1.DatabaseCommands.GetIndex("WorkerByName");
+						var index2 = store1.DatabaseCommands.GetIndex("WorkerByAge");
+						var index3 = store1.DatabaseCommands.GetIndex("WorkerAccountNumber");
+						Assert.Equal("WorkerByName", index1.Name);
+						Assert.Equal("WorkerByAge", index2.Name);
+						Assert.Equal("WorkerAccountNumber", index3.Name);
+					}
+				}
+
+				SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
+				{
+					OperateOnTypes = ItemType.Documents | ItemType.Indexes,
+					Incremental = false
+				});
+				smugglerApi.Options.Filters.Add(new FilterSetting
+				{
+					Path = "Name",
+					ShouldMatch = true,
+					Values = { "worker/22", "worker/333" }
+				});
+
+				await smugglerApi.Between(
+					new SmugglerBetweenOptions<RavenConnectionStringOptions>
+					{
+						From = new RavenConnectionStringOptions
+						{
+							Url = server.SystemDatabase.Configuration.ServerUrl,
+							DefaultDatabase = "Dba1"
+						},
+						To = new RavenConnectionStringOptions
+						{
+							Url = server.SystemDatabase.Configuration.ServerUrl,
+							DefaultDatabase = "Dba2"
+						}
+
+					});
+
+				using (var store2 = new DocumentStore
+				{
+					Url = server.SystemDatabase.Configuration.ServerUrl,
+					DefaultDatabase = "Dba2"
+
+				}.Initialize())
+				{
+					using (var session = store2.OpenSession())
+					{
+						var workers = session.Query<Worker>().ToList();
+						Assert.Equal(0, workers.Count);
+						var index1 = store2.DatabaseCommands.GetIndex("WorkerByName");
+						var index2 = store2.DatabaseCommands.GetIndex("WorkerByAge");
+						var index3 = store2.DatabaseCommands.GetIndex("WorkerAccountNumber");
+						Assert.Equal("WorkerByName", index1.Name);
+						Assert.Equal("WorkerByAge", index2.Name);
+						Assert.Equal("WorkerAccountNumber", index3.Name);
+					}
+				}
+
+				using (var store1 = new DocumentStore
+				{
+					Url = server.SystemDatabase.Configuration.ServerUrl,
+					DefaultDatabase = "Dba1"
+				}.Initialize())
+				{
+					StoreWorkerseDba1(store1);
+
+				}
+				 smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
+				{
+					OperateOnTypes = ItemType.Documents | ItemType.Indexes,
+					Incremental = true
+				});
+				smugglerApi.Options.Filters.Add(new FilterSetting
+				{
+					Path = "Name",
+					ShouldMatch = true,
+					Values = { "worker/22", "worker/33" }
+				});
+
+				await smugglerApi.Between(
+					new SmugglerBetweenOptions<RavenConnectionStringOptions>
+					{
+						From = new RavenConnectionStringOptions
+						{
+							Url = server.SystemDatabase.Configuration.ServerUrl,
+							DefaultDatabase = "Dba1"
+						},
+						To = new RavenConnectionStringOptions
+						{
+							Url = server.SystemDatabase.Configuration.ServerUrl,
+							DefaultDatabase = "Dba2"
+						}
+
+					});
+				using (var store2 = new DocumentStore
+				{
+					Url = server.SystemDatabase.Configuration.ServerUrl,
+					DefaultDatabase = "Dba2"
+
+				}.Initialize())
+				{
+					using (var session = store2.OpenSession())
+					{
+						var workers = session.Query<Worker>().ToList();
+						Assert.Equal(0, workers.Count);
+						var index1 = store2.DatabaseCommands.GetIndex("WorkerByName");
+						var index2 = store2.DatabaseCommands.GetIndex("WorkerByAge");
+						var index3 = store2.DatabaseCommands.GetIndex("WorkerAccountNumber");
+						Assert.Equal("WorkerByName", index1.Name);
+						Assert.Equal("WorkerByAge", index2.Name);
+						Assert.Equal("WorkerAccountNumber", index3.Name);
+					}
+				}
+
+			}
+		}
+		[Fact]
+		public async Task Smuggler_filtering_next_etag_incremental_export_to_file()
+		{
+			using (var server = GetNewServer())
+			{
+				var file = Path.Combine(NewDataPath(), "Incremental");
+				IOExtensions.DeleteDirectory(file);
+				using (var store = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
+				{
+					store
+						.DatabaseCommands
+						.GlobalAdmin
+						.CreateDatabase(new DatabaseDocument
+						{
+							Id = "Dba1",
+							Settings =
+							{
+								{"Raven/DataDir", "Dba1"}
+							}
+						});
+					store.DatabaseCommands.EnsureDatabaseExists("Dba1");
+				}
+				using (var store1 = new DocumentStore
+				{
+					Url = server.SystemDatabase.Configuration.ServerUrl,
+					DefaultDatabase = "Dba1"
+				}.Initialize())
+				{
+					StoreWorkerseDba1(store1);
+					using (var session = store1.OpenSession())
+					{
+						var workers = session.Query<Worker>().ToList();
+						Assert.Equal(3, workers.Count);
+
+						var index1 = store1.DatabaseCommands.GetIndex("WorkerByName");
+						var index2 = store1.DatabaseCommands.GetIndex("WorkerByAge");
+						var index3 = store1.DatabaseCommands.GetIndex("WorkerAccountNumber");
+						Assert.Equal("WorkerByName", index1.Name);
+						Assert.Equal("WorkerByAge", index2.Name);
+						Assert.Equal("WorkerAccountNumber", index3.Name);
+					}
+				}
+
+				SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
+				{
+					OperateOnTypes = ItemType.Documents | ItemType.Indexes,
+					Incremental = true
+				});
+				smugglerApi.Options.Filters.Add(new FilterSetting
+				{
+					Path = "Name",
+					ShouldMatch = true,
+					Values = { "worker/21", "worker/33" }
+				});
+
+				await smugglerApi.ExportData(
+					new SmugglerExportOptions<RavenConnectionStringOptions>
+					{
+						ToFile = file,
+						From = new RavenConnectionStringOptions
+						{
+							Url = server.SystemDatabase.Configuration.ServerUrl,
+							DefaultDatabase = "Dba1"
+						}
+					});
+	
+
+				//check file after first export
+
+
+
+				using (var store1 = new DocumentStore
+				{
+					Url = server.SystemDatabase.Configuration.ServerUrl,
+					DefaultDatabase = "Dba1"
+				}.Initialize())
+				{
+
+					StoreWorkerseDba1(store1);
+
+				}
+
+
+				//Second time Export 
+
+				smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
+				{
+					OperateOnTypes = ItemType.Documents | ItemType.Indexes,
+					Incremental = true
+				});
+				smugglerApi.Options.Filters.Add(new FilterSetting
+				{
+					Path = "Name",
+					ShouldMatch = true,
+					Values = { "worker/21", "worker/33" }
+				});
+				await smugglerApi.ExportData(
+					new SmugglerExportOptions<RavenConnectionStringOptions>
+					{
+						ToFile = file,
+						From = new RavenConnectionStringOptions
+						{
+							Url = server.SystemDatabase.Configuration.ServerUrl,
+							DefaultDatabase = "Dba1"
+						}
+					});
+
+				using (var store2 = new DocumentStore
+				{
+					Url = server.SystemDatabase.Configuration.ServerUrl,
+					DefaultDatabase = "Dba2"
+
+				}.Initialize())
+				{
+
+					 smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
+					{
+						OperateOnTypes = ItemType.Documents | ItemType.Indexes,
+						Incremental = true
+					});
+					
+					await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
+					{
+						FromFile = file,
+						To = new RavenConnectionStringOptions
+						{
+							Url = server.SystemDatabase.Configuration.ServerUrl,
+							DefaultDatabase = "Dba2"
+						}
+					});
+
+					using (var session = store2.OpenSession())
+					{
+						var workers = session.Query<Worker>().ToList();
+						Assert.Equal(0, workers.Count);
 					}
 				}
 			}

@@ -58,7 +58,7 @@ namespace Voron.Trees
 				return;
 			}
 
-			page = _tx.ModifyPage(page.PageNumber, page);
+			page = _tx.ModifyPage(page.PageNumber, this, page);
 			var item = page.GetNode(page.LastSearchPosition);
 
 			// already was turned into a multi tree, not much to do here
@@ -72,7 +72,7 @@ namespace Voron.Trees
 			byte* nestedPagePtr;
 			if (item->Flags == NodeFlags.PageRef)
 			{
-				var overFlowPage = _tx.ModifyPage(item->PageNumber, null);
+				var overFlowPage = _tx.ModifyPage(item->PageNumber, this ,null);
 				nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
 			}
 			else
@@ -223,7 +223,7 @@ namespace Voron.Trees
 				return; //nothing to delete - key not found
 			}
 
-			page = _tx.ModifyPage(page.PageNumber, page);
+			page = _tx.ModifyPage(page.PageNumber, this, page);
 
 			var item = page.GetNode(page.LastSearchPosition);
 
@@ -252,7 +252,7 @@ namespace Voron.Trees
 				byte* nestedPagePtr;
 				if (item->Flags == NodeFlags.PageRef)
 				{
-					var overFlowPage = _tx.ModifyPage(item->PageNumber, null);
+					var overFlowPage = _tx.ModifyPage(item->PageNumber, this, null);
 					nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
 				}
 				else

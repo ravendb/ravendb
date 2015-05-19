@@ -16,6 +16,29 @@ namespace Voron
 		public ushort KeyLength;
 		public SliceOptions Options;
 
+        protected MemorySlice()
+        { }
+
+        protected MemorySlice(SliceOptions options)
+        {
+            this.Options = options;
+        }
+
+        protected MemorySlice(SliceOptions options, ushort size)
+        {
+            this.Options = options;
+            this.Size = size;
+            this.KeyLength = size;
+        }
+
+        protected MemorySlice(SliceOptions options, ushort size, ushort keyLength)
+        {
+            this.Options = options;
+            this.Size = size;
+            this.KeyLength = keyLength;
+        }
+
+
 		public abstract void CopyTo(byte* dest);
 		public abstract Slice ToSlice();
 		public abstract Slice Skip(ushort bytesToSkip);

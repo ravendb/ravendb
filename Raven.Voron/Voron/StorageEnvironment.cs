@@ -33,7 +33,7 @@ namespace Voron
         private readonly IVirtualPager _dataPager;
 
         private readonly WriteAheadJournal _journal;
-        private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
+		private readonly object _txWriter = new object();
 		private readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
 
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
@@ -174,12 +174,21 @@ namespace Voron
         }
 
         public long OldestTransaction
-        {
-            get
-            {
-                return Math.Min(_activeTransactions.OrderBy(x => x.Id).Select(x => x.Id).FirstOrDefault(), _transactionsCounter);
-            }
-        }
+		{
+			get
+			{
+				var largestTx = long.MaxValue;
+				// ReSharper disable once LoopCanBeConvertedToQuery
+				foreach (var activeTransaction in _activeTransactions)
+				{
+					if (largestTx > activeTransaction.Id)
+						largestTx = activeTransaction.Id;
+				}
+				if (largestTx == long.MaxValue)
+					return 0;
+				return largestTx;
+			}
+		}
 
         public long NextPageNumber
         {
@@ -400,13 +409,12 @@ namespace Voron
 		        if (flags == (TransactionFlags.ReadWrite))
 		        {
 			        var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
-
-					if (_txWriter.Wait(wait) == false)
+					Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
+					if (txLockTaken == false)
 					{
 						throw new TimeoutException("Waited for " + wait +
 													" for transaction write lock, but could not get it");
 					}
-					txLockTaken = true;
 					
 			        if (_endOfDiskSpace != null)
 			        {
@@ -454,7 +462,7 @@ namespace Voron
             catch (Exception)
             {
                 if (txLockTaken)
-                    _txWriter.Release();
+					Monitor.Exit(_txWriter);
                 throw;
             }
         }
@@ -490,7 +498,14 @@ namespace Voron
             if (tx.FlushedToJournal == false)
                 return;
 
-            Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Sum(x => x.NumberOfPages));
+			var totalPages = 0;
+			// ReSharper disable once LoopCanBeConvertedToQuery
+			foreach (var page in tx.GetTransactionPages())
+			{
+				totalPages += page.NumberOfPages;
+			}
+
+			Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, totalPages);
 			_flushWriter.Set();
         }
 
@@ -502,7 +517,7 @@ namespace Voron
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
 
-            _txWriter.Release();
+			Monitor.Exit(_txWriter);
         }
 
         public Dictionary<string, List<long>> AllPages(Transaction tx)

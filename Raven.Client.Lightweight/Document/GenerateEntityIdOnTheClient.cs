@@ -11,18 +11,18 @@ namespace Raven.Client.Document
 {
 	public class GenerateEntityIdOnTheClient
 	{
-		private readonly IDocumentStore documentStore;
+		private readonly DocumentConvention conventions;
 		private readonly Func<object, string> generateKey;
 
-		public GenerateEntityIdOnTheClient(IDocumentStore documentStore, Func<object, string> generateKey)
+		public GenerateEntityIdOnTheClient(DocumentConvention conventions, Func<object, string> generateKey)
 		{
-			this.documentStore = documentStore;
+			this.conventions = conventions;
 			this.generateKey = generateKey;
 		}
 
 		private MemberInfo GetIdentityProperty(Type entityType)
 		{
-			return documentStore.Conventions.GetIdentityProperty(entityType);
+			return conventions.GetIdentityProperty(entityType);
 		}
 
 		/// <summary>
@@ -46,7 +46,7 @@ namespace Raven.Client.Document
 	    {
 	        id = value as string;
 		    if (id == null && value != null) // need conversion
-			    id = documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
+				id = conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
 
 		    return id != null;
 	    }
@@ -114,7 +114,7 @@ namespace Raven.Client.Document
 		protected internal void TrySetIdentity(object entity, string id)
 		{
 			var entityType = entity.GetType();
-			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
+			var identityProperty = conventions.GetIdentityProperty(entityType);
 			if (identityProperty == null)
 			{
 				if (entity is IDynamicMetaObjectProvider)
@@ -162,12 +162,12 @@ namespace Raven.Client.Document
 			else // need converting
 			{
 				var converter =
-					documentStore.Conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(propertyOrFieldType));
+					conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(propertyOrFieldType));
 				if (converter == null)
 					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
 												" because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-				setIdentifier(converter.ConvertTo(documentStore.Conventions.FindIdValuePartForValueTypeConversion(entity, id)));
+				setIdentifier(converter.ConvertTo(conventions.FindIdValuePartForValueTypeConversion(entity, id)));
 			}
 		}
 	}
