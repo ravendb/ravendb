@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -20,7 +21,7 @@ namespace Raven.Tests.Issues
 
 		public RavenDB_3435()
 		{
-			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = 15000 };
+			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Debugger.IsAttached ? 600000 : 15000 };
 		}
 
 		public class User
@@ -94,11 +95,8 @@ namespace Raven.Tests.Issues
 				Name = TestUsername1
 			};
 
-			using (var storeB = CreateStore(databaseName: TestDatabaseName, runInMemory: false))
+			using (var storeB = CreateStore(databaseName: TestDatabaseName))
 			{
-				storeB.DatabaseCommands.GlobalAdmin.DeleteDatabase(TestDatabaseName);
-				storeB.DatabaseCommands.GlobalAdmin.CreateDatabase(MultiDatabase.CreateDatabaseDocument(TestDatabaseName));
-
 				//initial replication -> essentially create the doc in storeB
 				var initialReplicationRequestBody = RavenJArray.Parse("[{\"Max\":32,\"@metadata\":{\"Raven-Replication-Version\":2,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"@id\":\"Raven/Hilo/users\",\"Last-Modified\":\"2015-05-19T11:28:05.2198563Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.2198563\",\"@etag\":\"01000000-0000-0002-0000-000000000003\"}},{\"Name\":\"John Doe A\",\"@metadata\":{\"Raven-Entity-Name\":\"Users\",\"Raven-Clr-Type\":\"Raven.Tests.Issues.RavenDB_3435+User, Raven.Tests.Issues\",\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"@id\":\"users/1\",\"Last-Modified\":\"2015-05-19T11:28:05.2348669Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.2348669\",\"@etag\":\"01000000-0000-0002-0000-000000000004\"}}]");
 				var serverUrl = servers[0].DocumentStore.Url;
