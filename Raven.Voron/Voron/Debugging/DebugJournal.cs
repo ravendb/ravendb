@@ -258,7 +258,7 @@ namespace Voron.Debugging
                             type,
                             long.Parse(columnArray[1]),
                             Slice.Empty,
-                            columnArray[2],
+                            columnArray[2].Trim('"'),
                             null);
                         return activityEntry;
                     }
@@ -268,8 +268,8 @@ namespace Voron.Debugging
                         var activityEntry = new WriteActivityEntry(
                             type,
                             long.Parse(columnArray[1]),
-                            (Slice)columnArray[3],
-                            columnArray[2],
+                            (Slice)columnArray[3].Trim('"'),
+							columnArray[2].Trim('"'),
                             null);
 
                         return activityEntry;
@@ -305,8 +305,8 @@ namespace Voron.Debugging
                     var entry = new WriteActivityEntry(
                         type,
                         long.Parse(columnArray[1]),
-                        (Slice)columnArray[3],
-                        columnArray[2],
+						(Slice)columnArray[3].Trim('"'),
+						columnArray[2].Trim('"'),
                         value);
 
                     return entry;
