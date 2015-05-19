@@ -1,5 +1,8 @@
+using System.Diagnostics;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Bundles.Replication.Triggers;
 using Raven.Database;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Storage;
@@ -72,6 +75,11 @@ namespace Raven.Bundles.Replication.Responders
                 else
                 {
                     var etag = deleted == false ? existingEtag : null;
+
+					var resolvedItemJObject = incoming as RavenJObject;
+					if (resolvedItemJObject != null)
+						ExecuteRemoveConflictOnPutTrigger(id, metadata, resolvedItemJObject);
+
                     AddWithoutConflict(id, etag, metadata, incoming);
                 }
                 return;
@@ -218,6 +226,21 @@ namespace Raven.Bundles.Replication.Responders
 														}));
 
 			}
+
+
+		private void ExecuteRemoveConflictOnPutTrigger(string id, RavenJObject metadata, RavenJObject resolvedItemJObject)
+		{
+			//since we are in replication handler, triggers are disabled, and if we are replicating PUT of conflict resolution,
+			//we need to execute the relevant trigger manually
+			// --> AddWithoutConflict() does PUT, but because of 'No Triggers' context the trigger itself is executed
+			var removeConflictTrigger = Database.PutTriggers.GetAllParts()
+				.Select(trg => trg.Value)
+				.OfType<RemoveConflictOnPutTrigger>()
+				.FirstOrDefault();
+
+			Debug.Assert(removeConflictTrigger != null, "If this is null, this means something is very wrong - replication configured, and no relevant plugin is there.");
+			removeConflictTrigger.OnPut(id, resolvedItemJObject, new RavenJObject(metadata), null);
+		}
 
 		protected abstract void DeleteItem(string id, Etag etag);
 
