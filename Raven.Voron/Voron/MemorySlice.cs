@@ -31,7 +31,7 @@ namespace Voron
             this.KeyLength = size;
         }
 
-        protected MemorySlice(SliceOptions options, ushort size, ushort keyLength)
+		protected MemorySlice(SliceOptions options, ushort size, ushort keyLength)
         {
             this.Options = options;
             this.Size = size;
