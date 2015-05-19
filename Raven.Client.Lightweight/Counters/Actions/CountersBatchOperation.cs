@@ -5,7 +5,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -54,12 +53,10 @@ namespace Raven.Client.Counters.Actions
 
 			OperationId = Guid.NewGuid();
 			disposed = false;
+
 			batchOperationTask = StartBatchOperation();
-			if (streamingStarted.WaitAsync().Wait(Options.StreamingInitializeTimeout) == false ||
-			    batchOperationTask.IsFaulted)
-			{
-				throw new InvalidOperationException("Failed to start streaming batch.", batchOperationTask.Exception);
-			}
+			WaitForBatchOperationToStart();
+
 			closeAndReopenStreamingTimer = CreateNewTimer();
 		}
 
@@ -120,6 +117,15 @@ namespace Raven.Client.Counters.Actions
 					await IsOperationCompleted(serverOperationId).ConfigureAwait(false);
 					batchOperationTcs.SetResult(true);
 				}
+			}
+		}
+
+		private void WaitForBatchOperationToStart()
+		{
+			if (streamingStarted.WaitAsync().Wait(Options.StreamingInitializeTimeout) == false ||
+				batchOperationTask.IsFaulted)
+			{
+				throw new InvalidOperationException("Failed to start streaming batch.", batchOperationTask.Exception);
 			}
 		}
 
@@ -326,6 +332,7 @@ namespace Raven.Client.Counters.Actions
 
 		public void ScheduleChange(string groupName, string counterName, long delta)
 		{
+			WaitForBatchOperationToStart();
 			changesQueue.Add(new CounterChange
 			{
 				Delta = delta,
