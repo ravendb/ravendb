@@ -49,6 +49,27 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 	});
 }";
 
+        private const string replicateAllDocumentButOrder2 = @"
+if (if (documentId !== 'orders/2')
+    {
+    var orderData = {
+	    Id: documentId,
+	    OrderLinesCount: this.OrderLines.length,
+	    TotalCost: 0
+    };
+    replicateToOrders(orderData);
+    for (var i = 0; i < this.OrderLines.length; i++) {
+	    var line = this.OrderLines[i];
+	    orderData.TotalCost += line.Cost;
+	    replicateToOrderLines({
+		    OrderId: documentId,
+		    Qty: line.Quantity,
+		    Product: line.Product,
+		    Cost: line.Cost
+	    });
+    }
+}";
+
 		private void CreateRdbmsSchema(string tablePrefix = null)
 		{
 			var providerFactory = DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
@@ -288,6 +309,51 @@ CREATE TABLE [dbo].[Orders]
 
 			}
 		}
+
+        [FactIfSqlServerIsAvailable]
+        public void RavenDB_3341()
+        {
+            CreateRdbmsSchema();
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
+                store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                    .First().AfterReplicationCompleted += successCount =>
+                    {
+                        if (successCount != 0)
+                            eventSlim.Set();
+                    };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+						}
+                    });
+
+                    session.SaveChanges();
+                }
+
+                SetupSqlReplication(store, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
+
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+                AssertCounts(1, 1);
+
+                eventSlim.Reset();
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Load<Order>(1);
+                    order.OrderLines.Clear();
+                    session.SaveChanges();
+                }
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                AssertCounts(0, 0);
+            }
+        }
 
 		private static int GetOrdersCount(string tableSuffix = "")
 		{
