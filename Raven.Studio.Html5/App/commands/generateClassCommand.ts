@@ -8,14 +8,17 @@ class generateClassCommand extends commandBase {
     }
     isGeneratingCode = ko.observable(true);
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<string> {
 
         var url = "/generate/code";
         var args = {
             docId: this.docId,
             lang: this.lang
         }
-        return this.query(url, args,this.db);
+        return this.query(url, args, this.db)
+            .done((result) => {
+                return result.Code;
+            });
     }
 
     activateGenerateCode() {

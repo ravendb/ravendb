@@ -476,7 +476,6 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
-    <Content Include="App\views\generateCode.html" />
     <Content Include="App\views\fieldRangeFilter.html" />
     <Content Include="App\views\fieldStringFilter.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
@@ -489,6 +488,7 @@
     <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
     <Content Include="App\views\filesystem\versioning.html" />
     <Content Include="App\views\inMethodFilter.html" />
+    <Content Include="App\views\showDataDialog.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />

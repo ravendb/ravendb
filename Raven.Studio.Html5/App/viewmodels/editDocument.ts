@@ -27,9 +27,9 @@ import pagedResultSet = require("common/pagedResultSet");
 
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
-
+import dialog = require("plugins/dialog");
 import generateClassCommand = require("commands/generateClassCommand");
-
+import showDataDialog = require("viewmodels/showDataDialog");
 
 class editDocument extends viewModelBase {
 
@@ -912,7 +912,14 @@ class editDocument extends viewModelBase {
     generateCode() {
         var doc: document = this.document();
         var generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
-        generate.execute();
+        var deffered = generate.execute();
+        deffered.done((code: JSON) => {
+                    app.showDialog(new showDataDialog("Generated Class", code["Code"]));
+                })
+            .fail(() => {
+                alert("fail");
+                alert("exit");
+            });
     }
 }
 

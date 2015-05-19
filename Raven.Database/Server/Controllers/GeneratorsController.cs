@@ -44,7 +44,11 @@ namespace Raven.Database.Server.Controllers
             var generator = new JsonCodeGenerator(lang);
             var code = generator.Execute(document);
 
-            return this.GetMessageWithString(code);
+            return GetMessageWithObject(new
+	        {
+				Document = docId,
+				Code = code
+	        });
         }
 
 
