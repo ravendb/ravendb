@@ -7,11 +7,10 @@ import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCom
 import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 
 class createFilesystem extends viewModelBase {
-
-    public creationTask = $.Deferred();
+    creationTask = $.Deferred();
     creationTaskStarted = false;
 
-    public fileSystemName = ko.observable('');
+    fileSystemName = ko.observable('');
     nameCustomValidityError: KnockoutComputed<string>;
     fileSystemPath = ko.observable('');
     pathCustomValidityError: KnockoutComputed<string>;
@@ -33,7 +32,7 @@ class createFilesystem extends viewModelBase {
             var errorMessage: string = '';
             var newFileSystemName = this.fileSystemName();
 
-            if (this.isFilesystemNameExists(newFileSystemName, this.filesystems()) == true) {
+            if (this.doesFileSystemNameExist(newFileSystemName, this.filesystems())) {
                 errorMessage = "File system name already exists!";
             }
             else if ((errorMessage = this.checkName(newFileSystemName)) != '') { }
@@ -56,14 +55,6 @@ class createFilesystem extends viewModelBase {
 		this.fetchAllowVoron();
     }
 
-	fetchAllowVoron() {
-		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
-			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
-			).done((stats: Array<databaseStatisticsDto>, config: any) => {
-			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
-		});
-	}
-
     deactivate() {
         // If we were closed via X button or other dialog dismissal, reject the deletion task since
         // we never started it.
@@ -71,6 +62,14 @@ class createFilesystem extends viewModelBase {
             this.creationTask.reject();
         }
     }
+
+	fetchAllowVoron() {
+		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
+			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
+			).done((stats: Array<databaseStatisticsDto>, config: any) => {
+			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
+		});
+	}
 
     isBundleActive(name: string): boolean {
         var licenseStatus: licenseStatusDto = this.licenseStatus();
@@ -91,10 +90,10 @@ class createFilesystem extends viewModelBase {
         this.creationTask.resolve(this.fileSystemName(), this.getActiveBundles(), this.fileSystemPath(), this.fileSystemLogsPath(), this.storageEngine());
     }
 
-    private isFilesystemNameExists(fileSystemName: string, filesystems: filesystem[]): boolean {
+    private doesFileSystemNameExist(fileSystemName: string, fileSystems: filesystem[]): boolean {
         fileSystemName = fileSystemName.toLowerCase();
-        for (var i = 0; i < filesystems.length; i++) {
-            if (fileSystemName == filesystems[i].name.toLowerCase()) {
+        for (var i = 0; i < fileSystems.length; i++) {
+            if (fileSystemName === fileSystems[i].name.toLowerCase()) {
                 return true;
             }
         }

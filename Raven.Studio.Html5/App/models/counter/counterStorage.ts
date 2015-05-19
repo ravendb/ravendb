@@ -2,7 +2,7 @@
 import license = require("models/auth/license");
 
 class counterStorage extends resource{
-    static type = 'counterstorage';
+    static type = "counterstorage";
 
     constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false) {
         super(name, counterStorage.type, isAdminCurrentTenant);

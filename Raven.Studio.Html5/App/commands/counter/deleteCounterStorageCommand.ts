@@ -1,7 +1,7 @@
 ﻿import commandBase = require("commands/commandBase");
 
 class deleteCounterStorageCommand extends commandBase {
-    constructor(private counterStorageName: string, private isHardDelete: boolean) {
+    constructor(private resourceName: string, private isHardDelete: boolean) {
         super();
     }
 

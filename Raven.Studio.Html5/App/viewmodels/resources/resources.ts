@@ -2,8 +2,7 @@
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require('viewmodels/shell');
-import license = require("models/auth/license");
+import shell = require("viewmodels/shell");
 import alert = require("models/database/debug/alert");
 import resource = require("models/resources/resource");
 import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
@@ -332,7 +331,7 @@ class resources extends viewModelBase {
 	}
 
     newResource() {
-        var createResourceViewModel = new createResource(this.databases, this.fileSystems, license.licenseStatus);
+        var createResourceViewModel = new createResource();
         createResourceViewModel.createDatabasePart
             .creationTask
             .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, databaseTemp: string, storageEngine: string, incrementalBackup: boolean
@@ -373,7 +372,7 @@ class resources extends viewModelBase {
                 this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings, clusterWide);
             });
 
-        createResourceViewModel.createFilesystemPart
+        createResourceViewModel.createFileSystemPart
                 .creationTask
             .done((filesystemName: string, bundles: string[], filesystemPath: string, filesystemLogs: string, storageEngine: string) => {
                 var settings = {

@@ -8,7 +8,7 @@ class filesystem extends resource {
     importStatus = ko.observable<string>("");
     statistics = ko.observable<fileSystemStatistics>();
     files = ko.observableArray<filesystemFileHeaderDto>();
-    static type = 'filesystem';
+    static type = "filesystem";
 
     constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = null) {
         super(name, filesystem.type, isAdminCurrentTenant);

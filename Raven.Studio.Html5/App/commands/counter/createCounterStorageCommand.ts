@@ -5,10 +5,10 @@ class createCounterStorageCommand extends commandBase {
     /**
     * @param filesystemName The file system name we are creating.
     */
-    constructor(private counterStorageName: string, private counterStoragePath: string) {
+    constructor(private resourceName: string, private resourcePath: string) {
         super();
 
-        if (!counterStorageName) {
+        if (!resourceName) {
             this.reportError("Counter Storage must have a name!");
             throw new Error("Counter Storage must have a name!");
         }
