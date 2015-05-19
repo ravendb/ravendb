@@ -10,6 +10,7 @@ namespace Raven.Client.FileSystem.Changes
         private readonly Action onZero;
         private readonly Task task;
         private int value;
+
         public Task Task
         {
             get { return task; }

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Abstractions.FileSystem.Notifications
 {
-	public class FileChangeNotification : Notification
+	public class FileChangeNotification : FileSystemNotification
 	{
 		public string File { get; set; }
 

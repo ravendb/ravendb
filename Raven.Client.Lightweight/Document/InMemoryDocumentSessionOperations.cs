@@ -157,7 +157,7 @@ namespace Raven.Client.Document
 			AllowNonAuthoritativeInformation = true;
 			NonAuthoritativeInformationTimeout = TimeSpan.FromSeconds(15);
 			MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
-			GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, GenerateKey);
+			GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
 			EntityToJson = new EntityToJson(documentStore, listeners);
 		}
 
