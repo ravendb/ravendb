@@ -54,7 +54,6 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 				return;
 			}
 
-
 			// we just got the same version from the same source - request playback again?
 			// at any rate, not an error, moving on
 			if (existingMetadata.Value<string>(Constants.RavenReplicationSource) ==
@@ -65,7 +64,6 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 			{
 				return;
 			}
-
 
 			var existingDocumentIsInConflict = existingMetadata[Constants.RavenReplicationConflict] != null;
 

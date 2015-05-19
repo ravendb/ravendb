@@ -1,22 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Net.Http;
+using System.Web.Http;
 using Jint.Parser.Ast;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Bundles.Replication.Tasks;
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
-using Raven.Server;
 using Raven.Tests.Bundles.MoreLikeThis;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -26,6 +27,12 @@ namespace Raven.Tests.Issues
 		private const string TestDatabaseName = "testDB";
 		private const string TestUsername1 = "John Doe A";
 		private const string TestUsername2 = "John Doe B";
+		private HttpRavenRequestFactory httpRavenRequestFactory;
+
+		public RavenDB_3435()
+		{
+			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = 15000 };
+		}
 
 		public class User
 		{
@@ -75,7 +82,6 @@ namespace Raven.Tests.Issues
 
 				var maxDate = conflictedDocs.Max(x => x.Metadata.Value<DateTimeOffset>(Constants.RavenLastModified));
 
-
 				resolvedDocument =
 					conflictedDocs.FirstOrDefault(x => x.Metadata.Value<DateTimeOffset>(Constants.RavenLastModified) == maxDate);
 				if (resolvedDocument != null)
@@ -92,150 +98,64 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void Resolution_of_conflict_should_delete_all_conflict_files()
+		public void Resolution_of_conflict_should_delete_all_conflict_files_with_mocked_cluster()
 		{
 			var user = new User
 			{
 				Name = TestUsername1
 			};
 
-			using (var storeA = CreateStore(useFiddler:true,databaseName:TestDatabaseName, runInMemory:false, configureStore: store => store.RegisterListener(new TestDocumentConflictListener())))
-			using (var storeB = CreateStore(useFiddler:true,databaseName: TestDatabaseName, runInMemory: false))
-			{				
-				storeA.DatabaseCommands.GlobalAdmin.DeleteDatabase(TestDatabaseName);
+			using (var storeB = CreateStore(databaseName: TestDatabaseName, runInMemory: false))
+			{
 				storeB.DatabaseCommands.GlobalAdmin.DeleteDatabase(TestDatabaseName);
-
-				storeA.DatabaseCommands.GlobalAdmin.CreateDatabase(MultiDatabase.CreateDatabaseDocument(TestDatabaseName));
 				storeB.DatabaseCommands.GlobalAdmin.CreateDatabase(MultiDatabase.CreateDatabaseDocument(TestDatabaseName));
+
+				//initial replication -> essentially create the doc in storeB
+				var initialReplicationRequestBody = RavenJArray.Parse("[{\"Max\":32,\"@metadata\":{\"Raven-Replication-Version\":2,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"@id\":\"Raven/Hilo/users\",\"Last-Modified\":\"2015-05-19T11:28:05.2198563Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.2198563\",\"@etag\":\"01000000-0000-0002-0000-000000000003\"}},{\"Name\":\"John Doe A\",\"@metadata\":{\"Raven-Entity-Name\":\"Users\",\"Raven-Clr-Type\":\"Raven.Tests.Issues.RavenDB_3435+User, Raven.Tests.Issues\",\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"@id\":\"users/1\",\"Last-Modified\":\"2015-05-19T11:28:05.2348669Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.2348669\",\"@etag\":\"01000000-0000-0002-0000-000000000004\"}}]");
+				var url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=2", servers[0].DocumentStore.Url, servers[0].Configuration.Port, TestDatabaseName);
+
+				var replicateRequest = httpRavenRequestFactory.Create(url, "POST", new RavenConnectionStringOptions
+				{
+					DefaultDatabase = TestDatabaseName,
+					Url = url
+				});
+				replicateRequest.Write(initialReplicationRequestBody);
+				replicateRequest.ExecuteRequest();				
+
+				ChangeDocument(storeB, "users/1", TestUsername2);
+
+				//simulate what happens when on storeA the doc is changed -> replication request to storeB
+				var afterChangeReplicationRequestBody = RavenJArray.Parse("[{\"Name\":\"John Doe B\",\"@metadata\":{\"Raven-Entity-Name\":\"Users\",\"Raven-Clr-Type\":\"Raven.Tests.Issues.RavenDB_3435+User, Raven.Tests.Issues\",\"Raven-Replication-Version\":4,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"Raven-Replication-History\":[{\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\"}],\"@id\":\"users/1\",\"Last-Modified\":\"2015-05-19T11:28:05.7662451Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.7662451\",\"@etag\":\"01000000-0000-0002-0000-000000000005\"}}]");
+				url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=1", servers[0].DocumentStore.Url, servers[0].Configuration.Port, TestDatabaseName);
 				
-				TellFirstInstanceToReplicateToSecondInstance();			
-				StoreDataDoc(user, storeA);
+				replicateRequest = httpRavenRequestFactory.Create(url, "POST", new RavenConnectionStringOptions
+				{
+					DefaultDatabase = TestDatabaseName,
+					Url = url
+				});
 
-				WaitForReplication(storeB, user.Id);
+				replicateRequest.Write(afterChangeReplicationRequestBody);
+				replicateRequest.ExecuteRequest();				
 
-				TellSecondInstanceToReplicateToFirstInstance();
-				PauseAllReplicationTasks();
+				//sanity check -> make sure that the conflict is created on storeB
+				Assert.True(WaitForConflictDocumentsToAppear(storeB, user.Id, TestDatabaseName));
 
-				StopDatabase(1);
+				//simulate replication request from storeA as if concurrent replication happened on storeA and storeB
+				var storeBDatabaseId = storeB.DatabaseCommands.ForDatabase(TestDatabaseName).GetStatistics().DatabaseId.ToString();
+				var afterConflictResolveRequestBody = RavenJArray.Parse("[{\"Name\":\"John Doe B\",\"@metadata\":{\"Raven-Entity-Name\":\"Users\",\"Raven-Clr-Type\":\"Raven.Tests.Issues.RavenDB_3435+User, Raven.Tests.Issues\",\"Raven-Replication-Version\":2,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"Raven-Replication-History\":[{\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\"},{\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\"},{\"Raven-Replication-Version\":4,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\"},{\"Raven-Replication-Version\":2,\"Raven-Replication-Source\":\"6009d0d3-4976-41e9-8068-110f97d894be\"}],\"@id\":\"users/1\",\"Last-Modified\":\"2015-05-19T11:28:07.6190254Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:07.6190254\",\"@etag\":\"01000000-0000-0003-0000-000000000005\"}}]".Replace("6009d0d3-4976-41e9-8068-110f97d894be",storeBDatabaseId));			
+				url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=1", servers[0].DocumentStore.Url, servers[0].Configuration.Port, TestDatabaseName);
 
-				// Precaution -> if this fails -> something is wrong in how the test is written
-				Assert.DoesNotThrow(() => ChangeDocument(storeA, user.Id, TestUsername2));
+				replicateRequest = httpRavenRequestFactory.Create(url, "POST", new RavenConnectionStringOptions
+				{
+					DefaultDatabase = TestDatabaseName,
+					Url = url
+				});
 
-				StopDatabase(0);
-				StartDatabase(1);
+				replicateRequest.Write(afterConflictResolveRequestBody);
+				replicateRequest.ExecuteRequest();
 
-				// Precaution -> if this fails -> something is wrong in how the test is written
-				Assert.DoesNotThrow(() => ChangeDocument(storeB, user.Id, TestUsername2));
-				
-				StartDatabase(0);
-
-				ExecuteReplicationOnAllServers();
-
-				//it might take some time for controller to process the replication and generate conflicts
-				Assert.True(WaitForConflictDocuments(storeA, user.Id));
-				Assert.True(WaitForConflictDocuments(storeB, user.Id));					
-		
-				using (var session = storeA.OpenSession())
-					session.Load<User>(user.Id); //resolve conflict on A (resolver listener registered)
-
-				ExecuteReplicationOnAllServers();
-
-				Assert.True(CheckIfConflictDocumentsRemoved(storeA, user.Id));
-				Assert.True(CheckIfConflictDocumentsRemoved(storeB, user.Id));
-
-				//storeB has no conflict resolver listeners, but since
-				//the conflict was resolved on A, it should be resolved on B as well
-				using (var session = storeB.OpenSession())
-					Assert.DoesNotThrow(() => session.Load<User>(user.Id));
+				Assert.True(CheckIfConflictDocumentsIsThere(storeB, "users/1", TestDatabaseName));
 			}
-		}
-
-		private bool CheckIfConflictDocumentsRemoved(IDocumentStore store, string id, int timeoutMs = 15000)
-		{
-			var beginningTime = DateTime.UtcNow;
-			var timeouted = false;
-			JsonDocument[] docs;
-			do
-			{
-				var currentTime = DateTime.UtcNow;
-				if ((currentTime - beginningTime).TotalMilliseconds >= timeoutMs)
-				{
-					timeouted = true;
-					break;
-				}
-				docs = store.DatabaseCommands.ForDatabase(TestDatabaseName).GetDocuments(0, 1024);
-			} while (docs.Any(d => d.Key.Contains(id + "/conflicts")));
-
-			return !timeouted;
-		}
-
-		private bool WaitForConflictDocuments(IDocumentStore store, string id, int timeoutMs = 15000)
-		{
-			var beginningTime = DateTime.UtcNow;
-			var timeouted = false;
-			JsonDocument[] docs;
-			do
-			{
-				var currentTime = DateTime.UtcNow;
-				if ((currentTime - beginningTime).TotalMilliseconds >= timeoutMs)
-				{
-					timeouted = true;
-					break;
-				}
-				docs = store.DatabaseCommands.ForDatabase(TestDatabaseName).GetDocuments(0, 1024);
-			} while (!docs.Any(d => d.Key.Contains(id + "/conflicts")));
-
-			return !timeouted;
-		}
-
-
-		private void PauseAllReplicationTasks()
-		{
-			Parallel.ForEach(servers, PauseReplication);
-		}
-
-		private static void PauseReplication(RavenDbServer srv)
-		{
-			var documentDatabaseTask = srv.Server.GetDatabaseInternal(TestDatabaseName);
-			documentDatabaseTask.Wait();
-			var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
-
-			if (replicationTask != null)
-				replicationTask.Pause();
-		}
-
-		private void ExecuteReplicationOnAllServers()
-		{
-			var countdown = new CountdownEvent(servers.Count);
-			var allThreadsDone = new CountdownEvent(servers.Count);
-			var replicationThreads = servers.Where(server => !server.Disposed)
-											.Select(server => new Thread(() =>
-			{
-				var documentDatabaseTask = server.Server.GetDatabaseInternal(TestDatabaseName);
-				documentDatabaseTask.Wait();
-				var replicationTask = documentDatabaseTask.Result.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
-
-				if (replicationTask != null)
-				{
-					replicationTask.ShouldWaitForWork = false;
-					replicationTask.ReplicationExecuted += documentDatabaseTask.Result.WorkContext.StopWork;
-					var executeMethod = typeof (ReplicationTask).GetMethod("Execute", BindingFlags.NonPublic | BindingFlags.Instance);
-
-					countdown.Signal();
-					countdown.Wait(); //make sure that replication will start as simultaneously as possible
-
-					executeMethod.Invoke(replicationTask, new object[0]);
-					replicationTask.ReplicationExecuted -= documentDatabaseTask.Result.WorkContext.StopWork;
-					documentDatabaseTask.Result.WorkContext.StartWork();
-
-					while (server.Server.HasPendingRequests)
-						Thread.Sleep(100);
-					allThreadsDone.Signal();
-				}
-			})).ToList();
-
-			replicationThreads.ForEach(t => t.Start());
-			allThreadsDone.Wait();
 		}
 
 		private static void ChangeDocument(DocumentStore store, string id, string newName)
@@ -244,15 +164,6 @@ namespace Raven.Tests.Issues
 			{
 				var fetchedUser = session.Load<User>(id);				
 				fetchedUser.Name = newName;
-				session.SaveChanges();
-			}
-		}
-
-		private static void StoreDataDoc(User user, DocumentStore store)
-		{
-			using (var session = store.OpenSession())
-			{
-				session.Store(user);
 				session.SaveChanges();
 			}
 		}
