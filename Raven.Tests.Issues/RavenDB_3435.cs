@@ -1,23 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Web.Http;
-using Jint.Parser.Ast;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.MoreLikeThis;
 using Raven.Tests.Common;
-using Raven.Tests.Common.Util;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -27,7 +16,7 @@ namespace Raven.Tests.Issues
 		private const string TestDatabaseName = "testDB";
 		private const string TestUsername1 = "John Doe A";
 		private const string TestUsername2 = "John Doe B";
-		private HttpRavenRequestFactory httpRavenRequestFactory;
+		private readonly HttpRavenRequestFactory httpRavenRequestFactory;
 
 		public RavenDB_3435()
 		{
@@ -98,7 +87,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void Resolution_of_conflict_should_delete_all_conflict_files_with_mocked_cluster()
+		public void Resolution_of_conflict_should_delete_all_conflict_files_with_simulated_second_node()
 		{
 			var user = new User
 			{
@@ -112,7 +101,9 @@ namespace Raven.Tests.Issues
 
 				//initial replication -> essentially create the doc in storeB
 				var initialReplicationRequestBody = RavenJArray.Parse("[{\"Max\":32,\"@metadata\":{\"Raven-Replication-Version\":2,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"@id\":\"Raven/Hilo/users\",\"Last-Modified\":\"2015-05-19T11:28:05.2198563Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.2198563\",\"@etag\":\"01000000-0000-0002-0000-000000000003\"}},{\"Name\":\"John Doe A\",\"@metadata\":{\"Raven-Entity-Name\":\"Users\",\"Raven-Clr-Type\":\"Raven.Tests.Issues.RavenDB_3435+User, Raven.Tests.Issues\",\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"@id\":\"users/1\",\"Last-Modified\":\"2015-05-19T11:28:05.2348669Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.2348669\",\"@etag\":\"01000000-0000-0002-0000-000000000004\"}}]");
-				var url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=2", servers[0].DocumentStore.Url, servers[0].Configuration.Port, TestDatabaseName);
+				var serverUrl = servers[0].DocumentStore.Url;
+				var serverPort = servers[0].Configuration.Port;
+				var url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=2", serverUrl, serverPort, TestDatabaseName);
 
 				var replicateRequest = httpRavenRequestFactory.Create(url, "POST", new RavenConnectionStringOptions
 				{
@@ -126,7 +117,7 @@ namespace Raven.Tests.Issues
 
 				//simulate what happens when on storeA the doc is changed -> replication request to storeB
 				var afterChangeReplicationRequestBody = RavenJArray.Parse("[{\"Name\":\"John Doe B\",\"@metadata\":{\"Raven-Entity-Name\":\"Users\",\"Raven-Clr-Type\":\"Raven.Tests.Issues.RavenDB_3435+User, Raven.Tests.Issues\",\"Raven-Replication-Version\":4,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"Raven-Replication-History\":[{\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\"}],\"@id\":\"users/1\",\"Last-Modified\":\"2015-05-19T11:28:05.7662451Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.7662451\",\"@etag\":\"01000000-0000-0002-0000-000000000005\"}}]");
-				url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=1", servers[0].DocumentStore.Url, servers[0].Configuration.Port, TestDatabaseName);
+				url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=1", serverUrl, serverPort, TestDatabaseName);
 				
 				replicateRequest = httpRavenRequestFactory.Create(url, "POST", new RavenConnectionStringOptions
 				{
@@ -145,7 +136,7 @@ namespace Raven.Tests.Issues
 				var requestString = "[{\"Name\":\"John Doe B\",\"@metadata\":{\"Raven-Entity-Name\":\"Users\",\"Raven-Clr-Type\":\"Raven.Tests.Issues.RavenDB_3435+User, Raven.Tests.Issues\",\"Raven-Replication-Version\":2,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"Raven-Replication-History\":[{\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\"},{\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\"},{\"Raven-Replication-Version\":4,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\"},{\"Raven-Replication-Version\":2,\"Raven-Replication-Source\":\"6009d0d3-4976-41e9-8068-110f97d894be\"}],\"@id\":\"users/1\",\"Last-Modified\":\"2015-05-19T11:28:07.6190254Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:07.6190254\",\"@etag\":\"01000000-0000-0003-0000-000000000005\"}}]";
 				requestString = requestString.Replace("6009d0d3-4976-41e9-8068-110f97d894be", storeBDatabaseId);
 				var afterConflictResolveRequestBody = RavenJArray.Parse(requestString);			
-				url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=1", servers[0].DocumentStore.Url, servers[0].Configuration.Port, TestDatabaseName);
+				url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=1", serverUrl, serverPort, TestDatabaseName);
 
 				replicateRequest = httpRavenRequestFactory.Create(url, "POST", new RavenConnectionStringOptions
 				{
