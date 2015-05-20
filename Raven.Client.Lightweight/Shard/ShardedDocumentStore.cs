@@ -313,19 +313,23 @@ namespace Raven.Client.Shard
 			{
 				ShardStrategy.Shards.ForEach(shard => shard.Value.Initialize());
 
-                string mutiKeysidentifier = ShardStrategy.Shards
-                    .GroupBy(x => new
+                var shardsPointingToSameDb = ShardStrategy.Shards
+                    .GroupBy(x =>
                     {
-                        x.Value.DatabaseCommands.GetStatistics().DatabaseId,
-                        x.Value.Identifier
-                    }, x => x.Key).
-                    Where(x => x.Count() > 1).Select(x => x.Key.Identifier).FirstOrDefault();
+                        try
+                        {
+                            return x.Value.DatabaseCommands.GetStatistics().DatabaseId;
+                        }
+                        catch (Exception)
+                        {
+                            return Guid.NewGuid();// we'll just ignore any connection erros here
+                        }
+                    }).FirstOrDefault(x => x.Count() > 1);
 
-                string multiKeysUrl = ShardStrategy.Shards.Where(x => x.Value.Identifier == mutiKeysidentifier)
-                    .Select(x => x.Value.Url).FirstOrDefault();
 
-                if(multiKeysUrl != null)
-                    throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.", multiKeysUrl));
+			    if (shardsPointingToSameDb != null)
+			        throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.",
+			            string.Join(", ", shardsPointingToSameDb.Select(x => x.Key))));
 
                 if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
