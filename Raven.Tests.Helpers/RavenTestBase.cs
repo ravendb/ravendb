@@ -261,6 +261,21 @@ namespace Raven.Tests.Helpers
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
 
+        /// <summary>
+        /// Creates a new document store connecting to a remote RavenDb server.
+        /// </summary>
+        /// <param name="fiddler">Are all requests to the remote RavenDb server passed through Fiddler? (NOTE: This is only* for a localhost RavenDb server).</param>
+        /// <param name="ravenDbServer">A RavenDb server.</param>
+        /// <param name="databaseName">Name of the server that will show up on /admin/stats endpoint.</param>
+        /// <param name="runInMemory">Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost.<br/>Default: <b>true</b></param>
+        /// <param name="dataDirectory">The path for the database directory. Can use ~\ as the root, in which case the path will start from the server base directory. <br/>Default: <b>~\Data</b></param>
+        /// <param name="requestedStorage">What storage type to use (see: RavenDB Storage engines).<br/>Allowed values: <b>vornon</b>, <b>esent</b>.<br/>Default: <b>voron</b></param>
+        /// <param name="enableAuthentication"></param>
+        /// <param name="ensureDatabaseExists">For a multi-tenant RavenDb server, creates the database if it doesn't already exist.</param>
+        /// <param name="configureStore">An action delegate which allows you to configure the document store instance that is returned. eg. <code>configureStore: store => store.DefaultDatabase = "MasterDb"</code></param>
+        /// <param name="activeBundles">Semicolon separated list of bundles names, such as: 'Replication;Versioning'.<br/>Default: no bundles turned on.</param>
+        /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
+        /// <returns></returns>
 		public DocumentStore NewRemoteDocumentStore(bool fiddler = false, 
             RavenDbServer ravenDbServer = null, 
             [CallerMemberName] string databaseName = null,
