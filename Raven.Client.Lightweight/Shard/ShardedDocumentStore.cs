@@ -312,7 +312,22 @@ namespace Raven.Client.Shard
 			try
 			{
 				ShardStrategy.Shards.ForEach(shard => shard.Value.Initialize());
-				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
+
+                string mutiKeysidentifier = ShardStrategy.Shards
+                    .GroupBy(x => new
+                    {
+                        x.Value.DatabaseCommands.GetStatistics().DatabaseId,
+                        x.Value.Identifier
+                    }, x => x.Key).
+                    Where(x => x.Count() > 1).Select(x => x.Key.Identifier).FirstOrDefault();
+
+                string multiKeysUrl = ShardStrategy.Shards.Where(x => x.Value.Identifier == mutiKeysidentifier)
+                    .Select(x => x.Value.Url).FirstOrDefault();
+
+                if(multiKeysUrl != null)
+                    throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.", multiKeysUrl));
+
+                if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new ShardedHiloKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKey(commands, Conventions, entity);
