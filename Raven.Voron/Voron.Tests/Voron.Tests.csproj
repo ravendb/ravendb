@@ -108,6 +108,7 @@
     <Compile Include="Bugs\InvalidReleasesOfScratchPages.cs" />
     <Compile Include="Bugs\MultiReads.cs" />
     <Compile Include="Bugs\Iterating.cs" />
+    <Compile Include="Bugs\SplittingPageWithPrefixes.cs" />
     <Compile Include="Bugs\StartsWithSearch.cs" />
     <Compile Include="Bugs\FreeSpaceAndOverflowPages.cs" />
     <Compile Include="Bugs\DataCorruptionInOverflow.cs" />
