@@ -9,7 +9,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -18,7 +17,6 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
-
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -30,12 +28,12 @@ using Raven.Client.Connection;
 using Raven.Database.Config;
 using Raven.Database.Raft;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -150,7 +148,7 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		public async Task<RavenJObject> ReadJsonAsync()
+	    protected async Task<RavenJObject> ReadJsonAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
@@ -158,7 +156,7 @@ namespace Raven.Database.Server.Controllers
 				return RavenJObject.Load(jsonReader);
 		}
 
-		public async Task<RavenJArray> ReadJsonArrayAsync()
+	    protected async Task<RavenJArray> ReadJsonArrayAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
@@ -168,14 +166,14 @@ namespace Raven.Database.Server.Controllers
 		}
 		}
 
-		public async Task<string> ReadStringAsync()
+	    protected async Task<string> ReadStringAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 				return streamReader.ReadToEnd();
 		}
 
-		public async Task<RavenJArray> ReadBsonArrayAsync()
+	    protected async Task<RavenJArray> ReadBsonArrayAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var jsonReader = new BsonReader(stream))
@@ -192,14 +190,14 @@ namespace Raven.Database.Server.Controllers
 			return Encoding.GetEncoding(InnerRequest.Content.Headers.ContentType.CharSet);
 		}
 
-		public int GetStart()
+	    protected int GetStart()
 		{
 			int start;
 			int.TryParse(GetQueryStringValue("start"), out start);
 			return Math.Max(0, start);
 		}
 
-        public int GetNextPageStart()
+	    protected int GetNextPageStart()
         {
             bool isNextPage;
             if (bool.TryParse(GetQueryStringValue("next-page"), out isNextPage) && isNextPage)
@@ -208,7 +206,7 @@ namespace Raven.Database.Server.Controllers
             return 0;
         }
 
-		public int GetPageSize(int maxPageSize)
+	    protected int GetPageSize(int maxPageSize)
 		{
 			int pageSize;
 			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
@@ -221,8 +219,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 
-
-		public bool MatchEtag(Etag etag)
+	    protected bool MatchEtag(Etag etag)
 		{
 			return EtagHeaderToEtag() == etag;
 		}
@@ -744,7 +741,7 @@ namespace Raven.Database.Server.Controllers
 
 		public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
 
-		public void AddRequestTraceInfo(Action<StringBuilder> info)
+	    protected void AddRequestTraceInfo(Action<StringBuilder> info)
 		{
 			if (info == null)
 				return;
@@ -755,11 +752,15 @@ namespace Raven.Database.Server.Controllers
 			CustomRequestTraceInfo.Add(info);
 		}
 
-        public void IncrementInnerRequestsCount()
+	    protected void IncrementInnerRequestsCount()
         {
             Interlocked.Increment(ref innerRequestsCount);
         }
 
+		protected static bool Match(string x, string y)
+		{
+			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+		}
 
 	    public abstract void MarkRequestDuration(long duration);
 

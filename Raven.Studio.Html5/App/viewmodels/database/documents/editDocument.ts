@@ -185,7 +185,7 @@ class editDocument extends viewModelBase {
         } else if (args && args.item && args.list) {
             return $.Deferred().resolve({ can: true }); //todo: maybe treat case when there is collection and item number but no id
         }
-        else if (args && args.index ) {
+        else if (args && args.index) {
             this.isInDocMode(false);
             var indexName: string = args.index;
             var queryText: string = args.query;

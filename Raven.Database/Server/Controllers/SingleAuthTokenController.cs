@@ -74,7 +74,7 @@ namespace Raven.Database.Counters.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken("counters/" + CounterStorageName, User);
+            var token = authorizer.GenerateSingleUseAuthToken("cs/" + CounterStorageName, User);
 
             return GetMessageWithObject(new
             {

@@ -222,6 +222,11 @@ namespace Raven.Client.Connection
 			return asyncServerClient.GetIndexAsync(name).ResultUnwrap();
 		}
 
+		public IndexingPerformanceStatistics[] GetIndexingPerformanceStatistics()
+		{
+			return asyncServerClient.GetIndexingPerformanceStatisticsAsync().ResultUnwrap();
+		}
+
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 			return asyncServerClient.PutIndexAsync(name, definition, false).ResultUnwrap();

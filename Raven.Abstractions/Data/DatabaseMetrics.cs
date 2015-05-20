@@ -15,6 +15,7 @@ namespace Raven.Abstractions.Data
 		public double RequestsPerSecond { get; set; }
 		public MeterData Requests { get; set; }
 		public HistogramData RequestsDuration { get; set; }
+		public OneMinuteMetricData RequestDurationLastMinute { get; set; }
 		public HistogramData StaleIndexMaps { get; set; }
 		public HistogramData StaleIndexReduces { get; set; }
 		public Dictionary<string, Dictionary<string, string>> Gauges { get; set; }
@@ -48,6 +49,15 @@ namespace Raven.Abstractions.Data
 		public double FiveMinuteRate { get; set; }
 		public double FifteenMinuteRate { get; set; }
 		public MetricType Type = MetricType.Meter;
+	}
+
+
+	public class OneMinuteMetricData : IMetricsData
+	{
+		public int Count { get; set; }
+		public long Min { get; set; }
+		public long Max { get; set; }
+		public double Avg { get; set; }
 	}
 
 	public enum MetricType

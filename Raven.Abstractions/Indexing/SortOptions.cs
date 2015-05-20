@@ -60,6 +60,5 @@ namespace Raven.Abstractions.Indexing
 		/// uses ordinals to do the sorting. 
 		/// </summary>
 		StringVal = 11,
-		
 	}
 }

@@ -58,6 +58,12 @@ namespace Raven.Database.Server.WebApi
 			get { return Thread.VolatileRead(ref physicalRequestsCount); }
 		}
 
+		public long NumberOfConcurrentRequests
+		{
+			get { return Thread.VolatileRead(ref concurrentRequests); }
+		}
+
+		public DateTime? LastRequestTime { get; private set; }
 
 		public event EventHandler<BeforeRequestWebApiEventArgs> BeforeRequest;
 
@@ -147,6 +153,7 @@ namespace Raven.Database.Server.WebApi
 			Stopwatch sw = Stopwatch.StartNew();
 			try
 			{
+				LastRequestTime = SystemTime.UtcNow;
 				Interlocked.Increment(ref concurrentRequests);
 			    var requestSuccess = await controller.SetupRequestToProperDatabase(this);
                 if (requestSuccess)

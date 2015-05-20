@@ -276,6 +276,7 @@
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
+    <Compile Include="Issues\RavenDB_3435.cs" />
     <Compile Include="Json\JsonCodeGeneratorTests.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
@@ -635,6 +636,7 @@
     <Compile Include="Smuggler\SmugglerIdentitiesTests.cs" />
     <Compile Include="Smuggler\SmugglerTransformScriptsTests.cs" />
     <Compile Include="Smuggler\SmugglerWithDisabledVersioning_RavenDB_3219.cs" />
+    <Compile Include="Sorting\AlphaNumericSorting.cs" />
     <Compile Include="Sorting\SortByDynamicFields.cs" />
     <Compile Include="Sorting\CustomSorting.cs" />
     <Compile Include="Sorting\SortByNumberOfCharactersFromEnd.cs" />
@@ -1010,7 +1012,6 @@
     <EmbeddedResource Include="Patching\failingdump11.ravendump" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Issues\" />
     <Folder Include="MailingList\" />
   </ItemGroup>
   <ItemGroup>

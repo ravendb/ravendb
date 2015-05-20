@@ -153,10 +153,10 @@
                 <label class="col-md-2 text-right control-label">Exception</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
                     <p class="form-control-static">
-                        <!-- ko ifnot: noExceptionText -->
+                        <!-- ko if: $root.noExceptionText -->
                         <span data-bind="text: ExceptionText"></span>
                         <!-- /ko -->
-                        <!-- ko if: noExceptionText -->
+                        <!-- ko ifnot: $root.noExceptionText -->
                         <span>-</span>
                         <!-- /ko -->
                     </p>

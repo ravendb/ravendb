@@ -157,7 +157,7 @@ namespace Raven.Client.Document
 			AllowNonAuthoritativeInformation = true;
 			NonAuthoritativeInformationTimeout = TimeSpan.FromSeconds(15);
 			MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
-			GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, GenerateKey);
+			GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
 			EntityToJson = new EntityToJson(documentStore, listeners);
 		}
 
@@ -241,22 +241,14 @@ namespace Raven.Client.Document
 			{
 				string id;
 				if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
-					|| (instance is IDynamicMetaObjectProvider &&
-					   GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id))
-)
+				    || (instance is IDynamicMetaObjectProvider &&
+				        GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id))
+					)
 				{
 					AssertNoNonUniqueInstance(instance, id);
 
 					var jsonDocument = GetJsonDocument(id);
-					entitiesByKey[id] = instance;
-					entitiesAndMetadata[instance] = value = new DocumentMetadata
-					{
-						ETag = UseOptimisticConcurrency ? Etag.Empty : null,
-						Key = id,
-						OriginalMetadata = jsonDocument.Metadata,
-						Metadata = (RavenJObject)jsonDocument.Metadata.CloneToken(),
-						OriginalValue = new RavenJObject()
-					};
+					value = GetDocumentMetadataValue(instance, id, jsonDocument);
 				}
 				else
 				{
@@ -270,6 +262,20 @@ namespace Raven.Client.Document
 		/// Get the json document by key from the store
 		/// </summary>
 		protected abstract JsonDocument GetJsonDocument(string documentKey);
+
+	    protected DocumentMetadata GetDocumentMetadataValue<T>(T instance, string id, JsonDocument jsonDocument)
+		{
+			entitiesByKey[id] = instance;
+			return entitiesAndMetadata[instance] = new DocumentMetadata
+			{
+				ETag = UseOptimisticConcurrency ? Etag.Empty : null,
+				Key = id,
+				OriginalMetadata = jsonDocument.Metadata,
+				Metadata = (RavenJObject)jsonDocument.Metadata.CloneToken(),
+				OriginalValue = new RavenJObject()
+			};
+		}
+
 
 		/// <summary>
 		/// Returns whatever a document with the specified id is loaded in the 

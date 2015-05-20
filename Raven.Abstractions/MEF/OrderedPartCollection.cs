@@ -18,7 +18,12 @@ namespace Raven.Abstractions.MEF
 			disableApplication = disableApplicationValue;
 			return this;
 		}
-		
+
+		public List<Lazy<T, IPartMetadata>> GetAllParts()
+		{
+			return inner.ToList();
+		}
+
 		public IEnumerator<Lazy<T, IPartMetadata>> GetEnumerator()
 		{
 			try

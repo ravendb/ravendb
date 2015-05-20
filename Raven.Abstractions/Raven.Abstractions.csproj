@@ -83,10 +83,6 @@
     <Reference Include="Mono.Cecil.Rocks">
       <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
     </Reference>
-    <Reference Include="Spatial4n.Core.NTS, Version=0.3.0.0, Culture=neutral, PublicKeyToken=9f9456e1ca16d45e, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
@@ -161,6 +157,9 @@
     <Compile Include="Counters\CounterReplicationDestination.cs" />
     <Compile Include="Counters\CountersReplicationDocument.cs" />
     <Compile Include="Counters\CounterView.cs" />
+    <Compile Include="Counters\Notifications\BulkOperationNotification.cs" />
+    <Compile Include="Counters\Notifications\ChangeNotification.cs" />
+    <Compile Include="Counters\Notifications\CounterStorageNotification.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />
     <Compile Include="Data\BulkOperationOptions.cs" />
@@ -188,6 +187,8 @@
     <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\Etag.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
+    <Compile Include="Data\IndexingPerformanceStatistics.cs" />
+    <Compile Include="Data\IndexingPerformanceStats.cs" />
     <Compile Include="Data\IOperationState.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
@@ -374,7 +375,7 @@
     <Compile Include="FileSystem\FileSystemMetrics.cs" />
     <Compile Include="FileSystem\HistoryItem.cs" />
     <Compile Include="FileSystem\ItemsPage.cs" />
-    <Compile Include="FileSystem\Notification.cs" />
+    <Compile Include="FileSystem\FileSystemNotification.cs" />
     <Compile Include="FileSystem\RdcStats.cs" />
     <Compile Include="FileSystem\FileSystemInfo.cs" />
     <Compile Include="FileSystem\FileSystemStats.cs" />

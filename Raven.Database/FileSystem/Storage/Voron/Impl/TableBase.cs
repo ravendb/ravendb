@@ -37,19 +37,19 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
 			TableName = tableName;
 		}
 
-		public virtual void Add(WriteBatch writeBatch, string key, string value, ushort? expectedVersion = null)
-		{
-			Add(writeBatch, key, Encoding.UTF8.GetBytes(value), expectedVersion);
-		}
+        public virtual void Add(WriteBatch writeBatch, string key, string value, ushort? expectedVersion = null)
+        {
+            Add(writeBatch, key, Encoding.UTF8.GetBytes(value), expectedVersion);
+        }
 
-		public virtual void Add(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
-		{
-		    var stream = new BufferPoolMemoryStream(BufferPool);
+        public virtual void Add(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
+        {
+            var stream = new BufferPoolMemoryStream(BufferPool);
             stream.Write(value, 0, value.Length);
-		    stream.Position = 0;
+            stream.Position = 0;
 
-			writeBatch.Add(key, stream, TableName, expectedVersion);
-		}
+            writeBatch.Add((Slice)key, stream, TableName, expectedVersion);
+        }
 
 		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value, ushort? expectedVersion = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
@@ -64,6 +64,20 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
 
 			writeBatch.Add(key, stream, TableName, expectedVersion);
 		}
+
+        public virtual void Add(WriteBatch writeBatch, Slice key, string value, ushort? expectedVersion = null)
+        {
+            Add(writeBatch, key, Encoding.UTF8.GetBytes(value), expectedVersion);
+        }
+
+        public virtual void Add(WriteBatch writeBatch, Slice key, byte[] value, ushort? expectedVersion = null)
+        {
+            var stream = new BufferPoolMemoryStream(BufferPool);
+            stream.Write(value, 0, value.Length);
+            stream.Position = 0;
+
+            writeBatch.Add(key, stream, TableName, expectedVersion);
+        }
 
 		public virtual void Increment(WriteBatch writeBatch, Slice key, long delta, ushort? expectedVersion = null)
 		{
@@ -108,7 +122,7 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
 
 		public virtual void Delete(WriteBatch writeBatch, string key, ushort? expectedVersion = null)
 		{
-			writeBatch.Delete(key, TableName, expectedVersion);
+			writeBatch.Delete((Slice)key, TableName, expectedVersion);
 		}
 
 		public virtual void Delete(WriteBatch writeBatch, Slice key, ushort? expectedVersion = null)

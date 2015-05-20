@@ -541,10 +541,10 @@ namespace Raven.Database.Queries
 				var sortOptions = GetSortOptionsForFacet(field);
 				switch (sortOptions)
 				{
-					case SortOptions.String:
 					case SortOptions.None:
-					case SortOptions.Custom:
+					case SortOptions.String:
 					case SortOptions.StringVal:
+					case SortOptions.Custom:
 						return text;
 					case SortOptions.Int:
 						if (IsStringNumber(text))

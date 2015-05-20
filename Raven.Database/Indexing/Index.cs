@@ -805,9 +805,7 @@ namespace Raven.Database.Indexing
 			}.RobustEnumeration(input, funcs);
 		}
 
-		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func,
-															IStorageActionsAccessor actions,
-			IndexingWorkStats stats, Stopwatch linqExecutionDuration)
+		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func, IndexingWorkStats stats, Stopwatch linqExecutionDuration)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
@@ -1101,25 +1099,32 @@ namespace Raven.Database.Indexing
 			}
 			if (indexQuery.SortedFields != null)
 			{
-				foreach (SortedField field in indexQuery.SortedFields)
+				foreach (SortedField sortedField in indexQuery.SortedFields)
 				{
-					string f = field.Field;
-					if (f == Constants.TemporaryScoreValue)
+					string field = sortedField.Field;
+					if (field == Constants.TemporaryScoreValue)
 						continue;
-					if (f.EndsWith("_Range"))
+					if (field.EndsWith("_Range"))
 					{
-						f = f.Substring(0, f.Length - "_Range".Length);
+						field = field.Substring(0, field.Length - "_Range".Length);
 					}
-					if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
+
+					if (field.StartsWith(Constants.RandomFieldName) || field.StartsWith(Constants.CustomSortFieldName))
 						continue;
-					if (viewGenerator.ContainsField(f) == false && !f.StartsWith(Constants.DistanceFieldName)
+
+					if (field.StartsWith(Constants.AlphaNumericFieldName))
+					{
+						field = SortFieldHelper.CustomField(field).Name;
+						if(string.IsNullOrEmpty(field))
+							throw new ArgumentException("Alpha numeric sorting requires a field name");
+					}
+
+					if (viewGenerator.ContainsField(field) == false && !field.StartsWith(Constants.DistanceFieldName)
 							&& viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
-						throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
+						throw new ArgumentException("The field '" + field + "' is not indexed, cannot sort on fields that are not indexed");
 				}
 			}
 		}
-
-
 
 		#region Nested type: IndexQueryOperation
 

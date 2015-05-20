@@ -2,9 +2,8 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
-using Raven.Client.Counters.Actions;
 
-namespace Raven.Client.Counters
+namespace Raven.Client.Counters.Replication
 {
 	public interface ICountersReplicationInformer : IReplicationInformerBase<CountersClient>
 	{

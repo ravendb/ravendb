@@ -9,9 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Threading;
-using NLog.Internal;
+
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
+
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 
 namespace Raven.Database.Config
@@ -33,6 +34,8 @@ namespace Raven.Database.Config
 		private static int nextWriteIndex;
         private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
 	    private static bool dynamicLoadBalancding;
+
+		public static double Average { get; private set; }
 
 	    static CpuStatistics()
 		{
@@ -121,7 +124,7 @@ namespace Raven.Database.Config
 
             nextWriteIndex = 0;
 
-			var average = LastUsages.Average();
+			var average = Average = LastUsages.Average();
 		    if (average < 0)
 		        return; // there was an error in getting the CPU stats, ignoring
 

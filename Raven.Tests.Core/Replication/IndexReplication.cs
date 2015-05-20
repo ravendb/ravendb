@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Connection;
@@ -145,7 +146,7 @@ namespace Raven.Tests.Core.Replication
 
 				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
-				replicationTask.ReplicateIndexesAndTransformersTask(null);
+				SpinWait.SpinUntil(() => replicationTask.ReplicateIndexesAndTransformersTask(null));
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
@@ -555,7 +556,7 @@ namespace Raven.Tests.Core.Replication
 				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
 				replicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.Zero;
-				replicationTask.ReplicateIndexesAndTransformersTask(null);
+				SpinWait.SpinUntil(() => replicationTask.ReplicateIndexesAndTransformersTask(null));
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToArray();
@@ -571,7 +572,7 @@ namespace Raven.Tests.Core.Replication
 
 				//the index is now replicated on all servers.
 				//now delete the index and verify that deletion is replicated
-				replicationTask.ReplicateIndexesAndTransformersTask(null);
+				SpinWait.SpinUntil(() => replicationTask.ReplicateIndexesAndTransformersTask(null));
 
 
 				indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToArray();

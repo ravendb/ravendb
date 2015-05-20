@@ -7,6 +7,7 @@ using System.Linq;
 using Raven.Abstractions.Util;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Database.Util;
 
 namespace Raven.Database.Queries
 {
@@ -227,12 +228,18 @@ namespace Raven.Database.Queries
 
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
-								var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortedField.Field);
+								var sortField = sortedField.Field;
+								if (sortField.StartsWith(Constants.AlphaNumericFieldName) ||
+									sortField.StartsWith(Constants.RandomFieldName) ||
+									sortField.StartsWith(Constants.CustomSortFieldName))
+								{
+									sortField = SortFieldHelper.CustomField(sortField).Name;
+								}
+
+								var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortField);
+
 							    if (normalizedFieldName.EndsWith("_Range"))
 							        normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
-							    if (normalizedFieldName.StartsWith(Constants.RandomFieldName) ||
-									normalizedFieldName.StartsWith(Constants.CustomSortFieldName))
-							        continue; // virtual field that we don't sort by
 
 							    // if the field is not in the output, then we can't sort on it. 
 								if (abstractViewGenerator.ContainsField(normalizedFieldName) == false)

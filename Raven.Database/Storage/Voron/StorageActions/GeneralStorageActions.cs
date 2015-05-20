@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.Impl;
@@ -15,6 +15,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
     {
 	    private const int PulseTreshold = 16 * 1024 * 1024; // 16 MB
 
+		private readonly object maybePulseLock = new object();
 	    private readonly TableStorage storage;
 		private readonly Reference<WriteBatch> writeBatch;
         private readonly Reference<SnapshotReader> snapshot;
@@ -62,7 +63,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (string.IsNullOrEmpty(name)) 
 				throw new ArgumentNullException("name");
 
-            var lowerKeyName = name.ToLowerInvariant();
+            var lowerKeyName = (Slice)name.ToLowerInvariant();
 
 			var readResult = storage.General.Read(Snapshot, lowerKeyName, writeBatch.Value); 
             if (readResult == null)
@@ -115,14 +116,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public bool MaybePulseTransaction()
 		{
-			if (++maybePulseCount%1000 != 0)
+			if (Interlocked.Increment(ref maybePulseCount)%1000 != 0)
 				return false;
 
-			if (writeBatch.Value.Size() >= PulseTreshold)
+			lock (maybePulseLock)
 			{
-				PulseTransaction();
+				if (writeBatch.Value.Size() >= PulseTreshold)
+				{
+					PulseTransaction();
+				}
+				return true;
 			}
-			return true;
 		}
     }
 }

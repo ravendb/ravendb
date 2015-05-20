@@ -1,4 +1,7 @@
 ﻿using System.Security.Principal;
+
+using metrics;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -668,7 +671,8 @@ namespace Raven.Database.Server.Controllers
 	    {
 	        if (Database == null)
 	            return;
-	        Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(duration);
+	        Database.WorkContext.MetricsCounters.RequestDurationMetric.Update(duration);
+			Database.WorkContext.MetricsCounters.RequestDurationLastMinute.AddRecord(duration);
 	    }
 
 	    public bool ClientIsV3OrHigher

@@ -443,10 +443,13 @@ CREATE TABLE [dbo].[Orders]
                 SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
+                Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
 
                 var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
                 var foo = databaseMemoryTarget[Constants.SystemDatabase].WarnLog.First(x => x.LoggerName == typeof(SqlReplicationTask).FullName);
+                if ("Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1" != foo.FormattedMessage)
+                    throw new InvalidOperationException("Got bad message", foo.Exception);
+          
                 Assert.Equal("Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1", foo.FormattedMessage);
             }
         }

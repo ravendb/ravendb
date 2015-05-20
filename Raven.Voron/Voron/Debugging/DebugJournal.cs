@@ -225,9 +225,8 @@ namespace Voron.Debugging
 					throw new NotSupportedException(string.Format("Given value type is not supported ({0}).", Value.GetType()));
 				}
 
-                var line = string.Format("{0},{1},{2},{3},{4}", ActionType, TransactionId, TreeName, Key, Convert.ToBase64String(entryValue));
-				Debug.Assert(line.Count(x => x == ',') == 4);
-	            
+                var line = string.Format("{0},{1},{2},\"{3}\",{4}", ActionType, TransactionId, TreeName, Key, Convert.ToBase64String(entryValue));
+				
 				return line;
             }
 
@@ -259,7 +258,7 @@ namespace Voron.Debugging
                             type,
                             long.Parse(columnArray[1]),
                             Slice.Empty,
-                            columnArray[2],
+                            columnArray[2].Trim('"'),
                             null);
                         return activityEntry;
                     }
@@ -269,8 +268,8 @@ namespace Voron.Debugging
                         var activityEntry = new WriteActivityEntry(
                             type,
                             long.Parse(columnArray[1]),
-                            columnArray[3],
-                            columnArray[2],
+                            (Slice)columnArray[3].Trim('"'),
+							columnArray[2].Trim('"'),
                             null);
 
                         return activityEntry;
@@ -306,8 +305,8 @@ namespace Voron.Debugging
                     var entry = new WriteActivityEntry(
                         type,
                         long.Parse(columnArray[1]),
-                        columnArray[3],
-                        columnArray[2],
+						(Slice)columnArray[3].Trim('"'),
+						columnArray[2].Trim('"'),
                         value);
 
                     return entry;

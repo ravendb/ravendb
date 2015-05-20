@@ -96,7 +96,8 @@ namespace Voron
 
 			ScratchBufferOverflowTimeout = 5000;
 
-			MaxNumberOfPagesInMergedTransaction = 1024*128;// Ends up being 512 MB
+			MaxNumberOfPagesInMergedTransaction = 1024 * 128;// Ends up being 512 MB
+
 
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;

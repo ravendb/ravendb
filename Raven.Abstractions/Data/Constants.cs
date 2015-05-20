@@ -32,6 +32,8 @@ namespace Raven.Abstractions.Data
 
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 
+		public const string AlphaNumericFieldName = "__alphaNumeric";
+
 		public const string RandomFieldName = "__random";
 
 		public const string CustomSortFieldName = "__customSort";
@@ -258,14 +260,6 @@ namespace Raven.Abstractions.Data
 			public const string UrlPrefix = "counters";
 		}
 
-		public const byte GroupSeperator = 29;
-
-		public const char GroupSeperatorChar = (char)GroupSeperator;
-
-		public const string GroupSeperatorString = "\u001D";
-
-
-
         public const string MetadataEtagField = "ETag";
 
 		public const string TempUploadsDirectoryName = "RavenTempUploads";
@@ -425,6 +419,22 @@ namespace Raven.Abstractions.Data
 			public const string RavenAuthorizationOperation = "Raven-Authorization-Operation";
 
 			public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
+		}
+
+		public class Monitoring
+		{
+			public class Snmp
+			{
+				public const string Enabled = "Raven/Monitoring/Snmp/Enabled";
+
+				public const string Community = "Raven/Monitoring/Snmp/Community";
+
+				public const string Port = "Raven/Monitoring/Snmp/Port";
+
+				public const string DatabaseMappingDocumentKey = "Raven/Monitoring/Snmp/Databases";
+
+				public const string DatabaseMappingDocumentPrefix = "Raven/Monitoring/Snmp/Databases/";
+			} 
 		}
 
 		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";

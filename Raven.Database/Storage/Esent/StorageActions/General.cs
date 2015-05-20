@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -26,6 +27,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 		public event Action BeforeStorageCommit;
 		public event Action AfterStorageCommit;
 
+		private readonly object maybePulseLock = new object();
 		private readonly TableColumnsCache tableColumnsCache;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 		private readonly IUuidGenerator uuidGenerator;
@@ -215,27 +217,30 @@ namespace Raven.Database.Storage.Esent.StorageActions
 		private int maybePulseCount;
 		public bool MaybePulseTransaction()
 		{
-			if (++maybePulseCount%1000 != 0)
+			if (Interlocked.Increment(ref maybePulseCount)%1000 != 0)
 				return false;
 
-			var sizeInBytes = transactionalStorage.GetDatabaseTransactionVersionSizeInBytes();
-			const int maxNumberOfCallsBeforePulsingIsForced = 50 * 1000;
-			if (sizeInBytes <= 0) // there has been an error
+			lock (maybePulseLock)
 			{
-				if (maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
+				var sizeInBytes = transactionalStorage.GetDatabaseTransactionVersionSizeInBytes();
+				const int maxNumberOfCallsBeforePulsingIsForced = 50*1000;
+				if (sizeInBytes <= 0) // there has been an error
+				{
+					if (maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
+					{
+						logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
+						PulseTransaction();
+					}
+					return true;
+				}
+				var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
+				if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
 				{
 					logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 					PulseTransaction();
 				}
 				return true;
 			}
-			var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
-			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
-			{
-				logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
-				PulseTransaction();
-			}
-			return true;
 		}
 
 		public bool UsingLazyCommit { get; set; }

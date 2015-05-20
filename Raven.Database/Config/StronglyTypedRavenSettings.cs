@@ -34,6 +34,10 @@ namespace Raven.Database.Config
 
         public ClusterConfiguration Cluster { get; private set; }
 
+		public WebSocketsConfiguration WebSockets { get; set; }
+
+		public MonitoringConfiguration Monitoring { get; private set; }
+
 		public StronglyTypedRavenSettings(NameValueCollection settings)
 		{
 			Replication = new ReplicationConfiguration();
@@ -43,7 +47,9 @@ namespace Raven.Database.Config
 			FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
+			WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
+			Monitoring = new MonitoringConfiguration();
 
 			this.settings = settings;
 		}
@@ -258,6 +264,17 @@ namespace Raven.Database.Config
 		    
             if (settings["Raven/MaxServicePointIdleTime"] != null) 
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
+
+			WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
+
+			FillMonitoringSettings();
+		}
+
+		private void FillMonitoringSettings()
+		{
+			Monitoring.Snmp.Enabled = new BooleanSetting(settings[Constants.Monitoring.Snmp.Enabled], false);
+			Monitoring.Snmp.Community = new StringSetting(settings[Constants.Monitoring.Snmp.Community], "ravendb");
+			Monitoring.Snmp.Port = new IntegerSetting(settings[Constants.Monitoring.Snmp.Port], 161);
 		}
 
 		private string GetDefaultWebDir()
@@ -499,6 +516,31 @@ namespace Raven.Database.Config
 			public IntegerSetting EncryptionKeyBitsPreference { get; set; }
 
 			public BooleanSetting UseSsl { get; set; }
+		}
+
+		public class WebSocketsConfiguration
+		{
+			public IntegerSetting InitialBufferPoolSize { get; set; }
+		}
+
+
+		public class MonitoringConfiguration
+		{
+			public MonitoringConfiguration()
+			{
+				Snmp = new SnmpConfiguration();
+			}
+
+			public SnmpConfiguration Snmp { get; private set; }
+
+			public class SnmpConfiguration
+			{
+				public BooleanSetting Enabled { get; set; }
+
+				public IntegerSetting Port { get; set; }
+
+				public StringSetting Community { get; set; }
+			}
 		}
 	}
 

@@ -1,6 +1,6 @@
 ﻿namespace Raven.Abstractions.FileSystem.Notifications
 {
-	public class ConflictNotification : Notification
+	public class ConflictNotification : FileSystemNotification
 	{
 		public string FileName { get; set; }
         public string SourceServerUrl { get; set; }

@@ -14,7 +14,7 @@ namespace Raven.Client.Changes
 {
     public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState>, IDatabaseChanges
     {
-        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
@@ -28,7 +28,7 @@ namespace Raven.Client.Changes
         
         private readonly Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
-        protected readonly DocumentConvention Conventions;
+	    private readonly DocumentConvention Conventions;
 
         public RemoteDatabaseChanges(string url, string apiKey,
                                        ICredentials credentials,
@@ -64,12 +64,12 @@ namespace Raven.Client.Changes
 
             foreach (var watchedCollection in watchedCollections)
             {
-                await Send("watch-collection", watchedCollection);
+				await Send("watch-collection", watchedCollection).ConfigureAwait(false);
             }
 
             foreach (var watchedType in watchedTypes)
             {
-                await Send("watch-type", watchedType);
+				await Send("watch-type", watchedType).ConfigureAwait(false);
             }
 
             foreach (var watchedIndex in watchedIndexes)
@@ -135,7 +135,7 @@ namespace Raven.Client.Changes
 
                                 if (t.Result)
                                 {
-                                    logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
+                                    Logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
                                                  replicationConflictNotification.Id);
                                 }
                             });
@@ -470,16 +470,5 @@ namespace Raven.Client.Changes
 
             return taskedObservable;
         }
-
-        private Task AfterConnection(Func<Task> action)
-        {
-            return Task.ContinueWith(task =>
-            {
-                task.AssertNotFailed();
-                return action();
-            })
-            .Unwrap();
-        }
-
     }
 }
