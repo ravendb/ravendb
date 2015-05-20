@@ -928,6 +928,7 @@ namespace Raven.Tests.Issues
 			{
 				var id = store.Subscriptions.Create<User>(new SubscriptionCriteria<User>());
 				var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions());
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				var users = new BlockingCollection<User>();
 
