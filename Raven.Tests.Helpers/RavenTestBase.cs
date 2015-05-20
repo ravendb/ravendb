@@ -251,15 +251,15 @@ namespace Raven.Tests.Helpers
         }
 
         public static void EnableAuthentication(DocumentDatabase database)
-		{
-			var license = GetLicenseByReflection(database);
-			license.Error = false;
-			license.Status = "Commercial";
-		    license.Attributes["ravenfs"] = "true";
+        {
+            var license = GetLicenseByReflection(database);
+            license.Error = false;
+            license.Status = "Commercial";
+            license.Attributes["ravenfs"] = "true";
             license.Attributes["counters"] = "true";
-			// rerun this startup task
-			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
-		}
+            // rerun this startup task
+            database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
+        }
 
         /// <summary>
         /// Creates a new document store connecting to a remote RavenDb server.
@@ -276,53 +276,53 @@ namespace Raven.Tests.Helpers
         /// <param name="activeBundles">Semicolon separated list of bundles names, such as: 'Replication;Versioning'.<br/>Default: no bundles turned on.</param>
         /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
         /// <returns></returns>
-		public DocumentStore NewRemoteDocumentStore(bool fiddler = false, 
-            RavenDbServer ravenDbServer = null, 
+        public DocumentStore NewRemoteDocumentStore(bool fiddler = false,
+            RavenDbServer ravenDbServer = null,
             [CallerMemberName] string databaseName = null,
-			bool runInMemory = true,
-			string dataDirectory = null,
-			string requestedStorage = null,
-			bool enableAuthentication = false,
-			bool ensureDatabaseExists = true,
-			Action<DocumentStore> configureStore = null,
-			string activeBundles = null,
+            bool runInMemory = true,
+            string dataDirectory = null,
+            string requestedStorage = null,
+            bool enableAuthentication = false,
+            bool ensureDatabaseExists = true,
+            Action<DocumentStore> configureStore = null,
+            string activeBundles = null,
             IEnumerable<IEnumerable> seedData = null)
-		{
-			databaseName = NormalizeDatabaseName(databaseName);
+        {
+            databaseName = NormalizeDatabaseName(databaseName);
 
-			checkPorts = true;
-		    ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory,
-		        dataDirectory: dataDirectory,
-		        requestedStorage: requestedStorage,
-		        enableAuthentication: enableAuthentication,
-		        databaseName: databaseName,
-		        activeBundles: activeBundles);
-			ModifyServer(ravenDbServer);
-			var documentStore = new DocumentStore
-			{
-				Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
-				DefaultDatabase = databaseName
-			};
-			pathsToDelete.Add(Path.Combine(ravenDbServer.SystemDatabase.Configuration.DataDirectory, @"..\Databases"));
-			stores.Add(documentStore);
-			documentStore.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+            checkPorts = true;
+            ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory,
+                dataDirectory: dataDirectory,
+                requestedStorage: requestedStorage,
+                enableAuthentication: enableAuthentication,
+                databaseName: databaseName,
+                activeBundles: activeBundles);
+            ModifyServer(ravenDbServer);
+            var documentStore = new DocumentStore
+            {
+                Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
+                DefaultDatabase = databaseName
+            };
+            pathsToDelete.Add(Path.Combine(ravenDbServer.SystemDatabase.Configuration.DataDirectory, @"..\Databases"));
+            stores.Add(documentStore);
+            documentStore.AfterDispose += (sender, args) => ravenDbServer.Dispose();
 
-		    if (configureStore != null)
-		    {
-		        configureStore(documentStore);
-		    }
+            if (configureStore != null)
+            {
+                configureStore(documentStore);
+            }
 
-		    ModifyStore(documentStore);
+            ModifyStore(documentStore);
 
-			documentStore.Initialize(ensureDatabaseExists);
+            documentStore.Initialize(ensureDatabaseExists);
 
-		    if (seedData != null)
-		    {
-		        StoreSeedData(seedData, documentStore);
-		    }
+            if (seedData != null)
+            {
+                StoreSeedData(seedData, documentStore);
+            }
 
-			return documentStore;
-		}
+            return documentStore;
+        }
 
         protected RavenDbServer GetServer(int port = 8079)
         {
@@ -927,31 +927,31 @@ namespace Raven.Tests.Helpers
 			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
 
-		protected string NormalizeDatabaseName(string databaseName)
-		{
-		    if (string.IsNullOrEmpty(databaseName))
-		    {
-		        return null;
-		    }
+        protected string NormalizeDatabaseName(string databaseName)
+        {
+            if (string.IsNullOrEmpty(databaseName))
+            {
+                return null;
+            }
 
-			if (databaseName.Length < 50)
-			{
-				DatabaseNames.Add(databaseName);
-				return databaseName;
-			}
+            if (databaseName.Length < 50)
+            {
+                DatabaseNames.Add(databaseName);
+                return databaseName;
+            }
 
-			var prefix = databaseName.Substring(0, 30);
-			var suffix = databaseName.Substring(databaseName.Length - 10, 10);
-			var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
+            var prefix = databaseName.Substring(0, 30);
+            var suffix = databaseName.Substring(databaseName.Length - 10, 10);
+            var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
 
-			var name = string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+            var name = string.Format("{0}_{1}_{2}", prefix, hash, suffix);
 
-			DatabaseNames.Add(name);
+            DatabaseNames.Add(name);
 
-			return name;
-		}
+            return name;
+        }
 
-		protected static void DeployNorthwind(DocumentStore store, string databaseName = null)
+        protected static void DeployNorthwind(DocumentStore store, string databaseName = null)
 		{
 			if (string.IsNullOrEmpty(databaseName) == false)
 				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(databaseName);
