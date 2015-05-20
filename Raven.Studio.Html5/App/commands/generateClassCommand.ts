@@ -18,7 +18,9 @@ class generateClassCommand extends commandBase {
         return this.query(url, args, this.db)
             .done((result) => {
                 return result.Code;
-            });
+            })
+            .fail((response: JQueryXHR) => this.reportError("Failed to create class code", response.responseText, response.statusText));
+
     }
 
     activateGenerateCode() {
