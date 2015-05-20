@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Database.Bundles.Replication.Impl;
+using Raven.Database.Bundles.Replication.Triggers;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -52,7 +54,6 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 				return;
 			}
 
-
 			// we just got the same version from the same source - request playback again?
 			// at any rate, not an error, moving on
 			if (existingMetadata.Value<string>(Constants.RavenReplicationSource) ==
@@ -63,7 +64,6 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 			{
 				return;
 			}
-
 
 			var existingDocumentIsInConflict = existingMetadata[Constants.RavenReplicationConflict] != null;
 
@@ -92,7 +92,12 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                 else
                 {
                     var etag = deleted == false ? existingEtag : null;
+					var resolvedItemJObject = resolvedItemToSave as RavenJObject;
+					if (resolvedItemJObject != null)
+						ExecuteRemoveConflictOnPutTrigger(id, metadata, resolvedItemJObject);
+
 					AddWithoutConflict(id, etag, resolvedMetadataToSave, resolvedItemToSave);
+
                 }
                 return;
 			}
@@ -128,6 +133,20 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 																		Conflicts = createdConflict.ConflictedIds
 																	}));
 			}
+
+		private void ExecuteRemoveConflictOnPutTrigger(string id, RavenJObject metadata, RavenJObject resolvedItemJObject)
+		{
+//since we are in replication handler, triggers are disabled, and if we are replicating PUT of conflict resolution,
+			//we need to execute the relevant trigger manually
+			// --> AddWithoutConflict() does PUT, but because of 'No Triggers' context the trigger itself is executed
+			var removeConflictTrigger = Database.PutTriggers.GetAllParts()
+				.Select(trg => trg.Value)
+				.OfType<RemoveConflictOnPutTrigger>()
+				.FirstOrDefault();
+
+			Debug.Assert(removeConflictTrigger != null, "If this is null, this means something is very wrong - replication configured, and no relevant plugin is there.");
+			removeConflictTrigger.OnPut(id, resolvedItemJObject, new RavenJObject(metadata), null);
+		}
 
 		protected abstract ReplicationConflictTypes ReplicationConflict { get; }
 
