@@ -275,7 +275,7 @@ namespace Voron.Trees
 			{
 				_cursor.Push(p);
 
-				var pageSplitter = new PageSplitter(_tx, _tree, _newKey, _len, p.PageNumber, _nodeType, _nodeVersion, _cursor, _treeState);
+				var pageSplitter = new PageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _nodeVersion, _cursor, _treeState);
 
 				return pageSplitter.Execute();
 			}
