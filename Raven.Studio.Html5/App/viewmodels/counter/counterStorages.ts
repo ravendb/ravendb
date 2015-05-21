@@ -2,9 +2,8 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require('viewmodels/shell');
 import counterStorage = require("models/counter/counterStorage");
-import createCounterStorageCommand = require("commands/counter/createCounterStorageCommand");
 import appUrl = require("common/appUrl");
-import createCounterStorage = require("viewmodels/counter/createCounterStorage");
+import createCounterStorage = require("viewmodels/resources/createCounterStorage");
 import deleteCounterStorageConfirm = require("viewmodels/counter/deleteCounterStorageConfirm");
 
 class counterStorages extends viewModelBase {
@@ -31,11 +30,11 @@ class counterStorages extends viewModelBase {
         return true;
     }
 
-    attached() {
+    /*attached() {
         this.counterStoragesLoaded();
-    }
+    }*/
 
-    private counterStoragesLoaded() {
+    /*private counterStoragesLoaded() {
         // If we have no counter storages, show the "create a new counter storage" screen.
         if (this.counterStorages().length === 0) {
             this.createNewCountersStorage();
@@ -48,19 +47,7 @@ class counterStorages extends viewModelBase {
                 enabledCounterStorages.forEach(cs => shell.fetchCsStats(cs));
             }
         }
-    }
-
-    private addNewCounterStorage(counterStorageName: string): counterStorage {
-        var counterStorageInArray = this.counterStorages.first((cs: counterStorage) => cs.name == counterStorageName);
-
-        if (!counterStorageInArray) {
-            var newCounterStorage = new counterStorage(counterStorageName);
-            this.counterStorages.unshift(newCounterStorage);
-            return newCounterStorage;
-        }
-
-        return counterStorageInArray;
-    }
+    }*/
 
     private onCounterStorageDeleted(counterStorageName: string) {
         var counterStorageInArray = this.counterStorages.first((cs: counterStorage) => cs.name == counterStorageName);
@@ -88,7 +75,7 @@ class counterStorages extends viewModelBase {
         }
     }
     
-    createNewCountersStorage() {
+    /*createNewCountersStorage() {
         var createCounterStorageiewModel = new createCounterStorage(this.counterStorages);
         createCounterStorageiewModel
             .creationTask
@@ -97,16 +84,16 @@ class counterStorages extends viewModelBase {
                 this.showCreationAdvancedStepsIfNecessary(counterStorageName, counterStoragePath);
             });
         app.showDialog(createCounterStorageiewModel);
-    }
+    }*/
 
-    private showCreationAdvancedStepsIfNecessary(counterStorageName: string, counterStoragePath: string) {
+    /*private showCreationAdvancedStepsIfNecessary(counterStorageName: string, counterStoragePath: string) {
         new createCounterStorageCommand(counterStorageName, counterStoragePath)
             .execute()
             .done(() => {
                 var newCounterStorage = this.addNewCounterStorage(counterStorageName);
                 this.selectCounterStorage(newCounterStorage);
             });
-    }
+    }*/
 
     deleteSelectedCounterStorage() {
         var cs: counterStorage = this.selectedCounterStorage();

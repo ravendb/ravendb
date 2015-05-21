@@ -4,32 +4,21 @@ import databaseStatistics = require("models/resources/databaseStatistics");
 
 class database extends resource {
     statistics = ko.observable<databaseStatistics>();
-    activeBundles = ko.observableArray<string>();
-    isImporting = ko.observable<boolean>(false);
-    importStatus = ko.observable<string>('');
     indexingDisabled = ko.observable<boolean>(false);
 	rejectClientsMode = ko.observable<boolean>(false);
 	clusterWide = ko.observable<boolean>(false);
     recentQueriesLocalStorageName: string;
     mergedIndexLocalStoragePrefix: string;
-    static type = 'database';
+    static type = "database";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: Array<string> = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, clusterWide = false) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, clusterWide = false) {
         super(name, database.type, isAdminCurrentTenant);
         this.disabled(isDisabled);
         this.activeBundles(bundles);
         this.indexingDisabled(isIndexingDisabled);
 		this.rejectClientsMode(isRejectClientsMode);
 	    this.clusterWide(clusterWide);
-        this.itemCount = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocuments() : 0);
-        this.itemCountText = ko.computed(() => {
-            var itemCount = this.itemCount();
-            var text = itemCount.toLocaleString() + ' document';
-            if (itemCount != 1) {
-                text += 's';
-            }
-            return text;
-        });
+        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "0 documents");
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var attributes = license.licenseStatus().Attributes;
@@ -40,8 +29,8 @@ class database extends resource {
             }
             return true;
         });
-        this.recentQueriesLocalStorageName = 'ravenDB-recentQueries.' + name;
-        this.mergedIndexLocalStoragePrefix = 'ravenDB-mergedIndex.' + name;
+        this.recentQueriesLocalStorageName = "ravenDB-recentQueries." + name;
+        this.mergedIndexLocalStoragePrefix = "ravenDB-mergedIndex." + name;
     }
 
     private attributeValue(attributes, bundleName: string) {
@@ -68,7 +57,7 @@ class database extends resource {
 
     isBundleActive(bundleName: string) {
         if (!!bundleName) {
-            var bundle = this.activeBundles.first((x: string) => x.toLowerCase() == bundleName.toLowerCase());
+            var bundle = this.activeBundles.first((x: string) => x.toLowerCase() === bundleName.toLowerCase());
             return !!bundle;
         }
         return false;

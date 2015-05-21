@@ -2,18 +2,29 @@
 import license = require("models/auth/license");
 
 class counterStorage extends resource{
+    //statistics = ko.observable<DatabaseStatistics>();
+    resourceSingular = "counter";
     static type = "counterstorage";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
         super(name, counterStorage.type, isAdminCurrentTenant);
         this.disabled(isDisabled);
-        this.name = name;
+        this.activeBundles(bundles);
+        //this.itemCount = ko.computed(() => !!this.statistics() ? this.statistics().counterCount() : 0);
+        /*this.itemCountText = ko.computed(() => {
+            var itemCount = this.itemCount();
+            var text = itemCount.toLocaleString() + " counter";
+            if (itemCount !== 1) {
+                text += "s";
+            }
+            return text;
+        });*/
 
         //TODO: change this to match counter storage
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
-                var ravenFsValue = license.licenseStatus().Attributes.ravenfs;
-                return /^true$/i.test(ravenFsValue);
+                var counterStorageValue = license.licenseStatus().Attributes.counterStorage;
+                return /^true$/i.test(counterStorageValue);
             }
             return true;
         });

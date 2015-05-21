@@ -10,12 +10,15 @@ import counterStorage = require("models/counter/counterStorage");
 import shell = require("viewmodels/shell");
 
 class createResource extends dialogViewModelBase {
-
-    resourceType = ko.observable<string>(database.type);
     databaseType = database.type;
     fileSystemType = fileSystem.type;
     counterStorageType = counterStorage.type;
-
+    resourceType = ko.observable<string>(this.databaseType);
+    resourceTypes = [
+        { value: database.type, name: "Database" }, 
+        { value: fileSystem.type, name: "File System" }, 
+        { value: counterStorage.type, name: "Counter Storage" }
+    ];
     createDatabasePart: createDatabase;
     createFileSystemPart: createFileSystem;
     createCounterStoragePart: createCounterStorage;
@@ -87,13 +90,7 @@ class createResource extends dialogViewModelBase {
             default:
                 throw "Can't figure what to do!";
         }
-        if (this.resourceType() === "db") {
-            
-        } else {
-            
-        }
     }
-   
 }
 
 export = createResource;

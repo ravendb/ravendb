@@ -3,12 +3,14 @@
     isSystem = false;
     isSelected = ko.observable<boolean>(false);
     isChecked = ko.observable<boolean>(false);
-    itemCount: KnockoutComputed<number>;
     itemCountText: KnockoutComputed<string>;
     isVisible = ko.observable(true);
     isLoading = ko.observable(false);
     disabled = ko.observable<boolean>(false);
     isLicensed: KnockoutComputed<boolean>;
+    activeBundles = ko.observableArray<string>();
+    isImporting = ko.observable<boolean>(false);
+    importStatus = ko.observable<string>("");
     statistics: KnockoutObservable<any>;
 
     constructor(public name: string, public type: string, isAdminCurrentTenant: boolean) {
@@ -24,11 +26,15 @@
     }
 
     isDatabase() {
-        return this.type == "database";
+        return this.type === "database";
     }
 
-    isFilesystem() {
-        return this.type == 'filesystem';
+    isFileSystem() {
+        return this.type === "filesystem";
+    }
+
+    isCounterStorage() {
+        return this.type === "counterstorage";
     }
 }
 

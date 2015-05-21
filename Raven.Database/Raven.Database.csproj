@@ -672,7 +672,6 @@
     <Compile Include="FileSystem\Controllers\FileSystemsController.cs" />
     <Compile Include="FileSystem\Extensions\ConfigurationExtension.cs" />
     <Compile Include="FileSystem\Extensions\EnumExtensions.cs" />
-    <Compile Include="FileSystem\Extensions\HttpExtensions.cs" />
     <Compile Include="FileSystem\Extensions\MetadataExtensions.cs" />
     <Compile Include="FileSystem\Extensions\StreamExtensions.cs" />
     <Compile Include="FileSystem\Infrastructure\Historian.cs" />

@@ -106,7 +106,7 @@ class shell extends viewModelBase {
     });
 
     static resources = ko.computed(() => {
-        var result = [].concat(shell.databases(), shell.fileSystems());
+        var result = [].concat(shell.databases(), shell.fileSystems(), shell.counterStorages());
         return result.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
     });
 
@@ -442,8 +442,17 @@ class shell extends viewModelBase {
             $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
                 .done(() => {
                     var connectedResource = this.currentConnectedResource;
-                    var resourceObservableArray: any = (connectedResource instanceof database) ? shell.databases : (connectedResource instanceof filesystem) ? shell.fileSystems : shell.counterStorages;
-                    var activeResourceObservable: any = (connectedResource instanceof database) ? this.activeDatabase : (connectedResource instanceof filesystem) ? this.activeFilesystem : this.activeCounterStorage;
+                    var resourceObservableArray: any = shell.databases;
+                    var activeResourceObservable: any = this.activeDatabase;
+                    var isNotDatabase = !(connectedResource instanceof database);
+                    if (isNotDatabase && connectedResource instanceof filesystem) {
+                        resourceObservableArray = shell.fileSystems;
+                        activeResourceObservable = this.activeFilesystem;                       
+                    }
+                    else if (isNotDatabase && connectedResource instanceof counterStorage) {
+                        resourceObservableArray = shell.counterStorages;
+                        activeResourceObservable = this.activeCounterStorage; 
+                    }
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
             });
         }
@@ -631,17 +640,14 @@ class shell extends viewModelBase {
     }
 
     loadCounterStorages(): JQueryPromise<any> {
-        return $.Deferred().resolve();
-        
-        //TODO: uncomment this for counter storages
-        /*var deferred = $.Deferred();
+        var deferred = $.Deferred();
 
         new getCounterStoragesCommand()
             .execute()
             .done((results: counterStorage[]) => shell.counterStorages(results))
             .always(() => deferred.resolve());
 
-        return deferred;*/
+        return deferred;
     }
 
     loadServerConfig() {

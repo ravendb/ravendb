@@ -14,12 +14,12 @@ class fileSystemStatistics {
 
         this.fileCountText(this.getItemCountText(dto.FileCount, "file", "s"));
         this.requestsCountText(dto.Metrics.RequestsPerSecond + " requests per second");
-        this.meanDurationText(dto.Metrics.RequestsDuration.Mean.toFixed(1) + 'ms mean duration');
+        this.meanDurationText(dto.Metrics.RequestsDuration.Mean.toFixed(1) + "ms mean duration");
     }
 
     private getItemCountText(itemCount: number, singularText: string, suffix: string): string {
-        var itemCountText = itemCount.toLocaleString() + ' ' + singularText;
-        if (itemCount != 1) {
+        var itemCountText = itemCount.toLocaleString() + " " + singularText;
+        if (itemCount !== 1) {
             itemCountText += suffix;
         }
         return itemCountText;

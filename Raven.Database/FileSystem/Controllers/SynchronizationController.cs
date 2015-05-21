@@ -18,6 +18,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.FileSystem.Controllers
 {

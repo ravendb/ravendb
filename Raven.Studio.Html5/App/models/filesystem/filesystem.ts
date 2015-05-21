@@ -3,26 +3,15 @@ import license = require("models/auth/license");
 import fileSystemStatistics = require("models/filesystem/fileSystemStatistics");
 
 class filesystem extends resource {
-    activeBundles = ko.observableArray<string>();
-    isImporting = ko.observable<boolean>(false);
-    importStatus = ko.observable<string>("");
     statistics = ko.observable<fileSystemStatistics>();
     files = ko.observableArray<filesystemFileHeaderDto>();
     static type = "filesystem";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = null) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
         super(name, filesystem.type, isAdminCurrentTenant);
         this.disabled(isDisabled);
         this.activeBundles(bundles);
-        this.itemCount = ko.computed(() => this.statistics() ? this.statistics().fileCount() : 0);
-        this.itemCountText = ko.computed(() => {
-            var itemCount = this.itemCount();
-            var text = itemCount + ' file';
-            if (itemCount != 1) {
-                text += 's';
-            }
-            return text;
-        });
+        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().fileCountText() : "0 files");
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var ravenFsValue = license.licenseStatus().Attributes.ravenfs;

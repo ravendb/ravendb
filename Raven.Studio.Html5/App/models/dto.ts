@@ -258,6 +258,7 @@ interface licenseStatusDto {
         maxRamUtilization: string;
         maxParallelism: string;
         ravenfs: string;
+        counterStorage: string;
     }
 }
 
@@ -1068,6 +1069,9 @@ interface tenantDto {
 }
 
 interface fileSystemDto extends tenantDto {
+}
+
+interface counterStorageDto extends tenantDto {
 }
 
 interface customFunctionsDto {

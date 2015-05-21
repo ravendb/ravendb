@@ -1,6 +1,7 @@
 ﻿import createResourceBase = require("viewmodels/resources/createResourceBase");
 import dialog = require("plugins/dialog");
 import counterStorage = require("models/counter/counterStorage");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class createCounterStorage extends createResourceBase {
     creationTask = $.Deferred();
@@ -9,7 +10,7 @@ class createCounterStorage extends createResourceBase {
     resourceNameCapitalString = "Counter storage";
     resourceNameString = "counter storage";
 
-    constructor(private counterStorages: KnockoutObservableArray<counterStorage>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
+    constructor(private counterStorages: KnockoutObservableArray<counterStorage>, licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super(counterStorages, licenseStatus);
     }
 

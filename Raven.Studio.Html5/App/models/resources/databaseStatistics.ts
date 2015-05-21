@@ -11,15 +11,15 @@ class databaseStatistics {
         this.countOfDocuments(dto.CountOfDocuments);
         this.databaseId(dto.DatabaseId);
 
-        this.countOfDocumentsText(this.getItemCountText(dto.CountOfDocuments, 'document', 's'));
-        this.countOfIndexesText(this.getItemCountText(dto.CountOfIndexes, 'index', 'es'));
-        this.staleIndexesCountText(dto.StaleIndexes.length.toLocaleString() + ' stale');
-        this.errorsCountText(this.getItemCountText(dto.Errors.length, 'error', 's'));
+        this.countOfDocumentsText(this.getItemCountText(dto.CountOfDocuments, "document", "s"));
+        this.countOfIndexesText(this.getItemCountText(dto.CountOfIndexes, "index", "es"));
+        this.staleIndexesCountText(dto.StaleIndexes.length.toLocaleString() + " stale");
+        this.errorsCountText(this.getItemCountText(dto.Errors.length, "error", "s"));
     }
 
     private getItemCountText(itemCount: number, singularText: string, suffix: string): string {
-        var itemCountText = itemCount.toLocaleString() + ' ' + singularText;
-        if (itemCount != 1) {
+        var itemCountText = itemCount.toLocaleString() + " " + singularText;
+        if (itemCount !== 1) {
             itemCountText += suffix;
         }
         return itemCountText;

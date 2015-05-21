@@ -1,9 +1,15 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
+using Raven.Database.Server;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
@@ -11,12 +17,102 @@ namespace Raven.Database.Counters.Controllers
 {
 	public class CountersController : RavenDbApiController
 	{
-		[RavenRoute("cs/counterStorageNames")]
+		[RavenRoute("cs")]
 		[HttpGet]
-		public HttpResponseMessage GetCounterStorageNames()
+		public HttpResponseMessage GetCounterStorageNames(bool getAdditionalData = false)
 		{
-			var names = GetCounterStorages();
-			return GetMessageWithObject(names);
+			if (EnsureSystemDatabase() == false)
+				return
+					GetMessageWithString(
+						"The request '" + InnerRequest.RequestUri.AbsoluteUri + "' can only be issued on the system database",
+						HttpStatusCode.BadRequest);
+
+			// This method is NOT secured, and anyone can access it.
+			// Because of that, we need to provide explicit security here.
+
+			// Anonymous Access - All / Get / Admin
+			// Show all file systems
+
+			// Anonymous Access - None
+			// Show only the file system that you have access to (read / read-write / admin)
+
+			// If admin, show all file systems
+
+
+			var counterStoragesDocuments = GetResourcesDocuments(Constants.Counter.Prefix);
+			var counterStoragesData = GetCounterStoragesData(counterStoragesDocuments);
+			var counterStoragesNames = counterStoragesData.Select(x => x.Name).ToArray();
+
+			List<string> approvedCounterStorages = null;
+			if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
+			{
+				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+
+				HttpResponseMessage authMsg;
+				if (authorizer.TryAuthorize(this, out authMsg) == false)
+					return authMsg;
+
+				var user = authorizer.GetUser(this);
+				if (user == null)
+					return authMsg;
+
+				if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
+				{
+					approvedCounterStorages = authorizer.GetApprovedResources(user, this, counterStoragesNames);
+				}
+
+				counterStoragesData.ForEach(x =>
+				{
+					var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
+					if (principalWithDatabaseAccess != null)
+					{
+						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode);
+						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+					}
+					else
+					{
+						x.IsAdminCurrentTenant = user.IsAdministrator(x.Name);
+					}
+				});
+			}
+
+			if (approvedCounterStorages != null)
+			{
+				counterStoragesData = counterStoragesData.Where(data => approvedCounterStorages.Contains(data.Name)).ToList();
+				counterStoragesNames = counterStoragesNames.Where(name => approvedCounterStorages.Contains(name)).ToArray();
+			}
+
+			var responseMessage = getAdditionalData ? GetMessageWithObject(counterStoragesData) : GetMessageWithObject(counterStoragesNames);
+			return responseMessage.WithNoCache();
+		}
+
+		private class CounterStorageData : TenantData
+		{
+		}
+
+		private static List<CounterStorageData> GetCounterStoragesData(IEnumerable<RavenJToken> counterStorages)
+		{
+			return counterStorages
+				.Select(counterStorage =>
+				{
+					var bundles = new string[] {};
+					var settings = counterStorage.Value<RavenJObject>("Settings");
+					if (settings != null)
+					{
+						var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+						if (activeBundles != null)
+						{
+							bundles = activeBundles.Split(';');
+						}
+					}
+					return new CounterStorageData
+					{
+						Name = counterStorage.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.Counter.Prefix, string.Empty),
+						Disabled = counterStorage.Value<bool>("Disabled"),
+						Bundles = bundles,
+						IsAdminCurrentTenant = true,
+					};
+				}).ToList();
 		}
 
 		private string[] GetCounterStorages()

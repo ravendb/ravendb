@@ -14,6 +14,9 @@ class createResourceBase extends viewModelBase {
     resourceNameCapitalString = "";
     resourceNameString = "";
 
+    allowVoron = ko.observable<boolean>(true);
+	voronWarningVisible = ko.computed(() => !this.allowVoron() && this.storageEngine() === "voron");
+
     constructor(private resources: KnockoutObservableArray<resource>, private licenseStatus: KnockoutObservable<licenseStatusDto>) {
         super();
 

@@ -7,9 +7,7 @@
         <div class="modal-body" style="max-height: 600px; overflow: auto">
             <div class="form-group">
                 <label for="resourceType">Resource type</label>
-                <select data-bind="value: resourceType" class="form-control" id="resourceType">
-                    <option value="db">Database</option>
-                    <option value="fs">File system</option>
+                <select data-bind="options: resourceTypes, optionsText: 'name', optionsValue: 'value', value: resourceType" class="form-control" id="resourceType">
                 </select>
             </div>
             
