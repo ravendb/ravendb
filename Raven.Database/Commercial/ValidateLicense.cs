@@ -5,25 +5,22 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Xml;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Impl.Clustering;
-using Raven.Database.Plugins;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
-using Raven.Database.Extensions;
-using System.Linq;
 
 namespace Raven.Database.Commercial
 {
-	using Raven.Abstractions;
-
 	internal class ValidateLicense : IDisposable
 	{
 		public static LicensingStatus CurrentLicense { get; set; }
@@ -32,7 +29,7 @@ namespace Raven.Database.Commercial
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 
-		private static readonly Dictionary<string, string> alwaysOnAttributes = new Dictionary<string, string>
+		private static readonly Dictionary<string, string> AlwaysOnAttributes = new Dictionary<string, string>
 		{
 			{"periodicBackup", "false"},
 			{"encryption", "false"},
@@ -41,6 +38,7 @@ namespace Raven.Database.Commercial
 			{"compression", "false"},
 			{"quotas","false"},
 			{"ravenfs", "false"},
+			{"counters", "false"},
 
 			{"authorization","true"},
 			{"documentExpiration","true"},
@@ -58,7 +56,7 @@ namespace Raven.Database.Commercial
 				Error = false,
 				Message = "No license file was found.\r\n" +
 						  "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
-				Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
+				Attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
 			};
 		}
 
@@ -110,7 +108,7 @@ namespace Raven.Database.Commercial
 					errorMessage = ex.Message;
 				}
 
-				var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
+				var attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
 				foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
 				{
 					attributes[licenseAttribute.Key] = licenseAttribute.Value;
@@ -163,7 +161,7 @@ namespace Raven.Database.Commercial
 					Error = true,
 					Details = "License Path: " + licensePath + Environment.NewLine + ", License Text: " + licenseText + Environment.NewLine + ", Exception: " + e,
 					Message = "Could not validate license: " + e.Message,
-					Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
+					Attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
 				};
 			}
 		}
