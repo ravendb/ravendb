@@ -94,80 +94,89 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
-		{
-			if (take < 0)
-				throw new ArgumentException("must have zero or positive value", "take");
-			if (take == 0) yield break;
+        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
+        {
+            if (take < 0)
+                throw new ArgumentException("must have zero or positive value", "take");
+            if (take == 0) yield break;
 
-			if (string.IsNullOrEmpty(etag))
-				throw new ArgumentNullException("etag");
+            if (string.IsNullOrEmpty(etag))
+                throw new ArgumentNullException("etag");
 
-			Stopwatch duration = null;
-			if (timeout != null)
-				duration = Stopwatch.StartNew();
+            Stopwatch duration = null;
+            if (timeout != null)
+                duration = Stopwatch.StartNew();
 
-			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(Snapshot, writeBatch.Value))
-			{
-				var slice = (Slice) etag.ToString();
-				if (iterator.Seek(slice) == false)
-					yield break;
+            using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+                                            .Iterate(Snapshot, writeBatch.Value))
+            {
+                var slice = (Slice)etag.ToString();
+                if (iterator.Seek(slice) == false)
+                    yield break;
 
-				if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
-				{
-					if (iterator.MoveNext() == false)
-						yield break;
-				}
+                if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+                {
+                    if (iterator.MoveNext() == false)
+                        yield break;
+                }
 
-				long fetchedDocumentTotalSize = 0;
-				int fetchedDocumentCount = 0;
+                long fetchedDocumentTotalSize = 0;
+                int fetchedDocumentCount = 0;
 
-				do
-				{
-					cancellationToken.ThrowIfCancellationRequested();
+                do
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
 
+                    // We can skip many documents so the timeout should be at the start of the process to be executed.
+                    if (timeout != null)
+                    {
+                        if (duration.Elapsed > timeout.Value)
+                            yield break;
+                    }
 
-					var docEtag = Etag.Parse(iterator.CurrentKey.ToString());
+                    var docEtag = Etag.Parse(iterator.CurrentKey.ToString());
 
-					if (untilEtag != null)
-					{
-						if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
-							yield break;
-					}
+                    if (untilEtag != null)
+                    {
+                        if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
+                            yield break;
+                    }
 
-					var key = GetKeyFromCurrent(iterator);
+                    var key = GetKeyFromCurrent(iterator);
+                    if (!string.IsNullOrEmpty(idPrefix))
+                    {
+                        // Check if the ignore case is correct.
+                        if (!key.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                    }                        
 
-					var document = DocumentByKey(key);
-					if (document == null) //precaution - should never be true
-					{
-						throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
-					}
+                    var document = DocumentByKey(key);
+                    if (document == null) //precaution - should never be true
+                    {
+                        throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents index, but matching document was not found", key));
+                    }
 
-					if (!document.Etag.Equals(docEtag))
-					{
-						throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its indice", key));
-					}
+                    if (!document.Etag.Equals(docEtag))
+                    {
+                        throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its index", key));
+                    }
 
-					fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
-					fetchedDocumentCount++;
+                    fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
+                    fetchedDocumentCount++;
 
-					if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
-					{
-						yield return document;
-						yield break;
-					}
+                    yield return document;
 
-					yield return document;
+                    if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
+                        yield break;
 
-					if (timeout != null)
-					{
-						if (duration.Elapsed > timeout.Value)
-							yield break;
-					}
-				} while (iterator.MoveNext() && fetchedDocumentCount < take);
-			}
-		}
+                } while (iterator.MoveNext() && fetchedDocumentCount < take);
+            }
+        }
+
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
+        {
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout);
+        }
 
 		private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iterator)
 		{
@@ -704,5 +713,5 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return stat;
 			}
 		}
-	}
+    }
 }
