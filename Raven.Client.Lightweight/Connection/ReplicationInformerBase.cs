@@ -234,7 +234,7 @@ namespace Raven.Client.Connection
             {
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
 												.ConfigureAwait(false);
-
+				
                 if (operationResult.Success)
                     return operationResult.Result;
 
