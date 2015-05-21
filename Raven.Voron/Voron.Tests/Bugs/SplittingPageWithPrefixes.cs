@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
-using Voron.Debugging;
 using Xunit;
 
 namespace Voron.Tests.Bugs
@@ -29,11 +28,6 @@ namespace Voron.Tests.Bugs
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.ReadTree("prefixed-tree");
-
-					if (i == 115)
-					{
-						DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber, 1);
-					}
 
 					tree.Add(new string('a', r.Next(2000)) + i, new MemoryStream(new byte[128]));
 					tree.Add(new string('b', r.Next(1000)) + i, new MemoryStream(new byte[256]));
