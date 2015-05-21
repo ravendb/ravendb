@@ -157,7 +157,7 @@ namespace Raven.Client.Document
 		{
 			var text = ere.ResponseString;
 
-			if (ere.StatusCode == SubscriptionDoesNotExistExeption.RelevantHttpStatusCode)
+			if (ere.StatusCode == SubscriptionDoesNotExistException.RelevantHttpStatusCode)
 			{
 				var errorResult = JsonConvert.DeserializeAnonymousType(text, new
 				{
@@ -165,7 +165,7 @@ namespace Raven.Client.Document
 					error = (string)null
 				});
 
-				subscriptionException = new SubscriptionDoesNotExistExeption(errorResult.error);
+				subscriptionException = new SubscriptionDoesNotExistException(errorResult.error);
 				return true;
 			}
 
