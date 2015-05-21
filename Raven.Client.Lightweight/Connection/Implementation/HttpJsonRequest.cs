@@ -106,16 +106,13 @@ namespace Raven.Client.Connection.Implementation
 			owner = requestParams.Owner;
 			conventions = requestParams.Convention;
 
-			if (factory.httpMessageHandler != null) 
-				recreateHandler = () => factory.httpMessageHandler;
-			else
-			{
-				recreateHandler = () => new WebRequestHandler
+			recreateHandler = factory.httpMessageHandler ?? (
+				() => new WebRequestHandler
 				{
 					UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
 					Credentials = _credentials != null ? _credentials.Credentials : null,
-				};
-			}
+				}
+			);
 
 			httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
 
