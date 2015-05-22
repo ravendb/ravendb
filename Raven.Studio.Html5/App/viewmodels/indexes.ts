@@ -18,10 +18,11 @@ import indexesAndTransformersClipboardDialog = require("viewmodels/indexesAndTra
 import indexReplaceDocument = require("models/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/getPendingIndexReplacementsCommand");
 import d3 = require('d3/d3');
+import forceIndexReplace = require("commands/forceIndexReplace");
 
 class indexes extends viewModelBase {
 
-    indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index> }>();
+    indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index>; groupHidden: KnockoutObservable<boolean> }>();
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
@@ -32,9 +33,11 @@ class indexes extends viewModelBase {
     btnStateTooltip = ko.observable<string>("ExpandAll");
     btnTitle = ko.computed(() => this.btnState() === true ? "Expand all" : "Collapse all");
     sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
+	searchText = ko.observable<string>();
 
     constructor() {
         super();
+		this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterIndexes());
 
         this.sortedGroups = ko.computed(() => {
             var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
@@ -104,6 +107,22 @@ class indexes extends viewModelBase {
     private fetchRecentQueries() {
         this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
     }
+
+	private filterIndexes() {
+		var filterLower = this.searchText().toLowerCase();
+		this.indexGroups().forEach(indexGroup => {
+			var hasAnyInGroup = false;
+			indexGroup.indexes().forEach(index => {
+				var match = index.name.toLowerCase().indexOf(filterLower) >= 0;
+				index.filteredOut(!match);
+				if (match) {
+					hasAnyInGroup = true;
+				}
+			});
+
+			indexGroup.groupHidden(!hasAnyInGroup);
+		});
+	}
 
     getRecentQueryUrl(query: storedQueryDto) {
         return appUrl.forQuery(this.activeDatabase(), query.Hash);
@@ -177,7 +196,7 @@ class indexes extends viewModelBase {
                 group.indexes.push(i);
             }
         } else {
-            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
+            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]), groupHidden: ko.observable<boolean>(false) });
         }
     }
 
@@ -369,6 +388,10 @@ class indexes extends viewModelBase {
     makeIndexPersistent(index: index) {
         new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
     }
+
+	forceSideBySide(idx: index) {
+		new forceIndexReplace(idx.name, this.activeDatabase()).execute();
+	}
 }
 
 export = indexes;

@@ -16,11 +16,22 @@ class showDataDialog extends dialogViewModelBase {
 
     attached() {
         super.attached();
+        this.registerResizing("documentsResize");
         this.selectText();
+        jwerty.key("CTRL+C, enter", e => {
+            e.preventDefault();
+            this.close();
+        }, this, "#documentsText");
+
     }
 
     deactivate() {
         $("#inputData").unbind('keydown.jwerty');
+    }
+
+    detached() {
+        super.detached();
+        this.unregisterResizing("documentsResize");
     }
 
     selectText() {

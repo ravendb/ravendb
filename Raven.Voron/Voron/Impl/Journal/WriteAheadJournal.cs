@@ -398,7 +398,7 @@ namespace Voron.Impl.Journal
 			private JournalFile _lastFlushedJournal;
 			private long? forcedIterateJournalsAsOf = null;
 			private bool forcedFlushOfOldPages = false;
-			private volatile bool ignoreLockAlreadyTaken = false;
+			private bool ignoreLockAlreadyTaken = false;
 
 			public JournalApplicator(WriteAheadJournal waj)
 			{
@@ -610,7 +610,7 @@ namespace Voron.Impl.Journal
 				_lastDataFileSyncTime = DateTime.UtcNow;
 			}
 
-			public Dictionary<long, int> writtenPages = new Dictionary<long, int>();
+			public Dictionary<long, int> writtenPages = new Dictionary<long, int>(LongEqualityComparer.Instance);
 
 			private void ApplyPagesToDataFileFromScratch(Dictionary<long, PagePosition> pagesToWrite, Transaction transaction, bool alreadyInWriteTx)
 			{
@@ -773,10 +773,30 @@ namespace Voron.Impl.Journal
 				}
 			}
 
+			public bool IsCurrentThreadInFlushOperation
+			{
+				get { return Monitor.IsEntered(_flushingLock); }
+			}
+
+			public IDisposable TryTakeFlushingLock(ref bool lockTaken)
+			{
+				Monitor.TryEnter(_flushingLock, ref lockTaken);
+				bool localLockTaken = lockTaken;
+
+				ignoreLockAlreadyTaken = true;
+
+				return new DisposableAction(() =>
+				{
+					ignoreLockAlreadyTaken = false;
+					if (localLockTaken)
+						Monitor.Exit(_flushingLock);
+				});
+			}
+
 			public IDisposable TakeFlushingLock()
 			{
 				bool lockTaken = false;
-				Monitor.TryEnter(_flushingLock, ref lockTaken);
+				Monitor.Enter(_flushingLock, ref lockTaken);
 				ignoreLockAlreadyTaken = true;
 
 				return new DisposableAction(() =>
@@ -863,14 +883,13 @@ namespace Voron.Impl.Journal
 			var write = tempBuffer;
 			var txPages = tx.GetTransactionPages();
 
-			for (int index = 1; index < txPages.Count; index++)
-			{
-				var txPage = txPages[index];
-				var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
-				var count = txPage.NumberOfPages * AbstractPager.PageSize;
+            foreach( var txPage in txPages )
+            {
+                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                var count = txPage.NumberOfPages * AbstractPager.PageSize;
                 MemoryUtils.BulkCopy(write, scratchPage, count);
-				write += count;
-			}
+                write += count;
+            }
 
 			var len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBuffer);
 		    var remainder = len % AbstractPager.PageSize;
@@ -884,7 +903,8 @@ namespace Voron.Impl.Journal
 
 			var pages = new IntPtr[compressedPages + 1];
 
-			var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPages[0].ScratchFileNumber, txPages[0].PositionInScratchBuffer);
+            var txHeaderPage = tx.GetTransactionHeaderPage();
+            var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(txHeaderPage.ScratchFileNumber, txHeaderPage.PositionInScratchBuffer);
 			var txHeader = (TransactionHeader*)txHeaderBase;
 
 			txHeader->Compressed = true;

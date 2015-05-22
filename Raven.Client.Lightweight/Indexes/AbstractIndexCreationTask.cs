@@ -327,14 +327,15 @@ namespace Raven.Client.Indexes
         private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
         {
             IndexDefinition legacyIndexDefinition;
-            documentConvention.PrettifyGeneratedLinqExpressions = false;
+			var oldPrettifyGeneratedLinqExpressions = documentConvention.PrettifyGeneratedLinqExpressions;
+			documentConvention.PrettifyGeneratedLinqExpressions = false;
             try
             {
                 legacyIndexDefinition = CreateIndexDefinition();
             }
             finally
             {
-                documentConvention.PrettifyGeneratedLinqExpressions = true;
+				documentConvention.PrettifyGeneratedLinqExpressions = oldPrettifyGeneratedLinqExpressions;
             }
             return legacyIndexDefinition;
         }

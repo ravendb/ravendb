@@ -27,6 +27,8 @@ import pagedResultSet = require("common/pagedResultSet");
 
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
+import generateClassCommand = require("commands/generateClassCommand");
+import showDataDialog = require("viewmodels/showDataDialog");
 
 class editDocument extends viewModelBase {
 
@@ -838,25 +840,7 @@ class editDocument extends viewModelBase {
             this.metaPropsToRestoreOnSave.length = 0;
             var metaDto = this.metadata().toDto();
 
-            // We don't want to show certain reserved properties in the metadata text area.
-            // Remove them from the DTO, restore them on save.
-            var metaPropsToRemove = ["@id", "@etag", "Origin", "Raven-Server-Build", "Raven-Client-Version", "Non-Authoritative-Information", "Raven-Timer-Request",
-                "Raven-Authenticated-User", "Raven-Last-Modified", "Has-Api-Key", "Access-Control-Allow-Origin", "Access-Control-Max-Age", "Access-Control-Allow-Methods",
-                "Access-Control-Request-Headers", "Access-Control-Allow-Headers", "Reverse-Via", "Persistent-Auth", "Allow", "Content-Disposition", "Content-Encoding",
-                "Content-Language", "Content-Location", "Content-MD5", "Content-Range", "Content-Type", "Expires", "Last-Modified", "Content-Length", "Keep-Alive", "X-Powered-By",
-                "X-AspNet-Version", "X-Requested-With", "X-SourceFiles", "Accept-Charset", "Accept-Encoding", "Accept", "Accept-Language", "Authorization", "Cookie", "Expect",
-                "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
-                "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
-                "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL","Size-In-Kb"];
-
-            for (var property in metaDto) {
-                if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
-                    if (metaDto[property]) {
-                        this.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
-                    }
-                    delete metaDto[property];
-                }
-            }
+	        documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
 
             var metaString = this.stringify(metaDto);
             this.metadataText(metaString);
@@ -922,6 +906,15 @@ class editDocument extends viewModelBase {
         }
 
         return "";
+    }
+
+    generateCode() {
+        var doc: document = this.document();
+        var generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
+        var deffered = generate.execute();
+        deffered.done((code: JSON) => {
+            app.showDialog(new showDataDialog("Generated Class", code["Code"]));
+        });
     }
 }
 

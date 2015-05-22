@@ -201,13 +201,13 @@
                     <div class="checkbox col-sm-8">
                         <div class="btn-group">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="visible: performTableQuatation">Use quotes for tables</span>
-                                <span data-bind="visible: !performTableQuatation()">Don't use quotes for tables</span>
+								<span data-bind="visible: quoteTables()">Use quotes for tables</span>
+								<span data-bind="visible: !quoteTables()">Don't use quotes for tables</span>
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu">
-                                <li><a href="#" data-bind="click: performTableQuatation.bind(performTableQuatation, true)">Use quotes for tables</a></li>
-                                <li><a href="#" data-bind="click: performTableQuatation.bind(performTableQuatation, false)">Don't use quotes for tables</a></li>
+                                <li><a href="#" data-bind="click: quoteTables.bind(quoteTables, true)">Use quotes for tables</a></li>
+                                <li><a href="#" data-bind="click: quoteTables.bind(quoteTables, false)">Don't use quotes for tables</a></li>
                             </ul>
                         </div>
                     </div>

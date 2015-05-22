@@ -363,6 +363,8 @@ namespace Raven.Database.Indexing
 			        }
 		        }
 	        }
+
+			indexReplacer.ReplaceIndexes(new []{ indexToWorkOn.IndexId });
         }
 
 		private IndexingPerformanceStats HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified, CancellationToken token)
@@ -498,7 +500,16 @@ namespace Raven.Database.Indexing
 					Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
 							  lastEtag, lastModified);
 					// we use it this way to batch all the updates together
-					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified);
+					actions[i] = accessor =>
+					{
+						accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified);
+
+						accessor.AfterStorageCommit += () =>
+						{
+							indexToWorkOn.Index.EnsureIndexWriter();
+							indexToWorkOn.Index.Flush(lastEtag);
+						};
+					};
 					return;
 				}
 				if (Log.IsDebugEnabled)

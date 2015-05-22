@@ -859,7 +859,7 @@ namespace Raven.Client.Connection.Async
 				AddTransactionInformation(metadata);
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
 				{
-					return await request.ReadResponseJsonAsync().WithCancellation(token);
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
 			}, token).ConfigureAwait(false);
 			return ((RavenJObject)result).Deserialize<MultiLoadResult>(convention);
@@ -959,8 +959,8 @@ namespace Raven.Client.Connection.Async
 						Url = "/facets/" + x.IndexName,
 						Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
 							x.Query.GetQueryString(),
-							x.Query.Start,
-							x.Query.PageSize,
+							x.PageStart,
+							x.PageSize,
 							addition)
 					};
 				}
@@ -974,8 +974,8 @@ namespace Raven.Client.Connection.Async
 						Url = "/facets/" + x.IndexName,
 						Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
 							x.Query.GetQueryString(),
-							x.Query.Start,
-							x.Query.PageSize,
+							x.PageStart,
+							x.PageSize,
 							addition)
 					};
 				}
@@ -1722,7 +1722,7 @@ namespace Raven.Client.Connection.Async
 											.ConfigureAwait(false);
 				}
 
-				await response.AssertNotFailingResponse().WithCancellation(cancellationToken);
+				await response.AssertNotFailingResponse().WithCancellation(cancellationToken).ConfigureAwait(false);
 			}
 			catch (Exception e)
 			{
@@ -1971,7 +1971,7 @@ namespace Raven.Client.Connection.Async
 										.WithCancellation(cancellationToken)
 										.ConfigureAwait(false);
 
-				await response.AssertNotFailingResponse().WithCancellation(cancellationToken);
+				await response.AssertNotFailingResponse().WithCancellation(cancellationToken).ConfigureAwait(false);
 			}
 			catch (Exception)
 			{
@@ -2224,13 +2224,14 @@ namespace Raven.Client.Connection.Async
 		}
 
 		private volatile bool currentlyExecuting;
+		private volatile bool retryBecauseOfConflict;
 		private bool resolvingConflict;
 		private bool resolvingConflictRetries;
 
 		internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation, CancellationToken token = default (CancellationToken))
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
-			if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false)
+			if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false && retryBecauseOfConflict == false)
 				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
 			currentlyExecuting = true;
 			try
@@ -2313,7 +2314,7 @@ namespace Raven.Client.Connection.Async
 						JsonDocument resolvedDocument;
 						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
 						{
-							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata).ConfigureAwait(false);
+							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata, token).ConfigureAwait(false);
 							return true;
 						}
 					}
@@ -2345,8 +2346,9 @@ namespace Raven.Client.Connection.Async
 
 			if (resolvingConflictRetries)
 				throw new InvalidOperationException(
-					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+					"Encountered another conflict after already resolving a conflict. Conflict resolution cannot recurse.");
 			resolvingConflictRetries = true;
+			retryBecauseOfConflict = true;
 			try
 			{
 				return await nextTry().WithCancellation(token).ConfigureAwait(false);
@@ -2354,6 +2356,7 @@ namespace Raven.Client.Connection.Async
 			finally
 			{
 				resolvingConflictRetries = false;
+				retryBecauseOfConflict = false;
 			}
 		}
 

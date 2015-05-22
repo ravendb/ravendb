@@ -51,7 +51,7 @@ namespace Raven.Database.Server.WebApi
 		private CancellationToken cancellationToken;
 
 		private ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>> resourceHttpTraces = new ConcurrentDictionary<string, ConcurrentSet<IEventsTransport>>();
-		private ConcurrentSet<IEventsTransport> serverHttpTrace = new ConcurrentSet<IEventsTransport>();
+		private readonly ConcurrentSet<IEventsTransport> serverHttpTrace = new ConcurrentSet<IEventsTransport>();
 
 		public int NumberOfRequests
 		{
@@ -74,16 +74,9 @@ namespace Raven.Database.Server.WebApi
 			BeforeRequest += OnBeforeRequest;
 			cancellationTokenSource = new CancellationTokenSource();
 			this.landlord = landlord;
-			int val;
-			if (int.TryParse(landlord.SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
-				val = 900;
-
-			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(val);
-
-			if (int.TryParse(landlord.SystemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
-				val = 60;
-
-			frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(val);
+			
+			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(landlord.MaxIdleTimeForTenantDatabaseInSec);
+			frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(landlord.FrequencyToCheckForIdleDatabasesInSec);
 
 			Init();
 			cancellationToken = cancellationTokenSource.Token;

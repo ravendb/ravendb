@@ -43,7 +43,8 @@
                 <div id="databaseCompactLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
                     <pre data-bind="visible: dbCompactOptions.compactStatusMessages().length > 0" id="databaseCompactLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
 <!-- ko foreach: dbCompactOptions.compactStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-        </pre>
+                        <div data-bind="text: 'Last Progress Message: ' + dbCompactOptions.compactStatusLastUpdate(), visible:isBusy()"></div>
+                    </pre>
                 </div>
             </form>
         </div>

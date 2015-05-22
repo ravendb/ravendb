@@ -94,80 +94,89 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
-		{
-			if (take < 0)
-				throw new ArgumentException("must have zero or positive value", "take");
-			if (take == 0) yield break;
+        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
+        {
+            if (take < 0)
+                throw new ArgumentException("must have zero or positive value", "take");
+            if (take == 0) yield break;
 
-			if (string.IsNullOrEmpty(etag))
-				throw new ArgumentNullException("etag");
+            if (string.IsNullOrEmpty(etag))
+                throw new ArgumentNullException("etag");
 
-			Stopwatch duration = null;
-			if (timeout != null)
-				duration = Stopwatch.StartNew();
+            Stopwatch duration = null;
+            if (timeout != null)
+                duration = Stopwatch.StartNew();
 
-			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(Snapshot, writeBatch.Value))
-			{
-				Slice slice = etag.ToString();
-				if (iterator.Seek(slice) == false)
-					yield break;
+            using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+                                            .Iterate(Snapshot, writeBatch.Value))
+            {
+                var slice = (Slice)etag.ToString();
+                if (iterator.Seek(slice) == false)
+                    yield break;
 
-				if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
-				{
-					if (iterator.MoveNext() == false)
-						yield break;
-				}
+                if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+                {
+                    if (iterator.MoveNext() == false)
+                        yield break;
+                }
 
-				long fetchedDocumentTotalSize = 0;
-				int fetchedDocumentCount = 0;
+                long fetchedDocumentTotalSize = 0;
+                int fetchedDocumentCount = 0;
 
-				do
-				{
-					cancellationToken.ThrowIfCancellationRequested();
+                do
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
 
+                    // We can skip many documents so the timeout should be at the start of the process to be executed.
+                    if (timeout != null)
+                    {
+                        if (duration.Elapsed > timeout.Value)
+                            yield break;
+                    }
 
-					var docEtag = Etag.Parse(iterator.CurrentKey.ToString());
+                    var docEtag = Etag.Parse(iterator.CurrentKey.ToString());
 
-					if (untilEtag != null)
-					{
-						if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
-							yield break;
-					}
+                    if (untilEtag != null)
+                    {
+                        if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
+                            yield break;
+                    }
 
-					var key = GetKeyFromCurrent(iterator);
+                    var key = GetKeyFromCurrent(iterator);
+                    if (!string.IsNullOrEmpty(idPrefix))
+                    {
+                        // Check if the ignore case is correct.
+                        if (!key.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                    }                        
 
-					var document = DocumentByKey(key);
-					if (document == null) //precaution - should never be true
-					{
-						throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
-					}
+                    var document = DocumentByKey(key);
+                    if (document == null) //precaution - should never be true
+                    {
+                        throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents index, but matching document was not found", key));
+                    }
 
-					if (!document.Etag.Equals(docEtag))
-					{
-						throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its indice", key));
-					}
+                    if (!document.Etag.Equals(docEtag))
+                    {
+                        throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its index", key));
+                    }
 
-					fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
-					fetchedDocumentCount++;
+                    fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
+                    fetchedDocumentCount++;
 
-					if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
-					{
-						yield return document;
-						yield break;
-					}
+                    yield return document;
 
-					yield return document;
+                    if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
+                        yield break;
 
-					if (timeout != null)
-					{
-						if (duration.Elapsed > timeout.Value)
-							yield break;
-					}
-				} while (iterator.MoveNext() && fetchedDocumentCount < take);
-			}
-		}
+                } while (iterator.MoveNext() && fetchedDocumentCount < take);
+            }
+        }
+
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
+        {
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout);
+        }
 
 		private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iterator)
 		{
@@ -194,8 +203,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			using (var iterator = tableStorage.Documents.Iterate(Snapshot, writeBatch.Value))
 			{
-				iterator.RequiredPrefix = idPrefix.ToLowerInvariant();
-				var seekStart = skipAfter == null ? iterator.RequiredPrefix : skipAfter.ToLowerInvariant();
+                iterator.RequiredPrefix = (Slice)idPrefix.ToLowerInvariant();
+                var seekStart = skipAfter == null ? (Slice)iterator.RequiredPrefix : (Slice)skipAfter.ToLowerInvariant();
 				if (iterator.Seek(seekStart) == false || !iterator.Skip(start))
 					yield break;
 
@@ -224,9 +233,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public Stream RawDocumentByKey(string key)
 		{
-			var loweredKey = CreateKey(key);
+            var normalizedKey = (Slice)CreateKey(key);
 
-			var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
+			var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKey, writeBatch.Value);
 			if (documentReadResult == null) //non existing document
 				return null;
 
@@ -241,8 +250,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return null;
 			}
 
-            var loweredKey = CreateKey(key);
-            var metadataDocument = ReadDocumentMetadata(loweredKey);
+            var normalizedKey = CreateKey(key);
+            var metadataDocument = ReadDocumentMetadata(normalizedKey);
 			if (metadataDocument == null)
 			{
 				logger.Debug("Document with key='{0}' was not found", key);
@@ -250,14 +259,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
 			int sizeOnDisk;
-            var documentData = ReadDocumentData(loweredKey, metadataDocument.Etag, metadataDocument.Metadata, out sizeOnDisk);
+            var documentData = ReadDocumentData(normalizedKey, metadataDocument.Etag, metadataDocument.Metadata, out sizeOnDisk);
 			if (documentData == null)
 			{
 				logger.Warn("Could not find data for {0}, but found the metadata", key);
 				return null;
 			}
 
-			var metadataSize = metadataIndex.GetDataSize(Snapshot, loweredKey);
+			var metadataSize = metadataIndex.GetDataSize(Snapshot, (Slice)normalizedKey);
 
 			return new JsonDocument
 			{
@@ -275,10 +284,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-            var lowerKey = CreateKey(key);
+            var normalizedKey = CreateKey(key);
 
-			if (tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
-                return ReadDocumentMetadata(lowerKey);
+            if (tableStorage.Documents.Contains(Snapshot, (Slice)normalizedKey, writeBatch.Value))
+                return ReadDocumentMetadata(normalizedKey);
 
 			logger.Debug("Document with key='{0}' was not found", key);
 			return null;
@@ -289,13 +298,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-            var loweredKey = CreateKey(key);
+            var normalizedKey = CreateKey(key);
+            var normalizedKeyAsSlice = (Slice)normalizedKey;
 
 			if (etag != null)
-				EnsureDocumentEtagMatch(loweredKey, etag, "DELETE");
+				EnsureDocumentEtagMatch(normalizedKey, etag, "DELETE");
 
 			ushort? existingVersion;
-			if (!tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion))
+            if (!tableStorage.Documents.Contains(Snapshot, normalizedKeyAsSlice, writeBatch.Value, out existingVersion))
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				metadata = null;
@@ -303,25 +313,25 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return false;
 			}
 
-			if (!metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
+            if (!metadataIndex.Contains(Snapshot, normalizedKeyAsSlice, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
 			{
 				var errorString = string.Format("Document with key '{0}' was found, but its metadata wasn't found --> possible data corruption", key);
 				throw new InvalidDataException(errorString);
 			}
 
-            var existingEtag = EnsureDocumentEtagMatch(loweredKey, etag, "DELETE");
-            var documentMetadata = ReadDocumentMetadata(loweredKey);
+            var existingEtag = EnsureDocumentEtagMatch(normalizedKey, etag, "DELETE");
+            var documentMetadata = ReadDocumentMetadata(normalizedKey);
 			metadata = documentMetadata.Metadata;
 
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
 
-			tableStorage.Documents.Delete(writeBatch.Value, loweredKey, existingVersion);
-			metadataIndex.Delete(writeBatch.Value, loweredKey);
+			tableStorage.Documents.Delete(writeBatch.Value, normalizedKey, existingVersion);
+			metadataIndex.Delete(writeBatch.Value, normalizedKey);
 
 			tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 						  .Delete(writeBatch.Value, deletedETag);
 
-			documentCacher.RemoveCachedDocument(loweredKey, etag);
+			documentCacher.RemoveCachedDocument(normalizedKey, etag);
 
 			logger.Debug("Deleted document with key = '{0}'", key);
 
@@ -340,7 +350,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			Etag newEtag;
 
 			DateTime savedAt;
-			var isUpdate = WriteDocumentData(key, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
+            var normalizedKey = CreateKey(key);
+            var isUpdate = WriteDocumentData(key, normalizedKey, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
 
 			logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key);
 
@@ -353,7 +364,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			};
 		}
 
-		private bool PutDocumentMetadataInternal(string key, RavenJObject metadata, Etag newEtag, DateTime savedAt)
+        private bool PutDocumentMetadataInternal(string key, Slice normalizedKey, RavenJObject metadata, Etag newEtag, DateTime savedAt)
 		{
 			return WriteDocumentMetadata(new JsonDocumentMetadata
 			{
@@ -361,7 +372,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				Etag = newEtag,
 				Metadata = metadata,
 				LastModified = savedAt
-			});
+            }, normalizedKey);
 		}
 
 		public void IncrementDocumentCount(int value)
@@ -374,7 +385,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			if (!overwriteExisting && tableStorage.Documents.Contains(Snapshot, CreateKey(key), writeBatch.Value))
+            if (!overwriteExisting && tableStorage.Documents.Contains(Snapshot, (Slice)CreateKey(key), writeBatch.Value))
 			{
 				throw new ConcurrencyException(string.Format("InsertDocument() - overwriteExisting is false and document with key = '{0}' already exists", key));
 			}
@@ -387,9 +398,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-            var lowerKey = CreateKey(key);
+            var normalizedKey = CreateKey(key);
+            var normalizedKeySlice = (Slice)normalizedKey;
 
-			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
+            if (!tableStorage.Documents.Contains(Snapshot, normalizedKeySlice, writeBatch.Value))
 			{
 				logger.Debug("Document with dataKey='{0}' was not found", key);
 				preTouchEtag = null;
@@ -397,19 +409,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return;
 			}
 
-            var metadata = ReadDocumentMetadata(lowerKey);
+            var metadata = ReadDocumentMetadata(normalizedKey);
 
 			var newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			afterTouchEtag = newEtag;
 			preTouchEtag = metadata.Etag;
 			metadata.Etag = newEtag;
 
-			WriteDocumentMetadata(metadata, shouldIgnoreConcurrencyExceptions: true);
+            WriteDocumentMetadata(metadata, normalizedKeySlice, shouldIgnoreConcurrencyExceptions: true);
 
 			var keyByEtagIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
 
 			keyByEtagIndex.Delete(writeBatch.Value, preTouchEtag);
-			keyByEtagIndex.Add(writeBatch.Value, newEtag, lowerKey);
+			keyByEtagIndex.Add(writeBatch.Value, newEtag, normalizedKey);
 			etagTouches.Add(preTouchEtag, afterTouchEtag);
 
 			logger.Debug("TouchDocument() - document with key = '{0}'", key);
@@ -422,7 +434,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			using (var iter = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 													.Iterate(Snapshot, writeBatch.Value))
 			{
-				if (!iter.Seek(etag.ToString()) &&
+                if (!iter.Seek((Slice)etag.ToString()) &&
 					!iter.Seek(Slice.BeforeAllKeys)) //if parameter etag not found, scan from beginning. if empty --> return original etag
 					return etag;
 
@@ -479,7 +491,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		}
 
 		//returns true if it was update operation
-		private bool WriteDocumentMetadata(JsonDocumentMetadata metadata, bool shouldIgnoreConcurrencyExceptions = false)
+		private bool WriteDocumentMetadata(JsonDocumentMetadata metadata, Slice key, bool shouldIgnoreConcurrencyExceptions = false)
 		{
 			var metadataStream = CreateStream();
 
@@ -495,22 +507,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			metadataStream.Position = 0;
 
-			var loweredKey = CreateKey(metadata.Key);
-
 			ushort? existingVersion;
-			var isUpdate = metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion);
-			metadataIndex.Add(writeBatch.Value, loweredKey, metadataStream, existingVersion, shouldIgnoreConcurrencyExceptions);
+			var isUpdate = metadataIndex.Contains(Snapshot, key, writeBatch.Value, out existingVersion);
+			metadataIndex.Add(writeBatch.Value, key, metadataStream, existingVersion, shouldIgnoreConcurrencyExceptions);
 
 			return isUpdate;
 		}
 
-        private JsonDocumentMetadata ReadDocumentMetadata(string loweredKey)
+        private JsonDocumentMetadata ReadDocumentMetadata(string normalizedKey)
 		{
 			try
 			{
-                //var loweredKey = CreateKey(key);
-
-				var metadataReadResult = metadataIndex.Read(Snapshot, loweredKey, writeBatch.Value);
+				var metadataReadResult = metadataIndex.Read(Snapshot, (Slice)normalizedKey, writeBatch.Value);
 				if (metadataReadResult == null)
 					return null;
 
@@ -521,7 +529,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var originalKey = stream.ReadString();
 					var lastModifiedDateTimeBinary = stream.ReadInt64();
 
-					var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
+					var existingCachedDocument = documentCacher.GetCachedDocument(normalizedKey, etag);
 
 					var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
 					var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
@@ -538,28 +546,27 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			catch (Exception e)
 			{
 
-                throw new InvalidDataException("Failed to de-serialize metadata of document " + loweredKey, e);
+                throw new InvalidDataException("Failed to de-serialize metadata of document " + normalizedKey, e);
 			}
 		}
 
-		private bool WriteDocumentData(string key, Etag etag, RavenJObject data, RavenJObject metadata, out Etag newEtag, out Etag existingEtag, out DateTime savedAt)
+		private bool WriteDocumentData(string key, string normalizedKey, Etag etag, RavenJObject data, RavenJObject metadata, out Etag newEtag, out Etag existingEtag, out DateTime savedAt)
 		{
+            var normalizedKeySlice = (Slice)normalizedKey;
 			var keyByEtagDocumentIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
-			var loweredKey = CreateKey(key);
 
 			ushort? existingVersion;
-			var isUpdate = tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion);
+            var isUpdate = tableStorage.Documents.Contains(Snapshot, normalizedKeySlice, writeBatch.Value, out existingVersion);
 			existingEtag = null;
 
 			if (isUpdate)
 			{
-				existingEtag = EnsureDocumentEtagMatch(loweredKey, etag, "PUT");
+				existingEtag = EnsureDocumentEtagMatch(normalizedKey, etag, "PUT");
 				keyByEtagDocumentIndex.Delete(writeBatch.Value, existingEtag);
 			}
 			else if (etag != null && etag != Etag.Empty)
 			{
-				throw new ConcurrencyException("PUT attempted on document '" + key +
-													   "' using a non current etag (document deleted)")
+				throw new ConcurrencyException("PUT attempted on document '" + key + "' using a non current etag (document deleted)")
 				{
 					ExpectedETag = etag
 				};
@@ -568,48 +575,48 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var dataStream = CreateStream();
 
 			using (var finalDataStream = documentCodecs.Aggregate((Stream)new UndisposableStream(dataStream),
-				(current, codec) => codec.Encode(loweredKey, data, metadata, current)))
+				(current, codec) => codec.Encode(normalizedKey, data, metadata, current)))
 			{
 				data.WriteTo(finalDataStream);
 				finalDataStream.Flush();
 			}
 
 			dataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch.Value, loweredKey, dataStream, existingVersion ?? 0);
+            tableStorage.Documents.Add(writeBatch.Value, normalizedKeySlice, dataStream, existingVersion ?? 0);
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;
 
-			var isUpdated = PutDocumentMetadataInternal(key, metadata, newEtag, savedAt);
+            var isUpdated = PutDocumentMetadataInternal(key, normalizedKeySlice, metadata, newEtag, savedAt);
 
-			keyByEtagDocumentIndex.Add(writeBatch.Value, newEtag, loweredKey);
+			keyByEtagDocumentIndex.Add(writeBatch.Value, newEtag, normalizedKey);
 
 			return isUpdated;
 		}
 
-        private RavenJObject ReadDocumentData(string loweredKey, Etag existingEtag, RavenJObject metadata, out int size)
+        private RavenJObject ReadDocumentData(string normalizedKey, Etag existingEtag, RavenJObject metadata, out int size)
 		{
+            var normalizedKeySlice = (Slice)normalizedKey;
+
 			try
 			{
-                //var loweredKey = CreateKey(key);
-
 				size = -1;
 
-				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, existingEtag);
+				var existingCachedDocument = documentCacher.GetCachedDocument(normalizedKey, existingEtag);
 				if (existingCachedDocument != null)
 				{
 					size = existingCachedDocument.Size;
 					return existingCachedDocument.Document;
 				}
 
-				var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
+                var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKeySlice, writeBatch.Value);
 				if (documentReadResult == null) //non existing document
 					return null;
 
 				using (var stream = documentReadResult.Reader.AsStream())
 				{
 					using (var decodedDocumentStream = documentCodecs.Aggregate(stream,
-							(current, codec) => codec.Value.Decode(loweredKey, metadata, current)))
+							(current, codec) => codec.Value.Decode(normalizedKey, metadata, current)))
 					{
 						var streamToUse = decodedDocumentStream;
 						if (stream != decodedDocumentStream)
@@ -618,7 +625,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						var documentData = decodedDocumentStream.ToJObject();
 
 						size = (int)Math.Max(stream.Position, streamToUse.Position);
-						documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, size);
+						documentCacher.SetCachedDocument(normalizedKey, existingEtag, documentData, metadata, size);
 
 						return documentData;
 					}
@@ -629,9 +636,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 InvalidDataException invalidDataException = null;
 			    try
 			    {
-                    // var loweredKey = CreateKey(key);
                     size = -1;
-                    var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
+                    var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKeySlice, writeBatch.Value);
                     if (documentReadResult == null) //non existing document
                         return null;
 
@@ -642,7 +648,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			                if (reader.ReadUInt32() == DocumentCompression.CompressFileMagic)
 			                {
 			                    invalidDataException = new InvalidDataException(string.Format("Document '{0}' is compressed, but the compression bundle is not enabled.\r\n" +
-                                                                                              "You have to enable the compression bundle when dealing with compressed documents.", loweredKey), e);
+                                                                                              "You have to enable the compression bundle when dealing with compressed documents.", normalizedKey), e);
 			                }
 			            }
 			        }
@@ -656,7 +662,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			    if(invalidDataException != null)
                     throw invalidDataException;
 
-                throw new InvalidDataException("Failed to de-serialize a document: " + loweredKey, e);
+                throw new InvalidDataException("Failed to de-serialize a document: " + normalizedKey, e);
 			}
 		}
 
@@ -685,8 +691,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						stat.System.Update(size, doc.Key);
 					}
 
-                    var loweredKey = CreateKey(key);
-                    var metadata = ReadDocumentMetadata(loweredKey);
+                    var normalizedKey = CreateKey(key);
+                    var metadata = ReadDocumentMetadata(normalizedKey);
 
 					var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
 					if (string.IsNullOrEmpty(entityName))
@@ -707,5 +713,5 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return stat;
 			}
 		}
-	}
+    }
 }

@@ -25,6 +25,7 @@ namespace Raven.Tests.Core
 			configuration.ServerName = ServerName;
 			configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
 			configuration.DataDirectory = Path.Combine(configuration.DataDirectory, "Tests");
+			configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 10;
 
 			IOExtensions.DeleteDirectory(configuration.DataDirectory);
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Voron.Util
 {
@@ -20,6 +21,8 @@ namespace Voron.Util
             t[array.Count] = next;
             return t;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static long NearestPowerOfTwo(long v)
 		{
 			v--;

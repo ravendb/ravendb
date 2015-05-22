@@ -132,6 +132,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationIndexesTombstones = "Raven/Replication/Indexes/Tombstones";
 		public const string RavenReplicationTransformerTombstones = "Raven/Replication/Transformers/Tombstones";
 
+		public const string RavenSqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
+
         [Obsolete("Use RavenFS instead.")]
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 
@@ -217,6 +219,7 @@ namespace Raven.Abstractions.Data
             public const string Storage = "Raven/FileSystem/Storage";
 	        public const string UrlPrefix = "fs";
 	        public const string RavenFsSize = "RavenFS-Size";
+            public const string PreventSchemaUpdate = "Raven/PreventSchemaUpdate";
 
 	        public static class Versioning
 	        {
@@ -247,6 +250,7 @@ namespace Raven.Abstractions.Data
             public const string MaxBufferPoolSize = "Raven/Voron/MaxBufferPoolSize";
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
+	        public const string AllowOn32Bits = "Raven/Voron/AllowOn32Bits";
         }
 
 	    public static class Smuggler
@@ -260,5 +264,7 @@ namespace Raven.Abstractions.Data
 			public const string RavenAuthorizationOperation = "Raven-Authorization-Operation";
 			public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
 		}
+
+		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";
 	}
 }

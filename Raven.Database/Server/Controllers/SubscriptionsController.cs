@@ -59,23 +59,16 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/subscriptions/open")]
 		public async Task<HttpResponseMessage> Open(long id)
 		{
-			try
-			{
-				Database.Subscriptions.GetSubscriptionConfig(id);
+			Database.Subscriptions.GetSubscriptionConfig(id);
 
-				var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
+			var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
 
-				if (options == null)
-					throw new InvalidOperationException("Options cannot be null");
+			if (options == null)
+				throw new InvalidOperationException("Options cannot be null");
 
-				Database.Subscriptions.OpenSubscription(id, options);
+			Database.Subscriptions.OpenSubscription(id, options);
 
-				return GetEmptyMessage();
-			}
-			catch (SubscriptionException e)
-			{
-				return GetMessageWithString(e.Message, e.ResponseStatusCode);
-			}
+			return GetEmptyMessage();
 		}
 
 		[HttpGet]
@@ -183,7 +176,8 @@ namespace Raven.Database.Server.Controllers
 				using (var cts = new CancellationTokenSource())
 				using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 				{
-					Etag lastProcessedDocEtag = null;
+                    Etag lastProcessedDocEtag = null;
+
 					var batchSize = 0;
 					var batchDocCount = 0;
 					var hasMoreDocs = false;
@@ -191,6 +185,33 @@ namespace Raven.Database.Server.Controllers
 					var config = subscriptions.GetSubscriptionConfig(id);
 					var startEtag = config.AckEtag;
 					var criteria = config.Criteria;
+
+                    Action<JsonDocument> addDocument = doc =>
+                    {
+                        timeout.Delay();
+
+                        if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
+                            return;
+
+                        if (batchDocCount >= options.MaxDocCount)
+                            return;
+
+                        lastProcessedDocEtag = doc.Etag;
+
+                        if (doc.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+                            return;
+
+                        if (MatchCriteria(criteria, doc) == false)
+                            return;
+
+                        doc.ToJson().WriteTo(writer);
+                        writer.WriteRaw(Environment.NewLine);
+
+                        batchSize += doc.SerializedSizeOnDisk;
+                        batchDocCount++;
+                    };
+
+                    int nextStart = 0;
 
 					do
 					{
@@ -200,31 +221,15 @@ namespace Raven.Database.Server.Controllers
 							// of them aren't going to be relevant for other ops, so we are going to skip
 							// the cache for that, to avoid filling it up very quickly
 							using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-							{
-								Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, doc =>
-								{
-									timeout.Delay();
-
-									if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
-										return;
-
-									if (batchDocCount >= options.MaxDocCount)
-										return;
-
-									lastProcessedDocEtag = doc.Etag;
-
-									if (doc.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
-										return;
-
-									if (MatchCriteria(criteria, doc) == false) 
-										return;
-
-									doc.ToJson().WriteTo(writer);
-									writer.WriteRaw(Environment.NewLine);
-
-									batchSize += doc.SerializedSizeOnDisk;
-									batchDocCount++;
-								});
+							{    
+                                if (!string.IsNullOrWhiteSpace(criteria.KeyStartsWith))
+                                {
+                                    Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                }
+                                else
+                                {
+                                    Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                }
 							}
 
 							if (lastProcessedDocEtag == null)

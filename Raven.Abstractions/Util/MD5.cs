@@ -1,6 +1,7 @@
 //Copyright (c) Microsoft Corporation.  All rights reserved.
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Raven.Abstractions.Util
@@ -73,6 +74,7 @@ namespace Raven.Abstractions.Util
 			return GetHashString(input, new UTF8Encoding());
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static ABCDStruct GetInitialStruct()
         {
             //Initial values defined in RFC 1321
@@ -250,6 +252,7 @@ namespace Raven.Abstractions.Util
 		}
 
 		//Manually unrolling these equations nets us a 20% performance improvement
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static uint r1(uint a, uint b, uint c, uint d, uint x, int s, uint t)
 		{
 			//                  (b + LSR((a + F(b, c, d) + x + t), s))
@@ -257,6 +260,7 @@ namespace Raven.Abstractions.Util
 			return unchecked(b + LSR((a + ((b & c) | ((b ^ 0xFFFFFFFF) & d)) + x + t), s));
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static uint r2(uint a, uint b, uint c, uint d, uint x, int s, uint t)
 		{
 			//                  (b + LSR((a + G(b, c, d) + x + t), s))
@@ -264,6 +268,7 @@ namespace Raven.Abstractions.Util
 			return unchecked(b + LSR((a + ((b & d) | (c & (d ^ 0xFFFFFFFF))) + x + t), s));
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static uint r3(uint a, uint b, uint c, uint d, uint x, int s, uint t)
 		{
 			//                  (b + LSR((a + H(b, c, d) + k + i), s))
@@ -271,6 +276,7 @@ namespace Raven.Abstractions.Util
 			return unchecked(b + LSR((a + (b ^ c ^ d) + x + t), s));
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static uint r4(uint a, uint b, uint c, uint d, uint x, int s, uint t)
 		{
 			//                  (b + LSR((a + I(b, c, d) + k + i), s))
@@ -278,6 +284,7 @@ namespace Raven.Abstractions.Util
 			return unchecked(b + LSR((a + (c ^ (b | (d ^ 0xFFFFFFFF))) + x + t), s));
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		// Implementation of left rotate
 		// s is an int instead of a uint because the CLR requires the argument passed to >>/<< is of 
 		// type int. Doing the demoting inside this function would add overhead.
@@ -286,6 +293,7 @@ namespace Raven.Abstractions.Util
 			return ((i << s) | (i >> (32 - s)));
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		//Convert input array into array of UInts
 		private static uint[] Converter(byte[] input, int ibStart)
 		{

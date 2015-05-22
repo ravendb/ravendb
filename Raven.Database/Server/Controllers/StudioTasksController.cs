@@ -30,6 +30,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Impl.Generators;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
@@ -210,11 +211,11 @@ for(var customFunction in customFunctions) {{
 	    {
             public string SmugglerOptions { get; set; }
 	    }
-        
+
 		[HttpPost]
 		[RavenRoute("studio-tasks/exportDatabase")]
 		[RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
-        public Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
+        public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData smugglerOptionsJson)
 		{
             var requestString = smugglerOptionsJson.SmugglerOptions;
             SmugglerDatabaseOptions smugglerOptions;
@@ -225,7 +226,6 @@ for(var customFunction in customFunctions) {{
                 smugglerOptions = (SmugglerDatabaseOptions)serializer.Deserialize(jsonReader, typeof(SmugglerDatabaseOptions));
 			}
 
-
             var result = GetEmptyMessage();
             
             // create PushStreamContent object that will be called when the output stream will be ready.
@@ -235,7 +235,7 @@ for(var customFunction in customFunctions) {{
 			    {
 				    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
 				    await dataDumper.ExportData(
-                        new SmugglerExportOptions<RavenConnectionStringOptions>
+					    new SmugglerExportOptions<RavenConnectionStringOptions>
 					    {
 						    ToStream = outputStream
 					    }).ConfigureAwait(false);
@@ -244,12 +244,10 @@ for(var customFunction in customFunctions) {{
 			    {
 			        outputStream.Close();
 			    }
-
-				
 			});
 		    
             var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ? 
-		        string.Format("Dump of {0}, {1}", this.DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
+		        string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
 		        smugglerOptions.NoneDefualtFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
@@ -298,7 +296,7 @@ for(var customFunction in customFunctions) {{
                     JsonConvert.DeserializeObject<SqlReplicationConfig>(GetQueryStringValue("sqlReplication"));
 
                 // string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert, out Dictionary<string,object> parameters
-                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
+                var results = task.SimulateSqlReplicationSqlQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
 
                 return GetMessageWithObjectAsTask(new {
                     Results = results,

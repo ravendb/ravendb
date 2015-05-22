@@ -58,7 +58,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (String.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-            var loweredKey = CreateKey(key);
+            var loweredKey = (Slice)CreateKey(key);
 
 			var keyByETagIndice = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag);
 			ushort? version;
@@ -141,7 +141,7 @@ but the attachment itself was found. Data corruption?", key));
 			if (String.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-            var loweredKey = CreateKey(key);
+            var loweredKey = (Slice) CreateKey(key);
 
             if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value))
 			{
@@ -172,7 +172,7 @@ but the attachment itself was found. Data corruption?", key));
 
 		public Attachment GetAttachment(string key)
 		{
-            var loweredKey = CreateKey(key);
+            var loweredKey = (Slice)CreateKey(key);
 
             if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value))
 				return null;
@@ -326,7 +326,7 @@ but the attachment itself was found. Data corruption?", key));
 
 			using (var iter = attachmentsTable.Iterate(Snapshot, writeBatch.Value))
 			{
-				iter.RequiredPrefix = idPrefix.ToLowerInvariant();
+				iter.RequiredPrefix = (Slice)idPrefix.ToLowerInvariant();
 				if (iter.Seek(iter.RequiredPrefix) == false)
 					yield break;
 

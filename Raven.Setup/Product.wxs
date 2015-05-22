@@ -58,6 +58,7 @@
 			<ComponentRef Id='Raven.Abstractions.Service' />
       <ComponentRef Id='PersistServiceValues' />
       <ComponentRef Id ="CopyLicenseFile"/>
+			<ComponentRef Id="NLog.Ignored.Config.File"/>
     </Feature>
 
     <Feature Id='IIS'
@@ -77,6 +78,7 @@
       <ComponentGroupRef Id="IISConfigurationBasedOnNewRavenWebSite" />
       <ComponentRef Id="PersistWebSiteValues" />
       <ComponentRef Id ="CopyLicenseFile"/>
+			<ComponentRef Id="NLog.Ignored.Config.File"/>
     </Feature>
 
     <UIRef Id="InstallerUI" />

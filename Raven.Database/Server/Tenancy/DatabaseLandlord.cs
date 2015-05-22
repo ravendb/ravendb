@@ -28,8 +28,23 @@ namespace Raven.Database.Server.Tenancy
         private const string DATABASES_PREFIX = "Raven/Databases/";
         public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
+		public int MaxIdleTimeForTenantDatabaseInSec { get; private set; }
+		
+		public int FrequencyToCheckForIdleDatabasesInSec { get; private set; }
+
         public DatabasesLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
+			int val;
+			if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
+				val = 900;
+
+	        MaxIdleTimeForTenantDatabaseInSec = val;
+
+			if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
+				val = 60;
+
+	        FrequencyToCheckForIdleDatabasesInSec = val;
+
 			string tempPath = Path.GetTempPath();
 			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
 	        if (File.Exists(fullTempPath))
@@ -383,7 +398,7 @@ namespace Raven.Database.Server.Tenancy
 				ResourcesStoresCache.Set(database.Name, (dbName) =>
 				{
 					var tcs = new TaskCompletionSource<DocumentDatabase>();
-					tcs.SetException(new ObjectDisposedException(dbName, "Database named " + dbName + " is being disposed right now and cannot be accessed.\r\n" +
+					tcs.SetException(new ObjectDisposedException(database.Name, "Database named " + database.Name + " is being disposed right now and cannot be accessed.\r\n" +
 																 "Access will be available when the dispose process will end")
 					{
 						Data =
@@ -391,6 +406,8 @@ namespace Raven.Database.Server.Tenancy
 							{"Raven/KeepInResourceStore", "true"}
 						}
 					});
+					// we need to observe this task exception in case no one is actually looking at it during disposal
+					GC.KeepAlive(tcs.Task.Exception);
 					return tcs.Task;
 				});
 			}

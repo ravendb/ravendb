@@ -84,6 +84,7 @@ namespace Raven.Abstractions.Extensions
 			"Referer",
 			"TE",
 			"User-Agent",
+			"DNT",
 			//Response headers
 			"Accept-Ranges",
 			"Age",

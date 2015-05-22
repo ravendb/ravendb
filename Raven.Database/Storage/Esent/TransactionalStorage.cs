@@ -524,7 +524,7 @@ namespace Raven.Storage.Esent
                         var column = Api.RetrieveColumn(session, details, columnids["id"]);
                         Id = new Guid(column);
                         var schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
-                        if (schemaVersion == SchemaCreator.SchemaVersion)
+                        if (configuration.Storage.PreventSchemaUpdate || schemaVersion == SchemaCreator.SchemaVersion)
                             return tx;
 
                         using (var ticker = new OutputTicker(TimeSpan.FromSeconds(3), () =>

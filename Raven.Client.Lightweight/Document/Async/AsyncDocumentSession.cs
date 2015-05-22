@@ -20,6 +20,7 @@ using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Client.Document.Batches;
 using System.Diagnostics;
+using System.Dynamic;
 
 namespace Raven.Client.Document.Async
 {
@@ -405,8 +406,7 @@ namespace Raven.Client.Document.Async
             var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation, token).ConfigureAwait(false);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
 			queryOperation.DisableEntitiesTracking = true;
-
-			return new QueryYieldStream<T>(this, enumerator, queryOperation, token);
+			return new QueryYieldStream<T>(this, enumerator, queryOperation,query, token);
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
@@ -462,17 +462,21 @@ namespace Raven.Client.Document.Async
 		public class QueryYieldStream<T> : YieldStream<T>
 		{
 			private readonly QueryOperation queryOperation;
+			private IAsyncDocumentQuery<T> query;
 
-			public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation, CancellationToken token = default (CancellationToken))
+			public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation, IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
 				: base(parent, enumerator, token)
 			{
 				this.queryOperation = queryOperation;
+				this.query = query;
 			}
 
 			protected override void SetCurrent()
 			{
-				var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
+			    var ravenJObject = enumerator.Current;
+			    query.InvokeAfterStreamExecuted(ref ravenJObject);
 
+				var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata);
 				string key = null;
 				Etag etag = null;
 				if (meta != null)
@@ -485,7 +489,7 @@ namespace Raven.Client.Document.Async
 
 				Current = new StreamResult<T>
 				{
-					Document = queryOperation.Deserialize<T>(enumerator.Current),
+					Document = queryOperation.Deserialize<T>(ravenJObject),
 					Etag = etag,
 					Key = key,
 					Metadata = meta
@@ -503,7 +507,6 @@ namespace Raven.Client.Document.Async
 			protected override void SetCurrent()
 			{
 				var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
-
 				Current = new StreamResult<T>
 				{
 					Document = (T)parent.ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),
@@ -973,5 +976,44 @@ namespace Raven.Client.Document.Async
 			RefreshInternal(entity, jsonDocument, value);
 		}
 
+		public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
+		{
+			 var metadata = await GetDocumentMetadataAsync(instance);
+			return metadata.Metadata;
+		}
+		private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
+			{
+				string id;
+				if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
+					|| (instance is IDynamicMetaObjectProvider &&
+					   GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
+				{
+					AssertNoNonUniqueInstance(instance, id);
+
+					var jsonDocument = await GetJsonDocumentAsync(id);
+
+					value =  GetDocumentMetadataValue(instance, id, jsonDocument);
+				}
+				else
+				{
+					throw new InvalidOperationException("Could not find the document key for " + instance);
+				}
+			}
+			return value;
+		}
+
+		/// <summary>
+		/// Get the json document by key from the store
+		/// </summary>
+		public async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
+		{
+			var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey);
+			if (jsonDocument == null)
+				throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+			return jsonDocument;
+		}
 	}
 }

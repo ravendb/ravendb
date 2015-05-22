@@ -67,6 +67,13 @@ namespace Raven.Database.Server.Controllers
 				writer.WritePropertyName("Results");
 				writer.WriteStartArray();
 
+                Action<JsonDocument> addDocument = doc =>
+                {
+                    timeout.Delay();
+                    doc.ToJson().WriteTo(writer);
+                    writer.WriteRaw(Environment.NewLine);
+                };
+
 				Database.TransactionalStorage.Batch(accessor =>
 				{
 					// we may be sending a LOT of documents to the user, and most 
@@ -75,22 +82,14 @@ namespace Raven.Database.Server.Controllers
 					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 					{
 						if (string.IsNullOrEmpty(startsWith))
-							Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, doc =>
-							{
-								timeout.Delay();
-								doc.ToJson().WriteTo(writer);
-                                writer.WriteRaw(Environment.NewLine);
-							});
+                        {
+                            Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, addDocument);
+                        }
 						else
 						{
 							var nextPageStartInternal = nextPageStart;
 
-							Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, doc =>
-							{
-								timeout.Delay();
-								doc.WriteTo(writer);
-                                writer.WriteRaw(Environment.NewLine);
-							},skipAfter: skipAfter);
+							Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, skipAfter: skipAfter);
 
 							nextPageStart = nextPageStartInternal;
 						}
@@ -135,7 +134,7 @@ namespace Raven.Database.Server.Controllers
 				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
 				msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.GetDefaultRavenFormat());
 
-                if ( IsCsvDownloadRequest(InnerRequest))
+                if (IsCsvDownloadRequest(InnerRequest))
 				{
 					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
 				}
@@ -180,9 +179,9 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-			{
-				using (queryOp)
-				using (accessor)
+			{							
+				using(queryOp)
+				using(accessor)
 				using(_timeout)
 				using (var writer = GetOutputWriter(req, stream))
 				{

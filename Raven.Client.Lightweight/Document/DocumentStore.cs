@@ -319,7 +319,7 @@ namespace Raven.Client.Document
 				var session = new DocumentSession(options.Database, this, Listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
 					{
-						DatabaseName = options.Database ?? DefaultDatabase
+						DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
 					};
 				AfterSessionCreated(session);
 				return session;
@@ -368,7 +368,7 @@ namespace Raven.Client.Document
 
 			AssertValidConfiguration();
 
-		    jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler, Conventions.AcceptGzipContent);
+		    jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, Conventions.AcceptGzipContent);
 
 		    try
 			{
@@ -684,10 +684,11 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(Url))
 				throw new InvalidOperationException("Changes API requires usage of server/client");
 
-			database = database ?? DefaultDatabase;
+			database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
 
 			var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-			if (string.IsNullOrEmpty(database) == false)
+			if (string.IsNullOrEmpty(database) == false &&
+			    string.Equals(database, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
 			using (NoSynchronizationContext.Scope())
@@ -765,7 +766,7 @@ namespace Raven.Client.Document
 
 				var session = new AsyncDocumentSession(options.Database, this, asyncDatabaseCommands, Listeners, sessionId)
 				{
-					DatabaseName = options.Database ?? DefaultDatabase
+					DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
 				};
 				AfterSessionCreated(session);
 				return session;
@@ -797,7 +798,7 @@ namespace Raven.Client.Document
 			});
 		}
 
-		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
+		public override IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
 			return OpenAsyncSessionInternal(options);
 		}
@@ -820,7 +821,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public HttpMessageHandler HttpMessageHandler { get; set; }
+		public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
 
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
@@ -831,9 +832,9 @@ namespace Raven.Client.Document
 		{
 			if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
 			{
-				var databaseName = session.DatabaseName;
-				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
-					_ => new EvictItemsFromCacheBasedOnChanges(databaseName ?? Constants.SystemDatabase,
+				var databaseName = session.DatabaseName ?? Constants.SystemDatabase;
+				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ,
+					_ => new EvictItemsFromCacheBasedOnChanges(databaseName,
 						Changes(databaseName),
 						jsonRequestFactory.ExpireItemsFromCache));
 			}
@@ -843,7 +844,8 @@ namespace Raven.Client.Document
 
 		public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
 		{
-			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? DefaultDatabase);
+			var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.SystemDatabase;
+			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
             return changes == null ? new CompletedTask() : changes.ConnectionTask;
 		}

@@ -23,6 +23,7 @@ class recentErrors extends dialogViewModelBase {
 
     clear() {
         this.errors.removeAll();
+        dialog.close(this);
     }
 
     close() {

@@ -64,6 +64,8 @@
     <Compile Include="Exceptions\InvalidJournalFlushRequest.cs" />
     <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
     <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
+    <Compile Include="Util\Comparers.cs" />
+    <Compile Include="Util\Hashing.cs" />
     <Compile Include="Impl\Backup\MinimalIncrementalBackup.cs" />
     <Compile Include="Impl\Compaction\StorageCompaction.cs" />
     <Compile Include="Impl\PagePosition.cs" />
@@ -91,7 +93,8 @@
     <Compile Include="Platform\Win32\Win32Helper.cs" />
     <Compile Include="PrefixComparisonCache.cs" />
     <Compile Include="PrefixedSlice.cs" />
-    <Compile Include="SliceComparisonMethods.cs" />
+    <Compile Include="PrefixedSliceComparisonMethods.cs" />
+    <Compile Include="SliceComparer.cs" />
     <Compile Include="SliceWriter.cs" />
     <Compile Include="StructReadResult.cs" />
     <Compile Include="Structure.cs" />
@@ -128,7 +131,6 @@
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferPool.cs" />
-    <Compile Include="Impl\SliceEqualityComparer.cs" />
     <Compile Include="Impl\SnapshotReader.cs" />
     <Compile Include="Impl\TransactionMergingWriter.cs" />
     <Compile Include="Impl\TreeAndSliceComparer.cs" />
@@ -173,7 +175,6 @@
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
-    <Compile Include="Util\SkipList.cs" />
     <Compile Include="Util\Utils.cs" />
     <Compile Include="Util\PageTable.cs" />
     <Compile Include="ValueReader.cs" />

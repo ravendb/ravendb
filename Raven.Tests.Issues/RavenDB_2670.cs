@@ -64,7 +64,7 @@ namespace Raven.Tests.Issues
 
 				new Products_ByName().Execute(store.DatabaseCommands.ForDatabase("Northwind"), store.Conventions);
 
-				WaitForIndexing(store, db: "Northwind");
+				WaitForIndexing(store, database: "Northwind");
 
 				using (var session = store.OpenSession("Northwind"))
 				{

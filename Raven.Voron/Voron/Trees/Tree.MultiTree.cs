@@ -40,7 +40,7 @@ namespace Voron.Trees
 		public void MultiAdd(Slice key, Slice value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
-			int maxNodeSize = _tx.DataPager.MaxNodeSize;
+			int maxNodeSize = AbstractPager.NodeMaxSize;
 			if (value.Size > maxNodeSize)
 				throw new ArgumentException(
 					"Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", "value");
@@ -58,7 +58,7 @@ namespace Voron.Trees
 				return;
 			}
 
-			page = _tx.ModifyPage(page.PageNumber, page);
+			page = _tx.ModifyPage(page.PageNumber, this, page);
 			var item = page.GetNode(page.LastSearchPosition);
 
 			// already was turned into a multi tree, not much to do here
@@ -72,7 +72,7 @@ namespace Voron.Trees
 			byte* nestedPagePtr;
 			if (item->Flags == NodeFlags.PageRef)
 			{
-				var overFlowPage = _tx.ModifyPage(item->PageNumber, null);
+				var overFlowPage = _tx.ModifyPage(item->PageNumber, this ,null);
 				nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
 			}
 			else
@@ -223,7 +223,7 @@ namespace Voron.Trees
 				return; //nothing to delete - key not found
 			}
 
-			page = _tx.ModifyPage(page.PageNumber, page);
+			page = _tx.ModifyPage(page.PageNumber, this, page);
 
 			var item = page.GetNode(page.LastSearchPosition);
 
@@ -252,7 +252,7 @@ namespace Voron.Trees
 				byte* nestedPagePtr;
 				if (item->Flags == NodeFlags.PageRef)
 				{
-					var overFlowPage = _tx.ModifyPage(item->PageNumber, null);
+					var overFlowPage = _tx.ModifyPage(item->PageNumber, this, null);
 					nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
 				}
 				else

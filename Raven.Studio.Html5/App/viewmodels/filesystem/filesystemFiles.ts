@@ -17,13 +17,18 @@ import folder = require("models/filesystem/folder");
 import uploadItem = require("models/uploadItem");
 import fileUploadBindingHandler = require("common/fileUploadBindingHandler");
 import uploadQueueHelper = require("common/uploadQueueHelper");
+import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFilesMatchingQueryConfirm");
+import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
+import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
+import filesystemEditFile = require("viewmodels/filesystem/filesystemEditFile");
+import filerenamedialog = require("viewmodels/filesystem/filerenamedialog");
+import renameFileCommand = require("commands/filesystem/renameFileCommand");
 
 class filesystemFiles extends viewModelBase {
 
     static revisionsFolderId = "/$$revisions$$";
 
     appUrls: computedAppUrls;
-    fileName = ko.observable<file>();
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
     selectedFilesText: KnockoutComputed<string>;
@@ -38,7 +43,7 @@ class filesystemFiles extends viewModelBase {
     folderNotificationSubscriptions = {};
     hasAnyFilesSelected: KnockoutComputed<boolean>;
     hasAllFilesSelected: KnockoutComputed<boolean>;
-
+     //id = ko.observable<string)>(); 
     inRevisionsFolder = ko.observable<boolean>(false);
 
     private activeFilesystemSubscription: any;
@@ -124,65 +129,68 @@ class filesystemFiles extends viewModelBase {
                         return;
                     switch (e.Action) {
 
-                        case "Add": {
-                            var eventFolder = folder.getFolderFromFilePath(e.File);
+                    case "Add":
+                    {
+                        var eventFolder = folder.getFolderFromFilePath(e.File);
 
-                            if (!eventFolder || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
-                                return;
-                            }
+                        if (!eventFolder || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
+                            return;
+                        }
 
-                            //check if the file is new at the folder level to add it
-                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                this.loadFiles();
+                        //check if the file is new at the folder level to add it
+                        if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                            this.loadFiles();
+                        } else {
+                            //check if a new folder at this level was added so we add it to the tree
+                            var subPaths = eventFolder.getSubpathsFrom(callbackFolder.path);
+                            if (subPaths.length > 1 && !treeBindingHandler.nodeExists(filesystemFiles.treeSelector, subPaths[1].path)) {
+                                var newNode = {
+                                    key: subPaths[1].path,
+                                    title: subPaths[1].name,
+                                    isLazy: true,
+                                    isFolder: true,
+                                };
+                                this.addedFolder(newNode);
                             }
-                            else {
-                                //check if a new folder at this level was added so we add it to the tree
-                                var subPaths = eventFolder.getSubpathsFrom(callbackFolder.path);
-                                if (subPaths.length > 1 && !treeBindingHandler.nodeExists(filesystemFiles.treeSelector, subPaths[1].path)) {
-                                    var newNode = {
-                                        key: subPaths[1].path,
-                                        title: subPaths[1].name,
-                                        isLazy: true,
-                                        isFolder: true,
-                                    };
-                                    this.addedFolder(newNode);
-                                }
-                            }
+                        }
 
-                            break;
-                        }
-                        case "Delete": {
-                            var eventFolder = folder.getFolderFromFilePath(e.File);
+                        break;
+                    }
+                    case "Delete":
+                    {
+                        var eventFolder = folder.getFolderFromFilePath(e.File);
 
-                            //check if the file is new at the folder level to remove it from the table
-                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                this.loadFiles();
-                            }
-                            else {
-                                //reload node and its children
-                                treeBindingHandler.reloadNode(filesystemFiles.treeSelector, callbackFolder.path);
-                            }
-                            break;
+                        //check if the file is new at the folder level to remove it from the table
+                        if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                            this.loadFiles();
+                        } else {
+                            //reload node and its children
+                            treeBindingHandler.reloadNode(filesystemFiles.treeSelector, callbackFolder.path);
                         }
-                        case "Renaming": {
-                            //nothing to do here
+                        break;
+                    }
+                    case "Renaming":
+                    {
+                        //nothing to do here
+                    }
+                    case "Renamed":
+                    {
+                        //reload files to load the new names
+                        if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                            this.loadFiles();
                         }
-                        case "Renamed": {
-                            //reload files to load the new names
-                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                this.loadFiles();
-                            }
-                            break;
+                        break;
+                    }
+                    case "Update":
+                    {
+                        //check if the file is new at the folder level to add it
+                        if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                            this.loadFiles();
                         }
-                        case "Update": {
-                            //check if the file is new at the folder level to add it
-                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                this.loadFiles();
-                            }
-                            break;
-                        }
-                        default:
-                            console.error("unknown notification action");
+                        break;
+                    }
+                    default:
+                        console.error("unknown notification action");
                     }
                 });
         }
@@ -190,7 +198,7 @@ class filesystemFiles extends viewModelBase {
 
     createPagedList(directory): pagedList {
         var fetcher;
-        if (directory == filesystemFiles.revisionsFolderId) { 
+        if (directory === filesystemFiles.revisionsFolderId) {
             fetcher = (skip: number, take: number) => this.fetchRevisions(skip, take);
         } else {
             fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
@@ -201,7 +209,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), directory, skip, take).execute();
+        var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), this.escapeQueryString(directory), skip, take).execute();
         return task;
     }
 
@@ -215,6 +223,7 @@ class filesystemFiles extends viewModelBase {
             this.loadFiles();
         }
     }
+
     editSelectedFile() {
         var grid = this.getFilesGrid();
         if (grid) {
@@ -282,6 +291,26 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
+    renameSelectedFile() {
+
+        var grid = this.getFilesGrid();
+        if (grid) {
+            var selectedItem = <file>grid.getSelectedItems(1).first();
+            var currentFileName = selectedItem.getId();
+            var dialog = new filerenamedialog(currentFileName, this.activeFilesystem());
+            dialog.onExit().done((newName: string) => {
+                var currentFilesystemName = this.activeFilesystem().name;
+                var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
+                if (recentFilesForCurFilesystem) {
+                    recentFilesForCurFilesystem.recentFiles.remove(currentFileName);
+                }
+                selectedItem.setId(newName);
+                grid.refreshCollectionData();
+            });
+            app.showDialog(dialog);
+        }
+    }
+
     clearUploadQueue() {
         window.localStorage.removeItem(uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name);
         this.uploadQueue.removeAll();
@@ -341,6 +370,41 @@ class filesystemFiles extends viewModelBase {
         $(filesystemFiles.uploadQueueSelector).addClass("hidden");
         $(filesystemFiles.uploadQueuePanelCollapsedSelector).removeClass("hidden");
         $(".upload-queue").addClass("upload-queue-min");
+    }
+
+	deleteFolder() {
+		if (!this.selectedFolder()) {
+			// delete all files from filesystem
+			new getFileSystemStatsCommand(this.activeFilesystem())
+				.execute()
+				.done((fs: filesystemStatisticsDto) => {
+					this.promptDeleteFilesMatchingQuery(fs.FileCount, "");
+				});
+		} else {
+			// Run the query so that we have an idea of what we'll be deleting.
+			var query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
+			new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
+				.execute()
+				.done((results: pagedResultSet) => {
+				if (results.totalResultCount === 0) {
+					app.showMessage("There are no files matching your query.", "Nothing to do");
+				} else {
+					this.promptDeleteFilesMatchingQuery(results.totalResultCount, query);
+				}
+			});
+		}
+	}
+
+	private escapeQueryString(query: string): string {
+		if (!query) return null;
+        return query.replace(/([ \-\_\.])/g, '\\$1');
+    }
+
+	promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
+        var viewModel = new deleteFilesMatchingQueryConfirm(query, resultCount, this.activeFilesystem());
+        app
+            .showDialog(viewModel)
+            .done(() => this.loadFiles());
     }
 }
 

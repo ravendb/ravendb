@@ -17,6 +17,7 @@ class fileRenameDialog extends dialogViewModelBase {
     }
 
     cancel() {
+        this.nextTask.reject();
         dialog.close(this);
     }
 

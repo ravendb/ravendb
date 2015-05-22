@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Database.Indexing.Sorting.Custom;
 

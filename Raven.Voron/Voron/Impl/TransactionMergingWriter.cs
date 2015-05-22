@@ -71,15 +71,6 @@ namespace Voron.Impl
 			}
 		}
 
-		private IEnumerable<WriteBatch.BatchOperation> GetBatchOperations(OutstandingWrite write)
-		{
-			var trees = write.Trees.ToList();
-
-			var operations = new List<WriteBatch.BatchOperation>();
-			trees.ForEach(tree => operations.AddRange(write.GetOperations(tree)));
-			return operations.Where(x => x != null);
-		}
-
 		private void EnsureValidBackgroundTaskState()
 		{
 			var backgroundTask = _backgroundTask.Value;
@@ -330,7 +321,7 @@ namespace Voron.Impl
 			private Exception _exception;
 			private readonly ManualResetEventSlim _completed;
 
-			private readonly Dictionary<string, List<WriteBatch.BatchOperation>> _operations = new Dictionary<string, List<WriteBatch.BatchOperation>>(); 
+			private readonly Dictionary<string, List<WriteBatch.BatchOperation>> _operations; 
 
 			public OutstandingWrite(WriteBatch batch, TransactionMergingWriter transactionMergingWriter)
 			{

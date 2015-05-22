@@ -11,6 +11,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 
@@ -37,6 +38,13 @@ namespace Raven.Database.Indexing
 		private int currentNumberOfWrites;
 
 	    private readonly IndexWriter.IndexReaderWarmer _indexReaderWarmer;
+
+		private int changesSinceCommit;
+
+		private readonly Field forceCommitField = new Field("__dummy_force_index_write", "forced", Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
+        private readonly Term forceCommitTerm = new Term("__dummy_force_index_write", "forced");
+		private readonly Document forceCommitDoc;
+		private DateTime lastCommitDataStoreTime;
 
 		public Directory Directory
 		{
@@ -69,6 +77,9 @@ namespace Raven.Database.Indexing
 		    _indexReaderWarmer = indexReaderWarmer;
 			this.maximumNumberOfWritesBeforeRecreate = maximumNumberOfWritesBeforeRecreate;
 
+			forceCommitDoc = new Document();
+			forceCommitDoc.Add(forceCommitField);
+
 			RecreateIfNecessary(force: true);
 		}
 
@@ -76,12 +87,14 @@ namespace Raven.Database.Indexing
 		{
 			indexWriter.AddDocument(doc);
 			currentNumberOfWrites++;
+			changesSinceCommit++;
 		}
 
 		public void AddDocument(Document doc, Analyzer a)
 		{
 			indexWriter.AddDocument(doc, a);
 			currentNumberOfWrites++;
+			changesSinceCommit++;
 		}
 
 		public void DeleteDocuments(Term term)
@@ -89,6 +102,7 @@ namespace Raven.Database.Indexing
 			indexWriter.DeleteDocuments(term);
 
 			currentNumberOfWrites += 2; // deletes are more expensive than additions
+			changesSinceCommit++;
 		}
 
 		public void DeleteDocuments(Term[] terms)
@@ -96,6 +110,7 @@ namespace Raven.Database.Indexing
 			indexWriter.DeleteDocuments(terms);
 
 			currentNumberOfWrites += terms.Length*2; // deletes are more expensive than writes
+			changesSinceCommit++;
 		}
 
 		public IndexReader GetReader()
@@ -110,12 +125,28 @@ namespace Raven.Database.Indexing
 				                 { "Marker", CommitMarker.ToString(CultureInfo.InvariantCulture) }
 			                 };
 
+			var commitDataStored = false;
+
+			if (changesSinceCommit == 0 && SystemTime.UtcNow - lastCommitDataStoreTime > TimeSpan.FromMinutes(10))
+			{
+				ForceCommitDataStore();
+				commitDataStored = true;
+			}
+			else if (changesSinceCommit > 0)
+				commitDataStored = true;
+
+
 			if (lastEtag != null)
 				commitData.Add("LastEtag", lastEtag);
 
 			try
 			{
 				indexWriter.Commit(commitData);
+
+				if (commitDataStored)
+					lastCommitDataStoreTime = SystemTime.UtcNow;
+
+				changesSinceCommit = 0;
 			}
 			catch (SystemException e)
 			{
@@ -124,8 +155,14 @@ namespace Raven.Database.Indexing
 
 				throw;
 			}
-			
+
 			RecreateIfNecessary(force: false);
+		}
+
+		private void ForceCommitDataStore()
+		{
+			indexWriter.AddDocument(forceCommitDoc);
+			indexWriter.DeleteDocuments(forceCommitTerm);
 		}
 
 		public long RamSizeInBytes()

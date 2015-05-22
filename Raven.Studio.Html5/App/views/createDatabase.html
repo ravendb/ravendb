@@ -14,14 +14,17 @@
             </div>
             <div id="dbAdvancedOptions" class="panel-collapse collapse">
                 <div class="panel-body">
-                    <div class="form-group">
-                        <label for="storageEngine">Storage Engine</label>
-                        <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
-                            <option value="">Default</option>
-                            <option value="esent">Esent</option>
-                            <option value="voron">Voron</option>
-                        </select>
-                    </div>
+	                <div class="form-group">
+		                <label for="storageEngine">Storage Engine</label>
+		                <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
+			                <option value="">Default</option>
+			                <option value="esent">Esent</option>
+			                <option value="voron">Voron</option>
+		                </select>
+	                </div>
+					<div class="alert alert-danger" role="alert" data-bind="visible: voronWarningVisible">
+						Running Voron in 32-bit mode is error prone. Set Raven/Voron/AllowOn32Bits in configuration to allow Voron on 32-bit.
+					</div>
                     <div class="form-group">
                         <label for="databasePath">Path</label>
                         <input data-bind="value: databasePath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + databaseName() }" type="text" class="form-control" id="databasePath" autocomplete="off">

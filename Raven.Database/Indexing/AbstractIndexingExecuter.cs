@@ -19,7 +19,7 @@ namespace Raven.Database.Indexing
     {
         protected WorkContext context;
 
-	    private readonly IndexReplacer indexReplacer;
+	    protected readonly IndexReplacer indexReplacer;
 
 	    protected TaskScheduler scheduler;
         protected static readonly ILog Log = LogManager.GetCurrentClassLogger();

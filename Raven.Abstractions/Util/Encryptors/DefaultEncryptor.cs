@@ -20,6 +20,10 @@ namespace Raven.Abstractions.Util.Encryptors
 
 		public class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
 		{
+            private ObjectPool<MD5> md5Pool = new ObjectPool<MD5>(() => MD5.Create());
+            private ObjectPool<SHA1> sha1Pool = new ObjectPool<SHA1>(() => SHA1.Create());
+            private ObjectPool<SHA256> sha256Pool = new ObjectPool<SHA256>(() => SHA256.Create());
+
 			public DefaultHashEncryptor()
 				: this(true)
 			{
@@ -32,10 +36,7 @@ namespace Raven.Abstractions.Util.Encryptors
 
 			public int StorageHashSize
 			{
-				get
-				{
-					return 32;
-				}
+				get { return 32; }
 			}
 
 			private MD5 md5;
@@ -69,45 +70,128 @@ namespace Raven.Abstractions.Util.Encryptors
 
 			public byte[] ComputeForStorage(byte[] bytes)
 			{
-				return ComputeHash(SHA256.Create(), bytes);
+                SHA256 algorithm = null;
+                try
+                {
+                    algorithm = this.sha256Pool.Get();
+                    return ComputeHashInternal(algorithm, bytes);
+                }
+                finally
+                {
+                    if (algorithm != null)
+                        this.sha256Pool.Put(algorithm);
+                }                
 			}
 
 			public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
 			{
-				return ComputeHash(SHA256.Create(), bytes, offset, length);
+                SHA256 algorithm = null;
+                try
+                {
+                    algorithm = this.sha256Pool.Get();
+                    return ComputeHashInternal(algorithm, bytes, offset, length);
+                }
+                finally
+                {
+                    if (algorithm != null)
+                        this.sha256Pool.Put(algorithm);
+                }
 			}
 
 			public byte[] ComputeForOAuth(byte[] bytes)
 			{
-				return ComputeHash(SHA1.Create(), bytes);
+                SHA1 algorithm = null;
+                try
+                {
+                    algorithm = this.sha1Pool.Get();
+                    return ComputeHashInternal(algorithm, bytes);
+                }
+                finally
+                {
+                    if (algorithm != null)
+                        this.sha1Pool.Put(algorithm);
+                }
 			}
 
 			public byte[] Compute16(byte[] bytes)
 			{
-				return ComputeHash(MD5.Create(), bytes);
+                if (bytes.Length < 512)
+                    return MD5Core.GetHash(bytes);
+
+                MD5 algorithm = null;
+                try
+                {
+                    algorithm = this.md5Pool.Get();
+                    return ComputeHashInternal(algorithm, bytes);
+                }
+                finally
+                {
+                    if (algorithm != null)
+                        this.md5Pool.Put(algorithm);
+                }
 			}
 
-			public byte[] Compute16(Stream stream)
+            public byte[] Compute16(Stream stream)
 			{
-				using (var hasher = MD5.Create())
-				{
-					return hasher.ComputeHash(stream);
-				}
+                MD5 algorithm = null;
+                try
+                {
+                    algorithm = this.md5Pool.Get();
+                    return algorithm.ComputeHash(stream);
+                }
+                finally
+                {
+                    if (algorithm != null)
+                        this.md5Pool.Put(algorithm);
+                }
 			}
 
 			public byte[] Compute16(byte[] bytes, int offset, int length)
 			{
-				return ComputeHash(MD5.Create(), bytes, offset, length);
+                if (bytes.Length < 512)
+                    return MD5Core.GetHash(bytes, offset, length);
+
+                MD5 algorithm = null;
+                try
+                {
+                    algorithm = this.md5Pool.Get();
+                    return ComputeHashInternal(algorithm, bytes, offset, length);
+                }
+                finally
+                {
+                    if (algorithm != null)
+                        this.md5Pool.Put(algorithm);
+                }
 			}
 
 			public byte[] Compute20(byte[] bytes)
 			{
-				return ComputeHash(SHA1.Create(), bytes);
+                SHA1 algorithm = null;
+                try
+                {
+                    algorithm = this.sha1Pool.Get();
+                    return ComputeHashInternal(algorithm, bytes);
+                }
+                finally
+                {
+                    if (algorithm != null)
+                        this.sha1Pool.Put(algorithm);
+                }
 			}
 
 			public byte[] Compute20(byte[] bytes, int offset, int length)
 			{
-				return ComputeHash(SHA1.Create(), bytes, offset, length);
+                SHA1 algorithm = null;
+                try
+                {
+                    algorithm = this.sha1Pool.Get();
+                    return ComputeHashInternal(algorithm, bytes, offset, length);
+                }
+                finally
+                {
+                    if (algorithm != null)
+                        this.sha1Pool.Put(algorithm);
+                }
 			}
 		}
 	}

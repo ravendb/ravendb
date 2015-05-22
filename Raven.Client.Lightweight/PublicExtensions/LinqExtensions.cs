@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Document.Async;
 using Raven.Client.Document.Batches;
 using Raven.Client.Linq;
 
@@ -194,6 +195,25 @@ namespace Raven.Client
 			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
 			return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
 		}
+
+
+
+        /// <summary>
+        /// LazilyAsync Query the facets results for this query using the specified facet document with the given start and pageSize
+        /// </summary>
+        /// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        public static Lazy<Task<FacetResults>> ToFacetsLazyAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
+        {
+            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            var query = ravenQueryInspector.GetIndexQuery(true);
+
+            var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.AsyncIndexQueried, facetSetupDoc, query, start, pageSize);
+
+            var documentSession = ((AsyncDocumentSession)ravenQueryInspector.Session);
+            return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+        }
 
         /// <summary>
         /// Lazily Query the facets results for this query using the specified list of facets with the given start and pageSize

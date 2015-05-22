@@ -16,6 +16,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 
 namespace Raven.Client.Shard
@@ -128,6 +129,14 @@ namespace Raven.Client.Shard
 		public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
 			return OpenAsyncSessionInternal(databaseName, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(databaseName)));
+		}
+
+		/// <summary>
+		/// Opens the async session with the specified options.
+		/// </summary>
+		public override IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
+		{
+			return OpenAsyncSessionInternal(sessionOptions.Database, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(sessionOptions.Database).With(sessionOptions.Credentials)));
 		}
 
 		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName,Dictionary<string, IAsyncDatabaseCommands> shardDbCommands)
@@ -303,7 +312,26 @@ namespace Raven.Client.Shard
 			try
 			{
 				ShardStrategy.Shards.ForEach(shard => shard.Value.Initialize());
-				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
+
+                var shardsPointingToSameDb = ShardStrategy.Shards
+                    .GroupBy(x =>
+                    {
+                        try
+                        {
+                            return x.Value.DatabaseCommands.GetStatistics().DatabaseId;
+                        }
+                        catch (Exception)
+                        {
+                            return Guid.NewGuid();// we'll just ignore any connection erros here
+                        }
+                    }).FirstOrDefault(x => x.Count() > 1);
+
+
+			    if (shardsPointingToSameDb != null)
+			        throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.",
+			            string.Join(", ", shardsPointingToSameDb.Select(x => x.Key))));
+
+                if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new ShardedHiloKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKey(commands, Conventions, entity);

@@ -190,30 +190,30 @@ namespace Voron
 			var prefixedSlice = other as PrefixedSlice;
 
 			if (prefixedSlice != null)
-				return SliceComparisonMethods.Compare(this, prefixedSlice, MemoryUtils.MemoryComparerInstance, size);
+				return PrefixedSliceComparisonMethods.Compare(this, prefixedSlice, MemoryUtils.MemoryComparerInstance, size);
 
 			var slice = other as Slice;
 
 			if (slice != null)
 			{
-				return SliceComparisonMethods.Compare(slice, this, MemoryUtils.MemoryComparerInstance, size) * -1;
+				return PrefixedSliceComparisonMethods.Compare(slice, this, MemoryUtils.MemoryComparerInstance, size) * -1;
 			}
 
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
 		}
 
-		protected override int CompareData(MemorySlice other, SliceComparer cmp, ushort size)
+		protected override int CompareData(MemorySlice other, PrefixedSliceComparer cmp, ushort size)
 		{
 			var prefixedSlice = other as PrefixedSlice;
 
 			if (prefixedSlice != null)
-				return SliceComparisonMethods.Compare(this, prefixedSlice, cmp, size);
+				return PrefixedSliceComparisonMethods.Compare(this, prefixedSlice, cmp, size);
 
 			var slice = other as Slice;
 
 			if (slice != null)
 			{
-				return SliceComparisonMethods.Compare(slice, this, cmp, size) * -1;
+				return PrefixedSliceComparisonMethods.Compare(slice, this, cmp, size) * -1;
 			}
 
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());

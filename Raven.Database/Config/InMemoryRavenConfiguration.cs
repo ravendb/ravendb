@@ -51,6 +51,8 @@ namespace Raven.Database.Config
 
 		public IndexingConfiguration Indexing { get; set; }
 
+		public WebSocketsConfiguration WebSockets { get; set; }
+
 		public InMemoryRavenConfiguration()
 		{
 			Replication = new ReplicationConfiguration();
@@ -59,6 +61,7 @@ namespace Raven.Database.Config
             FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
+			WebSockets = new WebSocketsConfiguration();
 
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -100,7 +103,10 @@ namespace Raven.Database.Config
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
 
+			AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
+
 			IndexAndTransformerReplicationLatencyInSec = ravenSettings.IndexAndTransformerReplicationLatencyInSec.Value;
+
 			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
 
 			// Important! this value is synchronized with the max sessions number in esent
@@ -137,6 +143,7 @@ namespace Raven.Database.Config
 
 			MaxStepsForScript = ravenSettings.MaxStepsForScript.Value;
 			AdditionalStepsForScriptBasedOnDocumentSize = ravenSettings.AdditionalStepsForScriptBasedOnDocumentSize.Value;
+		    TurnOffDiscoveryClient = ravenSettings.TurnOffDiscoveryClient.Value;
 
 			// Index settings
 			MaxProcessingRunLatency = ravenSettings.MaxProcessingRunLatency.Value;
@@ -278,9 +285,10 @@ namespace Raven.Database.Config
 			Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
 			Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
 			Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
+			Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
 
 			Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
-
+		    Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
@@ -306,6 +314,8 @@ namespace Raven.Database.Config
 
 			IgnoreSslCertificateErrors = GetIgnoreSslCertificateErrorModeMode();
 
+			WebSockets.InitialBufferPoolSize = ravenSettings.WebSockets.InitialBufferPoolSize.Value;
+
 			PostInit();
 
 			return this;
@@ -330,6 +340,8 @@ namespace Raven.Database.Config
 		public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
 
 	    public int IndexAndTransformerReplicationLatencyInSec { get; internal set; }
+
+		public bool AllowScriptsToAdjustNumberOfSteps { get; set; }
 
 		/// <summary>
 		/// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
@@ -974,6 +986,11 @@ namespace Raven.Database.Config
 		/// </summary>
 		public bool DisableClusterDiscovery { get; set; }
 
+        /// <summary>
+        /// If True, turns off the discovery client.
+        /// </summary>
+        public bool TurnOffDiscoveryClient { get; set; }
+
 		/// <summary>
 		/// The server name
 		/// </summary>
@@ -1050,6 +1067,7 @@ namespace Raven.Database.Config
         ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
         /// </summary>
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
+
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -1249,6 +1267,7 @@ namespace Raven.Database.Config
 				Voron = new VoronConfiguration();
 				Esent = new EsentConfiguration();
 	        }
+            public bool PreventSchemaUpdate { get; set; }
 
 			public VoronConfiguration Voron { get; private set; }
 
@@ -1291,6 +1310,11 @@ namespace Raven.Database.Config
 				public string TempPath { get; set; }
 
 				public string JournalsStoragePath { get; set; }
+
+				/// <summary>
+				/// Whether to allow Voron to run in 32 bits process.
+				/// </summary>
+				public bool AllowOn32Bits { get; set; }
 			}
 		}
 
@@ -1398,6 +1422,11 @@ namespace Raven.Database.Config
 		public class IndexingConfiguration
 		{
 			public int MaxNumberOfItemsToProcessInTestIndexes { get; set; }
+		}
+
+		public class WebSocketsConfiguration
+		{
+			public int InitialBufferPoolSize { get; set; }
 		}
 
 		public void UpdateDataDirForLegacySystemDb()

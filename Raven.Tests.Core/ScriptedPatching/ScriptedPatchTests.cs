@@ -10,6 +10,7 @@ namespace Raven.Tests.Core.ScriptedPatching
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/MaxStepsForScript"] = "5000";
+			configuration.Settings[Constants.AllowScriptsToAdjustNumberOfSteps] = "true";
 		}
 
 		public class Foo
@@ -28,6 +29,45 @@ namespace Raven.Tests.Core.ScriptedPatching
 			public string Id { get; set; }
 
 			public string LastName { get; set; }
+		}
+
+		[Fact]
+		public void Max_script_steps_can_be_increased_from_inside_script()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				var foo = new Foo
+				{
+					BarId = "bar/1",
+					FirstName = "Joe"
+				};
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Bar
+					{
+						Id = "bar/1",
+						LastName = "Doe"
+					});
+
+					session.Store(foo);
+					session.SaveChanges();
+				}
+
+				Assert.Throws<ErrorResponseException>(() =>
+				{
+					store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+					{
+						Script = @"for(var i = 0;i < 7500;i++){}"
+					});
+				});
+
+				Assert.DoesNotThrow(() =>
+				 store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+				 {
+					 Script = @"IncreaseNumberOfAllowedStepsBy(4500); for(var i = 0;i < 7500;i++){}"
+				 }));
+			}			
 		}
 
 		[Fact]

@@ -59,6 +59,8 @@ task Compile -depends Init, CompileHtml5 {
 	if ($commit -ne "0000000000000000000000000000000000000000") {
 		exec { &"$tools_dir\GitLink.Custom.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
 	}
+	
+	exec { &"$tools_dir\Assembly.Validator.exe" "$lib_dir" "$lib_dir\Sources\" }
 }
 
 task CompileHtml5 {
@@ -92,14 +94,14 @@ task Test -depends Compile {
 
 	$test_prjs = @( `
 		"$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
+		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
 		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
 		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
 		"$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
 		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
 		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
-		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
-		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll")
+		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll")
 	Write-Host $test_prjs
 	
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -529,10 +531,13 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 	@("Raven.Client.MvcIntegration.???") |% { Copy-Item "$base_dir\Raven.Client.MvcIntegration\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 }
 		
 	New-Item $nuget_dir\RavenDB.Database\lib\net45 -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Database\content -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Database\tools -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
+	Copy-Item $base_dir\NuGet\RavenDB.Database.install.ps1 $nuget_dir\RavenDB.Database\tools\install.ps1
 	@("Raven.Database.???", "Raven.Abstractions.???") `
 		 |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Database\lib\net45 }
-	Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\lib\net45
+	Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\content
 	Copy-Item $base_dir\NuGet\readme.txt $nuget_dir\RavenDB.Database\ -Recurse
 	
 	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
@@ -776,7 +781,7 @@ TaskTearDown {
 	
 	if ($LastExitCode -ne 0) {
 		write-host "TaskTearDown detected an error. Build failed." -BackgroundColor Red -ForegroundColor Yellow
-		write-host "Yes, something was failed!!!!!!!!!!!!!!!!!!!!!" -BackgroundColor Red -ForegroundColor Yellow
+		write-host "Yes, something has failed!!!!!!!!!!!!!!!!!!!!!" -BackgroundColor Red -ForegroundColor Yellow
 		# throw "TaskTearDown detected an error. Build failed."
 		exit 1
 	}

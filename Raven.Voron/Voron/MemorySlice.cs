@@ -16,6 +16,29 @@ namespace Voron
 		public ushort KeyLength;
 		public SliceOptions Options;
 
+        protected MemorySlice()
+        { }
+
+        protected MemorySlice(SliceOptions options)
+        {
+            this.Options = options;
+        }
+
+        protected MemorySlice(SliceOptions options, ushort size)
+        {
+            this.Options = options;
+            this.Size = size;
+            this.KeyLength = size;
+        }
+
+        protected MemorySlice(SliceOptions options, ushort size, ushort keyLength)
+        {
+            this.Options = options;
+            this.Size = size;
+            this.KeyLength = keyLength;
+        }
+
+
 		public abstract void CopyTo(byte* dest);
 		public abstract Slice ToSlice();
 		public abstract Slice Skip(ushort bytesToSkip);
@@ -23,7 +46,7 @@ namespace Voron
 
 		protected abstract int CompareData(MemorySlice other, ushort size);
 
-		protected abstract int CompareData(MemorySlice other, SliceComparer cmp, ushort size);
+		protected abstract int CompareData(MemorySlice other, PrefixedSliceComparer cmp, ushort size);
 
 		public bool Equals(MemorySlice other)
 		{
@@ -50,11 +73,12 @@ namespace Voron
 		{
 			if (KeyLength < other.KeyLength)
 				return false;
-			return CompareData(other, other.KeyLength) == 0;
+			
+            return CompareData(other, other.KeyLength) == 0;
 		}
 
 		private ushort _matchedBytes;
-		private SliceComparer _matchPrefixInstance;
+		private PrefixedSliceComparer _matchPrefixInstance;
 
 		public ushort FindPrefixSize(MemorySlice other)
 		{

@@ -83,10 +83,6 @@
     <Reference Include="Mono.Cecil.Rocks">
       <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
     </Reference>
-    <Reference Include="Spatial4n.Core.NTS, Version=0.3.0.0, Culture=neutral, PublicKeyToken=9f9456e1ca16d45e, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
@@ -252,7 +248,7 @@
     <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionClosedException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
-    <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistExeption.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
@@ -428,6 +424,7 @@
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />
     <Compile Include="Util\MD5.cs" />
+    <Compile Include="Util\ObjectPool.cs" />
     <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\RavenQuery.cs" />

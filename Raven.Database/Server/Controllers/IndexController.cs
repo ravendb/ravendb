@@ -176,6 +176,17 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage >IndexPost(string id)
 		{
 			var index = id;
+
+			if ("forceReplace".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
+			{
+				var indexDefiniton = Database.IndexDefinitionStorage.GetIndexDefinition(id);
+				if (indexDefiniton == null)
+					return GetEmptyMessage(HttpStatusCode.NotFound);
+
+				Database.IndexReplacer.ForceReplacement(indexDefiniton);
+				return GetEmptyMessage();
+			}
+
 			if ("forceWriteToDisk".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 			{
                 Database.IndexStorage.ForceWriteToDiskAndWriteInMemoryIndexToDiskIfNecessary(index);

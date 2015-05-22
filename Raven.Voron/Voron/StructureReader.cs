@@ -191,7 +191,7 @@ namespace Voron
 				return new string((sbyte*)(_ptr + offset + valueLengthSize), 0, length, Encoding.UTF8);
 			}
 
-			return Encoding.UTF8.GetString(_value.VariableSizeWrites[fieldIndex].Value);
+			return _value.VariableSizeWrites[fieldIndex].ValueString;
 		}
 
 		public byte[] ReadBytes(T field)

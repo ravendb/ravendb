@@ -269,7 +269,7 @@ namespace Voron.Debugging
                         var activityEntry = new WriteActivityEntry(
                             type,
                             long.Parse(columnArray[1]),
-                            columnArray[3],
+                            (Slice)columnArray[3],
                             columnArray[2],
                             null);
 
@@ -306,7 +306,7 @@ namespace Voron.Debugging
                     var entry = new WriteActivityEntry(
                         type,
                         long.Parse(columnArray[1]),
-                        columnArray[3],
+                        (Slice)columnArray[3],
                         columnArray[2],
                         value);
 

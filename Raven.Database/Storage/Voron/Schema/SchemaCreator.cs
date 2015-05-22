@@ -77,18 +77,21 @@ namespace Raven.Database.Storage.Voron.Schema
 		{
 			using (var snapshot = storage.CreateSnapshot())
 			{
+                var idSlice = new Slice("id");
+                var schemaVersionSlice = new Slice("schema_version");
+
 				Guid id;
 				string schemaVersion;
 
-				var read = storage.Details.Read(snapshot, "id", null);
+                var read = storage.Details.Read(snapshot, idSlice, null);
 				if (read == null) // new db
 				{
 					id = Guid.NewGuid();
 					schemaVersion = SchemaVersion;
 					using (var writeIdBatch = new WriteBatch())
 					{
-						storage.Details.Add(writeIdBatch, "id", id.ToByteArray());
-						storage.Details.Add(writeIdBatch, "schema_version", schemaVersion);
+                        storage.Details.Add(writeIdBatch, idSlice, id.ToByteArray());
+                        storage.Details.Add(writeIdBatch, schemaVersionSlice, schemaVersion);
 						storage.Write(writeIdBatch);
 					}
 				}
@@ -103,7 +106,7 @@ namespace Raven.Database.Storage.Voron.Schema
 						id = new Guid(reader.ReadBytes((int)stream.Length));
 					}
 
-					var schemaRead = storage.Details.Read(snapshot, "schema_version", null);
+                    var schemaRead = storage.Details.Read(snapshot, schemaVersionSlice, null);
 					if (schemaRead == null)
 						throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption. (no schema version)");
 

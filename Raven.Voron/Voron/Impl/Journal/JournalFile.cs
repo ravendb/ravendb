@@ -136,7 +136,7 @@ namespace Voron.Impl.Journal
 		/// </summary>
 		public long Write(Transaction tx, IntPtr[] pages)
 		{
-			var ptt = new Dictionary<long, PagePosition>();
+			var ptt = new Dictionary<long, PagePosition>(LongEqualityComparer.Instance);
 			var unused = new HashSet<PagePosition>();
 			var pageWritePos = _writePage;
 
@@ -159,8 +159,6 @@ namespace Voron.Impl.Journal
 
 	    private void UpdatePageTranslationTable(Transaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
 	    {
-		    var txPages = tx.GetTransactionPages();
-
 			foreach (var freedPageNumber in tx.GetFreedPagesNumbers())
 			{
 				// set freed page marker - note it can be overwritten below by later allocation
@@ -175,31 +173,31 @@ namespace Voron.Impl.Journal
 				};
 			}
 
-		    for (int index = 1; index < txPages.Count; index++)
-		    {
-			    var txPage = txPages[index];
-			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
-			    var pageNumber = scratchPage.PageNumber;
+            var txPages = tx.GetTransactionPages();
+            foreach ( var txPage in txPages )
+            {
+                var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                var pageNumber = scratchPage.PageNumber;
 
-				PagePosition value;
-			    if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
-			    {
-				    value.UnusedInPTT = true;
-				    unused.Add(value);
-			    }
+                PagePosition value;
+                if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
+                {
+                    value.UnusedInPTT = true;
+                    unused.Add(value);
+                }
 
-				PagePosition pagePosition;
-				if (ptt.TryGetValue(pageNumber, out pagePosition) && pagePosition.IsFreedPageMarker == false)
-					unused.Add(pagePosition);
+                PagePosition pagePosition;
+                if (ptt.TryGetValue(pageNumber, out pagePosition) && pagePosition.IsFreedPageMarker == false)
+                    unused.Add(pagePosition);
 
-				ptt[pageNumber] = new PagePosition
-				{
-					ScratchPos = txPage.PositionInScratchBuffer,
-					ScratchNumber = txPage.ScratchFileNumber,
-					TransactionId = tx.Id,
-					JournalNumber = Number
-				};
-			}
+                ptt[pageNumber] = new PagePosition
+                {
+                    ScratchPos = txPage.PositionInScratchBuffer,
+                    ScratchNumber = txPage.ScratchFileNumber,
+                    TransactionId = tx.Id,
+                    JournalNumber = Number
+                };
+            }
 
 		    foreach (var freedPage in tx.GetUnusedScratchPages())
 		    {

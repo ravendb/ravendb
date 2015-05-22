@@ -42,7 +42,7 @@ namespace Voron.Trees
             _cursor = cursor;
             _treeState = treeState;
             Page page = _cursor.Pages.First.Value;
-            _page = tx.ModifyPage(page.PageNumber, page);
+            _page = tx.ModifyPage(page.PageNumber, _tree, page);
             _cursor.Pop();
         }
 
@@ -74,13 +74,13 @@ namespace Voron.Trees
 					// can cause a delete of a free space section resulting in a run of the tree rebalancer
 					// and here the parent page that exists in cursor can be outdated
 
-					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, null); // pass _null_ to make sure we'll get the most updated parent page
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, null); // pass _null_ to make sure we'll get the most updated parent page
 					_parentPage.LastSearchPosition = _cursor.CurrentPage.LastSearchPosition;
 					_parentPage.LastMatch = _cursor.CurrentPage.LastMatch;
 	            }
 	            else
 	            {
-					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor.CurrentPage);
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, _cursor.CurrentPage);
 	            }
 
                 _cursor.Update(_cursor.Pages.First, _parentPage);
@@ -158,9 +158,16 @@ namespace Voron.Trees
             if (currentIndex < splitIndex)
                 newPosition = false;
 
-            if (_page.IsLeaf)
+	        PrefixNode[] prefixes = null;
+
+	        if (_tree.KeysPrefixing && _page.HasPrefixes)
+	        {
+		        prefixes = _page.GetPrefixes();
+	        }
+
+	        if (_page.IsLeaf || prefixes != null)
             {
-                splitIndex = AdjustSplitPosition(currentIndex, splitIndex, ref newPosition);
+                splitIndex = AdjustSplitPosition(currentIndex, splitIndex, prefixes, ref newPosition);
             }
 
 	        var currentKey = _page.GetNodeKey(splitIndex);
@@ -180,7 +187,18 @@ namespace Voron.Trees
             AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey);
 
 	        MemorySlice instance = _page.CreateNewEmptyKey();
-            // move the actual entries from page to right page
+
+	        if (prefixes != null)
+	        {
+				for (int i = 0; i < prefixes.Length; i++)
+				{
+					var prefix = prefixes[i];
+
+					rightPage.WritePrefix(new Slice(prefix.ValuePtr, prefix.PrefixLength), i);
+				}
+	        }
+
+	        // move the actual entries from page to right page
             ushort nKeys = _page.NumberOfEntries;
             for (int i = splitIndex; i < nKeys; i++)
             {
@@ -193,6 +211,7 @@ namespace Voron.Trees
                 {
 	                _page.SetNodeKey(node, ref instance);
 	                var key = rightPage.PrepareKeyToInsert(instance, rightPage.NumberOfEntries);
+
 					rightPage.CopyNodeDataToEndOfPage(node, key);
                 }
             }
@@ -256,7 +275,7 @@ namespace Voron.Trees
 			{
 				_cursor.Push(p);
 
-				var pageSplitter = new PageSplitter(_tx, _tree, _newKey, _len, p.PageNumber, _nodeType, _nodeVersion, _cursor, _treeState);
+				var pageSplitter = new PageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _nodeVersion, _cursor, _treeState);
 
 				return pageSplitter.Execute();
 			}
@@ -283,8 +302,7 @@ namespace Voron.Trees
             }
         }
 
-        private int AdjustSplitPosition(int currentIndex, int splitIndex,
-            ref bool newPosition)
+        private int AdjustSplitPosition(int currentIndex, int splitIndex, PrefixNode[] prefixes, ref bool newPosition)
         {
 	        MemorySlice keyToInsert;
 
@@ -295,8 +313,14 @@ namespace Voron.Trees
 
 	        var pageSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert , _len) + Constants.NodeOffsetSize;
 
-			if(_tree.KeysPrefixing)
-				pageSize += (Constants.PrefixNodeHeaderSize + 1); // let's assume that prefix will be created to ensure the destination page will have enough space, + 1 because prefix node might require 2-byte alignment
+			if (prefixes != null)
+			{
+				// we are going to copy all existing prefixes so we need to take into account their sizes
+				for (var i = 0; i < prefixes.Length; i++)
+				{
+					pageSize += (Constants.PrefixNodeHeaderSize + prefixes[i].Header.PrefixLength) & 1; // & 1 because we need 2-byte alignment
+				}
+			}
 
             if (currentIndex <= splitIndex)
             {

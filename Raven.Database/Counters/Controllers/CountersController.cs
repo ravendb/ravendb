@@ -8,6 +8,7 @@ using System.Web.Http;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.WebApi.Attributes;
+using Voron;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -86,7 +87,7 @@ namespace Raven.Database.Counters.Controllers
 				var prefix = (group == null) ? string.Empty : (group + Constants.GroupSeperatorString);
 				var results = (
 					from counterFullName in reader.GetCounterNames(prefix)
-					let counter = reader.GetCounter(counterFullName)
+                    let counter = reader.GetCounter((Slice)counterFullName)
 					select new CounterView
 					{
 						Name = counterFullName.Split(Constants.GroupSeperatorChar)[1],
@@ -109,7 +110,7 @@ namespace Raven.Database.Counters.Controllers
 			using (var reader = Storage.CreateReader())
 			{
 				string counterFullName = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
-				Counter counter = reader.GetCounter(counterFullName);
+				Counter counter = reader.GetCounter((Slice)counterFullName);
 				
 				if (counter == null)
 				{
@@ -128,7 +129,7 @@ namespace Raven.Database.Counters.Controllers
             using (var reader = Storage.CreateReader())
             {
                 string counterFullName = String.Join(Constants.GroupSeperatorString, new[] { group, counterName });
-                Counter counter = reader.GetCounter(counterFullName);
+                Counter counter = reader.GetCounter((Slice)counterFullName);
 
                 if (counter == null)
                 {

@@ -155,6 +155,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Linq" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
@@ -244,10 +245,12 @@
     <Compile Include="Bugs\DocumentWithNaN.cs" />
     <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="Bugs\MapRedue\LargeKeysInVoron.cs" />
     <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="Bugs\SortingAsMaxInt.cs" />
     <Compile Include="DistinctFacets\DistinctAndFacets.cs" />
     <Compile Include="DistinctFacets\FromUser.cs" />
+    <Compile Include="Indexes\IndexReplacement.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
@@ -790,6 +793,7 @@
     <Compile Include="Spatial\WktConverterTests.cs" />
     <Compile Include="Spatial\WktSanitizerTests.cs" />
     <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
+    <Compile Include="Storage\DocRefsDump.cs" />
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Storage\Voron\AttachmentActionsStorageTests.cs" />
     <Compile Include="Storage\Voron\GeneralStorageActionsTests.cs" />
@@ -902,6 +906,10 @@
     <Compile Include="Suggestions\SuggestionsLazy.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="TestBase\Animal_Search.cs" />
+    <Compile Include="TestBase\FakeModelHelpers.cs" />
+    <Compile Include="TestBase\FakeModels.cs" />
+    <Compile Include="TestBase\RavenTestBaseTests.cs" />
     <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />

@@ -97,33 +97,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetMessageWithObjectAsTask(topology);
 		}
 
-		[HttpPost]
-		[RavenRoute("admin/replication/topology/discover")]
-		[RavenRoute("databases/{databaseName}/admin/replication/topology/discover")]
-		public async Task<HttpResponseMessage> ReplicationTopologyDiscover()
-		{
-			var ttlAsString = GetQueryStringValue("ttl");
-
-			int ttl;
-			RavenJArray from;
-
-			if (string.IsNullOrEmpty(ttlAsString))
-			{
-				ttl = 10;
-				from = new RavenJArray();
-			}
-			else
-			{
-				ttl = int.Parse(ttlAsString);
-				from = await ReadJsonArrayAsync();
-			}
-
-			var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, from, ttl, Log);
-			var node = replicationSchemaDiscoverer.Discover();
-
-			return GetMessageWithObject(node);
-		}
-
 		private ReplicationInfoStatus[] CheckDestinations(ReplicationDocument replicationDocument)
 		{
 			var results = new ReplicationInfoStatus[replicationDocument.Destinations.Count];

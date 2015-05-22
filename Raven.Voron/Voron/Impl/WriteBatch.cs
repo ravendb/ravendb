@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Voron.Exceptions;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Impl
@@ -15,9 +16,9 @@ namespace Voron.Impl
 		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
 		private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>> _multiTreeOperations;
 
-		private readonly HashSet<string> _trees = new HashSet<string>(); 
+		private readonly HashSet<string> _trees = new HashSet<string>();
 
-		private readonly SliceEqualityComparer _sliceEqualityComparer;
+        private readonly SliceComparer _sliceEqualityComparer;
 		private bool _disposeAfterWrite = true;
 
 		public HashSet<string> Trees
@@ -44,27 +45,19 @@ namespace Voron.Impl
 			if (_multiTreeOperations.TryGetValue(treeName, out multiOperations) == false)
 				yield break;
 
-			foreach (var operation in multiOperations
-				.OrderBy(x => x.Key, _sliceEqualityComparer)
-				.SelectMany(x => x.Value)
-				.OrderBy(x => x.ValueSlice, _sliceEqualityComparer))
+            var orderedOperations = multiOperations
+                        				.SelectMany(x => x.Value)
+				                        .OrderBy(x => x.ValueSlice, _sliceEqualityComparer)
+                                        .ThenBy(x => x.Key, _sliceEqualityComparer);
+
+            foreach (var operation in orderedOperations)
 				yield return operation;
 		}
 
+        private long totalSize = 0;
+
 		public long Size()
 		{
-			long totalSize = 0;
-
-			if (_lastOperations.Count > 0)
-				totalSize += _lastOperations.Sum(
-					operation =>
-					operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
-
-			if (_multiTreeOperations.Count > 0)
-				totalSize += _multiTreeOperations.Sum(
-					tree =>
-					tree.Value.Sum(
-						multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
 			return totalSize;
 		}
 
@@ -126,7 +119,7 @@ namespace Voron.Impl
 		{
 			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
 			_multiTreeOperations = new Dictionary<string, Dictionary<Slice, List<BatchOperation>>>();
-			_sliceEqualityComparer = new SliceEqualityComparer();
+			_sliceEqualityComparer = new SliceComparer();
 		}
 
 		public void Add(Slice key, Slice value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
@@ -212,6 +205,7 @@ namespace Voron.Impl
 		{
 			var treeName = operation.TreeName;
 			AssertValidTreeName(treeName);
+			AssertValidKey(operation.Key);
 
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
@@ -232,6 +226,8 @@ namespace Voron.Impl
 					multiTreeOperationsOfTree[operation.Key] = specificMultiTreeOperations = new List<BatchOperation>();
 
 				specificMultiTreeOperations.Add(operation);
+
+                totalSize += operation.Key.Size;
 			}
 			else
 			{
@@ -240,15 +236,35 @@ namespace Voron.Impl
 				{
 					_lastOperations[treeName] = lastOpsForTree = new Dictionary<Slice, BatchOperation>(_sliceEqualityComparer);
 				}
+
 				BatchOperation old;
 				if (lastOpsForTree.TryGetValue(operation.Key, out old))
 				{
-					operation.SetVersionFrom(old);
+                    operation.SetVersionFrom(old);
+
+                    if (operation.Type == BatchOperationType.Add)
+                        totalSize -= operation.Key.Size + operation.ValueSize;
+                    else
+                        totalSize -= operation.Key.Size;
+
 					if (old.ValueStream != null)
-						old.ValueStream.Dispose();
+						old.ValueStream.Dispose();                    
 				}
+
 				lastOpsForTree[operation.Key] = operation;
-			}
+
+                if (operation.Type == BatchOperationType.Add)
+                    totalSize += operation.Key.Size + operation.ValueSize;
+                else
+                    totalSize += operation.Key.Size;
+            }
+		}
+
+		private void AssertValidKey(Slice key)
+		{
+			if (key.Size + Constants.NodeHeaderSize > AbstractPager.NodeMaxSize)
+				throw new ArgumentException(
+					"Key size is too big, must be at most " + (AbstractPager.NodeMaxSize - Constants.NodeHeaderSize) + " bytes, but was " + key.Size, "key");
 		}
 
 		internal class BatchOperation : IComparable<BatchOperation>
@@ -385,14 +401,16 @@ namespace Voron.Impl
 
 			public int CompareTo(BatchOperation other)
 			{
-				var r = SliceEqualityComparer.Instance.Compare(Key, other.Key);
+				var r = SliceComparer.CompareInline(Key, other.Key);
 				if (r != 0)
 					return r;
+
 				if (ValueSlice != null)
 				{
 					if (other.ValueSlice == null)
 						return -1;
-					return ValueSlice.Compare(other.ValueSlice);
+
+					return SliceComparer.CompareInline(ValueSlice, other.ValueSlice);
 				}
 				else if (other.ValueSlice != null)
 				{

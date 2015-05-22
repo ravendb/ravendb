@@ -66,9 +66,9 @@ namespace Raven.Client.Document
 			{
 				span = SystemTime.UtcNow - lastRequestedUtc2;
 				if (span.TotalSeconds < 3)
-					capacity *= 4;
+					capacity = Math.Max(capacity, Math.Max(capacity * 2, capacity * 4));
 				else
-					capacity *= 2;
+					capacity = Math.Max(capacity, capacity * 2);
 			}
 			else if (span.TotalMinutes > 1)
 			{
