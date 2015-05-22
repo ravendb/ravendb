@@ -5,11 +5,11 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Bundles.Replication;
@@ -36,6 +36,10 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 		private readonly int databaseIndex;
 
+		private readonly object locker = new object();
+
+		private bool loaded;
+
 		public SnmpDatabase(DatabasesLandlord databaseLandlord, ObjectStore store, string databaseName, int databaseIndex)
 		{
 			this.databaseLandlord = databaseLandlord;
@@ -44,7 +48,17 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			this.databaseIndex = databaseIndex;
 
 			Initialize();
-			Update();
+
+			databaseLandlord.OnDatabaseLoaded += loadedDatabaseName =>
+			{
+				if (string.Equals(loadedDatabaseName, databaseName, StringComparison.OrdinalIgnoreCase) == false)
+					return;
+
+				Load();
+			};
+
+			if (databaseLandlord.IsDatabaseLoaded(databaseName))
+				Load();
 		}
 
 		private void Initialize()
@@ -89,22 +103,38 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new ReplicationBundleEnabled(databaseName, databaseLandlord, databaseIndex));
 		}
 
-		public void Update()
+		public void Load()
 		{
-			var database = databaseLandlord.GetDatabaseInternal(databaseName).Result;
+			if (loaded)
+				return;
 
-			database.Notifications.OnIndexChange += (db, notification) =>
+			Task.Factory.StartNew(() =>
 			{
-				if (notification.Type != IndexChangeTypes.IndexAdded)
-					return;
+				lock (locker)
+				{
+					if (loaded)
+						return;
 
-				loadedIndexes.GetOrAdd(notification.Name, AddIndex);
-			};
+					var database = databaseLandlord
+						.GetDatabaseInternal(databaseName)
+						.Result;
 
-			database.ConfigurationRetriever.SubscribeToConfigurationDocumentChanges(Constants.RavenReplicationDestinations, () => AddReplicationDestinations(database));
+					database.Notifications.OnIndexChange += (db, notification) =>
+					{
+						if (notification.Type != IndexChangeTypes.IndexAdded)
+							return;
 
-			AddIndexes(database);
-			AddReplicationDestinations(database);
+						loadedIndexes.GetOrAdd(notification.Name, AddIndex);
+					};
+
+					database.ConfigurationRetriever.SubscribeToConfigurationDocumentChanges(Constants.RavenReplicationDestinations, () => AddReplicationDestinations(database));
+
+					AddIndexes(database);
+					AddReplicationDestinations(database);
+
+					loaded = true;
+				}
+			});
 		}
 
 		private void AddReplicationDestinations(DocumentDatabase database)

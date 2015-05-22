@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -29,7 +30,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 {
 	public class SnmpTask : IServerStartupTask
 	{
-		private readonly Dictionary<string, SnmpDatabase> loadedDatabases = new Dictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase); 
+		private readonly ConcurrentDictionary<string, SnmpDatabase> loadedDatabases = new ConcurrentDictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase); 
 
 		private readonly object locker = new object();
 
@@ -165,14 +166,30 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 		private void AddDatabases()
 		{
-			databaseLandlord.ForAllDatabases(database => AddDatabase(objectStore, database.Name ?? Constants.SystemDatabase));
+			var nextStart = 0;
+			var databases = systemDatabase
+				.Documents
+				.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, int.MaxValue, systemDatabase.WorkContext.CancellationToken, ref nextStart);
+
+			var databaseNames = new List<string> { Constants.SystemDatabase };
+
+			foreach (RavenJObject database in databases)
+			{
+				var id = database[Constants.Metadata].Value<string>("@id");
+				if (id.StartsWith(Constants.Database.Prefix))
+					id = id.Substring(Constants.Database.Prefix.Length);
+
+				databaseNames.Add(id);
+			}
+
+			databaseNames.ForEach(databaseName => AddDatabase(objectStore, databaseName));
 		}
 
 		private void AddDatabase(ObjectStore store, string databaseName)
 		{
 			var index = (int)GetOrAddDatabaseIndex(databaseName);
 
-			loadedDatabases.Add(databaseName, new SnmpDatabase(databaseLandlord, store, databaseName, index));
+			loadedDatabases.GetOrAdd(databaseName, new SnmpDatabase(databaseLandlord, store, databaseName, index));
 		}
 
 		private long GetOrAddDatabaseIndex(string databaseName)
