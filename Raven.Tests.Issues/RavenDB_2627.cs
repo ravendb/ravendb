@@ -64,7 +64,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore())
 			{
-				var ex = Assert.Throws<SubscriptionDoesNotExistExeption>(() => store.Subscriptions.Open(1, new SubscriptionConnectionOptions()));
+				var ex = Assert.Throws<SubscriptionDoesNotExistException>(() => store.Subscriptions.Open(1, new SubscriptionConnectionOptions()));
 				Assert.Equal("There is no subscription configuration for specified identifier (id: 1)", ex.Message);
 			}
 		}
