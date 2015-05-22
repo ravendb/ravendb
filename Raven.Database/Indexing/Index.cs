@@ -1161,7 +1161,7 @@ namespace Raven.Database.Indexing
 					}
 				}
 				parent.MarkQueried();
-				using (IndexStorage.EnsureInvariantCulture())
+				using (CultureHelper.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, parent.viewGenerator);
 					IndexSearcher indexSearcher;
@@ -1203,7 +1203,7 @@ namespace Raven.Database.Indexing
 					throw new IndexDisabledException("The index has been disabled due to errors");
 
 				parent.MarkQueried();
-				using (IndexStorage.EnsureInvariantCulture())
+				using (CultureHelper.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, parent.viewGenerator);
 					IndexSearcher indexSearcher;
@@ -1423,7 +1423,7 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<IndexQueryResult> IntersectionQuery(CancellationToken token)
 			{
-				using (IndexStorage.EnsureInvariantCulture())
+				using (CultureHelper.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, parent.viewGenerator);
 					IndexSearcher indexSearcher;
