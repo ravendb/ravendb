@@ -117,6 +117,7 @@
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="Compaction\StorageCompactionTests.cs" />
     <Compile Include="DebugJournalTest.cs" />
+    <Compile Include="PrefixesFact.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
     <Compile Include="Journal\LogShipping.cs" />
@@ -124,6 +125,7 @@
     <Compile Include="Journal\UncommittedTransactions.cs" />
     <Compile Include="MultiTreeSize.cs" />
     <Compile Include="MultiValueTree.cs" />
+    <Compile Include="PrefixesTheory.cs" />
     <Compile Include="ScratchBuffer\MutipleScratchBuffersUsage.cs" />
     <Compile Include="ScratchBuffer\ScratchCanForceToFlushOldPages.cs" />
     <Compile Include="Optimizations\Writes.cs" />

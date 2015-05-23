@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Remoting.Messaging;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -70,6 +71,10 @@ namespace Voron.Trees
 
         public static Tree Create(Transaction tx, bool keysPrefixing, TreeFlags flags = TreeFlags.None)
         {
+			var globalKeysPrefixingSetting = (CallContext.GetData("Voron/Trees/GlobalKeysPrefixingSetting") as bool?);
+	        if (globalKeysPrefixingSetting != null)
+				keysPrefixing = globalKeysPrefixingSetting.Value;
+
             var newRootPage = NewPage(tx, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf, 1);
             var tree = new Tree(tx, newRootPage.PageNumber)
             {

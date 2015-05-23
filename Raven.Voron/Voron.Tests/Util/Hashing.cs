@@ -11,7 +11,7 @@ namespace Voron.Tests.Util
     public class HashingTests
     {
 
-        [Fact]
+        [PrefixesFact]
         public void XXHash32()
         {
             string value = "abcd";
@@ -42,7 +42,7 @@ namespace Voron.Tests.Util
         }
 
 
-        [Fact]
+        [PrefixesFact]
         public void NotEquivalenceOfBytesWithString()
         {
             string value = "abcd";

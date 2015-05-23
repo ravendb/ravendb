@@ -19,7 +19,7 @@ namespace Voron.Tests.Journal
 			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void TransactionCommitShouldSetCurrentLogFileToNullIfItIsFull()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

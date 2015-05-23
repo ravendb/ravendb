@@ -9,7 +9,7 @@ namespace Voron.Tests.Trees
 {
 	public class TreesWithPrefixedKeys : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void BasicCheck()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -35,7 +35,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void LotOfInsertsAndDeletes()
 		{
 			const int countOfTransactions = 10;
