@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Net.Http;
 
@@ -41,7 +42,8 @@ namespace Raven.Tests.Bundles.Replication
 
 			using (var session = store1.OpenSession())
 			{
-				Assert.Throws<HttpRequestException>(() => session.Load<Company>("companies/1"));
+				var e = Assert.Throws<InvalidOperationException>(() => session.Load<Company>("companies/1"));
+				Assert.True(e.Message.StartsWith("Attempted to connect to master and all replicas have failed, giving up", StringComparison.OrdinalIgnoreCase));
 			}
 		}
 	}
