@@ -39,7 +39,7 @@ namespace Raven.Client.Connection.Request
 
 		public int GetReadStripingBase(bool increment)
 		{
-			return replicationInformer.GetReadStripingBase(increment);
+			return readStripingBase = replicationInformer.GetReadStripingBase(increment);
 		}
 
 		public ReplicationDestination[] FailoverServers
