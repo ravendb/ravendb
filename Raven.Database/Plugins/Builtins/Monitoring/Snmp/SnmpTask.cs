@@ -30,7 +30,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 {
 	public class SnmpTask : IServerStartupTask
 	{
-		private readonly ConcurrentDictionary<string, SnmpDatabase> loadedDatabases = new ConcurrentDictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase); 
+		private readonly ConcurrentDictionary<string, SnmpDatabase> loadedDatabases = new ConcurrentDictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly object locker = new object();
 
@@ -100,13 +100,6 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			{
 				lock (locker)
 				{
-					SnmpDatabase database;
-					if (loadedDatabases.TryGetValue(databaseName, out database))
-					{
-						database.Update();
-						return;
-					}
-
 					AddDatabase(objectStore, databaseName);
 				}
 			});
@@ -128,7 +121,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			};
 
 			var messageHandlerFactory = new MessageHandlerFactory(handlers);
-			
+
 			var factory = new SnmpApplicationFactory(new Logger(log), store, membershipProvider, messageHandlerFactory);
 
 			var listener = new Listener();
@@ -194,13 +187,13 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 		private long GetOrAddDatabaseIndex(string databaseName)
 		{
-			if (databaseName == null || string.Equals(databaseName, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)) 
+			if (databaseName == null || string.Equals(databaseName, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
 				return 1;
 
 			var mappingDocument = systemDatabase.Documents.Get(Constants.Monitoring.Snmp.DatabaseMappingDocumentKey, null) ?? new JsonDocument();
 
 			RavenJToken value;
-			if (mappingDocument.DataAsJson.TryGetValue(databaseName, out value)) 
+			if (mappingDocument.DataAsJson.TryGetValue(databaseName, out value))
 				return value.Value<int>();
 
 			var index = 0L;

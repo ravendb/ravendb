@@ -12,7 +12,8 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 {
-	public abstract class DatabaseIndexScalarObjectBase : DatabaseScalarObjectBase
+	public abstract class DatabaseIndexScalarObjectBase<TData> : DatabaseScalarObjectBase<TData>
+		where TData : ISnmpData
 	{
 		protected readonly string IndexName;
 
@@ -36,7 +37,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 						return GetData(database);
 				}
 
-				return Null;
+				return DefaultValue();
 			}
 		}
 

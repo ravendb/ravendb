@@ -9,14 +9,14 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Requests
 {
-	public class DatabaseReducedPerSecond : DatabaseScalarObjectBase
+	public class DatabaseReducedPerSecond : DatabaseScalarObjectBase<Gauge32>
 	{
 		public DatabaseReducedPerSecond(string databaseName, DatabasesLandlord landlord, int index)
 			: base(databaseName, landlord, "5.2.{0}.3.3", index)
 		{
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override Gauge32 GetData(DocumentDatabase database)
 		{
 			return new Gauge32(GetCount(database));
 		}

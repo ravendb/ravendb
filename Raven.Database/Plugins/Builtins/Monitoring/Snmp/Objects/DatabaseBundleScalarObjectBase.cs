@@ -12,7 +12,8 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 {
-	public abstract class DatabaseBundleScalarObjectBase : DatabaseScalarObjectBase
+	public abstract class DatabaseBundleScalarObjectBase<TData> : DatabaseScalarObjectBase<TData>
+		where TData : ISnmpData
 	{
 		public string BundleName { get; private set; }
 
@@ -34,7 +35,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 						return GetData(database);
 				}
 
-				return Null;
+				return DefaultValue();
 			}
 		}
 	}

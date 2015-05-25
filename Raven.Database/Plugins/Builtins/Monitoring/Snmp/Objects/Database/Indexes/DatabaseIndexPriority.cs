@@ -9,14 +9,14 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Indexes
 {
-	public class DatabaseIndexPriority : DatabaseIndexScalarObjectBase
+	public class DatabaseIndexPriority : DatabaseIndexScalarObjectBase<OctetString>
 	{
 		public DatabaseIndexPriority(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
 			: base(databaseName, indexName, landlord, databaseIndex, indexIndex, "4")
 		{
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override OctetString GetData(DocumentDatabase database)
 		{
 			var stats = GetIndexStats(database);
 			return new OctetString(stats.Priority.ToString());
