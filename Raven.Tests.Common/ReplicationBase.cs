@@ -215,7 +215,8 @@ namespace Raven.Tests.Common
 			string password = null,
 			string domain = null,
 			ReplicationClientConfiguration clientConfiguration = null,
-			string[] replicationSourceCollections = null)
+			string[] replicationSourceCollections = null,
+			bool skipIndexReplication = false)
         {
             db = db ?? (destination is DocumentStore ? ((DocumentStore)destination).DefaultDatabase : null);
 
@@ -230,7 +231,8 @@ namespace Raven.Tests.Common
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
 					IgnoredClient = ignoredClient,
-					SourceCollections = replicationSourceCollections
+					SourceCollections = replicationSourceCollections,
+					SkipIndexReplication = skipIndexReplication
                 };
                 if (db != null)
                     replicationDestination.Database = db;
