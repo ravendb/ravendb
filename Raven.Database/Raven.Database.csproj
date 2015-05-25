@@ -354,6 +354,7 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
     <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
+    <Compile Include="Util\CultureHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\StopwatchScope.cs" />
