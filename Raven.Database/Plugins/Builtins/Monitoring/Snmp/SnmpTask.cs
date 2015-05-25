@@ -16,13 +16,13 @@ using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
 
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Server;
 
@@ -72,9 +72,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 		private static bool IsLicenseValid()
 		{
-			if (SystemTime.UtcNow > new DateTime(2015, 6, 1))
-				throw new NotImplementedException("Time bomb. Enabled monitoring for development.");
-
+			DevelopmentHelper.TimeBomb();
 			return true;
 
 			string monitoring;
