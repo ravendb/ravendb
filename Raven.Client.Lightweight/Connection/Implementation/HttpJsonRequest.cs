@@ -204,8 +204,8 @@ namespace Raven.Client.Connection.Implementation
 					if (Response == null && e is HttpRequestException) //something bad happened and httpClient.SendAsync failed -> i.e. server down, network down
 					{
 						e.Data.Add(Constants.RequestFailedExceptionMarker, true);
-						throw ErrorResponseException.FromHttpRequestException((HttpRequestException)e);
 					}
+					throw;
 				}
 				finally
 				{

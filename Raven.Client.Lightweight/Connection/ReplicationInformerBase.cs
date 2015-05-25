@@ -326,34 +326,34 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                     }
                 }
 
-                if (shouldTryAgain == false)
-                {
+				if (shouldTryAgain == false)
+				{
+					if (avoidThrowing == false)
+						throw;
+
 					bool wasTimeout;
-	                var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
-	                if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
-	                {
+					var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
+					if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
+					{
 						return new AsyncOperationResult<T>
 						{
 							Success = false,
 							WasTimeout = wasTimeout,
 							Error = e
-						};		                
-	                }
-
-                    if (avoidThrowing == false)
-                        throw;
-
-                    if (isServerDown)
-                    {
-                        return new AsyncOperationResult<T>
-                        {
-                            Success = false,
-                            WasTimeout = wasTimeout,
-                            Error = e
-                        };
-                    }
-                    throw;
-                }
+						};
+					}
+					
+					if (HttpConnectionHelper.IsServerDown(e, out wasTimeout))
+					{
+						return new AsyncOperationResult<T>
+						{
+							Success = false,
+							WasTimeout = wasTimeout,
+							Error = e
+						};
+					}
+					throw;
+				}
             }
             return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken);
         }

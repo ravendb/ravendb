@@ -21,6 +21,8 @@ namespace Raven.Client.Counters.Replication
 {
 	public class CounterReplicationInformer : ReplicationInformerBase<CountersClient>,ICountersReplicationInformer
 	{
+		public const int DefaultIntervalBetweenUpdatesInMinutes = 5;
+
 		private bool currentlyExecuting;
 		private int requestCount;
 		private bool firstTime;
@@ -32,7 +34,7 @@ namespace Raven.Client.Counters.Replication
 		{
 			firstTime = true;
 			lastReplicationUpdate = SystemTime.UtcNow;
-			MaxIntervalBetweenUpdatesInMillisec = TimeSpan.FromMinutes(5).TotalMilliseconds;
+			MaxIntervalBetweenUpdatesInMillisec = TimeSpan.FromMinutes(DefaultIntervalBetweenUpdatesInMinutes).TotalMilliseconds;
 		}
 
 		internal void OnReplicationUpdate()
