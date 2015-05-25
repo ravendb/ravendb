@@ -192,7 +192,8 @@ namespace Raven.Abstractions.Replication
 						   SkipIndexReplication = source.SkipIndexReplication,
 						   TransitiveReplicationBehavior = source.TransitiveReplicationBehavior,
 						   Url = source.Url,
-						   Username = source.Username
+						   Username = source.Username,
+						   SourceCollections = source.SourceCollections
 					   };
 			}
 		}
