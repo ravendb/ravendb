@@ -71,7 +71,7 @@ namespace Voron.Trees
 
         public static Tree Create(Transaction tx, bool keysPrefixing, TreeFlags flags = TreeFlags.None)
         {
-			var globalKeysPrefixingSetting = (CallContext.GetData("Voron/Trees/GlobalKeysPrefixingSetting") as bool?);
+			var globalKeysPrefixingSetting = (CallContext.GetData("Voron/Trees/KeysPrefixing") as bool?);
 	        if (globalKeysPrefixingSetting != null)
 				keysPrefixing = globalKeysPrefixingSetting.Value;
 

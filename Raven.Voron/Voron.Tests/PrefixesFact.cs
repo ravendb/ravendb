@@ -17,19 +17,19 @@ namespace Voron.Tests
 	{
 		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
 		{
-			yield return new PrefixedTreesFactCommand(method, "[keysPrefixing: false]");
+			yield return new PrefixedTreesFactCommand(method, "[Standard trees]");
 
 			using (TreesWithPrefixedKeys())
 			{
-				yield return new PrefixedTreesFactCommand(method, "[keysPrefixing: true]");
+				yield return new PrefixedTreesFactCommand(method, "[Prefixed trees]");
 			}		
 		}
 
 		internal static IDisposable TreesWithPrefixedKeys()
 		{
-			CallContext.LogicalSetData("Voron/Trees/GlobalKeysPrefixingSetting", true);
+			CallContext.LogicalSetData("Voron/Trees/KeysPrefixing", true);
 
-			return new DisposableAction(() => CallContext.FreeNamedDataSlot("Voron/Trees/ForceKeysPrefixing"));
+			return new DisposableAction(() => CallContext.FreeNamedDataSlot("Voron/Trees/KeysPrefixing"));
 		}
 	}
 
