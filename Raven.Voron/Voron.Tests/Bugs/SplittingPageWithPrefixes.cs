@@ -11,7 +11,7 @@ namespace Voron.Tests.Bugs
 {
 	public class SplittingPageWithPrefixes : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void ShouldHaveEnoughSpaceOnNewPageDuringTruncate()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -39,7 +39,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldHaveEnoughSpaceOnNewPageWhenSplittingPageInHalf()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

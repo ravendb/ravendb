@@ -20,7 +20,7 @@ namespace Voron.Tests
 				File.Delete(fileNameWithDebugJournalExtension);
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void Record_debug_journal_and_replay_it()
 		{
 			var structSchema = new StructureSchema<SampleStruct>()
@@ -185,7 +185,7 @@ namespace Voron.Tests
 			Bar
 		}
 
-		[Fact]
+		[PrefixesFact]
         public void Record_debug_journal_and_replay_it_size_only()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
@@ -297,7 +297,7 @@ namespace Voron.Tests
 
         }
 
-        [Fact]
+        [PrefixesFact]
         public void Record_debug_journal_and_replay_it_with_manual_flushing()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))

@@ -30,7 +30,7 @@ namespace Voron.Tests.Backups
 			Directory.Delete(_tempDir, true);
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void Can_write_minimal_incremental_backup_and_restore_with_regular_incremental()
 		{
 			const int UserCount = 5000;
@@ -82,7 +82,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void Can_use_full_back_then_full_min_backup()
 		{
 			_tempDir = Guid.NewGuid().ToString();
@@ -158,7 +158,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void Can_make_multiple_min_inc_backups_and_then_restore()
 		{
 			const int UserCount = 5000;
@@ -212,7 +212,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public unsafe void Min_inc_backup_is_smaller_than_normal_inc_backup()
 		{
 			const int UserCount = 5000;
@@ -256,7 +256,7 @@ namespace Voron.Tests.Backups
 		}
 
 
-		[Fact]
+		[PrefixesFact]
 		public void Can_split_merged_transaction_to_multiple_tx()
 		{
 			_tempDir = Guid.NewGuid().ToString();
@@ -292,7 +292,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void Mixed_small_and_overflow_changes()
 		{
 			_tempDir = Guid.NewGuid().ToString();
@@ -339,7 +339,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void Can_write_minimal_incremental_backup()
 		{
 			_tempDir = Guid.NewGuid().ToString();

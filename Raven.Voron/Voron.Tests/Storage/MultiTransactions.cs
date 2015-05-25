@@ -7,7 +7,7 @@ namespace Voron.Tests.Storage
 {
     public class MultiTransactions
     {
-        [Fact]
+        [PrefixesFact]
         public void ShouldWork()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))

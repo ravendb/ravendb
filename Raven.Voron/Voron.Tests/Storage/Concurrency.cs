@@ -11,7 +11,7 @@ namespace Voron.Tests.Storage
 
 	public class Concurrency : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void MissingEntriesShouldReturn0Version()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -20,7 +20,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void SimpleVersion()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -39,7 +39,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void VersionOverflow()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -59,7 +59,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void NoCommit()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -76,7 +76,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void Delete()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -89,7 +89,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void Missing()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -107,7 +107,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ConcurrencyExceptionShouldBeThrownWhenVersionMismatch()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -131,7 +131,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ConcurrencyExceptionShouldBeThrownWhenVersionMismatchMultiTree()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -155,7 +155,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void BatchSimpleVersion()
 		{
 			var batch1 = new WriteBatch();
@@ -179,7 +179,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void BatchDelete()
 		{
 			var batch1 = new WriteBatch();
@@ -203,7 +203,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void BatchMissing()
 		{
 			var batch1 = new WriteBatch();
@@ -223,7 +223,7 @@ namespace Voron.Tests.Storage
 			Assert.Equal("Cannot add 'key/1' to 'Root' tree. Version mismatch. Expected: 0. Actual: 1.", e.Message);
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void BatchConcurrencyExceptionShouldBeThrownWhenVersionMismatch()
 		{
 			var batch1 = new WriteBatch();
@@ -244,7 +244,7 @@ namespace Voron.Tests.Storage
 			Assert.Equal("Cannot delete 'key/1' to 'Root' tree. Version mismatch. Expected: 2. Actual: 1.", e.Message);
 		}
 
-        [Fact]
+        [PrefixesFact]
         public void BatchConcurrencyExceptionShouldNotBeThrown()
         {
             var batch1 = new WriteBatch();
@@ -266,7 +266,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void BatchConcurrencyExceptionShouldNotBeThrown2()
         {
             var batch1 = new WriteBatch();

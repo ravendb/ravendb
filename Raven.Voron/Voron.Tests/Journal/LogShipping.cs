@@ -20,7 +20,7 @@ namespace Voron.Tests.Journal
 		{
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void Committing_tx_should_fire_event_with_transactionsToShip_records()
 		{
 			var transactionsToShip = new ConcurrentQueue<TransactionToShip>();
@@ -51,7 +51,7 @@ namespace Voron.Tests.Journal
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void StorageEnvironment_Two_Different_Tx_Should_be_shipped_properly1()
 		{
 			var transactionsToShip = new ConcurrentQueue<TransactionToShip>();
@@ -114,7 +114,7 @@ namespace Voron.Tests.Journal
 		}
 
 
-		[Fact]
+		[PrefixesFact]
 		public void StorageEnvironment_Two_Different_Tx_Should_be_shipped_properly2()
 		{
 			var transactionsToShip = new ConcurrentQueue<TransactionToShip>();
@@ -166,7 +166,7 @@ namespace Voron.Tests.Journal
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void StorageEnvironment_Two_Different_Tx_With_env_shutdown_Should_be_shipped_properly()
 		{
 			var transactionsToShip = new ConcurrentQueue<TransactionToShip>();
@@ -234,7 +234,7 @@ namespace Voron.Tests.Journal
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void StorageEnvironment_CreateTree_Should_be_shipped_properly()
 		{
 			var transactionsToShip = new ConcurrentBag<TransactionToShip>();
@@ -268,7 +268,7 @@ namespace Voron.Tests.Journal
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void StorageEnvironment_should_be_able_to_accept_transactionsToShip()
 		{
 			var transactionsToShip = new List<TransactionToShip>();
@@ -300,7 +300,7 @@ namespace Voron.Tests.Journal
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void StorageEnvironment_should_be_able_to_accept_transactionsToShip_with_LOTS_of_transactions()
 		{
 			var transactionsToShip = new List<TransactionToShip>();
@@ -341,7 +341,7 @@ namespace Voron.Tests.Journal
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void StorageEnvironment_should_be_able_to_accept_transactionsToShip_with_new_trees()
 		{
 			var transactionsToShip = new ConcurrentBag<TransactionToShip>();
@@ -377,7 +377,7 @@ namespace Voron.Tests.Journal
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void StorageEnvironment_should_be_able_to_accept_transactionsToShip_with_new_trees_no_flushing()
 		{
 			var transactionsToShip = new ConcurrentBag<TransactionToShip>();
