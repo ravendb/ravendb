@@ -11,15 +11,10 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 
+using Xunit;
+
 namespace Raven.Tests.Issues
 {
-	using System;
-	using System.Globalization;
-
-	using Raven.Abstractions.Linq;
-
-	using Xunit;
-
 	public class RavenDB_2706 : RavenTest
 	{
 		[Fact]
@@ -44,7 +39,7 @@ namespace Raven.Tests.Issues
 				
 				  var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                               servers[0].SystemDatabase.ServerUrl +
-																			  string.Format("databases/db1/exploration?linq={0}&collection=Users&timeoutSeconds=30", "from result in results select result"),
+																			  string.Format("databases/db1/streams/exploration?linq={0}&collection=Users&timeoutSeconds=30", "from result in results select result"),
                                                                               HttpMethods.Get,
                                                                               new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                               store.Conventions);
