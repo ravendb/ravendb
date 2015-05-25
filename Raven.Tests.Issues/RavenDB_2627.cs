@@ -912,8 +912,10 @@ namespace Raven.Tests.Issues
 
 				Thread.Sleep(TimeSpan.FromSeconds(5));
 
-				Assert.False(docs.TryTake(out doc, waitForDocTimeout));
-				Assert.False(docs.TryTake(out doc, waitForDocTimeout));
+				doc = null;
+
+				Assert.False(docs.TryTake(out doc, waitForDocTimeout), doc != null ? doc.ToString() : string.Empty);
+				Assert.False(docs.TryTake(out doc, waitForDocTimeout), doc != null ? doc.ToString() : string.Empty);
 
 				Assert.True(subscription.IsClosed);
 
