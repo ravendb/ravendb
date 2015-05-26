@@ -247,8 +247,8 @@
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionClosedException.cs" />
-    <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
