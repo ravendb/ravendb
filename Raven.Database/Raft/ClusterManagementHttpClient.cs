@@ -55,7 +55,7 @@ namespace Raven.Database.Raft
 			var request = new HttpRaftRequest(node, url, httpMethod, info =>
 			{
 				HttpClient client;
-				var dispose = (IDisposable) GetConnection(info, out client);
+				var dispose = (IDisposable)GetConnection(info, out client);
 				return Tuple.Create(dispose, client);
 			},
 			CancellationToken.None)
@@ -221,7 +221,7 @@ namespace Raven.Database.Raft
 					return response.IsSuccessStatusCode ? ConnectivityStatus.Online : ConnectivityStatus.Offline;
 				}
 			}
-			catch (ErrorResponseException e) 
+			catch (ErrorResponseException e)
 			{
 				return e.StatusCode == HttpStatusCode.Unauthorized ? ConnectivityStatus.WrongCredentials : ConnectivityStatus.Offline;
 			}
@@ -332,6 +332,8 @@ namespace Raven.Database.Raft
 
 		public async Task SendLeaveAsync(NodeConnectionInfo node)
 		{
+			var success = true;
+
 			try
 			{
 				if (raftEngine.Options.SelfConnection == node)
@@ -346,9 +348,11 @@ namespace Raven.Database.Raft
 			}
 			catch (NotLeadingException)
 			{
+				success = false;
 			}
 
-			await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node).ConfigureAwait(false);
+			if (success == false)
+				await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node).ConfigureAwait(false);
 		}
 
 		public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
