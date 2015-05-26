@@ -201,6 +201,8 @@ namespace Raven.Abstractions.Data
         public const string IncrementalBackupRecurringAlertTimeout = "Raven/IncrementalBackup/RecurringAlertTimeoutDays";
 		public const string IncrementalBackupState = "IncrementalBackupState.Document";
 
+		// Queries
+		public const string MaxClauseCount = "Raven/MaxClauseCount";
 
 		// General
 		public static partial class Database
