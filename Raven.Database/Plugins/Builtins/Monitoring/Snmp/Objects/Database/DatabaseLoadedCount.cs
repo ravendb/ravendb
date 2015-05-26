@@ -6,13 +6,12 @@
 using System.Linq;
 
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database
 {
-	public class DatabaseLoadedCount : ScalarObjectBase
+	public class DatabaseLoadedCount : ScalarObjectBase<Integer32>
 	{
 		private readonly DatabasesLandlord databasesLandlord;
 
@@ -22,10 +21,9 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database
 			this.databasesLandlord = databasesLandlord;
 		}
 
-		public override ISnmpData Data
+		protected override Integer32 GetData()
 		{
-			get { return new Integer32(GetCount(databasesLandlord)); }
-			set { throw new AccessFailureException(); }
+			return new Integer32(GetCount(databasesLandlord));
 		}
 
 		private static int GetCount(AbstractLandlord<DocumentDatabase> landlord)

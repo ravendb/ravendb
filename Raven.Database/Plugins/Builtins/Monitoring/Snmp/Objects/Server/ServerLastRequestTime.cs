@@ -1,16 +1,13 @@
 ﻿using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Abstractions;
 using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	internal class ServerLastRequestTime : ScalarObjectBase
+	internal class ServerLastRequestTime : ScalarObjectBase<TimeTicks>
 	{
 		private readonly RequestManager requestManager;
-
-		private static readonly TimeTicks Zero = new TimeTicks(0);
 
 		public ServerLastRequestTime(RequestManager requestManager)
 			: base("1.11")
@@ -18,16 +15,12 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 			this.requestManager = requestManager;
 		}
 
-		public override ISnmpData Data
+		protected override TimeTicks GetData()
 		{
-			get
-			{
-				if (requestManager.LastRequestTime.HasValue)
-					return new TimeTicks(SystemTime.UtcNow - requestManager.LastRequestTime.Value);
+			if (requestManager.LastRequestTime.HasValue)
+				return new TimeTicks(SystemTime.UtcNow - requestManager.LastRequestTime.Value);
 
-				return Zero;
-			}
-			set { throw new AccessFailureException(); }
+			return null;
 		}
 	}
 }

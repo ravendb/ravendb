@@ -9,14 +9,14 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Indexes
 {
-	public class DatabaseIndexReduceErrors : DatabaseIndexScalarObjectBase
+	public class DatabaseIndexReduceErrors : DatabaseIndexScalarObjectBase<Integer32>
 	{
 		public DatabaseIndexReduceErrors(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
 			: base(databaseName, indexName, landlord, databaseIndex, indexIndex, "10")
 		{
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override Integer32 GetData(DocumentDatabase database)
 		{
 			var stats = GetIndexStats(database);
 			return new Integer32(stats.ReduceIndexingErrors.HasValue ? stats.ReduceIndexingErrors.Value : 0);

@@ -9,14 +9,14 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseCurrentNumberOfItemsToReduceInSingleBatch : DatabaseScalarObjectBase
+	public class DatabaseCurrentNumberOfItemsToReduceInSingleBatch : DatabaseScalarObjectBase<Gauge32>
 	{
 		public DatabaseCurrentNumberOfItemsToReduceInSingleBatch(string databaseName, DatabasesLandlord landlord, int index)
 			: base(databaseName, landlord, "5.2.{0}.1.9", index)
 		{
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override Gauge32 GetData(DocumentDatabase database)
 		{
 			return new Gauge32(database.WorkContext.CurrentNumberOfItemsToReduceInSingleBatch);
 		}

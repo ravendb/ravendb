@@ -5,13 +5,12 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerIndexingErrors : ScalarObjectBase
+	public class ServerIndexingErrors : ScalarObjectBase<Gauge32>
 	{
 		private readonly DatabasesLandlord landlord;
 
@@ -21,13 +20,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 			this.landlord = landlord;
 		}
 
-		public override ISnmpData Data
-		{
-			get { return GetData(); }
-			set { throw new AccessFailureException(); }
-		}
-
-		private ISnmpData GetData()
+		protected override Gauge32 GetData()
 		{
 			var indexingErrors = 0;
 			landlord.ForAllDatabases(database =>

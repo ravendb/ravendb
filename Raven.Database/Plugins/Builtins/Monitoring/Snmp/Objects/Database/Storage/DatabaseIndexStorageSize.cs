@@ -9,14 +9,14 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Storage
 {
-	public class DatabaseIndexStorageSize : DatabaseScalarObjectBase
+	public class DatabaseIndexStorageSize : DatabaseScalarObjectBase<Gauge32>
 	{
 		public DatabaseIndexStorageSize(string databaseName, DatabasesLandlord landlord, int index)
 			: base(databaseName, landlord, "5.2.{0}.2.3", index)
 		{
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override Gauge32 GetData(DocumentDatabase database)
 		{
 			var indexStorageSizeOnDisk = database.GetIndexStorageSizeOnDisk();
 			return new Gauge32(indexStorageSizeOnDisk / 1024L / 1024L);
