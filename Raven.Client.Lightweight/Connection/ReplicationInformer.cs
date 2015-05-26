@@ -101,6 +101,8 @@ namespace Raven.Client.Connection
                 var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url : x.ClientVisibleUrl;
                 if (string.IsNullOrEmpty(url) || x.Disabled || x.IgnoredClient)
                     return null;
+	            if (x.ShouldReplicateFromSpecificCollections) 
+					return null;
                 if (string.IsNullOrEmpty(x.Database))
                     return new OperationMetadata(url, x.Username, x.Password, x.Domain, x.ApiKey, x.ClusterInformation);
 
