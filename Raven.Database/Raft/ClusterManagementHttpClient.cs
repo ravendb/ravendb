@@ -332,8 +332,6 @@ namespace Raven.Database.Raft
 
 		public async Task SendLeaveAsync(NodeConnectionInfo node)
 		{
-			var success = true;
-
 			try
 			{
 				if (raftEngine.Options.SelfConnection == node)
@@ -344,21 +342,20 @@ namespace Raven.Database.Raft
 				else
 				{
 					await raftEngine.RemoveFromClusterAsync(node).ConfigureAwait(false);
+					return;
 				}
 			}
 			catch (NotLeadingException)
 			{
-				success = false;
 			}
 
-			if (success == false)
-				await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node).ConfigureAwait(false);
+			await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node).ConfigureAwait(false);
 		}
 
 		public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
 		{
-			var url = leavingNode.Uri.AbsoluteUri + "admin/cluster/leave?name=" + leavingNode.Name;
-			using (var request = CreateRequest(leavingNode, url, HttpMethods.Get))
+			var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/leave?name=" + leavingNode.Name;
+			using (var request = CreateRequest(leaderNode, url, HttpMethods.Get))
 			{
 				var response = await request.ExecuteAsync().ConfigureAwait(false);
 				if (response.IsSuccessStatusCode)
