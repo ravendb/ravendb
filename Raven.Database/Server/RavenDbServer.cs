@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-
+using Lucene.Net.Search;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Client.FileSystem;
@@ -103,8 +103,11 @@ namespace Raven.Server
 				ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
 			}
 
+			BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
+
 			owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
 			options = owinHttpServer.Options;
+			
 			serverThingsForTests = new ServerThingsForTests(options);
 			documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
 			documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
