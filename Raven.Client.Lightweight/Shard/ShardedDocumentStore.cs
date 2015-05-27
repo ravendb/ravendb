@@ -312,7 +312,26 @@ namespace Raven.Client.Shard
 			try
 			{
 				ShardStrategy.Shards.ForEach(shard => shard.Value.Initialize());
-				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
+
+                var shardsPointingToSameDb = ShardStrategy.Shards
+                    .GroupBy(x =>
+                    {
+                        try
+                        {
+                            return x.Value.DatabaseCommands.GetStatistics().DatabaseId;
+                        }
+                        catch (Exception)
+                        {
+                            return Guid.NewGuid();// we'll just ignore any connection erros here
+                        }
+                    }).FirstOrDefault(x => x.Count() > 1);
+
+
+			    if (shardsPointingToSameDb != null)
+			        throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.",
+			            string.Join(", ", shardsPointingToSameDb.Select(x => x.Key))));
+
+                if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new ShardedHiloKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKey(commands, Conventions, entity);

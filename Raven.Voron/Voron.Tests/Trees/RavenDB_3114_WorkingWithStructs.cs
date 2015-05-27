@@ -28,7 +28,7 @@ namespace Voron.Tests.Trees
 		}
 
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldNotAllowToCreateSchemaWithAnyTypeOfFields()
 		{
 			Assert.DoesNotThrow(() => new StructureSchema<MappedResults>());
@@ -43,7 +43,7 @@ namespace Voron.Tests.Trees
 		}
 
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldNotAllowToDefineFixedSizeFieldAfterVariableSizeField()
 		{
 			var ae = Assert.Throws<ArgumentException>(() => new StructureSchema<SchemaFields>().Add<string>(SchemaFields.Message).Add<int>(SchemaFields.Count));
@@ -51,7 +51,7 @@ namespace Voron.Tests.Trees
 			Assert.Equal("Cannot define a fixed size field after variable size fields", ae.Message);
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldThrowOnUnsupportedType()
 		{
 			var notSupportedException = Assert.Throws<NotSupportedException>(() => new StructureSchema<SchemaFields>().Add<DateTime>(SchemaFields.DateTime));
@@ -61,7 +61,7 @@ namespace Voron.Tests.Trees
 			Assert.True(notSupportedException.Message.StartsWith("Not supported structure field type:"));
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldThrowWhenSettingUndefinedField()
 		{
 			var schema = new StructureSchema<SchemaFields>()
@@ -83,7 +83,7 @@ namespace Voron.Tests.Trees
 			Assert.Equal("No such field in schema defined. Field name: Does_Not_Exist", ae.Message);
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldThrowWhenSettingDifferentValueTypeThanDefinedInSchema()
 		{
 			var schema = new StructureSchema<SchemaFields>()
@@ -95,7 +95,7 @@ namespace Voron.Tests.Trees
 			Assert.Equal("Attempt to set a field value which type is different than defined in the structure schema. Expected: System.Int32, got: System.Int64", invalidData.Message);
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldThrowOnAttemptToPartialWriteOfVariableFields()
 		{
 			var schema = new StructureSchema<SchemaFields>()
@@ -116,7 +116,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldNotAllowToDefineSchemaWithDuplicatedFields()
 		{
 			var ae = Assert.Throws<ArgumentException>(() => new StructureSchema<SchemaFields>()
@@ -148,7 +148,7 @@ namespace Voron.Tests.Trees
 			Message
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanReadAndWriteStructsFromTrees()
 		{
 			var indexedAt = new DateTime(2015, 1, 20);
@@ -191,7 +191,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanDeleteStructsFromTrees()
 		{
 			var schema = new StructureSchema<IndexingStatsFields>()
@@ -227,7 +227,7 @@ namespace Voron.Tests.Trees
 		}
 
 
-		[Fact]
+		[PrefixesFact]
 		public void CanWriteStructsByUsingWriteBatchAndReadFromSnapshot()
 		{
 			var statsSchema = new StructureSchema<IndexingStatsFields>()
@@ -296,7 +296,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanReadStructsFromTreeIterator()
 		{
 			var statsSchema = new StructureSchema<IndexingStatsFields>()
@@ -356,7 +356,7 @@ namespace Voron.Tests.Trees
 			TimestampBinary
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void BasicStructureWithStringTest()
 		{
 			var schema = new StructureSchema<Enum>()
@@ -393,7 +393,7 @@ namespace Voron.Tests.Trees
 			World
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void MultipleStringFieldsShouldBeWrittenInProperOrder()
 		{
 			var schema = new StructureSchema<HelloWorld>()
@@ -418,7 +418,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ComplexStructureTest()
 		{
 			var now = DateTime.Now;
@@ -484,7 +484,7 @@ namespace Voron.Tests.Trees
 			@bool
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanWriteAndReadAllPrimitiveTypesAndDecimals()
 		{
 			var schema = new StructureSchema<PrimitiveFields>()
@@ -589,7 +589,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldNotAllowToSkipVariableSizeFieldsByDefault()
 		{
 			var schema = new StructureSchema<MappedResults>()

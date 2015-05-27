@@ -34,12 +34,12 @@ namespace Raven.Client.Shard
 				throw new ArgumentException("shardIds must have at least one value", "shardIds");
 		}
 
-		public void ShardingOn<TEntity>(Expression<Func<TEntity, string>> shardingProperty, Func<string, string> translator = null)
+		public DefaultShardResolutionStrategy ShardingOn<TEntity>(Expression<Func<TEntity, string>> shardingProperty, Func<string, string> translator = null)
 		{
-			ShardingOn(shardingProperty, translator, translator);
+			return ShardingOn(shardingProperty, translator, translator);
 		}
 
-		public void ShardingOn<TEntity, TResult>(Expression<Func<TEntity, TResult>> shardingProperty, 
+		public DefaultShardResolutionStrategy ShardingOn<TEntity, TResult>(Expression<Func<TEntity, TResult>> shardingProperty, 
 			Func<TResult, string> valueTranslator = null,
 			Func<string, string> queryTranslator = null
 			)
@@ -81,6 +81,8 @@ namespace Raven.Client.Shard
 
 			shardResultToStringByType[typeof(TEntity)] = o => valueTranslator(compiled((TEntity)o));
 			queryResultToStringByType[typeof(TEntity)] = o => queryTranslator(o);
+
+			return this;
 		}
 
 

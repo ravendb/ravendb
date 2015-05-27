@@ -64,7 +64,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore())
 			{
-				var ex = Assert.Throws<SubscriptionDoesNotExistExeption>(() => store.Subscriptions.Open(1, new SubscriptionConnectionOptions()));
+				var ex = Assert.Throws<SubscriptionDoesNotExistException>(() => store.Subscriptions.Open(1, new SubscriptionConnectionOptions()));
 				Assert.Equal("There is no subscription configuration for specified identifier (id: 1)", ex.Message);
 			}
 		}
@@ -912,8 +912,10 @@ namespace Raven.Tests.Issues
 
 				Thread.Sleep(TimeSpan.FromSeconds(5));
 
-				Assert.False(docs.TryTake(out doc, waitForDocTimeout));
-				Assert.False(docs.TryTake(out doc, waitForDocTimeout));
+				doc = null;
+
+				Assert.False(docs.TryTake(out doc, waitForDocTimeout), doc != null ? doc.ToString() : string.Empty);
+				Assert.False(docs.TryTake(out doc, waitForDocTimeout), doc != null ? doc.ToString() : string.Empty);
 
 				Assert.True(subscription.IsClosed);
 
@@ -928,6 +930,7 @@ namespace Raven.Tests.Issues
 			{
 				var id = store.Subscriptions.Create<User>(new SubscriptionCriteria<User>());
 				var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions());
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				var users = new BlockingCollection<User>();
 

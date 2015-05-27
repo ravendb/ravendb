@@ -15,7 +15,7 @@ namespace Voron.Tests.Bugs
 			options.ManualFlushing = true;
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2585()
 		{
 			const int testedOverflowSize = 20000;
@@ -59,7 +59,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_2_RavenDB_2585()
 		{
 			const int testedOverflowSize = 16000;
@@ -111,7 +111,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2806()
 		{
 			RequireFileBasedPager();
@@ -158,7 +158,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_2_RavenDB_2806()
 		{
 			RequireFileBasedPager();
@@ -214,7 +214,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2891()
 		{
 			const int testedOverflowSize = 50000;

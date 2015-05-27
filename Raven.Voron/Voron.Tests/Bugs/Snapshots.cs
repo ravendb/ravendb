@@ -23,7 +23,7 @@ namespace Voron.Tests.Bugs
 			
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void SnapshotIssue()
 		{
 			const int DocumentCount = 50000;
@@ -76,7 +76,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void SnapshotIssue_ExplicitFlushing()
 		{
 			const int DocumentCount = 50000;

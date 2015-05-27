@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Mono.CSharp;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -18,8 +17,8 @@ using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
-using System.Globalization;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -65,17 +64,23 @@ namespace Raven.Bundles.Replication.Tasks
 		private TimeSpan _lastQueriedFrequency;
 		private Timer _indexReplicationTaskTimer;
 		private Timer _lastQueriedTaskTimer;
-		private object _indexReplicationTaskLock = new object();
-		private object _lastQueriedTaskLock = new object();
+		private readonly object _indexReplicationTaskLock = new object();
+		private readonly object _lastQueriedTaskLock = new object();
 
 		private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>();
 
-		private readonly ConcurrentDictionary<string, bool> destinationForceBuffering = new ConcurrentDictionary<string, bool>(); 
+		private readonly ConcurrentDictionary<string, bool> destinationForceBuffering = new ConcurrentDictionary<string, bool>();
 
 		public ConcurrentDictionary<string, DestinationStats> DestinationStats
 		{
 			get { return destinationStats; }
 		}
+
+
+		[Obsolete("Use for debugging only!")]
+		public bool ShouldWaitForWork { get; set; }
+
+		public event Action ReplicationExecuted;
 
 		public ConcurrentDictionary<string, DateTime> Heartbeats
 		{
@@ -92,12 +97,13 @@ namespace Raven.Bundles.Replication.Tasks
 		public ReplicationTask()
 		{
 			TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromMinutes(1);
+			ShouldWaitForWork = true;
 		}
 
 		public void Execute(DocumentDatabase database)
 		{
 			docDb = database;
-			
+
 
 			docDb.Notifications.OnIndexChange += OnIndexChange;
 			docDb.Notifications.OnTransformerChange += OnTransformerChange;
@@ -232,10 +238,12 @@ namespace Raven.Bundles.Replication.Tasks
 											() =>
 											{
 												using (LogContext.WithDatabase(docDb.Name))
+												using (CultureHelper.EnsureInvariantCulture())
 												{
 													try
 													{
-														if (ReplicateTo(destination)) docDb.WorkContext.NotifyAboutWork();
+														if (ReplicateTo(destination))
+															docDb.WorkContext.NotifyAboutWork();
 													}
 													catch (Exception e)
 													{
@@ -275,7 +283,7 @@ namespace Raven.Bundles.Replication.Tasks
 													prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
 												}
 											}
-										}).AssertNotFailed();
+										}).ContinueWith(t => OnReplicationExecuted()).AssertNotFailed();
 								}
 							}
 						}
@@ -286,9 +294,10 @@ namespace Raven.Bundles.Replication.Tasks
 					}
 
 					runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
+
 					timeToWaitInMinutes = runningBecauseOfDataModifications
-											? TimeSpan.FromSeconds(30)
-											: TimeSpan.FromMinutes(5);
+						? TimeSpan.FromSeconds(30)
+						: TimeSpan.FromMinutes(5);
 				}
 
 				IsRunning = false;
@@ -885,7 +894,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 				using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
 				{
-					var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions, destinationForceBuffering.GetOrAdd(destination.ConnectionStringOptions.Url, docDb.Configuration.Replication.ForceReplicationRequestBuffering));
+					var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions, GetRequestBuffering(destination));
 					request.Write(jsonDocuments);
 					request.ExecuteRequest(docDb.WorkContext.CancellationToken);
 
@@ -939,36 +948,34 @@ namespace Raven.Bundles.Replication.Tasks
 				return;
 			try
 			{
-
-				var relevantIndexLastQueries = new Dictionary<string, DateTime>();
-				var relevantIndexes = docDb.Statistics.Indexes.Where(indexStats => indexStats.IsInvalidIndex == false &&
-																				   indexStats.Priority != IndexingPriority.Error &&
-																				   indexStats.Priority != IndexingPriority.Disabled &&
-																				   indexStats.LastQueryTimestamp.HasValue);
-				foreach (var relevantIndex in relevantIndexes)
+				using (CultureHelper.EnsureInvariantCulture())
 				{
-					relevantIndexLastQueries[relevantIndex.Name] = relevantIndex.LastQueryTimestamp.GetValueOrDefault();
-				}
-
-				if (relevantIndexLastQueries.Count == 0)
-					return;
-
-				var destinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
-				foreach (var destination in destinations)
-				{
-					try
+					var relevantIndexLastQueries = new Dictionary<string, DateTime>();
+					var relevantIndexes = docDb.Statistics.Indexes.Where(indexStats => indexStats.IsInvalidIndex == false && indexStats.Priority != IndexingPriority.Error && indexStats.Priority != IndexingPriority.Disabled && indexStats.LastQueryTimestamp.HasValue);
+					foreach (var relevantIndex in relevantIndexes)
 					{
-						string url = destination.ConnectionStringOptions.Url + "/indexes/last-queried";
-
-						var replicationRequest = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions, GetRequestBuffering(destination));
-						replicationRequest.Write(RavenJObject.FromObject(relevantIndexLastQueries));
-						replicationRequest.ExecuteRequest();
+						relevantIndexLastQueries[relevantIndex.Name] = relevantIndex.LastQueryTimestamp.GetValueOrDefault();
 					}
-					catch (Exception e)
-					{
-						HandleRequestBufferingErrors(e, destination);
 
-						log.WarnException("Could not update last query time of " + destination.ConnectionStringOptions.Url, e);
+					if (relevantIndexLastQueries.Count == 0) return;
+
+					var destinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
+					foreach (var destination in destinations)
+					{
+						try
+						{
+							string url = destination.ConnectionStringOptions.Url + "/indexes/last-queried";
+
+							var replicationRequest = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions, GetRequestBuffering(destination));
+							replicationRequest.Write(RavenJObject.FromObject(relevantIndexLastQueries));
+							replicationRequest.ExecuteRequest();
+						}
+						catch (Exception e)
+						{
+							HandleRequestBufferingErrors(e, destination);
+
+							log.WarnException("Could not update last query time of " + destination.ConnectionStringOptions.Url, e);
+						}
 					}
 				}
 			}
@@ -992,94 +999,95 @@ namespace Raven.Bundles.Replication.Tasks
 
 			try
 			{
-				var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
-				foreach (var destination in replicationDestinations)
+				using (CultureHelper.EnsureInvariantCulture())
 				{
-					try
+					var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
+					foreach (var destination in replicationDestinations)
 					{
-						var indexTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationIndexesTombstones, 0, 64);
-						var replicatedIndexTombstones = new Dictionary<string, int>();
-
-						ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
-
-						var transformerTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationTransformerTombstones, 0, 64);
-						var replicatedTransformerTombstones = new Dictionary<string, int>();
-
-						ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
-
-						if (docDb.Indexes.Definitions.Length > 0)
+						try
 						{
-							foreach (var definition in docDb.Indexes.Definitions)
-							{
-								try
-								{
-									var url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
-									var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
-									replicationRequest.Write(RavenJObject.FromObject(definition));
-									replicationRequest.ExecuteRequest();
-								}
-								catch (Exception e)
-								{
-									HandleRequestBufferingErrors(e, destination);
+							var indexTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationIndexesTombstones, 0, 64);
+							var replicatedIndexTombstones = new Dictionary<string, int>();
 
-									log.WarnException("Could not replicate index " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
+							ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
+
+							var transformerTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationTransformerTombstones, 0, 64);
+							var replicatedTransformerTombstones = new Dictionary<string, int>();
+
+							ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
+
+							if (docDb.Indexes.Definitions.Length > 0)
+							{
+								foreach (var definition in docDb.Indexes.Definitions)
+								{
+									try
+									{
+										var url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
+										var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
+										replicationRequest.Write(RavenJObject.FromObject(definition));
+										replicationRequest.ExecuteRequest();
+									}
+									catch (Exception e)
+									{
+										HandleRequestBufferingErrors(e, destination);
+
+										log.WarnException("Could not replicate index " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
+									}
 								}
 							}
+
+							if (docDb.Transformers.Definitions.Length > 0)
+							{
+								foreach (var definition in docDb.Transformers.Definitions)
+								{
+									try
+									{
+										var clonedTransformer = definition.Clone();
+										clonedTransformer.TransfomerId = 0;
+
+										string url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
+										var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
+										replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
+										replicationRequest.ExecuteRequest();
+									}
+									catch (Exception e)
+									{
+										HandleRequestBufferingErrors(e, destination);
+
+										log.WarnException("Could not replicate transformer " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
+									}
+								}
+							}
+
+							docDb.TransactionalStorage.Batch(actions =>
+							{
+								foreach (var indexTombstone in replicatedIndexTombstones)
+								{
+									if (indexTombstone.Value != replicationDestinations.Length) continue;
+									actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
+								}
+
+								foreach (var transformerTombstone in replicatedTransformerTombstones)
+								{
+									if (transformerTombstone.Value != replicationDestinations.Length) continue;
+									actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
+								}
+							});
 						}
-
-						if (docDb.Transformers.Definitions.Length > 0)
+						catch (Exception e)
 						{
-							foreach (var definition in docDb.Transformers.Definitions)
-							{
-								try
-								{
-									var clonedTransformer = definition.Clone();
-									clonedTransformer.TransfomerId = 0;
-
-									string url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
-									var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
-									replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
-									replicationRequest.ExecuteRequest();
-								}
-								catch (Exception e)
-								{
-									HandleRequestBufferingErrors(e, destination);
-
-									log.WarnException("Could not replicate transformer " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
-								}
-							}
+							log.ErrorException("Failed to replicate indexes and transformers to " + destination, e);
 						}
-
-						docDb.TransactionalStorage.Batch(actions =>
-						{
-							foreach (var indexTombstone in replicatedIndexTombstones)
-							{
-								if (indexTombstone.Value != replicationDestinations.Length)
-									continue;
-								actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
-							}
-
-							foreach (var transformerTombstone in replicatedTransformerTombstones)
-							{
-								if (transformerTombstone.Value != replicationDestinations.Length)
-									continue;
-								actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
-							}
-						});
 					}
-					catch (Exception e)
-					{
-						log.ErrorException("Failed to replicate indexes and transformers to " + destination, e);
-					}
+
+					return true;
 				}
-
-				return true;
 			}
 			catch (Exception e)
 			{
 				log.ErrorException("Failed to replicate indexes and transformers", e);
 
-                return false;
+				return false;
 			}
 			finally
 			{
@@ -1163,7 +1171,7 @@ namespace Raven.Bundles.Replication.Tasks
 					// we don't send out deletions immediately, we wait for a bit
 					// to make sure that the user didn't reset the index or delete / create
 					// things manually
-					.Where(x => (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfIndexesToSiblings )
+					.Where(x => (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfIndexesToSiblings)
 					.Select(x => new JsonDocument
 					{
 						Etag = x.Etag,
@@ -1684,10 +1692,10 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public void Dispose()
 		{
-            if (_indexReplicationTaskTimer != null) 
-                _indexReplicationTaskTimer.Dispose();
-            if (_lastQueriedTaskTimer != null)
-    			_lastQueriedTaskTimer.Dispose();
+			if (_indexReplicationTaskTimer != null)
+				_indexReplicationTaskTimer.Dispose();
+			if (_lastQueriedTaskTimer != null)
+				_lastQueriedTaskTimer.Dispose();
 
 			Task task;
 			while (activeTasks.TryDequeue(out task))
@@ -1717,6 +1725,13 @@ namespace Raven.Bundles.Replication.Tasks
 			metadata[Constants.RavenReplicationVersion] = 0;
 			metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(database.TransactionalStorage.Id);
 		}
+
+		protected void OnReplicationExecuted()
+		{
+			var replicationExecuted = ReplicationExecuted;
+			if (replicationExecuted != null) replicationExecuted();
+		}
+
 	}
 
 	internal class ReplicationStatisticsRecorder : IDisposable
@@ -1833,4 +1848,5 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 	}
+
 }

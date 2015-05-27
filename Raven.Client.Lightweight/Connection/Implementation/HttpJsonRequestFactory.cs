@@ -51,7 +51,7 @@ namespace Raven.Client.Connection
 	        get { return httpClientCache; }
 	    }
 
-	    internal readonly HttpMessageHandler httpMessageHandler;
+	    internal readonly Func<HttpMessageHandler> httpMessageHandler;
 
 		internal readonly bool acceptGzipContent;
 
@@ -173,7 +173,7 @@ namespace Raven.Client.Connection
 		/// default ctor
 		/// </summary>
 		/// <param name="maxNumberOfCachedRequests"></param>
-		public HttpJsonRequestFactory(int maxNumberOfCachedRequests, HttpMessageHandler httpMessageHandler = null, bool acceptGzipContent = true)
+		public HttpJsonRequestFactory(int maxNumberOfCachedRequests, Func<HttpMessageHandler> httpMessageHandler = null, bool acceptGzipContent = true)
 		{
 			this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
 			this.httpMessageHandler = httpMessageHandler;

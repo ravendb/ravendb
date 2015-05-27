@@ -27,6 +27,7 @@ namespace Raven.Bundles.Replication.Tasks
 				Log.Debug(reason); 
 				return false;
 			}
+
 			if (metadata[Constants.RavenReplicationConflict] != null)
 				// don't replicate conflicted documents, that just propagate the conflict
 			{

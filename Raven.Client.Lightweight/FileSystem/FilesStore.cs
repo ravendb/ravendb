@@ -153,11 +153,11 @@ namespace Raven.Client.FileSystem
                 maxNumberOfCachedRequests = value;
                 if (jsonRequestFactory != null)
                     jsonRequestFactory.Dispose();
-                jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests, HttpMessageHandler);
+                jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests, HttpMessageHandlerFactory);
             }
         }
 
-        public HttpMessageHandler HttpMessageHandler { get; set; }
+        public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
 
         private string url;
 
@@ -205,7 +205,7 @@ namespace Raven.Client.FileSystem
             if (initialized)
                 return this;
 
-            jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler);
+            jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory);
 
             try
             {

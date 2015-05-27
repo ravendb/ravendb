@@ -14,7 +14,7 @@ namespace Voron.Tests.Bugs
         /// <summary>
         /// http://issues.hibernatingrhinos.com/issue/RavenDB-1707
         /// </summary>
-        [Fact]
+        [PrefixesFact]
         public void MultipleTxPagesCanPointToOnePageNumberWhichShouldNotBeCausingIssuesDuringFlushing()
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnly();

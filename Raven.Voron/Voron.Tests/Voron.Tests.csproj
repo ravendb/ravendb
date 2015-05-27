@@ -108,6 +108,7 @@
     <Compile Include="Bugs\InvalidReleasesOfScratchPages.cs" />
     <Compile Include="Bugs\MultiReads.cs" />
     <Compile Include="Bugs\Iterating.cs" />
+    <Compile Include="Bugs\SplittingPageWithPrefixes.cs" />
     <Compile Include="Bugs\StartsWithSearch.cs" />
     <Compile Include="Bugs\FreeSpaceAndOverflowPages.cs" />
     <Compile Include="Bugs\DataCorruptionInOverflow.cs" />
@@ -116,6 +117,7 @@
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="Compaction\StorageCompactionTests.cs" />
     <Compile Include="DebugJournalTest.cs" />
+    <Compile Include="PrefixesFact.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
     <Compile Include="Journal\LogShipping.cs" />
@@ -123,6 +125,7 @@
     <Compile Include="Journal\UncommittedTransactions.cs" />
     <Compile Include="MultiTreeSize.cs" />
     <Compile Include="MultiValueTree.cs" />
+    <Compile Include="PrefixesTheory.cs" />
     <Compile Include="ScratchBuffer\MutipleScratchBuffersUsage.cs" />
     <Compile Include="ScratchBuffer\ScratchCanForceToFlushOldPages.cs" />
     <Compile Include="Optimizations\Writes.cs" />
@@ -154,7 +157,6 @@
     <Compile Include="StorageTest.cs" />
     <Compile Include="Trees\Rebalance.cs" />
     <Compile Include="Trees\TreeRenaming.cs" />
-    <Compile Include="Trees\TreesWithPrefixedKeys.cs" />
     <Compile Include="Trees\Updates.cs" />
     <Compile Include="Util\CrcTests.cs" />
     <Compile Include="Util\Hashing.cs" />
