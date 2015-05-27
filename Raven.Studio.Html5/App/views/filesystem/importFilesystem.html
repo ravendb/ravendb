@@ -1,20 +1,26 @@
 ﻿<div class="panel panel-default">
     <div class="panel-heading">
-        <h3 class="panel-title">Import Filesystem</h3>
+        <h3 class="panel-title">Import File System</h3>
     </div>
     <div class="panel-body">
-        <h4>Import data from a .ravendump file into the current filesystem.</h4>
+        <h4>Import data from a .ravendump file into the current file system.</h4>
         <p class="help-block">
             <i class="fa fa-warning text-warning"></i>
             Importing will overwrite any existing data.
         </p>
         <div data-bind="with: activeFilesystem">
-            <span class="btn btn-primary btn-file" data-bind="visible: !isImporting()">
-                Choose file <input id="importFilesystemFilePicker" type="file" data-bind="visible: isImporting() == false, event: { change: $root.fileSelected.bind($root, $element.value) }" />
-            </span>
-            <br />
-            <br />
-            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting()"></p>
+            <button class="btn btn-primary btn-file" data-bind="disable: isImporting">
+                Choose file <input id="importFilesystemFilePicker" type="file" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }"/>
+            </button>
+            <button class="btn btn-primary" data-bind="click: $root.importFs.bind($root), disable: !$root.hasFileSelected() || isImporting()">
+                <i class="fa fa-upload"></i>
+                Import File System
+            </button>
+            <p data-bind="visible: $root.hasFileSelected()">
+                Selected file name: <span data-bind="text: $root.importedFileName()"></span>
+            </p>
+            <br /> 
+            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting() || !!importStatus()"></p>
             <br />
             <div class="progress progress-striped active" data-bind="visible: isImporting">
                 <div class="progress-bar" role="progressbar" style="width: 100%"></div>
