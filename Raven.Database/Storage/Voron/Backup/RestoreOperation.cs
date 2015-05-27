@@ -4,7 +4,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using System;
 using System.IO;
-using Raven.Database.Data;
 using Voron;
 using Voron.Impl.Backup;
 

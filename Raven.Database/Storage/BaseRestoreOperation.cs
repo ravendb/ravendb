@@ -4,7 +4,6 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
 
 namespace Raven.Database.Storage

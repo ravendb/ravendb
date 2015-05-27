@@ -59,6 +59,11 @@ namespace Raven.Abstractions.Replication
 			set
 			{
 				_sourceCollections = value;
+
+				//precaution - make sure to remove the destination from possible failover targets 
+				//if collection specific replication is enabled
+				if (_sourceCollections.Length > 0)
+					IgnoredClient = true;
 			}
 		}
 
