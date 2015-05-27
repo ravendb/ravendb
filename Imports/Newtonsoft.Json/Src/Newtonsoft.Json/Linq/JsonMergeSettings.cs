@@ -1,6 +1,6 @@
 using System;
 
-namespace Newtonsoft.Json.Linq
+namespace Raven.Imports.Newtonsoft.Json.Linq
 {
     /// <summary>
     /// Specifies the settings used when merging JSON.

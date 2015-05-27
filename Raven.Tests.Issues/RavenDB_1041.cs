@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Extensions;

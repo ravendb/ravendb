@@ -6,7 +6,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Newtonsoft.Json.Sample
+namespace Raven.Imports.Newtonsoft.Json.Sample
 {
     /// <summary>
     /// A minimal

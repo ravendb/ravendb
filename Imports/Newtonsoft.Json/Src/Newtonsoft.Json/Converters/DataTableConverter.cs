@@ -25,7 +25,7 @@
 
 using System.Collections.Generic;
 using System.Globalization;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 #if !(NETFX_CORE || PORTABLE40 || PORTABLE)
 using System;
 using System.Data;
