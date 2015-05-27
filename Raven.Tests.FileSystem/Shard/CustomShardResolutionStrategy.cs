@@ -135,11 +135,13 @@ namespace Raven.Tests.FileSystem.Shard
 
             try
             {
-                var strategy = new ShardStrategy(shards);
+	            new ShardStrategy(shards).ShardAccessStrategy
+					.ApplyAsync(new List<IAsyncFilesCommands>(), new ShardRequestData(), async (commands, i) => 1)
+					.Wait();
             }
-            catch (Exception ex)
+            catch (AggregateException ex)
             {
-                notSuppotedEx = ex as NotSupportedException;
+                notSuppotedEx = ex.InnerException as NotSupportedException;
             }
 
             Assert.NotNull(notSuppotedEx);
