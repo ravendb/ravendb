@@ -143,13 +143,13 @@ namespace Raven.Database.Impl
 							    }
 							}
 						});
-                        if (shouldWaitNow)
-					    {
-                            SystemTime.Wait(500);
-                            operations = 0;
-                            duration.Restart();
-						    continue;
-					    }
+					}
+					if (shouldWaitNow)
+					{
+						SystemTime.Wait(500);
+						operations = 0;
+						duration.Restart();
+						continue;
 					}
 					if (batchCount < batchSize) break;
 				}
