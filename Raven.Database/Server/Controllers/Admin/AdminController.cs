@@ -223,12 +223,17 @@ namespace Raven.Database.Server.Controllers.Admin
 					    return;
 
 				    databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+					databaseDocument.Settings.Remove(Constants.RavenIndexPath);
+					databaseDocument.Settings.Remove(Constants.RavenEsentLogsPath);
+					databaseDocument.Settings.Remove(Constants.RavenTxJournalPath);
+
 				    if (restoreRequest.IndexesLocation != null)
 					    databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
-				    if (restoreRequest.JournalsLocation != null)
-					    databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
 
-				    bool replicationBundleRemoved = false;
+	                if (restoreRequest.JournalsLocation != null)
+		                databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+
+	                bool replicationBundleRemoved = false;
 				    if (restoreRequest.DisableReplicationDestinations)
 					    replicationBundleRemoved = TryRemoveReplicationBundle(databaseDocument);
 
@@ -253,8 +258,11 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
                 catch (Exception e)
                 {
+	                var aggregateException = e as AggregateException;
+	                var exception = aggregateException != null ? aggregateException.ExtractSingleInnerException() : e;
+
                     restoreStatus.State = RestoreStatusState.Faulted;
-                    restoreStatus.Messages.Add("Unable to restore database " + e.Message);
+					restoreStatus.Messages.Add("Unable to restore database " + exception.Message);
                     DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                                RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
                     throw;
