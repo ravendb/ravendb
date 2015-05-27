@@ -26,12 +26,24 @@
                                     <input data-bind="value: backupLocation, disable: $parent.isBusy" type="text" required class="form-control" id="backupLocation" placeholder="C:&#92;path-to-your-backup-folder">
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="databaseLocation" class="col-sm-2 control-label">Database Location</label>
-                                <div class="col-sm-5">
-                                    <input data-bind="value: resourceLocation, disable: $parent.isBusy" type="text" class="form-control" id="databaseLocation" placeholder="C:&#92;path-to-your-restored-database-folder">
-                                </div>
-                            </div>
+	                        <div class="form-group">
+		                        <label for="databaseLocation" class="col-sm-2 control-label">Database Location</label>
+		                        <div class="col-sm-5">
+			                        <input data-bind="value: resourceLocation, disable: $parent.isBusy" type="text" class="form-control" id="databaseLocation" placeholder="C:&#92;path-to-your-restored-database-folder">
+		                        </div>
+	                        </div>
+	                        <div class="form-group">
+								<label for="indexesLocation" class="col-sm-2 control-label">Indexes Location</label>
+		                        <div class="col-sm-5">
+									<input data-bind="value: indexesLocation, disable: $parent.isBusy" type="text" class="form-control" id="indexesLocation" placeholder="(Optional) Path to location where indexes should be placed">
+		                        </div>
+	                        </div>
+							<div class="form-group">
+								<label for="journalsLocation" class="col-sm-2 control-label">Logs Location</label>
+								<div class="col-sm-5">
+									<input data-bind="value: journalsLocation, disable: $parent.isBusy" type="text" class="form-control" id="journalsLocation" placeholder="(Optional) Path to location where logs/journals should be placed">
+								</div>
+							</div>
                             <div class="form-group">
                                 <label for="databaseName" class="col-sm-2 control-label">Database Name</label>
                                 <div class="col-sm-3">
@@ -97,12 +109,24 @@
                                     <input data-bind="value: backupLocation, disable: $parent.isBusy" type="text" required class="form-control" id="Text1" placeholder="C:&#92;path-to-your-backup-folder">
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="filesystemLocation" class="col-sm-2 control-label">Filesystem Location</label>
-                                <div class="col-sm-5">
-                                    <input data-bind="value: resourceLocation, disable: $parent.isBusy" type="text" class="form-control" id="filesystemLocation" placeholder="C:&#92;path-to-your-restored-filesystem-folder">
-                                </div>
-                            </div>
+	                        <div class="form-group">
+		                        <label for="filesystemLocation" class="col-sm-2 control-label">Filesystem Location</label>
+		                        <div class="col-sm-5">
+			                        <input data-bind="value: resourceLocation, disable: $parent.isBusy" type="text" class="form-control" id="filesystemLocation" placeholder="C:&#92;path-to-your-restored-filesystem-folder">
+		                        </div>
+	                        </div>
+							<div class="form-group">
+								<label for="filesystemIndexesLocation" class="col-sm-2 control-label">Indexes Location</label>
+								<div class="col-sm-5">
+									<input data-bind="value: indexesLocation, disable: $parent.isBusy" type="text" class="form-control" id="filesystemIndexesLocation" placeholder="(Optional) Path to location where indexes should be placed">
+								</div>
+							</div>
+	                        <div class="form-group">
+		                        <label for="filesystemJournalsLocation" class="col-sm-2 control-label">Logs Location</label>
+		                        <div class="col-sm-5">
+									<input data-bind="value: journalsLocation, disable: $parent.isBusy" type="text" class="form-control" id="filesystemJournalsLocation" placeholder="(Optional) Path to location where logs/journals should be placed">
+		                        </div>
+	                        </div>
                             <div class="form-group">
                                 <label for="filesystemName" class="col-sm-2 control-label">Filesystem Name</label>
                                 <div class="col-sm-3">
