@@ -1,22 +1,26 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Counters;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Counters;
 using Raven.Database.Counters.Backup;
+using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Tests.Helpers.Util;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Counters
 {
 	public class BackupRestoreTests : IDisposable
 	{
-		private const string BackupDestinationDirectory = "TestCounterBackup";
-		private const string BackupSourceDirectory = "TestCounterData";
-		private const string RestoreToDirectory = "TestCounterRestore";
+		private readonly string BackupDestinationDirectory = "TestCounterBackup";
+		private readonly string BackupSourceDirectory = "TestCounterData";
+		private readonly string RestoreToDirectory = "TestCounterRestore";
+		private readonly string DocumentDatabaseDirectory = "TestCounterDB";
 		private const string CounterStorageId = "FooBar";
 
 		private readonly CounterStorage storage;
@@ -25,21 +29,20 @@ namespace Raven.Tests.Counters
 
 		public BackupRestoreTests()
 		{
-			if (Directory.Exists(BackupSourceDirectory))
-				Directory.Delete(BackupSourceDirectory, true);
+			DeleteTempFolders();
 
-			if (Directory.Exists(BackupDestinationDirectory))
-				Directory.Delete(BackupDestinationDirectory, true);
+			var uniqueId = Guid.NewGuid();
+			BackupDestinationDirectory += uniqueId;
+			BackupSourceDirectory += uniqueId;
+			RestoreToDirectory += uniqueId;
+			DocumentDatabaseDirectory += uniqueId;
 
-			if (Directory.Exists(RestoreToDirectory))
-				Directory.Delete(RestoreToDirectory, true);
-	
 			config = new RavenConfiguration
 			{
 				CountersDataDirectory = BackupSourceDirectory,
 				CountersDatabaseName = "TestCounterDB",				
 				Port = 8090,
-				DataDirectory = "System",
+				DataDirectory = DocumentDatabaseDirectory,
 				RunInMemory = false,
 				DefaultStorageTypeName = "Voron",
 				AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
@@ -54,8 +57,24 @@ namespace Raven.Tests.Counters
 			documentDatabase = new DocumentDatabase(config,null);
 		}
 
-		public void Dispose()
+		private static void DeleteTempFolders()
 		{
+			var directoriesToDelete = Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "TestCounter*", SearchOption.TopDirectoryOnly).ToList();
+			directoriesToDelete.ForEach(dir =>
+			{
+				try
+				{
+					IOExtensions.DeleteDirectory(dir);
+				}
+				catch (IOException)
+				{
+				}
+			});
+			
+		}
+
+		public void Dispose()
+		{			
 			storage.Dispose();
 			documentDatabase.Dispose();
 		}

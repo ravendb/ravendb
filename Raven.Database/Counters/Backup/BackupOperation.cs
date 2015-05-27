@@ -17,9 +17,10 @@ namespace Raven.Database.Counters.Backup
 	public class BackupOperation
 	{
 		private readonly DocumentDatabase database;
-		private string backupDestinationDirectory;
+		private readonly string backupDestinationDirectory;
 		private readonly StorageEnvironment env;
 		private readonly bool incrementalBackup;
+		private readonly CounterStorageDocument counterDocument;
 
 		private static readonly ILog _log = LogManager.GetCurrentClassLogger();
 		private readonly string backupFilename;
@@ -32,6 +33,7 @@ namespace Raven.Database.Counters.Backup
 			this.backupDestinationDirectory = backupDestinationDirectory;
 			this.env = env;
 			this.incrementalBackup = incrementalBackup;
+			this.counterDocument = counterDocument;
 			this.backupSourceDirectory = backupSourceDirectory;
 			backupFilename = counterDocument.Id + ".Voron.Backup";
 
@@ -88,7 +90,7 @@ namespace Raven.Database.Counters.Backup
 				var state = new IncrementalBackupState()
 				{
 					ResourceId = database.TransactionalStorage.Id,
-					ResourceName = database.Name ?? Constants.SystemDatabase
+					ResourceName = counterDocument.Id
 				};
 
 				File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());

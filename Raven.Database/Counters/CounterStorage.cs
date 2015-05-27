@@ -239,6 +239,7 @@ namespace Raven.Database.Counters
 				exceptionAggregator.Execute(metricsCounters.Dispose);
 
 			exceptionAggregator.ThrowIfNeeded();
+			storageEnvironment.Dispose();
 		}
 
 		[CLSCompliant(false)]
