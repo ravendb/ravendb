@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Shard
@@ -9,55 +10,70 @@ namespace Raven.Client.FileSystem.Shard
 	/// </summary>
 	public class SequentialShardAccessStrategy : IShardAccessStrategy
 	{
-        public event ShardingErrorHandle<IAsyncFilesCommands> OnAsyncError;
+		private readonly Task runFirst;
 
-        public Task<T[]> ApplyAsync<T>(IList<IAsyncFilesCommands> commands, ShardRequestData request, Func<IAsyncFilesCommands, int, Task<T>> operation)
+		public SequentialShardAccessStrategy(IDictionary<string, IAsyncFilesCommands> shards)
 		{
-			var resultsTask = new TaskCompletionSource<List<T>>();
-			var results = new List<T>();
-			var errors = new List<Exception>();
+			this.runFirst = ValidateShards(shards);
+		}
 
-			Action<int> executer = null;
-			executer = index =>
+		private async Task ValidateShards(IEnumerable<KeyValuePair<string, IAsyncFilesCommands>> shards)
+		{
+			var shardsKeyIdList = new List<Tuple<string, Guid>>();
+			foreach (var shard in shards)
 			{
-				if (index >= commands.Count)
+				try
 				{
-					if (errors.Count == commands.Count)
-						throw new AggregateException(errors);
-					// finished all commands successfully
-					resultsTask.SetResult(results);
-					return;
+					var id = await shard.Value.GetServerIdAsync();
+					shardsKeyIdList.Add(Tuple.Create(shard.Key, id));
 				}
-
-				operation(commands[index], index).ContinueWith(task =>
+				catch (Exception)
 				{
-					if (task.IsFaulted)
-					{
-						var error = OnAsyncError;
-						if (error == null)
-						{
-							resultsTask.SetException(task.Exception);
-							return;
-						}
-						if (error(commands[index], request, task.Exception) == false)
-						{
-							resultsTask.SetException(task.Exception);
-							return;
-						}
-						errors.Add(task.Exception);
-					}
-					else
-					{
-						results.Add(task.Result);
-					}
+					// ignore the error here
+				}
+			}
 
-					// After we've dealt with one result, we call the operation on the next shard
-					executer(index + 1);
-				});
-			};
+			var shardsPointingToSameDb = shardsKeyIdList
+				.GroupBy(x => x.Item2)
+				.FirstOrDefault(x => x.Count() > 1);
 
-			executer(0);
-			return resultsTask.Task.ContinueWith(task => task.Result.ToArray());
+			if (shardsPointingToSameDb != null)
+				throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.",
+					string.Join(", ", shardsPointingToSameDb.Select(x => x.Item1))));
+		}
+
+		public event ShardingErrorHandle<IAsyncFilesCommands> OnAsyncError;
+
+        public async Task<T[]> ApplyAsync<T>(IList<IAsyncFilesCommands> commands, ShardRequestData request, Func<IAsyncFilesCommands, int, Task<T>> operation)
+        {
+	        await runFirst;
+
+			var list = new List<T>();
+			var errors = new List<Exception>();
+			for (int i = 0; i < commands.Count; i++)
+			{
+				try
+				{
+					list.Add(await operation(commands[i], i));
+				}
+				catch (Exception e)
+				{
+					var error = OnAsyncError;
+					if (error == null)
+						throw;
+					if (error(commands[i], request, e) == false)
+					{
+						throw;
+					}
+					errors.Add(e);
+				}
+			}
+
+			// if ALL nodes failed, we still throw
+			if (errors.Count == commands.Count)
+				throw new AggregateException(errors);
+
+			return list.ToArray();
 		}
 	}
 }
