@@ -7,7 +7,7 @@ using System.Net.Http;
 using System.Web.Http.Filters;
 using System.Web.Http.Results;
 using Jint.Runtime;
-
+using Lucene.Net.Search;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -31,7 +31,8 @@ namespace Raven.Database.Server.WebApi.Filters
                 {typeof (ImplicitFetchFieldsFromDocumentNotAllowedException), (ctx, e) => HandleImplicitFetchFieldsFromDocumentNotAllowedException(ctx, e as ImplicitFetchFieldsFromDocumentNotAllowedException)},
 				{typeof (SynchronizationException), (ctx, e) => HandleSynchronizationException(ctx, e as SynchronizationException)},
 				{typeof (FileNotFoundException), (ctx, e) => HandleFileNotFoundException(ctx, e as FileNotFoundException)},
-				{typeof (SubscriptionException), (ctx, e) => HandleSubscriptionException(ctx, e as SubscriptionException)}
+				{typeof (SubscriptionException), (ctx, e) => HandleSubscriptionException(ctx, e as SubscriptionException)},
+				{typeof (BooleanQuery.TooManyClauses), (ctx, e) => HandleTooManyClausesException(ctx, e as BooleanQuery.TooManyClauses)}
 			};
 
 		public override void OnException(HttpActionExecutedContext ctx)
@@ -84,6 +85,21 @@ namespace Raven.Database.Server.WebApi.Filters
 				//ExceptionType = e.GetType().AssemblyQualifiedName,					
 				Url = ctx.Request.RequestUri.PathAndQuery,
 				Error = e.ToString(),
+			});
+		}
+
+		private static void HandleTooManyClausesException(HttpActionExecutedContext ctx, BooleanQuery.TooManyClauses e)
+		{
+			ctx.Response = new HttpResponseMessage
+			{
+				StatusCode = HttpStatusCode.InternalServerError,
+			};
+
+			SerializeError(ctx, new
+			{
+				ExceptionType = e.GetType().AssemblyQualifiedName,					
+				Error = "Exceeded maximum clause count in the query.",
+				e.Message
 			});
 		}
 

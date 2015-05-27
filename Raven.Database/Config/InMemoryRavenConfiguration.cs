@@ -103,6 +103,8 @@ namespace Raven.Database.Config
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
 
+			MaxClauseCount = ravenSettings.MaxClauseCount.Value;
+
 			AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
 
 			IndexAndTransformerReplicationLatencyInSec = ravenSettings.IndexAndTransformerReplicationLatencyInSec.Value;
@@ -336,6 +338,8 @@ namespace Raven.Database.Config
 
 			return FilePathTools.MakeSureEndsWithSlash(workingDirectory.ToFullPath());
 		}
+
+		public int MaxClauseCount { get; set; }
 
 		public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
 
