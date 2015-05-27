@@ -51,8 +51,6 @@ namespace Raven.Database.Counters
 
 		public string ResourceName { get; private set; }
 
-		public event Action ReplicationUpdated;
-
 		public int ReplicationTimeoutInMs { get; private set; }
 
 		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
@@ -68,7 +66,6 @@ namespace Raven.Database.Counters
 			transportState = recievedTransportState ?? new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			replicationTask = new ReplicationTask(this);
-			replicationTask.ReplicationUpdate += OnReplicationUpdated;
 
 			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
@@ -78,12 +75,6 @@ namespace Raven.Database.Counters
 			Initialize();
 		}
 
-		private void OnReplicationUpdated()
-		{
-			var replicationUpdated = ReplicationUpdated;
-			if (replicationUpdated != null)
-				replicationUpdated();
-		}
 
 		private void Initialize()
 		{
@@ -106,7 +97,6 @@ namespace Raven.Database.Counters
 
 					metadata.Add("id", serverIdBytes);
 
-					tx.Commit();
 				}
 				else // existing counter db
 				{
@@ -123,6 +113,8 @@ namespace Raven.Database.Counters
 				}
 
 				replicationTask.StartReplication();
+			
+				tx.Commit();
 			}
 		}
 

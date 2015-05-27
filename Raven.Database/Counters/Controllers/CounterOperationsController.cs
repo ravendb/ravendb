@@ -297,7 +297,7 @@ namespace Raven.Database.Counters.Controllers
 						Group = groupName,
 						OverallTotal = CounterStorage.CalculateOverallTotal(counter),
 						Servers = (from counterValue in counter.CounterValues
-								  group counterValue by counterValue.ServerId into g
+								  group counterValue by counterValue.GetServerId into g
 								  select new CounterView.ServerValue{
 									  Name = g.Select(x => x.ServerName).ToString(),
 									  Positive = g.Where(x => x.IsPositive).Select(x => x.Value).FirstOrDefault(),
@@ -348,10 +348,11 @@ namespace Raven.Database.Counters.Controllers
 				countersByPrefix.CounterValues.ForEach(x =>
 				{
 					ServerValue serverValue;
-					if (serverValuesDictionary.TryGetValue(x.ServerId, out serverValue) == false)
+					var serverId = x.GetServerId();
+					if (serverValuesDictionary.TryGetValue(serverId, out serverValue) == false)
 					{
 						serverValue = new ServerValue();
-						serverValuesDictionary.Add(x.ServerId, serverValue);
+						serverValuesDictionary.Add(serverId, serverValue);
 					}
 					serverValue.UpdateValue(x.IsPositive, x.Value);
 				});
