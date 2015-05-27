@@ -10,7 +10,7 @@
 
 	public class Versioning : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void SplittersAndRebalancersShouldNotChangeNodeVersion()
 		{
 			const int DocumentCount = 100000;

@@ -93,5 +93,56 @@ namespace Raven.Tests.Shard
 
 			}
 		}
-	}
+
+        [Fact]
+	    public void CanIgnoreMultiShard()
+	    {
+	        using (var server1 = GetNewServer(8079))
+            using (var server2 = GetNewServer(8078))
+            using (var server3 = GetNewServer(8077))
+            using (var server4 = server3)
+            {
+                Dictionary<string, IDocumentStore> shards = new Dictionary<string, IDocumentStore>
+                {
+                    {"Eastern", server1.DocumentStore},
+                    {"Western", server2.DocumentStore},
+                    {"Northern", server3.DocumentStore},
+                    {"Southern", server4.DocumentStore},
+                };
+
+                ShardStrategy shardStrategy = new ShardStrategy(shards)
+                    .ShardingOn<Region2>(r => r.Name)//, name => (name == "Northern" || name == "Southern") ? "NorthSouth" : name)
+                    .ShardingOn<TerritoryOf>(x => x.RegionId);
+
+                IDocumentStore store = new ShardedDocumentStore(shardStrategy);
+                NotSupportedException notSuppotedEx = null;
+                try
+                {
+                    store.Initialize();
+                }
+                catch (Exception ex)
+                {
+
+                    notSuppotedEx = ex as NotSupportedException;
+                }
+
+                Assert.NotNull(notSuppotedEx);
+                Assert.Contains("Multiple keys in shard dictionary for", notSuppotedEx.Message);
+            }
+ 
+	    }
+        public class Region2
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        public class TerritoryOf
+        {
+            public string Id { get; set; }
+            public string RegionId { get; set; }
+            public string Code { get; set; }
+            public string Name { get; set; }
+        }
+    }
 }

@@ -11,7 +11,7 @@ namespace Voron.Tests.Trees
 {
 	public class TreeRenaming : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void CanRenameTree()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -47,7 +47,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldNotAllowToRenameTreeIfTreeAlreadyExists()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -61,7 +61,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldThrowIfTreeDoesNotExist()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -72,7 +72,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void MustNotRenameToRootAndFreeSpaceRootTrees()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -85,7 +85,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldPreventFromRenamingTreeInReadTransaction()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))

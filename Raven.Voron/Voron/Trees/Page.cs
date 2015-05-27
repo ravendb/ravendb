@@ -305,6 +305,12 @@ namespace Voron.Trees
 			get { return (_header->Flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed; }
 		}
 
+		public bool HasPrefixes
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return _prefixSection->NextPrefixId > 0; }
+		}
+
         public ushort NumberOfEntries
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -469,6 +475,20 @@ namespace Voron.Trees
 			public ushort PrefixUsage;
 		}
 
+		public PrefixNode[] GetPrefixes()
+		{
+			var prefixes = new PrefixNode[_prefixSection->NextPrefixId];
+
+			for (byte prefixId = 0; prefixId < _prefixSection->NextPrefixId; prefixId++)
+			{
+				var prefix = new PrefixNode();
+				prefix.Set(_base + _prefixSection->PrefixOffsets[prefixId], PageNumber);
+				prefixes[prefixId] = prefix;
+			}
+
+			return prefixes;
+		}
+
 	    private bool TryUseExistingPrefix(MemorySlice key, out PrefixedSlice prefixedSlice)
 	    {
 		    if (_prefixSection->NextPrefixId < 1)
@@ -606,7 +626,7 @@ namespace Voron.Trees
             return node;
         }
 
-		private void WritePrefix(Slice prefix, int prefixId)
+		public void WritePrefix(Slice prefix, int prefixId)
 		{
 			var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefix.Size;
 			prefixNodeSize += prefixNodeSize & 1;
@@ -676,6 +696,18 @@ namespace Voron.Trees
 		        copy.ClearPrefixInfo();
 
 		        var slice = CreateNewEmptyKey();
+
+		        if (KeysPrefixed && HasPrefixes)
+		        {
+					var prefixes = GetPrefixes();
+
+					for (int prefixId = 0; prefixId < prefixes.Length; prefixId++)
+					{
+						var prefix = prefixes[prefixId];
+
+						copy.WritePrefix(new Slice(prefix.ValuePtr, prefix.PrefixLength), prefixId);
+					}
+		        }
 
 				for (int j = 0; j < i; j++)
 				{

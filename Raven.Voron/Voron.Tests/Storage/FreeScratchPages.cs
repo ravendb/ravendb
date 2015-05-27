@@ -15,7 +15,7 @@ namespace Voron.Tests.Storage
 {
 	public class FreeScratchPages : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void UncommittedTransactionShouldFreeScratchPagesThatWillBeReusedByNextTransaction()
 		{
 			var random = new Random();

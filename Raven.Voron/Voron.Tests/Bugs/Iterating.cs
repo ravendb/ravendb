@@ -9,7 +9,7 @@ namespace Voron.Tests.Bugs
 {
 	public class Iterating : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void IterationShouldNotFindAnyRecordsAndShouldNotThrowWhenNumberOfEntriesOnPageIs1AndKeyDoesNotMatch()
 		{
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))

@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [RavenRoute("generate/code")]
         [RavenRoute("databases/{databaseName}/generate/code")]
-        public HttpResponseMessage GenerateCodeFromDocument([FromUri] string doc, [FromUri] string lang = "csharp")
+        public HttpResponseMessage GenerateCodeFromDocument([FromUri] string docId, [FromUri] string lang = "csharp")
         {
             var msg = GetEmptyMessage();
             if (Database == null)
@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Controllers
                 msg.StatusCode = HttpStatusCode.NotFound;
                 return msg;
             }
-            var document = Database.Documents.Get(doc, GetRequestTransaction());
+            var document = Database.Documents.Get(docId, GetRequestTransaction());
             if (document == null)
             {
                 msg.StatusCode = HttpStatusCode.NotFound;
@@ -44,7 +44,13 @@ namespace Raven.Database.Server.Controllers
             var generator = new JsonCodeGenerator(lang);
             var code = generator.Execute(document);
 
-            return this.GetMessageWithString(code);
+            return GetMessageWithObject(new
+	        {
+				Document = docId,
+				Code = code
+	        });
         }
+
+
     }
 }

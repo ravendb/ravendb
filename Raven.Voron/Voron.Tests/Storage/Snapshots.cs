@@ -8,7 +8,7 @@ namespace Voron.Tests.Storage
 {
 	public class Snapshots : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void SingleItemBatchTest()
 		{
 			var batch = new WriteBatch();
@@ -23,7 +23,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void SingleItemBatchTestLowLevel()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

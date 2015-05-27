@@ -2314,7 +2314,7 @@ namespace Raven.Client.Connection.Async
 						JsonDocument resolvedDocument;
 						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
 						{
-							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata).ConfigureAwait(false);
+							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata, token).ConfigureAwait(false);
 							return true;
 						}
 					}

@@ -27,7 +27,7 @@ namespace Voron.Tests.Backups
 			IncrementalBackupTestUtils.Clean();
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanBackupAndRestoreOnEmptyStorage()
 		{
             RequireFileBasedPager();
@@ -70,7 +70,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanDoMultipleIncrementalBackupsAndRestoreOneByOne()
 		{
             RequireFileBasedPager();
@@ -143,7 +143,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void IncrementalBackupShouldCopyJustNewPagesSinceLastBackup()
         {
             RequireFileBasedPager();
@@ -210,7 +210,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-        [Fact]
+        [PrefixesFact]
         public void IncrementalBackupShouldAcceptEmptyIncrementalBackups()
         {
             RequireFileBasedPager();
@@ -270,7 +270,7 @@ namespace Voron.Tests.Backups
             }
         }
 
-		[Fact]
+		[PrefixesFact]
 		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2806()
 		{
 			RequireFileBasedPager();
@@ -328,7 +328,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_2_RavenDB_2806()
 		{
 			RequireFileBasedPager();
@@ -394,7 +394,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void IncorrectWriteOfOverflowPagesFromJournalsInBackupToDataFile_RavenDB_2891()
 		{
 			RequireFileBasedPager();
