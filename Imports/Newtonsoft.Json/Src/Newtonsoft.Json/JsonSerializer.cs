@@ -28,12 +28,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters;
 using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Runtime.Serialization;
-using ErrorEventArgs = Newtonsoft.Json.Serialization.ErrorEventArgs;
+using ErrorEventArgs = Raven.Imports.Newtonsoft.Json.Serialization.ErrorEventArgs;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -952,11 +953,13 @@ namespace Raven.Imports.Newtonsoft.Json
             return _referenceResolver;
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal JsonConverter GetMatchingConverter(Type type)
         {
             return GetMatchingConverter(_converters, type);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static JsonConverter GetMatchingConverter(IList<JsonConverter> converters, Type objectType)
         {
 #if DEBUG
