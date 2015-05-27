@@ -15,18 +15,17 @@ namespace Raven.Tests.Counters
 {
 	public class RavenBaseCountersTest : RavenTestBase
 	{
-		protected IDocumentStore ravenStore;
+		private readonly IDocumentStore ravenStore;
+		private readonly ConcurrentDictionary<string, int> storeCount;
 		protected const string DefaultCounteStorageName = "FooBarCounter_ThisIsRelativelyUniqueCounterName";
 
-		private readonly ConcurrentDictionary<string,int> storeCount;
-
-		public RavenBaseCountersTest()
+		protected RavenBaseCountersTest()
 		{
 			ravenStore = NewRemoteDocumentStore(fiddler:true);
 			storeCount = new ConcurrentDictionary<string, int>();
 		}
 
-		public ICounterStore NewRemoteCountersStore(string counterStorageName = DefaultCounteStorageName,bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
+		protected ICounterStore NewRemoteCountersStore(string counterStorageName = DefaultCounteStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
 		{
 			ravenStore = ravenStore ?? this.ravenStore;
 			storeCount.AddOrUpdate(ravenStore.Identifier, id => 1, (id, val) => val++);		
@@ -90,7 +89,7 @@ namespace Raven.Tests.Counters
 			return hasReplicated;
 		}
 
-		protected async Task SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
+		protected static async Task SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
 		{
 			using (var client = source.NewCounterClient())
 			{

@@ -5,80 +5,72 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Counters.Actions
 {
-	public class CountersBatchOperation : CountersActionsBase, ICountersBatchOperation
+	public sealed class CountersBatchOperation : CountersActionsBase, ICountersBatchOperation
 	{
-		private Task _batchOperationTask;
-		private readonly TaskCompletionSource<bool> _batchOperationTcs; 
-		private readonly BlockingCollection<CounterChange> _changesQueue;
-		private readonly CancellationTokenSource _cts;
-		private bool disposed;
-		private readonly CountersBatchOptions _options;
-		private MemoryStream _tempStream;
-		private long serverOperationId;
-		private readonly string _singleAuthUrl;
-		private readonly AsyncManualResetEvent _streamingStarted;
-		private Timer _closeAndReopenStreamingTimer;
+		private readonly CountersBatchOptions options;
+		private readonly AsyncManualResetEvent streamingStarted;
+		private readonly TaskCompletionSource<bool> batchOperationTcs;
+		private readonly CancellationTokenSource cts;
+		private readonly BlockingCollection<CounterChange> changesQueue;
+		private readonly string singleAuthUrl;
 
-		internal CountersBatchOperation(ICounterStore parent, string counterStorageName, CountersBatchOptions options = null)
+		private bool disposed;
+		private Task batchOperationTask;
+		private Timer closeAndReopenStreamingTimer;
+		private MemoryStream tempStream;
+		private long serverOperationId;
+
+		public Guid OperationId { get; private set; }
+
+		public CountersBatchOptions Options { get { return options; } }		
+
+		internal CountersBatchOperation(ICounterStore parent, string counterStorageName, CountersBatchOptions batchOptions = null)
 			: base(parent, counterStorageName)
 		{
-
-			if(options != null && options.BatchSizeLimit < 1)
+			if(batchOptions != null && batchOptions.BatchSizeLimit < 1)
 				throw new ArgumentException("options");
 
-			_streamingStarted = new AsyncManualResetEvent();
-			_options = options ?? new CountersBatchOptions(); //defaults do exist
-			_changesQueue = new BlockingCollection<CounterChange>();			
-			_cts = new CancellationTokenSource();
-			_batchOperationTcs = new TaskCompletionSource<bool>();
-			_singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", serverUrl, counterStorageName);
-			_batchOperationTask = StartBatchOperation();
+			options = batchOptions ?? new CountersBatchOptions(); //defaults do exist
+			streamingStarted = new AsyncManualResetEvent();
+			batchOperationTcs = new TaskCompletionSource<bool>();
+			cts = new CancellationTokenSource();
+			changesQueue = new BlockingCollection<CounterChange>();			
+			singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", ServerUrl, counterStorageName);
+
+			OperationId = Guid.NewGuid();
 			disposed = false;
-
-			_closeAndReopenStreamingTimer = new Timer(CloseAndReopenStreaming, null,
-				TimeSpan.FromMilliseconds(_options.ConnectionReopenTimingInMilliseconds),
-				TimeSpan.FromMilliseconds(-1)); //fire timer only once -> then rescedule - handles ConnectionReopenTimingInMilliseconds changing use-case
-		}
-
-		private void CloseAndReopenStreaming(object state)
-		{
-			_cts.Cancel();
-			if(_batchOperationTask.Status != TaskStatus.Faulted &&
-				_batchOperationTask.Status != TaskStatus.Canceled)
-			_batchOperationTask.Wait();
-
-			_batchOperationTask = StartBatchOperation();
-
-			_closeAndReopenStreamingTimer.Dispose();
-			_closeAndReopenStreamingTimer = new Timer(CloseAndReopenStreaming, null,
-				TimeSpan.FromMilliseconds(_options.ConnectionReopenTimingInMilliseconds),
-				TimeSpan.FromMilliseconds(-1)); //fire timer only once -> then rescedule - handles ConnectionReopenTimingInMilliseconds changing use-case
-		}
-
-		public CountersBatchOptions Options
-		{
-			get { return _options; }
+			batchOperationTask = StartBatchOperation();
+			if (streamingStarted.WaitAsync().Wait(Options.StreamingInitializeTimeout) == false ||
+			    batchOperationTask.IsFaulted)
+			{
+				throw new InvalidOperationException("Failed to start streaming batch.", batchOperationTask.Exception);
+			}
+			closeAndReopenStreamingTimer = CreateNewTimer();
 		}
 
 		private async Task StartBatchOperation()
 		{
-			_tempStream = new MemoryStream();
-			using (ConnectionOptions.Expect100Continue(serverUrl))
+			if (tempStream != null)
+				tempStream.Dispose();
+
+			tempStream = new MemoryStream();
+			streamingStarted.Reset();
+			using (ConnectionOptions.Expect100Continue(ServerUrl))
 			{
 				var authToken = await GetToken().ConfigureAwait(false);
 				try
@@ -90,14 +82,15 @@ namespace Raven.Client.Counters.Actions
 					throw new InvalidOperationException("Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
 				}
 
-				var requestUriString = String.Format("{0}/batch", counterStorageUrl);
+				var requestUriString = string.Format("{0}/batch?operationId={1}", CounterStorageUrl, OperationId);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post, true, true)
 										.AddOperationHeader("Single-Use-Auth-Token", authToken))
 				{
-					var token = _cts.Token;
+					var token = cts.Token;
+
 					var response = await request.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
 					{
-						_streamingStarted.Set();
+						streamingStarted.Set();
 						try
 						{
 							ContinuouslyWriteQueueToServer(stream, token);
@@ -106,13 +99,12 @@ namespace Raven.Client.Counters.Actions
 						catch (Exception e)
 						{
 							source.TrySetException(e);
-							_batchOperationTcs.SetException(e);
+							batchOperationTcs.SetException(e);
 						}
 					}, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
 					await response.AssertNotFailingResponse();
 
-					long operationId;
 					using (response)
 					{
 						using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
@@ -121,15 +113,34 @@ namespace Raven.Client.Counters.Actions
 							if (result == null) //precaution - should prevent NRE in case the crap hits the fan
 								throw new ApplicationException("Invalid response from server... maybe its not json?");
 
-							operationId = result.Value<long>("OperationId");
+							serverOperationId = result.Value<long>("OperationId");
 						}
 					}
-					
-					if (await IsOperationCompleted(operationId).ConfigureAwait(false))
-						serverOperationId = operationId;
-					_batchOperationTcs.SetResult(true);
+
+					await IsOperationCompleted(serverOperationId).ConfigureAwait(false);
+					batchOperationTcs.SetResult(true);
 				}
 			}
+		}
+
+		private void CloseAndReopenStreaming(object state)
+		{
+			cts.Cancel();
+			if (batchOperationTask.Status != TaskStatus.Faulted &&
+				batchOperationTask.Status != TaskStatus.Canceled)
+				batchOperationTask.Wait();
+
+			batchOperationTask = StartBatchOperation();
+
+			closeAndReopenStreamingTimer.Dispose();
+			closeAndReopenStreamingTimer = CreateNewTimer();
+		}
+
+		private Timer CreateNewTimer()
+		{
+			return new Timer(CloseAndReopenStreaming, null,
+				TimeSpan.FromMilliseconds(options.ConnectionReopenTimingInMilliseconds),
+				TimeSpan.FromMilliseconds(-1)); //fire timer only once -> then rescedule - handles ConnectionReopenTimingInMilliseconds changing use-case
 		}
 
 		private async Task<bool> IsOperationCompleted(long operationId)
@@ -140,7 +151,8 @@ namespace Raven.Client.Counters.Actions
 			{
 				var status = await GetOperationStatusAsync(operationId);
 
-				if (status == null) return true;
+				if (status == null)
+					return true;
 
 				if (status.Value<bool>("Completed"))
 					return true;
@@ -155,14 +167,14 @@ namespace Raven.Client.Counters.Actions
 				errorResponse = e;
 			}
 
-			var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(new StringReader(errorResponse.ResponseString)));
+			var errorMessage = RavenJObject.Load(new RavenJsonTextReader(new StringReader(errorResponse.ResponseString)));
 
-			throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
+			throw new ConcurrencyException(errorMessage.Value<string>("Error"));
 		}
 
 		private async Task<RavenJToken> GetOperationStatusAsync(long id)
 		{
-			var url = serverUrl + "/operation/status?id=" + id;
+			var url = ServerUrl + "/operation/status?id=" + id;
 			using (var request = CreateHttpJsonRequest(url, HttpMethods.Get))
 			{
 				try
@@ -182,7 +194,7 @@ namespace Raven.Client.Counters.Actions
 			try
 			{
 				var batch = new List<CounterChange>();
-				while (_changesQueue.IsCompleted == false)
+				while (changesQueue.IsCompleted == false)
 				{
 					batch.Clear();
 					if (token.IsCancellationRequested)
@@ -196,7 +208,7 @@ namespace Raven.Client.Counters.Actions
 					try
 					{
 						CounterChange counterChange;
-						while (_changesQueue.TryTake(out counterChange, Options.BatchReadTimeoutInMilliseconds, token))
+						while (changesQueue.TryTake(out counterChange, Options.BatchReadTimeoutInMilliseconds, token))
 						{
 							if (counterChange.Done != null)
 							{
@@ -211,7 +223,7 @@ namespace Raven.Client.Counters.Actions
 					}
 					catch (OperationCanceledException)
 					{
-						if(_changesQueue.Count > 0)
+						if(changesQueue.Count > 0)
 							FetchAllChangeQueue(batch);
 					}
 
@@ -236,21 +248,21 @@ namespace Raven.Client.Counters.Actions
 			}
 			finally
 			{
-				_tempStream.Dispose();
+				tempStream.Dispose();
 			}
 		}
 
 		private void FetchAllChangeQueue(List<CounterChange> batch)
 		{
 			CounterChange counterChange;
-			while (_changesQueue.TryTake(out counterChange))
+			while (changesQueue.TryTake(out counterChange))
 				batch.Add(counterChange);
 		}
 
 		public Task FlushAsync()
 		{
 			var taskCompletionSource = new TaskCompletionSource<object>();
-			_changesQueue.Add(new CounterChange
+			changesQueue.Add(new CounterChange
 			{
 				Done = taskCompletionSource
 			});
@@ -263,18 +275,18 @@ namespace Raven.Client.Counters.Actions
 			if (batchItems.Count == 0)
 				return;
 
-			_tempStream.SetLength(0);
+			tempStream.SetLength(0);
 			long bytesWritten;
-			WriteCollectionToBuffer(_tempStream, AggregateItems(batchItems), out bytesWritten);
+			WriteCollectionToBuffer(tempStream, AggregateItems(batchItems), out bytesWritten);
 
 			var requestBinaryWriter = new BinaryWriter(requestStream);
-			requestBinaryWriter.Write((int)_tempStream.Position);
+			requestBinaryWriter.Write((int)tempStream.Position);
 
-			_tempStream.WriteTo(requestStream);
+			tempStream.WriteTo(requestStream);
 			requestStream.Flush();
 		}
 
-		private ICollection<CounterChange> AggregateItems(IEnumerable<CounterChange> batchItems)
+		private static ICollection<CounterChange> AggregateItems(IEnumerable<CounterChange> batchItems)
 		{
 			var aggregationResult = from item in batchItems
 									group item by new { item.Name, item.Group }
@@ -290,7 +302,7 @@ namespace Raven.Client.Counters.Actions
 			return aggregateItems;
 		}
 
-		private void WriteCollectionToBuffer(Stream targetStream, ICollection<CounterChange> items, out long bytesWritten)
+		private static void WriteCollectionToBuffer(Stream targetStream, ICollection<CounterChange> items, out long bytesWritten)
 		{
 			using (var gzip = new GZipStream(targetStream, CompressionMode.Compress, leaveOpen: true))
 			using (var stream = new CountingStream(gzip))
@@ -314,8 +326,7 @@ namespace Raven.Client.Counters.Actions
 
 		public void ScheduleChange(string groupName, string counterName, long delta)
 		{
-			_streamingStarted.WaitAsync().Wait();
-			_changesQueue.Add(new CounterChange
+			changesQueue.Add(new CounterChange
 			{
 				Delta = delta,
 				Group = groupName,
@@ -333,35 +344,35 @@ namespace Raven.Client.Counters.Actions
 			ScheduleChange(groupName, counterName, -1);
 		}
 
-		public virtual void Dispose()
+		public void Dispose()
 		{
-			if (!disposed)
+			if (disposed)
+				return;
+
+			closeAndReopenStreamingTimer.Dispose();
+			changesQueue.CompleteAdding();
+
+			batchOperationTcs.Task.Wait();
+			if (batchOperationTask.Status != TaskStatus.RanToCompletion ||
+			    batchOperationTask.Status != TaskStatus.Canceled)
+				cts.Cancel();
+
+			if (serverOperationId != default(long))
 			{
-				_closeAndReopenStreamingTimer.Dispose();
-				_changesQueue.CompleteAdding();
-
-				_batchOperationTcs.Task.Wait();
-				if (_batchOperationTask.Status != TaskStatus.RanToCompletion ||
-					_batchOperationTask.Status != TaskStatus.Canceled)
-					_cts.Cancel();
-
-				if (serverOperationId != default(long))
+				while (true)
 				{
-					while (true)
-					{
-						var serverSideOperationWaitingTask = IsOperationCompleted(serverOperationId);
-						serverSideOperationWaitingTask.Wait();
+					var serverSideOperationWaitingTask = IsOperationCompleted(serverOperationId);
+					serverSideOperationWaitingTask.Wait();
 
-						if (serverSideOperationWaitingTask.Result)
-							break;
+					if (serverSideOperationWaitingTask.Result)
+						break;
 
-						Thread.Sleep(100);
-					}
+					Thread.Sleep(100);
 				}
-
-				_tempStream.Dispose(); //precaution
-				disposed = true;
 			}
+
+			tempStream.Dispose(); //precaution
+			disposed = true;
 		}
 
 		private async Task<string> GetToken()
@@ -374,7 +385,7 @@ namespace Raven.Client.Counters.Actions
 
 		private async Task<RavenJToken> GetAuthToken()
 		{
-			using (var request = CreateHttpJsonRequest(_singleAuthUrl, HttpMethods.Get, disableRequestCompression: true))
+			using (var request = CreateHttpJsonRequest(singleAuthUrl, HttpMethods.Get, disableRequestCompression: true))
 			{
 				var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return response;
@@ -383,7 +394,7 @@ namespace Raven.Client.Counters.Actions
 
 		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
 		{
-			using (var request = CreateHttpJsonRequest(_singleAuthUrl, HttpMethods.Get, disableRequestCompression: true, disableAuthentication: true))
+			using (var request = CreateHttpJsonRequest(singleAuthUrl, HttpMethods.Get, disableRequestCompression: true, disableAuthentication: true))
 			{
 				request.AddOperationHeader("Single-Use-Auth-Token", token);
 				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);

@@ -11,7 +11,8 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 {
-	public abstract class DatabaseScalarObjectBase : ScalarObjectBase
+	public abstract class DatabaseScalarObjectBase<TData> : ScalarObjectBase<TData>
+		where TData : ISnmpData
 	{
 		protected readonly string DatabaseName;
 
@@ -24,22 +25,14 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 			Landlord = landlord;
 		}
 
-		protected abstract ISnmpData GetData(DocumentDatabase database);
+		protected abstract TData GetData(DocumentDatabase database);
 
-		public override ISnmpData Data
+		protected override TData GetData()
 		{
-			get
-			{
-				if (Landlord.IsDatabaseLoaded(DatabaseName)) 
-					return GetData(Landlord.GetDatabaseInternal(DatabaseName).Result);
+			if (Landlord.IsDatabaseLoaded(DatabaseName))
+				return GetData(Landlord.GetDatabaseInternal(DatabaseName).Result);
 
-				return Null;
-			}
-
-			set
-			{
-				throw new AccessFailureException();
-			}
+			return default(TData);
 		}
 	}
 }

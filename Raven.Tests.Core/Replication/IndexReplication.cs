@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -148,13 +150,13 @@ namespace Raven.Tests.Core.Replication
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication1));
+				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication1);
 
 				var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication3));
+				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication3);
 
 				var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication2));
+				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication2);
 			}					
 		}
 
@@ -265,18 +267,19 @@ namespace Raven.Tests.Core.Replication
 				{
 					Url = source.Url
 				});
+
 				replicationRequest.ExecuteRequest();
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication1));
-
+				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication1);
 
 				var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication3));
+				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication3);
 
 				var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication2));
+				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication2);
+
 			}
 		}
 
@@ -375,11 +378,11 @@ namespace Raven.Tests.Core.Replication
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication1));
+				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication1);
 
 
 				var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication3));
+				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication3);
 
 				//since destination2 has disabled flag - indexes should not replicate to here
 				var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);

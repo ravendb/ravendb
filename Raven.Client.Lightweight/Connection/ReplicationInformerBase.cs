@@ -234,7 +234,7 @@ namespace Raven.Client.Connection
             {
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
 												.ConfigureAwait(false);
-
+				
                 if (operationResult.Success)
                     return operationResult.Result;
 
@@ -330,18 +330,19 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                 {
 					bool wasTimeout;
 	                var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
-	                if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
-	                {
+	                
+                    if (avoidThrowing == false)
+                        throw;
+
+					if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
+					{
 						return new AsyncOperationResult<T>
 						{
 							Success = false,
 							WasTimeout = wasTimeout,
 							Error = e
-						};		                
-	                }
-
-                    if (avoidThrowing == false)
-                        throw;
+						};
+					}
 
                     if (isServerDown)
                     {

@@ -12,14 +12,14 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseNumberOfIdleIndexes : DatabaseScalarObjectBase
+	public class DatabaseNumberOfIdleIndexes : DatabaseScalarObjectBase<Integer32>
 	{
 		public DatabaseNumberOfIdleIndexes(string databaseName, DatabasesLandlord landlord, int index)
 			: base(databaseName, landlord, "5.2.{0}.5.4", index)
 		{
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override Integer32 GetData(DocumentDatabase database)
 		{
 			var count = database
 				.IndexStorage

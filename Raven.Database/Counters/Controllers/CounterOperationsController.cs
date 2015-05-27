@@ -6,13 +6,13 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.FileSystem;
@@ -24,6 +24,7 @@ using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
+using BatchType = Raven.Abstractions.Counters.Notifications.BatchType;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -35,9 +36,17 @@ namespace Raven.Database.Counters.Controllers
 		{
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.Store(groupName, counterName, delta);
+				var counterChangeAction = writer.Store(groupName, counterName, delta);
 				writer.Commit(delta != 0);
-                Storage.MetricsCounters.ClientRequests.Mark();
+
+				Storage.MetricsCounters.ClientRequests.Mark();
+				Storage.Publisher.RaiseNotification(new LocalChangeNotification
+				{
+					GroupName = groupName,
+					CounterName = counterName,
+					Action = counterChangeAction
+				});
+
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
@@ -99,28 +108,52 @@ namespace Raven.Database.Counters.Controllers
 		            {
 						using (var writer = Storage.CreateWriter())
 						{
+							Storage.Publisher.RaiseNotification(new BulkOperationNotification
+							{
+								Type = BatchType.Started,
+								OperationId = operationId
+							});
+
 							foreach (var counterChange in changeBatch)
 							{
 								writer.Store(counterChange.Group, counterChange.Name, counterChange.Delta);
 							}
 							writer.Commit();
+
+							Storage.Publisher.RaiseNotification(new BulkOperationNotification
+							{
+								Type = BatchType.Ended,
+								OperationId = operationId
+							});
 						}
 		            }
 	            }
 	            catch (OperationCanceledException)
 	            {
-		            // happens on timeout
-		            /*DatabasesLandlord.SystemDatabase
-						.Notifications.RaiseNotifications(
-						new BulkInsertChangeNotification {OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError});*/
+					// happens on timeout
+		            Storage.Publisher.RaiseNotification(new BulkOperationNotification
+		            {
+			            Type = BatchType.Error,
+			            OperationId = operationId,
+						Message = "Operation cancelled, likely because of a batch timeout"
+		            });
+		            
 		            status.IsTimedOut = true;
 		            status.Faulted = true;
 		            throw;
 	            }
 	            catch (Exception e)
 	            {
+		            var errorMessage = e.SimplifyException().Message;
+					Storage.Publisher.RaiseNotification(new BulkOperationNotification
+					{
+						Type = BatchType.Error,
+						OperationId = operationId,
+						Message = errorMessage
+					});
+
 		            status.Faulted = true;
-		            status.State = RavenJObject.FromObject(new {Error = e.SimplifyException().Message});
+		            status.State = RavenJObject.FromObject(new {Error = errorMessage});
 		            throw;
 	            }
 	            finally
@@ -223,12 +256,21 @@ namespace Raven.Database.Counters.Controllers
 		{
 			using (var writer = Storage.CreateWriter())
 			{
-				var changesWereMade = writer.Reset(groupName, counterName);
+				var counterChangeAction = writer.Reset(groupName, counterName);
 
-				if (changesWereMade)
+				if (counterChangeAction != CounterChangeAction.None)
 				{
 					writer.Commit();
+
+					Storage.MetricsCounters.Resets.Mark();
+					Storage.Publisher.RaiseNotification(new LocalChangeNotification
+					{
+						GroupName = groupName,
+						CounterName = counterName,
+						Action = counterChangeAction,
+					});
 				}
+
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}

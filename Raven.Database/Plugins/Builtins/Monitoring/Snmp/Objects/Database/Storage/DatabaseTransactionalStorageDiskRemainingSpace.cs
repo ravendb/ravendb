@@ -11,7 +11,7 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Storage
 {
-	public class DatabaseTransactionalStorageDiskRemainingSpace : DatabaseScalarObjectBase
+	public class DatabaseTransactionalStorageDiskRemainingSpace : DatabaseScalarObjectBase<Gauge32>
 	{
 		private static readonly Gauge32 Empty = new Gauge32(-1);
 
@@ -20,7 +20,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stora
 		{
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override Gauge32 GetData(DocumentDatabase database)
 		{
 			if (database.Configuration.RunInMemory) 
 				return Empty;

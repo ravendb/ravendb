@@ -157,6 +157,9 @@
     <Compile Include="Counters\CounterReplicationDestination.cs" />
     <Compile Include="Counters\CountersReplicationDocument.cs" />
     <Compile Include="Counters\CounterView.cs" />
+    <Compile Include="Counters\Notifications\BulkOperationNotification.cs" />
+    <Compile Include="Counters\Notifications\ChangeNotification.cs" />
+    <Compile Include="Counters\Notifications\CounterStorageNotification.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />
     <Compile Include="Data\BulkOperationOptions.cs" />
@@ -372,7 +375,7 @@
     <Compile Include="FileSystem\FileSystemMetrics.cs" />
     <Compile Include="FileSystem\HistoryItem.cs" />
     <Compile Include="FileSystem\ItemsPage.cs" />
-    <Compile Include="FileSystem\Notification.cs" />
+    <Compile Include="FileSystem\FileSystemNotification.cs" />
     <Compile Include="FileSystem\RdcStats.cs" />
     <Compile Include="FileSystem\FileSystemInfo.cs" />
     <Compile Include="FileSystem\FileSystemStats.cs" />

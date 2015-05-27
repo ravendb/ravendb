@@ -5,13 +5,12 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerTotalRequests : ScalarObjectBase
+	public class ServerTotalRequests : ScalarObjectBase<Integer32>
 	{
 		private readonly RequestManager requestManager;
 
@@ -21,10 +20,9 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 			this.requestManager = requestManager;
 		}
 
-		public override ISnmpData Data
+		protected override Integer32 GetData()
 		{
-			get { return new Integer32(requestManager.NumberOfRequests); }
-			set { throw new AccessFailureException(); }
+			return new Integer32(requestManager.NumberOfRequests);
 		}
 	}
 }

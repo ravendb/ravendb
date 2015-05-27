@@ -68,14 +68,9 @@ namespace Raven.Database.Server.Controllers
                 if (string.IsNullOrEmpty(GetQueryStringValue("explain")) == false) 
                     return GetExplanation(index);
 
-				if (string.Equals(id, "indexing-perf-stats", StringComparison.OrdinalIgnoreCase))
-					return GetIndexingPerformanceStatistics();
-
                 return GetIndexQueryResult(index, cts.Token);
             }
 		}
-
-		
 
 		[HttpPost]
 		[RavenRoute("indexes/last-queried")]
@@ -773,20 +768,6 @@ namespace Raven.Database.Server.Controllers
 
 			stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(instance.indexId);
 			stats.SetLastDocumentEtag(lastEtag);
-			return GetMessageWithObject(stats);
-		}
-
-		private HttpResponseMessage GetIndexingPerformanceStatistics()
-		{
-			var stats = from pair in Database.IndexDefinitionStorage.IndexDefinitions 
-						let performance = Database.IndexStorage.GetIndexingPerformance(pair.Key) 
-						select new IndexingPerformanceStatistics
-						       {
-							       IndexId = pair.Key, 
-								   IndexName = pair.Value.Name, 
-								   Performance = performance
-						       };
-
 			return GetMessageWithObject(stats);
 		}
 	}

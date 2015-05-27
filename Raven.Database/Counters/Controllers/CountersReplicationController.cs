@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Counters.Notifications;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Counters.Controllers
@@ -47,6 +48,7 @@ namespace Raven.Database.Counters.Controllers
             bool wroteCounter = false;
             using (var writer = Storage.CreateWriter())
             {
+				var counterChangeNotifications = new List<ReplicationChangeNotification>();
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
@@ -60,9 +62,15 @@ namespace Raven.Database.Counters.Controllers
 
 					if (String.IsNullOrWhiteSpace(counter.FullCounterName))
 						return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
-
-		            writer.Store(counter.FullCounterName, counter.CounterValue);
-	            }
+					
+					var counterChangeAction = writer.Store(counter.FullCounterName, counter.CounterValue);
+					counterChangeNotifications.Add(new ReplicationChangeNotification
+					{
+						GroupName = counter.GroupName,
+						CounterName = counter.CounterName,
+						Action = counterChangeAction,
+					});
+				}
 
 				var serverId = replicationMessage.ServerId;
 	            if (String.IsNullOrWhiteSpace(serverId))
@@ -70,9 +78,10 @@ namespace Raven.Database.Counters.Controllers
 
 				if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
                 {
-					//TODO: fix this
 					writer.RecordLastEtagFor(serverId, lastEtag);
                     writer.Commit();
+
+					counterChangeNotifications.ForEach(Storage.Publisher.RaiseNotification);
                 }
 
 	            return new HttpResponseMessage(HttpStatusCode.OK);
@@ -83,14 +92,13 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
         public HttpResponseMessage HeartbeatPost(string sourceServer)
         {
-            var replicationTask = Storage.replicationTask;
+			var replicationTask = Storage.ReplicationTask;
             if (replicationTask == null)
             {
                 return GetMessageWithObject(new
                 {
                     Error = "Cannot find replication task setup in the database"
                 }, HttpStatusCode.NotFound);
-
             }
 
 			replicationTask.HandleHeartbeat(sourceServer);

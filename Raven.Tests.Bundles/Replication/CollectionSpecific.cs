@@ -2,6 +2,8 @@
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection.Async;
@@ -55,14 +57,13 @@ namespace Raven.Tests.Bundles.Replication
 				servers[0].Dispose();
 
 				//since the replication is collection specific, it is not a valid candidate for failover
-				var ex = Assert.Throws<HttpRequestException>(() =>
+				var ex = Assert.Throws<ErrorResponseException>(() =>
 				{
 					using (var session = store.OpenSession())
 						session.Load<C1>("C1s/1");
 				});
 
-				Assert.IsType<WebException>(ex.InnerException);
-				Assert.Equal("Unable to connect to the remote server", ex.InnerException.Message, StringComparer.InvariantCultureIgnoreCase);
+				Assert.Equal(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
 			}
 		}
 

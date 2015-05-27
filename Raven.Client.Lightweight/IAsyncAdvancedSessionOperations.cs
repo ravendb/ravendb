@@ -15,6 +15,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
@@ -216,5 +217,13 @@ namespace Raven.Client
 		///     null)
 		/// </param>
 		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken));
+
+		/// <summary>
+		///     Gets the metadata for the specified entity.
+		///     If the entity is transient, it will load the metadata from the store
+		///     and associate the current state of the entity with the metadata from the server.
+		/// </summary>
+		/// <param name="instance">The instance.</param>
+		Task<RavenJObject> GetMetadataForAsync<T>(T instance);
 	}
 }

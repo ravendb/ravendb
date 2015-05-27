@@ -14,82 +14,133 @@
                             <p class="form-control-static" data-bind="text: Connected"></p>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch all documents</label>
-                        <div class="col-md-10">
-                            <p class="form-control-static" data-bind="text: WatchAllDocuments"></p>
+                    <div data-bind="with: DocumentStore">
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watch all documents</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: WatchAllDocuments"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watch all indexes</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: WatchAllIndexes"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watch all transformers</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: WatchAllTransformers"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watch all replication conflicts</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: WatchAllReplicationConflicts"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watched indexes</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static">
+                                    <span data-bind="if: WatchedIndexes.length == 0">-</span>
+                                    <ul data-bind="foreach: WatchedIndexes">
+                                        <li data-bind="text: $data"></li>
+                                    </ul>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watched documents</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static">
+                                    <span data-bind="if: WatchedDocuments.length == 0">-</span>
+                                    <ul data-bind="foreach: WatchedDocuments">
+                                        <li data-bind="text: $data"></li>
+                                    </ul>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watched document prefixes</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static">
+                                    <span data-bind="if: WatchedDocumentPrefixes.length == 0">-</span>
+                                    <ul data-bind="foreach: WatchedDocumentPrefixes">
+                                        <li data-bind="text: $data"></li>
+                                    </ul>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watched documents in collection</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static">
+                                    <span data-bind="if: WatchedDocumentsInCollection.length == 0">-</span>
+                                    <ul data-bind="foreach: WatchedDocumentsInCollection">
+                                        <li data-bind="text: $data"></li>
+                                    </ul>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watched documents of type</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static">
+                                    <span data-bind="if: WatchedDocumentsOfType.length == 0">-</span>
+                                    <ul data-bind="foreach: WatchedDocumentsOfType">
+                                        <li data-bind="text: $data"></li>
+                                    </ul>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watched bulk inserts</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static">
+                                    <span data-bind="if: WatchedBulkInserts.length == 0">-</span>
+                                    <ul data-bind="foreach: WatchedBulkInserts">
+                                        <li data-bind="text: $data"></li>
+                                    </ul>
+                                </p>
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch all indexes</label>
-                        <div class="col-md-10">
-                            <p class="form-control-static" data-bind="text: WatchAllIndexes"></p>
+                    <!--<div data-bind="with: FileSystem">
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watch conflicts</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: WatchConflicts"></p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch config</label>
-                        <div class="col-md-10">
-                            <p class="form-control-static" data-bind="text: WatchConfig"></p>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watch sync</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: WatchSync"></p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch conflicts</label>
-                        <div class="col-md-10">
-                            <p class="form-control-static" data-bind="text: WatchConflicts"></p>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watch cancellations</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: WatchedCancellations"></p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch sync</label>
-                        <div class="col-md-10">
-                            <p class="form-control-static" data-bind="text: WatchSync"></p>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watch config</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: WatchConfig"></p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch cancellations</label>
-                        <div class="col-md-10">
-                            <p class="form-control-static" data-bind="text: WatchCancellations"></p>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Watched folders</label>
+                            <div class="col-md-10">
+                                <p data-bind="if: WatchedFolders.length == 0">-</p>
+                                <ul data-bind="foreach: WatchedFolders">
+                                    <li data-bind="text: $data"></li>
+                                </ul>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch document prefixes</label>
-                        <div class="col-md-10">
-                            <ul data-bind="foreach: WatchDocumentPrefixes">
-                                <li data-bind="text: $data"></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch documents in collection</label>
-                        <div class="col-md-10">
-                            <ul data-bind="foreach: WatchDocumentsInCollection">
-                                <li data-bind="text: $data"></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch indexes</label>
-                        <div class="col-md-10">
-                            <ul data-bind="foreach: WatchIndexes">
-                                <li data-bind="text: $data"></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watch documents</label>
-                        <div class="col-md-10">
-                            <ul data-bind="foreach: WatchDocuments">
-                                <li data-bind="text: $data"></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-md-2 control-label">Watched folders</label>
-                        <div class="col-md-10">
-                            <ul data-bind="foreach: WatchedFolders">
-                                <li data-bind="text: $data"></li>
-                            </ul>
-                        </div>
-                    </div>
+                    </div>-->
                 </div>
             </div>
         </div>

@@ -11,7 +11,9 @@ namespace Raven.Client.Counters.Actions
 		void ScheduleIncrement(string groupName, string counterName);
 		
 		void ScheduleDecrement(string groupName, string counterName);
-		
+
+		Guid OperationId { get; }
+
 		CountersBatchOptions Options { get; }
 
 		Task FlushAsync();

@@ -24,7 +24,7 @@ namespace Voron
 
 		public void WriteString(string s)
 	    {
-		    var stringBytes = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, _pos);
+		    var stringBytes = Encoding.UTF8.GetBytes(s,0,s.Length,_buffer, _pos);
 		    _pos += stringBytes;
 	    }
 

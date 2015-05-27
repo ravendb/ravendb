@@ -80,6 +80,15 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			if (dbDoc.IsClusterDatabase() && ClusterManager.IsActive())
 			{
+				string dataDir;
+				if (dbDoc.Settings.TryGetValue("Raven/DataDir", out dataDir) == false || string.IsNullOrEmpty(dataDir))
+					return GetMessageWithString(string.Format("Failed to create '{0}' database, because 'Raven/DataDir' setting is missing.", id), HttpStatusCode.BadRequest);
+
+				dataDir = dataDir.ToFullPath(SystemConfiguration.DataDirectory);
+
+				if (System.IO.Directory.Exists(dataDir))
+					return GetMessageWithString(string.Format("Failed to create '{0}' database, because data directory '{1}' exists and it is forbidden to create non-empty cluster-wide databases.", id, dataDir), HttpStatusCode.BadRequest);
+
 				await ClusterManager.Client.SendDatabaseUpdateAsync(id, dbDoc).ConfigureAwait(false);
 				return GetEmptyMessage();
 			}

@@ -14,27 +14,27 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Bundles.Replication
 {
-	public class ReplicationDestinationEnabled : ReplicationDestinationScalarObjectBase
+	public class ReplicationDestinationEnabled : ReplicationDestinationScalarObjectBase<OctetString>
 	{
 		public ReplicationDestinationEnabled(string databaseName, DatabasesLandlord landlord, int databaseIndex, string destinationUrl, int destinationIndex)
 			: base(databaseName, landlord, databaseIndex, destinationUrl, destinationIndex, "1")
 		{
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override OctetString GetData(DocumentDatabase database)
 		{
 			var task = database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 			if (task == null)
-				return Null;
+				return null;
 
-			var destinations = task.GetReplicationDestinations(destination => string.Equals(destination.Url.ForDatabase(destination.Database), DestinationUrl));
+			var destinations = task.GetReplicationDestinations(destination => string.Equals(destination.Url.ForDatabase(destination.Database), DestinationUrl, StringComparison.OrdinalIgnoreCase));
 			if (destinations == null || destinations.Length == 0)
 				return new OctetString(false.ToString());
 
 			return new OctetString(true.ToString());
 		}
 
-		public override ISnmpData GetData(DocumentDatabase database, ReplicationTask task, ReplicationStrategy destination)
+		public override OctetString GetData(DocumentDatabase database, ReplicationTask task, ReplicationStrategy destination)
 		{
 			throw new NotSupportedException();
 		}

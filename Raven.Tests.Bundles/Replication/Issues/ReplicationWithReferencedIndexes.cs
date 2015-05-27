@@ -101,8 +101,8 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			}
 
 			// master / master
-			TellFirstInstanceToReplicateToSecondInstance();
-			TellSecondInstanceToReplicateToFirstInstance();
+			RunReplication(one, two, skipIndexReplication: true);
+			RunReplication(two, one, skipIndexReplication: true);
 
 			WaitForReplication(two, "items/1");
 
