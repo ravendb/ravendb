@@ -25,8 +25,8 @@
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  public abstract class AbstractGenericBase<TKey>
-  {
-    public abstract TKey Id { get; set; }
-  }
+    public abstract class AbstractGenericBase<TKey>
+    {
+        public abstract TKey Id { get; set; }
+    }
 }
