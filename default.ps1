@@ -14,7 +14,7 @@ properties {
 	$build_dir = "$base_dir\build"
 	$sln_file_name = "zzz_RavenDB_Release.sln"
 	$sln_file = "$base_dir\$sln_file_name"
-	$version = "3.0"
+	$version = "3.5"
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
@@ -415,9 +415,9 @@ task UpdateLiveTest {
 </html>
 '@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
 
-	Remove-Item "C:\Sites\RavenDB 3\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
-	mkdir "C:\Sites\RavenDB 3\Web\bin" -ErrorAction SilentlyContinue
-	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web\" -Recurse -ErrorAction SilentlyContinue
+	Remove-Item "C:\Sites\RavenDB $version\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
+	mkdir "C:\Sites\RavenDB $version\Web\bin" -ErrorAction SilentlyContinue
+	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB $version\Web\" -Recurse -ErrorAction SilentlyContinue
 
 	Remove-Item "$build_dir\Output\Web\app_offline.htm"
 }
