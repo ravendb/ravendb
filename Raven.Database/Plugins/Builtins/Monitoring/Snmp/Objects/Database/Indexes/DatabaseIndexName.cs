@@ -9,7 +9,7 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Indexes
 {
-	public class DatabaseIndexName : DatabaseIndexScalarObjectBase
+	public class DatabaseIndexName : DatabaseIndexScalarObjectBase<OctetString>
 	{
 		private readonly OctetString name;
 
@@ -19,7 +19,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Index
 			name = new OctetString(indexName);
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override OctetString GetData(DocumentDatabase database)
 		{
 			return name;
 		}

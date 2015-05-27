@@ -5,11 +5,11 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Bundles.Replication;
@@ -36,6 +36,10 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 		private readonly int databaseIndex;
 
+		private readonly object locker = new object();
+
+		private bool attached;
+
 		public SnmpDatabase(DatabasesLandlord databaseLandlord, ObjectStore store, string databaseName, int databaseIndex)
 		{
 			this.databaseLandlord = databaseLandlord;
@@ -44,7 +48,17 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			this.databaseIndex = databaseIndex;
 
 			Initialize();
-			Update();
+
+			databaseLandlord.OnDatabaseLoaded += loadedDatabaseName =>
+			{
+				if (string.Equals(loadedDatabaseName, databaseName, StringComparison.OrdinalIgnoreCase) == false)
+					return;
+
+				Attach(force: true);
+			};
+
+			if (databaseLandlord.IsDatabaseLoaded(databaseName))
+				Attach(force: false);
 		}
 
 		private void Initialize()
@@ -87,27 +101,46 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new DatabaseTransactionalStorageDiskRemainingSpace(databaseName, databaseLandlord, databaseIndex));
 
 			store.Add(new ReplicationBundleEnabled(databaseName, databaseLandlord, databaseIndex));
+
+			AddIndexesFromMappingDocument();
+			AddReplicationDestinationsFromMappingDocument();
 		}
 
-		public void Update()
+		private void Attach(bool force)
 		{
-			var database = databaseLandlord.GetDatabaseInternal(databaseName).Result;
+			if (force == false && attached)
+				return;
 
-			database.Notifications.OnIndexChange += (db, notification) =>
+			Task.Factory.StartNew(() =>
 			{
-				if (notification.Type != IndexChangeTypes.IndexAdded)
-					return;
+				lock (locker)
+				{
+					if (force == false && attached)
+						return;
 
-				loadedIndexes.GetOrAdd(notification.Name, AddIndex);
-			};
+					var database = databaseLandlord
+						.GetDatabaseInternal(databaseName)
+						.Result;
 
-			database.ConfigurationRetriever.SubscribeToConfigurationDocumentChanges(Constants.RavenReplicationDestinations, () => AddReplicationDestinations(database));
+					database.Notifications.OnIndexChange += (db, notification) =>
+					{
+						if (notification.Type != IndexChangeTypes.IndexAdded)
+							return;
 
-			AddIndexes(database);
-			AddReplicationDestinations(database);
+						loadedIndexes.GetOrAdd(notification.Name, AddIndex);
+					};
+
+					database.ConfigurationRetriever.SubscribeToConfigurationDocumentChanges(Constants.RavenReplicationDestinations, () => AddReplicationDestinationsFromDatabase(database));
+
+					AddIndexesFromDatabase(database);
+					AddReplicationDestinationsFromDatabase(database);
+
+					attached = true;
+				}
+			});
 		}
 
-		private void AddReplicationDestinations(DocumentDatabase database)
+		private void AddReplicationDestinationsFromDatabase(DocumentDatabase database)
 		{
 			var replicationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			if (replicationDocument == null)
@@ -128,7 +161,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			return index;
 		}
 
-		private void AddIndexes(DocumentDatabase database)
+		private void AddIndexesFromDatabase(DocumentDatabase database)
 		{
 			var indexes = database.IndexStorage.IndexNames;
 
@@ -154,6 +187,33 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new DatabaseIndexTimeSinceLastQuery(databaseName, indexName, databaseLandlord, databaseIndex, index));
 
 			return index;
+		}
+
+		private void AddIndexesFromMappingDocument()
+		{
+			var mappingDocument = GetMappingDocument(MappingDocumentType.Indexes);
+			if (mappingDocument == null)
+				return;
+
+			foreach (var indexName in mappingDocument.DataAsJson.Keys)
+				loadedIndexes.GetOrAdd(indexName, AddIndex);
+		}
+
+		private void AddReplicationDestinationsFromMappingDocument()
+		{
+			var mappingDocument = GetMappingDocument(MappingDocumentType.Replication);
+			if (mappingDocument == null)
+				return;
+
+			foreach (var replicationDestinationUrl in mappingDocument.DataAsJson.Keys)
+				loadedReplicationDestinations.GetOrAdd(replicationDestinationUrl, AddReplicationDestination);
+		}
+
+		private JsonDocument GetMappingDocument(MappingDocumentType type)
+		{
+			var key = Constants.Monitoring.Snmp.DatabaseMappingDocumentPrefix + databaseName + "/" + type;
+
+			return databaseLandlord.SystemDatabase.Documents.Get(key, null);
 		}
 
 		private long GetOrAddIndex(string name, MappingDocumentType mappingDocumentType, DocumentDatabase systemDatabase)

@@ -5,23 +5,21 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Database.Config;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerCpu : ScalarObjectBase
+	public class ServerCpu : ScalarObjectBase<Gauge32>
 	{
 		public ServerCpu()
 			: base("1.7")
 		{
 		}
 
-		public override ISnmpData Data
+		protected override Gauge32 GetData()
 		{
-			get { return new Gauge32((int)CpuStatistics.Average); }
-			set { throw new AccessFailureException(); }
+			return new Gauge32((int)CpuStatistics.Average);
 		}
 	}
 }

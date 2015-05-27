@@ -43,13 +43,13 @@ namespace Raven.Client.Counters.Actions
 			: base(parent, counterStorageName)
 		{
 			if(batchOptions != null && batchOptions.BatchSizeLimit < 1)
-				throw new ArgumentException("options");
+				throw new ArgumentException("batchOptions.BatchSizeLimit cannot be negative", "batchOptions");
 
 			options = batchOptions ?? new CountersBatchOptions(); //defaults do exist
 			streamingStarted = new AsyncManualResetEvent();
 			batchOperationTcs = new TaskCompletionSource<bool>();
 			cts = new CancellationTokenSource();
-			changesQueue = new BlockingCollection<CounterChange>();			
+			changesQueue = new BlockingCollection<CounterChange>(options.BatchSizeLimit);			
 			singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", ServerUrl, counterStorageName);
 
 			OperationId = Guid.NewGuid();

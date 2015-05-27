@@ -12,7 +12,7 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Indexes
 {
-	public class DatabaseIndexExists : DatabaseIndexScalarObjectBase
+	public class DatabaseIndexExists : DatabaseIndexScalarObjectBase<OctetString>
 	{
 		public DatabaseIndexExists(string databaseName, string indexName, DatabasesLandlord landlord, int databaseIndex, int indexIndex)
 			: base(databaseName, indexName, landlord, databaseIndex, indexIndex, "1")
@@ -31,11 +31,11 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Index
 					return new OctetString(exists.ToString(CultureInfo.InvariantCulture));
 				}
 
-				return Null;
+				return DefaultValue();
 			}
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override OctetString GetData(DocumentDatabase database)
 		{
 			throw new NotSupportedException();
 		}

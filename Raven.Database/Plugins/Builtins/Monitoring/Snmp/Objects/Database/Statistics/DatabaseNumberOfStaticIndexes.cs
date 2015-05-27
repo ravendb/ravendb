@@ -13,14 +13,14 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseNumberOfStaticIndexes : DatabaseScalarObjectBase
+	public class DatabaseNumberOfStaticIndexes : DatabaseScalarObjectBase<Integer32>
 	{
 		public DatabaseNumberOfStaticIndexes(string databaseName, DatabasesLandlord landlord, int index)
 			: base(databaseName, landlord, "5.2.{0}.5.2", index)
 		{
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override Integer32 GetData(DocumentDatabase database)
 		{
 			return new Integer32(database.IndexStorage.IndexNames.Count(x => x.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase) == false));
 		}
