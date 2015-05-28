@@ -34,6 +34,7 @@ using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Runtime.Serialization;
+using Raven.Abstractions.Json;
 using ErrorEventArgs = Raven.Imports.Newtonsoft.Json.Serialization.ErrorEventArgs;
 
 namespace Raven.Imports.Newtonsoft.Json
@@ -283,10 +284,14 @@ namespace Raven.Imports.Newtonsoft.Json
             get
             {
                 if (_converters == null)
-                    _converters = new JsonConverterCollection();
+					_converters = JsonConverterCollection.Empty;
 
                 return _converters;
             }
+			set
+			{
+				_converters = value;
+			}
         }
 
         /// <summary>
@@ -523,10 +528,14 @@ namespace Raven.Imports.Newtonsoft.Json
             {
                 // insert settings converters at the beginning so they take precedence
                 // if user wants to remove one of the default converters they will have to do it manually
-                for (int i = 0; i < settings.Converters.Count; i++)
+				var converters = new JsonConverterCollection(serializer.Converters); 
+				for (int i = 0; i < settings.Converters.Count; i++)
                 {
-                    serializer.Converters.Insert(i, settings.Converters[i]);
+					converters.Insert(i, settings.Converters[i]);
                 }
+				converters.Freeze();
+
+				serializer.Converters = converters;
             }
 
             // serializer specific
@@ -956,10 +965,10 @@ namespace Raven.Imports.Newtonsoft.Json
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal JsonConverter GetMatchingConverter(Type type)
         {
-            return GetMatchingConverter(_converters, type);
+			return JsonConverterCache.GetMatchingConverter(_converters, type);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		/*[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static JsonConverter GetMatchingConverter(IList<JsonConverter> converters, Type objectType)
         {
 #if DEBUG
@@ -979,7 +988,7 @@ namespace Raven.Imports.Newtonsoft.Json
             }
 
 			return null;
-        }
+        }*/
 
         internal void OnError(ErrorEventArgs e)
         {

@@ -649,7 +649,12 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         /// </summary>
         /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
         /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-        public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+		public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+		{
+			WriteTo(writer, new JsonConverterCollection(converters));
+		}
+		
+		public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
         {
             if (converters != null && converters.Length > 0 && _value != null)
             {

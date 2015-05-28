@@ -104,7 +104,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             get { return _instance; }
         }
 
-        private static readonly JsonConverter[] BuiltInConverters =
+		private static readonly JsonConverterCollection BuiltInConverters = new JsonConverterCollection
         {
 #if !(NET20 || NETFX_CORE || PORTABLE40 || PORTABLE)
             new EntityKeyMemberConverter(),
@@ -130,6 +130,11 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             new BsonObjectIdConverter(),
             new RegexConverter()
         };
+
+		static DefaultContractResolver()
+		{
+			BuiltInConverters.Freeze();
+		}
 
         private static readonly object TypeContractCacheLock = new object();
 
