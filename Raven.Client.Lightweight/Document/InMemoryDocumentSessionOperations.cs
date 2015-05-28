@@ -550,13 +550,32 @@ more responsive application.
 
 		private void RegisterMissingProperties(object o, string key, object value)
 		{
-			Dictionary<string, object> dictionary;
+			Dictionary<string, JToken> dictionary;
 			if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
 			{
-				EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, object>();
+				EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
 			}
 
-			dictionary[key] = value;
+			dictionary[key] = ConvertValueToJToken(value);
+		}
+
+		private JToken ConvertValueToJToken(object value)
+		{
+			var jToken = value as JToken;
+			if (jToken != null)
+				return jToken;
+
+			try
+			{
+				// convert object value to JToken so it is compatible with dictionary
+				// could happen because of primitive types, type name handling and references
+				jToken = (value != null) ? JToken.FromObject(value) : JValue.CreateNull();
+				return jToken;
+			}
+			catch (Exception ex)
+			{
+				throw new InvalidOperationException("This is a bug. Value should be JToken.", ex);
+			}
 		}
 
 		/// <summary>

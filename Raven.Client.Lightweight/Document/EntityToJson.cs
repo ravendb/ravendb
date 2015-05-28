@@ -29,7 +29,7 @@ namespace Raven.Client.Document
             Listeners = listeners;
         }
 
-		public Dictionary<object, Dictionary<string, object>> MissingDictionary = new Dictionary<object, Dictionary<string, object>>(ObjectReferenceEqualityComparer<object>.Default);
+		public readonly Dictionary<object, Dictionary<string, JToken>> MissingDictionary = new Dictionary<object, Dictionary<string, JToken>>(ObjectReferenceEqualityComparer<object>.Default);
 
         public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
         {
@@ -74,7 +74,7 @@ namespace Raven.Client.Document
                 var ravenJTokenWriter = (RavenJTokenWriter)writer;
                 ravenJTokenWriter.AssociateCurrentOBjectWith(o);
 
-                Dictionary<string, object> value;
+                Dictionary<string, JToken> value;
                 if (MissingDictionary.TryGetValue(o, out value) == false)
                     return;
 
@@ -85,10 +85,7 @@ namespace Raven.Client.Document
 		                writer.WriteNull();
 	                else
 	                {
-		                var jToken = item.Value as JToken;
-		                if (jToken == null)
-			                throw new InvalidOperationException("This is a bug. Value should be JToken.");
-		                jToken.WriteTo(writer);
+		                item.Value.WriteTo(writer);
 	                }
                 }
             };
