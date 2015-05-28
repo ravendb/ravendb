@@ -54,10 +54,13 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         private readonly List<object> _serializeStack = new List<object>();
         private JsonSerializerProxy _internalSerializer;
 		private JsonConverterCollection _internalConverters;
-        
-		public JsonSerializerInternalWriter(JsonSerializer serializer)
+
+		Action<object, JsonWriter> beforeClosingObject;
+
+		public JsonSerializerInternalWriter(JsonSerializer serializer, Action<object, JsonWriter> beforeClosingObject)
             : base(serializer)
         {
+			this.beforeClosingObject = beforeClosingObject;
         }
 
         public void Serialize(JsonWriter jsonWriter, object value, Type objectType)
@@ -456,6 +459,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                     }
                 }
             }
+
+			if (beforeClosingObject != null)
+				beforeClosingObject(value, writer);
 
             writer.WriteEndObject();
 

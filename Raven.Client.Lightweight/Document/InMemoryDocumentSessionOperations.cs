@@ -548,12 +548,12 @@ more responsive application.
 			}
 		}
 
-		private void RegisterMissingProperties(object o, string key, JToken value)
+		private void RegisterMissingProperties(object o, string key, object value)
 		{
-			Dictionary<string, JToken> dictionary;
+			Dictionary<string, object> dictionary;
 			if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
 			{
-				EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
+				EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, object>();
 			}
 
 			dictionary[key] = value;

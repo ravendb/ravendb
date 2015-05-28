@@ -1873,7 +1873,7 @@ namespace Raven.Client.Indexes
 		{
 			// hack: the only way to detect anonymous types right now
 			return type.IsDefined(typeof(CompilerGeneratedAttribute), false)
-				&& type.IsGenericType() && type.Name.Contains("AnonymousType")
+				&& type.IsGenericType && type.Name.Contains("AnonymousType")
 				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
 				&& type.GetTypeInfo().Attributes.HasFlag(TypeAttributes.NotPublic);
 		}
@@ -2214,10 +2214,10 @@ namespace Raven.Client.Indexes
 
 		private static bool ShouldConvert(Type nonNullableType)
 		{
-			if (nonNullableType.IsEnum())
+			if (nonNullableType.IsEnum)
 				return true;
 
-			return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType() == false);
+			return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType == false);
 		}
 	}
 }

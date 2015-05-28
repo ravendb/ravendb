@@ -554,21 +554,26 @@ namespace Raven.Imports.Newtonsoft.Json
 			return SerializeObject(value, Formatting.None, converters);
 		}
 
-        /// <summary>
-        /// Serializes the specified object to a JSON string using formatting and a collection of <see cref="JsonConverter"/>.
-        /// </summary>
-        /// <param name="value">The object to serialize.</param>
-        /// <param name="formatting">Indicates how the output is formatted.</param>
-        /// <param name="converters">A collection converters used while serializing.</param>
-        /// <returns>A JSON string representation of the object.</returns>
-        public static string SerializeObject(object value, Formatting formatting, JsonConverterCollection converters)
-        {
-			JsonSerializerSettings settings = (converters != null && converters.Count > 0)
-                ? new JsonSerializerSettings { Converters = converters }
-                : null;
+		/// <summary>
+		/// Serializes the specified object to a JSON string using formatting and a collection of <see cref="JsonConverter"/>.
+		/// </summary>
+		/// <param name="value">The object to serialize.</param>
+		/// <param name="formatting">Indicates how the output is formatted.</param>
+		/// <param name="converters">A collection converters used while serializing.</param>
+		/// <returns>A JSON string representation of the object.</returns>
+		public static string SerializeObject(object value, Formatting formatting, params JsonConverter[] converters)
+		{
+			return SerializeObject(value, formatting, new JsonConverterCollection(converters));
+		}
 
-            return SerializeObject(value, null, formatting, settings);
-        }
+		public static string SerializeObject(object value, Formatting formatting, JsonConverterCollection converters)
+		{
+			JsonSerializerSettings settings = (converters != null && converters.Count > 0)
+											  ? new JsonSerializerSettings { Converters = converters }
+											  : null;
+
+			return SerializeObject(value, formatting, settings);
+		}
 
         /// <summary>
         /// Serializes the specified object to a JSON string using <see cref="JsonSerializerSettings"/>.
