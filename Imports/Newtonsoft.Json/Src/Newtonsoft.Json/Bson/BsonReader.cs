@@ -505,7 +505,10 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         {
             switch (type)
             {
-                case BsonType.Number:
+				case BsonType.NumberDecimal:
+					SetToken(JsonToken.Float, ReadDecimal());
+					break;
+				case BsonType.Number:
                     double d = ReadDouble();
 
 		            if (_floatParseHandling == FloatParseHandling.Decimal || _floatParseHandling == FloatParseHandling.PreferDecimalFallbackToDouble)
@@ -844,6 +847,13 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
             MovePosition(8);
             return _reader.ReadDouble();
         }
+
+		private decimal ReadDecimal()
+		{
+			MovePosition(16);
+			return _reader.ReadDecimal();
+		}
+
 
         private int ReadInt32()
         {
