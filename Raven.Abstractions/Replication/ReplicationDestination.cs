@@ -55,10 +55,15 @@ namespace Raven.Abstractions.Replication
 		/// </summary>
 		public string[] SourceCollections
 		{
-			get { return _sourceCollections ?? (_sourceCollections = new string[0]); }
+			get
+			{
+				return _sourceCollections ?? (_sourceCollections = new string[0]);
+			}
 			set
 			{
 				_sourceCollections = value;
+				if (_sourceCollections.Length > 0)
+					IgnoredClient = true;
 			}
 		}
 
