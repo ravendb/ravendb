@@ -163,10 +163,10 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         [ObsoleteAttribute("DefaultMembersSearchFlags is obsolete. To modify the members serialized inherit from DefaultContractResolver and override the GetSerializableMembers method instead.")] 
         public BindingFlags DefaultMembersSearchFlags { get; set; }
 #else
-        private BindingFlags DefaultMembersSearchFlags = BindingFlags.Instance | BindingFlags.Public;
+        private BindingFlags DefaultMembersSearchFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic; // RavenDB required also the following flag: BindingFlags.NonPublic.
 #endif
 
-        /// <summary>
+		/// <summary>
         /// Gets or sets a value indicating whether compiler generated members should be serialized.
         /// </summary>
         /// <value>
