@@ -79,6 +79,44 @@ namespace Raven.Tests.Common
             return documentStore;
         }
 
+		protected bool CheckIfConflictDocumentsIsThere(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
+		{
+			var beginningTime = DateTime.UtcNow;
+			var timeouted = false;
+			JsonDocument[] docs;
+			do
+			{
+				var currentTime = DateTime.UtcNow;
+				if ((currentTime - beginningTime).TotalMilliseconds >= timeoutMs)
+				{
+					timeouted = true;
+					break;
+				}
+				docs = store.DatabaseCommands.ForDatabase(databaseName).GetDocuments(0, maxDocumentsToCheck);
+			} while (docs.Any(d => d.Key.Contains(id + "/conflicts")));
+
+			return !timeouted;
+		}
+
+		protected bool WaitForConflictDocumentsToAppear(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
+		{
+			var beginningTime = DateTime.UtcNow;
+			var timeouted = false;
+			JsonDocument[] docs;
+			do
+			{
+				var currentTime = DateTime.UtcNow;
+				if ((currentTime - beginningTime).TotalMilliseconds >= timeoutMs)
+				{
+					timeouted = true;
+					break;
+				}
+				docs = store.DatabaseCommands.ForDatabase(databaseName).GetDocuments(0, maxDocumentsToCheck);
+			} while (!docs.Any(d => d.Key.Contains(id + "/conflicts")));
+
+			return !timeouted;
+		}
+
         protected virtual void ConfigureServer(RavenDBOptions options)
         {
             
@@ -177,7 +215,8 @@ namespace Raven.Tests.Common
 			string password = null,
 			string domain = null,
 			ReplicationClientConfiguration clientConfiguration = null,
-			string[] replicationSourceCollections = null)
+			string[] replicationSourceCollections = null,
+			bool skipIndexReplication = false)
         {
             db = db ?? (destination is DocumentStore ? ((DocumentStore)destination).DefaultDatabase : null);
 
@@ -192,7 +231,8 @@ namespace Raven.Tests.Common
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
 					IgnoredClient = ignoredClient,
-					SourceCollections = replicationSourceCollections
+					SourceCollections = replicationSourceCollections,
+					SkipIndexReplication = skipIndexReplication
                 };
                 if (db != null)
                     replicationDestination.Database = db;

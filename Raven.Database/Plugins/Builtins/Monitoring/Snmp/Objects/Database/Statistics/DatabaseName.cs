@@ -5,14 +5,13 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseName : DatabaseScalarObjectBase
+	public class DatabaseName : DatabaseScalarObjectBase<OctetString>
 	{
 		private readonly OctetString name;
 
@@ -22,7 +21,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stati
 			name = new OctetString(databaseName ?? Constants.SystemDatabase);
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override OctetString GetData(DocumentDatabase database)
 		{
 			return name;
 		}

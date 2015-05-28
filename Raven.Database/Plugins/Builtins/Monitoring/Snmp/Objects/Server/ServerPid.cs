@@ -7,11 +7,10 @@
 using System.Diagnostics;
 
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerPid : ScalarObjectBase
+	public class ServerPid : ScalarObjectBase<Integer32>
 	{
 		private readonly Integer32 pid;
 
@@ -21,10 +20,9 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 			pid = new Integer32(Process.GetCurrentProcess().Id);
 		}
 
-		public override ISnmpData Data
+		protected override Integer32 GetData()
 		{
-			get { return pid; }
-			set { throw new AccessFailureException(); }
+			return pid;
 		}
 	}
 }

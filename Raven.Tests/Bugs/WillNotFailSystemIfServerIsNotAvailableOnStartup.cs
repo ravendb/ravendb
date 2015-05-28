@@ -8,6 +8,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+
+using Raven.Abstractions.Connection;
 using Raven.Client.Document;
 using Raven.Tests.Common;
 
@@ -24,7 +26,7 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenSession())
 				{
-					Assert.Throws<HttpRequestException>(() => session.Load<User>("user/1"));
+					Assert.Throws<ErrorResponseException>(() => session.Load<User>("user/1"));
 				}
 
 				using (GetNewServer())
@@ -44,7 +46,7 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-                    await AssertAsync.Throws<HttpRequestException>(async () => await session.LoadAsync<User>("user/1"));
+					await AssertAsync.Throws<ErrorResponseException>(async () => await session.LoadAsync<User>("user/1"));
 				}
 
 				using (GetNewServer())

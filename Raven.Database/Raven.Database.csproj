@@ -503,6 +503,7 @@
     <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DatabaseHelper.cs" />
+    <Compile Include="Util\DevelopmentHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\SortFieldHelper.cs" />

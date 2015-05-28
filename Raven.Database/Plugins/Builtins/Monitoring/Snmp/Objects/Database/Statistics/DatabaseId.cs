@@ -10,7 +10,7 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseId : DatabaseScalarObjectBase
+	public class DatabaseId : DatabaseScalarObjectBase<OctetString>
 	{
 		private OctetString id;
 
@@ -20,7 +20,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stati
 
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override OctetString GetData(DocumentDatabase database)
 		{
 			return id ?? (id = new OctetString(database.TransactionalStorage.Id.ToString()));
 		}

@@ -1,12 +1,11 @@
 ﻿using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Abstractions;
 using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	internal class ServerUpTime : ScalarObjectBase
+	internal class ServerUpTime : ScalarObjectBase<TimeTicks>
 	{
 		private readonly RequestManager requestManager;
 
@@ -16,14 +15,13 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 			this.requestManager = requestManager;
 		}
 
-		public override ISnmpData Data
+		protected override TimeTicks GetData()
 		{
-			get { return new TimeTicks(SystemTime.UtcNow - requestManager.StartUpTime); }
-			set { throw new AccessFailureException(); }
+			return new TimeTicks(SystemTime.UtcNow - requestManager.StartUpTime);
 		}
 	}
 
-	internal class ServerUpTimeGlobal : ScalarObject
+	internal class ServerUpTimeGlobal : ScalarObjectBase<TimeTicks>
 	{
 		private readonly RequestManager requestManager;
 
@@ -33,10 +31,9 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 			this.requestManager = requestManager;
 		}
 
-		public override ISnmpData Data
+		protected override TimeTicks GetData()
 		{
-			get { return new TimeTicks(SystemTime.UtcNow - requestManager.StartUpTime); }
-			set { throw new AccessFailureException(); }
+			return new TimeTicks(SystemTime.UtcNow - requestManager.StartUpTime);
 		}
 	}
 }
