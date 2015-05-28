@@ -249,6 +249,31 @@ namespace Raven.Tests.Helpers
                 stores.Add(documentStore);
             }
         }
+		public IDocumentStore NewRemoteDocumentStoreWithUrl(int port, bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
+			bool runInMemory = true,
+			string dataDirectory = null,
+			string requestedStorage = null,
+			bool enableAuthentication = false)
+		{
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
+			ModifyServer(ravenDbServer);
+			var store = new DocumentStore
+			{
+				Url = GetServerUrl(port),
+				DefaultDatabase = databaseName,
+			};
+			stores.Add(store);
+			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+			ModifyStore(store);
+			return store.Initialize();
+		}
+
+		private static string GetServerUrl(int port)
+		{
+			return "http://localhost:" + port;
+		}
+
+
 
         public static void EnableAuthentication(DocumentDatabase database)
         {
