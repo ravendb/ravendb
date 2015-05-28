@@ -22,8 +22,8 @@ namespace Raven.Tests.Issues
 			var server2 = GetNewServer(8078);
 			var shards = new List<IDocumentStore>
 			{
-				new DocumentStore {Identifier = "Shard1", Url = server1.Url},
-				new DocumentStore {Identifier = "Shard2", Url = server2.Url}
+				new DocumentStore {Identifier = "Shard1", Url = server1.Configuration.ServerUrl},
+				new DocumentStore {Identifier = "Shard2", Url = server2.Configuration.ServerUrl}
 			}
 				.ToDictionary(x => x.Identifier, x => x);
 
