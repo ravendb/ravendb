@@ -23,41 +23,40 @@ namespace RavenDbShardingTests
         [Fact]
         public void OverwritingExistingDocumentGeneratesWrongIdWithShardedDocumentStore()
         {
-            using (var store1 = NewRemoteDocumentStoreWithUrl(8079, ravenDbServer: GetNewServer(8079)))
-            {
-                using (var store2 = NewRemoteDocumentStoreWithUrl(8078, ravenDbServer: GetNewServer(8078)))
-                {
-                    var shards = new List<IDocumentStore> { 
-                        new DocumentStore { Identifier="Shard1", Url = store1.Url}, 
-                        new DocumentStore { Identifier="Shard2", Url = store2.Url} }
-                            .ToDictionary(x => x.Identifier, x => x);
+			var server1 = GetNewServer(8079);
+			var server2 = GetNewServer(8078);
+			var shards = new Dictionary<string, IDocumentStore>
+			{
+				{"Shard1", new DocumentStore{Url = server1.Configuration.ServerUrl}},
+				{"Shard2", new DocumentStore{Url = server2.Configuration.ServerUrl}},
+			};
 
-                    var shardStrategy = new ShardStrategy(shards);
-                    shardStrategy.ShardingOn<Profile>(x => x.Location);
 
-                    using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
-                    {
-                        shardedDocumentStore.Initialize();
 
-                        var profile = new Profile { Name = "Test", Location = "Shard1" };
+	        var shardStrategy = new ShardStrategy(shards);
+	        shardStrategy.ShardingOn<Profile>(x => x.Location);
 
-                        using (var documentSession = shardedDocumentStore.OpenSession())
-                        {
-                            documentSession.Store(profile, profile.Id);
-                            documentSession.SaveChanges();
-                        }
+	        using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
+	        {
+		        shardedDocumentStore.Initialize();
 
-                        using (var documentSession = shardedDocumentStore.OpenSession())
-                        {
-                            var correctId = profile.Id;
+		        var profile = new Profile {Name = "Test", Location = "Shard1"};
 
-                            documentSession.Store(profile, profile.Id);
+		        using (var documentSession = shardedDocumentStore.OpenSession())
+		        {
+			        documentSession.Store(profile, profile.Id);
+			        documentSession.SaveChanges();
+		        }
 
-                            Assert.Equal(correctId, profile.Id);
-                        }
-                    }
-                }
-            }
+		        using (var documentSession = shardedDocumentStore.OpenSession())
+		        {
+			        var correctId = profile.Id;
+
+			        documentSession.Store(profile, profile.Id);
+
+			        Assert.Equal(correctId, profile.Id);
+		        }
+	        }
         }
     }
 }
