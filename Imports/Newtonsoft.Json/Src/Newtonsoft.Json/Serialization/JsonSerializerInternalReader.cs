@@ -2007,10 +2007,12 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                         }
                         catch (Exception ex)
                         {
-                            if (IsErrorHandled(newObject, contract, memberName, reader as IJsonLineInfo, reader.Path, ex))
-                                HandleError(reader, true, initialDepth);
-                            else
-                                throw;
+							var newEx = new JsonSerializationException("Could not read value for property: " + memberName, ex);
+							TryClearErrorContext(); 
+							if (IsErrorHandled(newObject, contract, memberName, reader as IJsonLineInfo, reader.Path, newEx))
+								HandleError(reader, true, initialDepth);
+							else
+								throw newEx;
                         }
                         break;
                     }
