@@ -31,6 +31,7 @@ using System.Numerics;
 #endif
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 #if NET20
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
@@ -248,8 +249,10 @@ namespace Raven.Imports.Newtonsoft.Json
         /// </summary>
         public StringEscapeHandling StringEscapeHandling
         {
-            get { return _stringEscapeHandling; }
-            set
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return _stringEscapeHandling; }
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			set
             {
                 _stringEscapeHandling = value;
                 OnStringEscapeHandlingChanged();

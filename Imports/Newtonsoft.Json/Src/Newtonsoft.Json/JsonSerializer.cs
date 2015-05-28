@@ -968,7 +968,8 @@ namespace Raven.Imports.Newtonsoft.Json
 
             if (converters != null)
             {
-                for (int i = 0; i < converters.Count; i++)
+	            var count = converters.Count;
+	            for (int i = 0; i < count; i++)
                 {
                     JsonConverter converter = converters[i];
 
@@ -977,7 +978,7 @@ namespace Raven.Imports.Newtonsoft.Json
                 }
             }
 
-            return null;
+			return null;
         }
 
         internal void OnError(ErrorEventArgs e)
