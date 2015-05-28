@@ -172,7 +172,6 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.Voron.TempPath.Value, actual => actual.Storage.Voron.TempPath);
 			configurationComparer.Assert(expected => expected.FileSystem.MaximumSynchronizationInterval.Value, actual => actual.FileSystem.MaximumSynchronizationInterval);
 			configurationComparer.Assert(expected => expected.Encryption.EncryptionKeyBitsPreference.Value, actual => actual.Encryption.EncryptionKeyBitsPreference);
-			configurationComparer.Assert(expected => expected.MaxClauseCount.Value, actual => actual.MaxClauseCount);
 			configurationComparer.Assert(expected => expected.Encryption.UseFips.Value, actual => actual.Encryption.UseFips);
 			configurationComparer.Assert(expected => expected.Encryption.UseSsl.Value, actual => actual.Encryption.UseSsl);
 			configurationComparer.Assert(expected => expected.MaxConcurrentServerRequests.Value, actual => actual.MaxConcurrentServerRequests);
