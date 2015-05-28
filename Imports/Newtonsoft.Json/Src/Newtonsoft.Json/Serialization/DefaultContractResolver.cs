@@ -45,6 +45,7 @@ using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Abstractions.Json;
 #if NET20
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
@@ -725,8 +726,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
             contract.Converter = ResolveContractConverter(contract.NonNullableUnderlyingType);
 
-            // then see whether object is compadible with any of the built in converters
-            contract.InternalConverter = JsonSerializer.GetMatchingConverter(BuiltInConverters, contract.NonNullableUnderlyingType);
+			// then see whether object is compatible with any of the built in converters
+			contract.InternalConverter = JsonConverterCache.GetMatchingConverter(BuiltInConverters, contract.NonNullableUnderlyingType);
 
             if (contract.IsInstantiable
                 && (ReflectionUtils.HasDefaultConstructor(contract.CreatedType, true) || contract.CreatedType.IsValueType()))

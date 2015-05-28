@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Globalization;
+using Raven.Abstractions.Json;
 #if !(NET35 || NET20 || PORTABLE40)
 using System.Dynamic;
 using System.Linq.Expressions;
@@ -656,9 +657,9 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
 		
 		public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
         {
-            if (converters != null && converters.Length > 0 && _value != null)
+			if (converters != null && converters.Count > 0 && _value != null)
             {
-                JsonConverter matchingConverter = JsonSerializer.GetMatchingConverter(converters, _value.GetType());
+				JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, _value.GetType());
                 if (matchingConverter != null && matchingConverter.CanWrite)
                 {
                     matchingConverter.WriteJson(writer, _value, JsonSerializer.CreateDefault());
