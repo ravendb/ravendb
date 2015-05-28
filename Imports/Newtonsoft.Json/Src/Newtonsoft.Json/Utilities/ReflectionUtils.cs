@@ -81,7 +81,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     }
 #endif
 
-    internal static class ReflectionUtils
+	public static class ReflectionUtils
     {
         public static readonly Type[] EmptyTypes;
 

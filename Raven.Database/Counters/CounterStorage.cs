@@ -20,7 +20,6 @@ using Voron.Trees;
 using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Raven.Abstractions.Data.Constants;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Raven.Database.Counters
 {
