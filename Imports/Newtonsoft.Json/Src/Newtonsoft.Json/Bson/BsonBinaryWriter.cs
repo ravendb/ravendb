@@ -110,7 +110,13 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
                     BsonValue value = (BsonValue)t;
                     _writer.Write(Convert.ToInt64(value.Value, CultureInfo.InvariantCulture));
                 }
-                    break;
+		            break;
+				case BsonType.RavenDBCustomFloat:
+				{
+					BsonValue value = (BsonValue)t;
+					_writer.Write(Convert.ToSingle(value.Value, CultureInfo.InvariantCulture));
+				}
+		            break;
                 case BsonType.Number:
                 {
                     BsonValue value = (BsonValue)t;
@@ -283,9 +289,11 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
                 case BsonType.Integer:
                     return 4;
                 case BsonType.Long:
-                    return 8;
+					return 8;
                 case BsonType.Number:
                     return 8;
+				case BsonType.RavenDBCustomFloat:
+					return 4;
 				case BsonType.NumberDecimal:
 					return 16;
                 case BsonType.String:

@@ -537,6 +537,9 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
 			            SetToken(JsonToken.Float, d);
 		            }
                     break;
+				case BsonType.RavenDBCustomFloat:
+					SetToken(JsonToken.Float, ReadSingle());
+					break;
                 case BsonType.String:
                 case BsonType.Symbol:
                     SetToken(JsonToken.String, ReadLengthString());
@@ -847,6 +850,12 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
             MovePosition(8);
             return _reader.ReadDouble();
         }
+
+		private float ReadSingle()
+		{
+			MovePosition(4);
+			return _reader.ReadSingle();
+		}
 
 		private decimal ReadDecimal()
 		{
