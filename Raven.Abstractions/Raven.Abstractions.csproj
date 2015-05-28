@@ -402,6 +402,7 @@
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="ServerSmugglerRequest.cs" />
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
+    <Compile Include="Smuggler\Data\CounterOperationState.cs" />
     <Compile Include="Smuggler\Data\OperationState.cs" />
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
     <Compile Include="Smuggler\Data\ExportFilesResult.cs" />
@@ -412,6 +413,7 @@
     <Compile Include="Smuggler\ISmugglerFilesOperations.cs" />
     <Compile Include="Smuggler\ServerSupportedFeatures.cs" />
     <Compile Include="Smuggler\SmugglerAction.cs" />
+    <Compile Include="Smuggler\SmugglerCounterOptions.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseApiBase.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseOptions.cs" />
     <Compile Include="Smuggler\SmugglerExportIncremental.cs" />

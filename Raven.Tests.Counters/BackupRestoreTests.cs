@@ -68,6 +68,7 @@ namespace Raven.Tests.Counters
 				}
 				catch (IOException)
 				{
+					//don't try to delete locked folders, they will be deleted next time
 				}
 			});
 			
