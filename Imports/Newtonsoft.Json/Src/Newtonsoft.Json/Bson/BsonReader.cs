@@ -508,10 +508,31 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
                 case BsonType.Number:
                     double d = ReadDouble();
 
-                    if (_floatParseHandling == FloatParseHandling.Decimal)
-                        SetToken(JsonToken.Float, Convert.ToDecimal(d, CultureInfo.InvariantCulture));
-                    else
-                        SetToken(JsonToken.Float, d);
+		            if (_floatParseHandling == FloatParseHandling.Decimal || _floatParseHandling == FloatParseHandling.PreferDecimalFallbackToDouble)
+		            {
+			            try
+			            {
+				            if (double.IsNaN(d))
+				            {
+					            SetToken(JsonToken.Float, d);
+				            }
+				            else
+				            {
+					            SetToken(JsonToken.Float, Convert.ToDecimal(d, CultureInfo.InvariantCulture));
+				            }
+			            }
+			            catch (Exception)
+			            {
+				            if (_floatParseHandling == FloatParseHandling.PreferDecimalFallbackToDouble)
+					            SetToken(JsonToken.Float, d);
+				            else
+					            throw;
+			            }
+		            }
+		            else
+		            {
+			            SetToken(JsonToken.Float, d);
+		            }
                     break;
                 case BsonType.String:
                 case BsonType.Symbol:

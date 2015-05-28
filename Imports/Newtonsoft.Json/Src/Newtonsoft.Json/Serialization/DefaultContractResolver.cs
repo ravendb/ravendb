@@ -1006,7 +1006,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             if (CollectionUtils.IsDictionaryType(t))
                 return CreateDictionaryContract(objectType);
 
-            if (typeof(IEnumerable).IsAssignableFrom(t))
+			if (typeof(IEnumerable).IsAssignableFrom(t) || ReflectionUtils.ImplementsGenericDefinition(t, typeof(IEnumerable<>)))
                 return CreateArrayContract(objectType);
 
             if (CanConvertToString(t))
