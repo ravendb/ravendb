@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -12,9 +13,10 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Tests.Helpers;
+
 using Xunit;
 
-namespace Raven.Tests.Core.Replication
+namespace Raven.Tests.Replication
 {
 	public class TransformerReplication : RavenTestBase
 	{
@@ -59,7 +61,7 @@ namespace Raven.Tests.Core.Replication
 			}
 		}
 
-		public class YetAnotherTransformer: AbstractTransformerCreationTask<UserWithExtraInfo>
+		public class YetAnotherTransformer : AbstractTransformerCreationTask<UserWithExtraInfo>
 		{
 			public YetAnotherTransformer()
 			{
@@ -102,7 +104,7 @@ namespace Raven.Tests.Core.Replication
 
 				var transformersOnDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				Assert.Equal(1, transformersOnDestination2.Count(x => x.Name == transformer.TransformerName));
-				
+
 				var transformersOnDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				Assert.Equal(1, transformersOnDestination3.Count(x => x.Name == transformer.TransformerName));
 			}
@@ -121,7 +123,7 @@ namespace Raven.Tests.Core.Replication
 			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3))
 			{
 				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
-				
+
 				CreateDatabaseWithReplication(source, "testDB");
 				CreateDatabaseWithReplication(destination1, "testDB");
 				CreateDatabaseWithReplication(destination2, "testDB");
@@ -159,7 +161,7 @@ namespace Raven.Tests.Core.Replication
 
 				transformersOnDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				Assert.Equal(0, transformersOnDestination3.Count(x => x.Name == transformer.TransformerName));
-	
+
 			}
 		}
 
@@ -229,7 +231,7 @@ namespace Raven.Tests.Core.Replication
 				var transformersOnDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				Assert.Equal(1, transformersOnDestination3.Count(x => x.Name == transformer.TransformerName));
 			}
-			
+
 		}
 
 		[Fact]
@@ -341,13 +343,13 @@ namespace Raven.Tests.Core.Replication
 		{
 			var requestFactory = new HttpRavenRequestFactory();
 			using (var sourceServer = GetNewServer(8077))
-			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer,fiddler:true))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
 			using (var destinationServer1 = GetNewServer(8078))
-			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1, fiddler:true))
+			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1, fiddler: true))
 			using (var destinationServer2 = GetNewServer())
-			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2, fiddler:true))
+			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2, fiddler: true))
 			using (var destinationServer3 = GetNewServer(8081))
-			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3, fiddler:true))
+			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3, fiddler: true))
 			{
 				CreateDatabaseWithReplication(source, "testDB");
 				CreateDatabaseWithReplication(destination1, "testDB");
@@ -369,7 +371,7 @@ namespace Raven.Tests.Core.Replication
 						{ userTransformer.TransformerName, 
 							anotherTransformer.TransformerName, 
 							yetAnotherTransformer.TransformerName };
-				
+
 				// ReSharper disable once AccessToDisposedClosure
 				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
 
@@ -383,7 +385,7 @@ namespace Raven.Tests.Core.Replication
 				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-	
+
 				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination1.Select(x => x.Name).ToArray()));
 				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination2.Select(x => x.Name).ToArray()));
 				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination3.Select(x => x.Name).ToArray()));
@@ -439,7 +441,7 @@ namespace Raven.Tests.Core.Replication
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 
 				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination1.Select(x => x.Name).ToArray()));
-				Assert.Equal(0,transformerNamesAtDestination2.Length);
+				Assert.Equal(0, transformerNamesAtDestination2.Length);
 				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination3.Select(x => x.Name).ToArray()));
 			}
 		}
