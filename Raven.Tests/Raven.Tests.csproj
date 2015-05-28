@@ -631,6 +631,8 @@
     <Compile Include="Queries\CommentsInQueries.cs" />
     <Compile Include="Querying\CachingOfLongQueries.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
+    <Compile Include="Replication\IndexReplication.cs" />
+    <Compile Include="Replication\TransformerReplication.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\NestingTransformers.cs" />
