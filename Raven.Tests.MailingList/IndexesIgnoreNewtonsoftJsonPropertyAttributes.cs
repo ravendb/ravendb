@@ -29,7 +29,7 @@ namespace RavenTestConsole.RavenTests
 	{
 		private class StudentDto
 		{
-            [Newtonsoft.Json.Sample.JsonProperty("EmailAddress")]
+			[Raven.Imports.Newtonsoft.Json.Sample.JsonProperty("EmailAddress")]
 			public string Email { get; set; }
         
             [Raven.Imports.Newtonsoft.Json.JsonProperty("ZipCode")]
