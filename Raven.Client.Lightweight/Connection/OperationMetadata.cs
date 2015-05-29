@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Net;
 
 using Raven.Abstractions.Cluster;
@@ -8,11 +7,8 @@ namespace Raven.Client.Connection
 {
     public class OperationMetadata
     {
-	    public Dictionary<string, object> AdditionalData { get; private set; } 
-
 	    internal OperationMetadata()
 	    {
-			AdditionalData = new Dictionary<string, object>();
 	    }
 
 		public OperationMetadata(string url, string username = null, string password = null, string domain = null, string apiKey = null, ClusterInformation clusterInformation = null)
@@ -82,7 +78,6 @@ namespace Raven.Client.Connection
 			    int hashCode = (Url != null ? Url.GetHashCode() : 0);
 			    hashCode = (hashCode * 397) ^ (ClusterInformation != null ? ClusterInformation.GetHashCode() : 0);
 			    hashCode = (hashCode * 397) ^ (Credentials != null ? Credentials.GetHashCode() : 0);
-				hashCode = (hashCode * 397) ^ (AdditionalData != null ? AdditionalData.GetHashCode() : 0);
 			    return hashCode;
 		    }
 	    }
