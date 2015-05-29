@@ -977,20 +977,21 @@ namespace Raven.Database.Server.Controllers.Admin
                 }, HttpStatusCode.BadRequest);
             }
 
-			if (Directory.Exists(ioTestRequest.Path) == false)
-			{
-				return GetMessageWithString(string.Format("Directory {0} doesn't exist.", ioTestRequest.Path), HttpStatusCode.BadRequest);
-			}
-
             Database.Documents.Delete(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, null);
 
 			var killTaskCts = new CancellationTokenSource();
+
+			var operationStatus = new RavenJObject();
 
 			var task = Task.Factory.StartNew(() =>
 			{
 				var debugInfo = new List<string>();
 
-				using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, debugInfo.Add, killTaskCts.Token))
+				using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, msg =>
+				{
+					debugInfo.Add(msg);
+					operationStatus["currentStatus"] = msg;
+				}, killTaskCts.Token))
 				{
 					diskIo.TestDiskIO();
 
@@ -1003,10 +1004,10 @@ namespace Raven.Database.Server.Controllers.Admin
 
 					Database.Documents.Put(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
 				}
-			});
+			}, killTaskCts.Token);
 
 			long id;
-			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+			Database.Tasks.AddTask(task, new TaskBasedOperationState(task, operationStatus), new TaskActions.PendingTaskDescription
 			{
 				StartTime = SystemTime.UtcNow,
 				TaskType = TaskActions.PendingTaskType.IoTest,
