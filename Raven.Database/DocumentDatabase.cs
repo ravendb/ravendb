@@ -503,7 +503,7 @@ namespace Raven.Database
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
 					SupportsDtc = TransactionalStorage.SupportsDtc,
-
+                    Is64Bit = Environment.Is64BitProcess
 				};
 
 				TransactionalStorage.Batch(actions =>
