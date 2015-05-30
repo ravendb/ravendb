@@ -43,7 +43,7 @@ namespace Raven.SlowTests.DiskIO
             {
                 FileSize = (long)128 * 1024,
                 OperationType = OperationType.Read,
-                Path = Path.GetTempPath(null),
+                Path = Path.GetTempPath(),
                 Sequential = true,
                 ThreadCount = 4,
                 TimeToRunInSeconds = 5,
