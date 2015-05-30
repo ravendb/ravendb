@@ -46,7 +46,7 @@ class disableResourceToggleCommand extends commandBase {
         var url = disableOneResourcePath + resource.name + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null, null, { dataType: undefined });
 
-        toggleTask.done(() => this.reportSuccess("Succefully " + action + "d " + name));
+        toggleTask.done(() => this.reportSuccess("Successfully " + action + "d " + name));
         toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " " + name, response.responseText, response.statusText));
         
         return toggleTask;
@@ -78,7 +78,7 @@ class disableResourceToggleCommand extends commandBase {
         var combinedPromise = $.when.apply(null, toggleTasks);
         combinedPromise.done(() => {
             var toggledResources = [].concat.apply([], arguments);
-            this.reportSuccess("Succefully " + action + "d " + toggledResources.length + " resources!")
+            this.reportSuccess("Successfully " + action + "d " + toggledResources.length + " resources!")
             mergedPromise.resolve(toggledResources);
         });
 
