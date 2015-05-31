@@ -438,6 +438,11 @@ namespace Raven.Database.Indexing.IndexMerging
 
 				if (aVal != bVal)
 				{
+					if ((aVal != SortOptions.None && bVal == SortOptions.None) ||
+						(bVal != SortOptions.None || aVal == SortOptions.None))
+					{
+						continue;
+					}
 					if ((aVal == SortOptions.None || aVal == SortOptions.String) &&
 					    (bVal == SortOptions.None || bVal == SortOptions.String))
 					{

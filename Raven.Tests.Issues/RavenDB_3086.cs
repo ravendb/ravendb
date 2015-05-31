@@ -60,39 +60,31 @@ namespace Raven.Tests.Issues
 
             using (var store = NewDocumentStore())
             {
-                new UsersByName().Execute(store);
-                new UsersByEmail().Execute(store);
-                new UsersByAge().Execute(store);
+	            new UsersByName().Execute(store);
+	            new UsersByEmail().Execute(store);
+	            new UsersByAge().Execute(store);
 
-                var index1 = store.DatabaseCommands.GetIndex("UsersByName");
+	            var index1 = store.DatabaseCommands.GetIndex("UsersByName");
 
-                var index2 = store.DatabaseCommands.GetIndex("UsersByEmail");
+	            var index2 = store.DatabaseCommands.GetIndex("UsersByEmail");
 
-                var index3 = store.DatabaseCommands.GetIndex("UsersByAge");
+	            var index3 = store.DatabaseCommands.GetIndex("UsersByAge");
 
-                var dictionary = new Dictionary<int, IndexDefinition>()
-                {
-                    {index1.IndexId,index1},
-                    {index2.IndexId,index2},
-                    {index3.IndexId, index3}
-                };
-                IndexMerger merger = new IndexMerger(dictionary);
-                IndexMergeResults results = merger.ProposeIndexMergeSuggestions();
-                
-                if (results.Suggestions.Count != 0)
-                {
-                    foreach (var suggestion in results.Suggestions)
-                    {
-                        var ind = suggestion.MergedIndex;
-                        Assert.Equal(FieldIndexing.Analyzed, ind.Indexes["Name"]);
-                        Assert.Equal(SortOptions.Int, ind.SortOptions["Age"]);
-
-
-                    }
-                }
-
+	            var dictionary = new Dictionary<int, IndexDefinition>()
+	            {
+		            {index1.IndexId, index1},
+		            {index2.IndexId, index2},
+		            {index3.IndexId, index3}
+	            };
+	            IndexMerger merger = new IndexMerger(dictionary);
+	            IndexMergeResults results = merger.ProposeIndexMergeSuggestions();
+	            foreach (var suggestion in results.Suggestions)
+	            {
+		            var ind = suggestion.MergedIndex;
+		            Assert.Equal(FieldIndexing.Analyzed, ind.Indexes["Name"]);
+		            Assert.Equal(SortOptions.Int, ind.SortOptions["Age"]);
+	            }
             }
-
         }
 
 
