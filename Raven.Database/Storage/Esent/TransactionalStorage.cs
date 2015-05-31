@@ -51,7 +51,7 @@ namespace Raven.Storage.Esent
         private readonly ThreadLocal<EsentTransactionContext> dtcTransactionContext = new ThreadLocal<EsentTransactionContext>();
         private readonly string database;
         private readonly InMemoryRavenConfiguration configuration;
-        private readonly Action onCommit;
+        private Action onCommit;
         private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         private readonly string path;
         private volatile bool disposed;
@@ -703,10 +703,23 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public IDisposable DisableBatchNesting()
+        public IDisposable DisableBatchNesting(bool allowCommit = true)
         {
             disableBatchNesting.Value = new object();
-            return new DisposableAction(() => disableBatchNesting.Value = null);
+	        
+			if (allowCommit == false)
+	        {
+				var onCommitBackup = onCommit;
+				disableBatchNesting.Value = new object();
+				onCommit = null;
+				return new DisposableAction(() =>
+				{
+					disableBatchNesting.Value = null;
+					onCommit = onCommitBackup;
+				});
+	        }
+
+			return new DisposableAction(() => disableBatchNesting.Value = null);
         }
 
         public IDisposable SetTransactionContext(EsentTransactionContext context)
@@ -774,7 +787,8 @@ namespace Raven.Storage.Esent
             }
             if (afterStorageCommit != null)
                 afterStorageCommit();
-            onCommit(); // call user code after we exit the lock
+			if (onCommit != null)
+				onCommit(); // call user code after we exit the lock
         }
 
         //[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
