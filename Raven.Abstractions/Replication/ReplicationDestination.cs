@@ -55,13 +55,13 @@ namespace Raven.Abstractions.Replication
 		/// </summary>
 		public string[] SourceCollections
 		{
-			get { return _sourceCollections ?? (_sourceCollections = new string[0]); }
+			get
+			{
+				return _sourceCollections ?? (_sourceCollections = new string[0]);
+			}
 			set
 			{
 				_sourceCollections = value;
-
-				//precaution - make sure to remove the destination from possible failover targets 
-				//if collection specific replication is enabled
 				if (_sourceCollections.Length > 0)
 					IgnoredClient = true;
 			}
