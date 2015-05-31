@@ -21,6 +21,7 @@ namespace Raven.Client.Counters.Replication
 {
 	public class CounterReplicationInformer : ReplicationInformerBase<CountersClient>,ICountersReplicationInformer
 	{
+		private readonly CounterStore counterStore;
 		public const int DefaultIntervalBetweenUpdatesInMinutes = 5;
 
 		private bool currentlyExecuting;
@@ -30,8 +31,9 @@ namespace Raven.Client.Counters.Replication
 		private Task refreshReplicationInformationTask;
 		private DateTime lastReplicationUpdate;
 
-		public CounterReplicationInformer(Client.Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000) : base(conventions, requestFactory, delayTime)
+		public CounterReplicationInformer(Client.Convention conventions, HttpJsonRequestFactory requestFactory, CounterStore counterStore,int delayTime = 1000) : base(conventions, requestFactory, delayTime)
 		{
+			this.counterStore = counterStore;
 			firstTime = true;
 			lastReplicationUpdate = SystemTime.UtcNow;
 			MaxIntervalBetweenUpdatesInMillisec = TimeSpan.FromMinutes(DefaultIntervalBetweenUpdatesInMinutes).TotalMilliseconds;
@@ -40,6 +42,33 @@ namespace Raven.Client.Counters.Replication
 		internal void OnReplicationUpdate()
 		{
 			lastReplicationUpdate = SystemTime.UtcNow;
+		}
+
+		public async Task<T> ExecuteWithReplicationAsyncWithReturnValue<T>(HttpMethod method, Func<OperationMetadata, Task<T>> operation)
+		{
+			var currentRequest = Interlocked.Increment(ref requestCount);
+			if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
+				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
+
+			currentlyExecuting = true;
+			try
+			{
+				var operationCredentials = new OperationCredentials(counterStore.Credentials.ApiKey, counterStore.Credentials.Credentials);
+				return await ExecuteWithReplicationAsync(method, counterStore.Url, operationCredentials, null, currentRequest, 0, operation)
+										.ConfigureAwait(false);
+			}
+			catch (AggregateException e)
+			{
+				var singleException = e.ExtractSingleInnerException();
+				if (singleException != null)
+					throw singleException;
+
+				throw;
+			}
+			finally
+			{
+				currentlyExecuting = false;
+			}
 		}
 
 		public async Task<T> ExecuteWithReplicationAsyncWithReturnValue<T>(HttpMethod method, CountersClient client, Func<OperationMetadata, Task<T>> operation)
@@ -71,6 +100,33 @@ namespace Raven.Client.Counters.Replication
 		
 		public double MaxIntervalBetweenUpdatesInMillisec { get; set; }
 
+		public async Task ExecuteWithReplicationAsync<T>(HttpMethod method, Func<OperationMetadata, Task<T>> operation)
+		{
+			var currentRequest = Interlocked.Increment(ref requestCount);
+			if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
+				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
+
+			currentlyExecuting = true;
+			try
+			{
+				var operationCredentials = new OperationCredentials(counterStore.Credentials.ApiKey, counterStore.Credentials.Credentials);
+				await ExecuteWithReplicationAsync(method, counterStore.Url, operationCredentials, null, currentRequest, 0, operation)
+										.ConfigureAwait(false);
+			}
+			catch (AggregateException e)
+			{
+				var singleException = e.ExtractSingleInnerException();
+				if (singleException != null)
+					throw singleException;
+
+				throw;
+			}
+			finally
+			{
+				currentlyExecuting = false;
+			}
+		}
+
 		public async Task ExecuteWithReplicationAsync<T>(HttpMethod method,CountersClient client, Func<OperationMetadata, Task<T>> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
@@ -98,18 +154,19 @@ namespace Raven.Client.Counters.Replication
 			}
 		}
 
-
+		
+		//TODO: When counter replication will be refactored (simplified) -> the parameter should be removed; now its a constraint of the interface
 		public override void RefreshReplicationInformation(CountersClient client)
 		{
 			JsonDocument document;
-			var serverHash = ServerHash.GetServerHash(client.ServerUrl);
+			var serverHash = ServerHash.GetServerHash(counterStore.Url);
 			try
 			{
 				var replicationFetchTask = client.Replication.GetReplicationsAsync();
 				replicationFetchTask.Wait();
 
 				if(replicationFetchTask.Status != TaskStatus.Faulted)
-					FailureCounters.ResetFailureCount(client.ServerUrl);
+					FailureCounters.ResetFailureCount(counterStore.Url);
 
 				document = new JsonDocument
 				{
@@ -130,7 +187,7 @@ namespace Raven.Client.Counters.Replication
 			UpdateReplicationInformationFromDocument(document);
 		}
 
-		public Task UpdateReplicationInformationIfNeededAsync(CountersClient client)
+		public Task UpdateReplicationInformationIfNeededAsync()
 		{
 			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
@@ -143,7 +200,7 @@ namespace Raven.Client.Counters.Replication
 			{
 				if (firstTime)
 				{
-					var serverHash = ServerHash.GetServerHash(client.ServerUrl);
+					var serverHash = ServerHash.GetServerHash(counterStore.Url);
 
 					var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 					if (IsInvalidDestinationsDocument(document) == false)
@@ -157,7 +214,7 @@ namespace Raven.Client.Counters.Replication
 					return taskCopy;
 
 				return refreshReplicationInformationTask = 
-					Task.Factory.StartNew(() => RefreshReplicationInformation(client))
+					Task.Factory.StartNew(() => RefreshReplicationInformation(null))
 					.ContinueWith(task =>
 					{
 						if (task.Exception != null)

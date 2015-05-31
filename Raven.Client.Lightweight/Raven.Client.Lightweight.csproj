@@ -389,6 +389,7 @@
       <Link>RavenDB.snk</Link>
     </None>
     <None Include="app.config" />
+    <Compile Include="Counters\CounterStore.Commands.cs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

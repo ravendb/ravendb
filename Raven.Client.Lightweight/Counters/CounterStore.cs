@@ -26,9 +26,9 @@ using Raven.Json.Linq;
 namespace Raven.Client.Counters
 {
 	/// <summary>
-	/// implements administration level counters functionality
+	/// Implements client-side counters functionality
 	/// </summary>
-	public class CounterStore : ICounterStore
+	public partial class CounterStore : ICounterStore
 	{
 		private readonly AtomicDictionary<ICountersChanges> counterStorageChanges = new AtomicDictionary<ICountersChanges>(StringComparer.OrdinalIgnoreCase);
 		private ICountersReplicationInformer replicationInformer;
@@ -67,7 +67,7 @@ namespace Raven.Client.Counters
 				}, DefaultCounterStorageName).ConfigureAwait(false).GetAwaiter().GetResult();
 			}			
 
-			replicationInformer = new CounterReplicationInformer(Convention, JsonRequestFactory); // make sure it is initialized
+			replicationInformer = new CounterReplicationInformer(Convention, JsonRequestFactory, this); // make sure it is initialized
 		}
 
 		public ICountersChanges Changes(string counterStorage = null)
@@ -94,10 +94,7 @@ namespace Raven.Client.Counters
 					Credentials.Credentials,
 					JsonRequestFactory,
 					Convention,
-					() =>
-					{
-						counterStorageChanges.Remove(counterStorage);
-					});
+					() => counterStorageChanges.Remove(counterStorage));
 
 				return client;
 			}
@@ -134,6 +131,7 @@ namespace Raven.Client.Counters
 
 		public CounterStoreAdvancedOperations Advanced { get; private set; }
 
+		//TODO : move create counter storage to admin commands and make shortcut with something like 'CounterStorage.For(otherCounterStorageName)'
 		/// <summary>
 		/// Create new counter storage on the server.
 		/// </summary>
@@ -147,6 +145,8 @@ namespace Raven.Client.Counters
 			var urlTemplate = "{0}/admin/cs/{1}";
 			if (shouldUpateIfExists)
 				urlTemplate += "?update=true";
+
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 			var requestUriString = String.Format(urlTemplate, Url, counterStorageName);
 
@@ -168,6 +168,8 @@ namespace Raven.Client.Counters
 
 		public async Task DeleteCounterStorageAsync(string counterStorageName, bool hardDelete = false, CancellationToken token = default(CancellationToken))
 		{
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+
 			var requestUriString = String.Format("{0}/admin/cs/{1}?hard-delete={2}", Url, counterStorageName, hardDelete);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
@@ -196,6 +198,8 @@ namespace Raven.Client.Counters
 
 		public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
 		{
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+
 			var requestUriString = String.Format("{0}/cs/counterStorageNames", Url);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
@@ -218,7 +222,7 @@ namespace Raven.Client.Counters
 		
 		public ICountersReplicationInformer ReplicationInformer
 		{
-			get { return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(Convention, JsonRequestFactory)); }
+			get { return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(Convention, JsonRequestFactory, this)); }
 		}
 
 
@@ -384,6 +388,7 @@ namespace Raven.Client.Counters
 				if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
+				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 				await defaultBatchOperation.Value.FlushAsync();
 			}
 

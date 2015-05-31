@@ -71,7 +71,7 @@ namespace Raven.Client.Counters
 		        CounterStorageName = counterStorageName;  
 				InitializeActions(counterStorageName);
 
-				parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync(this).Wait();
+				//parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync(this).Wait();
 			}
             catch (Exception)
             {
