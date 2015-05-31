@@ -8,7 +8,12 @@ namespace Raven.Database.Indexing.IndexMerging
 {
 	internal class IndexData
     {
-        private readonly IndexDefinition index;
+		public override string ToString()
+		{
+			return string.Format("IndexName: {0}", IndexName);
+		}
+
+		private readonly IndexDefinition index;
         public Dictionary<string, Expression> SelectExpressions = new Dictionary<string, Expression>();
 
         public IndexData(IndexDefinition index)
