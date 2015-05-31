@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ICSharpCode.NRefactory.CSharp;
+using NLog.LayoutRenderers;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -170,6 +171,9 @@ namespace Raven.Database.Indexing.IndexMerging
 
 		private bool CompareIndexFieldOptions(IndexData index1Data, IndexData index2Data)
 		{
+			if (SortOptionsMatch(index1Data.SortOptions, index2Data.SortOptions) == false)
+				return false;
+
 			string[] intersectNames = index2Data.SelectExpressions.Keys.Intersect(index1Data.SelectExpressions.Keys).ToArray();
 
 			if (DataDictionaryCompare(index1Data.Stores, index2Data.Stores, intersectNames) == false)
@@ -178,8 +182,7 @@ namespace Raven.Database.Indexing.IndexMerging
 				return false;
 			if (DataDictionaryCompare(index1Data.Suggestions, index2Data.Suggestions, intersectNames) == false)
 				return false;
-			if (DataDictionaryCompare(index1Data.SortOptions, index2Data.SortOptions, intersectNames) == false)
-				return false;
+			
 			if (DataDictionaryCompare(index1Data.Indexes, index2Data.Indexes, intersectNames) == false)
 				return false;
 			if (DataDictionaryCompare(index1Data.TermVectors, index2Data.TermVectors, intersectNames) == false)
@@ -390,7 +393,7 @@ namespace Raven.Database.Indexing.IndexMerging
 														DictionaryExtensions.ContentEquals(x.Stores, mergeSuggestion.MergedIndex.Stores) &&
 														DictionaryExtensions.ContentEquals(x.Indexes, mergeSuggestion.MergedIndex.Indexes) &&
 														DictionaryExtensions.ContentEquals(x.Analyzers, mergeSuggestion.MergedIndex.Analyzers) &&
-														DictionaryExtensions.ContentEquals(x.SortOptions, mergeSuggestion.MergedIndex.SortOptions) &&
+														SortOptionsMatch(x.SortOptions, mergeSuggestion.MergedIndex.SortOptions) &&
 														DictionaryExtensions.ContentEquals(x.Suggestions, mergeSuggestion.MergedIndex.Suggestions) &&
 														DictionaryExtensions.ContentEquals(x.TermVectors, mergeSuggestion.MergedIndex.TermVectors) &&
 														DictionaryExtensions.ContentEquals(x.SpatialIndexes, mergeSuggestion.MergedIndex.SpatialIndexes))
@@ -420,6 +423,35 @@ namespace Raven.Database.Indexing.IndexMerging
 			}
 			indexMergeResults = ExcludePartialResults(indexMergeResults);
 			return indexMergeResults;
+		}
+
+		private bool SortOptionsMatch(IDictionary<string, SortOptions> a, IDictionary<string, SortOptions> b)
+		{
+			foreach (var key in a.Keys.Union(b.Keys))
+			{
+				SortOptions aVal;
+				SortOptions bVal;
+				if (a.TryGetValue(key, out aVal) == false)
+					aVal = SortOptions.None;
+				if (b.TryGetValue(key, out bVal) == false)
+					bVal = SortOptions.None;
+
+				if (aVal != bVal)
+				{
+					if ((aVal != SortOptions.None && bVal == SortOptions.None) ||
+						(bVal != SortOptions.None || aVal == SortOptions.None))
+					{
+						continue;
+					}
+					if ((aVal == SortOptions.None || aVal == SortOptions.String) &&
+					    (bVal == SortOptions.None || bVal == SortOptions.String))
+					{
+						continue;
+					}
+					return false;
+				}
+			}
+			return true;
 		}
 
 		private IndexMergeResults ExcludePartialResults(IndexMergeResults originalIndexes)

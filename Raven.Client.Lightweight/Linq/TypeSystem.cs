@@ -19,7 +19,7 @@ namespace Raven.Client.Linq
 				return null;
 			if (seqType.IsArray)
 				return typeof(IEnumerable<>).MakeGenericType(seqType.GetElementType());
-			if (seqType.IsGenericType())
+			if (seqType.IsGenericType)
 			{
 				foreach (Type arg in seqType.GetGenericArguments())
 				{
@@ -38,8 +38,8 @@ namespace Raven.Client.Linq
 						return ienum;
 				}
 			}
-			if (seqType.BaseType() != null && seqType.BaseType() != typeof(object))
-				return FindIEnumerable(seqType.BaseType());
+			if (seqType.BaseType != null && seqType.BaseType != typeof(object))
+				return FindIEnumerable(seqType.BaseType);
 			return null;
 		}
 
@@ -58,12 +58,12 @@ namespace Raven.Client.Linq
 
 		internal static bool IsNullableType(Type type)
 		{
-			return type != null && type.IsGenericType() && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+			return type != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
 		}
 
 		internal static bool IsNullAssignable(Type type)
 		{
-			return !type.IsValueType() || IsNullableType(type);
+			return !type.IsValueType || IsNullableType(type);
 		}
 
 		internal static Type GetNonNullableType(Type type)
