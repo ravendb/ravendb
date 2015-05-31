@@ -166,6 +166,7 @@
     <Compile Include="FileSystem\OpenFilesSessionOptions.cs" />
     <Compile Include="FileSystem\Shard\IShardAccessStrategy.cs" />
     <Compile Include="FileSystem\Shard\IShardResolutionStrategy.cs" />
+    <Compile Include="Indexes\AbstractScriptedIndexCreationTask.cs" />
     <Compile Include="Util\DisposableStream.cs" />
     <Compile Include="Util\HttpClientCache.cs" />
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
