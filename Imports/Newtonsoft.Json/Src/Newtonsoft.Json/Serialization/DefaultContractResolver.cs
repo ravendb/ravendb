@@ -199,7 +199,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         {
 #if !NETFX_CORE
 #pragma warning disable 618
-            DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.Instance;
+			DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic; // RavenDB need also BindingFlags.NonPublic
 #pragma warning restore 618
 #endif
 #if !(NETFX_CORE || PORTABLE || PORTABLE40 || MONO)
