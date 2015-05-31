@@ -45,7 +45,7 @@ class counterStorages extends viewModelBase {
             var few = 20;
             var enabledCounterStorages: counterStorage[] = this.counterStorages().filter((db: counterStorage) => !db.disabled());
             if (enabledCounterStorages.length < few) {
-                enabledCounterStorages.forEach(cs => shell.fetchCsStats(cs));
+                //enabledCounterStorages.forEach(cs => shell.fetchCsStats(cs));
             }
         }
     }

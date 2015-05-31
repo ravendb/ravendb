@@ -185,7 +185,7 @@ namespace Raven.Tests.Helpers
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                     RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
                     Port = port ?? 8079,
-                    AnonymousUserAccessMode = anonymousUserAccessMode,
+                    AnonymousUserAccessMode = anonymousUserAccessMode
                 }
             };
 
@@ -685,7 +685,7 @@ namespace Raven.Tests.Helpers
             if (!done) throw new Exception("WaitForDocument failed");
 		}
 
-		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
+	    protected static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
@@ -702,7 +702,7 @@ namespace Raven.Tests.Helpers
 				SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
 				embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
 				NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-				server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.SystemDatabase);
+				server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
 				url = embeddableDocumentStore.Configuration.ServerUrl;
 			}
 
