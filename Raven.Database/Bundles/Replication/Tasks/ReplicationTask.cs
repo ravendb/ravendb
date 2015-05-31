@@ -231,8 +231,10 @@ namespace Raven.Bundles.Replication.Tasks
 									{
 										var destination = dest;
 										var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
-										if (holder.Wait(0) == false)
+										if (holder.Wait(0) == false) { 
+											log.Debug("Replication to distination {0} skipped due to existing replication operation", dest.ConnectionStringOptions.Url);
 											continue;
+										}
 
 										var replicationTask = Task.Factory.StartNew(
 											() =>
@@ -482,7 +484,11 @@ namespace Raven.Bundles.Replication.Tasks
 								destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
 
 								if (destinationsReplicationInformationForSource == null)
+								{
+									log.Error("Failed to replicate documents to destination {0}, because was not able to receive last Etag", destination.ConnectionStringOptions.Url);
 									return false;
+								}
+									
 							}
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
@@ -490,10 +496,18 @@ namespace Raven.Bundles.Replication.Tasks
 							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.InvalidEtag && destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.InvalidEtag)
 							{
 								DateTime lastSent;
-								if (destinationAlertSent.TryGetValue(destination.ConnectionStringOptions.Url, out lastSent) && (SystemTime.UtcNow - lastSent).TotalMinutes < 1)
-									return false;
 
+								// todo: move lastModifiedDate after the condition
 								var lastModifiedDate = destinationsReplicationInformationForSource.LastModified.HasValue ? destinationsReplicationInformationForSource.LastModified.Value.ToLocalTime() : DateTime.MinValue;
+
+								if (destinationAlertSent.TryGetValue(destination.ConnectionStringOptions.Url, out lastSent) && (SystemTime.UtcNow - lastSent).TotalMinutes < 1)
+								{
+									// todo: remove this log line
+									log.Debug(string.Format(@"Destination server is forbidding replication due to a possibility of having multiple instances with same DatabaseId replicating to it. After 10 minutes from '{2}' another instance will start replicating. Destination Url: {0}. DatabaseId: {1}. Current source: {3}. Stored source on destination: {4}.", destination.ConnectionStringOptions.Url, docDb.TransactionalStorage.Id, lastModifiedDate, docDb.ServerUrl, destinationsReplicationInformationForSource.Source));
+									return false;
+								}
+
+								
 
 								docDb.AddAlert(new Alert
 								{
@@ -731,6 +745,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var request = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
 				request.Write(new byte[0]);
 				request.ExecuteRequest();
+				log.Debug("Sent last replicated document Etag {0} to server {1}", lastDocEtag, destination.ConnectionStringOptions.Url);
 			}
 			catch (WebException e)
 			{
@@ -1523,6 +1538,7 @@ namespace Raven.Bundles.Replication.Tasks
 						  "&currentEtag=" + currentEtag + "&dbid=" + docDb.TransactionalStorage.Id;
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
 				var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformationWithBatchInformation>();
+				log.Debug("Received last replicated document Etag {0} from server {1}", lastReplicatedEtagFrom.LastDocumentEtag, destination.ConnectionStringOptions.Url);
 				return lastReplicatedEtagFrom;
 			}
 			catch (WebException e)

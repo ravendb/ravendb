@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -22,6 +23,7 @@ namespace Raven.Client.Document
 	public class ReplicationBehavior
 	{
 		private readonly DocumentStore documentStore;
+		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
 		public ReplicationBehavior(DocumentStore documentStore)
 		{
@@ -122,7 +124,7 @@ namespace Raven.Client.Document
 
 		        if (replicated)
 		            return;
-
+				
                 await Task.Delay(100, cancellationToken);
 		    }
 		}
@@ -139,11 +141,13 @@ namespace Raven.Client.Document
 		    using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
 		    {
 			    var json = await request.ReadResponseJsonAsync();
-
+			    var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
+				log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
+				
 			    return new ReplicatedEtagInfo
 			    {
-				    DestinationUrl = destinationUrl, 
-					DocumentEtag = Etag.Parse(json.Value<string>("LastDocumentEtag")), 
+				    DestinationUrl = destinationUrl,
+					DocumentEtag = etag 
 			    };
 		    }
 		}
