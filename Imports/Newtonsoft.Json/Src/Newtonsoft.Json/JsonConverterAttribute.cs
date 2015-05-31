@@ -29,45 +29,50 @@ using System.Globalization;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
-  /// <summary>
-  /// Instructs the <see cref="JsonSerializer"/> to use the specified <see cref="JsonConverter"/> when serializing the member or class.
-  /// </summary>
-  [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface | AttributeTargets.Enum | AttributeTargets.Parameter, AllowMultiple = false)]
-  public sealed class JsonConverterAttribute : Attribute
-  {
-    private readonly Type _converterType;
-
     /// <summary>
-    /// Gets the type of the converter.
+    /// Instructs the <see cref="JsonSerializer"/> to use the specified <see cref="JsonConverter"/> when serializing the member or class.
     /// </summary>
-    /// <value>The type of the converter.</value>
-    public Type ConverterType
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface | AttributeTargets.Enum | AttributeTargets.Parameter, AllowMultiple = false)]
+    public sealed class JsonConverterAttribute : Attribute
     {
-      get { return _converterType; }
-    }
+        private readonly Type _converterType;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JsonConverterAttribute"/> class.
-    /// </summary>
-    /// <param name="converterType">Type of the converter.</param>
-    public JsonConverterAttribute(Type converterType)
-    {
-      if (converterType == null)
-        throw new ArgumentNullException("converterType");
+        /// <summary>
+        /// Gets the <see cref="Type"/> of the converter.
+        /// </summary>
+        /// <value>The <see cref="Type"/> of the converter.</value>
+        public Type ConverterType
+        {
+            get { return _converterType; }
+        }
 
-      _converterType = converterType;
-    }
+        /// <summary>
+        /// The parameter list to use when constructing the JsonConverter described by ConverterType.  
+        /// If null, the default constructor is used.
+        /// </summary>
+        public object[] ConverterParameters { get; private set; }
 
-    internal static JsonConverter CreateJsonConverterInstance(Type converterType)
-    {
-      try
-      {
-        return (JsonConverter)Activator.CreateInstance(converterType);
-      }
-      catch (Exception ex)
-      {
-        throw new JsonException("Error creating {0}".FormatWith(CultureInfo.InvariantCulture, converterType), ex);
-      }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JsonConverterAttribute"/> class.
+        /// </summary>
+        /// <param name="converterType">Type of the converter.</param>
+        public JsonConverterAttribute(Type converterType)
+        {
+            if (converterType == null)
+                throw new ArgumentNullException("converterType");
+
+            _converterType = converterType;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JsonConverterAttribute"/> class.
+        /// </summary>
+        /// <param name="converterType">Type of the converter.</param>
+        /// <param name="converterParameters">Parameter list to use when constructing the JsonConverter. Can be null.</param>
+        public JsonConverterAttribute(Type converterType, params object[] converterParameters)
+        : this(converterType)
+        {
+            ConverterParameters = converterParameters;
+        }
     }
-  }
 }

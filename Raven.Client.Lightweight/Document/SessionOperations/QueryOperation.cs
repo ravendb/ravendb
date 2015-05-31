@@ -205,7 +205,7 @@ namespace Raven.Client.Document.SessionOperations
 			if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
 			{
 				var type = typeof(T);
-				if (type == typeof(string) || typeof(T).IsValueType() || typeof(T).IsEnum())
+				if (type == typeof(string) || typeof(T).IsValueType || typeof(T).IsEnum)
 				{
 					return result.Value<T>(projectionFields[0]);
 				}
