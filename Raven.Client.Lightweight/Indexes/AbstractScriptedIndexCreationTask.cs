@@ -31,6 +31,12 @@ namespace Raven.Client.Indexes
             set { scripts.DeleteScript = value; }
         }
 
+        public bool RetryOnConcurrencyExceptions
+        {
+            get { return scripts.RetryOnConcurrencyExceptions; }
+            set { scripts.RetryOnConcurrencyExceptions = value; }
+        }
+
         public void Execute(IDocumentStore store)
         {
             store.DatabaseCommands.Put(scripts.Id, null, RavenJObject.FromObject(scripts), null);
