@@ -201,15 +201,16 @@ namespace Raven.Database.Util
 					totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
 					availableMemory = MemoryStatistics.AvailableMemory;
 
-					var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor");
-
-					cpuTimes = searcher.Get()
-						.Cast<ManagementObject>()
-						.Select(mo => new
-						{
-							Name = mo["Name"],
-							Usage = string.Format("{0} %", mo["PercentProcessorTime"])
-						}).ToArray();
+					using (var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor"))
+					{
+						cpuTimes = searcher.Get()
+							.Cast<ManagementObject>()
+							.Select(mo => new
+							{
+								Name = mo["Name"],
+								Usage = string.Format("{0} %", mo["PercentProcessorTime"])
+							}).ToArray();	
+					}
 				}
 				catch (Exception e)
 				{
