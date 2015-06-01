@@ -337,8 +337,8 @@ namespace Raven.Storage.Esent
 
 
         private static object compactLocker = new object();
-
-        public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
+	    
+	    public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
         {
             bool lockTaken = false;
             try
@@ -766,6 +766,8 @@ namespace Raven.Storage.Esent
                 if (disposed)
                 {
                     Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
+	                if (Environment.StackTrace.Contains(".Finalize()") == false)
+		                throw e;
                     return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
                 }
 
