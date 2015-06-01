@@ -19,7 +19,7 @@ using Jint;
 using Jint.Parser;
 
 using Microsoft.VisualBasic.FileIO;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;

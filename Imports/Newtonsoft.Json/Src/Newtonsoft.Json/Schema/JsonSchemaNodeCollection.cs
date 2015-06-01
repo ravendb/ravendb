@@ -23,15 +23,17 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
+using System;
 using System.Collections.ObjectModel;
 
 namespace Raven.Imports.Newtonsoft.Json.Schema
 {
-  internal class JsonSchemaNodeCollection : KeyedCollection<string, JsonSchemaNode>
-  {
-    protected override string GetKeyForItem(JsonSchemaNode item)
+    [Obsolete("JSON Schema validation has been moved to its own package. See http://www.newtonsoft.com/jsonschema for more details.")]
+    internal class JsonSchemaNodeCollection : KeyedCollection<string, JsonSchemaNode>
     {
-      return item.Id;
+        protected override string GetKeyForItem(JsonSchemaNode item)
+        {
+            return item.Id;
+        }
     }
-  }
 }

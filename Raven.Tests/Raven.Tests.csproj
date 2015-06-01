@@ -631,6 +631,8 @@
     <Compile Include="Queries\CommentsInQueries.cs" />
     <Compile Include="Querying\CachingOfLongQueries.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
+    <Compile Include="Replication\IndexReplication.cs" />
+    <Compile Include="Replication\TransformerReplication.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\NestingTransformers.cs" />
@@ -990,7 +992,7 @@
       <Name>Raven.Server</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
-      <Project>{3E6401AC-3E33-4B61-A460-49953654A207}</Project>
+      <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">

@@ -15,6 +15,7 @@
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\ravendb\</SolutionDir>
+    <Prefer32Bit>false</Prefer32Bit>
     <RestorePackages>true</RestorePackages>
     <NuGetPackageImportStamp>9ceba09c</NuGetPackageImportStamp>
   </PropertyGroup>
@@ -29,7 +30,6 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <DocumentationFile>bin\Debug\Raven.Client.Lightweight.xml</DocumentationFile>
     <NoWarn>1573, 1587, 1591</NoWarn>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -40,8 +40,6 @@
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
-    <Prefer32Bit>false</Prefer32Bit>
-    <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
@@ -168,6 +166,7 @@
     <Compile Include="FileSystem\OpenFilesSessionOptions.cs" />
     <Compile Include="FileSystem\Shard\IShardAccessStrategy.cs" />
     <Compile Include="FileSystem\Shard\IShardResolutionStrategy.cs" />
+    <Compile Include="Util\DisposableStream.cs" />
     <Compile Include="Util\HttpClientCache.cs" />
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />

@@ -27,8 +27,8 @@ using Raven.Imports.Newtonsoft.Json.Converters;
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  [JsonConverter(typeof(IsoDateTimeConverter))]
-  public class IncompatibleJsonAttributeClass
-  {
-  }
+    [JsonConverter(typeof(IsoDateTimeConverter))]
+    public class IncompatibleJsonAttributeClass
+    {
+    }
 }

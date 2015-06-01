@@ -18,7 +18,7 @@ class disableIndexingCommand extends commandBase {
         }
         var url = "/admin/databases/toggle-indexing/" + this.dbName + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null, null, { dataType: undefined });
-        toggleTask.done(() => this.reportSuccess("Succefully " + action + "d " + " indexing in "+ this.dbName ));
+        toggleTask.done(() => this.reportSuccess("Successfully " + action + "d " + " indexing in "+ this.dbName ));
         toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " indexing in " + this.dbName, response.responseText, response.statusText));
         return toggleTask;
     }

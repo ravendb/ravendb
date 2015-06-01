@@ -15,6 +15,7 @@ class ioTest extends viewModelBase {
     ioTestRequest: performanceTestRequest = performanceTestRequest.empty();
     testResult = ko.observable<performanceTestResultWrapped>();
 
+	currentStatus = ko.observable<string>();
     lastCommand: ioTestCommand = null;
 
     chunkSizeCustomValidityError: KnockoutComputed<string>;
@@ -178,7 +179,7 @@ class ioTest extends viewModelBase {
         var diskTestParams = this.ioTestRequest.toDto();
 
         require(["commands/ioTestCommand"], ioTestCommand => {
-            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams); 
+			this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams, s => { if (s) this.currentStatus(s.currentStatus); });
             this.lastCommand
                 .execute()
                 .done(() => {

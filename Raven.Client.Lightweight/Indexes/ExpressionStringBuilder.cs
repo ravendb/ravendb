@@ -688,7 +688,7 @@ namespace Raven.Client.Indexes
 				case ExpressionType.Convert:
 					var expression = ((UnaryExpression)left).Operand;
 					var enumType = Nullable.GetUnderlyingType(expression.Type) ?? expression.Type;
-					if (enumType.IsEnum() == false)
+					if (enumType.IsEnum == false)
 						return;
 
 					var constantExpression = SkipConvertExpressions(right) as ConstantExpression;
@@ -1638,7 +1638,7 @@ namespace Raven.Client.Indexes
 			}
 			Out(IsIndexerCall(node) ? "]" : ")");
 
-			if (node.Type.IsValueType() && TypeExistsOnServer(node.Type))
+			if (node.Type.IsValueType && TypeExistsOnServer(node.Type))
 			{
 				switch (node.Method.Name)
 				{
@@ -1796,7 +1796,7 @@ namespace Raven.Client.Indexes
 
 		private void VisitType(Type type)
 		{
-			if (type.IsGenericType() == false || CheckIfAnonymousType(type))
+			if (type.IsGenericType == false || CheckIfAnonymousType(type))
 			{
 				if (type.IsArray)
 				{
@@ -1873,7 +1873,7 @@ namespace Raven.Client.Indexes
 		{
 			// hack: the only way to detect anonymous types right now
 			return type.IsDefined(typeof(CompilerGeneratedAttribute), false)
-				&& type.IsGenericType() && type.Name.Contains("AnonymousType")
+				&& type.IsGenericType && type.Name.Contains("AnonymousType")
 				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
 				&& type.GetTypeInfo().Attributes.HasFlag(TypeAttributes.NotPublic);
 		}
@@ -2214,10 +2214,10 @@ namespace Raven.Client.Indexes
 
 		private static bool ShouldConvert(Type nonNullableType)
 		{
-			if (nonNullableType.IsEnum())
+			if (nonNullableType.IsEnum)
 				return true;
 
-			return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType() == false);
+			return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType == false);
 		}
 	}
 }

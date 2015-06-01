@@ -644,7 +644,11 @@ namespace Raven.Client.Connection.Implementation
 			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
 
 				var stream = await Response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-				var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
+				var observableLineStream = new ObservableLineStream(stream, () =>
+				{
+					Response.Dispose();
+					factory.HttpClientCache.ReleaseClient(httpClient, _credentials);
+				});
 				observableLineStream.Start();
 				return (IObservable<string>)observableLineStream;
 			}).ConfigureAwait(false);
