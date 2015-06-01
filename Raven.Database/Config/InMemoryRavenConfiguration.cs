@@ -47,6 +47,8 @@ namespace Raven.Database.Config
 
         public FileSystemConfiguration FileSystem { get; private set; }
 
+		public CounterConfiguration Counter { get; private set; }
+
 		public EncryptionConfiguration Encryption { get; private set; }
 
 		public IndexingConfiguration Indexing { get; set; }
@@ -63,6 +65,7 @@ namespace Raven.Database.Config
 			Prefetcher = new PrefetcherConfiguration();
 			Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
+			Counter = new CounterConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
 			WebSockets = new WebSocketsConfiguration();
@@ -87,7 +90,7 @@ namespace Raven.Database.Config
 
         public string FileSystemName { get; set; }
 
-        public string CountersDatabaseName { get; set; }
+        public string CounterStorageName { get; set; }
 
 		public void PostInit()
 		{
@@ -108,6 +111,7 @@ namespace Raven.Database.Config
 
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
+			Counter.InitializeFrom(this);
 
 			AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
 
@@ -227,7 +231,6 @@ namespace Raven.Database.Config
 			SetupTransactionMode();
 
 			DataDirectory = ravenSettings.DataDir.Value;
-			CountersDataDirectory = ravenSettings.CountersDataDir.Value;
 
 			var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
 			if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)
@@ -306,9 +309,10 @@ namespace Raven.Database.Config
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
 			FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
 			FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
-
 			if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
 				FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
+
+			Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
 
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
@@ -777,16 +781,6 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
-		/// The directory for the RavenDB counters. 
-		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-		/// </summary>
-		public string CountersDataDirectory
-		{
-			get { return countersDataDirectory; }
-			set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
-		}
-
-		/// <summary>
 		/// What storage type to use (see: RavenDB Storage engines)
 		/// Allowed values: esent, voron
 		/// Default: esent
@@ -949,7 +943,6 @@ namespace Raven.Database.Config
 
 		private string indexStoragePath, journalStoragePath;
 		
-		private string countersDataDirectory;
 		private int? maxNumberOfParallelIndexTasks;
 
 		/// <summary>
@@ -1426,6 +1419,28 @@ namespace Raven.Database.Config
 				set { if (!string.IsNullOrEmpty(value)) defaultFileSystemStorageTypeName = value; }
 			}
         }
+
+		public class CounterConfiguration
+		{
+			public void InitializeFrom(InMemoryRavenConfiguration configuration)
+			{
+				workingDirectory = configuration.WorkingDirectory;
+			}
+
+			private string workingDirectory;
+
+			private string countersDataDirectory;
+
+			/// <summary>
+			/// The directory for the RavenDB counters. 
+			/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+			/// </summary>
+			public string DataDirectory
+			{
+				get { return countersDataDirectory; }
+				set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+			}
+		}
 
 		public class EncryptionConfiguration
 		{

@@ -247,18 +247,8 @@ namespace Raven.Abstractions.Data
         /// if no encoding information in headers of incoming request, this encoding is assumed
         /// </summary>
         public const string DefaultRequestEncoding = "UTF-8";
-        
+
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
-		
-		//Counters
-		public static class Counter
-		{
-			public const string Prefix = "Raven/Counters/";
-
-			public const string DataDirectory = "Raven/Counters/DataDir";
-
-			public const string UrlPrefix = "counters";
-		}
 
         public const string MetadataEtagField = "ETag";
 
@@ -291,6 +281,7 @@ namespace Raven.Abstractions.Data
 			public const string UrlPrefix = "databases";
 		}
 		
+		//File System
 		public static class FileSystem
         {
 			public const string Prefix = "Raven/FileSystems/";
@@ -313,6 +304,16 @@ namespace Raven.Abstractions.Data
 				public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
 	        }
         }
+
+		//Counters
+		public static class Counter
+		{
+			public const string Prefix = "Raven/Counters/";
+
+			public const string DataDirectory = "Raven/Counters/DataDir";
+
+			public const string UrlPrefix = "cs";
+		}
 
 		// Subscriptions
 		public const string RavenSubscriptionsPrefix = "Raven/Subscriptions/";
