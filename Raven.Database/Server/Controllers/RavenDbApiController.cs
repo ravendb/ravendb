@@ -179,7 +179,7 @@ namespace Raven.Database.Server.Controllers
 
 		public override HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
-			var result =base.GetMessageWithString(msg, code, etag);
+			var result = base.GetMessageWithString(msg, code, etag);
 			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
@@ -672,7 +672,7 @@ namespace Raven.Database.Server.Controllers
 			Database.WorkContext.MetricsCounters.RequestDurationLastMinute.AddRecord(duration);
 	    }
 
-	    public bool ClientIsV3OrHigher
+		protected bool ClientIsV3OrHigher
 	    {
 	        get
 	        {
