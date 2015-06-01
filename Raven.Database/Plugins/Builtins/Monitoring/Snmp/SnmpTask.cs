@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -15,13 +16,13 @@ using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
 
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Server;
 
@@ -29,7 +30,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 {
 	public class SnmpTask : IServerStartupTask
 	{
-		private readonly Dictionary<string, SnmpDatabase> loadedDatabases = new Dictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase); 
+		private readonly ConcurrentDictionary<string, SnmpDatabase> loadedDatabases = new ConcurrentDictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly object locker = new object();
 
@@ -71,9 +72,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 		private static bool IsLicenseValid()
 		{
-			if (SystemTime.UtcNow > new DateTime(2015, 6, 1))
-				throw new NotImplementedException("Time bomb. Enabled monitoring for development.");
-
+			DevelopmentHelper.TimeBomb();
 			return true;
 
 			string monitoring;
@@ -99,13 +98,6 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			{
 				lock (locker)
 				{
-					SnmpDatabase database;
-					if (loadedDatabases.TryGetValue(databaseName, out database))
-					{
-						database.Update();
-						return;
-					}
-
 					AddDatabase(objectStore, databaseName);
 				}
 			});
@@ -127,7 +119,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			};
 
 			var messageHandlerFactory = new MessageHandlerFactory(handlers);
-			
+
 			var factory = new SnmpApplicationFactory(new Logger(log), store, membershipProvider, messageHandlerFactory);
 
 			var listener = new Listener();
@@ -165,25 +157,41 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 		private void AddDatabases()
 		{
-			databaseLandlord.ForAllDatabases(database => AddDatabase(objectStore, database.Name ?? Constants.SystemDatabase));
+			var nextStart = 0;
+			var databases = systemDatabase
+				.Documents
+				.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, int.MaxValue, systemDatabase.WorkContext.CancellationToken, ref nextStart);
+
+			var databaseNames = new List<string> { Constants.SystemDatabase };
+
+			foreach (RavenJObject database in databases)
+			{
+				var id = database[Constants.Metadata].Value<string>("@id");
+				if (id.StartsWith(Constants.Database.Prefix))
+					id = id.Substring(Constants.Database.Prefix.Length);
+
+				databaseNames.Add(id);
+			}
+
+			databaseNames.ForEach(databaseName => AddDatabase(objectStore, databaseName));
 		}
 
 		private void AddDatabase(ObjectStore store, string databaseName)
 		{
 			var index = (int)GetOrAddDatabaseIndex(databaseName);
 
-			loadedDatabases.Add(databaseName, new SnmpDatabase(databaseLandlord, store, databaseName, index));
+			loadedDatabases.GetOrAdd(databaseName, new SnmpDatabase(databaseLandlord, store, databaseName, index));
 		}
 
 		private long GetOrAddDatabaseIndex(string databaseName)
 		{
-			if (databaseName == null || string.Equals(databaseName, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)) 
+			if (databaseName == null || string.Equals(databaseName, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
 				return 1;
 
 			var mappingDocument = systemDatabase.Documents.Get(Constants.Monitoring.Snmp.DatabaseMappingDocumentKey, null) ?? new JsonDocument();
 
 			RavenJToken value;
-			if (mappingDocument.DataAsJson.TryGetValue(databaseName, out value)) 
+			if (mappingDocument.DataAsJson.TryGetValue(databaseName, out value))
 				return value.Value<int>();
 
 			var index = 0L;

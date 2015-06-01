@@ -4,11 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerProductVersion : ScalarObjectBase
+	public class ServerProductVersion : ScalarObjectBase<OctetString>
 	{
 		private readonly OctetString productVersion;
 
@@ -18,10 +17,9 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 			productVersion = new OctetString(DocumentDatabase.ProductVersion);
 		}
 
-		public override ISnmpData Data
+		protected override OctetString GetData()
 		{
-			get { return productVersion; }
-			set { throw new AccessFailureException(); }
+			return productVersion;
 		}
 	}
 }

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -276,9 +278,9 @@ namespace Raven.Tests.Core.Replication
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 
-				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination1.Select(x => x.Name).ToArray()));
-				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination2.Select(x => x.Name).ToArray()));
-				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination3.Select(x => x.Name).ToArray()));
+				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination1.Select(x => x.Name));
+				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination2.Select(x => x.Name));
+				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination3.Select(x => x.Name));
 			}
 		}
 
@@ -387,10 +389,10 @@ namespace Raven.Tests.Core.Replication
 				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-	
-				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination1.Select(x => x.Name).ToArray()));
-				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination2.Select(x => x.Name).ToArray()));
-				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination3.Select(x => x.Name).ToArray()));
+
+				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination1.Select(x => x.Name));
+				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination2.Select(x => x.Name));
+				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination3.Select(x => x.Name));
 			}
 		}
 

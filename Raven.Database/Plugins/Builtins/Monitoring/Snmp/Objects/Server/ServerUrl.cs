@@ -5,13 +5,12 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Pipeline;
 
 using Raven.Database.Config;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
-	public class ServerUrl : ScalarObjectBase
+	public class ServerUrl : ScalarObjectBase<OctetString>
 	{
 		private readonly OctetString url;
 
@@ -21,10 +20,9 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 			url = new OctetString(configuration.ServerUrl);
 		}
 
-		public override ISnmpData Data
+		protected override OctetString GetData()
 		{
-			get { return url; }
-			set { throw new AccessFailureException(); }
+			return url;
 		}
 	}
 }

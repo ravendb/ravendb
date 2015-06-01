@@ -18,6 +18,7 @@ using Raven.Database.Commercial;
 using Raven.Database.Plugins;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Server;
 
@@ -55,9 +56,7 @@ namespace Raven.Database.Raft
 
 		private static bool IsValidLicense()
 		{
-			if (SystemTime.UtcNow > new DateTime(2015, 6, 1))
-				throw new NotImplementedException("Time bomb. Enabled cluster for development.");
-
+			DevelopmentHelper.TimeBomb();
 			return true;
 
 			if (ValidateLicense.CurrentLicense.IsCommercial == false)

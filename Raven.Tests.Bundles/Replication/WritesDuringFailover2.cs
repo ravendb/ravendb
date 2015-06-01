@@ -1,6 +1,7 @@
+using System;
 using System.Net;
 using System.Net.Http;
-
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -41,7 +42,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			using (var session = store1.OpenSession())
 			{
-				Assert.Throws<HttpRequestException>(() => session.Load<Company>("companies/1"));
+				Assert.Throws<ErrorResponseException>(() => session.Load<Company>("companies/1"));
 			}
 		}
 	}

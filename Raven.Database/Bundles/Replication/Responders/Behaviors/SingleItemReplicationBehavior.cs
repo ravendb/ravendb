@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Database.Bundles.Replication.Impl;
+using Raven.Database.Bundles.Replication.Triggers;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -83,18 +85,22 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 			TExternal resolvedItemToSave;
 			if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
 			{
-                if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
-                   metadata.Value<bool>("Raven-Remove-Document-Marker"))
-                {
-                    DeleteItem(id, null);
-                    MarkAsDeleted(id, metadata);
-                }
-                else
-                {
-                    var etag = deleted == false ? existingEtag : null;
+				if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
+				    metadata.Value<bool>("Raven-Remove-Document-Marker"))
+				{
+					DeleteItem(id, null);
+					MarkAsDeleted(id, metadata);
+				}
+				else
+				{
+					var etag = deleted == false ? existingEtag : null;
+					var resolvedItemJObject = resolvedItemToSave as RavenJObject;
+					if (resolvedItemJObject != null)
+						ExecuteRemoveConflictOnPutTrigger(id, metadata, resolvedItemJObject);
+
 					AddWithoutConflict(id, etag, resolvedMetadataToSave, resolvedItemToSave);
-                }
-                return;
+				}
+				return;
 			}
 
 			CreatedConflict createdConflict;
@@ -115,19 +121,33 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 				var existingDocumentConflictId = id + "/conflicts/" + GetReplicationIdentifierForCurrentDatabase();
 
 				createdConflict = CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem,
-												  existingMetadata);
+					existingMetadata);
 			}
 
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
 				Database.Notifications.RaiseNotifications(new ReplicationConflictNotification()
-																	{
-																		Id = id,
-																		Etag = createdConflict.Etag,
-																		ItemType = ReplicationConflict,
-																		OperationType = ReplicationOperationTypes.Put,
-																		Conflicts = createdConflict.ConflictedIds
-																	}));
-			}
+				{
+					Id = id,
+					Etag = createdConflict.Etag,
+					ItemType = ReplicationConflict,
+					OperationType = ReplicationOperationTypes.Put,
+					Conflicts = createdConflict.ConflictedIds
+				}));
+		}
+
+		private void ExecuteRemoveConflictOnPutTrigger(string id, RavenJObject metadata, RavenJObject resolvedItemJObject)
+		{
+			//since we are in replication handler, triggers are disabled, and if we are replicating PUT of conflict resolution,
+			//we need to execute the relevant trigger manually
+			// --> AddWithoutConflict() does PUT, but because of 'No Triggers' context the trigger itself is executed
+			var removeConflictTrigger = Database.PutTriggers.GetAllParts()
+				.Select(trg => trg.Value)
+				.OfType<RemoveConflictOnPutTrigger>()
+				.FirstOrDefault();
+
+			Debug.Assert(removeConflictTrigger != null, "If this is null, this means something is very wrong - replication configured, and no relevant plugin is there.");
+			removeConflictTrigger.OnPut(id, resolvedItemJObject, new RavenJObject(metadata), null);
+		}
 
 		protected abstract ReplicationConflictTypes ReplicationConflict { get; }
 

@@ -133,7 +133,7 @@ namespace Raven.Database.Actions
 		{
 			SubscriptionConnectionOptions options;
 			if (openSubscriptions.TryGetValue(id, out options) == false)
-				throw new InvalidOperationException("There is no open subscription with id: " + id);
+				throw new SubscriptionClosedException("There is no open subscription with id: " + id);
 
 			return options.BatchOptions;
 		}

@@ -13,7 +13,8 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Bundles.Replication
 {
-	public abstract class ReplicationDestinationScalarObjectBase : DatabaseBundleScalarObjectBase
+	public abstract class ReplicationDestinationScalarObjectBase<TData> : DatabaseBundleScalarObjectBase<TData>
+		where TData : ISnmpData
 	{
 		protected string DestinationUrl { get; private set; }
 
@@ -23,19 +24,19 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Bundl
 			DestinationUrl = destinationUrl;
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override TData GetData(DocumentDatabase database)
 		{
 			var task = database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 			if (task == null)
-				return Null;
+				return default(TData);
 
 			var destinations = task.GetReplicationDestinations(destination => string.Equals(destination.Url.ForDatabase(destination.Database), DestinationUrl));
-			if (destinations == null || destinations.Length == 0) 
-				return Null;
+			if (destinations == null || destinations.Length == 0)
+				return default(TData); ;
 
 			return GetData(database, task, destinations[0]);
 		}
 
-		public abstract ISnmpData GetData(DocumentDatabase database, ReplicationTask task, ReplicationStrategy destination);
+		public abstract TData GetData(DocumentDatabase database, ReplicationTask task, ReplicationStrategy destination);
 	}
 }

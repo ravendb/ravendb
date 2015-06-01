@@ -12,7 +12,7 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics
 {
-	public class DatabaseLoaded : DatabaseScalarObjectBase
+	public class DatabaseLoaded : DatabaseScalarObjectBase<OctetString>
 	{
 		private readonly string databaseName;
 
@@ -30,7 +30,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stati
 			}
 		}
 
-		protected override ISnmpData GetData(DocumentDatabase database)
+		protected override OctetString GetData(DocumentDatabase database)
 		{
 			throw new NotSupportedException();
 		}
