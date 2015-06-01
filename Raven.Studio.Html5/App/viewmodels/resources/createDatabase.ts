@@ -49,7 +49,12 @@ class createDatabase extends viewModelBase {
 	allowVoron = ko.observable<boolean>(true);
 	voronWarningVisible = ko.computed(() => !this.allowVoron() && "voron" === this.storageEngine());
 
-	clusterMode = ko.computed(() => shell.clusterMode());
+	replicationBundleChangeDisabled = ko.computed(() => {
+		var clusterMode = shell.clusterMode();
+		var clusterWide = this.isClusterWideChecked();
+		return clusterMode && clusterWide;
+	});
+
 
     constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();

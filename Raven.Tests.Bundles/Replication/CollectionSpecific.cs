@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
-using System.Web.Http;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
