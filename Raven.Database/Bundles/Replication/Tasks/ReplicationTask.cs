@@ -1661,8 +1661,7 @@ namespace Raven.Bundles.Replication.Tasks
 				ApiKey = destination.ApiKey,
 			};
 
-			replicationStrategy.CollectionsToReplicate = (destination.ShouldReplicateFromSpecificCollections) ?
-				destination.SourceCollections.ToList() : null;
+			replicationStrategy.CollectionsToReplicate = destination.SourceCollections.ToList();
 
 			if (string.IsNullOrEmpty(destination.Username) == false)
 			{
