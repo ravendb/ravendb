@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -19,7 +18,7 @@ namespace Raven.Database.Counters.Controllers
 	{
 		[RavenRoute("cs")]
 		[HttpGet]
-		public HttpResponseMessage GetCounterStorageNames(bool getAdditionalData = false)
+		public HttpResponseMessage Counters(bool getAdditionalData = false)
 		{
 			if (EnsureSystemDatabase() == false)
 				return
@@ -113,17 +112,6 @@ namespace Raven.Database.Counters.Controllers
 						IsAdminCurrentTenant = true,
 					};
 				}).ToList();
-		}
-
-		private string[] GetCounterStorages()
-		{
-			var start = GetStart();
-			var nextPageStart = start; // will trigger rapid pagination
-			var counterStorages = DatabasesLandlord.SystemDatabase.Documents.GetDocumentsWithIdStartingWith("Raven/Counters/", null, null, start, GetPageSize(DatabasesLandlord.SystemDatabase.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
-			var counterStoragesNames = counterStorages
-									.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.Counter.Prefix, string.Empty))
-									.ToArray();
-			return counterStoragesNames;
 		}
 	}
 }

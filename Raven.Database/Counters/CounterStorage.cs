@@ -57,12 +57,12 @@ namespace Raven.Database.Counters
 
 		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
 		{
-			CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, storageName);
+			CounterStorageUrl = string.Format("{0}cs/{1}", serverUrl, storageName);
 			Name = storageName;
 			ResourceName = string.Concat(Constants.Counter.UrlPrefix, "/", storageName);
 
 			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
-				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
+				: CreateStorageOptionsFromConfiguration(configuration.Counter.DataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
 			transportState = recievedTransportState ?? new TransportState();
@@ -157,13 +157,15 @@ namespace Raven.Database.Counters
 			{
 				var stats = new CounterStorageStats
 				{
-					CounterStorageName = Name,
+					Name = Name,
 					Url = CounterStorageUrl,
 					CountersCount = reader.GetCountersCount(),
-					LastCounterEtag = lastEtag,
-					TasksCount = replicationTask.GetActiveTasksCount(),
-					CounterStorageSize = SizeHelper.Humane(storageEnvironment.Stats().UsedDataFileSizeInBytes),
 					GroupsCount = reader.GetGroupsCount(),
+					LastCounterEtag = lastEtag,
+					ReplicationTasksCount = replicationTask.GetActiveTasksCount(),
+					CounterStorageSize = SizeHelper.Humane(storageEnvironment.Stats().UsedDataFileSizeInBytes),
+					ReplicatedServersCount = 0, //TODO: get the correct number
+					RequestsPerSecond = Math.Round(metricsCounters.RequestsPerSecondCounter.CurrentValue, 3),
 				};
 				return stats;
 			}

@@ -196,7 +196,7 @@ namespace Raven.Client.Counters
 
 		public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/cs/counterStorageNames", Url);
+			var requestUriString = string.Format("{0}/cs", Url);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
