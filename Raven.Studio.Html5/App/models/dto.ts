@@ -44,7 +44,7 @@ interface logNotificationDto {
     RequestUri: string;
     TenantName: string;
     CustomInfo: string;
-    TenantType: logTenantType;
+    TenantType: TenantType;
     InnerRequestsCount?: number;
 
 }
@@ -992,9 +992,9 @@ interface collectionStats {
     TopDocs: any[];
 }
 
-enum logTenantType {
+enum TenantType {
     Database = 0,
-    Filesystem = 1,
+    FileSystem = 1,
     CounterStorage = 2
 }
 

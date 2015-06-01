@@ -292,6 +292,19 @@
                 <!-- /ko -->
             </ul>
 
+            <ul class="nav navbar-nav" data-bind="with: activeCounterStorage, visible: !isActiveCounterStorageDisabled() && canShowCountersNavbar()">
+                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.filesystemStatus }" class="navbar-link" href="#">Status</a></li>
+                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
+                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+                </li>
+
+                <!-- ko with: statistics -->
+                <li><a data-bind="text: counterCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: groupCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: requestsPerSecondText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <!-- /ko -->
+            </ul>
+
             <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
 	            <!-- ko with: $root -->
 				<li data-bind="visible: isInCluster()"><a class="navbar-link" href="#" data-bind="click: navigateToClusterSettings" title="This server is part of cluster"><span class="text-danger"><i class="fa fa-cubes"></i> Cluster</span></a></li>

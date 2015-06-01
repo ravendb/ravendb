@@ -22,6 +22,7 @@
   <ItemGroup>
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
+    <TypeScriptCompile Include="App\commands\counter\getCounterStorageStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\createCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterGroupsCommand.ts" />
@@ -66,6 +67,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchConfigurationByPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
@@ -75,6 +77,8 @@
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
+    <TypeScriptCompile Include="App\models\counter\counterStorageDto.ts" />
+    <TypeScriptCompile Include="App\models\counter\counterStorageStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
     <TypeScriptCompile Include="App\common\idGenerator.ts" />

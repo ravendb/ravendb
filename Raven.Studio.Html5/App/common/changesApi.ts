@@ -126,7 +126,7 @@ class changesApi {
             }
         }
         this.webSocket.onopen = () => {
-            console.log("Connected to WebSocket changes API (rs = " + this.rs.name + ")");
+            console.log("Connected to WebSocket changes API (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
             this.reconnect();
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
@@ -137,7 +137,7 @@ class changesApi {
     private connectEventSource(connectionString: string) {
         var connectionOpened: boolean = false;
 
-        this.eventSource = new EventSource(this.resourcePath + '/changes/events?' + connectionString);
+        this.eventSource = new EventSource(this.resourcePath + "/changes/events?" + connectionString);
 
         this.eventSource.onmessage = (e) => this.onMessage(e);
         this.eventSource.onerror = (e) => {
@@ -150,7 +150,7 @@ class changesApi {
             }
         };
         this.eventSource.onopen = () => {
-            console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
+            console.log("Connected to EventSource changes API (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
             this.reconnect();
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
@@ -173,7 +173,7 @@ class changesApi {
     }
 
     private onError(e: Event) {
-        if (changesApi.messageWasShownOnce == false) {
+        if (changesApi.messageWasShownOnce === false) {
             this.commandBase.reportError("Changes stream was disconnected!", "Retrying connection shortly.");
             changesApi.messageWasShownOnce = true;
         }
@@ -463,12 +463,12 @@ class changesApi {
         this.connectToChangesApiTask.done(() => {
             var isCloseNeeded: boolean;
 
-            if (isCloseNeeded = this.webSocket && this.webSocket.readyState == this.readyStateOpen){
-                console.log("Disconnecting from WebSocket changes API for (rs = " + this.rs.name + ")");
+            if (isCloseNeeded = (this.webSocket && this.webSocket.readyState == this.readyStateOpen)){
+                console.log("Disconnecting from WebSocket changes API for (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
             }
             else if (isCloseNeeded = this.eventSource && this.eventSource.readyState == this.readyStateOpen) {
-                console.log("Disconnecting from EventSource changes API for (rs = " + this.rs.name + ")");
+                console.log("Disconnecting from EventSource changes API for (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
                 this.eventSource.close();
             }
 

@@ -12,8 +12,9 @@
     isImporting = ko.observable<boolean>(false);
     importStatus = ko.observable<string>("");
     statistics: KnockoutObservable<any>;
+    fullTypeName: string;
 
-    constructor(public name: string, public type: string, isAdminCurrentTenant: boolean) {
+    constructor(public name: string, public type: TenantType, isAdminCurrentTenant: boolean) {
         this.isAdminCurrentTenant(isAdminCurrentTenant);
     }
 
@@ -26,15 +27,15 @@
     }
 
     isDatabase() {
-        return this.type === "database";
+        return this.type === TenantType.Database;
     }
 
     isFileSystem() {
-        return this.type === "filesystem";
+        return this.type === TenantType.FileSystem;
     }
 
     isCounterStorage() {
-        return this.type === "counterstorage";
+        return this.type === TenantType.CounterStorage;
     }
 }
 

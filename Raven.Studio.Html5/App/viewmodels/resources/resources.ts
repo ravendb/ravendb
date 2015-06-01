@@ -258,13 +258,13 @@ class resources extends viewModelBase {
         }
     }
 
-    private getResources(resourceType: string): KnockoutObservableArray<resource> {
+    private getResources(resourceType: TenantType): KnockoutObservableArray<resource> {
         switch (resourceType) {
-            case database.type:
+            case TenantType.Database:
                 return this.databases;
-            case fileSystem.type:
+            case TenantType.FileSystem:
                 return this.fileSystems;
-            case counterStorage.type:
+            case TenantType.CounterStorage:
                 return this.counterStorages;
             default:
                 throw "Unknown type";
@@ -308,7 +308,7 @@ class resources extends viewModelBase {
 
             disableDatabaseToggleViewModel.disableToggleTask
                 .done((toggledResources: resource[]) => {
-                    if (resources.length == 1) {
+                    if (resources.length === 1) {
                         this.onResourceDisabledToggle(resources[0], action);
                     } else {
                         toggledResources.forEach(rs => {
@@ -325,6 +325,10 @@ class resources extends viewModelBase {
         if (!!rs) {
             rs.disabled(action);
             rs.isChecked(false);
+
+            if (rs.isSelected() && rs.disabled() === false) {
+                rs.activate();  
+            }
         }
     }
 
@@ -391,7 +395,7 @@ class resources extends viewModelBase {
                     }
                 }
                 if (!this.isEmptyStringOrWhitespace(databaseTemp)) {
-                    settings['Raven/Voron/TempPath'] = databaseTemp;
+                    settings["Raven/Voron/TempPath"] = databaseTemp;
                 }
                 if (alertTimeout !== "") {
                     settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
@@ -434,7 +438,7 @@ class resources extends viewModelBase {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
 
-                settings["Raven/CounterStorage/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\CounterStorages\\" + counterStorageName;
+                settings["Raven/Counters/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
                 this.showCsCreationAdvancedStepsIfNecessary(counterStorageName, bundles, settings);
             });
 
@@ -616,15 +620,6 @@ class resources extends viewModelBase {
                 .done(() => {
                     var newCounterStorage = this.addNewCounterStorage(counterStorageName, bundles);
                     this.selectResource(newCounterStorage);
-
-                    /*this.createDefaultFilesystemSettings(newCounterStorage, bundles).always(() => {
-                        if (bundles.contains("Versioning")) {
-                            encryptionConfirmationDialogPromise.always(() => {
-                                var settingsDialog = new filesystemSettingsDialog(bundles);
-                                app.showDialog(settingsDialog);
-                            });
-                        }
-                    });*/
                 });
     }
 

@@ -8,10 +8,11 @@ class filesystem extends resource {
     static type = "filesystem";
 
     constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
-        super(name, filesystem.type, isAdminCurrentTenant);
+        super(name, TenantType.FileSystem, isAdminCurrentTenant);
+        this.fullTypeName = "File System";
         this.disabled(isDisabled);
         this.activeBundles(bundles);
-        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().fileCountText() : "0 files");
+        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().fileCountText() : "");
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var ravenFsValue = license.licenseStatus().Attributes.ravenfs;
@@ -25,13 +26,17 @@ class filesystem extends resource {
         ko.postbox.publish("ActivateFilesystem", this);
     }
 
+    saveStatistics(dto: filesystemStatisticsDto) {
+        if (!this.statistics()) {
+            this.statistics(new fileSystemStatistics());
+        }
+
+        this.statistics().fromDto(dto);
+    }
+
     static getNameFromUrl(url: string) {
         var index = url.indexOf("filesystems/");
         return (index > 0) ? url.substring(index + 10) : "";
-    }
-
-    saveStatistics(dto: filesystemStatisticsDto) {
-        this.statistics(new fileSystemStatistics(dto));
     }
 }
 export = filesystem;

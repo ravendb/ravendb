@@ -7,7 +7,7 @@ class databaseStatistics {
     staleIndexesCountText = ko.observable<string>();
     errorsCountText = ko.observable<string>();
     
-    constructor(dto: databaseStatisticsDto) {
+    fromDto(dto: databaseStatisticsDto) {
         this.countOfDocuments(dto.CountOfDocuments);
         this.databaseId(dto.DatabaseId);
 

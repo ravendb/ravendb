@@ -6,9 +6,9 @@
 					<i class="fa fa-database fa-5x"></i>
 					<br />
 					<br />
-					No databases and no filesystems are available. <br />
+					No databases, file systems or counter storages are available. <br />
 					<small>
-						<span data-bind="visible: isGlobalAdmin">Go ahead and <a href="#" data-bind="click: newResource">create a database or distributed file system</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a></span>
+						<span data-bind="visible: isGlobalAdmin">Go ahead and <a href="#" data-bind="click: newResource">create one now</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a></span>
 					</small>
 				</h2>
 			</div>
@@ -34,7 +34,7 @@
         <li>
             <h3>
                 <a href="#resources">
-                    Databases &amp; File Systems
+                    Databases, File Systems and Counter Storages
                 </a>
             </h3>
         </li>
@@ -212,15 +212,16 @@
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getFileSystemFilesUrl($data) }"><i class="fa fa-sort-numeric-desc"></i> cs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getCounterStorageCountersUrl($data) }"><i class="fa fa-sort-numeric-desc"></i> cs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
-                    <a class="resource-name"><i class="fa fa-file-image-o"></i> fs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name"><i class="fa fa-sort-numeric-desc"></i> fs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                 </h4>
                 <br />
                 <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                <!--<span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>-->
+                <!--TODO: implement stats-->
+                <span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                 <!-- /ko -->
                 <!-- ko if: $data.disabled -->
                 <span class="stats-disabled">Disabled</span>
@@ -236,14 +237,14 @@
                 </a>
                 <ul class="dropdown-menu" role="menu">
                     <li role="presentation">
-                        <a data-bind="click: function () { $root.toggleSelectedResources([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
+                        <a data-bind="click: function () { $root.toggleSelectedResources([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Counter Storage' : 'Disable Selected Counter Storage' }">
                             <i class="fa fa-fw" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>
                             <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
                         </a>
                     </li>
                     <li class="divider"></li>
                     <li role="presentation" class="delete-resource">
-                        <a title="Delete selected filesystem" data-bind="click: function () { $root.deleteSelectedResources([$data]); return true; }">
+                        <a title="Delete Selected Counter Storage" data-bind="click: function () { $root.deleteSelectedResources([$data]); return true; }">
                             <i class="fa fa-fw fa-trash-o"></i>
                             <span>Delete</span>
                         </a>

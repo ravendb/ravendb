@@ -1,7 +1,7 @@
 ﻿import counter = require("models/counter/counter");
 
 class counterGroup {
-    name = ko.observable('');
+    name = ko.observable("");
     numOfCounters: any = ko.observable(0);
     counters = ko.observableArray<counter>([]);
 

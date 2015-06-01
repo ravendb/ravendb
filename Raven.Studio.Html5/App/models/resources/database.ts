@@ -12,13 +12,14 @@ class database extends resource {
     static type = "database";
 
     constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, clusterWide = false) {
-        super(name, database.type, isAdminCurrentTenant);
+        super(name, TenantType.Database, isAdminCurrentTenant);
+        this.fullTypeName = "Database";
         this.disabled(isDisabled);
         this.activeBundles(bundles);
         this.indexingDisabled(isIndexingDisabled);
 		this.rejectClientsMode(isRejectClientsMode);
 	    this.clusterWide(clusterWide);
-        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "0 documents");
+        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "");
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var attributes = license.licenseStatus().Attributes;
@@ -33,6 +34,18 @@ class database extends resource {
         this.mergedIndexLocalStoragePrefix = "ravenDB-mergedIndex." + name;
     }
 
+    activate() {
+        ko.postbox.publish("ActivateDatabase", this);
+	}
+
+    saveStatistics(dto: databaseStatisticsDto) {
+        if (!this.statistics()) {
+            this.statistics(new databaseStatistics());
+        }
+
+        this.statistics().fromDto(dto);
+    }
+
     private attributeValue(attributes, bundleName: string) {
         for (var key in attributes){
             if (attributes.hasOwnProperty(key) && key.toLowerCase() === bundleName.toLowerCase()) {
@@ -42,17 +55,9 @@ class database extends resource {
         return "true";
     }
 
-	activate() {
-        ko.postbox.publish("ActivateDatabase", this);
-	}
-
     static getNameFromUrl(url: string) {
         var index = url.indexOf("databases/");
         return (index > 0) ? url.substring(index + 10) : "";
-    }
-
-    saveStatistics(dto: databaseStatisticsDto) {
-        this.statistics(new databaseStatistics(dto));
     }
 
     isBundleActive(bundleName: string) {
