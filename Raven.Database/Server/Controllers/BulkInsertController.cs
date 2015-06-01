@@ -139,7 +139,7 @@ namespace Raven.Database.Server.Controllers
 				}, httpStatusCode);
             }
 	        if (status.IsTimedOut)
-                throw new TimeoutException("Bulk insert operation did not receive new data longer than configured treshold");
+				throw new TimeoutException("Bulk insert operation did not receive new data longer than configured threshold");
 
             sp.Stop();
 
