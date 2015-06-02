@@ -16,7 +16,7 @@ namespace Raven.Database.Bundles.Replication.Plugins
 	{
 		public static RemoteDocumentReplicationConflictResolver Instance = new RemoteDocumentReplicationConflictResolver();
 
-		public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
+		protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
 		                                Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
 		                                out RavenJObject documentToSave)
 		{
