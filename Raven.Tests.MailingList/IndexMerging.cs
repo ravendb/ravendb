@@ -26,7 +26,7 @@ namespace Raven.Tests.MailingList
 
             // Auto/Logfiles/BySavedAnalysesAndStoreIdAndUploadDateSortByUploadDate
             await SecondQuery(session);
-
+				
             //  Auto/Logfiles/BySavedAnalysesAndSharedOnFacebookActionIdAndStoreIdAndUploadDateSortByUploadDate
             await ThirdQuery(session);
 
@@ -34,14 +34,14 @@ namespace Raven.Tests.MailingList
 
             // now lets delete the second index
             store.DatabaseCommands.DeleteIndex("Auto/Logfiles/ByUploadDateSortByUploadDate");
-            store.DatabaseCommands.DeleteIndex("Auto/Logfiles/BySavedAnalysesAndStoreIdAndUploadDateSortByUploadDate");
+			store.DatabaseCommands.DeleteIndex("Auto/Logfiles/BySavedAnalysesAndStoreIdAndUploadDateSortBySavedAnalysesStoreIdUploadDate");
 
             await FirstQuery(session);
             await SecondQuery(session);
             await ThirdQuery(session);
 
             // Auto/Logfiles/BySavedAnalysesAndSharedOnFacebookActionIdAndStoreIdAndUploadDateSortByUploadDate is able to fulfill all requests
-            Assert.Equal(1, GetAutoIndexes(store).Length);
+	        Assert.Equal(1, GetAutoIndexes(store).Length);
         }
 
         static IndexDefinition[] GetAutoIndexes(IDocumentStore store)
