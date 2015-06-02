@@ -704,7 +704,7 @@ namespace Raven.Database.Server.Controllers
 				using (var file = new FileStream(tempFileName, FileMode.Create))
 				using (var package = new ZipArchive(file, ZipArchiveMode.Create))
 				{
-					DebugInfoProvider.CreateInfoPackageForDatabase(package, Database, RequestManager);
+					DebugInfoProvider.CreateInfoPackageForDatabase(package, Database, RequestManager, ClusterManager);
 				}
 
 				var response = new HttpResponseMessage();
