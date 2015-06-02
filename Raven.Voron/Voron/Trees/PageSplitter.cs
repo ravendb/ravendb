@@ -152,7 +152,7 @@ namespace Voron.Trees
 
         private byte* SplitPageInHalf(Page rightPage)
         {
-            int currentIndex = _page.LastSearchPosition;
+	        int currentIndex = _page.LastSearchPosition;
             bool newPosition = true;
             int splitIndex = _page.NumberOfEntries/2;
             if (currentIndex < splitIndex)
@@ -285,22 +285,24 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private void AddSeparatorToParentPage(long pageNumber, MemorySlice seperatorKey)
-        {
-	        var separatorKeyToInsert = _parentPage.PrepareKeyToInsert(seperatorKey, _parentPage.LastSearchPosition);
+		private byte* AddSeparatorToParentPage(long pageNumber, MemorySlice seperatorKey)
+		{
+			var oldLastSearchPosition = _parentPage.LastSearchPosition;
+			var pos = _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
+
+			var separatorKeyToInsert = _parentPage.PrepareKeyToInsert(seperatorKey, pos);
 
 			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
-            {
-                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
-                    0, _cursor, _treeState);
-                pageSplitter.Execute();
-            }
-            else
-            {
-                _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
-				_parentPage.AddPageRefNode(_parentPage.LastSearchPosition, separatorKeyToInsert, pageNumber);
-            }
-        }
+			{
+				_parentPage.LastSearchPosition = oldLastSearchPosition;
+
+				var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
+					0, _cursor, _treeState);
+				return pageSplitter.Execute();
+			}
+
+			return _parentPage.AddPageRefNode(pos, separatorKeyToInsert, pageNumber);
+		}
 
         private int AdjustSplitPosition(int currentIndex, int splitIndex, PrefixNode[] prefixes, ref bool newPosition)
         {
