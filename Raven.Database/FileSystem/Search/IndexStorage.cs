@@ -500,7 +500,7 @@ namespace Raven.Database.FileSystem.Search
             doc.Add(new Field("__rfileName", new string(revFileName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));                        
 
             int level = 0;
-			var directoryName = RavenFileNameHelper.RavenDirectory(FilesystemPathExtentions.GetDirectoryName(lowerKey));
+			var directoryName = RavenFileNameHelper.RavenDirectory(FileSystemPathExtentions.GetDirectoryName(lowerKey));
 
 
             doc.Add(new Field("__directory", directoryName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
@@ -521,7 +521,7 @@ namespace Raven.Database.FileSystem.Search
                 Array.Reverse(revDirectoryName);
                 doc.Add(new Field("__rdirectoryName", new string(revDirectoryName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
 
-				directoryName = FilesystemPathExtentions.GetDirectoryName(directoryName);
+				directoryName = FileSystemPathExtentions.GetDirectoryName(directoryName);
             }
 			while (directoryName != null );
 

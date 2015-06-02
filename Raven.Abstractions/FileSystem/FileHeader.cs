@@ -102,7 +102,7 @@ namespace Raven.Abstractions.FileSystem
         {
             get
             {
-				return FilesystemPathExtentions.GetDirectoryName(this.FullPath)
+				return FileSystemPathExtentions.GetDirectoryName(this.FullPath)
                                      .Replace('\\', '/');
             }
         }      
