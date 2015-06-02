@@ -31,7 +31,7 @@ namespace Raven.Client.Counters
 	public partial class CounterStore : ICounterStore
 	{
 		private readonly AtomicDictionary<ICountersChanges> counterStorageChanges = new AtomicDictionary<ICountersChanges>(StringComparer.OrdinalIgnoreCase);
-		private ICountersReplicationInformer replicationInformer;
+		private CounterReplicationInformer replicationInformer;
 		private bool isInitialized;
 
 		public CounterStore()
@@ -41,6 +41,7 @@ namespace Raven.Client.Counters
 			Convention = new Convention();
 			Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
 			Advanced = new CounterStoreAdvancedOperations(this);
+			Admin = new CounterStoreAdminOperations(this);
 			batch = new Lazy<BatchOperationsStore>(() => new BatchOperationsStore(this));
 			isInitialized = false;
 		}
@@ -53,21 +54,21 @@ namespace Raven.Client.Counters
 			isInitialized = true;
 			InitializeSecurity();
 
-			if (ensureDefaultCounterExists && !string.IsNullOrWhiteSpace(DefaultCounterStorageName))
+			if (ensureDefaultCounterExists && !string.IsNullOrWhiteSpace(Name))
 			{
-				if (String.IsNullOrWhiteSpace(DefaultCounterStorageName))
+				if (String.IsNullOrWhiteSpace(Name))
 					throw new InvalidOperationException("DefaultCounterStorageName is null or empty and ensureDefaultCounterExists = true --> cannot create default counter storage with empty name");
 
-				CreateCounterStorageAsync(new CounterStorageDocument
+				Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
-						{"Raven/Counters/DataDir", @"~\Counters\" + DefaultCounterStorageName}
+						{"Raven/Counters/DataDir", @"~\Counters\" + Name}
 					},
-				}, DefaultCounterStorageName).ConfigureAwait(false).GetAwaiter().GetResult();
+				}, Name).ConfigureAwait(false).GetAwaiter().GetResult();
 			}			
 
-			replicationInformer = new CounterReplicationInformer(Convention, JsonRequestFactory, this); // make sure it is initialized
+			replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this); // make sure it is initialized
 		}
 
 		public ICountersChanges Changes(string counterStorage = null)
@@ -75,7 +76,7 @@ namespace Raven.Client.Counters
 			AssertInitialized();
 
 			if (string.IsNullOrWhiteSpace(counterStorage))
-				counterStorage = DefaultCounterStorageName;
+				counterStorage = Name;
 
 			return counterStorageChanges.GetOrAdd(counterStorage, CreateCounterStorageChanges);
 		}
@@ -123,108 +124,32 @@ namespace Raven.Client.Counters
 
 		public string Url { get; set; }
 
-		public string DefaultCounterStorageName { get; set; }
+		public string Name { get; set; }
 
 		public Convention Convention { get; set; }
 
-		public JsonSerializer JsonSerializer { get; set; }
+		internal JsonSerializer JsonSerializer { get; set; }
 
 		public CounterStoreAdvancedOperations Advanced { get; private set; }
 
-		//TODO : move create counter storage to admin commands and make shortcut with something like 'CounterStorage.For(otherCounterStorageName)'
-		/// <summary>
-		/// Create new counter storage on the server.
-		/// </summary>
-		/// <param name="counterStorageDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
-		/// <param name="counterStorageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
-		public async Task CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, string counterStorageName, bool shouldUpateIfExists = false, CancellationToken token = default(CancellationToken))
-		{
-			if (counterStorageDocument == null)
-				throw new ArgumentNullException("counterStorageDocument");
-
-			var urlTemplate = "{0}/admin/cs/{1}";
-			if (shouldUpateIfExists)
-				urlTemplate += "?update=true";
-
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-
-			var requestUriString = String.Format(urlTemplate, Url, counterStorageName);
-
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Put))
-			{
-				try
-				{
-					await request.WriteAsync(RavenJObject.FromObject(counterStorageDocument)).WithCancellation(token).ConfigureAwait(false);
-				}
-				catch (ErrorResponseException e)
-				{
-					if (e.StatusCode == HttpStatusCode.Conflict)
-						throw new InvalidOperationException("Cannot create counter storage with the name '" + counterStorageName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e);
-
-					throw;
-				}					
-			}
-		}
-
-		public async Task DeleteCounterStorageAsync(string counterStorageName, bool hardDelete = false, CancellationToken token = default(CancellationToken))
-		{
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-
-			var requestUriString = String.Format("{0}/admin/cs/{1}?hard-delete={2}", Url, counterStorageName, hardDelete);
-
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
-			{
-				try
-				{
-					await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
-				}
-				catch (ErrorResponseException e)
-				{
-					if (e.StatusCode == HttpStatusCode.NotFound)
-						throw new InvalidOperationException(string.Format("Counter storage with specified name ({0}) doesn't exist", counterStorageName));
-					throw;
-				}
-			}
-		}
-
-		public CountersClient NewCounterClient(string counterStorageName = null)
-		{
-			if (counterStorageName == null && String.IsNullOrWhiteSpace(DefaultCounterStorageName))
-				throw new ArgumentNullException("counterStorageName", 
-					@"counterStorageName is null and default counter storage name is empty - 
-						this means no default counter exists.");
-			return new CountersClient(this,counterStorageName ?? DefaultCounterStorageName);
-		}
-
-		public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
-		{
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-
-			var requestUriString = String.Format("{0}/cs/counterStorageNames", Url);
-
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<string[]>(JsonSerializer);
-			}
-		}
-
+		public CounterStoreAdminOperations Admin { get; private set; }
+		
 		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
 		{
-			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, httpMethod, Credentials, Convention)
+			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, Credentials, Convention.ShouldCacheRequest)
 			{
 				DisableRequestCompression = disableRequestCompression,
 				DisableAuthentication = disableAuthentication
 			});
 		}
 
-		public ProfilingInformation ProfilingInformation { get; private set; }
-		
-		public ICountersReplicationInformer ReplicationInformer
+		public CounterReplicationInformer ReplicationInformer
 		{
-			get { return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(Convention, JsonRequestFactory, this)); }
+			get
+			{
+				return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this));
+			}
 		}
-
 
 		private void InitializeSecurity()
 		{
@@ -323,112 +248,6 @@ namespace Raven.Client.Counters
 				batch.Value.Dispose();
 
 			
-		}
-
-		public class BatchOperationsStore : ICountersBatchOperation
-		{
-			private readonly ICounterStore parent;
-			private readonly Lazy<CountersBatchOperation> defaultBatchOperation;
-			private readonly ConcurrentDictionary<string, CountersBatchOperation> batchOperations;
-
-			public BatchOperationsStore(ICounterStore parent)
-			{				
-				batchOperations = new ConcurrentDictionary<string, CountersBatchOperation>();
-				this.parent = parent;
-				if(string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName) == false)
-					defaultBatchOperation = new Lazy<CountersBatchOperation>(() => new CountersBatchOperation(parent, parent.DefaultCounterStorageName));
-
-				OperationId = Guid.NewGuid();
-			}
-
-			public ICountersBatchOperation this[string storageName]
-			{
-				get { return GetOrCreateBatchOperation(storageName); }
-			}
-
-			private ICountersBatchOperation GetOrCreateBatchOperation(string storageName)
-			{
-				return batchOperations.GetOrAdd(storageName, arg => new CountersBatchOperation(parent, storageName));
-			}
-
-			public void Dispose()
-			{
-				batchOperations.Values
-					.ForEach(operation => operation.Dispose());
-				if (defaultBatchOperation != null && defaultBatchOperation.IsValueCreated)
-					defaultBatchOperation.Value.Dispose();
-			}
-
-			public void ScheduleChange(string groupName, string counterName, long delta)
-			{
-				if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
-					throw new InvalidOperationException("Default counter storage name cannot be empty!");
-
-				defaultBatchOperation.Value.ScheduleChange(groupName, counterName, delta);
-			}
-
-			public void ScheduleIncrement(string groupName, string counterName)
-			{
-				if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
-					throw new InvalidOperationException("Default counter storage name cannot be empty!");
-
-				defaultBatchOperation.Value.ScheduleIncrement(groupName, counterName);
-			}
-
-			public void ScheduleDecrement(string groupName, string counterName)
-			{
-				if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
-					throw new InvalidOperationException("Default counter storage name cannot be empty!");
-
-				defaultBatchOperation.Value.ScheduleDecrement(groupName, counterName);
-			}
-
-			public async Task FlushAsync()
-			{
-				if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
-					throw new InvalidOperationException("Default counter storage name cannot be empty!");
-
-				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-				await defaultBatchOperation.Value.FlushAsync();
-			}
-
-			public Guid OperationId { get; private set; }
-
-			public CountersBatchOptions Options
-			{
-				get
-				{
-					if (string.IsNullOrWhiteSpace(parent.DefaultCounterStorageName))
-						throw new InvalidOperationException("Default counter storage name cannot be empty!");
-					return defaultBatchOperation.Value.Options;
-				}
-			}
-		}
-
-		public class CounterStoreAdvancedOperations
-		{
-			private readonly ICounterStore parent;
-
-			internal CounterStoreAdvancedOperations(ICounterStore parent)
-			{
-				this.parent = parent;
-			}
-
-			public ICountersBatchOperation NewBatch(CountersBatchOptions options = null)
-			{
-				if (parent.DefaultCounterStorageName == null)
-					throw new ArgumentException("Default Counter Storage isn't set!");
-
-				return new CountersBatchOperation(parent, parent.DefaultCounterStorageName, options);
-			}
-
-			public ICountersBatchOperation NewBatch(string counterStorageName, CountersBatchOptions options = null)
-			{
-				if (string.IsNullOrWhiteSpace(counterStorageName))
-					throw new ArgumentException("Counter Storage name isn't set!");
-
-				return new CountersBatchOperation(parent, counterStorageName, options);
-			}
 		}
 	}
 }

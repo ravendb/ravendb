@@ -12,7 +12,7 @@ namespace Raven.Client.Counters.Actions
 	/// <summary>
 	/// implements administration level counters functionality
 	/// </summary>
-	public abstract class CountersActionsBase : IHoldProfilingInformation
+	public abstract class CounterOperationsBase 
  	{
 		private readonly OperationCredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
@@ -20,22 +20,19 @@ namespace Raven.Client.Counters.Actions
 		protected readonly string ServerUrl;
 		protected readonly JsonSerializer JsonSerializer;
 		protected readonly string CounterStorageUrl;
-		protected readonly ICounterStore Parent;
+		protected readonly CounterStore Parent;
 		protected readonly string CounterStorageName;
 
-		public ProfilingInformation ProfilingInformation { get; private set; } //so far it is preparation for air conditioning
-
-		protected CountersActionsBase(ICounterStore parent, string counterStorageName)
+		protected CounterOperationsBase(CounterStore parent, string counterStorageName)
 		{
 			credentials = parent.Credentials;
 			jsonRequestFactory = parent.JsonRequestFactory;
 			ServerUrl = parent.Url;
-			this.Parent = parent;
-			this.CounterStorageName = counterStorageName;
+			Parent = parent;
+			CounterStorageName = counterStorageName;
 			CounterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}", ServerUrl, counterStorageName);
 			JsonSerializer = parent.JsonSerializer;
 			convention = parent.Convention;
-			ProfilingInformation = parent.ProfilingInformation;
 		}
 
 		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
@@ -43,7 +40,7 @@ namespace Raven.Client.Counters.Actions
 			CreateHttpJsonRequestParams @params;
 			if (timeout.HasValue)
 			{
-				@params = new CreateHttpJsonRequestParams(this, requestUriString, httpMethod, credentials, convention)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, convention.ShouldCacheRequest)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,
@@ -52,7 +49,7 @@ namespace Raven.Client.Counters.Actions
 			}
 			else
 			{
-				@params = new CreateHttpJsonRequestParams(this, requestUriString, httpMethod, credentials, convention)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, convention.ShouldCacheRequest)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,

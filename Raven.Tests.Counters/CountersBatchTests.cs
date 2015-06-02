@@ -21,26 +21,21 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterStorageAsync(new CounterStorageDocument
+				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
 						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
 					},
 				}, CounterStorageName1);
-				using (var batchOperation = store.Advanced.NewBatch(CounterStorageName1,
-														new CountersBatchOptions {BatchSizeLimit = 3}))
+				using (var batchOperation = store.Advanced.NewBatch(CounterStorageName1, new CountersBatchOptions {BatchSizeLimit = 3}))
 				{
-					batchOperation.ScheduleIncrement("FooGroup","FooCounter");
+					batchOperation.ScheduleIncrement("FooGroup", "FooCounter");
 					batchOperation.ScheduleIncrement("FooGroup", "FooCounter");
 					batchOperation.ScheduleDecrement("FooGroup", "FooCounter");
 				}
-
-				using (var client = store.NewCounterClient(CounterStorageName1))
-				{
-					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
-					total.Should().Be(1);
-				}
+				var total = await store.GetOverallTotalAsync("FooGroup", "FooCounter");
+				total.Should().Be(1);
 			}
 		}
 
@@ -49,7 +44,7 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterStorageAsync(new CounterStorageDocument()
+				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument()
 				{
 					Settings = new Dictionary<string, string>
 					{
@@ -67,12 +62,11 @@ namespace Raven.Tests.Counters
 					batchOperation.ScheduleDecrement("FooGroup", "FooCounter2");
 				}
 
-				using (var client = store.NewCounterClient(CounterStorageName1))
 				{
-					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter2");
+					var total = await store.GetOverallTotalAsync("FooGroup", "FooCounter2");
 					total.Should().Be(-1);
 
-					total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
+					total = await store.GetOverallTotalAsync("FooGroup", "FooCounter");
 					total.Should().Be(1);
 
 				}
@@ -87,7 +81,7 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterStorageAsync(new CounterStorageDocument
+				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
@@ -96,7 +90,7 @@ namespace Raven.Tests.Counters
 				}, CounterStorageName1);
 
 				using (var counterBatch = store.Advanced.NewBatch(CounterStorageName1,
-					new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch / 2 }))
+					new CountersBatchOptions {BatchSizeLimit = countOfOperationsInBatch/2}))
 				{
 					int x = 0;
 					for (int i = 0; i < countOfOperationsInBatch; i++)
@@ -105,12 +99,8 @@ namespace Raven.Tests.Counters
 						x++;
 					}
 				}
-
-				using (var client = store.NewCounterClient(CounterStorageName1))
-				{
-					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
-					total.Should().Be(countOfOperationsInBatch);
-				}
+				var total = await store.GetOverallTotalAsync("FooGroup", "FooCounter");
+				total.Should().Be(countOfOperationsInBatch);
 			}
 		}
 
@@ -119,15 +109,13 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				store.Batch.ScheduleIncrement("FooGroup", "FooCounter");//schedule increment for default counter storage
+				store.Batch.ScheduleIncrement("FooGroup", "FooCounter"); //schedule increment for default counter storage
 				await store.Batch.FlushAsync();
 
 				//with counter storage name null - client is opened for default counter
-				using (var client = store.NewCounterClient()) 
-				{
-					var total = await client.Commands.GetOverallTotalAsync("FooGroup","FooCounter");
-					total.Should().Be(1);
-				}
+
+				var total = await store.GetOverallTotalAsync("FooGroup", "FooCounter");
+				total.Should().Be(1);
 			}
 		}
 
@@ -136,13 +124,13 @@ namespace Raven.Tests.Counters
 		[InlineData(251, 252)]
 		public async Task Using_multiple_different_batches_for_the_same_store_async_should_work(int totalForT1, int totalForT2)
 		{
-			using (var store = NewRemoteCountersStore(createDefaultCounter:true))
+			using (var store = NewRemoteCountersStore())
 			{
 				var t1 = Task.Run(() =>
 				{
-					using (var batch = store.Advanced.NewBatch(store.DefaultCounterStorageName,new CountersBatchOptions
+					using (var batch = store.Advanced.NewBatch(store.Name, new CountersBatchOptions
 					{
-						BatchSizeLimit = totalForT1 / 3
+						BatchSizeLimit = totalForT1/3
 					}))
 					{
 						for (int i = 0; i < totalForT1; i++)
@@ -152,9 +140,9 @@ namespace Raven.Tests.Counters
 
 				var t2 = Task.Run(() =>
 				{
-					using (var batch = store.Advanced.NewBatch(store.DefaultCounterStorageName, new CountersBatchOptions
+					using (var batch = store.Advanced.NewBatch(store.Name, new CountersBatchOptions
 					{
-						BatchSizeLimit = totalForT2 / 3
+						BatchSizeLimit = totalForT2/3
 					}))
 					{
 						for (int i = 0; i < totalForT2; i++)
@@ -163,13 +151,9 @@ namespace Raven.Tests.Counters
 				});
 
 				await Task.WhenAll(t1, t2);
-
-				using (var client = store.NewCounterClient())
-				{
-					var total = await client.Commands.GetOverallTotalAsync("G", "C");
-					total.Should().Be(totalForT1 + totalForT2);
-				}
-
+				
+				var total = await store.GetOverallTotalAsync("G", "C");
+				total.Should().Be(totalForT1 + totalForT2);
 			}
 		}
 
@@ -178,8 +162,8 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterStorageAsync(CreateCounterStorageDocument(CounterStorageName1), CounterStorageName1);
-				await store.CreateCounterStorageAsync(CreateCounterStorageDocument(CounterStorageName2), CounterStorageName2);
+				await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument(CounterStorageName1), CounterStorageName1);
+				await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument(CounterStorageName2), CounterStorageName2);
 
 				var t1 = Task.Run(() =>
 				{
@@ -197,17 +181,11 @@ namespace Raven.Tests.Counters
 
 				await Task.WhenAll(t1, t2);
 
-				using (var client = store.NewCounterClient(CounterStorageName1))
-				{
-					var total = await client.Commands.GetOverallTotalAsync("G", "C");
-					total.Should().Be(499);
-				}
-
-				using (var client = store.NewCounterClient(CounterStorageName2))
-				{
-					var total = await client.Commands.GetOverallTotalAsync("G", "C");
-					total.Should().Be(500);
-				}
+				var total = await store.GetOverallTotalAsync("G", "C");
+				total.Should().Be(499);
+				
+				total = await store.GetOverallTotalAsync("G", "C");
+				total.Should().Be(500);
 			}
 		}
 
@@ -216,7 +194,7 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterStorageAsync(CreateCounterStorageDocument(CounterStorageName1), CounterStorageName1);
+				await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument(CounterStorageName1), CounterStorageName1);
 
 				var t1 = Task.Run(() =>
 				{
@@ -232,12 +210,9 @@ namespace Raven.Tests.Counters
 
 				await Task.WhenAll(t1, t2);
 				await store.Batch[CounterStorageName1].FlushAsync();
-
-				using (var client = store.NewCounterClient(CounterStorageName1))
-				{
-					var total = await client.Commands.GetOverallTotalAsync("G", "C");
-					total.Should().Be(1000);
-				}
+				
+				var total = await store.GetOverallTotalAsync("G", "C");
+				total.Should().Be(1000);
 			}
 		}
 
@@ -248,7 +223,7 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterStorageAsync(new CounterStorageDocument
+				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
@@ -256,7 +231,7 @@ namespace Raven.Tests.Counters
 					},
 				}, CounterStorageName1);
 
-				store.Batch[CounterStorageName1].Options.BatchSizeLimit = countOfOperationsInBatch/2;
+				store.Batch[CounterStorageName1].DefaultOptions.BatchSizeLimit = countOfOperationsInBatch/2;
 				int x = 0;
 				for (int i = 0; i < countOfOperationsInBatch; i++)
 				{
@@ -265,11 +240,8 @@ namespace Raven.Tests.Counters
 				}
 
 				await store.Batch[CounterStorageName1].FlushAsync();
-				using (var client = store.NewCounterClient(CounterStorageName1))
-				{
-					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
-					total.Should().Be(countOfOperationsInBatch);
-				}
+				var total = await store.GetOverallTotalAsync("FooGroup", "FooCounter");
+				total.Should().Be(countOfOperationsInBatch);
 			}
 		}
 	}

@@ -194,7 +194,7 @@ namespace Raven.Tests.Helpers
                 Credentials = credentials,
                 ApiKey = apiKey,
             };
-
+			
             store.Initialize(true);
 
             filesStores.Add(store);

@@ -1,48 +1,56 @@
-﻿using System.Threading;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
 using Raven.Client.Counters.Changes;
 using Raven.Client.Counters.Replication;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.Counters
 {
-	public interface ICounterStore : IHoldProfilingInformation, IDisposalNotification
+	public interface ICounterStore : IDisposalNotification
 	{
-		
-		OperationCredentials Credentials { get; set; }
+		CounterStore.BatchOperationsStore Batch { get; }
 
-		HttpJsonRequestFactory JsonRequestFactory { get; set; }
+		OperationCredentials Credentials { get;  }
+
+		string Name { get; }
 
 		string Url { get; }
 
-		string DefaultCounterStorageName { get; }
-
 		Convention Convention { get; set; }
 
-		JsonSerializer JsonSerializer { get; set; }
+		CounterReplicationInformer ReplicationInformer { get; }
 
 		CounterStore.CounterStoreAdvancedOperations Advanced { get; }
 
-		/// <summary>
-		/// Create new counter storage on the server.
-		/// </summary>
-		/// <param name="counterStorageDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
-		/// <param name="counterStorageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
-		Task CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, string counterStorageName, bool shouldUpateIfExists = false, CancellationToken token = default(CancellationToken));
+		CounterStore.CounterStoreAdminOperations Admin { get; }
 
-		Task DeleteCounterStorageAsync(string counterStorageName, bool hardDelete = false, CancellationToken token = default(CancellationToken));
-		
-		Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken));
+		Task ChangeAsync(string groupName, string counterName, long delta, CancellationToken token = default(CancellationToken));
 
-		CountersClient NewCounterClient(string counterStorageName = null);
+		Task IncrementAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
 
-		CounterStore.BatchOperationsStore Batch { get; }
+		Task DecrementAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
 
-		ICountersReplicationInformer ReplicationInformer { get; }
+		Task ResetAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
+
+		Task<long> GetOverallTotalAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
+
+		Task<CounterStorageStats> GetCounterStatsAsync(CancellationToken token = default (CancellationToken));
+
+		Task<CountersStorageMetrics> GetCounterMetricsAsync(CancellationToken token = default (CancellationToken));
+
+		Task<List<CounterStorageReplicationStats>> GetCounterRelicationStatsAsync(CancellationToken token = default (CancellationToken));
+
+
+		Task<CountersReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken));
+
+		Task SaveReplicationsAsync(CountersReplicationDocument newReplicationDocument, CancellationToken token = default(CancellationToken));
+
+		Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken));
 
 		void Initialize(bool ensureDefaultCounterExists = false);
 

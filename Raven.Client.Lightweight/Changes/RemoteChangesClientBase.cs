@@ -25,8 +25,7 @@ namespace Raven.Client.Changes
         private readonly string url;
         private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
-        private readonly Convention conventions;
-
+	    private readonly Func<string, bool> shouldCacheRequest;
         private readonly Action onDispose;                
 
         private IDisposable connection;
@@ -44,30 +43,41 @@ namespace Raven.Client.Changes
             HttpJsonRequestFactory jsonRequestFactory,
             Convention conventions,
             Action onDispose )
+			:this(url,apiKey,credentials,jsonRequestFactory,conventions.ShouldCacheRequest,onDispose)
         {
-            // Precondition
-            TChangesApi api = this as TChangesApi;
-            if (api == null)
-                throw new InvalidCastException(string.Format("The derived class does not implements {0}. Make sure the {0} interface is implemented by this class.", typeof(TChangesApi).Name));
-
-            ConnectionStatusChanged = LogOnConnectionStatusChanged;
-
-            id = Interlocked.Increment(ref connectionCounter) + "/" + Base62Util.Base62Random();
-
-            this.url = url;
-            this.credentials = new OperationCredentials(apiKey, credentials);
-            this.jsonRequestFactory = jsonRequestFactory;
-            this.conventions = conventions;
-            this.onDispose = onDispose;            
-
-            this.Task = EstablishConnection()
-                        .ObserveException()
-                        .ContinueWith(task =>
-                        {
-                            task.AssertNotFailed();
-                            return this as TChangesApi;
-                        });
+           
         }
+
+		protected RemoteChangesClientBase(
+		   string url,
+		   string apiKey,
+		   ICredentials credentials,
+		   HttpJsonRequestFactory jsonRequestFactory,
+		   Func<string,bool> shouldCacheRequest,
+		   Action onDispose)
+		{
+			// Precondition
+			var api = this as TChangesApi;
+			if (api == null)
+				throw new InvalidCastException(string.Format("The derived class does not implements {0}. Make sure the {0} interface is implemented by this class.", typeof(TChangesApi).Name));
+
+			ConnectionStatusChanged = LogOnConnectionStatusChanged;
+
+			id = Interlocked.Increment(ref connectionCounter) + "/" + Base62Util.Base62Random();
+
+			this.url = url;
+			this.credentials = new OperationCredentials(apiKey, credentials);
+			this.jsonRequestFactory = jsonRequestFactory;
+			this.onDispose = onDispose;
+			this.shouldCacheRequest = shouldCacheRequest;
+			Task = EstablishConnection()
+						.ObserveException()
+						.ContinueWith(task =>
+						{
+							task.AssertNotFailed();
+							return this as TChangesApi;
+						});
+		}
 
         public bool Connected { get; private set; }
         public event EventHandler ConnectionStatusChanged;
@@ -99,7 +109,7 @@ namespace Raven.Client.Changes
                 clientSideHeartbeatTimer = null;
             }
 
-			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethods.Get, credentials, conventions)
+			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethods.Get, credentials, shouldCacheRequest)
             {
                 AvoidCachingRequest = true,
                 DisableRequestCompression = true
@@ -188,7 +198,7 @@ namespace Raven.Client.Changes
                     if (string.IsNullOrEmpty(value) == false)
                         sendUrl += "&value=" + Uri.EscapeUriString(value);
 
-					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.Get, credentials, conventions)
+					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.Get, credentials, shouldCacheRequest)
                     {
                         AvoidCachingRequest = true
                     };

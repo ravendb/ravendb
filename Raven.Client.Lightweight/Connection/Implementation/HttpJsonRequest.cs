@@ -431,7 +431,7 @@ namespace Raven.Client.Connection.Implementation
 
 		public async Task<bool> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
 		{
-			if (conventions.HandleUnauthorizedResponseAsync == null)
+			if (conventions == null || conventions.HandleUnauthorizedResponseAsync == null)
 				return false;
 
 			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse, _credentials);
@@ -445,7 +445,7 @@ namespace Raven.Client.Connection.Implementation
 
 		private async Task HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse)
 		{
-			if (conventions.HandleForbiddenResponseAsync == null)
+			if (conventions == null || conventions.HandleForbiddenResponseAsync == null)
 				return;
 
 			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse, _credentials);

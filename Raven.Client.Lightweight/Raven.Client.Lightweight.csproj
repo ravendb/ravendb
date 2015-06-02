@@ -113,20 +113,18 @@
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\OperationMetadata.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
-    <Compile Include="Counters\Actions\CountersActionsBase.cs" />
-    <Compile Include="Counters\Actions\ICountersBatchOperation.cs" />
+    <Compile Include="Counters\CounterStore.BatchOperationStore.cs" />
+    <Compile Include="Counters\Operations\CounterOperationsBase.cs" />
     <Compile Include="Counters\Changes\CountersChangesClient.cs" />
     <Compile Include="Counters\Changes\CountersConnectionState.cs" />
     <Compile Include="Counters\Replication\CounterReplicationInformer.cs" />
     <Compile Include="Counters\CounterStore.cs" />
-    <Compile Include="Counters\Actions\CountersBatchOperation.cs" />
+    <Compile Include="Counters\Operations\CountersBatchOperation.cs" />
     <Compile Include="Counters\Convention.cs" />
-    <Compile Include="Counters\CountersClient.cs" />
-    <Compile Include="Counters\Actions\CountersCommands.cs" />
-    <Compile Include="Counters\Actions\CountersStats.cs">
+    <Compile Include="Counters\CounterStore.Stats.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Counters\Replication\CountersReplication.cs" />
+    <Compile Include="Counters\CounterStore.Replication.cs" />
     <Compile Include="Counters\Replication\ICountersReplicationInformer.cs" />
     <Compile Include="Counters\ICounterStore.cs" />
     <Compile Include="Document\AsyncDocumentSubscriptions.cs" />
@@ -390,6 +388,8 @@
     </None>
     <None Include="app.config" />
     <Compile Include="Counters\CounterStore.Commands.cs" />
+    <Compile Include="Counters\CounterStore.Advanced.cs" />
+    <Compile Include="Counters\CounterStore.Admin.cs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

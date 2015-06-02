@@ -37,16 +37,12 @@ namespace Raven.Tests.Counters
 						serverA.Server.ResetNumberOfRequests();
 						serverB.Server.ResetNumberOfRequests();
 						serverC.Server.ResetNumberOfRequests();
+						for (int i = 0; i < requestCount; i++)
+							await storeA.ChangeAsync("group", "counter", 2);
 
-						using (var clientA = storeA.NewCounterClient())
-						{							
-							for (int i = 0; i < requestCount; i++)
-								await clientA.Commands.ChangeAsync("group", "counter", 2);
-						}
-
-						serverA.Server.NumberOfRequests.Should().Be(requestCount / 3);
-						serverB.Server.NumberOfRequests.Should().Be(requestCount / 3);
-						serverC.Server.NumberOfRequests.Should().Be(requestCount / 3);
+						serverA.Server.NumberOfRequests.Should().Be(requestCount/3);
+						serverB.Server.NumberOfRequests.Should().Be(requestCount/3);
+						serverC.Server.NumberOfRequests.Should().Be(requestCount/3);
 					}
 				}
 			}

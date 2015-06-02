@@ -15,12 +15,9 @@ namespace Raven.Tests.Counters
 			{
 				await SetupReplicationAsync(storeA, storeB);
 
-				using (var client = storeA.NewCounterClient())
-				{
-					var replicationDocument = await client.Replication.GetReplicationsAsync();
+				var replicationDocument = await storeA.GetReplicationsAsync();
 
-					replicationDocument.Destinations.Should().OnlyContain(dest => dest.ServerUrl == storeB.Url);
-				}
+				replicationDocument.Destinations.Should().OnlyContain(dest => dest.ServerUrl == storeB.Url);
 			}
 		}
 
@@ -32,11 +29,8 @@ namespace Raven.Tests.Counters
 			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
 			{
 				await SetupReplicationAsync(storeA, storeB);
-
-				using (var client = storeA.NewCounterClient())
-				{
-					await client.Commands.ChangeAsync("group", "counter",2);
-				}
+				
+				await storeA.ChangeAsync("group", "counter", 2);
 				
 				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
 			}
@@ -52,15 +46,8 @@ namespace Raven.Tests.Counters
 				await SetupReplicationAsync(storeA, storeB);
 				await SetupReplicationAsync(storeB, storeA);
 
-				using (var client = storeA.NewCounterClient())
-				{
-					await client.Commands.ChangeAsync("group", "counter", 2);
-				}
-
-				using (var client = storeB.NewCounterClient())
-				{
-					await client.Commands.ChangeAsync("group", "counter", 3);
-				}
+				await storeA.ChangeAsync("group", "counter", 2);
+				await storeB.ChangeAsync("group", "counter", 3);
 
 				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
 			}
@@ -81,29 +68,17 @@ namespace Raven.Tests.Counters
 				await SetupReplicationAsync(storeC, storeA);
 				await SetupReplicationAsync(storeC, storeB);
 
-				using (var client = storeA.NewCounterClient())
-				{
-					await client.Commands.ChangeAsync("group", "counter", 2);
-				}
+				await storeA.ChangeAsync("group", "counter", 2);
 
-				using (var client = storeA.NewCounterClient())
-				{
-					await client.Commands.ChangeAsync("group", "counter", -1);
-				}
+				await storeA.ChangeAsync("group", "counter", -1);
 
-				using (var client = storeA.NewCounterClient())
-				{
-					await client.Commands.ChangeAsync("group", "counter", 4);
-				}
+				await storeA.ChangeAsync("group", "counter", 4);
 
-				using (var client = storeB.NewCounterClient())
-				{
-					await client.Commands.ChangeAsync("group", "counter", 4);
-				}
+				await storeB.ChangeAsync("group", "counter", 4);
 
 				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
 				Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
-			}			
+			}
 		}
 
 	}

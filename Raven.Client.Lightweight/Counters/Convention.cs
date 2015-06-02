@@ -1,4 +1,8 @@
-﻿using Raven.Abstractions.Replication;
+﻿using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Replication;
 
 namespace Raven.Client.Counters
 {
@@ -6,7 +10,7 @@ namespace Raven.Client.Counters
 	/// The set of conventions used by the <see cref="Convention"/> which allow the users to customize
 	/// the way the Raven client API behaves
 	/// </summary>
-	public class Convention : Client.Convention
+	public class Convention 
 	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Convention"/> class.
@@ -15,16 +19,25 @@ namespace Raven.Client.Counters
 		{
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			AllowMultipuleAsyncOperations = true;
-			IdentityPartsSeparator = "/";
 			ShouldCacheRequest = url => true;
 		}
 
+		public FailoverBehavior FailoverBehavior { get; set; }
+
+		public bool AllowMultipuleAsyncOperations { get; set; }
+
+		public Func<string, bool> ShouldCacheRequest { get; set; }
+
 		/// <summary>
-		/// Clone the current conventions to a new instance
+		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
+		/// in async manner
 		/// </summary>
-		public Convention Clone()
-		{
-			return (Convention)MemberwiseClone();
-		}
+		public Func<HttpResponseMessage, OperationCredentials, Task<Action<HttpClient>>> HandleUnauthorizedResponseAsync { get; set; }
+
+		/// <summary>
+		/// Begins handling of forbidden responses
+		/// in async manner
+		/// </summary>
+		public Func<HttpResponseMessage, OperationCredentials, Task<Action<HttpClient>>> HandleForbiddenResponseAsync { get; set; }
 	}
 }

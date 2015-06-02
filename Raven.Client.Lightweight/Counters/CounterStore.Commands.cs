@@ -13,8 +13,8 @@ namespace Raven.Client.Counters
     {
 		public async Task ChangeAsync(string groupName, string counterName, long delta, CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format(CultureInfo.InvariantCulture, "{0}/change/{1}/{2}?delta={3}",
-				Url, groupName, counterName, delta);
+			var requestUriString = String.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}/change/{2}/{3}?delta={4}",
+				Url, Name, groupName, counterName, delta);
 
 			await ReplicationInformer.ExecuteWithReplicationAsync(HttpMethods.Post, metadata =>
 			{
@@ -35,7 +35,7 @@ namespace Raven.Client.Counters
 
 		public async Task ResetAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/reset/{1}/{2}", Url, groupName, counterName);
+			var requestUriString = String.Format("{0}/cs/{1}/reset/{2}/{3}", Url, Name, groupName, counterName);
 
 			await ReplicationInformer.ExecuteWithReplicationAsync(HttpMethods.Post,  metadata =>
 			{
@@ -49,7 +49,7 @@ namespace Raven.Client.Counters
 
 			return await ReplicationInformer.ExecuteWithReplicationAsyncWithReturnValue(HttpMethods.Get,  async metadata =>
 			{
-				var requestUriString = String.Format("{0}/cs/{1}/getCounterOverallTotal/{2}/{3}", metadata.Url, this.DefaultCounterStorageName, groupName, counterName);
+				var requestUriString = String.Format("{0}/cs/{1}/getCounterOverallTotal/{2}/{3}", metadata.Url, Name, groupName, counterName);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);

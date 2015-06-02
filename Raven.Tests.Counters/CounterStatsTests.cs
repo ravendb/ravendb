@@ -11,21 +11,18 @@ namespace Raven.Tests.Counters
 	    {
 		    using (var store = NewRemoteCountersStore())
 		    {
-				await store.CreateCounterStorageAsync(CreateCounterStorageDocument("c1"), "c1");
+				await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument("c1"), "c1");
 
-				using (var client = store.NewCounterClient("c1"))
-				{
-					await client.Commands.IncrementAsync("group1","f");
-					await client.Commands.IncrementAsync("group2", "f");
-					await client.Commands.DecrementAsync("group2", "g");
-					await client.Commands.IncrementAsync("group3", "f");
+				await store.IncrementAsync("group1", "f");
+				await store.IncrementAsync("group2", "f");
+				await store.DecrementAsync("group2", "g");
+				await store.IncrementAsync("group3", "f");
 
-					var stats = await client.Stats.GetCounterStatsAsync();
-					
-					stats.CountersCount.Should().Be(4);
-					stats.GroupsCount.Should().Be(3);
-				}
-		    }
+				var stats = await store.GetCounterStatsAsync();
+
+				stats.CountersCount.Should().Be(4);
+				stats.GroupsCount.Should().Be(3);
+			}
 	    }
 	}
 }

@@ -34,7 +34,7 @@ namespace Raven.Tests.Counters
 			{
 				Url = ravenStore.Url,
 				Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
-				DefaultCounterStorageName = counterStorageName + storeCount[ravenStore.Identifier]
+				Name = counterStorageName + storeCount[ravenStore.Identifier]
 			};
 			counterStore.Initialize(createDefaultCounter);
 			return counterStore;
@@ -71,16 +71,12 @@ namespace Raven.Tests.Counters
 				if ((DateTime.Now - waitStartingTime).TotalSeconds > timeoutInSec)
 					break;
 
-				using (var sourceClient = source.NewCounterClient())
-				using (var destinationClient = destination.NewCounterClient())
+				var sourceValue = await source.GetOverallTotalAsync(groupName, counterName);
+				var targetValue = await destination.GetOverallTotalAsync(groupName, counterName);
+				if (sourceValue == targetValue)
 				{
-					var sourceValue = await sourceClient.Commands.GetOverallTotalAsync(groupName, counterName);
-					var targetValue = await destinationClient.Commands.GetOverallTotalAsync(groupName, counterName);
-					if (sourceValue == targetValue)
-					{
-						hasReplicated = true;
-						break;
-					}
+					hasReplicated = true;
+					break;
 				}
 
 				Thread.Sleep(50);
@@ -91,25 +87,17 @@ namespace Raven.Tests.Counters
 
 		protected static async Task SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
 		{
-			using (var client = source.NewCounterClient())
+			var replicationDocument = new CountersReplicationDocument();
+			foreach (var destStore in destinations)
 			{
-				var replicationDocument = new CountersReplicationDocument();
-				foreach (var destStore in destinations)
+				replicationDocument.Destinations.Add(new CounterReplicationDestination
 				{
-					using (var destClient = destStore.NewCounterClient())
-					{
-						replicationDocument.Destinations.Add(new CounterReplicationDestination
-						{
-							CounterStorageName = destClient.CounterStorageName,
-							ServerUrl = destClient.ServerUrl
-						});
-
-					}
-				}
-
-				await client.Replication.SaveReplicationsAsync(replicationDocument);
+					CounterStorageName = destStore.Name,
+					ServerUrl = destStore.Url
+				});
 			}
-		}	
 
+			await source.SaveReplicationsAsync(replicationDocument);
+		}
 	}
 }

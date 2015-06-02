@@ -5,7 +5,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -14,15 +13,16 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Counters.Actions;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Counters.Actions
+namespace Raven.Client.Counters.Operations
 {
-	public sealed class CountersBatchOperation : CountersActionsBase, ICountersBatchOperation
+	public sealed class CountersBatchOperation : CounterOperationsBase, IDisposable
 	{
-		private readonly CountersBatchOptions options;
+		private readonly CountersBatchOptions _defaultOptions;
 		private readonly AsyncManualResetEvent streamingStarted;
 		private readonly TaskCompletionSource<bool> batchOperationTcs;
 		private readonly CancellationTokenSource cts;
@@ -37,25 +37,25 @@ namespace Raven.Client.Counters.Actions
 
 		public Guid OperationId { get; private set; }
 
-		public CountersBatchOptions Options { get { return options; } }		
+		public CountersBatchOptions DefaultOptions { get { return _defaultOptions; } }		
 
-		internal CountersBatchOperation(ICounterStore parent, string counterStorageName, CountersBatchOptions batchOptions = null)
+		internal CountersBatchOperation(CounterStore parent, string counterStorageName, CountersBatchOptions batchOptions = null)
 			: base(parent, counterStorageName)
 		{
 			if(batchOptions != null && batchOptions.BatchSizeLimit < 1)
 				throw new ArgumentException("batchOptions.BatchSizeLimit cannot be negative", "batchOptions");
 
-			options = batchOptions ?? new CountersBatchOptions(); //defaults do exist
+			_defaultOptions = batchOptions ?? new CountersBatchOptions(); //defaults do exist
 			streamingStarted = new AsyncManualResetEvent();
 			batchOperationTcs = new TaskCompletionSource<bool>();
 			cts = new CancellationTokenSource();
-			changesQueue = new BlockingCollection<CounterChange>(options.BatchSizeLimit);			
+			changesQueue = new BlockingCollection<CounterChange>(_defaultOptions.BatchSizeLimit);			
 			singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", ServerUrl, counterStorageName);
 
 			OperationId = Guid.NewGuid();
 			disposed = false;
 			batchOperationTask = StartBatchOperation();
-			if (streamingStarted.WaitAsync().Wait(Options.StreamingInitializeTimeout) == false ||
+			if (streamingStarted.WaitAsync().Wait(DefaultOptions.StreamingInitializeTimeout) == false ||
 			    batchOperationTask.IsFaulted)
 			{
 				throw new InvalidOperationException("Failed to start streaming batch.", batchOperationTask.Exception);
@@ -139,7 +139,7 @@ namespace Raven.Client.Counters.Actions
 		private Timer CreateNewTimer()
 		{
 			return new Timer(CloseAndReopenStreaming, null,
-				TimeSpan.FromMilliseconds(options.ConnectionReopenTimingInMilliseconds),
+				TimeSpan.FromMilliseconds(_defaultOptions.ConnectionReopenTimingInMilliseconds),
 				TimeSpan.FromMilliseconds(-1)); //fire timer only once -> then rescedule - handles ConnectionReopenTimingInMilliseconds changing use-case
 		}
 
@@ -208,7 +208,7 @@ namespace Raven.Client.Counters.Actions
 					try
 					{
 						CounterChange counterChange;
-						while (changesQueue.TryTake(out counterChange, Options.BatchReadTimeoutInMilliseconds, token))
+						while (changesQueue.TryTake(out counterChange, DefaultOptions.BatchReadTimeoutInMilliseconds, token))
 						{
 							if (counterChange.Done != null)
 							{
@@ -217,7 +217,7 @@ namespace Raven.Client.Counters.Actions
 							}
 
 							batch.Add(counterChange);
-							if (batch.Count >= Options.BatchSizeLimit)
+							if (batch.Count >= DefaultOptions.BatchSizeLimit)
 								break;
 						}
 					}
