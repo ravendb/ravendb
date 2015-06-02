@@ -223,9 +223,10 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				string lastEtag = Etag.Empty.ToString();
 
 				var docIndex = 0;
-
+				var retries = 0;
 				while (docIndex < array.Length)
 				{
+					var lastIndex = docIndex;
 					using (Database.DocumentLock.Lock())
 					{
 						Database.TransactionalStorage.Batch(actions =>
@@ -249,7 +250,22 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							}
 
 							SaveReplicationSource(src, lastEtag, array.Length);
+							retries = lastIndex == docIndex? retries: 0;
 						});
+					}
+
+					if (lastIndex == docIndex)
+					{
+						
+						if (retries == 3)
+						{
+							Log.Warn("Replication processing did not end up replicating any documents for 3 times in a row, stopping operation", retries);
+						}
+						else
+						{
+							Log.Warn("Replication processing did not end up replicating any documents, due to possible storage error, retry number: {0}", retries);
+						}
+						retries++;
 					}
 				}
 			}

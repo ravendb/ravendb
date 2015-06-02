@@ -51,7 +51,7 @@ namespace Raven.Storage.Esent
         private readonly ThreadLocal<EsentTransactionContext> dtcTransactionContext = new ThreadLocal<EsentTransactionContext>();
         private readonly string database;
         private readonly InMemoryRavenConfiguration configuration;
-        private readonly Action onCommit;
+        private Action onCommit;
         private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         private readonly string path;
         private volatile bool disposed;
@@ -337,8 +337,8 @@ namespace Raven.Storage.Esent
 
 
         private static object compactLocker = new object();
-
-        public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
+	    
+	    public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
         {
             bool lockTaken = false;
             try
@@ -703,10 +703,23 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public IDisposable DisableBatchNesting()
+        public IDisposable DisableBatchNesting(bool allowCommit = true)
         {
             disableBatchNesting.Value = new object();
-            return new DisposableAction(() => disableBatchNesting.Value = null);
+	        
+			if (allowCommit == false)
+	        {
+				var onCommitBackup = onCommit;
+				disableBatchNesting.Value = new object();
+				onCommit = null;
+				return new DisposableAction(() =>
+				{
+					disableBatchNesting.Value = null;
+					onCommit = onCommitBackup;
+				});
+	        }
+
+			return new DisposableAction(() => disableBatchNesting.Value = null);
         }
 
         public IDisposable SetTransactionContext(EsentTransactionContext context)
@@ -753,6 +766,8 @@ namespace Raven.Storage.Esent
                 if (disposed)
                 {
                     Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
+	                if (Environment.StackTrace.Contains(".Finalize()") == false)
+		                throw e;
                     return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
                 }
 
@@ -774,7 +789,8 @@ namespace Raven.Storage.Esent
             }
             if (afterStorageCommit != null)
                 afterStorageCommit();
-            onCommit(); // call user code after we exit the lock
+			if (onCommit != null)
+				onCommit(); // call user code after we exit the lock
         }
 
         //[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]

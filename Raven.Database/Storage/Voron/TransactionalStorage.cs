@@ -49,7 +49,7 @@ namespace Raven.Storage.Voron
 
 		private readonly InMemoryRavenConfiguration configuration;
 
-		private readonly Action onCommit;
+		private Action onCommit;
 		private readonly Action onStorageInaccessible;
 
 		private TableStorage tableStorage;
@@ -107,9 +107,21 @@ namespace Raven.Storage.Voron
 			return exitLockDisposable;
 		}
 
-		public IDisposable DisableBatchNesting()
+		public IDisposable DisableBatchNesting(bool allowCommit = false)
 		{
 			disableBatchNesting.Value = new object();
+
+			if (allowCommit)
+			{
+				var onCommitBackup = onCommit;
+				disableBatchNesting.Value = new object();
+				onCommit = null;
+				return new DisposableAction(() =>
+				{
+					disableBatchNesting.Value = null;
+					onCommit = onCommitBackup;
+				});
+			}
 			return new DisposableAction(() => disableBatchNesting.Value = null);
 		}
 
@@ -163,6 +175,8 @@ namespace Raven.Storage.Voron
 				if (disposed)
 				{
 					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
+					if (Environment.StackTrace.Contains(".Finalize()") == false)
+						throw e;
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
@@ -190,7 +204,8 @@ namespace Raven.Storage.Voron
 			if (afterStorageCommit != null)
 				afterStorageCommit();
 
-			onCommit(); // call user code after we exit the lock
+			if (onCommit != null)
+				onCommit(); // call user code after we exit the lock
 		}
 
         private Action ExecuteBatch(Action<IStorageActionsAccessor> action)
