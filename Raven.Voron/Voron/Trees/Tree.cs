@@ -192,9 +192,19 @@ namespace Voron.Trees
             if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot add a value in a read only transaction");
 
-            if (key.Size + Constants.NodeHeaderSize > AbstractPager.NodeMaxSize)
-                throw new ArgumentException(
-                    "Key size is too big, must be at most " + (AbstractPager.NodeMaxSize - Constants.NodeHeaderSize) + " bytes, but was " + key.Size, "key");
+			if (KeysPrefixing == false)
+			{
+				if (key.Size + AbstractPager.RequiredSpaceForNewNode > AbstractPager.NodeMaxSize)
+					throw new ArgumentException(
+						"Key size is too big, must be at most " + (AbstractPager.NodeMaxSize - AbstractPager.RequiredSpaceForNewNode) + " bytes, but was " + key.Size, "key");
+
+			}
+			else
+			{
+				if (key.Size + AbstractPager.RequiredSpaceForNewNodePrefixedKeys > AbstractPager.NodeMaxSizePrefixedKeys)
+					throw new ArgumentException(
+						"Key size is too big, must be at most " + (AbstractPager.NodeMaxSizePrefixedKeys - AbstractPager.RequiredSpaceForNewNodePrefixedKeys) + " bytes, but was " + key.Size, "key");
+			}
 
             Lazy<Cursor> lazy;
             NodeHeader* node;
