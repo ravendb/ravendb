@@ -2,8 +2,7 @@
 import disableResourceToggleCommand = require("commands/disableResourceToggleCommand");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import resource = require("models/resource");
-import database = require("models/database");
-import filesystem = require("models/filesystem/filesystem");
+import shell = require("viewmodels/shell");
 
 class disableResourceToggleConfirm extends dialogViewModelBase {
 
@@ -16,7 +15,7 @@ class disableResourceToggleConfirm extends dialogViewModelBase {
     deletionText: KnockoutComputed<string>;
     confirmDeletionText: KnockoutComputed<string>;
 
-    constructor(resources: Array<resource>, elementToFocusOnDismissal?: string) {
+    constructor(private resources: Array<resource>, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
 
         if (resources.length === 0) {
@@ -30,17 +29,26 @@ class disableResourceToggleConfirm extends dialogViewModelBase {
     }
 
     toggleDisableReources() {
+        var selected = this.resources.filter((rs: resource) => rs.isSelected())[0];
+        if (!!selected)
+            shell.disconnectFromResourceChangesApi();
+
         var disableToggleCommand = new disableResourceToggleCommand(this.resourcesToDisable(), this.isSettingDisabled);
 
         var disableToggleCommandTask = disableToggleCommand.execute();
 
         disableToggleCommandTask.done((results) => {
-            if (this.resourcesToDisable().length == 1) {
+            if (this.resourcesToDisable().length === 1) {
                 results = [ this.resourcesToDisable()[0].name ];
             }
             this.disableToggleTask.resolve(results);
         });
-        disableToggleCommandTask.fail(response => this.disableToggleTask.reject(response));
+        disableToggleCommandTask.fail(response => {
+            if (!!selected)
+                selected.activate();
+
+            this.disableToggleTask.reject(response);
+        });
 
         this.disableToggleStarted = true;
         dialog.close(this);

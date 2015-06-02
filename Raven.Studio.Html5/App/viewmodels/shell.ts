@@ -10,7 +10,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import viewLocator = require("durandal/viewLocator");
 import resource = require("models/resource");
 import database = require("models/database");
-import filesystem = require("models/filesystem/filesystem");
+import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import documentClass = require("models/document");
 import collection = require("models/collection");
@@ -78,16 +78,16 @@ class shell extends viewModelBase {
     goToDocumentSearch: KnockoutObservable<string>;
     goToDocumentSearchResults = ko.observableArray<string>();
 
-    static fileSystems = ko.observableArray<filesystem>();
+    static fileSystems = ko.observableArray<fileSystem>();
     isActiveFileSystemDisabled: KnockoutComputed<boolean>;
     canShowFileSystemNavbar = ko.computed(() =>
         !!this.lastActivatedResource()
-        && this.lastActivatedResource().type === filesystem.type
+        && this.lastActivatedResource().type === fileSystem.type
         && (this.appUrls.isAreaActive('filesystems')() || this.appUrls.isAreaActive('resources')()));
 
     canShowFileSystemSettings = ko.computed(() => {
         if (!this.canShowFileSystemNavbar()) return false;
-        var fs = <filesystem> this.lastActivatedResource();
+        var fs = <fileSystem> this.lastActivatedResource();
         return fs.activeBundles.contains("Versioning");
     });
 
@@ -149,8 +149,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.activateDatabase(db));
-        ko.postbox.subscribe("ActivateFilesystem", (fs: filesystem) => this.activateFileSystem(fs));
-        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => this.activateCounterStorage(cs));
+        ko.postbox.subscribe("ActivateFilesystem", (fs: fileSystem) => this.activateFileSystem(fs));
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
         ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
@@ -327,32 +326,61 @@ class shell extends viewModelBase {
     }
 
     private activateDatabase(db: database) {
-        if (!!db) {
-            this.updateDbChangesApi(db);
-            shell.fetchDbStats(db);
-            shell.databases().forEach((d: database) => d.isSelected(d.name === db.name));
-            shell.fileSystems().filter(f => f.isSelected()).forEach((f: filesystem) => f.isSelected(false));
-            shell.counterStorages().filter(c => c.isSelected()).forEach((c: counterStorage) => c.isSelected(false));
+        var changeSubscriptionArray = () => [
+            shell.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
+            shell.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
+            shell.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
+        ];
+        var isNotADatabase = this.currentConnectedResource instanceof database === false;
+        this.updateChangesApi(db, isNotADatabase, () => this.fetchDbStats(db), changeSubscriptionArray);
+
+        shell.resources().forEach((r: resource) => r.isSelected(r instanceof database && r.name === db.name));
+    }
+
+    private fetchDbStats(db: database) {
+        if (!!db && !db.disabled() && db.isLicensed()) {
+            new getDatabaseStatsCommand(db, true)
+                .execute()
+                .done((result: databaseStatisticsDto) => db.saveStatistics(result));
         }
     }
 
-    private activateFileSystem(fs: filesystem) {
-        if (!!fs) {
-            this.updateFsChangesApi(fs);
-            shell.fetchFsStats(fs);
-            shell.fileSystems().forEach((f: filesystem) => f.isSelected(f.name === fs.name));
-            shell.databases().filter(d => d.isSelected()).forEach((d: database) => d.isSelected(false));
-            shell.counterStorages().filter(c => c.isSelected()).forEach((c: counterStorage) => c.isSelected(false));
+    private activateFileSystem(fs: fileSystem) {
+        var changesSubscriptionArray = () => [
+            shell.currentResourceChangesApi().watchFsFolders("", () => this.fetchFsStats(fs))
+        ];
+        var isNotAFileSystem = this.currentConnectedResource instanceof fileSystem === false;
+        this.updateChangesApi(fs, isNotAFileSystem, () => this.fetchFsStats(fs), changesSubscriptionArray);
+
+        shell.resources().forEach((r: resource) => r.isSelected(r instanceof fileSystem && r.name === fs.name));
+    }
+
+    private fetchFsStats(fs: fileSystem) {
+        if (!!fs && !fs.disabled() && fs.isLicensed()) {
+            new getFileSystemStatsCommand(fs)
+                .execute()
+                .done((result: filesystemStatisticsDto) => fs.saveStatistics(result));
         }
     }
 
-    private activateCounterStorage(cs: counterStorage) {
-        if (!!cs) {
-            this.updateCsChangesApi(cs);
-            shell.fetchCsStats(cs);
-            shell.counterStorages().forEach((c: counterStorage) => c.isSelected(c.name === cs.name));
-            shell.databases().filter(d => d.isSelected()).forEach((d: database) => d.isSelected(false));
-            shell.fileSystems().filter(f => f.isSelected()).forEach((f: filesystem) => f.isSelected(false));
+    private updateChangesApi(rs: resource, isPreviousDifferentKind: boolean, fetchStats: () => void, subscriptionsArray: () => changeSubscription[]) {
+        fetchStats();
+
+        if (isPreviousDifferentKind || this.currentConnectedResource.name !== rs.name) {
+            // disconnect from the current resource changes api and set the current connected resource
+            shell.disconnectFromResourceChangesApi();
+            this.currentConnectedResource = rs;
+        }
+
+        if ((!rs.disabled() && rs.isLicensed()) && 
+            (isPreviousDifferentKind || shell.currentResourceChangesApi() == null)) {
+            // connect to changes api, if it's not disabled and the changes api isn't already connected
+            var changes = new changesApi(rs, 5000);
+            changes.connectToChangesApiTask.done(() => {
+                fetchStats();
+                shell.currentResourceChangesApi(changes);
+                shell.changeSubscriptionArray = subscriptionsArray();
+            });
         }
     }
 
@@ -414,10 +442,10 @@ class shell extends viewModelBase {
             .done((results: database[]) => shell.updateResourceObservableArray(shell.databases, results, active));
     }
 
-    static reloadFilesystems(active: filesystem): JQueryPromise<filesystem[]> {
+    static reloadFilesystems(active: fileSystem): JQueryPromise<fileSystem[]> {
         return new getFileSystemsCommand()
             .execute()
-            .done((results: filesystem[]) => shell.updateResourceObservableArray(shell.fileSystems, results, active));
+            .done((results: fileSystem[]) => shell.updateResourceObservableArray(shell.fileSystems, results, active));
     }
 
     static reloadCounterStorages(active: counterStorage): JQueryPromise<counterStorage[]> {
@@ -440,8 +468,8 @@ class shell extends viewModelBase {
             $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
                 .done(() => {
                     var connectedResource = this.currentConnectedResource;
-                    var resourceObservableArray: any = (connectedResource instanceof database) ? shell.databases : (connectedResource instanceof filesystem) ? shell.fileSystems : shell.counterStorages;
-                    var activeResourceObservable: any = (connectedResource instanceof database) ? this.activeDatabase : (connectedResource instanceof filesystem) ? this.activeFilesystem : this.activeCounterStorage;
+                    var resourceObservableArray: any = (connectedResource instanceof database) ? shell.databases : (connectedResource instanceof fileSystem) ? shell.fileSystems : shell.counterStorages;
+                    var activeResourceObservable: any = (connectedResource instanceof database) ? this.activeDatabase : (connectedResource instanceof fileSystem) ? this.activeFilesystem : this.activeCounterStorage;
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
             });
         }
@@ -563,7 +591,7 @@ class shell extends viewModelBase {
             newResource = new database(resourceName, true, dto.Disabled);
         }
         else if (resourceType == logTenantType.Filesystem) {
-            newResource = new filesystem(resourceName, true, dto.Disabled);
+            newResource = new fileSystem(resourceName, true, dto.Disabled);
         }
         else if (resourceType == logTenantType.CounterStorage) {
             newResource = new counterStorage(resourceName, true, dto.Disabled);
@@ -621,7 +649,7 @@ class shell extends viewModelBase {
 
         new getFileSystemsCommand()
             .execute()
-            .done((results: filesystem[]) => shell.fileSystems(results))
+            .done((results: fileSystem[]) => shell.fileSystems(results))
             .always(() => deferred.resolve());
 
         return deferred;
@@ -807,74 +835,6 @@ class shell extends viewModelBase {
         }
     }
 
-    private updateDbChangesApi(db: database) {
-        var previousConnectedResource = this.currentConnectedResource;
-        if (this.currentConnectedResource.name != db.name || this.currentConnectedResource.name == db.name && (db.disabled() || !db.isLicensed())) {
-            // disconnect from the current database changes api and set the current connected database
-            shell.disconnectFromResourceChangesApi();
-            this.currentConnectedResource = db;
-        }
-
-        if (!db.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('databases')())
-                /*db.name == "<system>"*/ && previousConnectedResource.name != db.name) {
-            // connect to changes api, if it's not disabled and the changes api isn't already connected
-            var changes = new changesApi(db, 5000);
-            changes.connectToChangesApiTask.done(() => {
-                shell.fetchDbStats(db);
-                shell.currentResourceChangesApi(changes);
-                shell.changeSubscriptionArray = [
-                    shell.currentResourceChangesApi().watchAllDocs(() => shell.fetchDbStats(db)),
-                    shell.currentResourceChangesApi().watchAllIndexes(() => shell.fetchDbStats(db)),
-                    shell.currentResourceChangesApi().watchBulks(() => shell.fetchDbStats(db))
-                ];
-            });
-        }
-    }
-
-    private updateFsChangesApi(fs: filesystem) {
-        var previousConnectedResource = this.currentConnectedResource;
-        if (this.currentConnectedResource.name != fs.name || this.currentConnectedResource.name == fs.name && (fs.disabled() || !fs.isLicensed())) {
-            // disconnect from the current filesystem changes api and set the current connected filesystem
-            shell.disconnectFromResourceChangesApi();
-            this.currentConnectedResource = fs;
-        }
-
-        if (!fs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())
-                && previousConnectedResource.name != fs.name) {
-            // connect to changes api, if it's not disabled and the changes api isn't already connected
-            var changes = new changesApi(fs, 5000);
-            changes.connectToChangesApiTask.done(() => {
-                shell.fetchFsStats(fs);
-                shell.currentResourceChangesApi(changes);
-                shell.changeSubscriptionArray = [
-                    shell.currentResourceChangesApi().watchFsFolders("", () => shell.fetchFsStats(fs))
-                ];
-            });
-        }
-    }
-
-    private updateCsChangesApi(cs: counterStorage) {
-        var previousConnectedResource = this.currentConnectedResource;
-        if (this.currentConnectedResource.name != cs.name || this.currentConnectedResource.name == cs.name && cs.disabled()) {
-            // disconnect from the current filesystem changes api and set the current connected
-            shell.disconnectFromResourceChangesApi();
-            this.currentConnectedResource = cs;
-        }
-
-        if (!cs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('counterstorages')())
-                 && previousConnectedResource.name != cs.name) {
-            // connect to changes api, if it's not disabled and the changes api isn't already connected
-            var changes = new changesApi(cs, 5000);
-            changes.connectToChangesApiTask.done(() => {
-                shell.fetchCsStats(cs);
-                shell.currentResourceChangesApi(changes);
-                shell.changeSubscriptionArray = [
-                    //TODO: enable changes api for counter storages, server side
-                ];
-            });
-        }
-    }
-
     public static disconnectFromResourceChangesApi() {
         if (shell.currentResourceChangesApi()) {
             shell.changeSubscriptionArray.forEach((subscripbtion: changeSubscription) => subscripbtion.off());
@@ -884,31 +844,6 @@ class shell extends viewModelBase {
                 viewModelBase.isConfirmedUsingSystemDatabase = false;
             }
             shell.currentResourceChangesApi(null);
-        }
-    }
-    
-    static fetchDbStats(db: database) {
-        if (db && !db.disabled() && db.isLicensed()) {
-            new getDatabaseStatsCommand(db, true)
-                .execute()
-                .done((result: databaseStatisticsDto) => db.saveStatistics(result));
-        }
-    }
-
-    static fetchFsStats(fs: filesystem) {
-        if (fs && !fs.disabled() && fs.isLicensed()) {
-            new getFileSystemStatsCommand(fs)
-                .execute()
-                .done((result: filesystemStatisticsDto) => fs.saveStatistics(result));
-        }
-    }
-
-    static fetchCsStats(cs: counterStorage) {
-        if (cs && !cs.disabled() && cs.isLicensed()) {
-            //TODO: implememnt fetching of counter storage stats
-/*            new getCounterStorageStatsCommand(cs)
-                .execute()
-                .done(result=> cs.statistics(result));*/
         }
     }
 
@@ -946,7 +881,7 @@ class shell extends viewModelBase {
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion != 13) {
-                    new getLatestServerBuildVersionCommand(true, 3000, 3599) //pass false as a parameter to get the latest unstable
+                    new getLatestServerBuildVersionCommand(true, 3000, 3999) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {
                             if (latestServerBuildResult.LatestBuild > currentBuildVersion) { //
@@ -1023,7 +958,7 @@ class shell extends viewModelBase {
     iconName(rs: resource) {
         if (rs.type === database.type) {
             return "fa fa-database";
-        } else if (rs.type === filesystem.type) {
+        } else if (rs.type === fileSystem.type) {
             return "fa fa-file-image-o";
         } else {
             return "fa fa-calculator";
