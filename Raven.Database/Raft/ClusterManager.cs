@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Linq;
 
 using Rachis;
+using Rachis.Transport;
 
 using Raven.Database.Impl;
 
@@ -21,6 +23,21 @@ namespace Raven.Database.Raft
 		{
 			Engine = engine;
 			Client = new ClusterManagementHttpClient(engine);
+		}
+
+		public ClusterTopology GetTopology()
+		{
+			return new ClusterTopology
+				   {
+					   CurrentLeader = Engine.CurrentLeader,
+					   CurrentTerm = Engine.PersistentState.CurrentTerm,
+					   State = Engine.State.ToString(),
+					   CommitIndex = Engine.CommitIndex,
+					   AllVotingNodes = Engine.CurrentTopology.AllVotingNodes.ToArray(),
+					   PromotableNodes = Engine.CurrentTopology.PromotableNodes.ToArray(),
+					   NonVotingNodes = Engine.CurrentTopology.NonVotingNodes.ToArray(),
+					   TopologyId = Engine.CurrentTopology.TopologyId
+				   };
 		}
 
 		public void Dispose()
@@ -41,5 +58,24 @@ namespace Raven.Database.Raft
 
 			aggregator.ThrowIfNeeded();
 		}
+	}
+
+	public class ClusterTopology
+	{
+		public string CurrentLeader { get; set; }
+
+		public long CurrentTerm { get; set; }
+
+		public string State { get; set; }
+
+		public long CommitIndex { get; set; }
+
+		public NodeConnectionInfo[] AllVotingNodes { get; set; }
+
+		public NodeConnectionInfo[] PromotableNodes { get; set; }
+
+		public NodeConnectionInfo[] NonVotingNodes { get; set; }
+
+		public Guid TopologyId { get; set; }
 	}
 }

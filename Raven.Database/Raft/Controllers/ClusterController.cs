@@ -67,17 +67,7 @@ namespace Raven.Database.Raft.Controllers
 		[RavenRoute("cluster/topology")]
 		public HttpResponseMessage Topology()
 		{
-			return GetMessageWithObject(new
-			{
-				ClusterManager.Engine.CurrentLeader,
-				ClusterManager.Engine.PersistentState.CurrentTerm,
-				State = ClusterManager.Engine.State.ToString(),
-				ClusterManager.Engine.CommitIndex,
-				ClusterManager.Engine.CurrentTopology.AllVotingNodes,
-				ClusterManager.Engine.CurrentTopology.PromotableNodes,
-				ClusterManager.Engine.CurrentTopology.NonVotingNodes,
-				ClusterManager.Engine.CurrentTopology.TopologyId
-			});
+			return GetMessageWithObject(ClusterManager.GetTopology());
 		}
 
 		[HttpPost]
