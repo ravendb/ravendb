@@ -207,6 +207,14 @@ namespace Voron.Trees
 				}
 	        }
 
+	        bool addedAsImplicitRef = false;
+
+			if (_page.IsBranch && newPosition && splitIndex == currentIndex && seperatorKey == _newKey)
+			{
+				AddNodeToPage(rightPage, 0, _tree.KeysPrefixing ? (MemorySlice)PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys);
+				addedAsImplicitRef = true;
+			}
+
 	        // move the actual entries from page to right page
             ushort nKeys = _page.NumberOfEntries;
             for (int i = splitIndex; i < nKeys; i++)
@@ -225,6 +233,12 @@ namespace Voron.Trees
                 }
             }
             _page.Truncate(_tx, splitIndex);
+
+	        if (addedAsImplicitRef)
+	        {
+				_cursor.Push(rightPage);
+		        return null;
+	        }
 
             // actually insert the new key
 			try
@@ -296,15 +310,12 @@ namespace Voron.Trees
 
 		private byte* AddSeparatorToParentPage(long pageNumber, MemorySlice seperatorKey)
 		{
-			var oldLastSearchPosition = _parentPage.LastSearchPosition;
 			var pos = _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
 
 			var separatorKeyToInsert = _parentPage.PrepareKeyToInsert(seperatorKey, pos);
 
 			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
 			{
-				_parentPage.LastSearchPosition = oldLastSearchPosition;
-
 				var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
 					0, _cursor, _treeState);
 				return pageSplitter.Execute();

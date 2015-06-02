@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Voron.Debugging;
+using Voron.Impl;
 using Xunit;
 using Xunit.Extensions;
 
@@ -50,17 +51,17 @@ namespace Voron.Tests.Bugs
 			}
 
 			//TODO arek
-			//using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			//{
-			//	var tree = tx.ReadTree("tree");
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var tree = tx.ReadTree("tree");
 
-			//	for (int i = 0; i < keys.Count; i++)
-			//	{
-			//		var key = keys[i];
+				for (int i = 0; i < keys.Count; i++)
+				{
+					var key = keys[i];
 
-			//		Assert.NotNull(tree.Read(key));
-			//	}
-			//}
+					Assert.NotNull(tree.Read(key));
+				}
+			}
 
 			//TODO arek
 			//foreach (var key in keys)
@@ -111,17 +112,17 @@ namespace Voron.Tests.Bugs
 			}
 
 			//TODO arek
-			//using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			//{
-			//	var tree = tx.ReadTree("tree");
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var tree = tx.ReadTree("tree");
 
-			//	for (int i = 0; i < keys.Count; i++)
-			//	{
-			//		var key = keys[i];
+				for (int i = 0; i < keys.Count; i++)
+				{
+					var key = keys[i];
 
-			//		Assert.NotNull(tree.Read(key));
-			//	}
-			//}
+					Assert.NotNull(tree.Read(key));
+				}
+			}
 
 			//TODO arek
 			//foreach (var key in keys)
@@ -178,17 +179,17 @@ namespace Voron.Tests.Bugs
 			}
 
 			//TODO arek
-			//using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			//{
-			//	var tree = tx.ReadTree("tree");
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var tree = tx.ReadTree("tree");
 
-			//	for (int i = 0; i < addedKeys.Count; i++)
-			//	{
-			//		var key = addedKeys[i];
+				for (int i = 0; i < addedKeys.Count; i++)
+				{
+					var key = addedKeys[i];
 
-			//		Assert.NotNull(tree.Read(key));
-			//	}
-			//}
+					Assert.NotNull(tree.Read(key));
+				}
+			}
 
 			//TODO arek
 			//foreach (var key in addedKeys)
