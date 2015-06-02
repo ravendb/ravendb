@@ -117,7 +117,7 @@ namespace Raven.Tests.Counters
 									Assert.Equal(3, total);
 
 									serverA = GetNewServer(8077, runInMemory: false, dataDirectory: "data");
-									storeA.ReplicationInformer.RefreshReplicationInformation((CounterStore)storeA);
+									storeA.ReplicationInformer.RefreshReplicationInformation();
 									serverB.Dispose();
 
 									total = await storeA.GetOverallTotalAsync("group", "counter");
@@ -168,14 +168,14 @@ namespace Raven.Tests.Counters
 
 								Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
 								Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
-								storeA.ReplicationInformer.RefreshReplicationInformation((CounterStore) storeA);
+								storeA.ReplicationInformer.RefreshReplicationInformation();
 								serverA.Dispose();
 
 								var total = await storeA.GetOverallTotalAsync("group", "counter");
 								Assert.Equal(2, total);
 
 								serverA = GetNewServer(8077, runInMemory: false);
-								storeA.ReplicationInformer.RefreshReplicationInformation((CounterStore)storeA);
+								storeA.ReplicationInformer.RefreshReplicationInformation();
 								//now both A and B are dead, so check if we can fallback to C as well
 								serverA.Dispose();
 								serverB.Dispose();

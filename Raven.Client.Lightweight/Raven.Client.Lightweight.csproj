@@ -125,7 +125,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Counters\CounterStore.Replication.cs" />
-    <Compile Include="Counters\Replication\ICountersReplicationInformer.cs" />
     <Compile Include="Counters\ICounterStore.cs" />
     <Compile Include="Document\AsyncDocumentSubscriptions.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />

@@ -25,6 +25,10 @@ namespace Raven.Tests.Counters
 					using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
 					using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreC))
 					{
+						storeA.Initialize(true);
+						storeB.Initialize(true);
+						storeC.Initialize(true);
+
 						storeA.Convention.FailoverBehavior = FailoverBehavior.ReadFromAllServers;
 						await SetupReplicationAsync(storeA, storeB);
 						await SetupReplicationAsync(storeA, storeC);

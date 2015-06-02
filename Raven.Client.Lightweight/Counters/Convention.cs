@@ -22,6 +22,8 @@ namespace Raven.Client.Counters
 			ShouldCacheRequest = url => true;
 		}
 
+		public double RequestTimeThresholdInMilliseconds { get; set; }
+
 		public FailoverBehavior FailoverBehavior { get; set; }
 
 		public bool AllowMultipuleAsyncOperations { get; set; }

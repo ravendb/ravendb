@@ -62,7 +62,7 @@ namespace Raven.Client.Counters
 				}, Name).ConfigureAwait(false).GetAwaiter().GetResult();
 			}			
 
-			replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this); // make sure it is initialized
+			replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this, Convention); // make sure it is initialized
 		}
 
 		public ICountersChanges Changes(string counterStorage = null)
@@ -143,7 +143,7 @@ namespace Raven.Client.Counters
 		{
 			get
 			{
-				return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this));
+				return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this, Convention));
 			}
 		}
 
