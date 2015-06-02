@@ -439,7 +439,7 @@ namespace Raven.Tests.Helpers
 			return ravenDbServer;
 		}
 
-		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool? runInMemory = null, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
+		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool? runInMemory = null, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null, Action onCommit = null)
 		{
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
@@ -454,10 +454,16 @@ namespace Raven.Tests.Helpers
 			ravenConfiguration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
 			ravenConfiguration.Storage.Voron.TempPath = tempDir;
 
+			Action onCommitNotification = () =>
+			{
+				if (onCommit != null)
+					onCommit();
+			};
+
 			if (storageType == "voron")
-				newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, () => { }, () => { });
+				newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, onCommitNotification, () => { }, () => { }, () => { });
 			else
-				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(ravenConfiguration, () => { }, () => { });
+				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(ravenConfiguration, onCommitNotification, () => { }, () => { }, () => { });
 
 			newTransactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;

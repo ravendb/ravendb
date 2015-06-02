@@ -16,6 +16,9 @@ using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
+using Raven.Database.Config;
+using Raven.Storage.Esent;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Storage
 {
@@ -287,5 +290,7 @@ namespace Raven.Tests.Storage
 
 			});
 		}
+
+		
 	}
 }

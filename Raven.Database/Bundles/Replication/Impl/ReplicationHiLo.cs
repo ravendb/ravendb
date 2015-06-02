@@ -93,7 +93,7 @@ namespace Raven.Bundles.Replication.Impl
 			{
 				try
 				{
-					using (Database.TransactionalStorage.DisableBatchNesting(skipOnCommitNotification: true))
+					using (Database.TransactionalStorage.DisableBatchNesting())
 					{
 						var minNextMax = currentMax.Value;
 						long max = 0;

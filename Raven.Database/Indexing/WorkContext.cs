@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -19,6 +20,7 @@ using Raven.Database.Data;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -39,9 +41,14 @@ namespace Raven.Database.Indexing
 		private int workCounter;
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
-		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
+		private readonly ThreadLocal<Stack<List<Func<string>>>> shouldNotifyOnWork = new ThreadLocal<Stack<List<Func<string>>>>(() =>
+		{
+			var stack = new Stack<List<Func<string>>>();
+			stack.Push(new List<Func<string>>());
+			return stack;
+		});
 		private long errorsCounter = 0;
-
+		
 	    public WorkContext()
 	    {
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
@@ -200,7 +207,7 @@ namespace Raven.Database.Indexing
 
 		public void ShouldNotifyAboutWork(Func<string> why)
 		{
-			shouldNotifyOnWork.Value.Add(why);
+			shouldNotifyOnWork.Value.Peek().Add(why);
 			UpdateFoundWork();
 		}
 
@@ -208,29 +215,47 @@ namespace Raven.Database.Indexing
 		{
 			if (disposed)
 				return;
-			if (shouldNotifyOnWork.Value.Count == 0)
+			if (shouldNotifyOnWork.Value.Peek().Count == 0)
 				return;
 			NotifyAboutWork();
+		}
+
+		public void NestedTransactionEnter()
+		{
+			shouldNotifyOnWork.Value.Push(new List<Func<string>>());
+		}
+
+		public void NestedTransactionExit()
+		{
+			if (shouldNotifyOnWork.Value.Count == 1)
+				throw new InvalidOperationException("BUG: Cannot empty the should notify work stack");
+			shouldNotifyOnWork.Value.Pop();
+		}
+
+		public int GetWorkCount()
+		{
+			return workCounter;
 		}
 
 		public void NotifyAboutWork()
 		{
 			lock (waitForWork)
 			{
+				var notifications = shouldNotifyOnWork.Value.Peek();
 				if (doWork == false)
 				{
 					// need to clear this anyway
 					if(disposed == false)
-						shouldNotifyOnWork.Value.Clear();
+						notifications.Clear();
 					return;
 				}
 				var increment = Interlocked.Increment(ref workCounter);
 				if (log.IsDebugEnabled)
 				{
-					var reason = string.Join(", ", shouldNotifyOnWork.Value.Select(action => action()).Where(x => x != null));
+					var reason = string.Join(", ", notifications.Select(action => action()).Where(x => x != null));
 					log.Debug("Incremented work counter to {0} because: {1}", increment, reason);
 				}
-				shouldNotifyOnWork.Value.Clear();
+				notifications.Clear();
 				Monitor.PulseAll(waitForWork);
 			}
 		}

@@ -52,7 +52,7 @@ namespace Raven.Database.Tasks
 					string.Join(", ", ReferencesToCheck));
 			}
 
-			using (context.Database.TransactionalStorage.DisableBatchNesting(skipOnCommitNotification: true))
+			using (context.Database.TransactionalStorage.DisableBatchNesting())
 			{
 				var docsToTouch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 				var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);

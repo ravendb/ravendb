@@ -1226,7 +1226,7 @@ namespace Raven.Database
 								if (database.StorageInaccessible != null)
 									database.StorageInaccessible(database, EventArgs.Empty);
 
-							});
+							}, database.WorkContext.NestedTransactionEnter, database.WorkContext.NestedTransactionExit);
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 

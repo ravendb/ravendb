@@ -15,6 +15,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
+using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
@@ -49,14 +50,16 @@ namespace Raven.Storage.Voron
 
 		private readonly InMemoryRavenConfiguration configuration;
 
-		private Action onCommit;
+		private readonly Action onCommit;
 		private readonly Action onStorageInaccessible;
 
 		private TableStorage tableStorage;
 
 	    private readonly IBufferPool bufferPool;
+		private Action onNestedTransactionExit;
+		private Action onNestedTransactionEnter;
 
-		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible)
+		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
 		{
 			this.configuration = configuration;
 			this.onCommit = onCommit;
@@ -69,6 +72,8 @@ namespace Raven.Storage.Voron
             bufferPool = new BufferPool(
 				configuration.Storage.Voron.MaxBufferPoolSize * 1024L * 1024L * 1024L, 
 				int.MaxValue); // 2GB max buffer size (voron limit)
+			this.onNestedTransactionEnter = onNestedTransactionEnter;
+			this.onNestedTransactionExit = onNestedTransactionExit;
 		}
 
 		public void Dispose()
@@ -107,22 +112,22 @@ namespace Raven.Storage.Voron
 			return exitLockDisposable;
 		}
 
-		public IDisposable DisableBatchNesting(bool skipOnCommitNotification)
+		/// <summary>
+		/// Force current operations inside context to be performed directly
+		/// </summary>
+		/// <returns></returns>
+		public IDisposable DisableBatchNesting()
 		{
 			disableBatchNesting.Value = new object();
+			if (onNestedTransactionEnter != null)
+				onNestedTransactionEnter();
 
-			if (skipOnCommitNotification)
+			return new DisposableAction(() =>
 			{
-				var onCommitBackup = onCommit;
-				disableBatchNesting.Value = new object();
-				onCommit = null;
-				return new DisposableAction(() =>
-				{
-					disableBatchNesting.Value = null;
-					onCommit = onCommitBackup;
-				});
-			}
-			return new DisposableAction(() => disableBatchNesting.Value = null);
+				if (onNestedTransactionExit != null)
+					onNestedTransactionExit();
+				disableBatchNesting.Value = null;
+			});
 		}
 
 		public IStorageActionsAccessor CreateAccessor()
@@ -395,7 +400,7 @@ namespace Raven.Storage.Voron
 		}
         public bool SupportsDtc { get { return false; } }
 
-	    public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
+		public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
 	    {
 			if (ravenConfiguration.RunInMemory)
 				throw new InvalidOperationException("Cannot compact in-memory running Voron storage");
