@@ -21,6 +21,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Database.FileSystem.Controllers
 {
@@ -237,6 +238,12 @@ namespace Raven.Database.FileSystem.Controllers
             rename = FileHeader.Canonize(rename);
 		    var etag = GetEtag();
 
+		    if (rename.Length > SystemParameters.KeyMost)
+		    {
+				Log.Debug("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename);
+				return GetMessageWithString(string.Format("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename),HttpStatusCode.BadRequest);
+		    }
+
 			Storage.Batch(accessor =>
 			{
 				FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
@@ -287,6 +294,12 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 			var etag = GetEtag();
+
+			if (name.Length > SystemParameters.KeyMost)
+			{
+				Log.Debug("File '{0}' was not created due to illegal name length", name);
+				return GetMessageWithString(string.Format("File '{0}' was not created due to illegal name length", name), HttpStatusCode.BadRequest);
+			}
 
 			var options = new FileActions.PutOperationOptions();
 
