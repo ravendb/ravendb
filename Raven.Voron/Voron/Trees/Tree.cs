@@ -331,6 +331,12 @@ namespace Voron.Trees
                 p.DebugValidate(_tx, rootPageNumber);
                 if (p.IsBranch == false)
                     continue;
+
+				if (p.NumberOfEntries < 2)
+				{
+					throw new InvalidOperationException("The page " + p.PageNumber + " has " + p.NumberOfEntries + " entry");
+				}
+
                 for (int i = 0; i < p.NumberOfEntries; i++)
                 {
                     var page = p.GetNode(i)->PageNumber;
