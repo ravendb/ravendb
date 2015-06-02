@@ -459,6 +459,7 @@
     <Compile Include="Util\Streams\Substream.cs" />
     <Compile Include="Util\RavenTextFieldParser.cs" />
     <Compile Include="Util\MalformedLineException.cs" />
+    <Compile Include="Util\EnvironmentUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
