@@ -7,6 +7,11 @@ namespace Raven.Database.Raft.Dto
 {
 	public class ClusterConfiguration
 	{
+		public ClusterConfiguration()
+		{
+			EnableReplication = true;
+		}
+
 		public bool EnableReplication { get; set; }
 	}
 }

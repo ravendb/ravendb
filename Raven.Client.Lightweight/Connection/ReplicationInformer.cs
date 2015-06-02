@@ -99,9 +99,9 @@ namespace Raven.Client.Connection
             ReplicationDestinations = replicationDocument.Destinations.Select(x =>
             {
                 var url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url : x.ClientVisibleUrl;
-                if (string.IsNullOrEmpty(url) || x.Disabled || x.IgnoredClient)
+                if (string.IsNullOrEmpty(url))
                     return null;
-	            if (x.ShouldReplicateFromSpecificCollections) 
+	            if (x.CanBeFailover() == false) 
 					return null;
                 if (string.IsNullOrEmpty(x.Database))
                     return new OperationMetadata(url, x.Username, x.Password, x.Domain, x.ApiKey, x.ClusterInformation);

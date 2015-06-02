@@ -3,7 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Replication;
@@ -129,8 +128,8 @@ namespace Raven.Tests.Issues
 				for (var i = 0; i < 100; i++)
 					store1.DatabaseCommands.Get("keys/1");
 
-				rate = metric.Rate();
-				Assert.True(rate >= 0.75, "The rate is " + rate);
+				var newRate = metric.Rate();
+				Assert.True(newRate > rate, string.Format("{0} > {1}", newRate, rate));
 			}
 		}
 

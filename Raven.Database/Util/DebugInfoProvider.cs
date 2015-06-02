@@ -12,6 +12,8 @@ using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Config;
 using Raven.Database.Indexing;
+using Raven.Database.Raft;
+using Raven.Database.Raft.Dto;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Tasks;
 using Raven.Imports.Newtonsoft.Json;
@@ -30,7 +32,7 @@ namespace Raven.Database.Util
 	{
 		private const CompressionLevel CompressionLevel = System.IO.Compression.CompressionLevel.Optimal;
 
-		public static void CreateInfoPackageForDatabase(ZipArchive package, DocumentDatabase database, RequestManager requestManager, string zipEntryPrefix = null)
+		public static void CreateInfoPackageForDatabase(ZipArchive package, DocumentDatabase database, RequestManager requestManager, ClusterManager clusterManager, string zipEntryPrefix = null)
         {
             zipEntryPrefix = zipEntryPrefix ?? string.Empty;
 
@@ -231,6 +233,33 @@ namespace Raven.Database.Util
 				});
 
 				streamWriter.Flush();
+			}
+
+			if (clusterManager != null && database.IsSystemDatabase())
+			{
+				var clusterTopology = package.CreateEntry(zipEntryPrefix + "cluster-topology.json", CompressionLevel);
+
+				using (var stream = clusterTopology.Open())
+				using (var streamWriter = new StreamWriter(stream))
+				{
+					jsonSerializer.Serialize(streamWriter, clusterManager.GetTopology());
+					streamWriter.Flush();
+				}
+
+				var configurationJson = database.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
+				if (configurationJson == null)
+					return;
+
+				var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+
+				var clusterConfiguration = package.CreateEntry(zipEntryPrefix + "cluster-configuration.json", CompressionLevel);
+
+				using (var stream = clusterConfiguration.Open())
+				using (var streamWriter = new StreamWriter(stream))
+				{
+					jsonSerializer.Serialize(streamWriter, configuration);
+					streamWriter.Flush();
+				}
 			}
         }
 

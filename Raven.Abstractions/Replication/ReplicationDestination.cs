@@ -39,16 +39,6 @@ namespace Raven.Abstractions.Replication
 			}
 		}
 
-		[JsonIgnore]
-		public bool ShouldReplicateFromSpecificCollections
-		{
-			get
-			{
-				return SourceCollections != null &&
-				       SourceCollections.Length > 0;
-			}
-		}
-
 		/// <summary>
 		/// If an option to replicate only from specific collections is selected, 
 		/// replicate documents only from the specified collections
@@ -62,7 +52,7 @@ namespace Raven.Abstractions.Replication
 			set
 			{
 				_sourceCollections = value;
-				if (_sourceCollections.Length > 0)
+				if (value != null && value.Length > 0)
 					IgnoredClient = true;
 			}
 		}
@@ -127,6 +117,11 @@ namespace Raven.Abstractions.Replication
 					return null;
 				return url + " " + Database;
 			}
+		}
+
+		public bool CanBeFailover()
+		{
+			return IgnoredClient == false && Disabled == false && SourceCollections.Length == 0;
 		}
 
 		protected bool Equals(ReplicationDestination other)

@@ -855,7 +855,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					DatabasesLandlord.ForAllDatabases(database =>
 					{
 						var prefix = string.IsNullOrWhiteSpace(database.Name) ? "System" : database.Name;
-						DebugInfoProvider.CreateInfoPackageForDatabase(package, database, RequestManager, prefix + "/");
+						DebugInfoProvider.CreateInfoPackageForDatabase(package, database, RequestManager, ClusterManager, prefix + "/");
 					});
 
 					var stacktraceRequsted = GetQueryStringValue("stacktrace");

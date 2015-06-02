@@ -208,27 +208,28 @@ namespace Raven.Client.Connection
 			var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 
 			var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
-			if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && method == HttpMethods.Get && primaryRequestTimeMetric != null)
+
+			if (method == HttpMethods.Get && (shouldReadFromAllServers || allowReadFromSecondariesWhenRequestTimeThresholdIsPassed))
 			{
-				shouldReadFromAllServers = primaryRequestTimeMetric.RateSurpassed(Conventions);
+				var replicationIndex = -1;
+				if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && primaryRequestTimeMetric != null && primaryRequestTimeMetric.RateSurpassed(Conventions))
+					replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count);
+				else if (shouldReadFromAllServers)
+					replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1);
+
+				// if replicationIndex == destinations count, then we want to use the master
+				// if replicationIndex < 0, then we were explicitly instructed to use the master
+				if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
+				{
+					// if it is failing, ignore that, and move to the master or any of the replicas
+					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, method, false, null, token))
+					{
+						operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
+						if (operationResult.Success)
+							return operationResult.Result;
+					}
+				}
 			}
-           
-            if (shouldReadFromAllServers && method == HttpMethods.Get)
-            {
-                var replicationIndex = currentReadStripingBase%(localReplicationDestinations.Count + 1);
-                // if replicationIndex == destinations count, then we want to use the master
-                // if replicationIndex < 0, then we were explicitly instructed to use the master
-                if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
-                {
-                    // if it is failing, ignore that, and move to the master or any of the replicas
-                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, method, false, null,token))
-                    {
-                        operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
-                        if (operationResult.Success)
-                            return operationResult.Result;
-                    }
-                }
-            }
 
             if (ShouldExecuteUsing(primaryOperation,primaryOperation, method, true, null,token))
             {
