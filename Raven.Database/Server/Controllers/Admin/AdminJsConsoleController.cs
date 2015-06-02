@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Database.JsConsole;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers.Admin
 {
@@ -26,6 +28,10 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			var result = console.ApplyScript(script);
 
+			if (result.Type == JTokenType.Null)
+			{
+				result = new RavenJValue("OK");
+			}
 			return GetMessageWithObject(result);
 		}
 	}

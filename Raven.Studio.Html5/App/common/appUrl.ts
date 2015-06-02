@@ -230,6 +230,10 @@ class appUrl {
         return "#admin/settings/ioTest";
     }
 
+	static forAdminJsConsole(): string {
+		return "#admin/settings/console";
+	}
+
     static forStudioConfig(): string {
         return "#admin/settings/studioConfig";
     }
