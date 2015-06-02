@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Counters.Actions;
 using Raven.Client.Counters.Operations;
 
 namespace Raven.Client.Counters
@@ -16,7 +15,7 @@ namespace Raven.Client.Counters
 			private readonly Lazy<CountersBatchOperation> defaultBatchOperation;
 			private readonly ConcurrentDictionary<string, CountersBatchOperation> batchOperations;
 
-			public BatchOperationsStore(CounterStore parent)
+			internal BatchOperationsStore(CounterStore parent)
 			{
 				batchOperations = new ConcurrentDictionary<string, CountersBatchOperation>();
 				this.parent = parent;
@@ -72,6 +71,8 @@ namespace Raven.Client.Counters
 			{
 				if (string.IsNullOrWhiteSpace(parent.Name))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
+
+				parent.AssertInitialized();
 
 				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 				await defaultBatchOperation.Value.FlushAsync();

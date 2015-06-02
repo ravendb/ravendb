@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
-using Raven.Client.Connection;
 using Raven.Client.Counters.Changes;
 using Raven.Client.Counters.Replication;
-using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.Counters
 {

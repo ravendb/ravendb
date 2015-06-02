@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Replication;
-using Xunit;
 using Xunit.Extensions;
 
 namespace Raven.Tests.Counters
@@ -14,8 +9,8 @@ namespace Raven.Tests.Counters
 	{
 		[Theory]
 		[InlineData(6)]
-		[InlineData(9)]
-		[InlineData(30)]
+//		[InlineData(9)]
+//		[InlineData(30)]
 		public async Task When_replicating_can_do_read_striping(int requestCount)
 		{
 			using (var serverA = GetNewServer(8077))

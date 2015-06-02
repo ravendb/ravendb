@@ -135,8 +135,7 @@ namespace Raven.Tests.Counters
 			int startCount = 0, endCount = 0;
 			using (var store = NewRemoteCountersStore())
 			{
-				using (var batchOperation = store.Advanced.NewBatch(store.Name,
-														new CountersBatchOptions { BatchSizeLimit = batchSizeLimit }))
+				using (var batchOperation = store.Advanced.NewBatch(new CountersBatchOptions { BatchSizeLimit = batchSizeLimit }))
 				{
 					store.Changes().Task.Result
 						.ForBulkOperation(batchOperation.OperationId).Task.Result

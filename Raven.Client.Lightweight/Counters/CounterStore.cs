@@ -1,12 +1,9 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security;
-using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
@@ -15,13 +12,10 @@ using Raven.Abstractions.OAuth;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
-using Raven.Client.Connection.Profiling;
-using Raven.Client.Counters.Actions;
 using Raven.Client.Counters.Changes;
 using Raven.Client.Counters.Replication;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Counters
 {
@@ -85,6 +79,8 @@ namespace Raven.Client.Counters
 		{
 			if (string.IsNullOrEmpty(Url))
 				throw new InvalidOperationException("Changes API requires usage of server/client");
+			
+			AssertInitialized();
 
 			var tenantUrl = Url + "/cs/" + counterStorage;
 
@@ -105,7 +101,7 @@ namespace Raven.Client.Counters
 
 		public bool WasDisposed { get; private set; }
 
-		private void AssertInitialized()
+		internal void AssertInitialized()
 		{
 			if (!isInitialized)
 				throw new InvalidOperationException("You cannot open a session or access the counters commands before initializing the counter store. Did you forget calling Initialize()?");
@@ -246,8 +242,6 @@ namespace Raven.Client.Counters
 		{
 			if(batch.IsValueCreated)
 				batch.Value.Dispose();
-
-			
 		}
 	}
 }

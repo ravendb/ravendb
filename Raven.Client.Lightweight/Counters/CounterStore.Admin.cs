@@ -29,10 +29,13 @@ namespace Raven.Client.Counters
 			/// </summary>
 			/// <param name="counterStorageDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
 			/// <param name="counterStorageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
-			public async Task CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, string counterStorageName, bool shouldUpateIfExists = false, CancellationToken token = default(CancellationToken))
+			public async Task<CounterStore> CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, string counterStorageName, bool shouldUpateIfExists = false, OperationCredentials credentials = null, CancellationToken token = default(CancellationToken))
 			{
 				if (counterStorageDocument == null)
 					throw new ArgumentNullException("counterStorageDocument");
+				if (counterStorageName == null) throw new ArgumentNullException("counterStorageName");
+
+				parent.AssertInitialized();
 
 				var urlTemplate = "{0}/admin/cs/{1}";
 				if (shouldUpateIfExists)
@@ -56,10 +59,18 @@ namespace Raven.Client.Counters
 						throw;
 					}
 				}
+
+				return new CounterStore
+				{
+					Name = counterStorageName,
+					Url = parent.Url,
+					Credentials = credentials ?? parent.Credentials
+				};
 			}
 
 			public async Task DeleteCounterStorageAsync(string counterStorageName, bool hardDelete = false, CancellationToken token = default(CancellationToken))
 			{
+				parent.AssertInitialized();
 				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 				var requestUriString = String.Format("{0}/admin/cs/{1}?hard-delete={2}", parent.Url, counterStorageName, hardDelete);
@@ -81,6 +92,7 @@ namespace Raven.Client.Counters
 
 			public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
 			{
+				parent.AssertInitialized();
 				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 				var requestUriString = String.Format("{0}/cs/counterStorageNames", parent.Url);
