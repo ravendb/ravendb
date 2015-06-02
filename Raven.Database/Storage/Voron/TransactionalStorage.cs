@@ -107,11 +107,11 @@ namespace Raven.Storage.Voron
 			return exitLockDisposable;
 		}
 
-		public IDisposable DisableBatchNesting(bool allowCommit = false)
+		public IDisposable DisableBatchNesting(bool skipOnCommitNotification)
 		{
 			disableBatchNesting.Value = new object();
 
-			if (allowCommit)
+			if (skipOnCommitNotification)
 			{
 				var onCommitBackup = onCommit;
 				disableBatchNesting.Value = new object();
