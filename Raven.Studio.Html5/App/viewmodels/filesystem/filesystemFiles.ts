@@ -21,8 +21,7 @@ import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFi
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import filesystemEditFile = require("viewmodels/filesystem/filesystemEditFile");
-import filerenamedialog = require("viewmodels/filesystem/filerenamedialog");
-import renameFileCommand = require("commands/filesystem/renameFileCommand");
+import fileRenameDialog = require("viewmodels/filesystem/fileRenameDialog");
 
 class filesystemFiles extends viewModelBase {
 
@@ -297,7 +296,7 @@ class filesystemFiles extends viewModelBase {
         if (grid) {
             var selectedItem = <file>grid.getSelectedItems(1).first();
             var currentFileName = selectedItem.getId();
-            var dialog = new filerenamedialog(currentFileName, this.activeFilesystem());
+            var dialog = new fileRenameDialog(currentFileName, this.activeFilesystem());
             dialog.onExit().done((newName: string) => {
                 var currentFilesystemName = this.activeFilesystem().name;
                 var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
