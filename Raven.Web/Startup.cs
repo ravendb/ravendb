@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Web;
 using Owin;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -42,7 +43,8 @@ namespace Raven.Web
 								_server.Dispose();
 								_server = null;
 							}
-							throw;
+
+							throw new HttpException(503, "Startup Configuration Failed", ex);
 						}
 						finally
 						{
