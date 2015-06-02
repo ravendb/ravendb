@@ -109,17 +109,26 @@ namespace Voron.Trees
                 byte* pos;
                 if (_page.IsBranch)
                 {
-                    // here we steal the last entry from the current page so we maintain the implicit null left entry
-                    NodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
-                    Debug.Assert(node->Flags == NodeFlags.PageRef);
-					rightPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice) PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, node->PageNumber);
-                    pos = AddNodeToPage(rightPage, 1);
+					if (_page.NumberOfEntries > 2)
+					{
+						// here we steal the last entry from the current page so we maintain the implicit null left entry
 
-	                var separatorKey = _page.GetNodeKey(node);
+						NodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
+						Debug.Assert(node->Flags == NodeFlags.PageRef);
+						rightPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice)PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, node->PageNumber);
+						pos = AddNodeToPage(rightPage, 1);
 
-                    AddSeparatorToParentPage(rightPage.PageNumber, separatorKey);
+						var separatorKey = _page.GetNodeKey(node);
 
-                    _page.RemoveNode(_page.NumberOfEntries - 1);
+						AddSeparatorToParentPage(rightPage.PageNumber, separatorKey);
+
+						_page.RemoveNode(_page.NumberOfEntries - 1);
+					}
+					else
+					{
+						_tx.FreePage(rightPage.PageNumber); // return the unnecessary right page
+						return AddSeparatorToParentPage(_pageNumber, _newKey);
+					}
                 }
                 else
                 {
