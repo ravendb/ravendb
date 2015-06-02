@@ -306,19 +306,27 @@ namespace Voron.Trees
         {
 	        MemorySlice keyToInsert;
 
+	        int pageSize = 0;
+
 	        if (_tree.KeysPrefixing)
-		        keyToInsert = new PrefixedSlice(_newKey); // let's assume that _newkey won't be prefixed to ensure the destination page will have enough space
+			{
+				keyToInsert = new PrefixedSlice(_newKey); // let's assume that _newkey won't match any of the existing prefixes
+
+				pageSize += Constants.PrefixInfoSectionSize;
+				pageSize += Constants.PrefixNodeHeaderSize + 1; // possible new prefix,  + 1 because of possible 2-byte alignment
+			}
 	        else
 		        keyToInsert = _newKey;
 
-	        var pageSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert , _len) + Constants.NodeOffsetSize;
+	        pageSize += SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert , _len) + Constants.NodeOffsetSize;
 
 			if (prefixes != null)
 			{
 				// we are going to copy all existing prefixes so we need to take into account their sizes
 				for (var i = 0; i < prefixes.Length; i++)
 				{
-					pageSize += (Constants.PrefixNodeHeaderSize + prefixes[i].Header.PrefixLength) & 1; // & 1 because we need 2-byte alignment
+					var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixes[i].Header.PrefixLength;
+					pageSize += prefixNodeSize + (prefixNodeSize & 1); // & 1 because we need 2-byte alignment
 				}
 			}
 
