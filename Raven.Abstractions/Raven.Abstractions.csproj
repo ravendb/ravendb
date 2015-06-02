@@ -1,10 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -60,6 +58,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ICSharpCode.NRefactory">
@@ -112,28 +111,31 @@
       <Link>Imports\Newtonsoft.Json\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\*.cs">
-      <Link>Imports\Newtonsoft.Json\Bson\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Bson\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\*.cs">
-      <Link>Imports\Newtonsoft.Json\Converters\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Converters\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\*.cs">
-      <Link>Imports\Newtonsoft.Json\Linq\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Linq\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\JsonPath\*.cs">
-      <Link>Imports\Newtonsoft.Json\Linq\JsonPath\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Linq\JsonPath\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Schema\*.cs">
-      <Link>Imports\Newtonsoft.Json\Schema\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Schema\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\*.cs">
-      <Link>Imports\Newtonsoft.Json\Serialization\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Serialization\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
-      <Link>Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Utilities\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="Cluster\ClusterBehavior.cs" />
     <Compile Include="Cluster\ClusterInformation.cs" />
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
+      <Link>Imports\Newtonsoft.Json\%25%28FileName%29</Link>
+    </Compile>
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
@@ -455,6 +457,8 @@
     <Compile Include="Util\Streams\IBufferPool.cs" />
     <Compile Include="Util\Streams\NoBufferPool.cs" />
     <Compile Include="Util\Streams\Substream.cs" />
+    <Compile Include="Util\RavenTextFieldParser.cs" />
+    <Compile Include="Util\MalformedLineException.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">

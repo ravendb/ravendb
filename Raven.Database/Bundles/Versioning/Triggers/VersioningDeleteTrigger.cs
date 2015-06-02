@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Threading;
-using Microsoft.VisualBasic.Logging;
+// using Microsoft.VisualBasic.Logging;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.Plugins;
