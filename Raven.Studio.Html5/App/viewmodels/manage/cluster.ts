@@ -23,14 +23,12 @@ class cluster extends viewModelBase {
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
 	serverUrl = ko.observable<string>();
-	isSaveEnabled: KnockoutComputed<boolean>;
-	clusterConfiguration = ko.observable<clusterConfiguration>();
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
 
 		var db = appUrl.getSystemDatabase();
-        $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db), this.fetchClusterConfiguration(db))
+        $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db))
             .done(() => {
 				deferred.resolve({ can: true });
 		        this.fetchStatus(db);
@@ -42,19 +40,6 @@ class cluster extends viewModelBase {
 	refresh() {
 		this.fetchClusterTopology(appUrl.getSystemDatabase())
 			.done(() => this.fetchStatus(appUrl.getSystemDatabase()));
-	}
-
-	activate(args) {
-		super.activate(args);
-		this.dirtyFlag = new ko.DirtyFlag([this.clusterConfiguration]);
-		this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
-	}
-
-	fetchClusterConfiguration(db: database): JQueryPromise<any> {
-		return new getDocumentWithMetadataCommand("Raven/Cluster/Configuration", db, true)
-			.execute()
-			.done((result) => this.clusterConfiguration(result ? new clusterConfiguration(result) : clusterConfiguration.empty()))
-			.fail(() => messagePublisher.reportError("Unable to fetch cluster configuration"));
 	}
 
     fetchClusterTopology(db: database): JQueryPromise<any> {
@@ -121,7 +106,9 @@ class cluster extends viewModelBase {
                 .done(() => {
 					shell.clusterMode(true);
 					setTimeout(() => this.refresh(), 500);
-				});
+		            new saveClusterConfigurationCommand({ EnableReplication: true }, appUrl.getSystemDatabase())
+			            .execute();
+	            });
 
         });
         app.showDialog(dialog);
@@ -146,13 +133,6 @@ class cluster extends viewModelBase {
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
-	}
-
-	saveClusterConfig() {
-		var db = appUrl.getSystemDatabase();
-		new saveClusterConfigurationCommand(this.clusterConfiguration().toDto(), db)
-			.execute()
-			.done(() => this.dirtyFlag().reset());
 	}
 }
 
