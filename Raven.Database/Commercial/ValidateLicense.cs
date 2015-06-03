@@ -200,7 +200,7 @@ namespace Raven.Database.Commercial
 			}
 
 			licenseValidator.DisableFloatingLicenses = true;
-			licenseValidator.SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc";
+			licenseValidator.SubscriptionEndpoint = "http://licensing.ravendb.net/Subscriptions.svc";
 			licenseValidator.LicenseInvalidated += OnLicenseInvalidated;
 			licenseValidator.MultipleLicensesWereDiscovered += OnMultipleLicensesWereDiscovered;
 
