@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;

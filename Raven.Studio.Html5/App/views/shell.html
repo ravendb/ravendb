@@ -157,7 +157,7 @@
                     </ul>
                 </div>
 
-                <div data-bind="visible: canShowCountersNavbar">
+                <div data-bind="visible: canShowCountersNavbar, css: { 'menu-item-disabled': isActiveCounterStorageDisabled }">
                     <ul class=" nav navbar-nav">
                         <li data-bind="css: { active: appUrls.isActive('Counters') }">
                             <a data-bind="attr: { href: appUrls.counterStorageCounters }">Counters</a>

@@ -172,20 +172,9 @@ class shell extends viewModelBase {
             return (!!activeDb && !!systemDb) ? systemDb.name != activeDb.name : false;
         });
 
-        this.isActiveDatabaseDisabled = ko.computed(() => {
-            var activeDb: database = this.activeDatabase();
-            return !!activeDb ? activeDb.disabled() || !activeDb.isLicensed() : false;
-        });
-
-        this.isActiveFileSystemDisabled = ko.computed(() => {
-            var activeFs = this.activeFilesystem();
-            return !!activeFs ? activeFs.disabled() || !activeFs.isLicensed()  : false;
-        });
-
-        this.isActiveCounterStorageDisabled = ko.computed(() => {
-            var activeCs = this.activeCounterStorage();
-            return !!activeCs ? activeCs.disabled() : false;
-        });
+        this.isActiveDatabaseDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeDatabase()));
+        this.isActiveFileSystemDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeFilesystem()));
+        this.isActiveCounterStorageDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeCounterStorage()));
 
         this.listedResources = ko.computed(() => {
             var currentResource = this.lastActivatedResource();
@@ -232,10 +221,10 @@ class shell extends viewModelBase {
             { route: "filesystems/configuration", title: "Configuration", moduleId: "viewmodels/filesystem/configurations/configuration", nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: "filesystems/edit", title: "Edit File", moduleId: "viewmodels/filesystem/files/filesystemEditFile", nav: false },
             { route: ["", "counterstorages"], title: "Counter Storages", moduleId: "viewmodels/counter/counterStorages", nav: true, hash: this.appUrls.couterStorages },
-            { route: "counterstorages/counters", title: "counters", moduleId: "viewmodels/counter/counterStoragecounters", nav: true, hash: this.appUrls.counterStorageCounters },
-            { route: "counterstorages/replication", title: "replication", moduleId: "viewmodels/counter/counterStorageReplication", nav: true, hash: this.appUrls.counterStorageReplication },
-            { route: "counterstorages/stats", title: "stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
-            { route: "counterstorages/configuration", title: "configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration }
+            { route: "counterstorages/counters", title: "Counters", moduleId: "viewmodels/counter/counters", nav: true, hash: this.appUrls.counterStorageCounters },
+            { route: "counterstorages/replication", title: "Teplication", moduleId: "viewmodels/counter/counterStorageReplication", nav: true, hash: this.appUrls.counterStorageReplication },
+            { route: "counterstorages/stats", title: "Stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
+            { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
@@ -288,6 +277,10 @@ class shell extends viewModelBase {
         });
 
         $(window).resize(() => self.lastActivatedResource.valueHasMutated());
+    }
+
+    private isActiveResourceDisabled(rs: resource): boolean {
+        return !!rs ? rs.disabled() || !rs.isLicensed() : false;
     }
 
     private getWidth(tag: string): number {
