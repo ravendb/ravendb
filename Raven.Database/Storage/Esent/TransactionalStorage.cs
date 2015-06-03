@@ -703,11 +703,11 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public IDisposable DisableBatchNesting(bool allowCommit = true)
+        public IDisposable DisableBatchNesting(bool skipOnCommitNotification)
         {
             disableBatchNesting.Value = new object();
 	        
-			if (allowCommit == false)
+			if (skipOnCommitNotification)
 	        {
 				var onCommitBackup = onCommit;
 				disableBatchNesting.Value = new object();

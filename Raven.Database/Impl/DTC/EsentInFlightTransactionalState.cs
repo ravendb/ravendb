@@ -129,7 +129,7 @@ namespace Raven.Database.Impl.DTC
 					{
 						using (_database.DocumentLock.Lock())
 						{
-							using (storage.DisableBatchNesting())
+							using (storage.DisableBatchNesting(false))
 							{
 								storage.Batch(accessor =>
 								{

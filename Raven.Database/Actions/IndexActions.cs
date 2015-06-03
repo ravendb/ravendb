@@ -125,7 +125,7 @@ namespace Raven.Database.Actions
 	        Stopwatch sp = null;
 	        int count = 0;
 
-	        using (Database.TransactionalStorage.DisableBatchNesting(true))
+	        using (Database.TransactionalStorage.DisableBatchNesting(skipOnCommitNotification: true))
 	        {
 				// in external transaction number of references will be >= from current transaction references
 		        Database.TransactionalStorage.Batch(externalActions =>
