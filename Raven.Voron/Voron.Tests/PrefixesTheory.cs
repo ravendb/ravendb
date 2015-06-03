@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Xml;
 using Xunit.Extensions;
 using Xunit.Sdk;
 
@@ -16,12 +15,9 @@ namespace Voron.Tests
 	{
 		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
 		{
-			using (PrefixesFactAttribute.TreesWithPrefixedKeys())
+			foreach (var command in base.EnumerateTestCommands(method))
 			{
-				foreach (var command in base.EnumerateTestCommands(method))
-				{
-					yield return new PrefixedTreesTheoryCommand((TheoryCommand)command, method, "[Standard trees]");
-				}
+				yield return new PrefixedTreesTheoryCommand((TheoryCommand) command, method, "[Standard trees]");
 			}
 
 			using (PrefixesFactAttribute.TreesWithPrefixedKeys())
