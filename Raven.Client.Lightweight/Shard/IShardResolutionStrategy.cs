@@ -13,7 +13,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		///  Generate a shard id for the specified entity
 		///  </summary>
-		string GenerateShardIdFor(object entity, ITransactionalDocumentSession sessionMetadata);
+		string GenerateShardIdFor(object entity, object owner);
 
 		/// <summary>
 		///  The shard id for the server that contains the metadata (such as the HiLo documents)
