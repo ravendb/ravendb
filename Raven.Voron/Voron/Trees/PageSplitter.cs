@@ -251,28 +251,30 @@ namespace Voron.Trees
 
             _page.Truncate(_tx, splitIndex);
 
-	        if (addedAsImplicitRef)
-	        {
-				_cursor.Push(rightPage);
-		        return null;
-	        }
-
 			byte* pos;
 
-			try
-			{
-				// actually insert the new key
-				pos = toRight ? InsertNewKey(rightPage) : InsertNewKey(_page);
-			}
-			catch (InvalidOperationException e)
-			{
-				if (e.Message.StartsWith("The page is full and cannot add an entry") == false) 
-					throw;
-				
-				throw new InvalidOperationException(GatherDetailedDebugInfo(rightPage, currentKey, seperatorKey, currentIndex, splitIndex, toRight), e);
-			}
+	        if (addedAsImplicitRef == false)
+	        {
+				try
+				{
+					// actually insert the new key
+					pos = toRight ? InsertNewKey(rightPage) : InsertNewKey(_page);
+				}
+				catch (InvalidOperationException e)
+				{
+					if (e.Message.StartsWith("The page is full and cannot add an entry") == false)
+						throw;
 
-			if (_page.IsBranch) // remove a branch that has only one entry, the page ref needs to be added to the parent of the current page
+					throw new InvalidOperationException(GatherDetailedDebugInfo(rightPage, currentKey, seperatorKey, currentIndex, splitIndex, toRight), e);
+				}
+	        }
+	        else
+	        {
+				pos = null;
+				_cursor.Push(rightPage);
+	        }
+
+	        if (_page.IsBranch) // remove a branch that has only one entry, the page ref needs to be added to the parent of the current page
 			{
 				Debug.Assert(_page.NumberOfEntries > 0);
 				Debug.Assert(rightPage.NumberOfEntries > 0);
