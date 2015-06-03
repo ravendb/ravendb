@@ -17,7 +17,7 @@ namespace Raven.Tests.Shard.BlogModel
 			this.numberOfShardsForPosts = numberOfShardsForPosts;
 		}
 
-		public string GenerateShardIdFor(object entity, ITransactionalDocumentSession sessionMetadata)
+		public string GenerateShardIdFor(object entity, object sessionMetadata)
 		{
 			return GetShardIdFromObjectType(entity);
 		}
