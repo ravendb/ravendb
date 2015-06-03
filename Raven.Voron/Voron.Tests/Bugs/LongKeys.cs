@@ -60,16 +60,15 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			//TODO arek
-			//foreach (var key in keys)
-			//{
-			//	using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			//	{
-			//		tx.ReadTree("tree").Delete(key); // this makes Debug.Assert(parentPage.NumberOfEntries >= 2) fail
+			foreach (var key in keys)
+			{
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					tx.ReadTree("tree").Delete(key); // this makes Debug.Assert(parentPage.NumberOfEntries >= 2) fail
 
-			//		tx.Commit();
-			//	}
-			//}
+					tx.Commit();
+				}
+			}
 		}
 
 		[PrefixesTheory]
@@ -120,16 +119,15 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			//TODO arek
-			//foreach (var key in keys)
-			//{
-			//	using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			//	{
-			//		tx.ReadTree("tree").Delete(key); // this makes Debug.Assert(parentPage.NumberOfEntries >= 2) fail
+			foreach (var key in keys)
+			{
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					tx.ReadTree("tree").Delete(key); // this makes Debug.Assert(parentPage.NumberOfEntries >= 2) fail
 
-			//		tx.Commit();
-			//	}
-			//}
+					tx.Commit();
+				}
+			}
 		}
 
 		[PrefixesTheory]
@@ -186,16 +184,15 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			//TODO arek
-			//foreach (var key in addedKeys)
-			//{
-			//	using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			//	{
-			//		tx.ReadTree("tree").Delete(key); // this makes Debug.Assert(parentPage.NumberOfEntries >= 2) fail
+			foreach (var key in addedKeys)
+			{
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					tx.ReadTree("tree").Delete(key); // this makes Debug.Assert(parentPage.NumberOfEntries >= 2) fail
 
-			//		tx.Commit();
-			//	}
-			//}
+					tx.Commit();
+				}
+			}
 		}
 	}
 }
