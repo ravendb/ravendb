@@ -1003,6 +1003,11 @@ namespace Voron.Trees
             if (NumberOfEntries == 0)
                 return;
 
+			if (IsBranch && NumberOfEntries < 2)
+			{
+				throw new InvalidOperationException("The branch page " + PageNumber + " has " + NumberOfEntries + " entry");
+			}
+
             var prev = GetNodeKey(0);
             var pages = new HashSet<long>();
             for (int i = 1; i < NumberOfEntries; i++)

@@ -344,7 +344,7 @@ namespace Voron.Trees
 
 				if (p.NumberOfEntries < 2)
 				{
-					throw new InvalidOperationException("The page " + p.PageNumber + " has " + p.NumberOfEntries + " entry");
+					throw new InvalidOperationException("The branch page " + p.PageNumber + " has " + p.NumberOfEntries + " entry");
 				}
 
                 for (int i = 0; i < p.NumberOfEntries; i++)
