@@ -161,37 +161,53 @@ namespace Voron.Trees
 
         private byte* SplitPageInHalf(Page rightPage)
         {
-	        int currentIndex = _page.LastSearchPosition;
-            bool newPosition = true;
-            int splitIndex = _page.NumberOfEntries/2;
-            if (currentIndex < splitIndex)
-                newPosition = false;
+			bool toRight;
 
-	        PrefixNode[] prefixes = null;
+			var currentIndex = _page.LastSearchPosition;
+			var splitIndex = _page.NumberOfEntries / 2;
 
-	        if (_tree.KeysPrefixing && _page.HasPrefixes)
-	        {
-		        prefixes = _page.GetPrefixes();
-	        }
+			if (currentIndex <= splitIndex)
+			{
+				toRight = false;
+			}
+			else
+			{
+				toRight = true;
 
-	        if (_page.IsLeaf || prefixes != null)
-            {
-                splitIndex = AdjustSplitPosition(currentIndex, splitIndex, prefixes, ref newPosition);
-            }
+				var leftPageEntryCount = splitIndex;
+				var rightPageEntryCount = _page.NumberOfEntries - leftPageEntryCount + 1;
 
-	        var currentKey = _page.GetNodeKey(splitIndex);
+				if (rightPageEntryCount > leftPageEntryCount)
+				{
+					splitIndex++;
 
-            // here the current key is the separator key and can go either way, so 
-            // use newPosition to decide if it stays on the left node or moves to the right
-            MemorySlice seperatorKey;
-            if (currentIndex == splitIndex && newPosition)
-            {
-                seperatorKey = currentKey.Compare(_newKey) < 0 ? currentKey : _newKey;
-            }
-            else
-            {
-                seperatorKey = currentKey;
-            }
+					Debug.Assert(splitIndex < _page.NumberOfEntries);
+				}
+			}
+
+			PrefixNode[] prefixes = null;
+
+			if (_tree.KeysPrefixing && _page.HasPrefixes)
+			{
+				prefixes = _page.GetPrefixes();
+			}
+
+			if (_page.IsLeaf || prefixes != null)
+			{
+				splitIndex = AdjustSplitPosition(currentIndex, splitIndex, prefixes, ref toRight);
+			}
+
+			var currentKey = _page.GetNodeKey(splitIndex);
+			MemorySlice seperatorKey;
+
+			if (toRight && splitIndex == currentIndex)
+			{
+				seperatorKey = currentKey.Compare(_newKey) < 0 ? currentKey : _newKey;
+			}
+			else
+			{
+				seperatorKey = currentKey;
+			}
 
             AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey);
 
@@ -209,7 +225,7 @@ namespace Voron.Trees
 
 	        bool addedAsImplicitRef = false;
 
-			if (_page.IsBranch && newPosition && splitIndex == currentIndex && seperatorKey == _newKey)
+			if (_page.IsBranch && toRight && splitIndex == currentIndex && seperatorKey == _newKey)
 			{
 				AddNodeToPage(rightPage, 0, _tree.KeysPrefixing ? (MemorySlice)PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys);
 				addedAsImplicitRef = true;
@@ -232,6 +248,7 @@ namespace Voron.Trees
 					rightPage.CopyNodeDataToEndOfPage(node, key);
                 }
             }
+
             _page.Truncate(_tx, splitIndex);
 
 	        if (addedAsImplicitRef)
@@ -240,12 +257,12 @@ namespace Voron.Trees
 		        return null;
 	        }
 
-            // actually insert the new key
+			byte* pos;
+
 			try
 			{
-				return (currentIndex > splitIndex || newPosition && currentIndex == splitIndex)
-					? InsertNewKey(rightPage)
-					: InsertNewKey(_page);
+				// actually insert the new key
+				pos = toRight ? InsertNewKey(rightPage) : InsertNewKey(_page);
 			}
 			catch (InvalidOperationException e)
 			{
@@ -255,10 +272,10 @@ namespace Voron.Trees
 
 					debugInfo.AppendFormat("\r\n_tree.Name: {0}\r\n", _tree.Name);
 					debugInfo.AppendFormat("_newKey: {0}, _len: {1}, needed space: {2}\r\n", _newKey, _len, _page.GetRequiredSpace(_newKey, _len));
-					debugInfo.AppendFormat("currentKey: {0}, seperatorKey: {1}\r\n", currentKey, seperatorKey);
+					debugInfo.AppendFormat("key at LastSearchPosition: {0}, current key: {1}, seperatorKey: {2}\r\n", _page.GetNodeKey(_page.LastSearchPosition), currentKey, seperatorKey);
 					debugInfo.AppendFormat("currentIndex: {0}\r\n", currentIndex);
 					debugInfo.AppendFormat("splitIndex: {0}\r\n", splitIndex);
-					debugInfo.AppendFormat("newPosition: {0}\r\n", newPosition);
+					debugInfo.AppendFormat("toRight: {0}\r\n", toRight);
 
 					debugInfo.AppendFormat("_page info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", _page.Flags, _page.NumberOfEntries, _page.SizeLeft, _page.CalcSizeLeft());
 
@@ -286,7 +303,53 @@ namespace Voron.Trees
 				throw;
 			}
 
+			if (_page.IsBranch) // remove a branch that has only one entry, the page ref needs to be added to the parent of the current page
+			{
+				Debug.Assert(_page.NumberOfEntries > 0);
+				Debug.Assert(rightPage.NumberOfEntries > 0);
+
+				if (_page.NumberOfEntries == 1)
+				{
+					RemoveBranchWithOneEntry(_page, _cursor.ParentPage);
+				}
+
+				if (rightPage.NumberOfEntries == 1)
+				{
+					RemoveBranchWithOneEntry(rightPage, _cursor.ParentPage);
+				}
+			}
+
+			return pos;
         }
+
+		private void RemoveBranchWithOneEntry(Page page, Page parentPage)
+		{
+			Debug.Assert(page.NumberOfEntries == 1);
+
+			var pageRefNumber = page.GetNode(0)->PageNumber;
+
+			NodeHeader* nodeHeader = null;
+
+			for (int i = 0; i < parentPage.NumberOfEntries; i++)
+			{
+				nodeHeader = parentPage.GetNode(i);
+
+				if (nodeHeader->PageNumber == page.PageNumber)
+					break;
+			}
+
+			Debug.Assert(nodeHeader->PageNumber == page.PageNumber);
+
+			nodeHeader->PageNumber = pageRefNumber;
+
+			if (_cursor.CurrentPage.PageNumber == page.PageNumber)
+			{
+				_cursor.Pop();
+				_cursor.Push(_tx.GetReadOnlyPage(pageRefNumber));
+			}
+
+			_tx.FreePage(page.PageNumber);
+		}
 
         private byte* InsertNewKey(Page p)
         {
@@ -324,7 +387,7 @@ namespace Voron.Trees
 			return _parentPage.AddPageRefNode(pos, separatorKeyToInsert, pageNumber);
 		}
 
-        private int AdjustSplitPosition(int currentIndex, int splitIndex, PrefixNode[] prefixes, ref bool newPosition)
+        private int AdjustSplitPosition(int currentIndex, int splitIndex, PrefixNode[] prefixes, ref bool toRight)
         {
 	        MemorySlice keyToInsert;
 
@@ -352,44 +415,44 @@ namespace Voron.Trees
 				}
 			}
 
-            if (currentIndex <= splitIndex)
-            {
-                newPosition = false;
-                for (int i = 0; i < splitIndex; i++)
-                {
-                    NodeHeader* node = _page.GetNode(i);
-                    pageSize += node->GetNodeSize();
-                    pageSize += pageSize & 1;
-                    if (pageSize > AbstractPager.PageMaxSpace)
-                    {
-                        if (i <= currentIndex)
-                        {
-                            if (i < currentIndex)
-                                newPosition = true;
-                            return currentIndex;
-                        }
-                        return (ushort) i;
-                    }
-                }
-            }
-            else
-            {
-                for (int i = _page.NumberOfEntries - 1; i >= splitIndex; i--)
-                {
-                    NodeHeader* node = _page.GetNode(i);
-                    pageSize += node->GetNodeSize();
-                    pageSize += pageSize & 1;
-                    if (pageSize > AbstractPager.PageMaxSpace)
-                    {
-                        if (i >= currentIndex)
-                        {
-                            newPosition = false;
-                            return currentIndex;
-                        }
-                        return (ushort) (i + 1);
-                    }
-                }
-            }
+			if (toRight == false)
+			{
+				for (int i = 0; i < splitIndex; i++)
+				{
+					NodeHeader* node = _page.GetNode(i);
+					pageSize += node->GetNodeSize();
+					pageSize += pageSize & 1;
+					if (pageSize > AbstractPager.PageMaxSpace)
+					{
+						if (i <= currentIndex)
+						{
+							if (i < currentIndex)
+								toRight = true;
+							return currentIndex;
+						}
+						return i;
+					}
+				}
+			}
+			else
+			{
+				for (int i = _page.NumberOfEntries - 1; i >= splitIndex; i--)
+				{
+					NodeHeader* node = _page.GetNode(i);
+					pageSize += node->GetNodeSize();
+					pageSize += pageSize & 1;
+					if (pageSize > AbstractPager.PageMaxSpace)
+					{
+						if (i >= currentIndex)
+						{
+							toRight = false;
+							return currentIndex;
+						}
+						return i + 1;
+					}
+				}
+			}
+
             return splitIndex;
         }
     }

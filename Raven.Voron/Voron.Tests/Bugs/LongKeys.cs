@@ -6,8 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Voron.Debugging;
-using Voron.Impl;
 using Xunit;
 using Xunit.Extensions;
 
@@ -50,7 +48,6 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			//TODO arek
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				var tree = tx.ReadTree("tree");
@@ -111,7 +108,6 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			//TODO arek
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				var tree = tx.ReadTree("tree");
@@ -178,7 +174,6 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			//TODO arek
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				var tree = tx.ReadTree("tree");
