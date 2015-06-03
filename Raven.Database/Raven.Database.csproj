@@ -46,8 +46,6 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>1607, 1591</NoWarn>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <DocumentationFile>
-    </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -100,24 +98,8 @@
     <Reference Include="NetTopologySuite">
       <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="NLog, Version=3.2.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\NLog.3.2.0.0\lib\net45\NLog.dll</HintPath>
-    </Reference>
     <Reference Include="Owin">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpSnmpLib.Full, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005, processorArchitecture=MSIL">
-      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Full.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="SharpSnmpLib.Portable, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005, processorArchitecture=MSIL">
-      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Portable.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="Spatial4n.Core.NTS">
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
@@ -209,6 +191,12 @@
     </Reference>
     <Reference Include="System.Web.Http.Owin">
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Owin.5.2.2\lib\net45\System.Web.Http.Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="SharpSnmpLib.Full, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005">
+      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Full.dll</HintPath>
+    </Reference>
+    <Reference Include="SharpSnmpLib.Portable, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005">
+      <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Portable.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -1343,7 +1331,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rachis\Rachis\Rachis.csproj">
-      <Project>{f796f69f-d17b-4260-92d6-65cb94c0e05c}</Project>
+      <Project>{F796F69F-D17B-4260-92D6-65CB94C0E05C}</Project>
       <Name>Rachis</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
@@ -1357,10 +1345,6 @@
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.SpecificPlatform.Windows\Raven.SpecificPlatform.Windows.csproj">
-      <Project>{38444EDA-CBD2-4557-8947-F8803A942661}</Project>
-      <Name>Raven.SpecificPlatform.Windows</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

@@ -248,10 +248,6 @@
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
-      <Project>{3E6401AC-3E33-4B61-A460-49953654A207}</Project>
-      <Name>Raven.Smuggler</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
       <Name>Raven.Tests.Common</Name>
@@ -261,8 +257,12 @@
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
-      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3E6401AC-3E33-4B61-A460-49953654A207}</Project>
+      <Name>Raven.Smuggler</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
