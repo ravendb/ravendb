@@ -4,11 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -290,7 +292,12 @@ namespace Raven.Client.Shard
 
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-            return new BulkInsertOperation(database, this, Listeners, options ?? new BulkInsertOptions(), Changes(database));
+			return new BulkInsertOperation(database, this, Listeners, options ?? new BulkInsertOptions(), Changes(database));
+		}
+
+		public  ShardedBulkInsertOperation ShardedBulkInsert(string database = null, ShardedDocumentStore store = null, BulkInsertOptions options = null)
+		{
+			return new ShardedBulkInsertOperation(database, this, options ?? new BulkInsertOptions());
 		}
 
 		public override void InitializeProfiling()

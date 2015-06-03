@@ -219,6 +219,17 @@ namespace Voron
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
 		}
 
+		public override void PrepareForSearching()
+		{
+			if (Prefix == null && NewPrefix != null)
+			{
+				Prefix = new PrefixNode(new PrefixNodeHeader
+				{
+					PrefixLength = NewPrefix.KeyLength
+				}, NewPrefix.Array, -1);
+			}
+		}
+
 		public override string ToString()
 		{
 			if (Prefix != null)

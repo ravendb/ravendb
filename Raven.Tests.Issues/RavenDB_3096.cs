@@ -37,12 +37,12 @@ namespace RavenDbShardingTests
                 this.defaultShard = defaultShard;
             }
 
-            public override string GenerateShardIdFor(object entity, ITransactionalDocumentSession sessionMetadata)
+            public override string GenerateShardIdFor(object entity, object owner)
             {
                 if (!sharedTypes.Contains(entity.GetType()))
                     return ShardIds.FirstOrDefault(x => x == defaultShard);
 
-                return base.GenerateShardIdFor(entity, sessionMetadata);
+                return base.GenerateShardIdFor(entity, owner);
             }
         }
 
