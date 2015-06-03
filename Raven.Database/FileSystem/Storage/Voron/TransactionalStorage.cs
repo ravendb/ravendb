@@ -31,6 +31,7 @@ using Voron.Impl.Compaction;
 using VoronConstants = Voron.Impl.Constants;
 using Constants = Raven.Abstractions.Data.Constants;
 using VoronExceptions = Voron.Exceptions;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.FileSystem.Storage.Voron
 {
@@ -44,8 +45,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         private readonly NameValueCollection settings;
 
-        private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
-		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
+		private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
 
         private volatile bool disposed;
 

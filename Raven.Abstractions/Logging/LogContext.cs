@@ -9,12 +9,13 @@ using System.Threading;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Abstractions.Logging
 {
 	public static class LogContext
 	{
-		public static readonly ThreadLocal<string> DatabaseName = new ThreadLocal<string>();
+		public static readonly Raven.Abstractions.Threading.ThreadLocal<string> DatabaseName = new Raven.Abstractions.Threading.ThreadLocal<string>();
 
 		public static IDisposable WithDatabase(string database)
 		{

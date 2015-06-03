@@ -8,7 +8,7 @@ using Voron.Impl;
 using Voron.Platform.Win32;
 using Xunit;
 using Xunit.Extensions;
-using Mono.Unix.Native;
+using Raven.Unix.Native;
 
 namespace Voron.Tests.Storage
 {
@@ -90,7 +90,7 @@ namespace Voron.Tests.Storage
 		public void Should_be_able_to_allocate_new_pages(int growthMultiplier)
 		{
 			var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
-			Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, PagerInitialSize * growthMultiplier));
+			Env.Options.DataPager.AllocateMorePages(null, PagerInitialSize * growthMultiplier);
 			Assert.Equal(numberOfPagesBeforeAllocation * growthMultiplier, Env.Options.DataPager.NumberOfAllocatedPages);
 		}
 
@@ -103,7 +103,7 @@ namespace Voron.Tests.Storage
 		public void Should_be_able_to_allocate_new_pages_with_apply_logs_to_data_file(int growthMultiplier)
 		{
 		    _options.ManualFlushing = true;
-		    Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, PagerInitialSize*growthMultiplier));
+		    Env.Options.DataPager.AllocateMorePages(null, PagerInitialSize*growthMultiplier);
 		    var testData = GenerateTestData().ToList();
 		    CreatTestSchema();
 		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -135,7 +135,7 @@ namespace Voron.Tests.Storage
 			{
 				pagerSize *= 2;
 				var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
-				Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, pagerSize));
+				Env.Options.DataPager.AllocateMorePages(null, pagerSize);
 				Assert.Equal(numberOfPagesBeforeAllocation*2, Env.Options.DataPager.NumberOfAllocatedPages);
 			}
 		}
@@ -177,7 +177,7 @@ namespace Voron.Tests.Storage
 			for (int allocateMorePagesCount = 0; allocateMorePagesCount < 2; allocateMorePagesCount++)
 			{
 				pagerSize *= 2;
-				Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, pagerSize));
+				Env.Options.DataPager.AllocateMorePages(null, pagerSize);
 			}
 
 			var totalAllocationSize = Env.Options.DataPager.PagerState.AllocationInfos.Sum(info => info.Size);
@@ -192,7 +192,7 @@ namespace Voron.Tests.Storage
 
 				pagerSize *= 2;
 				var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
-				Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, pagerSize));
+				Env.Options.DataPager.AllocateMorePages(null, pagerSize);
 				Assert.Equal(numberOfPagesBeforeAllocation*2, Env.Options.DataPager.NumberOfAllocatedPages);
 
 			}

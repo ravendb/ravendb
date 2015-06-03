@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions;
 
 namespace Raven.Database.Plugins.Builtins
 {
@@ -61,7 +62,8 @@ FolderType=Generic
 
 
 			File.SetAttributes(desktopIni, FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive);
-			File.SetAttributes(dataDirectory, FileAttributes.ReadOnly);
+			if (EnvironmentUtils.RunningOnPosix == false) // Posix directory must be writeable in order to remove files in it
+				File.SetAttributes(dataDirectory, FileAttributes.ReadOnly);
 		}
 	}
 }

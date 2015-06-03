@@ -57,7 +57,7 @@ namespace Voron.Tests.Bugs
 					var tree = tx.Environment.State.GetTree(tx,"foo");
 					foreach (var buffer in inputData)
 					{						
-						Assert.DoesNotThrow(() => tree.MultiAdd("ChildTreeKey", new Slice(buffer)));
+						tree.MultiAdd ("ChildTreeKey", new Slice (buffer));
 					}
 					tx.Commit();
 				}
@@ -68,7 +68,7 @@ namespace Voron.Tests.Bugs
 					for (int i = 0; i < inputData.Count; i++)
 					{
 						var buffer = inputData[i];
-						Assert.DoesNotThrow(() => tree.MultiDelete("ChildTreeKey", new Slice(buffer)));
+						tree.MultiDelete("ChildTreeKey", new Slice(buffer));
 					}
 
 					tx.Commit();

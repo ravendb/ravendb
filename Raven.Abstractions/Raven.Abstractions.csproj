@@ -1,10 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -60,29 +58,9 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ICSharpCode.NRefactory">
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
-    </Reference>
-    <Reference Include="ICSharpCode.NRefactory.CSharp">
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="ICSharpCode.NRefactory.Xml">
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Mdb">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Mdb.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Pdb">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Pdb.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Rocks">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
@@ -94,15 +72,39 @@
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Web.Http, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.2\lib\net45\System.Web.Http.dll</HintPath>
-    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="System.Web.Http, Version=5.2.2">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.2\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.5.1\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory.Cecil">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.5.1\lib\Net40\ICSharpCode.NRefactory.Cecil.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory.CSharp">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.5.1\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory.Xml">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.5.1\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Mdb">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Mdb.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Pdb">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Pdb.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Rocks">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Rocks.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
@@ -112,28 +114,31 @@
       <Link>Imports\Newtonsoft.Json\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\*.cs">
-      <Link>Imports\Newtonsoft.Json\Bson\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Bson\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\*.cs">
-      <Link>Imports\Newtonsoft.Json\Converters\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Converters\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\*.cs">
-      <Link>Imports\Newtonsoft.Json\Linq\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Linq\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\JsonPath\*.cs">
-      <Link>Imports\Newtonsoft.Json\Linq\JsonPath\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Linq\JsonPath\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Schema\*.cs">
-      <Link>Imports\Newtonsoft.Json\Schema\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Schema\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\*.cs">
-      <Link>Imports\Newtonsoft.Json\Serialization\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Serialization\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
-      <Link>Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Utilities\%25%28FileName%29</Link>
     </Compile>
     <Compile Include="Cluster\ClusterBehavior.cs" />
     <Compile Include="Cluster\ClusterInformation.cs" />
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
+      <Link>Imports\Newtonsoft.Json\%25%28FileName%29</Link>
+    </Compile>
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
@@ -455,6 +460,10 @@
     <Compile Include="Util\Streams\IBufferPool.cs" />
     <Compile Include="Util\Streams\NoBufferPool.cs" />
     <Compile Include="Util\Streams\Substream.cs" />
+    <Compile Include="Util\RavenTextFieldParser.cs" />
+    <Compile Include="Util\MalformedLineException.cs" />
+    <Compile Include="Util\EnvironmentUtils.cs" />
+    <Compile Include="Threading\ThreadLocal.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
@@ -467,7 +476,7 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -477,4 +486,7 @@
   </Target>
   -->
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <ItemGroup>
+    <Folder Include="Threading\" />
+  </ItemGroup>
 </Project>

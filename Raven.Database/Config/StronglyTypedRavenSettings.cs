@@ -76,6 +76,9 @@ namespace Raven.Database.Config
 				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
 				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
 
+			LowMemoryLimitForLinuxDetectionInMB = 
+				new IntegerSetting(settings[Constants.LowMemoryLimitForLinuxDetectionInMB],
+					Math.Min(16, (int)(MemoryStatistics.AvailableMemory * 0.10))); // AvailableMemory reports in MB
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
 			MemoryCacheLimitMegabytes =
@@ -303,6 +306,7 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MemoryLimitForProcessing { get; private set; }
 
+		public IntegerSetting LowMemoryLimitForLinuxDetectionInMB { get; private set; }
 		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
 
 		public IntegerSetting MaxConcurrentRequestsForDatabaseDuringLoad { get; private set; }

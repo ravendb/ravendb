@@ -13,6 +13,7 @@ using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Bundles.Replication.Triggers
 {
@@ -30,7 +31,7 @@ namespace Raven.Bundles.Replication.Triggers
     [Obsolete("Use RavenFS instead.")]
 	public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
 	{
-		readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
+		readonly Raven.Abstractions.Threading.ThreadLocal<RavenJArray> deletedHistory = new Raven.Abstractions.Threading.ThreadLocal<RavenJArray>();
 	
 		public override void OnDelete(string key)
 		{

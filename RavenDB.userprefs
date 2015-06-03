@@ -1,0 +1,37 @@
+﻿<Properties StartupItem="Raven.Server/Raven.Server.csproj">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="../../../usr/local/lib/mono/4.5/Microsoft.Common.targets">
+    <Files>
+      <File FileName="Raven.Database/Linq/QueryParsingUtils.cs" Line="85" Column="4" />
+      <File FileName="Raven.Voron/Voron.Tests/Bugs/MultiAdds.cs" Line="60" Column="55" />
+      <File FileName="Raven.Voron/Voron.Tests/Bugs/RavenDB_2850.cs" Line="81" Column="28" />
+      <File FileName="Raven.Voron/Voron.Tests/Bugs/PageSplitter.cs" Line="50" Column="85" />
+      <File FileName="Raven.Voron/Voron.Tests/DebugJournalTest.cs" Line="292" Column="32" />
+      <File FileName="Raven.Voron/Voron.Tests/Journal/LogShipping.cs" Line="266" Column="7" />
+      <File FileName="Raven.Voron/Voron.Tests/MultiValueTree.cs" Line="270" Column="62" />
+      <File FileName="Raven.Voron/Voron.Tests/Storage/MemoryMapWithoutBackingPagerTest.cs" Line="195" Column="61" />
+      <File FileName="Raven.Voron/Voron.Tests/Trees/RavenDB_3114_WorkingWithStructs.cs" Line="620" Column="34" />
+      <File FileName="../../../usr/local/lib/mono/4.5/Microsoft.Common.targets" Line="1" Column="1" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="RavenDB" expanded="True">
+            <Node name="Tools" expanded="True">
+              <Node name="Raven.Backup" expanded="True" selected="True">
+                <Node name="References" expanded="True" />
+              </Node>
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <DisabledProjects>
+    <String>Raven.SpecificPlatform.Windows/Raven.SpecificPlatform.Windows.csproj</String>
+  </DisabledProjects>
+</Properties>

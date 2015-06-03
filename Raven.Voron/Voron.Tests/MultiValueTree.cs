@@ -267,7 +267,7 @@ namespace Voron.Tests
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Assert.DoesNotThrow(() => tx.State.Root.MultiDelete(CHILDTREE_KEY, CHILDTREE_VALUE));
+				tx.State.Root.MultiDelete(CHILDTREE_KEY, CHILDTREE_VALUE);
 				tx.Commit();
 			}
 

@@ -56,3 +56,6 @@
 *.RTF	diff=astextplain
 
 *.java text eol=lf
+
+* -crlf
+

@@ -31,7 +31,7 @@ namespace Voron.Tests.Trees
 		[Fact]
 		public void ShouldNotAllowToCreateSchemaWithAnyTypeOfFields()
 		{
-			Assert.DoesNotThrow(() => new StructureSchema<MappedResults>());
+			new StructureSchema<MappedResults>();
 
 			Assert.Throws<ArgumentException>(() => new StructureSchema<string>());
 			Assert.Throws<ArgumentException>(() => new StructureSchema<int>());
@@ -70,8 +70,8 @@ namespace Voron.Tests.Trees
 
 			var structure = new Structure<SchemaFields>(schema);
 
-			Assert.DoesNotThrow(() => structure.Set(SchemaFields.Count, 1));
-			Assert.DoesNotThrow(() => structure.Set(SchemaFields.Message, "hello"));
+			structure.Set(SchemaFields.Count, 1);
+			structure.Set(SchemaFields.Message, "hello");
 
 			var ae = Assert.Throws<ArgumentException>(() => structure.Set(SchemaFields.Does_Not_Exist, 1));
 			Assert.Equal("No such field in schema defined. Field name: Does_Not_Exist", ae.Message);
@@ -614,10 +614,10 @@ namespace Voron.Tests.Trees
 
 				Assert.Equal("Your structure schema defines variable size fields but you haven't set any. If you really want to skip those fields set AllowToSkipVariableSizeFields = true.", ex.Message);
 
-				Assert.DoesNotThrow(() => tx.State.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
+				tx.State.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
 				{
 					AllowToSkipVariableSizeFields = true
-				}.Set(MappedResults.View, 2)));
+				}.Set(MappedResults.View, 2));
 			}
 
 		}

@@ -50,7 +50,6 @@ declare module AceAjax {
     export interface TokenInfo {
 
         value: string;
-        type: any;
     }
 
     export interface Position {
@@ -477,8 +476,6 @@ declare module AceAjax {
 
         expandFold(arg: any);
 
-        foldAll();
-
         unfold(arg1: any, arg2: boolean);
 
         screenToDocumentColumn(row: number, column: number);
@@ -579,7 +576,7 @@ declare module AceAjax {
         /**
          * Returns the current tab size.
         **/
-        getTabSize(): string;
+        getTabSize(): number;
 
         /**
          * Returns `true` if the character at the position is a soft tab.
@@ -1037,6 +1034,9 @@ declare module AceAjax {
      * Event sessions dealing with the mouse and keyboard are bubbled up from `Document` to the `Editor`, which decides what to do with them.
     **/
     export interface Editor {
+        
+        addEventListener(ev: 'change', callback: (ev: EditorChangeEvent) => any);
+        addEventListener(ev: string, callback: Function);
 
         inMultiSelectMode: boolean;
 
@@ -1108,19 +1108,6 @@ declare module AceAjax {
          * @param force If `true`, recomputes the size, even if the height and width haven't changed
         **/
         resize(force?: boolean);
-
-        /**
-         * Enables automatic scrolling of the cursor into view when editor itself is inside scrollable element
-         * @param {Boolean} enable default true
-         **/
-        setAutoScrollEditorIntoView(enable?: boolean);
-
-        /**
-        * Setting an option for the editor
-        * @param {string} property name
-        * @param {number} property value
-        **/
-        setOption(name: string, value: any);
 
         /**
          * {:VirtualRenderer.setTheme}
@@ -1725,6 +1712,13 @@ declare module AceAjax {
          * @param session The `EditSession` to refer to
         **/
         new(renderer: VirtualRenderer, session?: IEditSession): Editor;
+    }
+    
+    interface EditorChangeEvent {
+        start: Position;
+        end: Position;
+        action: string; // insert, remove
+        lines: any[];
     }
 
     ////////////////////////////////

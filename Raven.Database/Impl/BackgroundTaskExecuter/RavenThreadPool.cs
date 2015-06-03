@@ -4,11 +4,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Microsoft.VisualBasic.Logging;
+
 using Mono.CSharp;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Impl.BackgroundTaskExecuter
 {
@@ -549,7 +550,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 
 		public int _partialMaxWait = 2500;
 
-		public ThreadLocal<bool> _freedThreadsValue = new ThreadLocal<bool>(true);
+		public Raven.Abstractions.Threading.ThreadLocal<bool> _freedThreadsValue = new Raven.Abstractions.Threading.ThreadLocal<bool>(true);
 		private int _partialMaxWaitChangeFlag = 1;
 
 		private void WaitForBatchAllowingPartialBatchResumption(CountdownEvent completionEvent, BatchStatistics batch, int completedMuliplier = 2, int freeThreadsMultiplier = 2, int maxWaitMultiplier = 1)
