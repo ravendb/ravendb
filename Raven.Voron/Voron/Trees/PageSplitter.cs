@@ -225,8 +225,9 @@ namespace Voron.Trees
 
 	        bool addedAsImplicitRef = false;
 
-			if (_page.IsBranch && toRight && splitIndex == currentIndex && seperatorKey == _newKey)
+			if (_page.IsBranch && toRight && seperatorKey == _newKey)
 			{
+				// _newKey needs to be inserted as first key (BeforeAllKeys) to the right page, so we need to add it before we move entries from the current page
 				AddNodeToPage(rightPage, 0, _tree.KeysPrefixing ? (MemorySlice)PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys);
 				addedAsImplicitRef = true;
 			}
