@@ -7,22 +7,16 @@ import transformerQueryType = require("models/transformerQuery");
 
 class queryIndexCommand extends commandBase {
     constructor(private indexName: string, private db: database, private skip: number, private take: number, private queryText?: string, private sorts?: querySort[], private transformerQuery?: transformerQueryType,
-        private showFields?: boolean, private indexEntries?: boolean, private useAndOperator?: boolean,private disableCache?: boolean ) {
+        private showFields?: boolean, private indexEntries?: boolean, private useAndOperator?: boolean, private disableCache?: boolean) {
         super();
     }
 
     execute(): JQueryPromise<pagedResultSet> {
-        
-
         var selector = (results: indexQueryResultsDto) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
         var queryTask = this.query(this.getUrl(), null, this.db, selector);
         queryTask.fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
 
         return queryTask;
-    }
-
-    cacheDisable() {
-        this.disableCache = true;
     }
 
     getUrl() {
