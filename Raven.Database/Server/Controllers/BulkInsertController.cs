@@ -88,7 +88,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     CurrentOperationContext.User.Value = user;
                     CurrentOperationContext.Headers.Value = headers;
-                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token);
+                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token, timeout);
                 }
 				catch (InvalidDataException e)
 				{

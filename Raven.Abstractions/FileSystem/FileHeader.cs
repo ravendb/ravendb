@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.FileSystem
 {
@@ -101,7 +102,7 @@ namespace Raven.Abstractions.FileSystem
         {
             get
             {
-                return System.IO.Path.GetDirectoryName(this.FullPath)
+				return FileSystemPathExtentions.GetDirectoryName(this.FullPath)
                                      .Replace('\\', '/');
             }
         }      

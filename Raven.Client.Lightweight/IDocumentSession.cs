@@ -224,7 +224,7 @@ namespace Raven.Client
 		///     Stores the specified dynamic entity, under the specified id.
 		/// </summary>
 		/// <param name="entity">entity to store.</param>
-		/// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overridden.</param>
+		/// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overwritten.</param>
 		void Store(object entity, string id);
 	}
 }

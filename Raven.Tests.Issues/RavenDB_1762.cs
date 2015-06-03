@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
                 Enabled = false;
             }
 
-            public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
+	        protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
             {
                 if (Enabled)
                 {
@@ -80,7 +80,7 @@ namespace Raven.Tests.Issues
                     target.Add(key, source[key]);
             }
 
-            public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
+	        protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
             {
                 if (Enabled)
                 {

@@ -16,7 +16,6 @@ namespace Raven.Database.Extensions
 		}
 	}
 
-
     public class CancellationTimeout : IDisposable
     {
         private readonly CancellationTokenSource source;
@@ -58,6 +57,17 @@ namespace Raven.Database.Extensions
             if (!isTimerDisposed)
                 timer.Change(dueTime, -1);
         }
+
+		public void Pause()
+		{
+			if (!isTimerDisposed)
+				timer.Change(Timeout.Infinite, Timeout.Infinite);
+		}
+
+		public void Resume()
+		{
+			Delay();
+		}
 
         public void Dispose()
         {

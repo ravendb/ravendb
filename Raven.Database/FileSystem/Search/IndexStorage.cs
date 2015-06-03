@@ -19,10 +19,12 @@ using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using Raven.Abstractions.Extensions;
 using Constants = Raven.Abstractions.Data.Constants;
 using Directory = System.IO.Directory;
 using LuceneDirectory = Lucene.Net.Store.Directory;
@@ -482,11 +484,13 @@ namespace Raven.Database.FileSystem.Search
             Index(writer, key, metadata, etag);
         }
 
+
+
         private static Document CreateDocument(string lowerKey, RavenJObject metadata)
         {
             var doc = new Document();
             doc.Add(new Field("__key", lowerKey, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
-
+			
             var fileName = Path.GetFileName(lowerKey);            
             Debug.Assert(fileName != null);
             doc.Add(new Field("__fileName", fileName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
@@ -496,7 +500,7 @@ namespace Raven.Database.FileSystem.Search
             doc.Add(new Field("__rfileName", new string(revFileName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));                        
 
             int level = 0;
-            var directoryName = RavenFileNameHelper.RavenDirectory(Path.GetDirectoryName(lowerKey));
+			var directoryName = RavenFileNameHelper.RavenDirectory(FileSystemPathExtentions.GetDirectoryName(lowerKey));
 
 
             doc.Add(new Field("__directory", directoryName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
@@ -517,9 +521,9 @@ namespace Raven.Database.FileSystem.Search
                 Array.Reverse(revDirectoryName);
                 doc.Add(new Field("__rdirectoryName", new string(revDirectoryName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
 
-                directoryName = Path.GetDirectoryName(directoryName);
-            } 
-            while (directoryName != null);
+				directoryName = FileSystemPathExtentions.GetDirectoryName(directoryName);
+            }
+			while (directoryName != null );
 
             doc.Add(new Field("__modified", DateTime.UtcNow.ToString(DateIndexFormat, CultureInfo.InvariantCulture), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
             var value = metadata.Value<string>(Constants.CreationDate);

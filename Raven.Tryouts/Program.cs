@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Lucene.Net.Search;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Client;
@@ -15,7 +17,9 @@ using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.FileSystem;
 using Raven.Tests.MailingList;
+using Xunit;
 
 namespace Raven.Tryouts
 {
@@ -29,6 +33,7 @@ namespace Raven.Tryouts
     {
         public string Customer;
     }
+	
     public class Program
     {
         private static void Main()
