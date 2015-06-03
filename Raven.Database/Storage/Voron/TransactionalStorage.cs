@@ -29,6 +29,8 @@ using Voron.Impl.Compaction;
 using VoronConstants = Voron.Impl.Constants;
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
+using Raven.Unix.Native;
+using Raven.Abstractions;
 
 namespace Raven.Storage.Voron
 {
@@ -280,11 +282,18 @@ namespace Raven.Storage.Voron
 		}
 
 	    private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
-        {
-            var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
-            var filePathFolder = new DirectoryInfo(directoryPath);
-            if (filePathFolder.Exists == false)
-                filePathFolder.Create();
+		{
+			var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
+			var filePathFolder = new DirectoryInfo (directoryPath);
+
+			if (filePathFolder.Exists == false) {
+				if (EnvironmentUtils.RunningOnPosix == true) {
+					uint permissions = 509;
+					Syscall.mkdir (filePathFolder.Name, permissions);
+				}
+				else
+					filePathFolder.Create ();
+			}
 
 		    var tempPath = configuration.Storage.Voron.TempPath;
 		    var journalPath = configuration.Storage.Voron.JournalsStoragePath;
