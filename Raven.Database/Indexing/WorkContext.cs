@@ -21,6 +21,7 @@ using Raven.Database.Storage;
 using System.Linq;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Indexing
 {
@@ -39,7 +40,7 @@ namespace Raven.Database.Indexing
 		private int workCounter;
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
-		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
+		private readonly Raven.Abstractions.Threading.ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new Raven.Abstractions.Threading.ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
 		private long errorsCounter = 0;
 
 	    public WorkContext()

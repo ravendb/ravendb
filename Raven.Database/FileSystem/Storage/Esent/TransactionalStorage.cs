@@ -29,6 +29,7 @@ using Raven.Database.FileSystem.Storage.Esent.Backup;
 using Raven.Database.FileSystem.Storage.Esent.Schema;
 using Raven.Database.Util;
 using BackupOperation = Raven.Database.FileSystem.Storage.Esent.Backup.BackupOperation;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.FileSystem.Storage.Esent
 {
@@ -37,8 +38,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		private readonly InMemoryRavenConfiguration configuration;
 
 		private OrderedPartCollection<AbstractFileCodec> fileCodecs;
-		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
-		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
+		private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
+		private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
 		private readonly string database;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;

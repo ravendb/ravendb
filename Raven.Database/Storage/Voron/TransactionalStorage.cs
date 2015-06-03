@@ -31,6 +31,7 @@ using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 using Raven.Unix.Native;
 using Raven.Abstractions;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Storage.Voron
 {
@@ -38,8 +39,8 @@ namespace Raven.Storage.Voron
 	{
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
-		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
+		private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
+		private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
 
 		private volatile bool disposed;
 		private readonly DisposableAction exitLockDisposable;

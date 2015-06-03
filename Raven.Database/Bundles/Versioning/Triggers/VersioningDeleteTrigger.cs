@@ -16,6 +16,7 @@ using Raven.Database.Plugins;
 using Raven.Json.Linq;
 using System.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Bundles.Versioning.Triggers
 {
@@ -23,8 +24,8 @@ namespace Raven.Bundles.Versioning.Triggers
 	[ExportMetadata("Bundle", "Versioning")]
 	public class VersioningDeleteTrigger : AbstractDeleteTrigger
 	{
-	    readonly ThreadLocal<Dictionary<string, RavenJObject>> versionInformer 
-			= new ThreadLocal<Dictionary<string, RavenJObject>>(() => new Dictionary<string, RavenJObject>());
+	    readonly Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>> versionInformer 
+			= new Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>>(() => new Dictionary<string, RavenJObject>());
 
 		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{

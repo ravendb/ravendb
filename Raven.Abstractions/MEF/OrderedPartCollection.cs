@@ -5,15 +5,16 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Abstractions.MEF
 {
 	public class OrderedPartCollection<T> : ICollection<Lazy<T, IPartMetadata>>, INotifyCollectionChanged
 	{
 		private readonly ObservableCollection<Lazy<T, IPartMetadata>> inner = new ObservableCollection<Lazy<T, IPartMetadata>>();
-		private ThreadLocal<bool> disableApplication;
+		private Raven.Abstractions.Threading.ThreadLocal<bool> disableApplication;
 
-		public OrderedPartCollection<T> Init(ThreadLocal<bool> disableApplicationValue)
+		public OrderedPartCollection<T> Init(Raven.Abstractions.Threading.ThreadLocal<bool> disableApplicationValue)
 		{
 			disableApplication = disableApplicationValue;
 			return this;
