@@ -168,7 +168,7 @@
       <HintPath>..\packages\Newtonsoft.Json.6.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
-      <HintPath>..\packages\NLog.3.1.0.0\lib\net45\NLog.dll</HintPath>
+      <HintPath>..\packages\NLog.3.2.0.0\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.Net.Http.Formatting">
@@ -197,6 +197,9 @@
     </Reference>
     <Reference Include="SharpSnmpLib.Portable, Version=8.5.10222.9, Culture=neutral, PublicKeyToken=4c00852d3788e005">
       <HintPath>..\packages\Lextm.SharpSnmpLib.8.5.0.0\lib\net40\SharpSnmpLib.Portable.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.SpecificPlatform.Windows">
+      <HintPath>..\SharedLibs\Raven.SpecificPlatform.Windows.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

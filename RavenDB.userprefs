@@ -23,4 +23,7 @@
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <DisabledProjects>
+    <String>Raven.SpecificPlatform.Windows/Raven.SpecificPlatform.Windows.csproj</String>
+  </DisabledProjects>
 </Properties>
