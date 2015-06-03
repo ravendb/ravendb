@@ -1,156 +1,88 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
 using System.Threading.Tasks;
-using System.Web.WebSockets;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Client.Shard;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-	public class ShardedBulkInsertOperation : IBulkInsertOperation, IDisposable
+	public class ShardedBulkInsertOperation :  IDisposable
 	{
-
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-
 		private readonly ShardedDocumentStore shardedDocumentStore;
 		public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
 		public IDictionary<string, IDocumentStore> Shards;
-		private IDictionary<string, IDatabaseCommands> shardDbCommands;
-
-		protected IDictionary<Guid,ILowLevelBulkInsertOperation> Operations { get; set; }
-
+		private string database;
+		private readonly BulkInsertOptions options;
+		private readonly IShardResolutionStrategy shardResolutionStrategy;
+		private readonly ShardStrategy shardStrategy;
 		//key - shardID, Value - bulk
-		private IDictionary<string, BulkInsertOperation> bulks { get; set; }
+		private IDictionary<string, BulkInsertOperation> Bulks { get; set; }
 
-		public ShardedBulkInsertOperation(string database, ShardedDocumentStore shardedDocumentStore, DocumentSessionListeners listeners, BulkInsertOptions options, IDatabaseChanges changes)
+		public ShardedBulkInsertOperation(string database, ShardedDocumentStore shardedDocumentStore, BulkInsertOptions options)
 		{
-			this.shardedDocumentStore = shardedDocumentStore;
-			Shards = new Dictionary<string, IDocumentStore>();
-			bulks = new Dictionary<string, BulkInsertOperation>();
-			/*DatabaseCommands = database == null
-				? shardedDocumentStore.AsyncDatabaseCommands.ForSystemDatabase()
-				: shardedDocumentStore.AsyncDatabaseCommands.ForDatabase(database);*/
 
+			this.database = database;
+			this.shardedDocumentStore = shardedDocumentStore;
+			this.options = options;
+			Shards = shardedDocumentStore.ShardStrategy.Shards;
+			Bulks = new Dictionary<string, BulkInsertOperation>();
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(shardedDocumentStore.Conventions,
+				entity => shardedDocumentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).ResultUnwrap());
+			shardResolutionStrategy = shardedDocumentStore.ShardStrategy.ShardResolutionStrategy;
+			shardStrategy = this.shardedDocumentStore.ShardStrategy;
 		}
-		public Guid OperationId { get; private set; }
 		public bool IsAborted
 		{
-			get
-			{
-				return bulks.Select(bulk => bulk.Value).Any(bulkOperation => bulkOperation.IsAborted);
-			}
+			get { return Bulks.Select(bulk => bulk.Value).Any(bulkOperation => bulkOperation.IsAborted); }
 		}
 
 		public void Abort()
 		{
-			foreach (var bulk in bulks)
+			foreach (var bulkOperation in Bulks.Select(bulk => bulk.Value))
 			{
-				var bulkOperation = bulk.Value;
 				bulkOperation.Abort();
 			}
 		}
 
-		public event Action<string> Report;
-
-
-		/*public Task DisposeAsync()
+		public void Store(object entity)
 		{
-		/*	var dis = new Task(() => DisposeAsync());
-			foreach (var bulk in bulks)
+			var shardId = shardResolutionStrategy.GenerateShardIdFor(entity, this);
+			DatabaseCommands = Shards[shardId].AsyncDatabaseCommands;
+			 
+			database = MultiDatabase.GetDatabaseName(Shards[shardId].Url);
+			string id;
+
+			if (generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
 			{
-				var bulkOperation = bulk.Value;
-				 dis = bulkOperation.DisposeAsync();
+				id = generateEntityIdOnTheClient.GetOrGenerateDocumentKey(entity);
+				
 			}
-			return dis;#1#
-			return Task
-		}*/
 
-
-		public Task DisposeAsync()
-		{
-			throw new NotImplementedException();
-		}
-
-		void IBulkInsertOperation.Dispose()
-		{
-			foreach (var bulk in bulks)
-			{
-				var bulkOperation = bulk.Value;
-				bulkOperation.Dispose();
-			}			
-		}
-
-		public string Store(object entity)
-		{
-				var id = GetId(entity);
-				Store(entity, id);
-				return id;	
-		}
-
-		public void Store(object entity, string id)
-		{
-				var shardId = GetShardId(entity);
-				if (shardId == null)
-					throw new InvalidOperationException("Cannot store a document when the shard id isn't defined. Missing Raven-Shard-Id in the metadata");
-				var bulkInsertOperation = bulks[shardId];
-				bulkInsertOperation.Store(entity, id);
-			
-		}
-
-		public void Store(RavenJObject document, RavenJObject metadata, string id, int? dataSize = null)
-		{
-			var shardId = metadata.Value<string>(Constants.RavenShardId);
-			var bulkInsertOperation = bulks[shardId];
-			bulkInsertOperation.Store(document, metadata, id, dataSize);
-		}	
+			var modifyDocumentId = shardStrategy.ModifyDocumentId(shardedDocumentStore.Conventions, shardId, id);
 	
+			BulkInsertOperation bulkInsertOperation;
+			if (Bulks.TryGetValue(shardId, out bulkInsertOperation) == false)
+			{
+				var shard = Shards[shardId];
+				bulkInsertOperation = new BulkInsertOperation(database, shard, shard.Listeners, options, shard.Changes());
+				Bulks.Add(shardId, bulkInsertOperation);
+			}
+
+			bulkInsertOperation.Store(entity, modifyDocumentId);
+		}
+
 		void IDisposable.Dispose()
 		{
-			foreach (var bulk in bulks)
+			foreach (var bulkOperation in Bulks.Select(bulk => bulk.Value))
 			{
-				var bulkOperation = bulk.Value;
 				bulkOperation.Dispose();
-			}			
-		}
-
-		private string GetId(object entity)
-		{
-			string id;
-			if (generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
-			{
-				id = generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
-			}
-			return id;
-		}
-		private string GetShardId(object entity)
-		{
-			using (var session = shardedDocumentStore.OpenSession())
-			{
-				var metadata = session.Advanced.GetMetadataFor(entity);
-				var shardId = metadata.Value<string>(Constants.RavenShardId);
-				if (shardId == null)
-					throw new InvalidOperationException("Cannot store a document when the shard id isn't defined. Missing Raven-Shard-Id in the metadata");
-				return shardId;
 			}
 		}
-		/*private Guid GetOperationId(object entity)
-		{
-			string id;
-			if (generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
-			{
-				id = generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
-			}
-			return id;
-		}*/
 	}
 }
 
