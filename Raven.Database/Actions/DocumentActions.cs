@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
@@ -241,7 +242,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId, CancellationToken token)
+        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId, CancellationToken token, CancellationTimeout timeout = null)
         {
 			var documents = 0;
 
@@ -261,8 +262,13 @@ namespace Raven.Database.Actions
                     var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
 
+					if (timeout != null)
+						timeout.Pause();
 			        using (Database.DocumentLock.Lock())
 			        {
+						if (timeout != null)
+							timeout.Resume();
+
 				        TransactionalStorage.Batch(accessor =>
 				        {
 					        var inserts = 0;
