@@ -162,9 +162,9 @@ namespace Voron.Tests
 					{
 						iter.Seek(Slice.BeforeAllKeys);
 						Assert.Equal("AA",iter.CurrentKey.ToString());
-						Assert.DoesNotThrow(() => iter.MoveNext());
+						iter.MoveNext();
 						Assert.Equal("BB",iter.CurrentKey.ToString());
-						Assert.DoesNotThrow(() => iter.MoveNext());
+						iter.MoveNext();
 						Assert.Equal("CC",iter.CurrentKey.ToString());
 					}
 
@@ -287,9 +287,9 @@ namespace Voron.Tests
                     {
                         iter.Seek(Slice.BeforeAllKeys);
                         Assert.Equal("AA", iter.CurrentKey.ToString());
-                        Assert.DoesNotThrow(() => iter.MoveNext());
+                        iter.MoveNext();
                         Assert.Equal("BB", iter.CurrentKey.ToString());
-                        Assert.DoesNotThrow(() => iter.MoveNext());
+                        iter.MoveNext();
                         Assert.Equal("CC", iter.CurrentKey.ToString());
                     }
                 }

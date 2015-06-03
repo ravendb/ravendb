@@ -78,7 +78,7 @@ namespace Voron.Tests.Bugs
 				txw.Commit();
 			}
 
-			Assert.DoesNotThrow(() =>  Env.FlushLogToDataFile());
+			Env.FlushLogToDataFile();
 		}
 	}
 }
