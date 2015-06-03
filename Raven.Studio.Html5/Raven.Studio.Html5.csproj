@@ -61,7 +61,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchConfigurationByPrefixCommand.ts" />
