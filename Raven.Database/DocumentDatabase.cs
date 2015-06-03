@@ -732,6 +732,9 @@ namespace Raven.Database
 
 			Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 
+			if ( EnvironmentUtils.RunningOnPosix )				
+				MemoryStatistics.StopPosixLowMemThread ();
+
 			EventHandler onDisposing = Disposing;
 			_tpCts.Cancel();
 			if (onDisposing != null)

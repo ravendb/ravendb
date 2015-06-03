@@ -124,9 +124,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
+    <Reference Include="System.Core" />
     <Reference Include="System.Data.Services.Client" />
     <Reference Include="System.DirectoryServices" />
     <Reference Include="System.IO.Compression" />
@@ -1300,6 +1298,7 @@
     <Compile Include="Util\Streams\BlockingStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
     <Compile Include="Extensions\FeatureNotSupportedOnPosixException.cs" />
+    <Compile Include="Config\MemoryStatisticsPosix.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
