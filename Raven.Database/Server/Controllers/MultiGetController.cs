@@ -36,11 +36,11 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> MultiGet()
 		{
 			
-			if (Recursive.Value)
+			if (recursive.Value)
 				throw new InvalidOperationException("Nested requests to multi_get are not supported");
 
 			
-			Recursive.Value = true;
+			recursive.Value = true;
 			try
 			{
 				var requests = await ReadJsonObjectAsync<GetRequest[]>();
