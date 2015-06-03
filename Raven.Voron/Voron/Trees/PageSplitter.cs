@@ -266,41 +266,10 @@ namespace Voron.Trees
 			}
 			catch (InvalidOperationException e)
 			{
-				if (e.Message.StartsWith("The page is full and cannot add an entry"))
-				{
-					var debugInfo = new StringBuilder();
-
-					debugInfo.AppendFormat("\r\n_tree.Name: {0}\r\n", _tree.Name);
-					debugInfo.AppendFormat("_newKey: {0}, _len: {1}, needed space: {2}\r\n", _newKey, _len, _page.GetRequiredSpace(_newKey, _len));
-					debugInfo.AppendFormat("key at LastSearchPosition: {0}, current key: {1}, seperatorKey: {2}\r\n", _page.GetNodeKey(_page.LastSearchPosition), currentKey, seperatorKey);
-					debugInfo.AppendFormat("currentIndex: {0}\r\n", currentIndex);
-					debugInfo.AppendFormat("splitIndex: {0}\r\n", splitIndex);
-					debugInfo.AppendFormat("toRight: {0}\r\n", toRight);
-
-					debugInfo.AppendFormat("_page info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", _page.Flags, _page.NumberOfEntries, _page.SizeLeft, _page.CalcSizeLeft());
-
-					for (int i = 0; i < _page.NumberOfEntries; i++)
-					{
-						var node = _page.GetNode(i);
-						var key = _page.GetNodeKey(node);
-						debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
-							node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
-					}
-
-					debugInfo.AppendFormat("rightPage info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", rightPage.Flags, rightPage.NumberOfEntries, rightPage.SizeLeft, rightPage.CalcSizeLeft());
-
-					for (int i = 0; i < rightPage.NumberOfEntries; i++)
-					{
-						var node = rightPage.GetNode(i);
-						var key = rightPage.GetNodeKey(node);
-						debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
-							node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
-					}
-
-					throw new InvalidOperationException(debugInfo.ToString(), e);
-				}
-
-				throw;
+				if (e.Message.StartsWith("The page is full and cannot add an entry") == false) 
+					throw;
+				
+				throw new InvalidOperationException(GatherDetailedDebugInfo(rightPage, currentKey, seperatorKey, currentIndex, splitIndex, toRight), e);
 			}
 
 			if (_page.IsBranch) // remove a branch that has only one entry, the page ref needs to be added to the parent of the current page
@@ -309,20 +278,16 @@ namespace Voron.Trees
 				Debug.Assert(rightPage.NumberOfEntries > 0);
 
 				if (_page.NumberOfEntries == 1)
-				{
 					RemoveBranchWithOneEntry(_page, _cursor.ParentPage);
-				}
 
 				if (rightPage.NumberOfEntries == 1)
-				{
 					RemoveBranchWithOneEntry(rightPage, _cursor.ParentPage);
-				}
 			}
 
 			return pos;
         }
 
-		private void RemoveBranchWithOneEntry(Page page, Page parentPage)
+	    private void RemoveBranchWithOneEntry(Page page, Page parentPage)
 		{
 			Debug.Assert(page.NumberOfEntries == 1);
 
@@ -455,5 +420,38 @@ namespace Voron.Trees
 
             return splitIndex;
         }
+
+		private string GatherDetailedDebugInfo(Page rightPage, MemorySlice currentKey, MemorySlice seperatorKey, int currentIndex, int splitIndex, bool toRight)
+		{
+			var debugInfo = new StringBuilder();
+
+			debugInfo.AppendFormat("\r\n_tree.Name: {0}\r\n", _tree.Name);
+			debugInfo.AppendFormat("_newKey: {0}, _len: {1}, needed space: {2}\r\n", _newKey, _len, _page.GetRequiredSpace(_newKey, _len));
+			debugInfo.AppendFormat("key at LastSearchPosition: {0}, current key: {1}, seperatorKey: {2}\r\n", _page.GetNodeKey(_page.LastSearchPosition), currentKey, seperatorKey);
+			debugInfo.AppendFormat("currentIndex: {0}\r\n", currentIndex);
+			debugInfo.AppendFormat("splitIndex: {0}\r\n", splitIndex);
+			debugInfo.AppendFormat("toRight: {0}\r\n", toRight);
+
+			debugInfo.AppendFormat("_page info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", _page.Flags, _page.NumberOfEntries, _page.SizeLeft, _page.CalcSizeLeft());
+
+			for (int i = 0; i < _page.NumberOfEntries; i++)
+			{
+				var node = _page.GetNode(i);
+				var key = _page.GetNodeKey(node);
+				debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
+					node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+			}
+
+			debugInfo.AppendFormat("rightPage info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", rightPage.Flags, rightPage.NumberOfEntries, rightPage.SizeLeft, rightPage.CalcSizeLeft());
+
+			for (int i = 0; i < rightPage.NumberOfEntries; i++)
+			{
+				var node = rightPage.GetNode(i);
+				var key = rightPage.GetNodeKey(node);
+				debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
+					node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+			}
+			return debugInfo.ToString();
+		}
     }
 }
