@@ -22,9 +22,23 @@ class consoleJs extends viewModelBase {
 	constructor() {
 		super();
 
-		this.predefinedSamples.push({ Name: "c1", Code: "this.a = \"b\";" }); //TODO: change me!
-		this.predefinedSamples.push({ Name: "c2", Code: "this.a = \"c\";" }); //TODO: change me!
-		this.predefinedSamples.push({ Name: "c3", Code: "this.a = \"d\";" }); //TODO: change me!
+	    this.predefinedSamples.push({ Name: "Get database stats", Code: "return database.Statistics;" });
+        this.predefinedSamples.push({
+            Name: "Get configuration values", Code: "return {" +
+                "\n	RaiseBatchLimit : database.Configuration.AvailableMemoryForRaisingBatchSizeLimit," +
+                "\n	ReduceBatchLimit: database.Configuration.MaxNumberOfItemsToReduceInSingleBatch" +
+                "\n};" });
+		this.predefinedSamples.push({
+            Name: "Change configuration on the fly", Code: "database.Configuration.DisableDocumentPreFetching = true;" +
+                "\ndatabase.Configuration.MaxNumberOfItemsToPreFetch = 1024;" +
+            "\ndatabase.Configuration.BulkImportBatchTimeout = System.TimeSpan.FromMinutes(13);"
+        });
+        this.predefinedSamples.push({ Name: "Run idle operations", Code: "database.RunIdleOperations();" });
+        this.predefinedSamples.push({
+            Name: "Put document",
+            Code: "var doc = Raven.Json.Linq.RavenJObject.Parse('{ \"Name\" : \"Raven\" }');" +
+            "\nvar metadata = Raven.Json.Linq.RavenJObject.Parse('{ \"Raven-Entity-Name\" : \"Docs\" }');" +
+            "\n\ndatabase.Documents.Put('doc/1', null, doc, metadata, null);" });
 
 
 		aceEditorBindingHandler.install();

@@ -10,11 +10,8 @@ class adminJsScriptCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-		var args = {
-            database:  this.targetDatabase
-        };
-
-        var url = "/admin/console" + this.urlEncodeArgs(args);
+		
+        var url = "/admin/console/" + this.targetDatabase.toString();
 	    return this.post(url, ko.toJSON({ script: this.script }), this.db)
 		    .done(() => this.reportSuccess("Script executed"))
 		    .fail((response: JQueryXHR) => this.reportError("Script failed", response.responseText, response.statusText));
