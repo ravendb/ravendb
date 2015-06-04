@@ -69,6 +69,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchConfigurationByPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\maintenance\adminJsScriptCommand.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
@@ -116,6 +117,7 @@
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\inMethodFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\monitorRestoreCommand.ts" />
@@ -182,6 +184,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\monitorCompactCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\startCompactCommand.ts" />
     <TypeScriptCompile Include="App\models\filesystem\versioningEntry.ts" />
+    <Content Include="App\views\manage\console.html" />
     <Content Include="App\views\manage\editNodeConnectionInfoDialog.html" />
     <Content Include="App\views\manage\cluster.html" />
     <TypeScriptCompile Include="App\viewmodels\resources\filesystemSettingsDialog.ts" />
