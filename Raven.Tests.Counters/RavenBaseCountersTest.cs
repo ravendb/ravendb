@@ -65,7 +65,7 @@ namespace Raven.Tests.Counters
 			{
 				base.Dispose();
 			}
-			catch (AggregateException)
+			catch (AggregateException) //TODO: do not forget to investigate where counter storage is not being disposed
 			{
 			}
 		}
