@@ -39,16 +39,16 @@ using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Storage.Esent.SchemaUpdates;
 using Raven.Storage.Esent.StorageActions;
-
+using Raven.Abstractions.Threading;
 
 namespace Raven.Storage.Esent
 {
     public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
     {
         private static int instanceCounter;
-        private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
-        private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
-        private readonly ThreadLocal<EsentTransactionContext> dtcTransactionContext = new ThreadLocal<EsentTransactionContext>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<StorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<StorageActionsAccessor>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<EsentTransactionContext> dtcTransactionContext = new Raven.Abstractions.Threading.ThreadLocal<EsentTransactionContext>();
         private readonly string database;
         private readonly InMemoryRavenConfiguration configuration;
         private readonly Action onCommit;

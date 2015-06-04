@@ -13,6 +13,7 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Client.Connection
 {
@@ -218,9 +219,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
 
-		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
-		private readonly ThreadLocal<TimeSpan?> requestTimeout = new ThreadLocal<TimeSpan?>(() => null);
-		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
+		private readonly Raven.Abstractions.Threading.ThreadLocal<TimeSpan?> aggressiveCacheDuration = new Raven.Abstractions.Threading.ThreadLocal<TimeSpan?>(() => null);
+		private readonly Raven.Abstractions.Threading.ThreadLocal<TimeSpan?> requestTimeout = new Raven.Abstractions.Threading.ThreadLocal<TimeSpan?>(() => null);
+		private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableHttpCaching = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
 
 		private volatile bool disposed;
 		private int numberOfCacheResets;

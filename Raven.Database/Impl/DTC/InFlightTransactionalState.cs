@@ -17,6 +17,7 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using System.Linq;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Impl.DTC
 {
@@ -173,7 +174,7 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-        protected readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
+        protected readonly Raven.Abstractions.Threading.ThreadLocal<string> currentlyCommittingTransaction = new Raven.Abstractions.Threading.ThreadLocal<string>();
 
 		public abstract void Commit(string id);
 

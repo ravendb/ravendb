@@ -187,6 +187,8 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.Monitoring.Snmp.Port.Value, actual => actual.Monitoring.Snmp.Port);
 			configurationComparer.Assert(expected => expected.Monitoring.Snmp.Community.Value, actual => actual.Monitoring.Snmp.Community);
 			configurationComparer.Assert(expected => expected.Monitoring.Snmp.Enabled.Value, actual => actual.Monitoring.Snmp.Enabled);
+
+			configurationComparer.Assert(expected => expected.LowMemoryLimitForLinuxDetectionInMB.Value, actual => actual.LowMemoryForLinuxDetectionInMB);
 			
 
             configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value, actual => actual.TimeToWaitBeforeMarkingAutoIndexAsIdle);

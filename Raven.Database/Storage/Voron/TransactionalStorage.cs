@@ -29,6 +29,9 @@ using Voron.Impl.Compaction;
 using VoronConstants = Voron.Impl.Constants;
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
+using Raven.Unix.Native;
+using Raven.Abstractions;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Storage.Voron
 {
@@ -36,8 +39,8 @@ namespace Raven.Storage.Voron
 	{
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
-		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
+		private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
+		private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
 
 		private volatile bool disposed;
 		private readonly DisposableAction exitLockDisposable;
@@ -280,11 +283,18 @@ namespace Raven.Storage.Voron
 		}
 
 	    private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
-        {
-            var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
-            var filePathFolder = new DirectoryInfo(directoryPath);
-            if (filePathFolder.Exists == false)
-                filePathFolder.Create();
+		{
+			var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
+			var filePathFolder = new DirectoryInfo (directoryPath);
+
+			if (filePathFolder.Exists == false) {
+				if (EnvironmentUtils.RunningOnPosix == true) {
+					uint permissions = 509;
+					Syscall.mkdir (filePathFolder.Name, permissions);
+				}
+				else
+					filePathFolder.Create ();
+			}
 
 		    var tempPath = configuration.Storage.Voron.TempPath;
 		    var journalPath = configuration.Storage.Voron.JournalsStoragePath;

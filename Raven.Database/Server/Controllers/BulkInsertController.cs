@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using Raven.Unix.Native;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Actions;

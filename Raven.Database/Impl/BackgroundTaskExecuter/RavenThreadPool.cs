@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Microsoft.VisualBasic.Logging;
+
 using Mono.CSharp;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;

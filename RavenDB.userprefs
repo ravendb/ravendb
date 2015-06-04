@@ -1,0 +1,29 @@
+﻿<Properties StartupItem="Raven.Server/Raven.Server.csproj">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Raven.Database/Server/AppBuilderExtensions.cs">
+    <Files>
+      <File FileName="Raven.Database/Server/AppBuilderExtensions.cs" Line="15" Column="13" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="RavenDB" expanded="True">
+            <Node name="Raven.Database" expanded="True">
+              <Node name="Server" expanded="True">
+                <Node name="AppBuilderExtensions.cs" selected="True" />
+              </Node>
+            </Node>
+            <Node name="Raven.Smuggler" expanded="True" />
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <DisabledProjects>
+    <String>Raven.SpecificPlatform.Windows/Raven.SpecificPlatform.Windows.csproj</String>
+  </DisabledProjects>
+</Properties>

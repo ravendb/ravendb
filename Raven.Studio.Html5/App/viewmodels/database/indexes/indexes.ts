@@ -17,6 +17,7 @@ import getPendingIndexReplacementsCommand = require("commands/database/index/get
 import d3 = require('d3/d3');
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
+import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 
 class indexes extends viewModelBase {
 
@@ -382,6 +383,10 @@ class indexes extends viewModelBase {
     makeIndexPersistent(index: index) {
         new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
     }
+
+	forceSideBySide(idx: index) {
+		new forceIndexReplace(idx.name, this.activeDatabase()).execute();
+	}
 }
 
 export = indexes;

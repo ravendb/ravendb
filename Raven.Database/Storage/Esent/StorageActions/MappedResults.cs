@@ -19,12 +19,13 @@ using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Storage.Esent.StorageActions;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IMappedResultsStorageAction
 	{
-		private static readonly ThreadLocal<IHashEncryptor> localSha1 = new ThreadLocal<IHashEncryptor>(() => Encryptor.Current.CreateHash());
+		private static readonly Raven.Abstractions.Threading.ThreadLocal<IHashEncryptor> localSha1 = new Raven.Abstractions.Threading.ThreadLocal<IHashEncryptor>(() => Encryptor.Current.CreateHash());
 
 		public static byte[] HashReduceKey(string reduceKey)
 		{

@@ -50,13 +50,13 @@ namespace Raven.Tests.Issues
 					Script = @"
 								database.Configuration.DisableDocumentPreFetching = true;
 								database.Configuration.MaxNumberOfItemsToPreFetch = 13;
-								database.Configuration.BulkImportBatchTimeout = System.TimeSpan.FromSeconds(13);
+								database.Configuration.BulkImportBatchTimeout = System.TimeSpan.FromMinutes(13);
 							 "
 				});
 
 				Assert.True(configuration.DisableDocumentPreFetching);
 				Assert.Equal(13, configuration.MaxNumberOfItemsToPreFetch);
-				Assert.Equal(TimeSpan.FromSeconds(13), configuration.BulkImportBatchTimeout);
+				Assert.Equal(TimeSpan.FromMinutes(13), configuration.BulkImportBatchTimeout);
 			}
 		}
 
@@ -140,17 +140,17 @@ namespace Raven.Tests.Issues
 				new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
 				{
 					Script = @"
-								var user = new Raven.Json.Linq.RavenJObject();
-								user.Add('Name', Raven.Json.Linq.RavenJToken.FromObject('Neo'));
-
-								database.Documents.Put('users/', null, user, new Raven.Json.Linq.RavenJObject(), null);
+								var doc = Raven.Json.Linq.RavenJObject.Parse('{ ""Name"" : ""Raven"" }');
+								var metadata = Raven.Json.Linq.RavenJObject.Parse('{ ""Raven-Entity-Name"" : ""Docs"" }');
+								database.Documents.Put('doc/1', null, doc, metadata, null);
 							 "
 				});
 
-				var jsonDocument = store.DatabaseCommands.Get("users/1");
+				var jsonDocument = store.DatabaseCommands.Get("doc/1");
 
 				Assert.NotNull(jsonDocument);
-				Assert.Equal("Neo", jsonDocument.DataAsJson["Name"]);
+				Assert.Equal("Raven", jsonDocument.DataAsJson["Name"]);
+				Assert.Equal("Docs", jsonDocument.Metadata[Constants.RavenEntityName]);
 			}
 		}
 	}

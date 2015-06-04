@@ -1368,3 +1368,13 @@ interface dataExplorationRequestDto {
 	TimeoutSeconds: number;
 	PageSize: number;
 }
+
+interface adminJsScriptDto {
+	Script: string;
+}
+
+
+interface consoleJsSampleDto {
+	Name: string;
+	Code: string;
+}
