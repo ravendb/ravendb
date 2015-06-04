@@ -49,7 +49,7 @@ namespace Raven.Database.Extensions
 				var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
 				var windowsPrincipal = databaseAccessPrincipal == null ? principal as WindowsPrincipal : databaseAccessPrincipal.Principal;
 
-				return Raven.SpecificPlatform.Windows.RoleFinder.IsInRole (windowsPrincipal, isModeAdmin, role, SystemTime.UtcNow, log.Debug,
+				return Raven.SpecificPlatform.Windows.RoleFinder.IsInRole(windowsPrincipal, isModeAdmin, role, SystemTime.UtcNow, s => log.Debug(s),
 					primitiveParameters.IsOAuthNull,
 					primitiveParameters.IsGlobalAdmin,
 					log.WarnException);
@@ -70,7 +70,7 @@ namespace Raven.Database.Extensions
 				var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
 				var windowsPrincipal = databaseAccessPrincipal == null ? principal as WindowsPrincipal : databaseAccessPrincipal.Principal;
 
-				return Raven.SpecificPlatform.Windows.RoleFinder.IsInRole (windowsPrincipal, isModeAdmin, WindowsBuiltInRole.Administrator, SystemTime.UtcNow, log.Debug,
+				return Raven.SpecificPlatform.Windows.RoleFinder.IsInRole(windowsPrincipal, isModeAdmin, WindowsBuiltInRole.Administrator, SystemTime.UtcNow, s => log.Debug(s),
 					primitiveParameters.IsOAuthNull,
 					primitiveParameters.IsGlobalAdmin,
 					log.WarnException);					
@@ -92,7 +92,7 @@ namespace Raven.Database.Extensions
 				var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
 				var windowsPrincipal = databaseAccessPrincipal == null ? principal as WindowsPrincipal : databaseAccessPrincipal.Principal;
 
-				return Raven.SpecificPlatform.Windows.RoleFinder.IsInRole (windowsPrincipal, isModeAdmin, WindowsBuiltInRole.BackupOperator, SystemTime.UtcNow, log.Debug,
+				return Raven.SpecificPlatform.Windows.RoleFinder.IsInRole(windowsPrincipal, isModeAdmin, WindowsBuiltInRole.BackupOperator, SystemTime.UtcNow, s => log.Debug(s),
 					primitiveParameters.IsOAuthNull,
 					primitiveParameters.IsGlobalAdmin,
 					log.WarnException);					
@@ -109,7 +109,7 @@ namespace Raven.Database.Extensions
 			public bool IsInRole(WindowsIdentity windowsIdentity, WindowsBuiltInRole role)
 			{
 				if (EnvironmentUtils.RunningOnPosix == false)
-					return cachingRoleFinder.IsInRole (windowsIdentity, role, SystemTime.UtcNow, log.Debug,
+					return cachingRoleFinder.IsInRole(windowsIdentity, role, SystemTime.UtcNow, s => log.Debug(s),
 						false,
 						false,
 						log.WarnException);
