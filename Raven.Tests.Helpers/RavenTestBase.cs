@@ -59,6 +59,8 @@ namespace Raven.Tests.Helpers
 
 	    private static bool checkedAsyncVoid;
 
+		private static bool isRemoteDocumentStore = false;
+
 		protected RavenTestBase()
 		{
 			if (checkedAsyncVoid == false)
@@ -286,6 +288,7 @@ namespace Raven.Tests.Helpers
             bool ensureDatabaseExists = true,
             Action<DocumentStore> configureStore = null,
             string activeBundles = null,
+		
             IEnumerable<IEnumerable> seedData = null)
         {
             databaseName = NormalizeDatabaseName(databaseName);
@@ -320,6 +323,8 @@ namespace Raven.Tests.Helpers
             {
                 StoreSeedData(seedData, documentStore);
             }
+
+	        isRemoteDocumentStore = true;
 
             return documentStore;
         }
@@ -767,11 +772,19 @@ namespace Raven.Tests.Helpers
 			if (debug && Debugger.IsAttached == false)
 				return;
 
+
+			if (!isRemoteDocumentStore)
+			{
+				throw new NotSupportedException("when using a local store WaitForUserToContinueTheTest must be called with store parameter");
+			}
+			
+
 			using (var documentStore = new DocumentStore
 			{
 				Url = url ?? "http://localhost:8079"
 			}.Initialize())
 			{
+			
                 var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
                 var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
                 Process.Start(documentsPage); // start the server
