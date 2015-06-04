@@ -26,7 +26,6 @@ namespace Raven.Client.Counters.Replication
 		private readonly HttpJsonRequestFactory requestFactory;
 		private readonly CounterStore counterStore;
 		private readonly Convention convention;
-		private readonly CounterStore parent;
 		public const int DefaultIntervalBetweenUpdatesInMinutes = 5;
 
 		private bool currentlyExecuting;
@@ -39,32 +38,30 @@ namespace Raven.Client.Counters.Replication
 		private readonly FailureCounters failureCounters;
 		private int currentReadStripingBase;
 
-		public List<OperationMetadata> ReplicationDestinations { get; protected set; }
+		public List<CounterReplicationDestination> ReplicationDestinations { get; protected set; }
 
-		private static readonly List<OperationMetadata> Empty = new List<OperationMetadata>();
+		private static readonly List<CounterReplicationDestination> Empty = new List<CounterReplicationDestination>();
 		private readonly int delayTimeInMiliSec;
 
 		/// <summary>
 		/// Gets the replication destinations.
 		/// </summary>
 		/// <value>The replication destinations.</value>
-		public List<OperationMetadata> ReplicationDestinationsUrls
+		public List<CounterReplicationDestination> ReplicationDestinationsAccordingToFailover
 		{
 			get
 			{
 				if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 					return Empty;
 
-				return ReplicationDestinations
-					.Select(operationMetadata => new OperationMetadata(operationMetadata))
-					.ToList();
+				return ReplicationDestinations;
 			}
 		}
 
 		internal CounterReplicationInformer(HttpJsonRequestFactory requestFactory, CounterStore counterStore, Convention convention, int delayTimeInMiliSec = 1000)
 		{
 			currentReadStripingBase = 0;
-			ReplicationDestinations = new List<OperationMetadata>();
+			ReplicationDestinations = new List<CounterReplicationDestination>();
 			this.requestFactory = requestFactory;
 			this.counterStore = counterStore;
 			this.convention = convention;
@@ -80,7 +77,7 @@ namespace Raven.Client.Counters.Replication
 			lastReplicationUpdate = SystemTime.UtcNow;
 		}
 
-		public async Task<T> ExecuteWithReplicationAsync<T>(string counterStoreUrl, HttpMethod method, Func<string, Task<T>> operation, CancellationToken token)
+		public async Task<T> ExecuteWithReplicationAsync<T>(string counterStoreUrl, HttpMethod method, Func<string, string, Task<T>> operation, CancellationToken token)
 		{
 			if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
 				throw new InvalidOperationException("Only a single concurrent async request is allowed per async store instance.");
@@ -89,8 +86,9 @@ namespace Raven.Client.Counters.Replication
 			try
 			{
 				var operationCredentials = new OperationCredentials(counterStore.Credentials.ApiKey, counterStore.Credentials.Credentials);
-				var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
+				var localReplicationDestinations = ReplicationDestinationsAccordingToFailover; // thread safe copy
 
+				//check for supported flags
 				var shouldReadFromAllServers = (Conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) != 0;
 				var shouldFailImmediately = (Conventions.FailoverBehavior & FailoverBehavior.FailImmediately) != 0;
 
@@ -101,6 +99,8 @@ namespace Raven.Client.Counters.Replication
 					operationResult = await TryExecuteOperationWithLoadBalancing(counterStoreUrl, operation, token, localReplicationDestinations, operationCredentials);
 					if (operationResult.Success)
 						return operationResult.Result;
+
+					RefreshReplicationInformation(); //force refresh of cluster information -> we failed to do round-robin, maybe some servers are down? 													
 				}
 
 				//if we did load balancing and got to this point, this means we failed to connect to the designated server, and then the following
@@ -108,16 +108,19 @@ namespace Raven.Client.Counters.Replication
 
 				//otherwise we didn't do load balancing; therefore go the usual route -> try to read from primary and if fails -> try to read from secondary
 
-				operationResult = await TryExecuteOperationOnPrimaryNode(counterStoreUrl, operation, token, operationCredentials);
+				operationResult = await TryExecuteOperationWithFailover(counterStoreUrl, operation, token, operationCredentials, shouldFailImmediately, localReplicationDestinations);
+
 				if (operationResult.Success)
 					return operationResult.Result;
 
-				if (shouldFailImmediately)
-					throw new InvalidOperationException(@"Attempted to connect to master and failed. Since there is FailImmediately flag specified in FailoverBehavior, failing the operation.");
-
-				operationResult = await TryExecutingOperationsOnSecondaryNodes(operation, token, localReplicationDestinations, operationCredentials);
-				if (operationResult.Success)
-					return operationResult.Result;
+				//maybe it's transient failure? if so, try again
+				if (operationResult.Success == false && failureCounters.IsFirstFailure(counterStoreUrl)) 
+				{
+					RefreshReplicationInformation();
+					operationResult = await TryExecuteOperationWithFailover(counterStoreUrl, operation, token, operationCredentials, shouldFailImmediately, localReplicationDestinations);
+					if (operationResult.Success)
+						return operationResult.Result;
+				}
 
 				// this should not be thrown, but sometimes, things go _really_ wrong...
 				throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
@@ -139,7 +142,27 @@ namespace Raven.Client.Counters.Replication
 			}
 		}
 
-		private async Task<AsyncOperationResult<T>> TryExecuteOperationWithLoadBalancing<T>(string counterStoreUrl, Func<string, Task<T>> operation, CancellationToken token, List<OperationMetadata> localReplicationDestinations, OperationCredentials operationCredentials)
+		private async Task<AsyncOperationResult<T>> TryExecuteOperationWithFailover<T>(string counterStoreUrl, Func<string, string, Task<T>> operation, CancellationToken token, OperationCredentials operationCredentials, bool shouldFailImmediately, List<CounterReplicationDestination> localReplicationDestinations)
+		{
+			var operationResult = await TryExecuteOperationOnPrimaryNode(counterStoreUrl, operation, token, operationCredentials);
+			if (operationResult.Success)
+				return operationResult;
+
+			if (shouldFailImmediately)
+				throw new InvalidOperationException(@"Attempted to connect to master and failed. Since there is FailImmediately flag specified in FailoverBehavior, failing the operation.");
+
+			operationResult = await TryExecutingOperationsOnSecondaryNodes(operation, token, localReplicationDestinations, operationCredentials);
+			if (operationResult.Success)
+				return operationResult;
+
+			return new AsyncOperationResult<T>
+			{
+				Result = default(T),
+				Success = false
+			};
+		}
+
+		private async Task<AsyncOperationResult<T>> TryExecuteOperationWithLoadBalancing<T>(string counterStoreUrl, Func<string, string, Task<T>> operation, CancellationToken token, List<CounterReplicationDestination> localReplicationDestinations, OperationCredentials operationCredentials)
 		{
 			//essentially do round robin load balancing here
 			var replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1);
@@ -147,10 +170,11 @@ namespace Raven.Client.Counters.Replication
 
 			if (ShouldReadFromSecondaryNode(replicationIndex, localReplicationDestinations))
 			{
-				var storeUrl = localReplicationDestinations[replicationIndex].Url;
+				var storeUrl = localReplicationDestinations[replicationIndex].ServerUrl;
+				var storeName = localReplicationDestinations[replicationIndex].CounterStorageName;
 				if (ShouldExecuteUsing(storeUrl, operationCredentials, token))
 				{
-					operationResult = await TryExecuteOperationAsync(storeUrl, operation, true, operationCredentials, token).ConfigureAwait(false);
+					operationResult = await TryExecuteOperationAsync(storeUrl,storeName, operation, true, operationCredentials, token).ConfigureAwait(false);
 					if (operationResult.Success)
 						return operationResult;
 				}
@@ -159,7 +183,7 @@ namespace Raven.Client.Counters.Replication
 			{
 				if (ShouldExecuteUsing(counterStoreUrl, operationCredentials, token))
 				{
-					operationResult = await TryExecuteOperationAsync(counterStoreUrl, operation, true, operationCredentials, token).ConfigureAwait(false);
+					operationResult = await TryExecuteOperationAsync(counterStoreUrl, counterStore.Name, operation, true, operationCredentials, token).ConfigureAwait(false);
 					if (operationResult.Success)
 						return operationResult;
 				}
@@ -172,7 +196,7 @@ namespace Raven.Client.Counters.Replication
 			};
 		}
 
-		private static bool ShouldReadFromSecondaryNode(int replicationIndex, List<OperationMetadata> localReplicationDestinations)
+		private static bool ShouldReadFromSecondaryNode(int replicationIndex, List<CounterReplicationDestination> localReplicationDestinations)
 		{
 			// if replicationIndex == destinations count, then we want to use the master
 			// if replicationIndex < 0, then we were explicitly instructed to use the master
@@ -185,7 +209,7 @@ namespace Raven.Client.Counters.Replication
 			get { return convention; }
 		}
 
-		private async Task<AsyncOperationResult<T>> TryExecuteOperationAsync<T>(string url, Func<string, Task<T>> operation, bool avoidThrowing, OperationCredentials credentials, CancellationToken cancellationToken)
+		private async Task<AsyncOperationResult<T>> TryExecuteOperationAsync<T>(string url, string counterStoreName, Func<string, string, Task<T>> operation, bool avoidThrowing, OperationCredentials credentials, CancellationToken cancellationToken)
 		{
 			var tryWithPrimaryCredentials = failureCounters.IsFirstFailure(url);
 			bool shouldTryAgain = false;
@@ -193,7 +217,7 @@ namespace Raven.Client.Counters.Replication
 			try
 			{
 				cancellationToken.ThrowCancellationIfNotDefault(); //canceling the task here potentially will stop the recursion
-				var result = await operation(url).ConfigureAwait(false);
+				var result = await operation(url,counterStoreName).ConfigureAwait(false);
 				failureCounters.ResetFailureCount(url);
 				return new AsyncOperationResult<T>
 				{
@@ -256,7 +280,7 @@ namespace Raven.Client.Counters.Replication
 					throw;
 				}
 			}
-			return await TryExecuteOperationAsync(url, operation, avoidThrowing, credentials, cancellationToken);
+			return await TryExecuteOperationAsync(url,counterStoreName, operation, avoidThrowing, credentials, cancellationToken);
 		}
 
 		private bool ShouldExecuteUsing(string counterStoreUrl, OperationCredentials credentials, CancellationToken token)
@@ -279,9 +303,10 @@ namespace Raven.Client.Counters.Replication
 						token.ThrowCancellationIfNotDefault();
 						try
 						{
-							var r = await TryExecuteOperationAsync<object>(counterStoreUrl, async url =>
+							var r = await TryExecuteOperationAsync<object>(counterStoreUrl,null, async (url, counterStoreName) =>
 							{
-								var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(url), HttpMethods.Get, credentials, Conventions.ShouldCacheRequest);
+								var serverCheckUrl = GetServerCheckUrl(url);
+								var requestParams = new CreateHttpJsonRequestParams(null, serverCheckUrl, HttpMethods.Get, credentials, Conventions.ShouldCacheRequest);
 								using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 								{
 									await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -313,30 +338,30 @@ namespace Raven.Client.Counters.Replication
 			return false;
 		}
 
-		private async Task<AsyncOperationResult<T>> TryExecutingOperationsOnSecondaryNodes<T>(Func<string, Task<T>> operation, CancellationToken token, List<OperationMetadata> localReplicationDestinations, OperationCredentials operationCredentials)
+		private async Task<AsyncOperationResult<T>> TryExecutingOperationsOnSecondaryNodes<T>(Func<string, string, Task<T>> operation, CancellationToken token, List<CounterReplicationDestination> localReplicationDestinations, OperationCredentials operationCredentials)
 		{
 			for (var i = 0; i < localReplicationDestinations.Count; i++)
 			{
 				token.ThrowCancellationIfNotDefault();
 
 				var replicationDestination = localReplicationDestinations[i];
-				if (ShouldExecuteUsing(replicationDestination.Url, operationCredentials, token) == false)
+				if (ShouldExecuteUsing(replicationDestination.CounterStorageUrl, operationCredentials, token) == false)
 					continue;
 
 				var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;
-				var operationResult = await TryExecuteOperationAsync(replicationDestination.Url, operation, hasMoreReplicationDestinations, operationCredentials, token).ConfigureAwait(false);
+				var operationResult = await TryExecuteOperationAsync(replicationDestination.ServerUrl,replicationDestination.CounterStorageName, operation, hasMoreReplicationDestinations, operationCredentials, token).ConfigureAwait(false);
 
 				if (operationResult.Success)
 					return operationResult;
 
-				failureCounters.IncrementFailureCount(replicationDestination.Url);
-				if (!operationResult.WasTimeout && failureCounters.IsFirstFailure(replicationDestination.Url))
+				failureCounters.IncrementFailureCount(replicationDestination.ServerUrl);
+				if (!operationResult.WasTimeout && failureCounters.IsFirstFailure(replicationDestination.ServerUrl))
 				{
-					operationResult = await TryExecuteOperationAsync(replicationDestination.Url, operation, hasMoreReplicationDestinations, operationCredentials, token).ConfigureAwait(false);
+					operationResult = await TryExecuteOperationAsync(replicationDestination.ServerUrl, replicationDestination.CounterStorageName, operation, hasMoreReplicationDestinations, operationCredentials, token).ConfigureAwait(false);
 					if (operationResult.Success)
 						return operationResult;
 
-					failureCounters.IncrementFailureCount(replicationDestination.Url);
+					failureCounters.IncrementFailureCount(replicationDestination.ServerUrl);
 				}
 			}
 
@@ -347,11 +372,11 @@ namespace Raven.Client.Counters.Replication
 			};
 		}
 
-		private async Task<AsyncOperationResult<T>> TryExecuteOperationOnPrimaryNode<T>(string counterStoreUrl, Func<string, Task<T>> operation, CancellationToken token, OperationCredentials operationCredentials)
+		private async Task<AsyncOperationResult<T>> TryExecuteOperationOnPrimaryNode<T>(string counterStoreUrl, Func<string, string, Task<T>> operation, CancellationToken token, OperationCredentials operationCredentials)
 		{
 			if (ShouldExecuteUsing(counterStoreUrl, operationCredentials, token))
 			{
-				var operationResult = await TryExecuteOperationAsync(counterStoreUrl, operation, true, operationCredentials, token).ConfigureAwait(false);
+				var operationResult = await TryExecuteOperationAsync(counterStoreUrl, counterStore.Name, operation, true, operationCredentials, token).ConfigureAwait(false);
 				if (operationResult.Success)
 					return operationResult;
 
@@ -437,31 +462,15 @@ namespace Raven.Client.Counters.Replication
 
 		protected void UpdateReplicationInformationFromDocument(JsonDocument document)
 		{
-			var destinations = document.DataAsJson.Value<RavenJArray>("Destinations").Select(x => JsonConvert.DeserializeObject<CounterReplicationDestination>(x.ToString()));
-
-			ReplicationDestinations = destinations.Select(x =>
-			{
-				ICredentials credentials = null;
-				if (string.IsNullOrEmpty(x.Username) == false)
-				{
-					credentials = string.IsNullOrEmpty(x.Domain)
-									  ? new NetworkCredential(x.Username, x.Password)
-									  : new NetworkCredential(x.Username, x.Password, x.Domain);
-				}
-
-				return new OperationMetadata(x.ServerUrl, new OperationCredentials(x.ApiKey, credentials), null);
-			})
-				// filter out replication destination that don't have the url setup, we don't know how to reach them
-				// so we might as well ignore them. Probably private replication destination (using connection string names only)
-			.Where(x => x != null)
-			.ToList();
+			ReplicationDestinations = document.DataAsJson.Value<RavenJArray>("Destinations")
+											.Select(x => JsonConvert.DeserializeObject<CounterReplicationDestination>(x.ToString())).ToList();
 
 			foreach (var replicationDestination in ReplicationDestinations)
 			{
 				FailureCounter value;
-				if (failureCounters.FailureCounts.TryGetValue(replicationDestination.Url, out value))
+				if (failureCounters.FailureCounts.TryGetValue(replicationDestination.ServerUrl, out value))
 					continue;
-				failureCounters.FailureCounts[replicationDestination.Url] = new FailureCounter();
+				failureCounters.FailureCounts[replicationDestination.ServerUrl] = new FailureCounter();
 			}
 		}
 

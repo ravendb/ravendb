@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,23 +10,28 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Client;
 using Raven.Client.Counters;
+using Raven.Database.Extensions;
 using Raven.Tests.Helpers;
 
 namespace Raven.Tests.Counters
 {
 	public class RavenBaseCountersTest : RavenTestBase
 	{
-		private readonly IDocumentStore ravenStore;
+		protected readonly IDocumentStore ravenStore;
 		private readonly ConcurrentDictionary<string, int> storeCount;
-		protected const string DefaultCounteStorageName = "FooBarCounter_ThisIsRelativelyUniqueCounterName";
+		protected readonly string DefaultCounteStorageName = "ThisIsRelativelyUniqueCounterName";
 
 		protected RavenBaseCountersTest()
 		{
+			foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueCounterName*"))
+				IOExtensions.DeleteDirectory(folder);
+
 			ravenStore = NewRemoteDocumentStore(fiddler:true);
+			DefaultCounteStorageName += Guid.NewGuid();
 			storeCount = new ConcurrentDictionary<string, int>();
 		}
 
-		protected ICounterStore NewRemoteCountersStore(string counterStorageName = DefaultCounteStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
+		protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
 		{
 			ravenStore = ravenStore ?? this.ravenStore;
 			storeCount.AddOrUpdate(ravenStore.Identifier, id => 1, (id, val) => val++);		
@@ -54,7 +60,14 @@ namespace Raven.Tests.Counters
 		public override void Dispose()
 		{
 			if (ravenStore != null) ravenStore.Dispose();
-			base.Dispose();
+
+			try
+			{
+				base.Dispose();
+			}
+			catch (AggregateException)
+			{
+			}
 		}
 
 		protected async Task<bool> WaitForReplicationBetween(ICounterStore source, ICounterStore destination, string groupName, string counterName, int timeoutInSec = 30)

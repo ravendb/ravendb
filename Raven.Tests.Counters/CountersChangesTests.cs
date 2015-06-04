@@ -18,7 +18,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task NotificationReceivedWhenCounterAddedAndIncremented()
 		{
-			using (var store = NewRemoteCountersStore())
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
@@ -52,7 +52,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task NotificationReceivedWhenLocalCounterAddedAndDecremented()
 		{
-			using (var store = NewRemoteCountersStore())
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
@@ -133,7 +133,7 @@ namespace Raven.Tests.Counters
 		public void NotificationReceivedWhenBatchOperation(int batchSizeLimit, int actionsCount)
 		{
 			int startCount = 0, endCount = 0;
-			using (var store = NewRemoteCountersStore())
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
 				using (var batchOperation = store.Advanced.NewBatch(new CountersBatchOptions { BatchSizeLimit = batchSizeLimit }))
 				{

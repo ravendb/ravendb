@@ -11,7 +11,6 @@ using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Tests.Helpers.Util;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Raven.Tests.Counters
 {

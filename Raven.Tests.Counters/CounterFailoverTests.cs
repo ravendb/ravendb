@@ -1,9 +1,10 @@
 ﻿using System;
-using System.IO;
 using System.Threading.Tasks;
+using Raven.Abstractions.Counters;
 using Raven.Abstractions.Replication;
-using Raven.Client.Counters;
+using Raven.Client;
 using Raven.Database.Extensions;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Counters
@@ -83,6 +84,16 @@ namespace Raven.Tests.Counters
 			}
 		}
 
+		private void SetDisabledStateOnCounter(string name,IDocumentStore store, bool value)
+		{
+			var counterDocumentKey = "Raven/Counters/" + name;
+			var document = store.DatabaseCommands.ForSystemDatabase().Get(counterDocumentKey);
+			var counterDocument = document.DataAsJson.ToObject<CounterStorageDocument>();
+			counterDocument.Disabled = value;
+
+			store.DatabaseCommands.ForSystemDatabase().Put(counterDocumentKey, null, RavenJObject.FromObject(counterDocument), new RavenJObject());
+		}
+
 		//test to check the following scenario:
 		//1) counterA, counterB online. 
 		//2) do changes in counterA
@@ -92,107 +103,68 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Alternating_failover_nodes_should_work()
 		{
-			if (Directory.Exists("data"))
-				IOExtensions.DeleteDirectory("data");
-
-			var serverA = GetNewServer(8077, runInMemory: false, dataDirectory: "data");
-			try
+			using (var serverA = GetNewServer(8077, runInMemory: false))
+			using (var serverB = GetNewServer(8078, runInMemory: false))
+			using (var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory:false))
+			using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB, runInMemory:false)) 
+			using (var storeA = NewRemoteCountersStore("A", ravenStore: ravenStoreA))
+			using (var storeB = NewRemoteCountersStore("B", ravenStore: ravenStoreB))
 			{
-				using (var serverB = GetNewServer(8076, runInMemory: false))
-				{
-					var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false);
-					try
-					{
-						using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
-						{
-							var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA);
-							try
-							{
-								using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
-								{
-									await SetupReplicationAsync(storeA, storeB);
-									await storeA.ChangeAsync("group", "counter", 3);
+				await SetupReplicationAsync(storeA, storeB);
+				await storeA.ChangeAsync("group", "counter", 3);
+				
+				await WaitForReplicationBetween(storeA, storeB, "group", "counter");
+				SetDisabledStateOnCounter(storeA.Name, ravenStoreA, true);
 
-									await WaitForReplicationBetween(storeA, storeB, "group", "counter");
-									ravenStoreA.Dispose();
-									serverA.Dispose();
+				var total = await storeA.GetOverallTotalAsync("group", "counter");
+				Assert.Equal(3, total);
 
-									var total = await storeA.GetOverallTotalAsync("group", "counter");
-									Assert.Equal(3, total);
+				SetDisabledStateOnCounter(storeA.Name, ravenStoreA, false);
+				SetDisabledStateOnCounter(storeB.Name, ravenStoreB, true);
 
-									serverA = GetNewServer(8077, runInMemory: false, dataDirectory: "data");
-									ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false);
-									storeA.ReplicationInformer.RefreshReplicationInformation();
-									serverB.Dispose();
+				storeA.ReplicationInformer.RefreshReplicationInformation();
 
-									total = await storeA.GetOverallTotalAsync("group", "counter");
-									Assert.Equal(3, total);
-								}
-							}
-							finally
-							{
-								storeA.Dispose();
-							}
-						}
-					}
-					finally
-					{
-						ravenStoreA.Dispose();
-					}
-				}
-			}
-			finally
-			{
-				serverA.Dispose();
+				total = await storeA.GetOverallTotalAsync("group", "counter");
+				Assert.Equal(3, total);
+
+				SetDisabledStateOnCounter(storeB.Name, ravenStoreB, false);
 			}
 		}
 
 		[Fact]
 		public async Task Multiple_node_failover_should_work()
 		{
-			var serverA = GetNewServer(8077, runInMemory: false);
-			using (var serverB = GetNewServer(8076))
-			using (var serverC = GetNewServer(8075))
+			using (var serverA = GetNewServer(8070, runInMemory: false))
+			using (var serverB = GetNewServer(8071, runInMemory: false))
+			using (var serverC = GetNewServer(8072, runInMemory: false))
+			using (var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false))
+			using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB, runInMemory: false))
+			using (var ravenStoreC = NewRemoteDocumentStore(ravenDbServer: serverC, runInMemory: false))
+			using (var storeA = NewRemoteCountersStore("A", ravenStore: ravenStoreA))
+			using (var storeB = NewRemoteCountersStore("B", ravenStore: ravenStoreB))
+			using (var storeC = NewRemoteCountersStore("C", ravenStore: ravenStoreC))
 			{
-				var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false);
-				var ravenStoreC = NewRemoteDocumentStore(ravenDbServer: serverC);
-				try
-				{
-					using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
-					{
-						using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA))
-						using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
-						using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreC))
-						{
-							await SetupReplicationAsync(storeA, storeB, storeC);
+				await SetupReplicationAsync(storeA, storeB, storeC);
+				await storeA.ChangeAsync("group", "counter", 2);
 
+				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
+				Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
 
-							await storeA.ChangeAsync("group", "counter", 2);
+				SetDisabledStateOnCounter(storeA.Name, ravenStoreA, true);
+				
+				storeA.ReplicationInformer.RefreshReplicationInformation();
+				
+				//A is dead -> checking if we can fall back to B or C
+				var total = await storeA.GetOverallTotalAsync("group", "counter");
+				Assert.Equal(2, total);
 
-							Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
-							Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
-							storeA.ReplicationInformer.RefreshReplicationInformation();
-							serverA.Dispose();
+				SetDisabledStateOnCounter(storeB.Name, ravenStoreB, true);
 
-							var total = await storeA.GetOverallTotalAsync("group", "counter");
-							Assert.Equal(2, total);
+				storeA.ReplicationInformer.RefreshReplicationInformation();
 
-							serverA = GetNewServer(8077, runInMemory: false);
-							storeA.ReplicationInformer.RefreshReplicationInformation();
-							//now both A and B are dead, so check if we can fallback to C as well
-							serverA.Dispose();
-							serverB.Dispose();
-
-							total = await storeA.GetOverallTotalAsync("group", "counter");
-							Assert.Equal(2, total);
-						}
-					}
-				}
-				finally
-				{
-					ravenStoreA.Dispose();
-					ravenStoreC.Dispose();
-				}
+				//now B is also dead, make sure we can fall back on C
+				total = await storeA.GetOverallTotalAsync("group", "counter");
+				Assert.Equal(2, total);
 			}
 		}
 
@@ -204,58 +176,36 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Updating_replication_information_should_happen_per_specified_intervals()
 		{
-			var serverA = GetNewServer(8077, runInMemory: false);
-			try
+			using (var serverA = GetNewServer(8070, runInMemory: false))
+			using (var serverB = GetNewServer(8071, runInMemory: false))
+			using (var serverC = GetNewServer(8072, runInMemory: false))
+			using (var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false))
+			using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB, runInMemory: false))
+			using (var ravenStoreC = NewRemoteDocumentStore(ravenDbServer: serverC, runInMemory: false))
+			using (var storeA = NewRemoteCountersStore("A", ravenStore: ravenStoreA))
+			using (var storeB = NewRemoteCountersStore("B", ravenStore: ravenStoreB))
+			using (var storeC = NewRemoteCountersStore("C", ravenStore: ravenStoreC))
 			{
-				using (var serverB = GetNewServer(8076))
-				using (var serverC = GetNewServer(8075))
-				{
-					var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false);
-					var ravenStoreC = NewRemoteDocumentStore(ravenDbServer: serverC);
-					try
-					{
-						using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
-						{
-							using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA))
-							using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
-							using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreC))
-							{
-								await SetupReplicationAsync(storeA, storeB, storeC);
+				await SetupReplicationAsync(storeA, storeB, storeC);
+				await storeA.ChangeAsync("group", "counter", 2);
 
-								//essentially each time ICounterStore::NewCounterClient() is called, update replication information
-								storeA.ReplicationInformer.MaxIntervalBetweenUpdatesInMillisec = 0;
+				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
+				Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
 
-								await storeA.ChangeAsync("group", "counter", 2);
+				storeA.ReplicationInformer.MaxIntervalBetweenUpdatesInMillisec = 0; 
 
-								Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
-								Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
-								serverA.Dispose();
+				SetDisabledStateOnCounter(storeA.Name, ravenStoreA, true);
 
-								var total = await storeA.GetOverallTotalAsync("group", "counter");
-								Assert.Equal(2, total);
 
-								serverA = GetNewServer(8077, runInMemory: false);
-								//now both A and B are dead, so check if we can fallback to C as well
-								ravenStoreA.Dispose();
-								serverA.Dispose();
-								ravenStoreB.Dispose();
-								serverB.Dispose();
+				//A is dead -> checking if we can fall back to B or C
+				var total = await storeA.GetOverallTotalAsync("group", "counter");
+				Assert.Equal(2, total);
 
-								total = await storeA.GetOverallTotalAsync("group", "counter");
-								Assert.Equal(2, total);
-							}
-						}
-					}
-					finally
-					{
-						ravenStoreA.Dispose();
-						ravenStoreC.Dispose();
-					}
-				}
-			}
-			finally
-			{
-				serverA.Dispose();
+				SetDisabledStateOnCounter(storeB.Name, ravenStoreB, true);
+
+				//now B is also dead, make sure we can fall back on C
+				total = await storeA.GetOverallTotalAsync("group", "counter");
+				Assert.Equal(2, total);
 			}
 		}
 	}

@@ -17,7 +17,7 @@ namespace Raven.Tests.Counters
 		[InlineData(-2)]
 		public async Task CountrsReset_should_work(int delta)
 		{
-			using (var store = NewRemoteCountersStore())
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
 				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
@@ -43,7 +43,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task CountersIncrement_should_work()
 		{
-			using (var store = NewRemoteCountersStore())
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
 				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
@@ -69,7 +69,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Counters_change_should_work()
 		{
-			using (var store = NewRemoteCountersStore())
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
 				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{

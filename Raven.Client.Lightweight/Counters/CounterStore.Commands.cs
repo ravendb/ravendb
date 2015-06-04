@@ -15,10 +15,10 @@ namespace Raven.Client.Counters
 		{
 			AssertInitialized();
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-			await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Post, url =>
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Post, (url, counterStoreName) =>
 			{
 				var requestUriString = String.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}/change/{2}/{3}?delta={4}",
-					url, Name, groupName, counterName, delta);
+					url, counterStoreName, groupName, counterName, delta);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 					return request.ReadResponseJsonAsync().WithCancellation(token);
 			},token);
@@ -39,9 +39,9 @@ namespace Raven.Client.Counters
 			AssertInitialized();
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
-			await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Post,  url =>
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Post,  (url, counterStoreName) =>
 			{
-				var requestUriString = String.Format("{0}/cs/{1}/reset/{2}/{3}", url, Name, groupName, counterName);
+				var requestUriString = String.Format("{0}/cs/{1}/reset/{2}/{3}", url, counterStoreName, groupName, counterName);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 					return request.ReadResponseJsonAsync().WithCancellation(token);
 			},token);
@@ -51,9 +51,9 @@ namespace Raven.Client.Counters
 		{
 			AssertInitialized();
 
-			return await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Get,  async url =>
+			return await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Get, async (url, counterStoreName) =>
 			{
-				var requestUriString = String.Format("{0}/cs/{1}/getCounterOverallTotal/{2}/{3}", url, Name, groupName, counterName);
+				var requestUriString = String.Format("{0}/cs/{1}/getCounterOverallTotal/{2}/{3}", url, counterStoreName, groupName, counterName);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -67,7 +67,7 @@ namespace Raven.Client.Counters
 			AssertInitialized();
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
-			return await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Get,  async url =>
+			return await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Get, async (url, counterStoreName) =>
 			{
 				var requestUriString = String.Format("{0}/getCounterServersValues/{1}/{2}", url, groupName, counterName);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
