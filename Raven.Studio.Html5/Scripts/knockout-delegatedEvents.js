@@ -1,4 +1,4 @@
-// knockout-delegatedEvents 0.5.0 | (c) 2015 Ryan Niemeyer |  http://www.opensource.org/licenses/mit-license
+// knockout-delegatedEvents 0.3.0 | (c) 2014 Ryan Niemeyer |  http://www.opensource.org/licenses/mit-license
 ;(function(factory) {
     //CommonJS
     if (typeof require === "function" && typeof exports === "object" && typeof module === "object") {
@@ -12,7 +12,7 @@
     }
 }(function(ko, actions) {
     var prefix = "ko_delegated_";
-    var createDelegatedHandler = function(eventName, root, bubble) {
+    var createDelegatedHandler = function(eventName, root) {
         return function(event) {
             var data, method, context, action, owner, matchingParent, command, result,
                 el = event.target || event.srcElement,
@@ -21,8 +21,7 @@
 
             //loop until we either find an action, run out of elements, or hit the root element that has our delegated handler
             while (!method && el) {
-                method = el.nodeType === 1 && !el.disabled && (el.getAttribute(attr) || ko.utils.domData.get(el, key));
-
+                method = el.getAttribute(attr) || ko.utils.domData.get(el, key);
                 if (!method) {
                     el = el !== root ? el.parentNode : null;
                 }
@@ -33,15 +32,6 @@
                 context = ko.contextFor(el);
 
                 if (context) {
-                    //need to ensure that the clicked element is not inside a disabled element
-                    while (el && el !== root) {
-                        if (el.disabled) {
-                            return;
-                        }
-
-                        el = el.parentNode;
-                    }
-
                     data = context.$data;
 
                     if (typeof method === "string") {
@@ -97,22 +87,14 @@
                         }
                     }
 
-                    //prevent bubbling if not enabled
-                    if (bubble !== true) {
-                        event.cancelBubble = true;
-
-                        if (typeof event.stopPropagation === "function") {
-                            event.stopPropagation();
-                        }
+                    //prevent bubbling
+                    event.cancelBubble = true;
+                    if (typeof event.stopPropagation === "function") {
+                        event.stopPropagation();
                     }
                 }
             }
         };
-    };
-
-    //create binding handler name from event name
-    var createBindingName = function(eventName) {
-        return "delegated" + eventName.substr(0, 1).toUpperCase() + eventName.slice(1);
     };
 
     //create a binding for an event to associate a function with the element
@@ -122,8 +104,8 @@
             return;
         }
 
-        //get binding name
-        bindingName = createBindingName(event);
+        //capitalize first letter
+        bindingName = "delegated" + event.substr(0, 1).toUpperCase() + event.slice(1);
 
         //create the binding, if it does not exist
         if (!ko.bindingHandlers[bindingName]) {
@@ -138,7 +120,7 @@
 
     //add a handler on a parent element that responds to events from the children
     ko.bindingHandlers.delegatedHandler = {
-        init: function(element, valueAccessor, allBindings) {
+        init: function(element, valueAccessor) {
             var events = ko.utils.unwrapObservable(valueAccessor()) || [];
 
             if (typeof events === "string") {
@@ -146,11 +128,8 @@
             }
 
             ko.utils.arrayForEach(events, function(event) {
-                //check if the associated "delegated<EventName>Bubble" is true (optionally allows bubbling)
-                var bubble = allBindings.get(createBindingName(event + "Bubble")) === true;
-
                 createDelegatedBinding(event);
-                ko.utils.registerEventHandler(element, event, createDelegatedHandler(event, element, bubble));
+                ko.utils.registerEventHandler(element, event, createDelegatedHandler(event, element));
             });
         }
     };

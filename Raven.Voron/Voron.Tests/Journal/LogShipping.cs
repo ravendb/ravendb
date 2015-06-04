@@ -83,12 +83,12 @@ namespace Voron.Tests.Journal
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
-					//if tree doesn't exist --> throws InvalidOperationException
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
 					{
 						var result = snaphsot.Read("TestTree", "ABC");
 						Assert.Equal(1, result.Version);
 						Assert.Equal("Foo", result.Reader.ToStringValue());
-					};
+					});
 				}
 
 				transactionsToShip.TryDequeue(out tx);
@@ -96,19 +96,19 @@ namespace Voron.Tests.Journal
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
-					//if tree doesn't exist --> throws InvalidOperationException
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
 					{
 						var result = snaphsot.Read("TestTree", "ABC");
 						Assert.Equal(1, result.Version);
 						Assert.Equal("Foo", result.Reader.ToStringValue());
-					};
+					});
 
-					//if tree doesn't exist --> throws InvalidOperationException
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
 					{
 						var result = snaphsot.Read("TestTree2", "ABC");
 						Assert.Equal(1, result.Version);
 						Assert.Equal("Foo", result.Reader.ToStringValue());
-					};
+					});
 				}
 			}
 		}
@@ -149,19 +149,19 @@ namespace Voron.Tests.Journal
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
-					//if tree doesn't exist --> throws InvalidOperationException
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
 					{
 						var result = snaphsot.Read("TestTree", "ABC");
 						Assert.Equal(1, result.Version);
 						Assert.Equal("Foo", result.Reader.ToStringValue());
-					};
+					});
 
-					//if tree doesn't exist --> throws InvalidOperationException
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
 					{
 						var result = snaphsot.Read("TestTree2", "ABC");
 						Assert.Equal(1, result.Version);
 						Assert.Equal("Foo", result.Reader.ToStringValue());
-					};
+					});
 				}
 			}
 		}
@@ -199,12 +199,12 @@ namespace Voron.Tests.Journal
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
-					//if tree doesn't exist --> throws InvalidOperationException
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
 					{
 						var result = snaphsot.Read("TestTree", "ABC");
 						Assert.Equal(1, result.Version);
 						Assert.Equal("Foo", result.Reader.ToStringValue());
-					};
+					});
 				}
 			}
 
@@ -217,19 +217,19 @@ namespace Voron.Tests.Journal
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
-					//if tree doesn't exist --> throws InvalidOperationException
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
 					{
 						var result = snaphsot.Read("TestTree", "ABC");
 						Assert.Equal(1, result.Version);
 						Assert.Equal("Foo", result.Reader.ToStringValue());
-					};
+					});
 
-					//if tree doesn't exist --> throws InvalidOperationException
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
 					{
 						var result = snaphsot.Read("TestTree2", "ABC");
 						Assert.Equal(1, result.Version);
 						Assert.Equal("Foo", result.Reader.ToStringValue());
-					};
+					});
 				}
 			}
 		}
@@ -258,12 +258,12 @@ namespace Voron.Tests.Journal
 
 				using (var snaphsot = shippingDestinationEnv.CreateSnapshot())
 				{
-					//if tree doesn't exist --> throws InvalidOperationException
+					Assert.DoesNotThrow(() => //if tree doesn't exist --> throws InvalidOperationException
 					{
 						var result = snaphsot.Read("TestTree", "ABC");
 						Assert.Equal(1, result.Version);
 						Assert.Equal("Foo", result.Reader.ToStringValue());
-					};
+					});
 				}
 			}
 		}

@@ -1,6 +1,6 @@
 // Type definitions for jquery.dynatree 1.2.5
 // Project: http://code.google.com/p/dynatree/
-// Definitions by: François de Campredon <https://github.com/fdecampredon>
+// Definitions by: https://github.com/fdecampredon
 // Definitions: https://github.com/borisyankov/DefinitelyTyped
 
 
@@ -40,7 +40,7 @@ interface DynaTree {
     renderInvisibleNodes(): void;
     selectKey(key: string, flag: string): DynaTreeNode;
     serializeArray(stopOnParents: boolean): any[];
-    toDict(includeRoot?: boolean): any;
+    toDict(includeRoot: boolean): any;
     visit(fn: (node: DynaTreeNode) =>boolean, includeRoot: boolean): void;
 }
 

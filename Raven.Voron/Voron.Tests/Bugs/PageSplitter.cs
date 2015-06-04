@@ -47,7 +47,7 @@ namespace Voron.Tests.Bugs
                 for (int index = 0; index < inputData.Count; index++)
                 {
                     var keyString = inputData[index];
-                    tree.Add(keyString, new MemoryStream(new byte[] { 1, 2, 3, 4 }));
+                    Assert.DoesNotThrow(() => tree.Add(keyString, new MemoryStream(new byte[] { 1, 2, 3, 4 })));
                 }
 
                 tx.Commit();
