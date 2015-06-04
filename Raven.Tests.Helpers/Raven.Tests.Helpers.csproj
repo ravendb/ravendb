@@ -58,6 +58,7 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="NoStaleQueriesListener.cs" />
     <Compile Include="RavenFilesTestBase.cs" />
     <Compile Include="Util\CommonInitializationUtil.cs" />
     <Compile Include="RavenTestBase.cs" />
