@@ -1,5 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
-import counter = require("models/counter/counter");
+import counter = require("models/counter/counterChange");
 import counterStorage = require("models/counter/counterStorage");
 
 class getCountersCommand extends commandBase {

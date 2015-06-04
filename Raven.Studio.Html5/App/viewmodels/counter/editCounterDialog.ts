@@ -1,28 +1,25 @@
 ﻿import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import counter = require("models/counter/counter");
+import counterChange = require("models/counter/counterChange");
+import updateCounterCommand = require("commands/counter/updateCounterCommand");
 
 class editCounterDialog extends dialogViewModelBase {
 
     public updateTask = $.Deferred();
     updateTaskStarted = false;
-    
-    isNewCounter = ko.observable(false);
-    editedCounter= ko.observable<counter>();
-    counterDelta=ko.observable(0);
-    
+    isNew = ko.observable(false);
+    editedCounter = ko.observable<counterChange>();
     private maxNameLength = 200;
 
-    constructor(editedCounter?: counter) {
+    constructor(editedCounter?: counterChange) {
         super();
 
         if (!editedCounter) {
-            this.isNewCounter(true);
-            this.editedCounter(new counter({ Name: '', Group: '', OverallTotal:0,Servers:[]}));
+            this.isNew(true);
+            this.editedCounter(counterChange.empty());
         } else {
             this.editedCounter(editedCounter);
         }
-        this.counterDelta(0);
     }
 
     cancel() {
@@ -31,26 +28,25 @@ class editCounterDialog extends dialogViewModelBase {
 
     nextOrCreate() {
         this.updateTaskStarted = true;
-        this.updateTask.resolve(this.editedCounter(), this.counterDelta());
+        this.updateTask.resolve(this.editedCounter(), this.isNew());
         dialog.close(this);
     }
     
     attached() {
         super.attached();
-        this.counterDelta(0);
-        var inputElement: any = $("#counterId")[0];
-        this.editedCounter().id.subscribe((newCounterId) => {
-            var errorMessage: string = '';
 
-            if ((errorMessage = this.CheckName(newCounterId, 'counter name')) != '') { }
-            inputElement.setCustomValidity(errorMessage);
-        });
+        var inputElementGroupName: any = $("#group")[0];
         this.editedCounter().group.subscribe((newCounterId) => {
-            var errorMessage: string = '';
-
-            if ((errorMessage = this.CheckName(newCounterId, 'group name')) != '') { }
-            inputElement.setCustomValidity(errorMessage);
+            var errorMessage = this.checkName(newCounterId, "group name");
+            inputElementGroupName.setCustomValidity(errorMessage);
         });
+
+        var inputElementCounterName: any = $("#counterName")[0];
+        this.editedCounter().counterName.subscribe((newCounterId) => {
+            var errorMessage = this.checkName(newCounterId, "counter name");
+            inputElementCounterName.setCustomValidity(errorMessage);
+        });
+
         //todo: maybe check validity of delta
     }
 
@@ -62,8 +58,8 @@ class editCounterDialog extends dialogViewModelBase {
         }
     }
 
-    private CheckName(name: string, fieldName): string {
-        var message = '';
+    private checkName(name: string, fieldName): string {
+        var message = "";
         if (!$.trim(name)) {
             message = "An empty " + fieldName + " is forbidden for use!";
         }

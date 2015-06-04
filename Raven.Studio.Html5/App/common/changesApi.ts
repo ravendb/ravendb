@@ -463,13 +463,15 @@ class changesApi {
         this.connectToChangesApiTask.done(() => {
             var isCloseNeeded: boolean;
 
-            if (isCloseNeeded = (this.webSocket && this.webSocket.readyState == this.readyStateOpen)){
+            if (this.webSocket && this.webSocket.readyState === this.readyStateOpen){
                 console.log("Disconnecting from WebSocket changes API for (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
+                isCloseNeeded = true;
             }
-            else if (isCloseNeeded = this.eventSource && this.eventSource.readyState == this.readyStateOpen) {
+            else if (this.eventSource && this.eventSource.readyState === this.readyStateOpen) {
                 console.log("Disconnecting from EventSource changes API for (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
                 this.eventSource.close();
+                isCloseNeeded = true;
             }
 
             if (isCloseNeeded) {

@@ -616,11 +616,11 @@ class resources extends viewModelBase {
     private showCsCreationAdvancedStepsIfNecessary(counterStorageName: string, bundles: string[], settings: {}) {
 
         new createCounterStorageCommand(counterStorageName, settings)
-                .execute()
-                .done(() => {
-                    var newCounterStorage = this.addNewCounterStorage(counterStorageName, bundles);
-                    this.selectResource(newCounterStorage);
-                });
+            .execute()
+            .done(() => {
+                var newCounterStorage = this.addNewCounterStorage(counterStorageName, bundles);
+                this.selectResource(newCounterStorage);
+            });
     }
 
     private addNewCounterStorage(counterStorageName: string, bundles: string[]): counterStorage {
@@ -628,20 +628,22 @@ class resources extends viewModelBase {
         if (!!foundCounterStorage)
             return foundCounterStorage;
 
-        var newCounterStorage = new counterStorage(counterStorageName);
+        var newCounterStorage = new counterStorage(counterStorageName, true, false, bundles);
         this.counterStorages.unshift(newCounterStorage);
         this.filterResources();
         return newCounterStorage;
-        //this.t(this.counterStorages, counterStorageName, bundles, new counterStorage(counterStorageName, true, false, bundles));
+        //return this.addNewResource(this.counterStorages, counterStorageName, () => new counterStorage(counterStorageName, true, false, bundles));
     }
 
-    t(resources: KnockoutObservableArray<resource>, resourceName: string, bundles: string[], resource: resource) {
-        var foundResource = resources.first((rs: resource) => rs.name === resourceName);
+    addNewResource(resourcesArray: KnockoutObservableArray<resource>, resourceName: string, createResource: () => resource) {
+        var foundResource = resourcesArray.first((rs: resource) => rs.name === resourceName);
         if (!!foundResource)
             return foundResource;
-        
-        var newCounterStorage = resource;
 
+        var newResource = createResource();
+        resourcesArray.unshift();
+        this.filterResources();
+        return newResource;
     }
 }
 

@@ -1010,15 +1010,15 @@ interface counterStorageDto {
 }
 
 interface counterDto {
-    Name: string;
+    CurrentValue: number;
     Group: string;
-    OverallTotal: number;
-    Servers: counterServerValueDto[];
+    CounterName: string;
+    Delta: number;
 }
 
 interface counterGroupDto {
     Name: string;
-    NumOfCounters?: number;
+    Count: number;
 }
 
 interface counterServerValueDto {
