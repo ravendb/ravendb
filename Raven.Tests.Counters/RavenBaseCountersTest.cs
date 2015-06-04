@@ -53,9 +53,8 @@ namespace Raven.Tests.Counters
 
 		public override void Dispose()
 		{
-			base.Dispose();
-
 			if (ravenStore != null) ravenStore.Dispose();
+			base.Dispose();
 		}
 
 		protected async Task<bool> WaitForReplicationBetween(ICounterStore source, ICounterStore destination, string groupName, string counterName, int timeoutInSec = 30)

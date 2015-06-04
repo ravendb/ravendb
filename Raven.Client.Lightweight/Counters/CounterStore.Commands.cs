@@ -14,7 +14,7 @@ namespace Raven.Client.Counters
 		public async Task ChangeAsync(string groupName, string counterName, long delta, CancellationToken token = default(CancellationToken))
 		{
 			AssertInitialized();
-
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Post, url =>
 			{
 				var requestUriString = String.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}/change/{2}/{3}?delta={4}",
@@ -37,7 +37,7 @@ namespace Raven.Client.Counters
 		public async Task ResetAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
 			AssertInitialized();
-
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Post,  url =>
 			{
@@ -65,7 +65,7 @@ namespace Raven.Client.Counters
 		public async Task<List<CounterView.ServerValue>> GetServersValuesAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
 			AssertInitialized();
-
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 			return await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Get,  async url =>
 			{

@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Replication;
 using Raven.Client.Counters;
+using Raven.Database.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Counters
@@ -47,7 +48,7 @@ namespace Raven.Tests.Counters
 			}
 		}
 
-	
+
 		[Fact]
 		public async Task Two_node_failover_should_work()
 		{
@@ -66,6 +67,8 @@ namespace Raven.Tests.Counters
 							await storeA.ChangeAsync("group", "counter", 2);
 
 							await WaitForReplicationBetween(storeA, storeB, "group", "counter");
+
+							ravenStoreA.Dispose();
 							serverA.Dispose();
 
 							var total = await storeA.GetOverallTotalAsync("group", "counter");
@@ -89,15 +92,15 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Alternating_failover_nodes_should_work()
 		{
-			if(Directory.Exists("data"))
-				Directory.Delete("data", true);
+			if (Directory.Exists("data"))
+				IOExtensions.DeleteDirectory("data");
 
 			var serverA = GetNewServer(8077, runInMemory: false, dataDirectory: "data");
 			try
 			{
 				using (var serverB = GetNewServer(8076, runInMemory: false))
 				{
-					var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA,runInMemory:false);
+					var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false);
 					try
 					{
 						using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
@@ -111,12 +114,14 @@ namespace Raven.Tests.Counters
 									await storeA.ChangeAsync("group", "counter", 3);
 
 									await WaitForReplicationBetween(storeA, storeB, "group", "counter");
+									ravenStoreA.Dispose();
 									serverA.Dispose();
 
 									var total = await storeA.GetOverallTotalAsync("group", "counter");
 									Assert.Equal(3, total);
 
 									serverA = GetNewServer(8077, runInMemory: false, dataDirectory: "data");
+									ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false);
 									storeA.ReplicationInformer.RefreshReplicationInformation();
 									serverB.Dispose();
 
@@ -145,56 +150,49 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Multiple_node_failover_should_work()
 		{
-			var serverA = GetNewServer(8077,runInMemory:false);
-			try
+			var serverA = GetNewServer(8077, runInMemory: false);
+			using (var serverB = GetNewServer(8076))
+			using (var serverC = GetNewServer(8075))
 			{
-				using (var serverB = GetNewServer(8076))
-				using (var serverC = GetNewServer(8075))
+				var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false);
+				var ravenStoreC = NewRemoteDocumentStore(ravenDbServer: serverC);
+				try
 				{
-					var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory:false);
-					var ravenStoreC = NewRemoteDocumentStore(ravenDbServer: serverC);
-					try
+					using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
 					{
-						using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
+						using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA))
+						using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
+						using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreC))
 						{
-							using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA))
-							using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
-							using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreC))
-							{
-								await SetupReplicationAsync(storeA, storeB, storeC);
+							await SetupReplicationAsync(storeA, storeB, storeC);
 
 
-								await storeA.ChangeAsync("group", "counter", 2);
+							await storeA.ChangeAsync("group", "counter", 2);
 
-								Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
-								Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
-								storeA.ReplicationInformer.RefreshReplicationInformation();
-								serverA.Dispose();
+							Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
+							Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
+							storeA.ReplicationInformer.RefreshReplicationInformation();
+							serverA.Dispose();
 
-								var total = await storeA.GetOverallTotalAsync("group", "counter");
-								Assert.Equal(2, total);
+							var total = await storeA.GetOverallTotalAsync("group", "counter");
+							Assert.Equal(2, total);
 
-								serverA = GetNewServer(8077, runInMemory: false);
-								storeA.ReplicationInformer.RefreshReplicationInformation();
-								//now both A and B are dead, so check if we can fallback to C as well
-								serverA.Dispose();
-								serverB.Dispose();
+							serverA = GetNewServer(8077, runInMemory: false);
+							storeA.ReplicationInformer.RefreshReplicationInformation();
+							//now both A and B are dead, so check if we can fallback to C as well
+							serverA.Dispose();
+							serverB.Dispose();
 
-								total = await storeA.GetOverallTotalAsync("group", "counter");
-								Assert.Equal(2, total);
-							}
+							total = await storeA.GetOverallTotalAsync("group", "counter");
+							Assert.Equal(2, total);
 						}
 					}
-					finally
-					{
-						ravenStoreA.Dispose();
-						ravenStoreC.Dispose();
-					}
 				}
-			}
-			finally
-			{
-				serverA.Dispose();
+				finally
+				{
+					ravenStoreA.Dispose();
+					ravenStoreC.Dispose();
+				}
 			}
 		}
 
@@ -238,7 +236,9 @@ namespace Raven.Tests.Counters
 
 								serverA = GetNewServer(8077, runInMemory: false);
 								//now both A and B are dead, so check if we can fallback to C as well
+								ravenStoreA.Dispose();
 								serverA.Dispose();
+								ravenStoreB.Dispose();
 								serverB.Dispose();
 
 								total = await storeA.GetOverallTotalAsync("group", "counter");

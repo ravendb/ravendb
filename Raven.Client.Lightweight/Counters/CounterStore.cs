@@ -43,7 +43,7 @@ namespace Raven.Client.Counters
 		public void Initialize(bool ensureDefaultCounterExists = false)
 		{
 			if(isInitialized)
-				throw new InvalidOperationException("CounterStore already initialized.");
+				throw new InvalidOperationException(string.Format("CounterStore already initialized. (name = {0})", Name));
 
 			isInitialized = true;
 			InitializeSecurity();
@@ -51,7 +51,7 @@ namespace Raven.Client.Counters
 			if (ensureDefaultCounterExists && !string.IsNullOrWhiteSpace(Name))
 			{
 				if (String.IsNullOrWhiteSpace(Name))
-					throw new InvalidOperationException("DefaultCounterStorageName is null or empty and ensureDefaultCounterExists = true --> cannot create default counter storage with empty name");
+					throw new InvalidOperationException("Name is null or empty and ensureDefaultCounterExists = true --> cannot create default counter storage with empty name");
 
 				Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
@@ -104,7 +104,7 @@ namespace Raven.Client.Counters
 		internal void AssertInitialized()
 		{
 			if (!isInitialized)
-				throw new InvalidOperationException("You cannot open a session or access the counters commands before initializing the counter store. Did you forget calling Initialize()?");
+				throw new InvalidOperationException(string.Format("You cannot open a session or access the counters commands before initializing the counter store. Did you forget calling Initialize()? (Counter store name = {0})", Name));
 		}
 
 		private readonly Lazy<BatchOperationsStore> batch;

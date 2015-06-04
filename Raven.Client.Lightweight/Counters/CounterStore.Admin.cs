@@ -41,8 +41,6 @@ namespace Raven.Client.Counters
 				if (shouldUpateIfExists)
 					urlTemplate += "?update=true";
 
-				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-
 				var requestUriString = String.Format(urlTemplate, parent.Url, counterStorageName);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Put))
@@ -71,7 +69,6 @@ namespace Raven.Client.Counters
 			public async Task DeleteCounterStorageAsync(string counterStorageName, bool hardDelete = false, CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
-				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 				var requestUriString = String.Format("{0}/admin/cs/{1}?hard-delete={2}", parent.Url, counterStorageName, hardDelete);
 
@@ -93,7 +90,6 @@ namespace Raven.Client.Counters
 			public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
-				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 				var requestUriString = String.Format("{0}/cs/counterStorageNames", parent.Url);
 

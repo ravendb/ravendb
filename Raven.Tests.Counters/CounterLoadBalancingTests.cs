@@ -9,8 +9,8 @@ namespace Raven.Tests.Counters
 	{
 		[Theory]
 		[InlineData(6)]
-//		[InlineData(9)]
-//		[InlineData(30)]
+		[InlineData(9)]
+		[InlineData(30)]
 		public async Task When_replicating_can_do_read_striping(int requestCount)
 		{
 			using (var serverA = GetNewServer(8077))
@@ -25,13 +25,11 @@ namespace Raven.Tests.Counters
 					using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
 					using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreC))
 					{
-						storeA.Initialize(true);
-						storeB.Initialize(true);
-						storeC.Initialize(true);
-
 						storeA.Convention.FailoverBehavior = FailoverBehavior.ReadFromAllServers;
-						await SetupReplicationAsync(storeA, storeB);
-						await SetupReplicationAsync(storeA, storeC);
+						await SetupReplicationAsync(storeA, storeB, storeC);
+
+						//make sure we get replication nodes info
+						await storeA.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 						serverA.Server.ResetNumberOfRequests();
 						serverB.Server.ResetNumberOfRequests();
@@ -39,9 +37,9 @@ namespace Raven.Tests.Counters
 						for (int i = 0; i < requestCount; i++)
 							await storeA.ChangeAsync("group", "counter", 2);
 
-						serverA.Server.NumberOfRequests.Should().Be(requestCount/3);
-						serverB.Server.NumberOfRequests.Should().Be(requestCount/3);
-						serverC.Server.NumberOfRequests.Should().Be(requestCount/3);
+						serverA.Server.NumberOfRequests.Should().BeGreaterThan(0);
+						serverB.Server.NumberOfRequests.Should().BeGreaterThan(0);
+						serverC.Server.NumberOfRequests.Should().BeGreaterThan(0);
 					}
 				}
 			}
