@@ -18,20 +18,17 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore(fiddler: true))
 			{
 				store.Initialize();
-
 				WaitForUserToContinueTheTest();
-				var e = "success";
-				Assert.Contains(e, "success");
-
 			}
 		}
 
 		[Fact]
-		public void WaitForUserToContinueTheTestValidateWithParamaters()
+		public void WaitForUserToContinueTheTestValidateServerConnection()
 		{
-			var server = GetNewServer(8080);
-			using (var store = new DocumentStore {Url = server.SystemDatabase.Configuration.ServerUrl}.Initialize())
+			using (var store = NewDocumentStore())
 			{
+				store.Initialize();
+				
 				var e = Assert.Throws<NotSupportedException>(() => WaitForUserToContinueTheTest(debug: false));
 				Assert.Contains("when using a local store WaitForUserToContinueTheTest must be called with store parameter", e.Message);
 

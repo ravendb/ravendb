@@ -13,6 +13,7 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -29,6 +30,7 @@ using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
+using Raven.Client.Linq.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -58,8 +60,6 @@ namespace Raven.Tests.Helpers
 		private static int pathCount;
 
 	    private static bool checkedAsyncVoid;
-
-		private static bool isRemoteDocumentStore = false;
 
 		protected RavenTestBase()
 		{
@@ -323,8 +323,6 @@ namespace Raven.Tests.Helpers
             {
                 StoreSeedData(seedData, documentStore);
             }
-
-	        isRemoteDocumentStore = true;
 
             return documentStore;
         }
@@ -767,26 +765,37 @@ namespace Raven.Tests.Helpers
 			documentDatabase.DatabaseCommands.Put("Raven/StudioConfig", null, doc, metadata);
 		}
 
+	/*    private void isServerExsist(string url)
+	    {
+		    checkPorts.CompareTo(url);
+
+	    }*/
+
 		protected void WaitForUserToContinueTheTest(bool debug = true, string url = null)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
 
 
-			if (!isRemoteDocumentStore)
-			{
-				throw new NotSupportedException("when using a local store WaitForUserToContinueTheTest must be called with store parameter");
-			}
-			
-
 			using (var documentStore = new DocumentStore
 			{
 				Url = url ?? "http://localhost:8079"
 			}.Initialize())
 			{
-			
                 var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
                 var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+				var request = WebRequest.Create(documentsPage);
+
+				try
+				{
+					var response = request.GetResponse();
+				}
+				catch (WebException ex)
+				{
+					
+					throw new NotSupportedException("when using a local store WaitForUserToContinueTheTest must be called with store parameter",ex);
+				}
+
                 Process.Start(documentsPage); // start the server
 
 				do
