@@ -51,8 +51,6 @@ namespace Raven.Database.Counters
 
 		public string ResourceName { get; private set; }
 
-		public event Action ReplicationUpdated;
-
 		public int ReplicationTimeoutInMs { get; private set; }
 
 		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
@@ -68,7 +66,6 @@ namespace Raven.Database.Counters
 			transportState = recievedTransportState ?? new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			replicationTask = new ReplicationTask(this);
-			replicationTask.ReplicationUpdate += OnReplicationUpdated;
 
 			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
@@ -78,24 +75,18 @@ namespace Raven.Database.Counters
 			Initialize();
 		}
 
-		private void OnReplicationUpdated()
-		{
-			var replicationUpdated = ReplicationUpdated;
-			if (replicationUpdated != null)
-				replicationUpdated();
-		}
 
 		private void Initialize()
 		{
-			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx = CounterStorageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				storageEnvironment.CreateTree(tx, "servers->lastEtag");
-				storageEnvironment.CreateTree(tx, "counters");
-				storageEnvironment.CreateTree(tx, "countersGroups");
-				storageEnvironment.CreateTree(tx, "counters->etags");
+				CounterStorageEnvironment.CreateTree(tx, "servers->lastEtag");
+				CounterStorageEnvironment.CreateTree(tx, "counters");
+				CounterStorageEnvironment.CreateTree(tx, "countersGroups");
+				CounterStorageEnvironment.CreateTree(tx, "counters->etags");
 
-				var etags = storageEnvironment.CreateTree(tx, "etags->counters");
-				var metadata = storageEnvironment.CreateTree(tx, "$metadata");
+				var etags = CounterStorageEnvironment.CreateTree(tx, "etags->counters");
+				var metadata = CounterStorageEnvironment.CreateTree(tx, "$metadata");
 				var id = metadata.Read("id");
 
 				if (id == null) // new counter db
@@ -106,7 +97,6 @@ namespace Raven.Database.Counters
 
 					metadata.Add("id", serverIdBytes);
 
-					tx.Commit();
 				}
 				else // existing counter db
 				{
@@ -123,6 +113,8 @@ namespace Raven.Database.Counters
 				}
 
 				replicationTask.StartReplication();
+			
+				tx.Commit();
 			}
 		}
 
@@ -162,7 +154,7 @@ namespace Raven.Database.Counters
 					CountersCount = reader.GetCountersCount(),
 					LastCounterEtag = lastEtag,
 					TasksCount = replicationTask.GetActiveTasksCount(),
-					CounterStorageSize = SizeHelper.Humane(storageEnvironment.Stats().UsedDataFileSizeInBytes),
+					CounterStorageSize = SizeHelper.Humane(CounterStorageEnvironment.Stats().UsedDataFileSizeInBytes),
 					GroupsCount = reader.GetGroupsCount(),
 				};
 				return stats;
@@ -218,14 +210,14 @@ namespace Raven.Database.Counters
 		[CLSCompliant(false)]
 		public Reader CreateReader()
 		{
-			return new Reader(storageEnvironment.NewTransaction(TransactionFlags.Read));
+			return new Reader(CounterStorageEnvironment.NewTransaction(TransactionFlags.Read));
 		}
 
 		[CLSCompliant(false)]
 		public Writer CreateWriter()
 		{
 			LastWrite = SystemTime.UtcNow;
-			return new Writer(this, storageEnvironment.NewTransaction(TransactionFlags.ReadWrite));
+			return new Writer(this, CounterStorageEnvironment.NewTransaction(TransactionFlags.ReadWrite));
 		}
 
 		private void Notify()
@@ -240,13 +232,14 @@ namespace Raven.Database.Counters
 			if (replicationTask != null)
 				exceptionAggregator.Execute(replicationTask.Dispose);
 
-			if (storageEnvironment != null)
-				exceptionAggregator.Execute(storageEnvironment.Dispose);
+			if (CounterStorageEnvironment != null)
+				exceptionAggregator.Execute(CounterStorageEnvironment.Dispose);
 
 			if (metricsCounters != null)
 				exceptionAggregator.Execute(metricsCounters.Dispose);
 
 			exceptionAggregator.ThrowIfNeeded();
+			storageEnvironment.Dispose();
 		}
 
 		[CLSCompliant(false)]
@@ -507,7 +500,7 @@ namespace Raven.Database.Counters
 
 				//var mergedGroupAndName = MergeGroupAndName(groupName, counterName);
 				var sign = delta >= 0 ? ValueSign.Positive : ValueSign.Negative;
-				var fullCounterName = string.Concat(groupName, Separator, counterName, Separator, parent.ServerId, Separator, sign);
+				var fullCounterName = string.Concat(groupName, GroupAndNameSeparator, counterName, GroupAndNameSeparator, parent.ServerId, GroupAndNameSeparator, sign);
 				var doesCounterExist = Store(fullCounterName, counterKey =>
 				{
 					if (sign == ValueSign.Negative)
@@ -552,11 +545,11 @@ namespace Raven.Database.Counters
 				sliceWriter.WriteString(Separator);
 				sliceWriter.WriteBigEndian(sign);*/
 
-				var endOfGroupNameIndex = fullCounterName.IndexOf(Separator, StringComparison.InvariantCultureIgnoreCase);
+				var endOfGroupNameIndex = fullCounterName.IndexOf(GroupAndNameSeparator, StringComparison.InvariantCultureIgnoreCase);
 				if (endOfGroupNameIndex == -1)
 					throw new InvalidOperationException("Could not find group name in counter, no separator");
 
-				var endOfCounterNameIndex = fullCounterName.IndexOf(Separator, endOfGroupNameIndex, StringComparison.InvariantCultureIgnoreCase);
+				var endOfCounterNameIndex = fullCounterName.IndexOf(GroupAndNameSeparator, endOfGroupNameIndex, StringComparison.InvariantCultureIgnoreCase);
 				if (endOfCounterNameIndex == -1)
 					throw new InvalidOperationException("Could not find counter name in counter, no separator");
 
@@ -665,10 +658,16 @@ namespace Raven.Database.Counters
 
 		private static string MergeGroupAndName(string groupName, string counterName)
 		{
-			return string.Concat(groupName, Separator, counterName, Separator);
+			//precaution
+			if (counterName.Contains(GroupAndNameSeparator))
+				throw new ArgumentException(string.Format("Counter name contains invalid character ('{0}')", GroupAndNameSeparator));
+			if (groupName.Contains(GroupAndNameSeparator))
+				throw new ArgumentException(string.Format("Counter's group name contains invalid character ('{0}')", GroupAndNameSeparator));
+
+			return string.Concat(groupName, GroupAndNameSeparator, counterName, GroupAndNameSeparator);
 		}
 
-		private const string Separator = "/";
+		public const string GroupAndNameSeparator = "/";
 
 		public class ServerEtag
 		{
@@ -681,5 +680,9 @@ namespace Raven.Database.Counters
 			get { return Name; }
 		}
 
+		public StorageEnvironment CounterStorageEnvironment
+		{
+			get { return storageEnvironment; }
+		}
 	}
 }

@@ -22,10 +22,9 @@ namespace Raven.Database.Counters.Controllers
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly object waitForCounterUpdate = new object();
-        private int actualWorkCounter = 0; // represents the number of changes in 
+        private int actualWorkCounter = 0;
         private int replicatedWorkCounter = 0; // represents the last actualWorkCounter value that was checked in the last replication iteration
         private bool shouldPause = false;
-        private bool IsRunning { get; set; }
         private readonly ConcurrentDictionary<string, CounterDestinationStats> destinationsStats =
             new ConcurrentDictionary<string, CounterDestinationStats>(StringComparer.OrdinalIgnoreCase);
         private int replicationAttempts;
@@ -35,14 +34,6 @@ namespace Raven.Database.Counters.Controllers
 
 		private readonly CounterStorage storage;
 		private readonly CancellationTokenSource cancellation;
-
-		public event Action ReplicationUpdate;
-
-		protected virtual void OnReplicationUpdate()
-		{
-			var handler = ReplicationUpdate;
-			if (handler != null) handler();
-		}
 
 		enum ReplicationResult
 		{
@@ -64,7 +55,6 @@ namespace Raven.Database.Counters.Controllers
 			{
 				Interlocked.Increment(ref actualWorkCounter);
 				Monitor.PulseAll(waitForCounterUpdate);
-				OnReplicationUpdate();
 			}
 		}
 
@@ -89,8 +79,6 @@ namespace Raven.Database.Counters.Controllers
                 runningBecauseOfDataModification = WaitForCountersUpdate(timeToWaitInMinutes);
                 timeToWaitInMinutes = runningBecauseOfDataModification ? TimeSpan.FromSeconds(30) : TimeSpan.FromMinutes(5);
             }
-
-	        IsRunning = false;
 	    }
 
 		private bool WaitForCountersUpdate(TimeSpan timeout)
@@ -113,11 +101,6 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		public void Pause()
-		{
-			shouldPause = true;
-		}
-
 		public void Continue()
 		{
 			shouldPause = false;
@@ -136,30 +119,26 @@ namespace Raven.Database.Counters.Controllers
 
 		private void SendReplicationToAllServers(bool runningBecauseOfDataModifications)
 		{
-			IsRunning = !shouldPause;
-			if (IsRunning)
+			try
 			{
-				try
+				var replicationDestinations = GetReplicationDestinations();
+
+				if (replicationDestinations == null || replicationDestinations.Count <= 0) 
+					return;
+
+				var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
+
+				var destinationForReplication = replicationDestinations.Where(
+					destination => (!runningBecauseOfDataModifications || IsNotFailing(destination.CounterStorageUrl, currentReplicationAttempts)) && !destination.Disabled);
+
+				foreach (var destination in destinationForReplication)
 				{
-					var replicationDestinations = GetReplicationDestinations();
-
-					if (replicationDestinations != null && replicationDestinations.Count > 0)
-					{
-						var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
-
-						var destinationForReplication = replicationDestinations.Where(
-							destination => (!runningBecauseOfDataModifications || IsNotFailing(destination.CounterStorageUrl, currentReplicationAttempts)) && !destination.Disabled);
-
-						foreach (var destination in destinationForReplication)
-						{
-							ReplicateToDestination(destination);
-						}
-					}
+					ReplicateToDestination(destination);
 				}
-				catch (Exception e)
-				{
-					Log.ErrorException("Failed to perform replication", e);
-				}
+			}
+			catch (Exception e)
+			{
+				Log.ErrorException("Failed to perform replication", e);
 			}
 		}
 
@@ -250,24 +229,23 @@ namespace Raven.Database.Counters.Controllers
             long etag = 0;
 		    lastEtagSent = 0;
 			var connectionStringOptions = GetConnectionOptionsSafe(destination, out lastError);
-            
-            if (connectionStringOptions != null && GetLastReplicatedEtagFrom(connectionStringOptions, destination.CounterStorageUrl, out etag, out lastError))
-			{
-                var replicationData = GetCountersDataSinceEtag(etag, out lastEtagSent);
+
+			if (connectionStringOptions == null ||
+				!GetLastReplicatedEtagFrom(connectionStringOptions, destination.CounterStorageUrl, out etag, out lastError)) 
+				return ReplicationResult.Failure;
+
+			var replicationData = GetCountersDataSinceEtag(etag, out lastEtagSent);
                 
-                storage.MetricsCounters.GetReplicationBatchSizeMetric(destination.CounterStorageUrl).Mark(replicationData.Counters.Count);
-                storage.MetricsCounters.GetReplicationBatchSizeHistogram(destination.CounterStorageUrl).Update(replicationData.Counters.Count);
+			storage.MetricsCounters.GetReplicationBatchSizeMetric(destination.CounterStorageUrl).Mark(replicationData.Counters.Count);
+			storage.MetricsCounters.GetReplicationBatchSizeHistogram(destination.CounterStorageUrl).Update(replicationData.Counters.Count);
 
-				if (replicationData.Counters.Count > 0)
-				{
-                    return PerformReplicationToServer(connectionStringOptions, destination.CounterStorageUrl, replicationData, out lastError) ?
-						ReplicationResult.Success : ReplicationResult.Failure;
-				}
-
-				return ReplicationResult.NotReplicated;
+			if (replicationData.Counters.Count > 0)
+			{
+				return PerformReplicationToServer(connectionStringOptions, destination.CounterStorageUrl, replicationData, out lastError) ?
+					ReplicationResult.Success : ReplicationResult.Failure;
 			}
 
-			return ReplicationResult.Failure;
+			return ReplicationResult.NotReplicated;
 		}
 
 		private bool GetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, out long lastEtag, out string lastError)
@@ -393,7 +371,7 @@ namespace Raven.Database.Counters.Controllers
 
             using (var reader = storage.CreateReader())
             {
-                message.Counters = reader.GetCountersSinceEtag(etag + 1).Take(10240).ToList(); //TODO: Capped this...how to get remaining values?
+                message.Counters = reader.GetCountersSinceEtag(etag + 1).Take(1024).ToList(); //TODO: Capped this...how to get remaining values?
                 lastEtagSent = message.Counters.Count > 0 ? message.Counters.Max(x => x.Etag) : etag; // change this once changed this function do a reall paging
             }
 

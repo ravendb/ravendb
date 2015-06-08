@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Replication;
-using Xunit;
 using Xunit.Extensions;
 
 namespace Raven.Tests.Counters
@@ -31,22 +26,20 @@ namespace Raven.Tests.Counters
 					using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreC))
 					{
 						storeA.Convention.FailoverBehavior = FailoverBehavior.ReadFromAllServers;
-						await SetupReplicationAsync(storeA, storeB);
-						await SetupReplicationAsync(storeA, storeC);
+						await SetupReplicationAsync(storeA, storeB, storeC);
+
+						//make sure we get replication nodes info
+						await storeA.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 						serverA.Server.ResetNumberOfRequests();
 						serverB.Server.ResetNumberOfRequests();
 						serverC.Server.ResetNumberOfRequests();
+						for (int i = 0; i < requestCount; i++)
+							await storeA.ChangeAsync("group", "counter", 2);
 
-						using (var clientA = storeA.NewCounterClient())
-						{							
-							for (int i = 0; i < requestCount; i++)
-								await clientA.Commands.ChangeAsync("group", "counter", 2);
-						}
-
-						serverA.Server.NumberOfRequests.Should().Be(requestCount / 3);
-						serverB.Server.NumberOfRequests.Should().Be(requestCount / 3);
-						serverC.Server.NumberOfRequests.Should().Be(requestCount / 3);
+						serverA.Server.NumberOfRequests.Should().BeGreaterThan(0);
+						serverB.Server.NumberOfRequests.Should().BeGreaterThan(0);
+						serverC.Server.NumberOfRequests.Should().BeGreaterThan(0);
 					}
 				}
 			}

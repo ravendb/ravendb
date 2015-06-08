@@ -11,11 +11,6 @@ namespace Raven.Database.Counters
 			CounterValues = new List<CounterValue>();
 		}
 
-		public long CalculateTotal()
-		{
-			return CounterValues.Sum(x => x.IsPositive ? x.Value : -x.Value);
-		}
-
 		public List<CounterValue> CounterValues { get; private set; }
 
 		public long Etag { get; set; }

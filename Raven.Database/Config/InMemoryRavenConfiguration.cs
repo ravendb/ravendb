@@ -15,6 +15,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
@@ -109,6 +110,8 @@ namespace Raven.Database.Config
 
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
+
+			MaxClauseCount = ravenSettings.MaxClauseCount.Value;
 
 			AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
 
@@ -361,6 +364,8 @@ namespace Raven.Database.Config
 
 			return FilePathTools.MakeSureEndsWithSlash(workingDirectory.ToFullPath());
 		}
+
+		public int MaxClauseCount { get; set; }
 
 		public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
 

@@ -18,7 +18,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task NotificationReceivedWhenCounterAddedAndIncremented()
 		{
-			using (var store = NewRemoteCountersStore())
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
@@ -27,11 +27,7 @@ namespace Raven.Tests.Counters
 					.Take(1).ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-
-				using (var client = store.NewCounterClient())
-				{
-					await client.Commands.IncrementAsync(GroupName, CounterName);
-				}
+				await store.IncrementAsync(GroupName, CounterName);
 
 				var counterChange = await notificationTask;
 				Assert.Equal(GroupName, counterChange.GroupName);
@@ -44,11 +40,7 @@ namespace Raven.Tests.Counters
 					.Take(1).ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-
-				using (var client = store.NewCounterClient())
-				{
-					await client.Commands.IncrementAsync(GroupName, CounterName);
-				}
+				await store.IncrementAsync(GroupName, CounterName);
 
 				counterChange = await notificationTask;
 				Assert.Equal(GroupName, counterChange.GroupName);
@@ -60,7 +52,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task NotificationReceivedWhenLocalCounterAddedAndDecremented()
 		{
-			using (var store = NewRemoteCountersStore())
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
@@ -69,11 +61,7 @@ namespace Raven.Tests.Counters
 					.Take(1).ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-
-				using (var client = store.NewCounterClient())
-				{
-					await client.Commands.IncrementAsync(GroupName, CounterName);
-				}
+				await store.IncrementAsync(GroupName, CounterName);
 
 				var counterChange = await notificationTask;
 				Assert.Equal(GroupName, counterChange.GroupName);
@@ -86,11 +74,7 @@ namespace Raven.Tests.Counters
 					.Take(1).ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-
-				using (var client = store.NewCounterClient())
-				{
-					await client.Commands.DecrementAsync(GroupName, CounterName);
-				}
+				await store.DecrementAsync(GroupName, CounterName);
 
 				counterChange = await notificationTask;
 				Assert.Equal(GroupName, counterChange.GroupName);
@@ -113,11 +97,7 @@ namespace Raven.Tests.Counters
 					.ForReplicationChange(GroupName, CounterName)
 					.Timeout(TimeSpan.FromSeconds(30))
 					.Take(1).ToTask();
-
-				using (var client = storeA.NewCounterClient())
-				{
-					await client.Commands.IncrementAsync(GroupName, CounterName);
-				}
+				await storeA.IncrementAsync(GroupName, CounterName);
 
 				changesB.WaitForAllPendingSubscriptions();
 
@@ -135,10 +115,7 @@ namespace Raven.Tests.Counters
 
 				changesA.WaitForAllPendingSubscriptions();
 
-				using (var client = storeB.NewCounterClient())
-				{
-					await client.Commands.IncrementAsync(GroupName, CounterName);
-				}
+				await storeB.IncrementAsync(GroupName, CounterName);
 
 				counterChange = await notificationTask;
 				Assert.Equal(GroupName, counterChange.GroupName);
@@ -156,10 +133,9 @@ namespace Raven.Tests.Counters
 		public void NotificationReceivedWhenBatchOperation(int batchSizeLimit, int actionsCount)
 		{
 			int startCount = 0, endCount = 0;
-			using (var store = NewRemoteCountersStore())
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
-				using (var batchOperation = store.Advanced.NewBatch(store.DefaultCounterStorageName,
-														new CountersBatchOptions { BatchSizeLimit = batchSizeLimit }))
+				using (var batchOperation = store.Advanced.NewBatch(new CountersBatchOptions { BatchSizeLimit = batchSizeLimit }))
 				{
 					store.Changes().Task.Result
 						.ForBulkOperation(batchOperation.OperationId).Task.Result

@@ -4,21 +4,17 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-using Raven.Client.Counters.Actions;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Counters.Replication
+namespace Raven.Client.Counters
 {
-	public class ReplicationClient : CountersActionsBase
+	public partial class CounterStore
 	{
-		internal ReplicationClient(ICounterStore parent, string counterStorageName)
-			: base(parent, counterStorageName)
-		{
-		}
-
 		public async Task<CountersReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/replications/get", CounterStorageUrl);
+			AssertInitialized();
+
+			var requestUriString = String.Format("{0}/cs/{1}/replications/get", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
@@ -29,7 +25,8 @@ namespace Raven.Client.Counters.Replication
 
 		public async Task SaveReplicationsAsync(CountersReplicationDocument newReplicationDocument,CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/replications/save", CounterStorageUrl);
+			AssertInitialized();
+			var requestUriString = String.Format("{0}/cs/{1}/replications/save", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 			{
@@ -40,7 +37,8 @@ namespace Raven.Client.Counters.Replication
 
 		public async Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/lastEtag?serverId={1}", CounterStorageUrl, serverId);
+			AssertInitialized();
+			var requestUriString = String.Format("{0}/cs/{1}/lastEtag?serverId={2}", Url, Name, serverId);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{

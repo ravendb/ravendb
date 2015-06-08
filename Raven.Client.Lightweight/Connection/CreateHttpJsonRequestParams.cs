@@ -31,12 +31,22 @@ namespace Raven.Client.Connection
 			RequestTimeMetric = requestTimeMetric;
 			Timeout = timeout;
 			operationsHeadersCollection = new NameValueCollection();
+			ShouldCacheRequest = convention != null ? convention.ShouldCacheRequest : urlParam => false;
 		}
 
 		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, OperationCredentials credentials, Convention convention, IRequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null)
 			: this(self, url, method, new RavenJObject(), credentials, convention, requestTimeMetric, timeout)
 		{
 		}
+
+		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, OperationCredentials credentials, Func<string, bool> shouldCacheRequest, IRequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null)
+			: this(self, url, method, new RavenJObject(), credentials, null, requestTimeMetric, timeout)
+		{
+			ShouldCacheRequest = shouldCacheRequest;
+		}
+
+
+		public Func<string, bool> ShouldCacheRequest { get; set; }
 
 		public bool AvoidCachingRequest { get; set; }
 
@@ -74,6 +84,7 @@ namespace Raven.Client.Connection
 				url = value;
 			}
 		}
+
 
 		/// <summary>
 		///     Adds the operation headers.

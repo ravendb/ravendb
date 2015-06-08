@@ -74,7 +74,7 @@ namespace Raven.Client.Connection
 			{
 				ShouldCacheRequest =
 					createHttpJsonRequestParams.AvoidCachingRequest == false && 
-					createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
+					createHttpJsonRequestParams.ShouldCacheRequest(createHttpJsonRequestParams.Url)
 			};
 
 			if (request.ShouldCacheRequest && !DisableHttpCaching)
@@ -100,7 +100,7 @@ namespace Raven.Client.Connection
 				if(duration.TotalSeconds > 0)
 					setHeader("Cache-Control", "max-age=" + duration.TotalSeconds);
 
-				if (cachedRequest.ForceServerCheck == false && (SystemTime.UtcNow- cachedRequest.Time) < duration) // can serve directly from local cache
+				if (cachedRequest.ForceServerCheck == false && (SystemTime.UtcNow - cachedRequest.Time) < duration) // can serve directly from local cache
 					skipServerCheck = true;
 
 				cachedRequest.ForceServerCheck = false;

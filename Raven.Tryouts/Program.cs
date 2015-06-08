@@ -12,7 +12,7 @@ namespace Raven.Tryouts
 				Console.WriteLine(i);
 				using (var test = new IndexReplication())
 				{
-					test.Should_replicate_all_indexes_if_relevant_endpoint_is_hit();
+					test.CanReplicateIndex();
 				}
 			}
 		}

@@ -129,7 +129,7 @@ namespace Raven.Database.Server.Tenancy
 				throw new InvalidOperationException("Could not find Raven/Counters/DataDir");
 
 			if (document.Disabled)
-				throw new InvalidOperationException("The database has been disabled.");
+				throw new InvalidOperationException("The counter has been disabled.");
 
 			return document;
 		}

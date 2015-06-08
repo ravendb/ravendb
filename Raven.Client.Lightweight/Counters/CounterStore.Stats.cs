@@ -6,18 +6,15 @@ using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 
-namespace Raven.Client.Counters.Actions
+namespace Raven.Client.Counters
 {
-	public class CountersStats : CountersActionsBase
+	public partial class CounterStore
 	{
-		internal CountersStats(ICounterStore parent,string counterStorageName)
-			: base(parent, counterStorageName)
-		{
-		}
-
 		public async Task<CounterStorageStats> GetCounterStatsAsync(CancellationToken token = default (CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/stats", CounterStorageUrl);
+			AssertInitialized();
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
+			var requestUriString = String.Format("{0}/cs/{1}/stats", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
@@ -28,7 +25,9 @@ namespace Raven.Client.Counters.Actions
 
 		public async Task<CountersStorageMetrics> GetCounterMetricsAsync(CancellationToken token = default (CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/metrics", CounterStorageUrl);
+			AssertInitialized();
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
+			var requestUriString = String.Format("{0}/cs/{1}/metrics", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
@@ -39,7 +38,9 @@ namespace Raven.Client.Counters.Actions
 
 		public async Task<List<CounterStorageReplicationStats>> GetCounterRelicationStatsAsync(CancellationToken token = default (CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/replications/stats", CounterStorageUrl);
+			AssertInitialized();
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
+			var requestUriString = String.Format("{0}/cs/{1}/replications/stats", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{

@@ -56,6 +56,9 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			//1024 is Lucene.net default - so if the setting is not set it will be the same as not touching Lucene's settings at all
+			MaxClauseCount = new IntegerSetting(settings[Constants.MaxClauseCount],1024); 
+
 			AllowScriptsToAdjustNumberOfSteps = new BooleanSetting(settings[Constants.AllowScriptsToAdjustNumberOfSteps], false);
 
 			IndexAndTransformerReplicationLatencyInSec = new IntegerSetting(settings[Constants.RavenIndexAndTransformerReplicationLatencyInSec], Constants.DefaultRavenIndexAndTransformerReplicationLatencyInSec);
@@ -299,6 +302,8 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public IntegerSetting MaxClauseCount { get; private set; }
 
 		public BooleanSetting AllowScriptsToAdjustNumberOfSteps { get; private set; }
 
