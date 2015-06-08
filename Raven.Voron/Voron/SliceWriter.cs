@@ -24,9 +24,14 @@ namespace Voron
 			_bitConverter = bitConverter ?? EndianBitConverter.Little;
 		}
 
-		public void WriteString(string s)
+	    public byte[] Buffer
 	    {
-		    var stringBytes = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, _pos);
+		    get { return _buffer; }
+	    }
+
+	    public void Write(string s)
+	    {
+			var stringBytes = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, _pos);
 		    _pos += stringBytes;
 	    }
 

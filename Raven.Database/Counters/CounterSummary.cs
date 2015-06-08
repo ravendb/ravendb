@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Raven.Database.Counters
+﻿namespace Raven.Database.Counters
 {
 	public class CounterSummary
 	{
