@@ -18,14 +18,15 @@ namespace Raven.Database.Extensions
 
     public class CancellationTimeout : IDisposable
     {
-        private readonly CancellationTokenSource source;
+		public CancellationTokenSource CancellationTokenSource { get; private set; }
         private readonly Timer timer;
         private readonly long dueTime;
-        private bool isTimerDisposed;
+		private readonly object locker = new object();
+        private volatile bool isTimerDisposed;
 
         public void ThrowIfCancellationRequested()
         {
-            source.Token.ThrowIfCancellationRequested();
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
         }
 
         public CancellationTimeout(CancellationTokenSource source, TimeSpan dueTime)
@@ -36,15 +37,15 @@ namespace Raven.Database.Extensions
                 throw new ArgumentOutOfRangeException("dueTime");
 
             isTimerDisposed = false;
-            this.source = source;
+            CancellationTokenSource = source;
             this.dueTime = (long)dueTime.TotalMilliseconds;
             timer = new Timer(self =>
             {
-                timer.Dispose();
-                isTimerDisposed = true;
+                Dispose(); 
+
                 try
                 {
-                    this.source.Cancel();
+                    CancellationTokenSource.Cancel();
                 }
                 catch (ObjectDisposedException)
                 {
@@ -54,14 +55,30 @@ namespace Raven.Database.Extensions
 
         public void Delay()
         {
-            if (!isTimerDisposed)
-                timer.Change(dueTime, -1);
+			if (isTimerDisposed)
+				return;
+
+	        lock (locker)
+	        {
+		        if (isTimerDisposed) 
+					return;
+
+				timer.Change(dueTime, -1);
+	        }
         }
 
 		public void Pause()
 		{
-			if (!isTimerDisposed)
+			if (isTimerDisposed)
+				return;
+
+			lock (locker)
+			{
+				if (isTimerDisposed)
+					return;
+
 				timer.Change(Timeout.Infinite, Timeout.Infinite);
+			}	
 		}
 
 		public void Resume()
@@ -71,8 +88,19 @@ namespace Raven.Database.Extensions
 
         public void Dispose()
         {
-	       isTimerDisposed = true;
-           timer.Dispose();
+			if (isTimerDisposed)
+				return;
+
+	        lock (locker)
+	        {
+				if (isTimerDisposed)
+					return;
+
+				isTimerDisposed = true;
+
+				if (timer != null)
+					timer.Dispose();
+	        }
         }
     }
 }
