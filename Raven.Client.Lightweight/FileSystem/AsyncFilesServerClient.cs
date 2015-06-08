@@ -13,6 +13,7 @@ using Raven.Client.Extensions;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Client.FileSystem.Listeners;
+using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System;
@@ -440,7 +441,7 @@ namespace Raven.Client.FileSystem
 
 				await response.AssertNotFailingResponse().ConfigureAwait(false);
 
-                return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+                return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
             }
         }
 
@@ -497,7 +498,7 @@ namespace Raven.Client.FileSystem
 
                 currentPageCount = 0;
                 currentEtag = etag;
-                currentStream = new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+                currentStream = new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
             }
 
             public async Task<bool> MoveNextAsync()
@@ -552,16 +553,19 @@ namespace Raven.Client.FileSystem
 
         internal class YieldStreamResults : IAsyncEnumerator<FileHeader>
         {
-            private readonly Stream stream;
+	        private readonly HttpJsonRequest request;
+
+	        private readonly Stream stream;
             private readonly StreamReader streamReader;
             private readonly JsonTextReaderAsync reader;
             private bool complete;
 
             private bool wasInitialized;
 
-            public YieldStreamResults(Stream stream)
+            public YieldStreamResults(HttpJsonRequest request, Stream stream)
             {
-                this.stream = stream;
+	            this.request = request;
+	            this.stream = stream;
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReaderAsync(streamReader);
             }
@@ -583,6 +587,7 @@ namespace Raven.Client.FileSystem
                 reader.Close();
                 streamReader.Close();
                 stream.Close();
+				request.Dispose();
             }
 
             public async Task<bool> MoveNextAsync()
@@ -761,7 +766,7 @@ namespace Raven.Client.FileSystem
 				if (metadataRef != null)
 					metadataRef.Value = response.HeadersToObject();
 
-				return await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
+				return new DisposableStream(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), request.Dispose);
 			}
 			catch (Exception e)
 			{

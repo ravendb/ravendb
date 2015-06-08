@@ -523,7 +523,7 @@ namespace Raven.Database
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
 					SupportsDtc = TransactionalStorage.SupportsDtc,
-
+                    Is64Bit = Environment.Is64BitProcess
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -1279,7 +1279,7 @@ namespace Raven.Database
 								if (database.StorageInaccessible != null)
 									database.StorageInaccessible(database, EventArgs.Empty);
 
-							});
+							}, database.WorkContext.NestedTransactionEnter, database.WorkContext.NestedTransactionExit);
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 

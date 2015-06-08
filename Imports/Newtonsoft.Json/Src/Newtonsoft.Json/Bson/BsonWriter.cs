@@ -139,7 +139,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         }
 
         /// <summary>
-        /// Writes the beginning of a Json array.
+        /// Writes the beginning of a JSON array.
         /// </summary>
         public override void WriteStartArray()
         {
@@ -149,7 +149,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         }
 
         /// <summary>
-        /// Writes the beginning of a Json object.
+        /// Writes the beginning of a JSON object.
         /// </summary>
         public override void WriteStartObject()
         {
@@ -159,7 +159,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         }
 
         /// <summary>
-        /// Writes the property name of a name/value pair on a Json object.
+        /// Writes the property name of a name/value pair on a JSON object.
         /// </summary>
         /// <param name="name">The name of the property.</param>
         public override void WritePropertyName(string name)
@@ -327,7 +327,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         public override void WriteValue(float value)
         {
             base.WriteValue(value);
-            AddValue(value, BsonType.RavenDBCustomFloat);
+			AddValue(value, BsonType.RavenDBCustomFloat);
         }
 
         /// <summary>
@@ -415,7 +415,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         public override void WriteValue(decimal value)
         {
             base.WriteValue(value);
-            AddValue(value, BsonType.NumberDecimal);
+			AddValue(value, BsonType.NumberDecimal);
         }
 
         /// <summary>

@@ -138,7 +138,11 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
             {
 #if !NET20
                 if (t == typeof(DateTimeOffset))
-                    return reader.Value is DateTimeOffset ? reader.Value : new DateTimeOffset((DateTime)reader.Value);
+                    return (reader.Value is DateTimeOffset) ? reader.Value : new DateTimeOffset((DateTime)reader.Value);
+
+                // converter is expected to return a DateTime
+                if (reader.Value is DateTimeOffset)
+                    return ((DateTimeOffset)reader.Value).DateTime;
 #endif
 
                 return reader.Value;

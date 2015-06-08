@@ -117,11 +117,14 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="BackupRestore.cs" />
     <Compile Include="RavenDB-3152.cs" />
     <Compile Include="RavenDB-3179.cs" />
     <Compile Include="RavenDB-3302.cs" />
     <Compile Include="RavenDB-3314.cs" />
     <Compile Include="RavenDB-3326.cs" />
+    <Compile Include="RavenDB-3420.cs" />
+    <Compile Include="RavenDB-3465.cs" />
     <Compile Include="RavenDB-3472.cs" />
     <Compile Include="RavenDB_3199.cs" />
     <Compile Include="RavenDB-3383.cs" />
@@ -403,8 +406,11 @@
     <Compile Include="RavenDB_3417.cs" />
     <Compile Include="RavenDB_3418.cs" />
     <Compile Include="RavenDB_3422.cs" />
+    <Compile Include="RavenDB_3435.cs" />
+    <Compile Include="RavenDB_3442.cs" />
     <Compile Include="RavenDB_3462.cs" />
     <Compile Include="RavenDB_349.cs" />
+    <Compile Include="RavenDB_3501.cs" />
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_381.cs" />
     <Compile Include="RavenDB_384.cs" />

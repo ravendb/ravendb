@@ -33,7 +33,7 @@ namespace Raven.Client.Document
 				return result;
 
 			var asmName = new AssemblyName(entityType.Assembly().FullName).Name;
-			if (entityType.IsGenericType())
+			if (entityType.IsGenericType)
 			{
 				var genericTypeDefinition = entityType.GetGenericTypeDefinition();
 				var sb = new StringBuilder(genericTypeDefinition.FullName);

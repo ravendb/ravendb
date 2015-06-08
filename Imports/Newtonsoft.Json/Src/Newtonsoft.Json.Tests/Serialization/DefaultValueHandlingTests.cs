@@ -36,7 +36,7 @@ using Newtonsoft.Json.Tests.TestObjects;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -373,7 +373,7 @@ namespace Newtonsoft.Json.Tests.Serialization
         public void PopulateTest()
         {
             var test = JsonConvert.DeserializeObject<PopulateWithNullJsonTest>("{\"IntValue\":null}");
-            Console.WriteLine("IntValue:{0}", test.IntValue);
+            Assert.AreEqual(0, test.IntValue);
         }
 
         public class PopulateWithNullJsonTest

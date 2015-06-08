@@ -68,7 +68,7 @@ namespace Raven.Database.Actions
 			SubscriptionConnectionOptions existingOptions;
 
 			if(openSubscriptions.TryGetValue(id, out existingOptions) == false)
-				throw new SubscriptionDoesNotExistExeption("Didn't get existing open subscription while it's expected. Subscription id: " + id);
+				throw new SubscriptionDoesNotExistException("Didn't get existing open subscription while it's expected. Subscription id: " + id);
 
 			if (existingOptions.ConnectionId.Equals(options.ConnectionId, StringComparison.OrdinalIgnoreCase))
 			{
@@ -147,7 +147,7 @@ namespace Raven.Database.Actions
 				var listItem = accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, id.ToString("D19"));
 
 				if(listItem == null)
-					throw new SubscriptionDoesNotExistExeption("There is no subscription configuration for specified identifier (id: " + id + ")");
+					throw new SubscriptionDoesNotExistException("There is no subscription configuration for specified identifier (id: " + id + ")");
 
 				config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
 			});

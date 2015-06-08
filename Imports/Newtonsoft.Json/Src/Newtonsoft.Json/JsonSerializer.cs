@@ -28,14 +28,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters;
 using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Runtime.Serialization;
-using ErrorEventArgs = Raven.Imports.Newtonsoft.Json.Serialization.ErrorEventArgs;
 using Raven.Abstractions.Json;
-using System.Runtime.CompilerServices;
+using ErrorEventArgs = Raven.Imports.Newtonsoft.Json.Serialization.ErrorEventArgs;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -81,7 +81,7 @@ namespace Raven.Imports.Newtonsoft.Json
         /// </summary>
         public virtual event EventHandler<ErrorEventArgs> Error;
 
-        public event Action<object, JsonWriter> BeforeClosingObject;
+		public event Action<object, JsonWriter> BeforeClosingObject;
 
         /// <summary>
         /// Gets or sets the <see cref="IReferenceResolver"/> used by the serializer when resolving references.
@@ -285,9 +285,9 @@ namespace Raven.Imports.Newtonsoft.Json
         {
             get
             {
-                if (_converters == null)
-                { 
-                    // This is a bit unorthodox but in debug mode (ours code) we don't want to use unfrozen converters
+	            if (_converters == null)
+	            {
+		             // This is a bit unorthodox but in debug mode (ours code) we don't want to use unfrozen converters
                     // because of the performance implications. Therefore, any mistaken attempt to use the wrong way to
                     // create the serializer will throw; but our users wont have to care about that until we hit
                     // v4.0 where the failure mode should be the default.
@@ -296,14 +296,14 @@ namespace Raven.Imports.Newtonsoft.Json
 #else
                     _converters = new JsonConverterCollection();
 #endif
-                }
-                return _converters;
+	            }
 
+                return _converters;
             }
-            set
-            {
-                _converters = value;
-            }
+			set
+			{
+				_converters = value;
+			}
         }
 
         /// <summary>
@@ -392,7 +392,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Get or set how <see cref="DateTime"/> and <see cref="DateTimeOffset"/> values are formatting when writing JSON text.
+        /// Get or set how <see cref="DateTime"/> and <see cref="DateTimeOffset"/> values are formatted when writing JSON text, and the expected date format when reading JSON text.
         /// </summary>
         public virtual string DateFormatString
         {
@@ -537,17 +537,17 @@ namespace Raven.Imports.Newtonsoft.Json
         private static void ApplySerializerSettings(JsonSerializer serializer, JsonSerializerSettings settings)
         {
             if (!CollectionUtils.IsNullOrEmpty(settings.Converters))
-            { 
+            {
                 // insert settings converters at the beginning so they take precedence
                 // if user wants to remove one of the default converters they will have to do it manually
-                var converters = new JsonConverterCollection(serializer.Converters);
-                for (int i = 0; i < settings.Converters.Count; i++)
+				var converters = new JsonConverterCollection(serializer.Converters); 
+				for (int i = 0; i < settings.Converters.Count; i++)
                 {
-                    converters.Insert(i, settings.Converters[i]);
+					converters.Insert(i, settings.Converters[i]);
                 }
-                converters.Freeze();
+				converters.Freeze();
 
-                serializer.Converters = converters;
+				serializer.Converters = converters;
             }
 
             // serializer specific
@@ -581,8 +581,8 @@ namespace Raven.Imports.Newtonsoft.Json
 
             if (settings.ContractResolver != null)
                 serializer.ContractResolver = settings.ContractResolver;
-            if (settings.ReferenceResolver != null)
-                serializer.ReferenceResolver = settings.ReferenceResolver;
+            if (settings.ReferenceResolverProvider != null)
+                serializer.ReferenceResolver = settings.ReferenceResolverProvider();
             if (settings.TraceWriter != null)
                 serializer.TraceWriter = settings.TraceWriter;
             if (settings.Binder != null)
@@ -660,13 +660,13 @@ namespace Raven.Imports.Newtonsoft.Json
             serializerReader.Populate(traceJsonReader ?? reader, target);
 
             if (traceJsonReader != null)
-                TraceWriter.Trace(TraceLevel.Verbose, "Deserialized JSON: " + Environment.NewLine + traceJsonReader.GetJson(), null);
+                TraceWriter.Trace(TraceLevel.Verbose, traceJsonReader.GetDeserializedJsonMessage(), null);
 
             ResetReader(reader, previousCulture, previousDateTimeZoneHandling, previousDateParseHandling, previousFloatParseHandling, previousMaxDepth, previousDateFormatString);
         }
 
         /// <summary>
-        /// Deserializes the Json structure contained by the specified <see cref="JsonReader"/>.
+        /// Deserializes the JSON structure contained by the specified <see cref="JsonReader"/>.
         /// </summary>
         /// <param name="reader">The <see cref="JsonReader"/> that contains the JSON structure to deserialize.</param>
         /// <returns>The <see cref="Object"/> being deserialized.</returns>
@@ -676,7 +676,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Deserializes the Json structure contained by the specified <see cref="StringReader"/>
+        /// Deserializes the JSON structure contained by the specified <see cref="StringReader"/>
         /// into an instance of the specified type.
         /// </summary>
         /// <param name="reader">The <see cref="TextReader"/> containing the object.</param>
@@ -688,7 +688,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Deserializes the Json structure contained by the specified <see cref="JsonReader"/>
+        /// Deserializes the JSON structure contained by the specified <see cref="JsonReader"/>
         /// into an instance of the specified type.
         /// </summary>
         /// <param name="reader">The <see cref="JsonReader"/> containing the object.</param>
@@ -700,7 +700,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Deserializes the Json structure contained by the specified <see cref="JsonReader"/>
+        /// Deserializes the JSON structure contained by the specified <see cref="JsonReader"/>
         /// into an instance of the specified type.
         /// </summary>
         /// <param name="reader">The <see cref="JsonReader"/> containing the object.</param>
@@ -732,7 +732,7 @@ namespace Raven.Imports.Newtonsoft.Json
             object value = serializerReader.Deserialize(traceJsonReader ?? reader, objectType, CheckAdditionalContent);
 
             if (traceJsonReader != null)
-                TraceWriter.Trace(TraceLevel.Verbose, "Deserialized JSON: " + Environment.NewLine + traceJsonReader.GetJson(), null);
+                TraceWriter.Trace(TraceLevel.Verbose, traceJsonReader.GetDeserializedJsonMessage(), null);
 
             ResetReader(reader, previousCulture, previousDateTimeZoneHandling, previousDateParseHandling, previousFloatParseHandling, previousMaxDepth, previousDateFormatString);
 
@@ -832,10 +832,10 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Serializes the specified <see cref="Object"/> and writes the Json structure
+        /// Serializes the specified <see cref="Object"/> and writes the JSON structure
         /// to a <c>Stream</c> using the specified <see cref="TextWriter"/>. 
         /// </summary>
-        /// <param name="textWriter">The <see cref="TextWriter"/> used to write the Json structure.</param>
+        /// <param name="textWriter">The <see cref="TextWriter"/> used to write the JSON structure.</param>
         /// <param name="value">The <see cref="Object"/> to serialize.</param>
         public void Serialize(TextWriter textWriter, object value)
         {
@@ -843,10 +843,10 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Serializes the specified <see cref="Object"/> and writes the Json structure
+        /// Serializes the specified <see cref="Object"/> and writes the JSON structure
         /// to a <c>Stream</c> using the specified <see cref="TextWriter"/>. 
         /// </summary>
-        /// <param name="jsonWriter">The <see cref="JsonWriter"/> used to write the Json structure.</param>
+        /// <param name="jsonWriter">The <see cref="JsonWriter"/> used to write the JSON structure.</param>
         /// <param name="value">The <see cref="Object"/> to serialize.</param>
         /// <param name="objectType">
         /// The type of the value being serialized.
@@ -859,10 +859,10 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Serializes the specified <see cref="Object"/> and writes the Json structure
+        /// Serializes the specified <see cref="Object"/> and writes the JSON structure
         /// to a <c>Stream</c> using the specified <see cref="TextWriter"/>. 
         /// </summary>
-        /// <param name="textWriter">The <see cref="TextWriter"/> used to write the Json structure.</param>
+        /// <param name="textWriter">The <see cref="TextWriter"/> used to write the JSON structure.</param>
         /// <param name="value">The <see cref="Object"/> to serialize.</param>
         /// <param name="objectType">
         /// The type of the value being serialized.
@@ -875,10 +875,10 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Serializes the specified <see cref="Object"/> and writes the Json structure
+        /// Serializes the specified <see cref="Object"/> and writes the JSON structure
         /// to a <c>Stream</c> using the specified <see cref="JsonWriter"/>. 
         /// </summary>
-        /// <param name="jsonWriter">The <see cref="JsonWriter"/> used to write the Json structure.</param>
+        /// <param name="jsonWriter">The <see cref="JsonWriter"/> used to write the JSON structure.</param>
         /// <param name="value">The <see cref="Object"/> to serialize.</param>
         public void Serialize(JsonWriter jsonWriter, object value)
         {
@@ -943,11 +943,11 @@ namespace Raven.Imports.Newtonsoft.Json
                 ? new TraceJsonWriter(jsonWriter)
                 : null;
 
-            JsonSerializerInternalWriter serializerWriter = new JsonSerializerInternalWriter(this, BeforeClosingObject);
+			JsonSerializerInternalWriter serializerWriter = new JsonSerializerInternalWriter(this, BeforeClosingObject);
             serializerWriter.Serialize(traceJsonWriter ?? jsonWriter, value, objectType);
 
             if (traceJsonWriter != null)
-                TraceWriter.Trace(TraceLevel.Verbose, "Serialized JSON: " + Environment.NewLine + traceJsonWriter.GetJson(), null);
+                TraceWriter.Trace(TraceLevel.Verbose, traceJsonWriter.GetSerializedJsonMessage(), null);
 
             // reset writer back to previous options
             if (previousFormatting != null)
@@ -974,11 +974,33 @@ namespace Raven.Imports.Newtonsoft.Json
             return _referenceResolver;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal JsonConverter GetMatchingConverter(Type type)
         {
-            return JsonConverterCache.GetMatchingConverter(_converters, type);
+			return JsonConverterCache.GetMatchingConverter(_converters, type);
         }
+
+		/*[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static JsonConverter GetMatchingConverter(IList<JsonConverter> converters, Type objectType)
+        {
+#if DEBUG
+            ValidationUtils.ArgumentNotNull(objectType, "objectType");
+#endif
+
+            if (converters != null)
+            {
+	            var count = converters.Count;
+	            for (int i = 0; i < count; i++)
+                {
+                    JsonConverter converter = converters[i];
+
+                    if (converter.CanConvert(objectType))
+                        return converter;
+                }
+            }
+
+			return null;
+        }*/
 
         internal void OnError(ErrorEventArgs e)
         {

@@ -30,7 +30,7 @@ using Newtonsoft.Json.Converters;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -111,16 +111,13 @@ namespace Newtonsoft.Json.Tests.Converters
 
             IPerson person = people[0];
 
-            Console.WriteLine(person.GetType());
-            // Newtonsoft.Json.Tests.Employee
+            Assert.AreEqual("Newtonsoft.Json.Tests.Employee", person.GetType().Name);
 
-            Console.WriteLine(person.FirstName);
-            // Maurice
+            Assert.AreEqual("Maurice", person.FirstName);
 
             Employee employee = (Employee)person;
 
-            Console.WriteLine(employee.JobTitle);
-            // Support
+            Assert.AreEqual("Support", employee.JobTitle);
         }
 
         public class MyClass

@@ -1,7 +1,10 @@
+using System;
+using System.Diagnostics;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Responders.Behaviors;
+using Raven.Database.Bundles.Replication.Triggers;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -26,7 +29,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)
 		{
-			Actions.Lists.Set(Constants.RavenReplicationDocsTombstones, id, metadata,UuidType.Documents);
+			Actions.Lists.Set(Constants.RavenReplicationDocsTombstones, id, metadata, UuidType.Documents);
 		}
 
 		protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, RavenJObject incoming)
@@ -35,7 +38,7 @@ namespace Raven.Bundles.Replication.Responders
 			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
 		}
 
-		protected override CreatedConflict CreateConflict(string id, string newDocumentConflictId, 
+		protected override CreatedConflict CreateConflict(string id, string newDocumentConflictId,
 			string existingDocumentConflictId, JsonDocument existingItem, RavenJObject existingMetadata)
 		{
 			existingMetadata.Add(Constants.RavenReplicationConflict, true);
@@ -44,11 +47,11 @@ namespace Raven.Bundles.Replication.Responders
 			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
 			var conflictsArray = new RavenJArray(existingDocumentConflictId, newDocumentConflictId);
 			var addResult = Actions.Documents.AddDocument(id, etag,
-			                                              new RavenJObject
+														  new RavenJObject
 			                                              {
 				                                              {"Conflicts", conflictsArray}
 			                                              },
-			                                              new RavenJObject
+														  new RavenJObject
 			                                              {
 				                                              {Constants.RavenReplicationConflict, true},
 				                                              {"@Http-Status-Code", 409},
@@ -73,7 +76,7 @@ namespace Raven.Bundles.Replication.Responders
 			if (ravenJArray.Contains(newConflictId) == false)
 			{
 				ravenJArray.Add(newConflictId);
-			var addResult = Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
+				var addResult = Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
 				conflictEtag = addResult.Etag;
 			}
 
@@ -87,7 +90,7 @@ namespace Raven.Bundles.Replication.Responders
 		protected override RavenJObject TryGetExisting(string id, out JsonDocument existingItem, out Etag existingEtag, out bool deleted)
 		{
 			var existingDoc = Actions.Documents.DocumentByKey(id);
-			if(existingDoc != null)
+			if (existingDoc != null)
 			{
 				ReplicationTask.EnsureReplicationInformationInMetadata(existingDoc.Metadata, Database);
 
@@ -98,7 +101,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 
 			var listItem = Actions.Lists.Read(Constants.RavenReplicationDocsTombstones, id);
-			if(listItem != null)
+			if (listItem != null)
 			{
 				ReplicationTask.EnsureReplicationInformationInMetadata(listItem.Data, Database);
 
@@ -124,15 +127,16 @@ namespace Raven.Bundles.Replication.Responders
 										out RavenJObject documentToSave)
 		{
 			foreach (var replicationConflictResolver in ReplicationConflictResolvers)
-		{
-				if (replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key),
+			{
+				if (replicationConflictResolver.TryResolveConflict(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key),
 														   out metadataToSave, out documentToSave))
 					return true;
-		}
+			}
 
 			metadataToSave = null;
 			documentToSave = null;
 
 			return false;
+		}
 	}
-}}
+}

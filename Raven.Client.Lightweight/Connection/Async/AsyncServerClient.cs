@@ -283,7 +283,7 @@ namespace Raven.Client.Connection.Async
 
 				try
 				{
-					await webRequest.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+					await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
 					if (overwrite == false) throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 				}
 				catch (ErrorResponseException e)
@@ -2345,7 +2345,7 @@ namespace Raven.Client.Connection.Async
 						JsonDocument resolvedDocument;
 						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
 						{
-							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata).ConfigureAwait(false);
+							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata, token).ConfigureAwait(false);
 							return true;
 						}
 					}

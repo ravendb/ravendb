@@ -102,6 +102,7 @@ namespace Raven.Client.Document
 	    {
 	        var minNextMax = Range.Max;
 
+			using (databaseCommands.ForceReadFromMaster())
 	        while (true)
 	        {
                 try

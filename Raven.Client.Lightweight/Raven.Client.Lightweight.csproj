@@ -13,6 +13,7 @@
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\ravendb\</SolutionDir>
+    <Prefer32Bit>false</Prefer32Bit>
     <RestorePackages>true</RestorePackages>
     <NuGetPackageImportStamp>9ceba09c</NuGetPackageImportStamp>
   </PropertyGroup>
@@ -26,7 +27,6 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Raven.Client.Lightweight.xml</DocumentationFile>
     <NoWarn>1573, 1587, 1591</NoWarn>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -37,8 +37,6 @@
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
-    <Prefer32Bit>false</Prefer32Bit>
-    <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
@@ -143,6 +141,7 @@
     <Compile Include="Document\ResponseTimeInformation.cs" />
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
+    <Compile Include="Document\ShardedBulkInsertOperation.cs" />
     <Compile Include="Document\Subscription.cs" />
     <Compile Include="Document\DocumentSubscriptions.cs" />
     <Compile Include="Extensions\Internal\HttpJsonRequestExtensions.cs" />
@@ -191,6 +190,8 @@
     <Compile Include="Metrics\RequestTimeMetric.cs" />
     <Compile Include="Metrics\TimeUnit.cs" />
     <Compile Include="Metrics\VolatileDouble.cs" />
+    <Compile Include="Indexes\AbstractScriptedIndexCreationTask.cs" />
+    <Compile Include="Util\DisposableStream.cs" />
     <Compile Include="Util\HttpClientCache.cs" />
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />

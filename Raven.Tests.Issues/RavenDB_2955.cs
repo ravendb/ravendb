@@ -63,7 +63,6 @@ namespace Raven.Tests.Issues
 				store.DocumentDatabase.IndexStorage.RunIdleOperations();
 
 				autoIndexes = store.DatabaseCommands.GetStatistics().Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
-
 				Assert.Equal(0, autoIndexes.Count);
 			}
 		}

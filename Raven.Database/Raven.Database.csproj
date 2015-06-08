@@ -31,6 +31,7 @@
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <Prefer32Bit>false</Prefer32Bit>
     <RestorePackages>true</RestorePackages>
     <NuGetPackageImportStamp>7003453f</NuGetPackageImportStamp>
   </PropertyGroup>
@@ -47,6 +48,8 @@
     <NoWarn>1607, 1591</NoWarn>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>
+    </DocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -59,7 +62,6 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <NoWarn>1607, 1591</NoWarn>
-    <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
@@ -70,7 +72,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
     <OutputPath>bin\Profiling\</OutputPath>
-    <DefineConstants>DEBUG;TRACE;NET_4_0 NET45</DefineConstants>
+    <DefineConstants>TRACE;NET_4_0 NET45</DefineConstants>
     <Optimize>true</Optimize>
     <NoWarn>1607, 1591</NoWarn>
     <DebugType>pdbonly</DebugType>
@@ -355,6 +357,7 @@
     <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From04To05.cs" />
     <Compile Include="FileSystem\Storage\CopyFileOperation.cs" />
+    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From05To06.cs" />
     <Compile Include="FileSystem\Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
@@ -476,6 +479,7 @@
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DatabaseHelper.cs" />
     <Compile Include="Util\DevelopmentHelper.cs" />
+    <Compile Include="Util\CultureHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\SortFieldHelper.cs" />

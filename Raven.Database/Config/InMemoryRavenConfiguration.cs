@@ -110,6 +110,8 @@ namespace Raven.Database.Config
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
 
+			MaxClauseCount = ravenSettings.MaxClauseCount.Value;
+
 			AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
 
 			IndexAndTransformerReplicationLatencyInSec = ravenSettings.IndexAndTransformerReplicationLatencyInSec.Value;
@@ -361,6 +363,8 @@ namespace Raven.Database.Config
 
 			return FilePathTools.MakeSureEndsWithSlash(workingDirectory.ToFullPath());
 		}
+
+		public int MaxClauseCount { get; set; }
 
 		public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
 
@@ -1163,7 +1167,7 @@ namespace Raven.Database.Config
 		}
 
 		[CLSCompliant(false)]
-		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible)
+		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible, Action onNestedTransactionEnter = null, Action onNestedTransactionExit = null)
 		{
 			if (EnvironmentUtils.RunningOnPosix)
 				storageEngine = "voron";
@@ -1172,8 +1176,9 @@ namespace Raven.Database.Config
 
 			if (type == null)
 				throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
+			Action dummyAction = () => { };
 
-			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible);
+			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible, onNestedTransactionEnter ?? dummyAction, onNestedTransactionExit ?? dummyAction);
 		}
 
 

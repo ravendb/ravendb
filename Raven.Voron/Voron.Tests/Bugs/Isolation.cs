@@ -8,7 +8,7 @@ namespace Voron.Tests.Bugs
 
 	public class Isolation : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void MultiTreeIteratorShouldBeIsolated1()
 		{
 			var directory = "Test2";
@@ -48,7 +48,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void MultiTreeIteratorShouldBeIsolated2()
 		{
 			var directory = "Test2";
@@ -113,7 +113,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ScratchPagesShouldNotBeReleasedUntilNotUsed()
 		{
 			var directory = "Test2";

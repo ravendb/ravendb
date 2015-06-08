@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -15,9 +15,10 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Tests.Helpers;
+
 using Xunit;
 
-namespace Raven.Tests.Core.Replication
+namespace Raven.Tests.Replication
 {
 	public class TransformerReplication : RavenTestBase
 	{
@@ -62,7 +63,7 @@ namespace Raven.Tests.Core.Replication
 			}
 		}
 
-		public class YetAnotherTransformer: AbstractTransformerCreationTask<UserWithExtraInfo>
+		public class YetAnotherTransformer : AbstractTransformerCreationTask<UserWithExtraInfo>
 		{
 			public YetAnotherTransformer()
 			{
@@ -347,13 +348,13 @@ namespace Raven.Tests.Core.Replication
 		{
 			var requestFactory = new HttpRavenRequestFactory();
 			using (var sourceServer = GetNewServer(8077))
-			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer,fiddler:true))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
 			using (var destinationServer1 = GetNewServer(8078))
-			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1, fiddler:true))
+			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1, fiddler: true))
 			using (var destinationServer2 = GetNewServer())
-			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2, fiddler:true))
+			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2, fiddler: true))
 			using (var destinationServer3 = GetNewServer(8081))
-			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3, fiddler:true))
+			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3, fiddler: true))
 			{
 				CreateDatabaseWithReplication(source, "testDB");
 				CreateDatabaseWithReplication(destination1, "testDB");
@@ -389,7 +390,7 @@ namespace Raven.Tests.Core.Replication
 				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-
+	
 				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination1.Select(x => x.Name));
 				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination2.Select(x => x.Name));
 				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination3.Select(x => x.Name));
@@ -445,7 +446,7 @@ namespace Raven.Tests.Core.Replication
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 
 				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination1.Select(x => x.Name).ToArray()));
-				Assert.Equal(0,transformerNamesAtDestination2.Length);
+				Assert.Equal(0, transformerNamesAtDestination2.Length);
 				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination3.Select(x => x.Name).ToArray()));
 			}
 		}
@@ -497,11 +498,11 @@ namespace Raven.Tests.Core.Replication
 				session.SaveChanges();
 
 				id = dummy.Id;
-			}
+	}
 
 			WaitForDocument(destination1.DatabaseCommands.ForDatabase("testDB"), id);
 			WaitForDocument(destination2.DatabaseCommands.ForDatabase("testDB"), id);
 			WaitForDocument(destination3.DatabaseCommands.ForDatabase("testDB"), id);
-		}
+}
 	}
 }

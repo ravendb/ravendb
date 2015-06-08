@@ -41,7 +41,7 @@ using Newtonsoft.Json.Tests.TestObjects;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -219,45 +219,32 @@ namespace Newtonsoft.Json.Tests.Serialization
         {
             SerializationEventTestObject obj = new SerializationEventTestObject();
 
-            Console.WriteLine(obj.Member1);
-            // 11
-            Console.WriteLine(obj.Member2);
-            // Hello World!
-            Console.WriteLine(obj.Member3);
-            // This is a nonserialized value
-            Console.WriteLine(obj.Member4);
-            // null
-            Console.WriteLine(obj.Member5);
-            // null
+            Assert.AreEqual(11, obj.Member1);
+            Assert.AreEqual("Hello World!", obj.Member2);
+            Assert.AreEqual("This is a nonserialized value", obj.Member3);
+            Assert.AreEqual(null, obj.Member4);
+            Assert.AreEqual(null, obj.Member5);
 
             string json = JsonConvert.SerializeObject(obj, Formatting.Indented);
-            // {
-            //   "Member1": 11,
-            //   "Member2": "This value went into the data file during serialization.",
-            //   "Member4": null
-            // }
+            StringAssert.AreEqual(@"{
+  ""Member1"": 11,
+  ""Member2"": ""This value went into the data file during serialization."",
+  ""Member4"": null
+}", json);
 
-            Console.WriteLine(obj.Member1);
-            // 11
-            Console.WriteLine(obj.Member2);
-            // This value was reset after serialization.
-            Console.WriteLine(obj.Member3);
-            // This is a nonserialized value
-            Console.WriteLine(obj.Member4);
-            // null
-            Console.WriteLine(obj.Member5);
-            // Error message for member Member6 = Exception has been thrown by the target of an invocation.
+            Assert.AreEqual(11, obj.Member1);
+            Assert.AreEqual("This value was reset after serialization.", obj.Member2);
+            Assert.AreEqual("This is a nonserialized value", obj.Member3);
+            Assert.AreEqual(null, obj.Member4);
+            Assert.AreEqual("Error message for member Member6 = Error getting value from 'Member6' on 'Newtonsoft.Json.Tests.TestObjects.SerializationEventTestObject'.", obj.Member5);
 
             obj = JsonConvert.DeserializeObject<SerializationEventTestObject>(json);
 
-            Console.WriteLine(obj.Member1);
-            // 11
-            Console.WriteLine(obj.Member2);
-            // This value went into the data file during serialization.
-            Console.WriteLine(obj.Member3);
-            // This value was set during deserialization
-            Console.WriteLine(obj.Member4);
-            // This value was set after deserialization.
+            Assert.AreEqual(11, obj.Member1);
+            Assert.AreEqual("This value went into the data file during serialization.", obj.Member2);
+            Assert.AreEqual("This value was set during deserialization", obj.Member3);
+            Assert.AreEqual("This value was set after deserialization.", obj.Member4);
+            Assert.AreEqual(null, obj.Member5);
         }
 
         public class SerializationEventBaseTestObject
@@ -286,7 +273,7 @@ namespace Newtonsoft.Json.Tests.Serialization
 }", json);
         }
 
-#if !(NETFX_CORE || PORTABLE || ASPNETCORE50)
+#if !(NETFX_CORE || PORTABLE || DNXCORE50)
         public class SerializationEventContextTestObject
         {
             public string TestMember { get; set; }
@@ -317,7 +304,7 @@ namespace Newtonsoft.Json.Tests.Serialization
         }
 #endif
 
-#if !(PORTABLE || ASPNETCORE50)
+#if !(PORTABLE || DNXCORE50)
         public void WhenSerializationErrorDetectedBySerializer_ThenCallbackIsCalled()
         {
             // Verify contract is properly finding our callback
@@ -356,9 +343,6 @@ namespace Newtonsoft.Json.Tests.Serialization
                 // persisted "Id" value into the renamed "Identifier"
                 // property, etc.
                 error.Handled = true;
-
-                // We never get here :(
-                Console.WriteLine("Error has been fixed");
             }
         }
 

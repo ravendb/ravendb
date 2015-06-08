@@ -618,7 +618,8 @@ interface databaseDocumentDto {
 
 interface restoreRequestDto {
     BackupLocation: string;
-    
+	IndexesLocation: string;
+	JournalsLocation: string;
 }
 
 interface databaseRestoreRequestDto extends restoreRequestDto {

@@ -31,7 +31,7 @@ using System.Globalization;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -209,7 +209,7 @@ undefined
         {
             string json = @"{
   ""frameworks"": {
-    ""aspnetcore50"": {
+    ""dnxcore50"": {
       ""dependencies"": {
         ""System.Xml.ReaderWriter"": {
           ""source"": ""NuGet""
@@ -221,9 +221,9 @@ undefined
 
             JObject o = JObject.Parse(json);
 
-            JToken v1 = o["frameworks"]["aspnetcore50"]["dependencies"]["System.Xml.ReaderWriter"]["source"];
+            JToken v1 = o["frameworks"]["dnxcore50"]["dependencies"]["System.Xml.ReaderWriter"]["source"];
 
-            Console.WriteLine(v1.Path);
+            Assert.AreEqual("frameworks.dnxcore50.dependencies.['System.Xml.ReaderWriter'].source", v1.Path);
 
             JToken v2 = o.SelectToken(v1.Path);
 
@@ -260,7 +260,9 @@ undefined
 
             foreach (JObject friend in items)
             {
-                Console.WriteLine(friend);
+                StringAssert.AreEqual(@"{
+  ""name"": ""value!""
+}", friend.ToString());
             }
         }
 
@@ -304,8 +306,7 @@ undefined
             JsonSerializer serializer = new JsonSerializer();
             Person p = (Person)serializer.Deserialize(new JTokenReader(o), typeof(Person));
 
-            // John Smith
-            Console.WriteLine(p.Name);
+            Assert.AreEqual("John Smith", p.Name);
         }
 
         [Test]
@@ -714,47 +715,40 @@ keyword such as type of business.""
                                                 from c in p.Categories
                                                 select new JValue(c)))))))));
 
-            Console.WriteLine(rss.ToString());
-
-            //{
-            //  "channel": {
-            //    "title": "James Newton-King",
-            //    "link": "http://james.newtonking.com",
-            //    "description": "James Newton-King's blog.",
-            //    "item": [
-            //      {
-            //        "title": "Json.NET 1.3 + New license + Now on CodePlex",
-            //        "description": "Annoucing the release of Json.NET 1.3, the MIT license and being available on CodePlex",
-            //        "link": "http://james.newtonking.com/projects/json-net.aspx",
-            //        "category": [
-            //          "Json.NET",
-            //          "CodePlex"
-            //        ]
-            //      },
-            //      {
-            //        "title": "LINQ to JSON beta",
-            //        "description": "Annoucing LINQ to JSON",
-            //        "link": "http://james.newtonking.com/projects/json-net.aspx",
-            //        "category": [
-            //          "Json.NET",
-            //          "LINQ"
-            //        ]
-            //      }
-            //    ]
-            //  }
-            //}
+            StringAssert.AreEqual(@"{
+  ""channel"": {
+    ""title"": ""James Newton-King"",
+    ""link"": ""http://james.newtonking.com"",
+    ""description"": ""James Newton-King's blog."",
+    ""item"": [
+      {
+        ""title"": ""Json.NET 1.3 + New license + Now on CodePlex"",
+        ""description"": ""Annoucing the release of Json.NET 1.3, the MIT license and being available on CodePlex"",
+        ""link"": ""http://james.newtonking.com/projects/json-net.aspx"",
+        ""category"": [
+          ""Json.NET"",
+          ""CodePlex""
+        ]
+      },
+      {
+        ""title"": ""LINQ to JSON beta"",
+        ""description"": ""Annoucing LINQ to JSON"",
+        ""link"": ""http://james.newtonking.com/projects/json-net.aspx"",
+        ""category"": [
+          ""Json.NET"",
+          ""LINQ""
+        ]
+      }
+    ]
+  }
+}", rss.ToString());
 
             var postTitles =
                 from p in rss["channel"]["item"]
                 select p.Value<string>("title");
 
-            foreach (var item in postTitles)
-            {
-                Console.WriteLine(item);
-            }
-
-            //LINQ to JSON beta
-            //Json.NET 1.3 + New license + Now on CodePlex
+            Assert.AreEqual("Json.NET 1.3 + New license + Now on CodePlex", postTitles.ElementAt(0));
+            Assert.AreEqual("LINQ to JSON beta", postTitles.ElementAt(1));
 
             var categories =
                 from c in rss["channel"]["item"].Children()["category"].Values<string>()
@@ -763,14 +757,12 @@ keyword such as type of business.""
                 orderby g.Count() descending
                 select new { Category = g.Key, Count = g.Count() };
 
-            foreach (var c in categories)
-            {
-                Console.WriteLine(c.Category + " - Count: " + c.Count);
-            }
-
-            //Json.NET - Count: 2
-            //LINQ - Count: 1
-            //CodePlex - Count: 1
+            Assert.AreEqual("Json.NET", categories.ElementAt(0).Category);
+            Assert.AreEqual(2, categories.ElementAt(0).Count);
+            Assert.AreEqual("CodePlex", categories.ElementAt(1).Category);
+            Assert.AreEqual(1, categories.ElementAt(1).Count);
+            Assert.AreEqual("LINQ", categories.ElementAt(2).Category);
+            Assert.AreEqual(1, categories.ElementAt(2).Count);
         }
 
         [Test]
@@ -930,7 +922,34 @@ keyword such as type of business.""
                 }
             });
 
-            Console.WriteLine(o.ToString());
+            StringAssert.AreEqual(@"{
+  ""channel"": {
+    ""title"": ""James Newton-King"",
+    ""link"": ""http://james.newtonking.com"",
+    ""description"": ""James Newton-King's blog."",
+    ""item"": [
+      {
+        ""title"": ""Json.NET 1.3 + New license + Now on CodePlex"",
+        ""description"": ""Annoucing the release of Json.NET 1.3, the MIT license and being available on CodePlex"",
+        ""link"": ""http://james.newtonking.com/projects/json-net.aspx"",
+        ""category"": [
+          ""Json.NET"",
+          ""CodePlex""
+        ]
+      },
+      {
+        ""title"": ""LINQ to JSON beta"",
+        ""description"": ""Annoucing LINQ to JSON"",
+        ""link"": ""http://james.newtonking.com/projects/json-net.aspx"",
+        ""category"": [
+          ""Json.NET"",
+          ""LINQ""
+        ]
+      }
+    ]
+  }
+}", o.ToString());
+
             CustomAssert.IsInstanceOfType(typeof(JObject), o);
             CustomAssert.IsInstanceOfType(typeof(JObject), o["channel"]);
             Assert.AreEqual("James Newton-King", (string)o["channel"]["title"]);
@@ -968,7 +987,34 @@ keyword such as type of business.""
                 }
             });
 
-            Console.WriteLine(o.ToString());
+            StringAssert.AreEqual(@"{
+  ""channel"": {
+    ""title"": ""James Newton-King"",
+    ""link"": ""http://james.newtonking.com"",
+    ""description"": ""James Newton-King's blog."",
+    ""item"": [
+      {
+        ""title"": ""Json.NET 1.3 + New license + Now on CodePlex"",
+        ""description"": ""Annoucing the release of Json.NET 1.3, the MIT license and being available on CodePlex"",
+        ""link"": ""http://james.newtonking.com/projects/json-net.aspx"",
+        ""category"": [
+          ""Json.NET"",
+          ""CodePlex""
+        ]
+      },
+      {
+        ""title"": ""LINQ to JSON beta"",
+        ""description"": ""Annoucing LINQ to JSON"",
+        ""link"": ""http://james.newtonking.com/projects/json-net.aspx"",
+        ""category"": [
+          ""Json.NET"",
+          ""LINQ""
+        ]
+      }
+    ]
+  }
+}", o.ToString()); 
+            
             CustomAssert.IsInstanceOfType(typeof(JObject), o);
             CustomAssert.IsInstanceOfType(typeof(JObject), o["channel"]);
             Assert.AreEqual("James Newton-King", (string)o["channel"]["title"]);

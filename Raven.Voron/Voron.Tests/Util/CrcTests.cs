@@ -14,7 +14,7 @@ namespace Voron.Tests.Util
 		// From rfc3720 section B.4.
 		public unsafe class StandardResults
 		{
-			[Fact]
+			[PrefixesFact]
 			public void Zeros()
 			{
 				var data = new byte[32];
@@ -27,7 +27,7 @@ namespace Voron.Tests.Util
 				}
 			}
 
-			[Fact]
+			[PrefixesFact]
 			public void MaxByteValues()
 			{
 				var data = new byte[32];
@@ -45,7 +45,7 @@ namespace Voron.Tests.Util
 				}
 			}
 
-			[Fact]
+			[PrefixesFact]
 			public void SequentialNumbers()
 			{
 				var data = new byte[32];
@@ -63,7 +63,7 @@ namespace Voron.Tests.Util
 				}
 			}
 
-			[Fact]
+			[PrefixesFact]
 			public void SequentialNumbers_Reversed()
 			{
 				var data = new byte[32];
@@ -81,7 +81,7 @@ namespace Voron.Tests.Util
 				}
 			}
 
-			[Fact]
+			[PrefixesFact]
 			public void DefinedData()
 			{
 				var data = new byte[48]

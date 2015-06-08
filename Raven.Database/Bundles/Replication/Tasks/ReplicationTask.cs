@@ -22,8 +22,8 @@ using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
-using System.Globalization;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -81,6 +81,12 @@ namespace Raven.Bundles.Replication.Tasks
 			get { return destinationStats; }
 		}
 
+
+		[Obsolete("Use for debugging only!")]
+		public bool ShouldWaitForWork { get; set; }
+
+		public event Action ReplicationExecuted;
+
 		public ConcurrentDictionary<string, DateTime> Heartbeats
 		{
 			get { return heartbeatDictionary; }
@@ -96,6 +102,7 @@ namespace Raven.Bundles.Replication.Tasks
 		public ReplicationTask()
 		{
 			TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromMinutes(1);
+			ShouldWaitForWork = true;
 		}
 
 		public void Execute(DocumentDatabase database)
@@ -229,17 +236,21 @@ namespace Raven.Bundles.Replication.Tasks
 									{
 										var destination = dest;
 										var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
-										if (holder.Wait(0) == false)
+										if (holder.Wait(0) == false) { 
+											log.Debug("Replication to distination {0} skipped due to existing replication operation", dest.ConnectionStringOptions.Url);
 											continue;
+										}
 
 										var replicationTask = Task.Factory.StartNew(
 											() =>
 											{
 												using (LogContext.WithDatabase(docDb.Name))
+												using (CultureHelper.EnsureInvariantCulture())
 												{
 													try
 													{
-														if (ReplicateTo(destination)) docDb.WorkContext.NotifyAboutWork();
+														if (ReplicateTo(destination))
+															docDb.WorkContext.NotifyAboutWork();
 													}
 													catch (Exception e)
 													{
@@ -278,7 +289,7 @@ namespace Raven.Bundles.Replication.Tasks
 													prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
 												}
 											}
-										}).AssertNotFailed();
+										}).ContinueWith(t => OnReplicationExecuted()).AssertNotFailed();
 								}
 							}
 						}
@@ -289,6 +300,7 @@ namespace Raven.Bundles.Replication.Tasks
 					}
 
 					runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
+
 					timeToWaitInMinutes = runningBecauseOfDataModifications
 											? TimeSpan.FromSeconds(30)
 											: TimeSpan.FromMinutes(5);
@@ -472,7 +484,15 @@ namespace Raven.Bundles.Replication.Tasks
 						{
 							destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
 							if (destinationsReplicationInformationForSource == null)
+							{
+								destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
+
+								if (destinationsReplicationInformationForSource == null)
+								{
+									log.Error("Failed to replicate documents to destination {0}, because was not able to receive last Etag", destination.ConnectionStringOptions.Url);
 									return false;
+
+							}
 
 							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty && destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.Empty)
 								_indexReplicationTaskTimer.Change(TimeSpan.Zero, _replicationFrequency);
@@ -484,10 +504,18 @@ namespace Raven.Bundles.Replication.Tasks
 								(destination.CollectionsToReplicate == null || destination.CollectionsToReplicate.Count == 0))
 							{
 								DateTime lastSent;
-								if (destinationAlertSent.TryGetValue(destination.ConnectionStringOptions.Url, out lastSent) && (SystemTime.UtcNow - lastSent).TotalMinutes < 1)
-									return false;
 
+								// todo: move lastModifiedDate after the condition
 								var lastModifiedDate = destinationsReplicationInformationForSource.LastModified.HasValue ? destinationsReplicationInformationForSource.LastModified.Value.ToLocalTime() : DateTime.MinValue;
+
+								if (destinationAlertSent.TryGetValue(destination.ConnectionStringOptions.Url, out lastSent) && (SystemTime.UtcNow - lastSent).TotalMinutes < 1)
+								{
+									// todo: remove this log line
+									log.Debug(string.Format(@"Destination server is forbidding replication due to a possibility of having multiple instances with same DatabaseId replicating to it. After 10 minutes from '{2}' another instance will start replicating. Destination Url: {0}. DatabaseId: {1}. Current source: {3}. Stored source on destination: {4}.", destination.ConnectionStringOptions.Url, docDb.TransactionalStorage.Id, lastModifiedDate, docDb.ServerUrl, destinationsReplicationInformationForSource.Source));
+									return false;
+								}
+
+
 
 								docDb.AddAlert(new Alert
 								{
@@ -727,6 +755,7 @@ namespace Raven.Bundles.Replication.Tasks
                                 var request = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 				request.Write(new byte[0]);
 				request.ExecuteRequest();
+				log.Debug("Sent last replicated document Etag {0} to server {1}", lastDocEtag, destination.ConnectionStringOptions.Url);
 			}
 			catch (WebException e)
 			{
@@ -951,19 +980,16 @@ namespace Raven.Bundles.Replication.Tasks
 				return;
 			try
 			{
-
+				using (CultureHelper.EnsureInvariantCulture())
+				{
 				var relevantIndexLastQueries = new Dictionary<string, DateTime>();
-				var relevantIndexes = docDb.Statistics.Indexes.Where(indexStats => indexStats.IsInvalidIndex == false &&
-																				   indexStats.Priority != IndexingPriority.Error &&
-																				   indexStats.Priority != IndexingPriority.Disabled &&
-																				   indexStats.LastQueryTimestamp.HasValue);
+					var relevantIndexes = docDb.Statistics.Indexes.Where(indexStats => indexStats.IsInvalidIndex == false && indexStats.Priority != IndexingPriority.Error && indexStats.Priority != IndexingPriority.Disabled && indexStats.LastQueryTimestamp.HasValue);
 				foreach (var relevantIndex in relevantIndexes)
 				{
 					relevantIndexLastQueries[relevantIndex.Name] = relevantIndex.LastQueryTimestamp.GetValueOrDefault();
 				}
 
-				if (relevantIndexLastQueries.Count == 0)
-					return;
+					if (relevantIndexLastQueries.Count == 0) return;
 
 				var destinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
 				foreach (var destination in destinations)
@@ -983,6 +1009,7 @@ namespace Raven.Bundles.Replication.Tasks
 						log.WarnException("Could not update last query time of " + destination.ConnectionStringOptions.Url, e);
 					}
 				}
+			}
 			}
 			catch (Exception e)
 			{
@@ -1004,6 +1031,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 			try
 			{
+				using (CultureHelper.EnsureInvariantCulture())
+				{
 				var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
 				foreach (var destination in replicationDestinations)
 				{
@@ -1066,15 +1095,13 @@ namespace Raven.Bundles.Replication.Tasks
 						{
 							foreach (var indexTombstone in replicatedIndexTombstones)
 							{
-								if (indexTombstone.Value != replicationDestinations.Length)
-									continue;
+									if (indexTombstone.Value != replicationDestinations.Length) continue;
 								actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
 							}
 
 							foreach (var transformerTombstone in replicatedTransformerTombstones)
 							{
-								if (transformerTombstone.Value != replicationDestinations.Length)
-									continue;
+									if (transformerTombstone.Value != replicationDestinations.Length) continue;
 								actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
 							}
 						});
@@ -1086,6 +1113,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 				}
 				return true;
+			}
 			}
 			catch (Exception e)
 			{
@@ -1529,6 +1557,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 				var request = httpRavenRequestFactory.Create(url, HttpMethods.Get, destination.ConnectionStringOptions);
 				var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformationWithBatchInformation>();
+				log.Debug("Received last replicated document Etag {0} from server {1}", lastReplicatedEtagFrom.LastDocumentEtag, destination.ConnectionStringOptions.Url);
 				return lastReplicatedEtagFrom;
 			}
 			catch (WebException e)
@@ -1736,6 +1765,13 @@ namespace Raven.Bundles.Replication.Tasks
 			metadata[Constants.RavenReplicationVersion] = 0;
 			metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(database.TransactionalStorage.Id);
 		}
+
+		protected void OnReplicationExecuted()
+		{
+			var replicationExecuted = ReplicationExecuted;
+			if (replicationExecuted != null) replicationExecuted();
+	}
+
 	}
 
 	internal class ReplicationStatisticsRecorder : IDisposable
@@ -1852,4 +1888,5 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 	}
+
 }
