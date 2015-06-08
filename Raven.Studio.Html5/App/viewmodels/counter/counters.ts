@@ -42,7 +42,9 @@ class counters extends viewModelBase {
     groups = ko.observableArray<counterGroup>();
     allGroupsGroup: counterGroup;
     selectedGroup = ko.observable<counterGroup>().subscribeTo("ActivateGroup").distinctUntilChanged();
+    currentGroup = ko.observable<counterGroup>();
     groupToSelectName: string;
+    currentGroupPagedItems = ko.observable<pagedList>();
     selectedCounterIndices = ko.observableArray<number>();
     hasCounters: KnockoutComputed<boolean>;
     hasAnyCountersSelected: KnockoutComputed<boolean>;
@@ -52,20 +54,24 @@ class counters extends viewModelBase {
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     static gridSelector = "#countersGrid";
 
+    
+
+
+
 
 
 
 
     displayName = "documents";
 
-    currentCollectionPagedItems = ko.observable<pagedList>();
+    
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
    
     selectedCountersText: KnockoutComputed<string>;
     
     contextName = ko.observable<string>('');
-    currentCollection = ko.observable<collection>();
+    
     isRegularCollection: KnockoutComputed<boolean>;
 
 
@@ -131,7 +137,7 @@ class counters extends viewModelBase {
         this.groupToSelectName = args ? args.group : null;
 
         var cs = this.activeCounterStorage();
-        this.fetchGroups().done(results => this.collectionsLoaded(results, cs));
+        this.fetchGroups().done(results => this.groupsLoaded(results, cs));
     }
 
 
@@ -152,7 +158,7 @@ class counters extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            //TODO: create subscription to all coutners
+            //TODO: create subscription to all counters
             //shell.currentResourceChangesApi().watchAllCounters(() => this.fetchGroups())
         ];
     }
@@ -176,7 +182,7 @@ class counters extends viewModelBase {
         return deferred;
     }
 
-    collectionsLoaded(groups: Array<counterGroup>, cs: counterStorage) {
+    groupsLoaded(groups: Array<counterGroup>, cs: counterStorage) {
         // Create the "All Groups" pseudo collection.
         this.allGroupsGroup = counterGroup.createAllGroupsCollection(cs);
         this.allGroupsGroup.countersCount = ko.computed(() => !!cs.statistics() ? cs.statistics().countersCount() : 0);
@@ -213,29 +219,12 @@ class counters extends viewModelBase {
         
     }
 
-    //TODO: this binding has notification leak!
     private selectedGroupChanged(selected: counterGroup) {
-        /*if (selected) {
-            var customColumnsCommand = selected.isAllDocuments ?
-                getCustomColumnsCommand.forAllDocuments(this.activeDatabase()) : getCustomColumnsCommand.forCollection(selected.name, this.activeDatabase());
-
-            this.contextName(customColumnsCommand.docName);
-
-            customColumnsCommand.execute().done((dto: customColumnsDto) => {
-                if (dto) {
-                    this.currentColumnsParams().columns($.map(dto.Columns, c => new customColumnParams(c)));
-                    this.currentColumnsParams().customMode(true);
-                } else {
-                    // use default values!
-                    this.currentColumnsParams().columns.removeAll();
-                    this.currentColumnsParams().customMode(false);
-                }
-
-                var pagedList = selected.getDocuments();
-                this.currentCollectionPagedItems(pagedList);
-                this.currentCollection(selected);
-            });
-        }*/
+        if (!!selected) {
+            var pagedList = selected.getCounters();
+            this.currentGroupPagedItems(pagedList);
+            this.currentGroup(selected);
+        }
     }
 
     deleteGroup(collection: collection) {

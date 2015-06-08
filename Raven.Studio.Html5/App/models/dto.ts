@@ -1016,6 +1016,14 @@ interface counterDto {
     Delta: number;
 }
 
+interface counterSummaryDto {
+    Group: string;
+    CounterName: string;
+    Increments: number;
+    Decrements: number;
+    Total: number;
+}
+
 interface counterGroupDto {
     Name: string;
     Count: number;

@@ -71,7 +71,9 @@
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
+    <TypeScriptCompile Include="App\common\pagedResultSet.ts" />
     <TypeScriptCompile Include="App\models\counter\counterChange.ts" />
+    <TypeScriptCompile Include="App\models\counter\counterSummary.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
     <TypeScriptCompile Include="App\models\counter\counterServerValue.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
