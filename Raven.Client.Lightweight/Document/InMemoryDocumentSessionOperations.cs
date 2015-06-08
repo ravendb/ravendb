@@ -25,6 +25,7 @@ using Raven.Client.Document.DTC;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -549,10 +550,10 @@ more responsive application.
 
 		private void RegisterMissingProperties(object o, string key, object value)
 		{
-            Dictionary<string, object> dictionary;
+			Dictionary<string, JToken> dictionary;
 			if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
 			{
-                EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, object>();
+				EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
 			}
 
 			dictionary[key] = ConvertValueToJToken(value);

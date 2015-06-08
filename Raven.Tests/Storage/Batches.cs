@@ -33,7 +33,7 @@ namespace Raven.Tests.Storage
 			{
 				DataDirectory = NewDataPath("DataDirectory"),
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
-			}))
+			}, null))
 			{
 
 				var ts = dd.TransactionalStorage;

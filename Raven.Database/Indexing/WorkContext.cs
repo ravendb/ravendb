@@ -7,9 +7,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -19,11 +20,8 @@ using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using System.Linq;
-using System.Runtime.InteropServices;
 using Raven.Database.Util;
 using Raven.Json.Linq;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Indexing
 {
@@ -42,7 +40,7 @@ namespace Raven.Database.Indexing
 		private int workCounter;
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
-		private readonly ThreadLocal<Stack<List<Func<string>>>> shouldNotifyOnWork = new ThreadLocal<Stack<List<Func<string>>>>(() =>
+		private readonly Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>> shouldNotifyOnWork = new Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>>(() =>
 		{
 			var stack = new Stack<List<Func<string>>>();
 			stack.Push(new List<Func<string>>());
