@@ -25,7 +25,7 @@ namespace Voron.Tests.Bugs
             options.MaxLogFileSize = 2 * AbstractPager.PageSize;
         }
 
-        [Fact]
+        [PrefixesFact]
         public unsafe void ReadTransactionShouldNotReadFromJournalSnapshotIfJournalWasFlushedInTheMeanwhile()
         {
             var value1 = new byte[4000];
@@ -75,7 +75,7 @@ namespace Voron.Tests.Bugs
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void FlushingOperationShouldHaveOwnScratchPagerStateReference()
         {
             var value1 = new byte[4000];
@@ -136,67 +136,62 @@ namespace Voron.Tests.Bugs
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void OldestActiveTransactionShouldBeCalculatedProperly()
         {
-            var directory = "Test";
+	        using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
+	        {
+		        options.ManualFlushing = true;
+		        using (var env = new StorageEnvironment(options))
+		        {
+			        var trees = CreateTrees(env, 1, "tree");
+			        var transactions = new List<Transaction>();
 
-            if (Directory.Exists(directory))
-                Directory.Delete(directory, true);
+			        for (int a = 0; a < 100; a++)
+			        {
+				        var random = new Random(1337);
+				        var buffer = new byte[random.Next(100, 1000)];
+				        random.NextBytes(buffer);
 
-            var options = StorageEnvironmentOptions.ForPath(directory);
+				        using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				        {
+					        for (int i = 0; i < 100; i++)
+					        {
+						        foreach (var tree in trees)
+						        {
+							        tx.Environment.State.GetTree(tx, tree).Add(string.Format("key/{0}/{1}", a, i), new MemoryStream(buffer));
+						        }
 
-            options.ManualFlushing = true;
-            using (var env = new StorageEnvironment(options))
-            {
-                var trees = CreateTrees(env, 1, "tree");
-                var transactions = new List<Transaction>();
+					        }
 
-                for (int a = 0; a < 100; a++)
-                {
-                    var random = new Random(1337);
-                    var buffer = new byte[random.Next(100, 1000)];
-                    random.NextBytes(buffer);
+					        tx.Commit();
+					        env.FlushLogToDataFile(tx);
+					        var txr = env.NewTransaction(TransactionFlags.Read);
 
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-                    {
-                        for (int i = 0; i < 100; i++)
-                        {
-                            foreach (var tree in trees)
-                            {
-                                tx.Environment.State.GetTree(tx,tree).Add(string.Format("key/{0}/{1}", a, i), new MemoryStream(buffer));
-                            }
+					        transactions.Add(txr);
+				        }
+			        }
 
-                        }
+			        Assert.Equal(transactions.OrderBy(x => x.Id).First().Id, env.OldestTransaction);
 
-                        tx.Commit();
-                        env.FlushLogToDataFile(tx);
-                        var txr = env.NewTransaction(TransactionFlags.Read);
+			        foreach (var tx in transactions)
+			        {
+				        foreach (var tree in trees)
+				        {
+					        using (var iterator = tx.Environment.State.GetTree(tx, tree).Iterate())
+					        {
+						        if (!iterator.Seek(Slice.BeforeAllKeys))
+							        continue;
 
-                        transactions.Add(txr);
-                    }
-                }
-
-                Assert.Equal(transactions.OrderBy(x => x.Id).First().Id, env.OldestTransaction);
-
-                foreach (var tx in transactions)
-                {
-                    foreach (var tree in trees)
-                    {
-                        using (var iterator = tx.Environment.State.GetTree(tx,tree).Iterate())
-                        {
-                            if (!iterator.Seek(Slice.BeforeAllKeys))
-                                continue;
-
-                            do
-                            {
-                                Assert.Contains("key/", iterator.CurrentKey.ToString());
-                            }
-                            while (iterator.MoveNext());
-                        }
-                    }
-                }
-            }
+						        do
+						        {
+							        Assert.Contains("key/", iterator.CurrentKey.ToString());
+						        } while (iterator.MoveNext());
+					        }
+				        }
+			        }
+		        }
+	        }
         }
     }
 }

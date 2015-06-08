@@ -35,6 +35,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Directory = System.IO.Directory;
@@ -1009,23 +1010,6 @@ namespace Raven.Database.Indexing
 			return indexQueryOperation.IndexEntries(totalResults);
 		}
 
-		protected internal static IDisposable EnsureInvariantCulture()
-		{
-			if (Thread.CurrentThread.CurrentCulture == CultureInfo.InvariantCulture)
-				return null;
-
-			var oldCurrentCulture = Thread.CurrentThread.CurrentCulture;
-			var oldCurrentUiCulture = Thread.CurrentThread.CurrentUICulture;
-
-			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
-			return new DisposableAction(() =>
-			{
-				Thread.CurrentThread.CurrentCulture = oldCurrentCulture;
-				Thread.CurrentThread.CurrentUICulture = oldCurrentUiCulture;
-			});
-		}
-
 		public void RemoveFromIndex(int index, string[] keys, WorkContext context)
 		{
 			Index value = indexes[index];
@@ -1051,7 +1035,7 @@ namespace Raven.Database.Indexing
 				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
 				return null;
 			}
-			using (EnsureInvariantCulture())
+			using (CultureHelper.EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
 				var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp, token);
@@ -1088,7 +1072,7 @@ namespace Raven.Database.Indexing
 				log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
 				return null;
 			}
-			using (EnsureInvariantCulture())
+			using (CultureHelper.EnsureInvariantCulture())
 			{
 				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys, inputCount);
 

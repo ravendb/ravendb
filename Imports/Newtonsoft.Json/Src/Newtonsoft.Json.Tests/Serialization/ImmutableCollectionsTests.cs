@@ -34,7 +34,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -46,7 +46,6 @@ using Newtonsoft.Json.Linq;
 namespace Newtonsoft.Json.Tests.Serialization
 {
     [TestFixture]
-    [Ignore]
     public class ImmutableCollectionsTests : TestFixtureBase
     {
         #region List
@@ -66,9 +65,6 @@ namespace Newtonsoft.Json.Tests.Serialization
   ""II"",
   ""3""
 ]", json);
-
-            Console.WriteLine("Serialized immutable list:");
-            Console.WriteLine(json);
         }
 
         [Test]
@@ -100,17 +96,10 @@ namespace Newtonsoft.Json.Tests.Serialization
             // what sorcery is this?!
             IImmutableList<string> champions = JsonConvert.DeserializeObject<IImmutableList<string>>(json);
 
-            Console.WriteLine(champions[0]);
-            // Volibear
-
             Assert.AreEqual(3, champions.Count);
             Assert.AreEqual("Volibear", champions[0]);
             Assert.AreEqual("Teemo", champions[1]);
             Assert.AreEqual("Katarina", champions[2]);
-
-            Console.WriteLine("Deserialized immutable list:");
-            Console.WriteLine(string.Join(", ", champions));
-
         }
         #endregion
 
@@ -451,5 +440,4 @@ namespace Newtonsoft.Json.Tests.Serialization
         #endregion
     }
 }
-
 #endif

@@ -14,7 +14,7 @@ namespace Raven.Database.Bundles.Replication.Plugins
     [Obsolete("Use RavenFS instead.")]
 	public class DefaultAttachmentReplicationConflictResolver : AbstractAttachmentReplicationConflictResolver
 	{
-	    public override bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
+	    protected override bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
 		                                Func<string, Attachment> getAttachment, out RavenJObject metadataToSave,
 		                                out byte[] dataToSave)
 		{

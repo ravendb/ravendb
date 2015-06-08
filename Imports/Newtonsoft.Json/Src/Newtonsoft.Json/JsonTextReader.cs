@@ -1193,157 +1193,169 @@ namespace Raven.Imports.Newtonsoft.Json
                               && _stringReference.Chars[_stringReference.StartIndex + 1] != 'e'
                               && _stringReference.Chars[_stringReference.StartIndex + 1] != 'E');
 
-            if (_readType == ReadType.ReadAsInt32)
-            {
-                if (singleDigit)
-                {
-                    // digit char values start at 48
-                    numberValue = firstChar - 48;
-                }
-                else if (nonBase10)
-                {
-                    string number = _stringReference.ToString();
+	        if (_readType == ReadType.ReadAsInt32)
+	        {
+		        if (singleDigit)
+		        {
+			        // digit char values start at 48
+			        numberValue = firstChar - 48;
+		        }
+		        else if (nonBase10)
+		        {
+			        string number = _stringReference.ToString();
 
-                    try
-                    {
-                        int integer = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                            ? Convert.ToInt32(number, 16)
-                            : Convert.ToInt32(number, 8);
+			        try
+			        {
+				        int integer = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+					        ? Convert.ToInt32(number, 16)
+					        : Convert.ToInt32(number, 8);
 
-                        numberValue = integer;
-                    }
-                    catch (Exception ex)
-                    {
-                        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid integer.".FormatWith(CultureInfo.InvariantCulture, number), ex);
-                    }
-                }
-                else
-                {
-                    int value;
-                    ParseResult parseResult = ConvertUtils.Int32TryParse(_stringReference.Chars, _stringReference.StartIndex, _stringReference.Length, out value);
-                    if (parseResult == ParseResult.Success)
-                        numberValue = value;
-                    else if (parseResult == ParseResult.Overflow)
-                        throw JsonReaderException.Create(this, "JSON integer {0} is too large or small for an Int32.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
-                    else
-                        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid integer.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
-                }
+				        numberValue = integer;
+			        }
+			        catch (Exception ex)
+			        {
+				        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid integer.".FormatWith(CultureInfo.InvariantCulture, number), ex);
+			        }
+		        }
+		        else
+		        {
+			        int value;
+			        ParseResult parseResult = ConvertUtils.Int32TryParse(_stringReference.Chars, _stringReference.StartIndex, _stringReference.Length, out value);
+			        if (parseResult == ParseResult.Success)
+				        numberValue = value;
+			        else if (parseResult == ParseResult.Overflow)
+				        throw JsonReaderException.Create(this, "JSON integer {0} is too large or small for an Int32.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
+			        else
+				        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid integer.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
+		        }
 
-                numberType = JsonToken.Integer;
-            }
-            else if (_readType == ReadType.ReadAsDecimal)
-            {
-                if (singleDigit)
-                {
-                    // digit char values start at 48
-                    numberValue = (decimal)firstChar - 48;
-                }
-                else if (nonBase10)
-                {
-                    string number = _stringReference.ToString();
+		        numberType = JsonToken.Integer;
+	        }
+	        else
+	        {
+				const NumberStyles numberStyles = NumberStyles.Number | NumberStyles.AllowExponent; 
+				if (_readType == ReadType.ReadAsDecimal)
+		        {
+			        if (singleDigit)
+			        {
+				        // digit char values start at 48
+				        numberValue = (decimal) firstChar - 48;
+			        }
+			        else if (nonBase10)
+			        {
+				        string number = _stringReference.ToString();
 
-                    try
-                    {
-                        // decimal.Parse doesn't support parsing hexadecimal values
-                        long integer = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                            ? Convert.ToInt64(number, 16)
-                            : Convert.ToInt64(number, 8);
+				        try
+				        {
+					        // decimal.Parse doesn't support parsing hexadecimal values
+					        long integer = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+						        ? Convert.ToInt64(number, 16)
+						        : Convert.ToInt64(number, 8);
 
-                        numberValue = Convert.ToDecimal(integer);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid decimal.".FormatWith(CultureInfo.InvariantCulture, number), ex);
-                    }
-                }
-                else
-                {
-                    string number = _stringReference.ToString();
+					        numberValue = Convert.ToDecimal(integer);
+				        }
+				        catch (Exception ex)
+				        {
+					        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid decimal.".FormatWith(CultureInfo.InvariantCulture, number), ex);
+				        }
+			        }
+			        else
+			        {
+				        string number = _stringReference.ToString();
 
-                    decimal value;
-                    if (decimal.TryParse(number, NumberStyles.Number | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out value))
-                        numberValue = value;
-                    else
-                        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid decimal.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
-                }
+				        decimal value;
+						if (decimal.TryParse(number, numberStyles, CultureInfo.InvariantCulture, out value))
+					        numberValue = value;
+				        else
+					        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid decimal.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
+			        }
 
-                numberType = JsonToken.Float;
-            }
-            else
-            {
-                if (singleDigit)
-                {
-                    // digit char values start at 48
-                    numberValue = (long)firstChar - 48;
-                    numberType = JsonToken.Integer;
-                }
-                else if (nonBase10)
-                {
-                    string number = _stringReference.ToString();
+			        numberType = JsonToken.Float;
+		        }
+		        else
+		        {
+			        if (singleDigit)
+			        {
+				        // digit char values start at 48
+				        numberValue = (long) firstChar - 48;
+				        numberType = JsonToken.Integer;
+			        }
+			        else if (nonBase10)
+			        {
+				        string number = _stringReference.ToString();
 
-                    try
-                    {
-                        numberValue = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                            ? Convert.ToInt64(number, 16)
-                            : Convert.ToInt64(number, 8);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid number.".FormatWith(CultureInfo.InvariantCulture, number), ex);
-                    }
+				        try
+				        {
+					        numberValue = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+						        ? Convert.ToInt64(number, 16)
+						        : Convert.ToInt64(number, 8);
+				        }
+				        catch (Exception ex)
+				        {
+					        throw JsonReaderException.Create(this, "Input string '{0}' is not a valid number.".FormatWith(CultureInfo.InvariantCulture, number), ex);
+				        }
 
-                    numberType = JsonToken.Integer;
-                }
-                else
-                {
-                    long value;
-                    ParseResult parseResult = ConvertUtils.Int64TryParse(_stringReference.Chars, _stringReference.StartIndex, _stringReference.Length, out value);
-                    if (parseResult == ParseResult.Success)
-                    {
-                        numberValue = value;
-                        numberType = JsonToken.Integer;
-                    }
-                    else if (parseResult == ParseResult.Overflow)
-                    {
+				        numberType = JsonToken.Integer;
+			        }
+			        else
+			        {
+				        long value;
+				        ParseResult parseResult = ConvertUtils.Int64TryParse(_stringReference.Chars, _stringReference.StartIndex, _stringReference.Length, out value);
+				        if (parseResult == ParseResult.Success)
+				        {
+					        numberValue = value;
+					        numberType = JsonToken.Integer;
+				        }
+				        else if (parseResult == ParseResult.Overflow)
+				        {
 #if !(NET20 || NET35 || PORTABLE40 || PORTABLE)
-                        string number = _stringReference.ToString();
+					        string number = _stringReference.ToString();
 
-                        if (number.Length > MaximumJavascriptIntegerCharacterLength)
-                            throw JsonReaderException.Create(this, "JSON integer {0} is too large to parse.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
-                        
-                        numberValue = BigIntegerParse(number, CultureInfo.InvariantCulture);
-                        numberType = JsonToken.Integer;
+					        if (number.Length > MaximumJavascriptIntegerCharacterLength)
+						        throw JsonReaderException.Create(this, "JSON integer {0} is too large to parse.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
+
+					        numberValue = BigIntegerParse(number, CultureInfo.InvariantCulture);
+					        numberType = JsonToken.Integer;
 #else
                         throw JsonReaderException.Create(this, "JSON integer {0} is too large or small for an Int64.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
 #endif
-                    }
-                    else
-                    {
-                        string number = _stringReference.ToString();
+				        }
+				        else
+				        {
+					        string number = _stringReference.ToString();
+							switch (_floatParseHandling)
+							{
+								case FloatParseHandling.Decimal:
+									decimal d;
+									if (decimal.TryParse(number, numberStyles, CultureInfo.InvariantCulture, out d))
+										numberValue = d;
+									else
+										throw JsonReaderException.Create(this, "Input string '{0}' is not a valid decimal.".FormatWith(CultureInfo.InvariantCulture, number));
+									break;
+								case FloatParseHandling.PreferDecimalFallbackToDouble:
+									decimal result;
+									if (decimal.TryParse(number, numberStyles, CultureInfo.InvariantCulture, out result) == false)
+									{
+										goto default;
+									}
+									numberValue = result;
+									break;
+								default:
+									double d1;
+									if (double.TryParse(number, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out d1))
+										numberValue = d1;
+									else
+										throw JsonReaderException.Create(this, "Input string '{0}' is not a valid number.".FormatWith(CultureInfo.InvariantCulture, number));
+									break;
+							}
 
-                        if (_floatParseHandling == FloatParseHandling.Decimal || _floatParseHandling == FloatParseHandling.DecimalWithNaN)
-                        {
-                            decimal d;
-                            if (decimal.TryParse(number, NumberStyles.Number | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out d))
-                                numberValue = d;
-                            else
-                                throw JsonReaderException.Create(this, "Input string '{0}' is not a valid decimal.".FormatWith(CultureInfo.InvariantCulture, number));
-                        }
-                        else
-                        {
-                            double d;
-                            if (double.TryParse(number, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out d))
-                                numberValue = d;
-                            else
-                                throw JsonReaderException.Create(this, "Input string '{0}' is not a valid number.".FormatWith(CultureInfo.InvariantCulture, number));
-                        }
+					        numberType = JsonToken.Float;
+				        }
+			        }
+		        }
+	        }
 
-                        numberType = JsonToken.Float;
-                    }
-                }
-            }
-
-            ClearRecentString();
+	        ClearRecentString();
 
             // index has already been updated
             SetToken(numberType, numberValue, false);

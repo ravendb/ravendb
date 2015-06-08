@@ -88,7 +88,9 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, options, batchSize => documents += batchSize), operationId, tre.Token);
+                    CurrentOperationContext.User.Value = user;
+                    CurrentOperationContext.Headers.Value = headers;
+                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, options, batchSize => documents += batchSize), operationId, tre.Token, timeout);
                 }
 				catch (InvalidDataException e)
 				{
@@ -97,7 +99,7 @@ namespace Raven.Database.Server.Controllers
 					status.IsSerializationError = true;
 					error = e;
 				}
-                catch (OperationCanceledException)
+				catch (OperationCanceledException)
                 {
                     // happens on timeout
                     currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
@@ -114,8 +116,12 @@ namespace Raven.Database.Server.Controllers
                 {
                     status.Completed = true;
                     status.Documents = documents;
+	                CurrentOperationContext.User.Value = null;
+	                CurrentOperationContext.Headers.Value = null;
+
+					timeout.Dispose();
                 }
-            }, tre.Token);
+			}, tre.Token);
 
             long id;
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
@@ -136,8 +142,8 @@ namespace Raven.Database.Server.Controllers
                     Error = error.ToString()
 				}, httpStatusCode);
             }
-            if (status.IsTimedOut)
-                throw new TimeoutException("Bulk insert operation did not receive new data longer than configured treshold");
+	        if (status.IsTimedOut)
+				throw new TimeoutException("Bulk insert operation did not receive new data longer than configured threshold");
 
             sp.Stop();
 
@@ -210,7 +216,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					case BulkInsertFormat.Bson:
 						{
-							var count = reader.ReadInt32();
+                var count = reader.ReadInt32();
 
 							return YieldBsonDocumentsInBatch(timeout, reader, count, increaseDocumentsCount).ToArray();
 						}

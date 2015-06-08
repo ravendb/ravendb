@@ -27,7 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-#if !(NET20 || NET35 || PORTABLE || ASPNETCORE50)
+#if !(NET20 || NET35 || PORTABLE || DNXCORE50)
 using System.Numerics;
 #endif
 using Newtonsoft.Json.Serialization;
@@ -36,7 +36,7 @@ using Newtonsoft.Json.Tests.TestObjects;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -46,7 +46,7 @@ using NUnit.Framework;
 using Newtonsoft.Json.Linq;
 using System.IO;
 using System.Collections;
-#if !(NETFX_CORE || ASPNETCORE50)
+#if !(NETFX_CORE || DNXCORE50)
 using System.Web.UI;
 #endif
 #if NET20
@@ -79,6 +79,31 @@ namespace Newtonsoft.Json.Tests.Linq
             Assert.IsNull((string)o.title);
         }
 #endif
+
+        [Test]
+        public void ReadWithSupportMultipleContent()
+        {
+            string json = @"{ 'name': 'Admin' }{ 'name': 'Publisher' }";
+
+            IList<JObject> roles = new List<JObject>();
+
+            JsonTextReader reader = new JsonTextReader(new StringReader(json));
+            reader.SupportMultipleContent = true;
+
+            while (true)
+            {
+                JObject role = (JObject)JToken.ReadFrom(reader);
+
+                roles.Add(role);
+
+                if (!reader.Read())
+                    break;
+            }
+
+            Assert.AreEqual(2, roles.Count);
+            Assert.AreEqual("Admin", (string)roles[0]["name"]);
+            Assert.AreEqual("Publisher", (string)roles[1]["name"]);
+        }
 
         [Test]
         public void JObjectWithComments()
@@ -570,8 +595,8 @@ Parameter name: arrayIndex");
             string smallest = (string)sizes[0];
             // Small
 
-            Console.WriteLine(name);
-            Console.WriteLine(smallest);
+            Assert.AreEqual("Apple", name);
+            Assert.AreEqual("Small", smallest);
         }
 
         [Test]
@@ -602,12 +627,6 @@ Parameter name: arrayIndex");
                     ErrorMessage = (string)json["short"]["error"]["msg"]
                 }
             };
-
-            Console.WriteLine(shortie.Original);
-            // http://www.foo.com/
-
-            Console.WriteLine(shortie.Error.ErrorMessage);
-            // No action taken
 
             Assert.AreEqual("http://www.foo.com/", shortie.Original);
             Assert.AreEqual("krehqk", shortie.Short);
@@ -641,15 +660,13 @@ Parameter name: arrayIndex");
             moss["Department"] = new JValue("IT");
             moss["JobTitle"] = new JValue("Support");
 
-            Console.WriteLine(moss.ToString());
-            //{
-            //  "FirstName": "Maurice",
-            //  "LastName": "Moss",
-            //  "BirthDate": "\/Date(252241200000+1300)\/",
-            //  "Department": "IT",
-            //  "JobTitle": "Support"
-            //}
-
+            StringAssert.AreEqual(@"{
+  ""FirstName"": ""Maurice"",
+  ""LastName"": ""Moss"",
+  ""BirthDate"": ""1977-12-30T00:00:00"",
+  ""Department"": ""IT"",
+  ""JobTitle"": ""Support""
+}", moss.ToString());
 
             JObject jen = new JObject();
             jen["FirstName"] = "Jen";
@@ -658,14 +675,13 @@ Parameter name: arrayIndex");
             jen["Department"] = "IT";
             jen["JobTitle"] = "Manager";
 
-            Console.WriteLine(jen.ToString());
-            //{
-            //  "FirstName": "Jen",
-            //  "LastName": "Barber",
-            //  "BirthDate": "\/Date(258721200000+1300)\/",
-            //  "Department": "IT",
-            //  "JobTitle": "Manager"
-            //}
+            StringAssert.AreEqual(@"{
+  ""FirstName"": ""Jen"",
+  ""LastName"": ""Barber"",
+  ""BirthDate"": ""1978-03-15T00:00:00"",
+  ""Department"": ""IT"",
+  ""JobTitle"": ""Manager""
+}", jen.ToString());
         }
 
         [Test]
@@ -701,7 +717,7 @@ Parameter name: arrayIndex");
             Assert.AreEqual(p4, l[1]);
         }
 
-#if !(NET20 || NETFX_CORE || PORTABLE || ASPNETCORE50 || PORTABLE40)
+#if !(NET20 || NETFX_CORE || PORTABLE || DNXCORE50 || PORTABLE40)
         [Test]
         public void PropertyChanging()
         {
@@ -1244,7 +1260,7 @@ Parameter name: arrayIndex");
             }, "Can not add property Test3 to Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object.");
         }
 
-#if !(NETFX_CORE || PORTABLE || ASPNETCORE50 || PORTABLE40)
+#if !(NETFX_CORE || PORTABLE || DNXCORE50 || PORTABLE40)
         [Test]
         public void IBindingListSortDirection()
         {
@@ -1568,7 +1584,7 @@ Parameter name: arrayIndex");
             Assert.AreEqual("Name2", value);
         }
 
-#if !(NETFX_CORE || PORTABLE || ASPNETCORE50 || PORTABLE40)
+#if !(NETFX_CORE || PORTABLE || DNXCORE50 || PORTABLE40)
         [Test]
         public void WriteObjectNullDBNullValue()
         {
@@ -1680,7 +1696,7 @@ Parameter name: arrayIndex");
             }, "Unexpected end of content while loading JObject. Path 'short.error.code', line 6, position 15.");
         }
 
-#if !(NETFX_CORE || PORTABLE || ASPNETCORE50 || PORTABLE40)
+#if !(NETFX_CORE || PORTABLE || DNXCORE50 || PORTABLE40)
         [Test]
         public void GetProperties()
         {

@@ -7,7 +7,7 @@ namespace Voron.Tests.Util
 {
 	public class ImmutableAppendOnlyTests
 	{
-		[Fact]
+		[PrefixesFact]
 		public void CanAddAndRemove()
 		{
 			var list = ImmutableAppendOnlyList<long>.Empty

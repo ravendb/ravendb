@@ -41,7 +41,7 @@ class deleteDatabaseCommand extends commandBase {
         var url = disableOneResourcePath + encodeURIComponent(resource.name) + this.urlEncodeArgs(args);
         var deleteTask = this.del(url, null, null, { dataType: undefined });
 
-        deleteTask.done(() => this.reportSuccess("Succefully deleted " + resource.name));
+        deleteTask.done(() => this.reportSuccess("Successfully deleted " + resource.name));
         deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to delete " + resource.name, response.responseText, response.statusText));
         return deleteTask;
     }
@@ -72,7 +72,7 @@ class deleteDatabaseCommand extends commandBase {
         var combinedPromise = $.when.apply(null, deleteTasks);
         combinedPromise.done(() => {
             var deletedResources = [].concat.apply([], arguments);
-            this.reportSuccess("Succefully deleted " + deletedResources.length + " resources!");
+            this.reportSuccess("Successfully deleted " + deletedResources.length + " resources!");
             mergedPromise.resolve(deletedResources);
         });
 

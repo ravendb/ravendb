@@ -10,8 +10,6 @@
     <AssemblyName>Raven.Abstractions</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>
-    </TargetFrameworkProfile>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\ravendb\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
@@ -25,7 +23,6 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>1591</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
-    <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -37,7 +34,6 @@
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
-    <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>1591</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -262,8 +258,8 @@
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionClosedException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
-    <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistExeption.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
@@ -278,6 +274,7 @@
     <Compile Include="Extensions\Buffers.cs" />
     <Compile Include="Extensions\ConcurrentDictionaryExtensions.cs" />
     <Compile Include="Extensions\Internal\SetExtensions.cs" />
+    <Compile Include="Extensions\FilesystemPathExtentions.cs" />
     <Compile Include="Extensions\Internal\DictionaryExtensions.cs" />
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />

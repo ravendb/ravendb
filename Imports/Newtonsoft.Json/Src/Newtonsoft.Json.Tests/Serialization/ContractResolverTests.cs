@@ -32,7 +32,7 @@ using System.Runtime.Serialization;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -57,7 +57,9 @@ namespace Newtonsoft.Json.Tests.Serialization
         private readonly char _startingWithChar;
 
         public DynamicContractResolver(char startingWithChar)
+#pragma warning disable 612,618
             : base(false)
+#pragma warning restore 612,618
         {
             _startingWithChar = startingWithChar;
         }
@@ -79,7 +81,7 @@ namespace Newtonsoft.Json.Tests.Serialization
         public string PropertyPrefix { get; set; }
         public string PropertySuffix { get; set; }
 
-        protected internal override string ResolvePropertyName(string propertyName)
+        protected override string ResolvePropertyName(string propertyName)
         {
             return base.ResolvePropertyName(PropertyPrefix + propertyName + PropertySuffix);
         }
@@ -563,7 +565,7 @@ namespace Newtonsoft.Json.Tests.Serialization
 }", startingWithB);
         }
 
-#if !(NETFX_CORE || PORTABLE || ASPNETCORE50 || PORTABLE40)
+#if !(NETFX_CORE || PORTABLE || DNXCORE50 || PORTABLE40)
 #pragma warning disable 618
         [Test]
         public void SerializeCompilerGeneratedMembers()

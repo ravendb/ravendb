@@ -37,11 +37,11 @@ using System.Security;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Runtime.Serialization;
+using Raven.Abstractions.Json;
 #if NET20
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
-using Raven.Abstractions.Json;
 
 #endif
 
@@ -53,15 +53,14 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         private int _rootLevel;
         private readonly List<object> _serializeStack = new List<object>();
         private JsonSerializerProxy _internalSerializer;
-        private JsonConverterCollection _internalConverters;
+		private JsonConverterCollection _internalConverters;
 
+		Action<object, JsonWriter> beforeClosingObject;
 
-        Action<object, JsonWriter> beforeClosingObject;
-
-        public JsonSerializerInternalWriter(JsonSerializer serializer, Action<object, JsonWriter> beforeClosingObject)
+		public JsonSerializerInternalWriter(JsonSerializer serializer, Action<object, JsonWriter> beforeClosingObject)
             : base(serializer)
         {
-            this.beforeClosingObject = beforeClosingObject;
+			this.beforeClosingObject = beforeClosingObject;
         }
 
         public void Serialize(JsonWriter jsonWriter, object value, Type objectType)
@@ -71,14 +70,21 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
             _rootContract = (objectType != null) ? Serializer._contractResolver.ResolveContract(objectType) : null;
             _rootLevel = _serializeStack.Count + 1;
-            _internalConverters = Serializer.Converters;
 
+			_internalConverters = Serializer.Converters;
 
             JsonContract contract = GetContractSafe(value);
 
             try
             {
-                SerializeValue(jsonWriter, value, contract, null, null, null);
+                if (ShouldWriteReference(value, null, contract, null, null))
+                {
+                    WriteReference(jsonWriter, value);
+                }
+                else
+                {
+                    SerializeValue(jsonWriter, value, contract, null, null, null);
+                }
             }
             catch (Exception ex)
             {
@@ -154,7 +160,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 ((containerProperty != null) ? containerProperty.ItemConverter : null) ??
                 ((containerContract != null) ? containerContract.ItemConverter : null) ??
                 valueContract.Converter ??
-                JsonConverterCache.GetMatchingConverter(_internalConverters, valueContract.UnderlyingType) ??
+				JsonConverterCache.GetMatchingConverter(_internalConverters, valueContract.UnderlyingType) ??
                 valueContract.InternalConverter;
 
             if (converter != null && converter.CanWrite)
@@ -454,8 +460,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 }
             }
 
-            if (beforeClosingObject != null)
-                beforeClosingObject(value, writer);
+			if (beforeClosingObject != null)
+				beforeClosingObject(value, writer);
 
             writer.WriteEndObject();
 
@@ -508,7 +514,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             writer.WriteStartObject();
 
             bool isReference = ResolveIsReference(contract, member, collectionContract, containerProperty) ?? HasFlag(Serializer._preserveReferencesHandling, PreserveReferencesHandling.Objects);
-            if (isReference)
+            // don't make readonly fields the referenced value because they can't be deserialized to
+            if (isReference && (member == null || member.Writable))
             {
                 WriteReferenceIdProperty(writer, contract.UnderlyingType, value);
             }
@@ -596,69 +603,68 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             int initialDepth = writer.Top;
 
             int index = 0;
-            IEnumerator enumerator;
-            try
-            {
-                enumerator = values.GetEnumerator();
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Could not get enumerator for property: " + member, e);
-            }
+			IEnumerator enumerator;
+			try
+			{
+				enumerator = values.GetEnumerator();
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not get enumerator for property: " + member, e);
+			}
+	        using (enumerator as IDisposable)
+	        {
+		        while (true)
+		        {
+			        try
+			        {
+				        if (enumerator.MoveNext() == false)
+					        break;
+			        }
+			        catch (Exception e)
+			        {
+				        throw new InvalidOperationException("Could not move to next value for property: " + member, e);
 
-            using ( enumerator as IDisposable)
-            {
-                while (true)
-                {
-                    try
-                    {
-                        if (enumerator.MoveNext() == false)
-                            break;
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Could not move to next value for property: " + member, e);
+			        }
+			        object value;
+			        try
+			        {
+				        value = enumerator.Current;
+			        }
+			        catch (Exception e)
+			        {
+				        throw new InvalidOperationException("Could not get current value for property: " + member, e);
 
-                    }
-                    object value;
-                    try
-                    {
-                        value = enumerator.Current;
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Could not get current value for property: " + member, e);
+			        }
+			        try
+			        {
+						JsonContract valueContract = contract.FinalItemContract ?? GetContractSafe(value);
 
-                    }
-                    try
-                    {
-                        JsonContract valueContract = contract.FinalItemContract ?? GetContractSafe(value);
-
-                        if (ShouldWriteReference(value, null, valueContract, contract, member))
-                        {
-                            WriteReference(writer, value);
-                        }
-                        else
-                        {
-                            if (CheckForCircularReference(writer, value, null, valueContract, contract, member))
-                            {
-                                SerializeValue(writer, value, valueContract, null, contract, member);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        if (IsErrorHandled(underlyingList, contract, index, null, writer.ContainerPath, ex))
-                            HandleError(writer, initialDepth);
-                        else
-                            throw;
-                    }
-                    finally
-                    {
-                        index++;
-                    }
-                }
-            }
+						if (ShouldWriteReference(value, null, valueContract, contract, member))
+						{
+							WriteReference(writer, value);
+						}
+						else
+						{
+							if (CheckForCircularReference(writer, value, null, valueContract, contract, member))
+							{
+								SerializeValue(writer, value, valueContract, null, contract, member);
+							}
+						}
+			        }
+					catch (Exception ex)
+					{
+						if (IsErrorHandled(underlyingList, contract, index, null, writer.ContainerPath, ex))
+							HandleError(writer, initialDepth);
+						else
+							throw;
+					}
+					finally
+					{
+						index++;
+					}
+		        }
+	        }
 
             writer.WriteEndArray();
 
@@ -744,6 +750,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         private bool WriteStartArray(JsonWriter writer, object values, JsonArrayContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerProperty)
         {
             bool isReference = ResolveIsReference(contract, member, containerContract, containerProperty) ?? HasFlag(Serializer._preserveReferencesHandling, PreserveReferencesHandling.Arrays);
+            // don't make readonly fields the referenced value because they can't be deserialized to
+            isReference = (isReference && (member == null || member.Writable));
+
             bool includeTypeDetails = ShouldWriteType(TypeNameHandling.Arrays, contract, member, containerContract, containerProperty);
             bool writeMetadataObject = isReference || includeTypeDetails;
 
@@ -960,8 +969,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 bool escape;
                 string propertyName = GetPropertyName(writer, entry.Key, contract.KeyContract, out escape);
 
-                propertyName = (contract.PropertyNameResolver != null)
-                    ? contract.PropertyNameResolver(propertyName)
+                propertyName = (contract.DictionaryKeyResolver != null)
+                    ? contract.DictionaryKeyResolver(propertyName)
                     : propertyName;
 
                 try

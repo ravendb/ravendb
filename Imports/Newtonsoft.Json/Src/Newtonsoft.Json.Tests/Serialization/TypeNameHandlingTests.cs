@@ -47,7 +47,7 @@ using Newtonsoft.Json.Tests.TestObjects;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -100,8 +100,6 @@ namespace Newtonsoft.Json.Tests.Serialization
             {
                 TypeNameHandling = TypeNameHandling.Auto
             });
-
-            Console.WriteLine(json);
 
             StringAssert.AreEqual(@"{
   ""Collection"": [
@@ -334,7 +332,7 @@ namespace Newtonsoft.Json.Tests.Serialization
             Assert.AreEqual("Name!", ((EmployeeReference)employee).Name);
         }
 
-#if !(NETFX_CORE || PORTABLE || ASPNETCORE50)
+#if !(NETFX_CORE || PORTABLE || DNXCORE50)
         [Test]
         public void DeserializeTypeNameFromGacAssembly()
         {
@@ -1106,7 +1104,7 @@ namespace Newtonsoft.Json.Tests.Serialization
             CollectionAssert.AreEquivalent(data, d);
         }
 
-#if !(NETFX_CORE || ASPNETCORE50)
+#if !(NETFX_CORE || DNXCORE50)
         [Test]
         public void ISerializableTypeNameHandlingTest()
         {
@@ -1132,7 +1130,6 @@ namespace Newtonsoft.Json.Tests.Serialization
 
         private void TestJsonSerializationRoundTrip(SerializableWrapper e, TypeNameHandling flag)
         {
-            Console.WriteLine("Type Name Handling: " + flag.ToString());
             StringWriter writer = new StringWriter();
 
             //Create our serializer and set Type Name Handling appropriately
@@ -1141,8 +1138,6 @@ namespace Newtonsoft.Json.Tests.Serialization
 
             //Do the actual serialization and dump to Console for inspection
             serializer.Serialize(new JsonTextWriter(writer), e);
-            Console.WriteLine(writer.ToString());
-            Console.WriteLine();
 
             //Now try to deserialize
             //Json.Net will cause an error here as it will try and instantiate
@@ -1172,7 +1167,7 @@ namespace Newtonsoft.Json.Tests.Serialization
                 Binder = new MetroBinder(),
                 ContractResolver = new DefaultContractResolver
                 {
-#if !(NETFX_CORE || PORTABLE || ASPNETCORE50)
+#if !(NETFX_CORE || PORTABLE || DNXCORE50)
                     IgnoreSerializableAttribute = true
 #endif
                 }
@@ -1203,7 +1198,7 @@ namespace Newtonsoft.Json.Tests.Serialization
             public override void BindToName(Type serializedType, out string assemblyName, out string typeName)
             {
                 assemblyName = "AssemblyName";
-#if !(NETFX_CORE || ASPNETCORE50)
+#if !(NETFX_CORE || DNXCORE50)
                 typeName = ":::" + serializedType.Name.ToUpper(CultureInfo.InvariantCulture) + ":::";
 #else
                 typeName = ":::" + serializedType.Name.ToUpper() + ":::";
@@ -1648,12 +1643,12 @@ namespace Newtonsoft.Json.Tests.Serialization
         }
 #endif
 
-#if !(NETFX_CORE || ASPNETCORE50)
+#if !(NETFX_CORE || DNXCORE50)
         [Test]
         public void SerializeDeserialize_DictionaryContextContainsGuid_DeserializesItemAsGuid()
         {
             const string contextKey = "k1";
-            var someValue = Guid.NewGuid();
+            var someValue = new Guid("a6e986df-fc2c-4906-a1ef-9492388f7833");
 
             Dictionary<string, Guid> inputContext = new Dictionary<string, Guid>();
             inputContext.Add(contextKey, someValue);
@@ -1665,7 +1660,10 @@ namespace Newtonsoft.Json.Tests.Serialization
             };
             string serializedString = JsonConvert.SerializeObject(inputContext, jsonSerializerSettings);
 
-            Console.WriteLine(serializedString);
+            StringAssert.AreEqual(@"{
+  ""$type"": ""System.Collections.Generic.Dictionary`2[[System.String, mscorlib],[System.Guid, mscorlib]], mscorlib"",
+  ""k1"": ""a6e986df-fc2c-4906-a1ef-9492388f7833""
+}", serializedString);
 
             var deserializedObject = (Dictionary<string, Guid>)JsonConvert.DeserializeObject(serializedString, jsonSerializerSettings);
 
@@ -1799,19 +1797,15 @@ namespace Newtonsoft.Json.Tests.Serialization
                 new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, TypeNameAssemblyFormat = FormatterAssemblyStyle.Full } // TypeNameHandling.Auto will work
             );
 
-            Console.WriteLine(serialized);
-
             var output = JsonConvert.DeserializeObject<List<Stack<string>>>(serialized,
                 new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All }
             );
 
-            foreach (var stack in output)
-            {
-                foreach (var value in stack)
-                {
-                    Console.WriteLine(value);
-                }
-            }
+            List<string> strings = output.SelectMany(s => s).ToList();
+
+            Assert.AreEqual(9, strings.Count);
+            Assert.AreEqual("One", strings[0]);
+            Assert.AreEqual("Nine", strings[8]);
         }
 
 #if !NET20
@@ -1892,7 +1886,7 @@ namespace Newtonsoft.Json.Tests.Serialization
         public string SomeProperty { get; set; }
     }
 
-#if !(NETFX_CORE || ASPNETCORE50)
+#if !(NETFX_CORE || DNXCORE50)
     public class ParentParent
     {
         [JsonProperty(ItemTypeNameHandling = TypeNameHandling.Auto)]
@@ -1960,7 +1954,7 @@ namespace Newtonsoft.Json.Tests.Serialization
         public int Quantity { get; set; }
     }
 
-#if !(NETFX_CORE || ASPNETCORE50)
+#if !(NETFX_CORE || DNXCORE50)
     public class SerializableWrapper
     {
         public object Content { get; set; }

@@ -16,7 +16,7 @@ namespace Voron.Tests.Storage
 			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldBeAbleToWriteValuesGreaterThanLogAndReadThem()
 		{
 			var random = new Random(1234);
@@ -47,7 +47,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldBeAbleToWriteValuesGreaterThanLogAndRecoverThem()
 		{
 			DeleteDirectory("test2.data");

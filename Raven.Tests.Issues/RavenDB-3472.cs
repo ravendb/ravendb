@@ -149,7 +149,7 @@ namespace Raven.Tests.Issues
 
 		public class ShardResolutionStrategy : IShardResolutionStrategy
 		{
-			public string GenerateShardIdFor(object entity, ITransactionalDocumentSession sessionMetadata)
+			public string GenerateShardIdFor(object entity, object sessionMetadata)
 			{
 				if (entity is Company)
 				{

@@ -5,7 +5,7 @@ namespace Voron.Tests.Trees
 {
     public class Rebalance : StorageTest
     {
-        [Fact]
+        [PrefixesFact]
         public void CanMergeRight()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -29,7 +29,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void CanMergeLeft()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -52,7 +52,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void StressTest()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

@@ -31,83 +31,84 @@ using System.Runtime.CompilerServices;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
-    /// <summary>
-    /// Represents a collection of <see cref="JsonConverter"/>.
-    /// </summary>
-    public class JsonConverterCollection : Collection<JsonConverter>
-    {
-        public static readonly JsonConverterCollection Empty = new JsonConverterCollection();
+	/// <summary>
+	/// Represents a collection of <see cref="JsonConverter"/>.
+	/// </summary>
+	public class JsonConverterCollection : Collection<JsonConverter>
+	{
 
-        static JsonConverterCollection()
-        {
-            Empty.Freeze();
-        }
+		public static readonly JsonConverterCollection Empty = new JsonConverterCollection();
 
-        public JsonConverterCollection()
-        {
-            this.IsFrozen = false;
-        }
+		static JsonConverterCollection()
+		{
+			Empty.Freeze();
+		}
 
-        public JsonConverterCollection(IEnumerable<JsonConverter> converters)
-        {
-            this.IsFrozen = false;
+		public JsonConverterCollection()
+		{
+			this.IsFrozen = false;
+		}
 
-            if (converters != null)
-            {
-                foreach (var item in converters)
-                    this.Add(item);
-            }
-        }
+		public JsonConverterCollection(IEnumerable<JsonConverter> converters)
+		{
+			this.IsFrozen = false;
 
-        protected JsonConverterCollection( JsonConverterCollection collection ) : base ( collection )
-        {
-            this.IsFrozen = collection.IsFrozen;
-        }
+			if (converters != null)
+			{
+				foreach (var item in converters)
+					this.Add(item);
+			}
+		}
 
-        protected override void ClearItems()
-        {
-            if (IsFrozen)
-                throw new InvalidOperationException("Cannot modify a frozen collection.");
+		protected JsonConverterCollection(JsonConverterCollection collection)
+			: base(collection)
+		{
+			this.IsFrozen = collection.IsFrozen;
+		}
 
-            base.ClearItems();
-        }
+		protected override void ClearItems()
+		{
+			if (IsFrozen)
+				throw new InvalidOperationException("Cannot modify a frozen collection.");
 
-        protected override void InsertItem(int index, JsonConverter item)
-        {
-            if (IsFrozen)
-                throw new InvalidOperationException("Cannot modify a frozen collection.");
+			base.ClearItems();
+		}
 
-            base.InsertItem(index, item);
-        }
+		protected override void InsertItem(int index, JsonConverter item)
+		{
+			if (IsFrozen)
+				throw new InvalidOperationException("Cannot modify a frozen collection.");
 
-        protected override void RemoveItem(int index)
-        {
-            if (IsFrozen)
-                throw new InvalidOperationException("Cannot modify a frozen collection.");
+			base.InsertItem(index, item);
+		}
 
-            base.RemoveItem(index);
-        }
+		protected override void RemoveItem(int index)
+		{
+			if (IsFrozen)
+				throw new InvalidOperationException("Cannot modify a frozen collection.");
 
-        protected override void SetItem(int index, JsonConverter item)
-        {
-            if (IsFrozen)
-                throw new InvalidOperationException("Cannot modify a frozen collection.");
+			base.RemoveItem(index);
+		}
 
-            base.SetItem(index, item);
-        }
+		protected override void SetItem(int index, JsonConverter item)
+		{
+			if (IsFrozen)
+				throw new InvalidOperationException("Cannot modify a frozen collection.");
 
-        public bool IsFrozen
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
-        }
+			base.SetItem(index, item);
+		}
 
-        public void Freeze()
-        {
-            this.IsFrozen = true;
-        }
+		public bool IsFrozen
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get;
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			private set;
+		}
 
-    }
+		public void Freeze()
+		{
+			this.IsFrozen = true;
+		}
+	}
 }

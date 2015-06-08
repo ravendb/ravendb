@@ -483,6 +483,11 @@ namespace Raven.Database.Bundles.SqlReplication
 
 					break;
 				}
+				catch (SynchronizationLockException)
+				{
+					// just ignore it, we'll save that next time
+					break;
+				}
 				catch (ConcurrencyException)
 				{
 					Thread.Sleep(50);

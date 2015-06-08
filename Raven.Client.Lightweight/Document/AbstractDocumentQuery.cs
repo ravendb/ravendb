@@ -1207,6 +1207,10 @@ If you really want to do in memory filtering on the data returned from the query
 		public void WhereEquals(WhereParams whereParams)
 		{
 			EnsureValidFieldName(whereParams);
+
+			if (theSession != null && whereParams.Value != null)
+				sortByHints.Add(new KeyValuePair<string, SortOptions?>(whereParams.FieldName, theSession.Conventions.GetDefaultSortOption(whereParams.Value.GetType())));
+
 			var transformToEqualValue = TransformToEqualValue(whereParams);
 			lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
 

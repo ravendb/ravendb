@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
@@ -97,13 +98,13 @@ namespace Raven.Database.Actions
 														  string skipAfter = null)
         {
             var list = new RavenJArray();
-            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add,
+            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, doc => list.Add(doc.ToJson()),
                                            transformer, transformerParameters, skipAfter);
             return list;
         }
 
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
-                                                   CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc,
+                                                   CancellationToken token, ref int nextStart, Action<JsonDocument> addDoc,
                                                    string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
 												   string skipAfter = null)
         {
@@ -184,13 +185,13 @@ namespace Raven.Database.Actions
 										DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed.Cast<Object>().ToArray()) } },
                                     };
 
-                                    addDoc(transformedJsonDocument.ToJson());
+                                    addDoc(transformedJsonDocument);
                                 }
 
                             }
                             else
                             {
-                                addDoc(document.ToJson());
+                                addDoc(document);
                             }
 
                             addedDocs++;
@@ -241,7 +242,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId, CancellationToken token)
+        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId, CancellationToken token, CancellationTimeout timeout = null)
         {
 			var documents = 0;
 
@@ -261,8 +262,13 @@ namespace Raven.Database.Actions
                     var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
 
+					if (timeout != null)
+						timeout.Pause();
 			        using (Database.DocumentLock.Lock())
 			        {
+						if (timeout != null)
+							timeout.Resume();
+
 				        TransactionalStorage.Batch(accessor =>
 				        {
 					        var inserts = 0;
@@ -424,7 +430,7 @@ namespace Raven.Database.Actions
                 {
                     var documents = etag == null
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-										: actions.Documents.GetDocumentsAfter(etag, pageSize, token);
+                                        : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     int docCount = 0;
                     foreach (var doc in documents)
@@ -443,13 +449,54 @@ namespace Raven.Database.Actions
 
                         addDocument(document);
                         returnedDocs = true;
-						Database.WorkContext.UpdateFoundWork();
-					}
+                        Database.WorkContext.UpdateFoundWork();
+                    }
                     if (returnedDocs || docCount == 0)
                         break;
                     start += docCount;
                 }
             });
+        }
+
+        public Etag GetDocumentsWithIdStartingWith(string idPrefix, int pageSize, Etag etag, CancellationToken token, Action<JsonDocument> addDocument)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                bool returnedDocs = false;
+                while (true)
+                {
+                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2));
+                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
+                    
+                    int docCount = 0;
+                    foreach (var doc in documents)
+                    {
+                        docCount++;
+                        token.ThrowIfCancellationRequested();
+                        
+                        etag = doc.Etag;
+                        
+                        JsonDocument.EnsureIdInMetadata(doc);
+                        
+                        var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                        var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
+                       
+                        document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
+                        if (document == null)
+                            continue;
+
+                        addDocument(document);
+                        
+                        returnedDocs = true;
+                        Database.WorkContext.UpdateFoundWork();
+                    }
+
+                    if (returnedDocs || docCount == 0)
+                        break;
+                }
+            });
+
+            return etag;
         }
 
 

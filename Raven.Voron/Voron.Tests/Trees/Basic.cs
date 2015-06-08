@@ -10,7 +10,7 @@ namespace Voron.Tests.Trees
     public class Basic : StorageTest
     {
 
-        [Fact]
+        [PrefixesFact]
         public void CanAddVeryLargeValue()
         {
             var random = new Random();
@@ -33,7 +33,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void CanAdd()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -42,7 +42,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void CanAddAndRead()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -57,7 +57,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void CanAddAndReadStats()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -72,7 +72,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void CanAddEnoughToCausePageSplit()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -99,7 +99,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void AfterPageSplitAllDataIsValid()
         {
             const int count = 256;
@@ -124,7 +124,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void PageSplitsAllAround()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

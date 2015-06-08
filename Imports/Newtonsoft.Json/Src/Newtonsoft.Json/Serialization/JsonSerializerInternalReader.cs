@@ -381,7 +381,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             }
             else if (Serializer.MetadataPropertyHandling == MetadataPropertyHandling.ReadAhead)
             {
-                var tokenReader = reader as JTokenReader;
+                JTokenReader tokenReader = reader as JTokenReader;
                 if (tokenReader == null)
                 {
                     JToken t = JToken.ReadFrom(reader);
@@ -862,7 +862,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
 #if !(PORTABLE || PORTABLE40 || NET35 || NET20)
                         if (value is BigInteger)
-                            return ConvertUtils.FromBigInteger((BigInteger)value, targetType);
+                            return ConvertUtils.FromBigInteger((BigInteger)value, contract.NonNullableUnderlyingType);
 #endif
 
                         // this won't work when converting to a custom IConvertible
@@ -1662,6 +1662,34 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 }
             }
 
+            // handle giving default values to creator parameters
+            // this needs to happen before the call to creator
+            if (propertiesPresence != null)
+            {
+                foreach (KeyValuePair<JsonProperty, PropertyPresence> propertyPresence in propertiesPresence)
+                {
+                    JsonProperty property = propertyPresence.Key;
+                    PropertyPresence presence = propertyPresence.Value;
+
+                    if (!property.Ignored && (presence == PropertyPresence.None || presence == PropertyPresence.Null))
+                    {
+                        if (property.PropertyContract == null)
+                            property.PropertyContract = GetContractSafe(property.PropertyType);
+
+                        if (HasFlag(property.DefaultValueHandling.GetValueOrDefault(Serializer._defaultValueHandling), DefaultValueHandling.Populate))
+                        {
+                            // have to use the name because property presence doesn't use creator properties
+                            int i = contract.CreatorParameters.IndexOf(p => p.PropertyName == property.PropertyName);
+
+                            if (i != -1)
+                            {
+                                creatorParameterValues[i] = EnsureType(reader, property.GetResolvedDefaultValue(), CultureInfo.InvariantCulture, property.PropertyContract, property.PropertyType);
+                            }
+                        }
+                    }
+                }
+            }
+
             object createdObject = creator(creatorParameterValues);
 
             if (id != null)
@@ -1958,10 +1986,15 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                                 continue;
                             }
 
-                            if (property.PropertyContract == null)
-                                property.PropertyContract = GetContractSafe(property.PropertyType);
+                            JsonConverter propertyConverter = null;
 
-                            JsonConverter propertyConverter = GetConverter(property.PropertyContract, property.MemberConverter, contract, member);
+                            if (!property.Ignored)
+                            {
+                                if (property.PropertyContract == null)
+                                    property.PropertyContract = GetContractSafe(property.PropertyType);
+
+                                propertyConverter = GetConverter(property.PropertyContract, property.MemberConverter, contract, member);
+                            }
 
                             if (!ReadForType(reader, property.PropertyContract, propertyConverter != null))
                                 throw JsonSerializationException.Create(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
@@ -1974,10 +2007,12 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                         }
                         catch (Exception ex)
                         {
-                            if (IsErrorHandled(newObject, contract, memberName, reader as IJsonLineInfo, reader.Path, ex))
-                                HandleError(reader, true, initialDepth);
-                            else
-                                throw;
+							var newEx = new JsonSerializationException("Could not read value for property: " + memberName, ex);
+							TryClearErrorContext(); 
+							if (IsErrorHandled(newObject, contract, memberName, reader as IJsonLineInfo, reader.Path, newEx))
+								HandleError(reader, true, initialDepth);
+							else
+								throw newEx;
                         }
                         break;
                     }
@@ -2060,11 +2095,14 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                                     if (resolvedRequired == Required.AllowNull || resolvedRequired == Required.Always)
                                         throw JsonSerializationException.Create(reader, "Required property '{0}' not found in JSON.".FormatWith(CultureInfo.InvariantCulture, property.PropertyName));
 
-                                    if (property.PropertyContract == null)
-                                        property.PropertyContract = GetContractSafe(property.PropertyType);
+                                    if (!property.Ignored)
+                                    {
+                                        if (property.PropertyContract == null)
+                                            property.PropertyContract = GetContractSafe(property.PropertyType);
 
-                                    if (HasFlag(property.DefaultValueHandling.GetValueOrDefault(Serializer._defaultValueHandling), DefaultValueHandling.Populate) && property.Writable && !property.Ignored)
-                                        property.ValueProvider.SetValue(newObject, EnsureType(reader, property.GetResolvedDefaultValue(), CultureInfo.InvariantCulture, property.PropertyContract, property.PropertyType));
+                                        if (HasFlag(property.DefaultValueHandling.GetValueOrDefault(Serializer._defaultValueHandling), DefaultValueHandling.Populate) && property.Writable)
+                                            property.ValueProvider.SetValue(newObject, EnsureType(reader, property.GetResolvedDefaultValue(), CultureInfo.InvariantCulture, property.PropertyContract, property.PropertyType));
+                                    }
                                     break;
                                 case PropertyPresence.Null:
                                     if (resolvedRequired == Required.Always)

@@ -271,7 +271,7 @@ class resources extends viewModelBase {
 
             disableDatabaseToggleViewModel.disableToggleTask
                 .done((toggledResources: resource[]) => {
-                    if (resources.length == 1) {
+                        if (resources.length === 1) {
                         this.onResourceDisabledToggle(resources[0], action);
                     } else {
                         toggledResources.forEach(rs => {
@@ -288,7 +288,11 @@ class resources extends viewModelBase {
         if (!!rs) {
             rs.disabled(action);
             rs.isChecked(false);
+
+            if (rs.isSelected() && rs.disabled() === false) {
+                rs.activate();  
         }
+    }
     }
 
     disableDatabaseIndexing(db: database) {

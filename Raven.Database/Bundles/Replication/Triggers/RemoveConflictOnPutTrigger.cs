@@ -42,6 +42,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
 			    {
 			        new RavenJArray(ReplicationData.GetHistory(metadata)) // first item to interleave
 			    };
+
 				foreach (var prop in conflicts)
 				{
 					RavenJObject deletedMetadata;

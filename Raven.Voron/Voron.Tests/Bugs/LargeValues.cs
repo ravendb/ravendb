@@ -9,7 +9,7 @@
 
     public class LargeValues : StorageTest
     {
-        [Fact]
+        [PrefixesFact]
         public void ShouldProperlyRecover()
         {
             var sequentialLargeIds = ReadData("non-leaf-page-seq-id-large-values-2.txt");

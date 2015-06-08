@@ -8401,4 +8401,7 @@ a.global_help_link:focus {
   margin-top: 3px;
   margin-bottom: 3px;
 }
+.text-height-fix {
+  line-height: 34px;
+}
 /*# sourceMappingURL=app.css.map */

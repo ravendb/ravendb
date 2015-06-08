@@ -81,7 +81,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     }
 #endif
 
-    public static class ReflectionUtils
+	public static class ReflectionUtils
     {
         public static readonly Type[] EmptyTypes;
 
@@ -142,8 +142,8 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         public static string GetTypeName(Type t, FormatterAssemblyStyle assemblyFormat, SerializationBinder binder)
         {
             string fullyQualifiedTypeName;
-#if !(NET20 || NET35)
-            if (binder != null)
+#if !(NET20 || NET35 || MONO)
+			if (binder != null)
             {
                 string assemblyName, typeName;
                 binder.BindToName(t, out assemblyName, out typeName);
@@ -884,6 +884,16 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
             ValidationUtils.ArgumentNotNull(targetType, "targetType");
 
             List<PropertyInfo> propertyInfos = new List<PropertyInfo>(targetType.GetProperties(bindingAttr));
+
+            // GetProperties on an interface doesn't return properties from its interfaces
+            if (targetType.IsInterface())
+            {
+                foreach (Type i in targetType.GetInterfaces())
+                {
+                    propertyInfos.AddRange(i.GetProperties(bindingAttr));
+                }
+            }
+
             GetChildPrivateProperties(propertyInfos, targetType, bindingAttr);
 
             // a base class private getter/setter will be inaccessable unless the property was gotten from the base class

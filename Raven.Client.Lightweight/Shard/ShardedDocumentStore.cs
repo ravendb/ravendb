@@ -4,10 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -287,9 +289,15 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
 
+		[Obsolete("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead",error: true)]
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-            return new BulkInsertOperation(database, this, Listeners, options ?? new BulkInsertOptions(), Changes(database));
+			throw new NotSupportedException("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead");
+		}
+
+		public  ShardedBulkInsertOperation ShardedBulkInsert(string database = null, ShardedDocumentStore store = null, BulkInsertOptions options = null)
+		{
+			return new ShardedBulkInsertOperation(database, this, options ?? new BulkInsertOptions());
 		}
 
 		public override void InitializeProfiling()
@@ -311,7 +319,26 @@ namespace Raven.Client.Shard
 			try
 			{
 				ShardStrategy.Shards.ForEach(shard => shard.Value.Initialize());
-				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
+
+                var shardsPointingToSameDb = ShardStrategy.Shards
+                    .GroupBy(x =>
+                    {
+                        try
+                        {
+                            return x.Value.DatabaseCommands.GetStatistics().DatabaseId;
+                        }
+                        catch (Exception)
+                        {
+                            return Guid.NewGuid();// we'll just ignore any connection erros here
+                        }
+                    }).FirstOrDefault(x => x.Count() > 1);
+
+
+			    if (shardsPointingToSameDb != null)
+			        throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.",
+			            string.Join(", ", shardsPointingToSameDb.Select(x => x.Key))));
+
+                if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new ShardedHiloKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKey(commands, Conventions, entity);

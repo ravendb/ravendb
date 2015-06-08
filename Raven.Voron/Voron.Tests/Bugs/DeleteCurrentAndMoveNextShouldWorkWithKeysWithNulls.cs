@@ -10,7 +10,7 @@ namespace Voron.Tests.Bugs
 			StartDatabase();
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void DeleteCurrentAndMoveNextShouldWork()
 		{
 			var treeName = CreateTrees(Env, 1, "test").First();
@@ -46,7 +46,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void DeleteCurrentAndMoveNextShouldWorkWhenTreeModified()
 		{
 			var treeName = CreateTrees(Env, 1, "test").First();

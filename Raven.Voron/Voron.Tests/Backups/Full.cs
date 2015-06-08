@@ -33,7 +33,7 @@ namespace Voron.Tests.Backups
 			    Directory.Delete(_recoveredStoragePath, true);
 	    }
 
-	    [Fact]
+	    [PrefixesFact]
         public void CanBackupAndRestore()
         {
             RequireFileBasedPager();

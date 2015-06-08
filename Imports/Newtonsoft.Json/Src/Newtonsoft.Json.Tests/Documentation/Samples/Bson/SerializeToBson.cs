@@ -30,10 +30,12 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using NUnit.Framework;
 
 namespace Newtonsoft.Json.Tests.Documentation.Samples.Bson
 {
-    public class SerializeToBson
+    [TestFixture]
+    public class SerializeToBson : TestFixtureBase
     {
         #region Types
         public class Event
@@ -43,13 +45,14 @@ namespace Newtonsoft.Json.Tests.Documentation.Samples.Bson
         }
         #endregion
 
+        [Test]
         public void Example()
         {
             #region Usage
             Event e = new Event
             {
                 Name = "Movie Premiere",
-                StartDate = new DateTime(2013, 1, 22, 20, 30, 0)
+                StartDate = new DateTime(2013, 1, 22, 20, 30, 0, DateTimeKind.Utc)
             };
 
             MemoryStream ms = new MemoryStream();
@@ -62,8 +65,10 @@ namespace Newtonsoft.Json.Tests.Documentation.Samples.Bson
             string data = Convert.ToBase64String(ms.ToArray());
 
             Console.WriteLine(data);
-            // MQAAAAJOYW1lAA8AAABNb3ZpZSBQcmVtaWVyZQAJU3RhcnREYXRlAMDgKWE8AQAAAA==
+            // MQAAAAJOYW1lAA8AAABNb3ZpZSBQcmVtaWVyZQAJU3RhcnREYXRlAED982M8AQAAAA==
             #endregion
+
+            Assert.AreEqual("MQAAAAJOYW1lAA8AAABNb3ZpZSBQcmVtaWVyZQAJU3RhcnREYXRlAED982M8AQAAAA==", data);
         }
     }
 }

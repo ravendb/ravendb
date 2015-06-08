@@ -24,6 +24,9 @@
 #endregion
 
 #if !PORTABLE40
+#if !(PORTABLE || NET20 || NET35)
+using System.Numerics;
+#endif
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -1376,7 +1379,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
                     string attributePrefix = MiscellaneousUtils.GetPrefix(nameValue.Key);
 
                     IXmlNode attribute = (!string.IsNullOrEmpty(attributePrefix))
-                        ? document.CreateAttribute(nameValue.Key, manager.LookupNamespace(attributePrefix), nameValue.Value)
+                        ? document.CreateAttribute(nameValue.Key, manager.LookupNamespace(attributePrefix) ?? string.Empty, nameValue.Value)
                         : document.CreateAttribute(nameValue.Key, nameValue.Value);
 
                     element.SetAttributeNode(attribute);
@@ -1417,6 +1420,11 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
             }
             else if (reader.TokenType == JsonToken.Integer)
             {
+#if !(NET20 || NET35 || PORTABLE || PORTABLE40)
+                if (reader.Value is BigInteger)
+                    return ((BigInteger)reader.Value).ToString(CultureInfo.InvariantCulture);
+#endif
+
                 return XmlConvert.ToString(Convert.ToInt64(reader.Value, CultureInfo.InvariantCulture));
             }
             else if (reader.TokenType == JsonToken.Float)

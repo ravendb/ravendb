@@ -978,9 +978,10 @@ namespace Raven.Client.Document.Async
 
 		public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
 		{
-			 var metadata = await GetDocumentMetadataAsync(instance);
+			var metadata = await GetDocumentMetadataAsync(instance);
 			return metadata.Metadata;
 		}
+
 		private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
 		{
 			DocumentMetadata value;
@@ -1008,7 +1009,7 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Get the json document by key from the store
 		/// </summary>
-		public async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
+		private async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
 		{
 			var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey);
 			if (jsonDocument == null)

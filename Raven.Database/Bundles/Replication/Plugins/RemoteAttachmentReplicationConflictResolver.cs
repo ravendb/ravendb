@@ -17,7 +17,7 @@ namespace Raven.Database.Bundles.Replication.Plugins
 	{
 		public static RemoteAttachmentReplicationConflictResolver Instance = new RemoteAttachmentReplicationConflictResolver();
 
-		public override bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment, Func<string, Attachment> getAttachment,
+		protected override bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment, Func<string, Attachment> getAttachment,
 		                                out RavenJObject metadataToSave, out byte[] dataToSave)
 		{
 			metadataToSave = metadata;

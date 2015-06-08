@@ -24,6 +24,13 @@ namespace Raven.Client.Document
 		/// <param name="path">The path.</param>
 		/// <returns></returns>
 		AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, object>> path);
+        /// <summary>
+        /// Begin a load while including the specified path
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="path">The path.</param>
+        /// <returns></returns>
+        AsyncMultiLoaderWithInclude<T> Include<TResult>(Expression<Func<T, object>> path);
 
 		/// <summary>
 		/// Begins the async multi-load operation

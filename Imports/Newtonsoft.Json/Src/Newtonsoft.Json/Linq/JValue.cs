@@ -27,13 +27,13 @@ using System;
 using System.Collections.Generic;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Globalization;
+using Raven.Abstractions.Json;
 #if !(NET35 || NET20 || PORTABLE40)
 using System.Dynamic;
 using System.Linq.Expressions;
 #endif
 #if !(NET20 || NET35 || PORTABLE40 || PORTABLE)
 using System.Numerics;
-using Raven.Abstractions.Json;
 
 #endif
 
@@ -650,21 +650,16 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         /// </summary>
         /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
         /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-        public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+		public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+		{
+			WriteTo(writer, new JsonConverterCollection(converters));
+		}
+		
+		public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
         {
-            WriteTo(writer, new JsonConverterCollection(converters));
-        }
-
-        /// <summary>
-        /// Writes this token to a <see cref="JsonWriter"/>.
-        /// </summary>
-        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
-        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-        public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
-        {
-            if (converters != null && converters.Count > 0 && _value != null)
+			if (converters != null && converters.Count > 0 && _value != null)
             {
-                JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, _value.GetType());
+				JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, _value.GetType());
                 if (matchingConverter != null && matchingConverter.CanWrite)
                 {
                     matchingConverter.WriteJson(writer, _value, JsonSerializer.CreateDefault());

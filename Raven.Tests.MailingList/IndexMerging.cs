@@ -13,36 +13,36 @@ namespace Raven.Tests.MailingList
     {
         const string SampleLogfileStoreId = "123";
 
-        [Fact]
-        public async Task AutoIndexReuseFails()
-        {
-            var store = NewRemoteDocumentStore(fiddler: true);
-            var session = store.OpenAsyncSession();
+		[Fact]
+		public async Task AutoIndexReuseFails()
+		{
+			var store = NewRemoteDocumentStore(fiddler: true);
+			var session = store.OpenAsyncSession();
 
-            // each of these queries will generate an auto index, that will expand on the previous auto index and include additional fields
+			// each of these queries will generate an auto index, that will expand on the previous auto index and include additional fields
 
-            // Auto/Logfiles/ByUploadDateSortByUploadDate
-            await FirstQuery(session);
+			// Auto/Logfiles/ByUploadDateSortByUploadDate
+			await FirstQuery(session);
 
-            // Auto/Logfiles/BySavedAnalysesAndStoreIdAndUploadDateSortByUploadDate
-            await SecondQuery(session);
+			// Auto/Logfiles/BySavedAnalysesAndStoreIdAndUploadDateSortByUploadDate
+			await SecondQuery(session);
 
-            //  Auto/Logfiles/BySavedAnalysesAndSharedOnFacebookActionIdAndStoreIdAndUploadDateSortByUploadDate
-            await ThirdQuery(session);
+			//  Auto/Logfiles/BySavedAnalysesAndSharedOnFacebookActionIdAndStoreIdAndUploadDateSortByUploadDate
+			await ThirdQuery(session);
 
-            Assert.Equal(3, GetAutoIndexes(store).Length);
+			Assert.Equal(3, GetAutoIndexes(store).Length);
 
-            // now lets delete the second index
-            store.DatabaseCommands.DeleteIndex("Auto/Logfiles/ByUploadDateSortByUploadDate");
-            store.DatabaseCommands.DeleteIndex("Auto/Logfiles/BySavedAnalysesAndStoreIdAndUploadDateSortByUploadDate");
+			// now lets delete the second index
+			store.DatabaseCommands.DeleteIndex("Auto/Logfiles/ByUploadDateSortByUploadDate");
+			store.DatabaseCommands.DeleteIndex("Auto/Logfiles/BySavedAnalysesAndStoreIdAndUploadDateSortBySavedAnalysesStoreIdUploadDate");
 
-            await FirstQuery(session);
-            await SecondQuery(session);
-            await ThirdQuery(session);
+			await FirstQuery(session);
+			await SecondQuery(session);
+			await ThirdQuery(session);
 
-            // Auto/Logfiles/BySavedAnalysesAndSharedOnFacebookActionIdAndStoreIdAndUploadDateSortByUploadDate is able to fulfill all requests
-            Assert.Equal(1, GetAutoIndexes(store).Length);
-        }
+			// Auto/Logfiles/BySavedAnalysesAndSharedOnFacebookActionIdAndStoreIdAndUploadDateSortByUploadDate is able to fulfill all requests
+			Assert.Equal(1, GetAutoIndexes(store).Length);
+		}
 
         static IndexDefinition[] GetAutoIndexes(IDocumentStore store)
         {

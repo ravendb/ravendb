@@ -5,7 +5,7 @@ namespace Voron.Tests.Trees
 {
 	public class CanIterateBackward : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void SeekLastOnEmptyResultInFalse()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
@@ -17,7 +17,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanSeekLast()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -39,7 +39,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanSeekBack()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

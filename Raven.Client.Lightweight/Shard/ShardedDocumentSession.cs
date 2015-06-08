@@ -767,7 +767,7 @@ namespace Raven.Client.Shard
 					IDatabaseCommands databaseCommands;
 					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
 						throw new InvalidOperationException(
-							string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
+							string.Format("ShardedDocumentStore can't find a DatabaseCommands for shard id '{0}'.", shardId));
 
 					var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
 					UpdateBatchResults(results, shardAndObjects.Value);

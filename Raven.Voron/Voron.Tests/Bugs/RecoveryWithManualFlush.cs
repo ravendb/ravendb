@@ -16,7 +16,7 @@ namespace Voron.Tests.Bugs
 			options.ManualFlushing = true;
 		}
 
-        [Fact]
+        [PrefixesFact]
         public void ShouldRecoverFromJournalsAfterFlushWhereLastPageOfFlushedTxHadTheSameNumberAsFirstPageOfNextTxNotFlushedJet()
         {
             using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -69,7 +69,7 @@ namespace Voron.Tests.Bugs
             }
         }
 
-        [Fact]
+        [PrefixesFact]
         public void ShouldRecoverTransactionEndPositionsTableAfterRestart()
         {
             using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -112,7 +112,7 @@ namespace Voron.Tests.Bugs
             }
         }
 
-		[Fact]
+		[PrefixesFact]
 		public void StorageRecoveryAfterFlushingToDataFile()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

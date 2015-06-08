@@ -25,18 +25,19 @@
 
 using System;
 using System.Collections;
-#if !(NET35 || NET20 || PORTABLE || PORTABLE40)
+using Raven.Imports.Newtonsoft.Json.Schema;
+#if !(NET35 || NET20 || PORTABLE || PORTABLE40 || MONO)
 using System.Collections.Concurrent;
 #endif
 using System.Collections.Generic;
 using System.ComponentModel;
-#if !(NET35 || NET20 || PORTABLE40)
+#if !(NET35 || NET20 || PORTABLE40 || MONO)
 using System.Dynamic;
 #endif
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.Serialization;
-#if !(NETFX_CORE || PORTABLE || PORTABLE40)
+#if !(NETFX_CORE || PORTABLE || PORTABLE40 || MONO)
 using System.Security.Permissions;
 #endif
 using System.Xml.Serialization;
@@ -44,11 +45,11 @@ using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Abstractions.Json;
 #if NET20
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
-using Raven.Abstractions.Json;
 
 #endif
 
@@ -95,25 +96,27 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     /// </summary>
     public class DefaultContractResolver : IContractResolver
     {
+#pragma warning disable 612,618
         private static readonly IContractResolver _instance = new DefaultContractResolver(true);
+#pragma warning restore 612,618
 
         internal static IContractResolver Instance
         {
             get { return _instance; }
         }
 
-        private static readonly JsonConverterCollection BuiltInConverters = new JsonConverterCollection
+		private static readonly JsonConverterCollection BuiltInConverters = new JsonConverterCollection
         {
-#if !(NET20 || NETFX_CORE || PORTABLE40 || PORTABLE)
+#if !(NET20 || NETFX_CORE || PORTABLE40 || PORTABLE || MONO)
             new EntityKeyMemberConverter(),
 #endif
-#if !(NET35 || NET20 || PORTABLE40)
+#if !(NET35 || NET20 || PORTABLE40 || MONO)
             new ExpandoObjectConverter(),
 #endif
 #if !(PORTABLE40)
             new XmlNodeConverter(),
 #endif
-#if !(NETFX_CORE || PORTABLE40 || PORTABLE)
+#if !(NETFX_CORE || PORTABLE40 || PORTABLE || MONO)
             new BinaryConverter(),
             new DataSetConverter(),
             new DataTableConverter(),
@@ -129,11 +132,10 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             new RegexConverter()
         };
 
-        static DefaultContractResolver()
-        {
-            BuiltInConverters.Freeze();
-        }
-
+		static DefaultContractResolver()
+		{
+			BuiltInConverters.Freeze();
+		}
 
         private static readonly object TypeContractCacheLock = new object();
 
@@ -153,18 +155,18 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             get { return JsonTypeReflector.DynamicCodeGeneration; }
         }
 
-#if !(NETFX_CORE || PORTABLE)
-        /// <summary>
+#if !(NETFX_CORE || PORTABLE || MONO)
+		/// <summary>
         /// Gets or sets the default members search flags.
         /// </summary>
         /// <value>The default members search flags.</value>
         [ObsoleteAttribute("DefaultMembersSearchFlags is obsolete. To modify the members serialized inherit from DefaultContractResolver and override the GetSerializableMembers method instead.")] 
         public BindingFlags DefaultMembersSearchFlags { get; set; }
 #else
-        private BindingFlags DefaultMembersSearchFlags = BindingFlags.Instance | BindingFlags.Public;
+        private BindingFlags DefaultMembersSearchFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic; // RavenDB required also the following flag: BindingFlags.NonPublic.
 #endif
 
-        /// <summary>
+		/// <summary>
         /// Gets or sets a value indicating whether compiler generated members should be serialized.
         /// </summary>
         /// <value>
@@ -172,8 +174,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         /// </value>
         public bool SerializeCompilerGeneratedMembers { get; set; }
 
-#if !(NETFX_CORE || PORTABLE || PORTABLE40)
-        /// <summary>
+#if !(NETFX_CORE || PORTABLE || PORTABLE40 || MONO)
+		/// <summary>
         /// Gets or sets a value indicating whether to ignore the <see cref="ISerializable"/> interface when serializing and deserializing types.
         /// </summary>
         /// <value>
@@ -194,8 +196,15 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         /// Initializes a new instance of the <see cref="DefaultContractResolver"/> class.
         /// </summary>
         public DefaultContractResolver()
-            : this(false)
         {
+#if !NETFX_CORE
+#pragma warning disable 618
+			DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic; // RavenDB need also BindingFlags.NonPublic
+#pragma warning restore 618
+#endif
+#if !(NETFX_CORE || PORTABLE || PORTABLE40 || MONO)
+			IgnoreSerializableAttribute = true;
+#endif
         }
 
         /// <summary>
@@ -207,17 +216,10 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         /// happen once. This setting can cause unexpected behavior if different instances of the resolver are suppose to produce different
         /// results. When set to false it is highly recommended to reuse <see cref="DefaultContractResolver"/> instances with the <see cref="JsonSerializer"/>.
         /// </param>
+        [ObsoleteAttribute("DefaultContractResolver(bool) is obsolete. Use the parameterless constructor and cache instances of the contract resolver within your application for optimal performance.")]
         public DefaultContractResolver(bool shareCache)
+            : this()
         {
-#if !NETFX_CORE
-#pragma warning disable 618
-            DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.Instance;
-#pragma warning restore 618
-#endif
-#if !(NETFX_CORE || PORTABLE || PORTABLE40)
-            IgnoreSerializableAttribute = true;
-#endif
-
             _sharedCache = shareCache;
         }
 
@@ -272,8 +274,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         protected virtual List<MemberInfo> GetSerializableMembers(Type objectType)
         {
             bool ignoreSerializableAttribute;
-#if !(NETFX_CORE || PORTABLE || PORTABLE40)
-            ignoreSerializableAttribute = IgnoreSerializableAttribute;
+#if !(NETFX_CORE || PORTABLE || PORTABLE40 || MONO)
+			ignoreSerializableAttribute = IgnoreSerializableAttribute;
 #else
             ignoreSerializableAttribute = true;
 #endif
@@ -311,6 +313,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                             // add members that are explicitly marked with JsonProperty/DataMember attribute
                             // or are a field if serializing just fields
                             if (JsonTypeReflector.GetAttribute<JsonPropertyAttribute>(member) != null)
+                                serializableMembers.Add(member);
+                            else if (JsonTypeReflector.GetAttribute<JsonRequiredAttribute>(member) != null)
                                 serializableMembers.Add(member);
 #if !NET20
                             else if (dataContractAttribute != null && JsonTypeReflector.GetAttribute<DataMemberAttribute>(member) != null)
@@ -368,8 +372,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             InitializeContract(contract);
 
             bool ignoreSerializableAttribute;
-#if !(NETFX_CORE || PORTABLE || PORTABLE40)
-            ignoreSerializableAttribute = IgnoreSerializableAttribute;
+#if !(NETFX_CORE || PORTABLE || PORTABLE40 || MONO)
+			ignoreSerializableAttribute = IgnoreSerializableAttribute;
 #else
             ignoreSerializableAttribute = true;
 #endif
@@ -394,9 +398,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                     contract.CreatorParameters.AddRange(CreateConstructorParameters(overrideConstructor, contract.Properties));
                 }
                 else if (contract.MemberSerialization == MemberSerialization.Fields)
-                {
-#if !(NETFX_CORE || PORTABLE40 || PORTABLE)
-                    // mimic DataContractSerializer behaviour when populating fields by overriding default creator to create an uninitialized object
+				{
+#if !(NETFX_CORE || PORTABLE40 || PORTABLE || MONO)
+					// mimic DataContractSerializer behaviour when populating fields by overriding default creator to create an uninitialized object
                     // note that this is only possible when the application is fully trusted so fall back to using the default constructor (if available) in partial trust
                     if (JsonTypeReflector.FullyTrusted)
                         contract.DefaultCreator = contract.GetUninitializedObject;
@@ -443,6 +447,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 if (!m.IsDefined(typeof(JsonExtensionDataAttribute), false))
                     return false;
 
+                if (!ReflectionUtils.CanReadMemberValue(m, true))
+                    throw new JsonException("Invalid extension data attribute on '{0}'. Member '{1}' must have a getter.".FormatWith(CultureInfo.InvariantCulture, GetClrTypeFullName(m.DeclaringType), m.Name));
+
                 Type t = ReflectionUtils.GetMemberUnderlyingType(m);
 
                 Type dictionaryType;
@@ -484,10 +491,12 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             else
                 createdType = t;
 
-            MethodInfo addMethod = t.GetMethod("Add", new[] { keyType, valueType });
             Func<object, object> getExtensionDataDictionary = JsonTypeReflector.ReflectionDelegateFactory.CreateGet<object>(member);
-            Action<object, object> setExtensionDataDictionary = JsonTypeReflector.ReflectionDelegateFactory.CreateSet<object>(member);
+            Action<object, object> setExtensionDataDictionary = (ReflectionUtils.CanSetMemberValue(member, true, false))
+                ? JsonTypeReflector.ReflectionDelegateFactory.CreateSet<object>(member)
+                : null;
             Func<object> createExtensionDataDictionary = JsonTypeReflector.ReflectionDelegateFactory.CreateDefaultConstructor<object>(createdType);
+            MethodInfo addMethod = t.GetMethod("Add", new[] { keyType, valueType });
             MethodCall<object, object> setExtensionDataDictionaryValue = JsonTypeReflector.ReflectionDelegateFactory.CreateMethodCall<object>(addMethod);
 
             ExtensionDataSetter extensionDataSetter = (o, key, value) =>
@@ -495,6 +504,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 object dictionary = getExtensionDataDictionary(o);
                 if (dictionary == null)
                 {
+                    if (setExtensionDataDictionary == null)
+                        throw new JsonSerializationException("Cannot set value onto extension data member '{0}'. The extension data collection is null and it cannot be set.".FormatWith(CultureInfo.InvariantCulture, member.Name));
+
                     dictionary = createExtensionDataDictionary();
                     setExtensionDataDictionary(o, dictionary);
                 }
@@ -714,8 +726,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
             contract.Converter = ResolveContractConverter(contract.NonNullableUnderlyingType);
 
-            // then see whether object is compatible with any of the built in converters
-            contract.InternalConverter = JsonConverterCache.GetMatchingConverter(BuiltInConverters, contract.NonNullableUnderlyingType);
+			// then see whether object is compatible with any of the built in converters
+			contract.InternalConverter = JsonConverterCache.GetMatchingConverter(BuiltInConverters, contract.NonNullableUnderlyingType);
 
             if (contract.IsInstantiable
                 && (ReflectionUtils.HasDefaultConstructor(contract.CreatedType, true) || contract.CreatedType.IsValueType()))
@@ -740,43 +752,16 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             GetCallbackMethodsForType(t, out onSerializing, out onSerialized, out onDeserializing, out onDeserialized, out onError);
 
             if (onSerializing != null)
-            {
-#if !(NET35 || NET20 || NETFX_CORE)
-                if (t.Name != FSharpUtils.FSharpSetTypeName && t.Name != FSharpUtils.FSharpMapTypeName)
-#endif
-                {
-#if NETFX_CORE
-                    if (!t.IsGenericType() || (t.GetGenericTypeDefinition() != typeof(ConcurrentDictionary<,>)))
-                         contract.OnSerializingCallbacks.AddRange(onSerializing);
-#else
-                    contract.OnSerializingCallbacks.AddRange(onSerializing);
-#endif
-                }
-            }
+                contract.OnSerializingCallbacks.AddRange(onSerializing);
 
             if (onSerialized != null)
                 contract.OnSerializedCallbacks.AddRange(onSerialized);
 
             if (onDeserializing != null)
-            {
                 contract.OnDeserializingCallbacks.AddRange(onDeserializing);
-            }
 
             if (onDeserialized != null)
-            {
-#if !(NET35 || NET20 || NETFX_CORE)
-                if (t.Name != FSharpUtils.FSharpSetTypeName && t.Name != FSharpUtils.FSharpMapTypeName)
-#endif
-                {
-                    // ConcurrentDictionary throws an error here so don't use its OnDeserialized - http://json.codeplex.com/discussions/257093
-#if !(NET35 || NET20 || PORTABLE || PORTABLE40)
-                    if (!t.IsGenericType() || (t.GetGenericTypeDefinition() != typeof(ConcurrentDictionary<,>)))
-                        contract.OnDeserializedCallbacks.AddRange(onDeserialized);
-#else
-                    contract.OnDeserializedCallbacks.AddRange(onDeserialized);
-#endif
-                }
-            }
+                contract.OnDeserializedCallbacks.AddRange(onDeserialized);
 
             if (onError != null)
                 contract.OnErrorCallbacks.AddRange(onError);
@@ -799,6 +784,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 MethodInfo currentOnDeserialized = null;
                 MethodInfo currentOnError = null;
 
+                bool skipSerializing = ShouldSkipSerializing(baseType);
+                bool skipDeserialized = ShouldSkipDeserialized(baseType);
+
                 foreach (MethodInfo method in baseType.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
                 {
                     // compact framework errors when getting parameters for a generic method
@@ -809,7 +797,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                     Type prevAttributeType = null;
                     ParameterInfo[] parameters = method.GetParameters();
 
-                    if (IsValidCallback(method, parameters, typeof(OnSerializingAttribute), currentOnSerializing, ref prevAttributeType))
+                    if (!skipSerializing && IsValidCallback(method, parameters, typeof(OnSerializingAttribute), currentOnSerializing, ref prevAttributeType))
                     {
                         onSerializing = onSerializing ?? new List<SerializationCallback>();
                         onSerializing.Add(JsonContract.CreateSerializationCallback(method));
@@ -827,7 +815,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                         onDeserializing.Add(JsonContract.CreateSerializationCallback(method));
                         currentOnDeserializing = method;
                     }
-                    if (IsValidCallback(method, parameters, typeof(OnDeserializedAttribute), currentOnDeserialized, ref prevAttributeType))
+                    if (!skipDeserialized && IsValidCallback(method, parameters, typeof(OnDeserializedAttribute), currentOnDeserialized, ref prevAttributeType))
                     {
                         onDeserialized = onDeserialized ?? new List<SerializationCallback>();
                         onDeserialized.Add(JsonContract.CreateSerializationCallback(method));
@@ -841,6 +829,35 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                     }
                 }
             }
+        }
+
+        private static bool ShouldSkipDeserialized(Type t)
+		{
+#if !(NET35 || NET20 || PORTABLE || PORTABLE40 || MONO)
+			// ConcurrentDictionary throws an error in its OnDeserialized so ignore - http://json.codeplex.com/discussions/257093
+            if (t.IsGenericType() && t.GetGenericTypeDefinition() == typeof(ConcurrentDictionary<,>))
+                return true;
+#endif
+#if !(NET35 || NET20 || NETFX_CORE)
+            if (t.Name == FSharpUtils.FSharpSetTypeName || t.Name == FSharpUtils.FSharpMapTypeName)
+                return true;
+#endif
+
+            return false;
+        }
+
+        private static bool ShouldSkipSerializing(Type t)
+        {
+#if !(NET35 || NET20 || NETFX_CORE)
+            if (t.Name == FSharpUtils.FSharpSetTypeName || t.Name == FSharpUtils.FSharpMapTypeName)
+                return true;
+#endif
+#if NETFX_CORE
+            if (t.IsGenericType() && t.GetGenericTypeDefinition() == typeof(ConcurrentDictionary<,>))
+                return true;
+#endif
+
+            return false;
         }
 
         private List<Type> GetClassHierarchyForType(Type type)
@@ -869,7 +886,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             JsonDictionaryContract contract = new JsonDictionaryContract(objectType);
             InitializeContract(contract);
 
-            contract.PropertyNameResolver = ResolvePropertyName;
+            contract.DictionaryKeyResolver = ResolveDictionaryKey;
 
             return contract;
         }
@@ -913,8 +930,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             return contract;
         }
 
-#if !(NETFX_CORE || PORTABLE40 || PORTABLE)
-        /// <summary>
+#if !(NETFX_CORE || PORTABLE40 || PORTABLE || MONO)
+		/// <summary>
         /// Creates a <see cref="JsonISerializableContract"/> for the given type.
         /// </summary>
         /// <param name="objectType">Type of the object.</param>
@@ -936,8 +953,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         }
 #endif
 
-#if !(NET35 || NET20 || PORTABLE40)
-        /// <summary>
+#if !(NET35 || NET20 || PORTABLE40 || MONO)
+		/// <summary>
         /// Creates a <see cref="JsonDynamicContract"/> for the given type.
         /// </summary>
         /// <param name="objectType">Type of the object.</param>
@@ -995,24 +1012,24 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             if (CollectionUtils.IsDictionaryType(t))
                 return CreateDictionaryContract(objectType);
 
-            if (typeof(IEnumerable).IsAssignableFrom(t))
+			if (typeof(IEnumerable).IsAssignableFrom(t) || ReflectionUtils.ImplementsGenericDefinition(t, typeof(IEnumerable<>)))
                 return CreateArrayContract(objectType);
 
             if (CanConvertToString(t))
                 return CreateStringContract(objectType);
 
-#if !(NETFX_CORE || PORTABLE40 || PORTABLE)
-            if (!IgnoreSerializableInterface && typeof(ISerializable).IsAssignableFrom(t))
+#if !(NETFX_CORE || PORTABLE40 || PORTABLE || MONO)
+			if (!IgnoreSerializableInterface && typeof(ISerializable).IsAssignableFrom(t))
                 return CreateISerializableContract(objectType);
 #endif
 
-#if !(NET35 || NET20 || PORTABLE40)
-            if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(t))
+#if !(NET35 || NET20 || PORTABLE40 || MONO)
+			if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(t))
                 return CreateDynamicContract(objectType);
 #endif
 
-#if !(PORTABLE || NETFX_CORE)
-            // tested last because it is not possible to automatically deserialize custom IConvertible types
+#if !(PORTABLE || NETFX_CORE || MONO)
+			// tested last because it is not possible to automatically deserialize custom IConvertible types
             if (IsIConvertible(t))
                 return CreatePrimitiveContract(t);
 #endif
@@ -1027,8 +1044,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             return (typeCode != PrimitiveTypeCode.Empty && typeCode != PrimitiveTypeCode.Object);
         }
 
-#if !(PORTABLE || NETFX_CORE)
-        internal static bool IsIConvertible(Type t)
+#if !(PORTABLE || NETFX_CORE || MONO)
+		internal static bool IsIConvertible(Type t)
         {
             if (typeof(IConvertible).IsAssignableFrom(t)
                 || (ReflectionUtils.IsNullableType(t) && typeof(IConvertible).IsAssignableFrom(Nullable.GetUnderlyingType(t))))
@@ -1041,9 +1058,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 #endif
 
         internal static bool CanConvertToString(Type type)
-        {
-#if !(NETFX_CORE || PORTABLE40 || PORTABLE)
-            TypeConverter converter = ConvertUtils.GetConverter(type);
+		{
+#if !(NETFX_CORE || PORTABLE40 || PORTABLE || MONO)
+			TypeConverter converter = ConvertUtils.GetConverter(type);
 
             // use the objectType's TypeConverter if it has one and can convert to a string
             if (converter != null
@@ -1149,18 +1166,18 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             // warning - this method use to cause errors with Intellitrace. Retest in VS Ultimate after changes
             IValueProvider valueProvider;
 
-#if !(PORTABLE40 || PORTABLE || NETFX_CORE)
-            if (DynamicCodeGeneration)
+#if !(PORTABLE40 || PORTABLE || NETFX_CORE || MONO)
+			if (DynamicCodeGeneration)
                 valueProvider = new DynamicValueProvider(member);
             else
                 valueProvider = new ReflectionValueProvider(member);
-#elif !(PORTABLE40)
+#elif !(PORTABLE40 || MONO)
             valueProvider = new ExpressionValueProvider(member);
 #else
             valueProvider = new ReflectionValueProvider(member);
 #endif
 
-            return valueProvider;
+			return valueProvider;
         }
 
         /// <summary>
@@ -1213,8 +1230,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 #endif
 
             JsonPropertyAttribute propertyAttribute = JsonTypeReflector.GetAttribute<JsonPropertyAttribute>(attributeProvider);
-            if (propertyAttribute != null)
-                property.HasMemberAttribute = true;
+            JsonRequiredAttribute requiredAttribute = JsonTypeReflector.GetAttribute<JsonRequiredAttribute>(attributeProvider);
 
             string mappedName;
             if (propertyAttribute != null && propertyAttribute.PropertyName != null)
@@ -1246,13 +1262,20 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 hasMemberAttribute = true;
             }
 #endif
+            if (requiredAttribute != null)
+            {
+                property._required = Required.Always;
+                hasMemberAttribute = true;
+            }
+
+            property.HasMemberAttribute = hasMemberAttribute;
 
             bool hasJsonIgnoreAttribute =
                 JsonTypeReflector.GetAttribute<JsonIgnoreAttribute>(attributeProvider) != null
                     // automatically ignore extension data dictionary property if it is public
                 || JsonTypeReflector.GetAttribute<JsonExtensionDataAttribute>(attributeProvider) != null
-#if !(NETFX_CORE || PORTABLE40 || PORTABLE)
-                || JsonTypeReflector.GetAttribute<NonSerializedAttribute>(attributeProvider) != null
+#if !(NETFX_CORE || PORTABLE40 || PORTABLE || MONO)
+ || JsonTypeReflector.GetAttribute<NonSerializedAttribute>(attributeProvider) != null
 #endif
                 ;
 
@@ -1260,8 +1283,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             {
                 bool hasIgnoreDataMemberAttribute = false;
 
-#if !(NET20 || NET35)
-                hasIgnoreDataMemberAttribute = (JsonTypeReflector.GetAttribute<IgnoreDataMemberAttribute>(attributeProvider) != null);
+#if !(NET20 || NET35 || MONO)
+				hasIgnoreDataMemberAttribute = (JsonTypeReflector.GetAttribute<IgnoreDataMemberAttribute>(attributeProvider) != null);
 #endif
 
                 // ignored if it has JsonIgnore or NonSerialized or IgnoreDataMember attributes
@@ -1301,18 +1324,10 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             if ((DefaultMembersSearchFlags & BindingFlags.NonPublic) == BindingFlags.NonPublic)
                 allowNonPublicAccess = true;
 #pragma warning restore 618
-            if (propertyAttribute != null)
+            if (hasMemberAttribute)
                 allowNonPublicAccess = true;
             if (memberSerialization == MemberSerialization.Fields)
                 allowNonPublicAccess = true;
-
-#if !NET20
-            if (dataMemberAttribute != null)
-            {
-                allowNonPublicAccess = true;
-                property.HasMemberAttribute = true;
-            }
-#endif
         }
 
         private Predicate<object> CreateShouldSerializeTest(MemberInfo member)
@@ -1351,10 +1366,20 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         /// Resolves the name of the property.
         /// </summary>
         /// <param name="propertyName">Name of the property.</param>
-        /// <returns>Name of the property.</returns>
-        protected internal virtual string ResolvePropertyName(string propertyName)
+        /// <returns>Resolved name of the property.</returns>
+        protected virtual string ResolvePropertyName(string propertyName)
         {
             return propertyName;
+        }
+
+        /// <summary>
+        /// Resolves the key of the dictionary. By default <see cref="ResolvePropertyName"/> is used to resolve dictionary keys.
+        /// </summary>
+        /// <param name="dictionaryKey">Key of the dictionary.</param>
+        /// <returns>Resolved key of the dictionary.</returns>
+        protected virtual string ResolveDictionaryKey(string dictionaryKey)
+        {
+            return ResolvePropertyName(dictionaryKey);
         }
 
         /// <summary>

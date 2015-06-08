@@ -19,7 +19,7 @@ namespace Voron.Tests.Bugs
 			options.MaxScratchBufferSize = 1 * 1024 * 1024 * 1024;
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanRecoverAfterRestartWithMultipleFilesInSingleTransaction()
 		{
 
@@ -62,7 +62,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanResetLogInfoAfterBigUncommitedTransaction()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -94,7 +94,7 @@ namespace Voron.Tests.Bugs
 			Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanResetLogInfoAfterBigUncommitedTransaction2()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -139,7 +139,7 @@ namespace Voron.Tests.Bugs
 			Assert.Equal(currentJournalInfo.CurrentJournal +1, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanResetLogInfoAfterBigUncommitedTransactionWithRestart()
 		{
 		    RequireFileBasedPager();
@@ -179,7 +179,7 @@ namespace Voron.Tests.Bugs
             }
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanResetLogInfoAfterBigUncommitedTransactionWithRestart2()
 		{
             RequireFileBasedPager();
@@ -222,7 +222,7 @@ namespace Voron.Tests.Bugs
 		}
 
 
-		[Fact]
+		[PrefixesFact]
 		public void CorruptingOneTransactionWillKillAllFutureTransactions()
 		{
             RequireFileBasedPager();
