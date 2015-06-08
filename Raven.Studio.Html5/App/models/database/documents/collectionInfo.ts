@@ -6,8 +6,8 @@ class collectionInfo extends abstractQueryResult {
 
     constructor(dto: collectionInfoDto) {
         super(dto);
-		this.results = dto.Results.map(d => new document(d))
-	}
+        this.results = dto.Results.map(d => new document(d));
+    }
 }
 
 export = collectionInfo;

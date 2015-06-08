@@ -43,7 +43,7 @@ class collection {
     }
 
     clearCollection() {
-        if (this.isAllDocuments === true && !!this.documentsList) {
+        if (this.isAllDocuments && !!this.documentsList) {
             this.documentsList.clear();
         }
     }

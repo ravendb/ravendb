@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -38,12 +37,8 @@ namespace Raven.Database.Server.Controllers
 
 			// If admin, show all dbs
 
-			var start = GetStart();
-			var nextPageStart = start; // will trigger rapid pagination
-			var databases = Database.Documents.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, start,
-										GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
-
-			var databasesData = GetDatabasesData(databases);
+		    var databasesDocuments = GetResourcesDocuments(Constants.Database.Prefix);
+			var databasesData = GetDatabasesData(databasesDocuments);
 			var databasesNames = databasesData.Select(databaseObject => databaseObject.Name).ToArray();
 
 			List<string> approvedDatabases = null;
@@ -90,13 +85,13 @@ namespace Raven.Database.Server.Controllers
 
 			if (approvedDatabases != null)
 			{
-				databasesData = databasesData.Where(databaseData => approvedDatabases.Contains(databaseData.Name)).ToList();
-				databasesNames = databasesNames.Where(databaseName => approvedDatabases.Contains(databaseName)).ToArray();
+				databasesData = databasesData.Where(data => approvedDatabases.Contains(data.Name)).ToList();
+				databasesNames = databasesNames.Where(name => approvedDatabases.Contains(name)).ToArray();
 			}
 
 			var responseMessage = getAdditionalData ? GetMessageWithObject(databasesData) : GetMessageWithObject(databasesNames);
 			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
-			return responseMessage;
+			return responseMessage.WithNoCache();
 		}
 
 		private List<DatabaseData> GetDatabasesData(IEnumerable<RavenJToken> databases)
@@ -141,7 +136,7 @@ namespace Raven.Database.Server.Controllers
         /// <param name="settingsProperty">Setting as raven object</param>
         /// <param name="propertyName">The property to be fetched</param>
         /// <returns>the value of the requested property as bool, default not found value is false.</returns>
-        private bool GetBooleanSettingStatus(RavenJObject settingsProperty,string propertyName)
+        private static bool GetBooleanSettingStatus(RavenJObject settingsProperty, string propertyName)
 	    {
 	        if (settingsProperty == null)
 	            return false;
@@ -153,6 +148,7 @@ namespace Raven.Database.Server.Controllers
             bool propertyStatus;
             if(bool.TryParse(propertyStatusString, out propertyStatus))
                 return propertyStatus;
+
             return false;
 	    }
 
@@ -166,7 +162,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				DatabaseSize = totalSizeOnDisk,
 				DatabaseSizeHumane = SizeHelper.Humane(totalSizeOnDisk)
-			});
+			}).WithNoCache();
 		}
 
 		[HttpGet]
@@ -187,9 +183,7 @@ namespace Raven.Database.Server.Controllers
 				IndexStorageSizeHumane = SizeHelper.Humane(indexStorageSize),
 				TotalDatabaseSize = totalDatabaseSize,
 				TotalDatabaseSizeHumane = SizeHelper.Humane(totalDatabaseSize),
-			});
+			}).WithNoCache();
 		}
-
-
 	}
 }

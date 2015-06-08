@@ -25,7 +25,7 @@ class patch extends viewModelBase {
     indexNames = ko.observableArray<string>();
     collections = ko.observableArray<collection>();
 
-    currentCollectionPagedItems = ko.observable<pagedList>();
+    currentGroupPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
 
     patchDocument = ko.observable<patchDocument>();
@@ -125,7 +125,7 @@ class patch extends viewModelBase {
         this.selectedDocumentIndices.subscribe(list => {
             var firstCheckedOnList = list.last();
             if (firstCheckedOnList != null) {
-                this.currentCollectionPagedItems().getNthItem(firstCheckedOnList)
+                this.currentGroupPagedItems().getNthItem(firstCheckedOnList)
                     .done(document => {
                         this.documentKey(document.__metadata.id);
                         this.beforePatchDoc(JSON.stringify(document.toDto(), null, 4));
@@ -188,7 +188,7 @@ class patch extends viewModelBase {
                 this.fetchAllIndexes();
                 break;
             default:
-                this.currentCollectionPagedItems(null);
+                this.currentGroupPagedItems(null);
                 break;
         }
     }
@@ -215,7 +215,7 @@ class patch extends viewModelBase {
     setSelectedCollection(coll: collection) {
         this.patchDocument().selectedItem(coll.name);
         var list = coll.getDocuments();
-        this.currentCollectionPagedItems(list);
+        this.currentGroupPagedItems(list);
         list.fetch(0, 20);
         $("#matchingDocumentsGrid").resize();
     }
@@ -246,7 +246,7 @@ class patch extends viewModelBase {
                 return command.execute();
             };
             var resultsList = new pagedList(resultsFetcher);
-            this.currentCollectionPagedItems(resultsList);
+            this.currentGroupPagedItems(resultsList);
             return resultsList;
         }
         return null;

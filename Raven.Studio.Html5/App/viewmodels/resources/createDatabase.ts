@@ -151,10 +151,9 @@ class createDatabase extends viewModelBase {
         if (licenseStatus == null || !licenseStatus.IsCommercial) {
             return true;
         }
-        else {
-            var value = licenseStatus.Attributes[name];
-            return value === "true";
-        }
+
+        var value = licenseStatus.Attributes[name];
+        return value === "true";
     }
 
     nextOrCreate() {

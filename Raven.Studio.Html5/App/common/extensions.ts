@@ -356,7 +356,7 @@ class extensions {
     }
 
     private static installBindingHandlers() {
-        ko.bindingHandlers['numericValue'] = {
+        ko.bindingHandlers["numericValue"] = {
             init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
                 var underlyingObservable = valueAccessor();
                 var interceptor = ko.computed({
@@ -373,7 +373,7 @@ class extensions {
             update: ko.bindingHandlers.value.update
         };
 
-        ko.bindingHandlers['customValidity'] = {
+        ko.bindingHandlers["customValidity"] = {
             update: (element, valueAccessor) => {
                 var errorMessage = ko.unwrap(valueAccessor()); //unwrap to get subscription
                 element.setCustomValidity(errorMessage);

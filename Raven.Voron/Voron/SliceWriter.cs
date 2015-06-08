@@ -21,58 +21,62 @@ namespace Voron
 		    _pos = 0;
 	    }
 
-
 		public void WriteString(string s)
 	    {
-		    var stringBytes = Encoding.UTF8.GetBytes(s,0,s.Length,_buffer, _pos);
+		    var stringBytes = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, _pos);
 		    _pos += stringBytes;
 	    }
 
 		public void WriteBytes(byte[] bytes)
 	    {
-			Array.Copy(bytes, _buffer, bytes.Length);
+			Array.Copy(bytes, 0, _buffer, _pos, bytes.Length);
 			_pos += (bytes.Length);
 		}
 
-		public void WriteBigEndian(byte b)
+		public void WriteLittleEndian(byte b)
 		{
 			_buffer[_pos] = b;
 			_pos += sizeof(byte);
 		}
 
-		public void WriteBigEndian(char i)
+		public void WriteLittleEndian(char i)
 		{
-			EndianBitConverter.Big.CopyBytes(i, _buffer, _pos);
+			EndianBitConverter.Little.CopyBytes(i, _buffer, _pos);
 			_pos += sizeof(char);
 		}
 
-		public void WriteBigEndian(double d)
+		public void WriteLittleEndian(double d)
 		{
-			EndianBitConverter.Big.CopyBytes(d, _buffer, _pos);
+			EndianBitConverter.Little.CopyBytes(d, _buffer, _pos);
 			_pos += sizeof(double);
 		}
 
-		public void WriteBigEndian(int i)
+		public void WriteLittleEndian(int i)
         {
-            EndianBitConverter.Big.CopyBytes(i, _buffer, _pos);
-            _pos += sizeof (int);
+			EndianBitConverter.Little.CopyBytes(i, _buffer, _pos);
+            _pos += sizeof(int);
 		}
 
-		public void WriteBigEndian(long l)
+		public void WriteLittleEndian(long l)
         {
-            EndianBitConverter.Big.CopyBytes(l, _buffer, _pos);
+			EndianBitConverter.Little.CopyBytes(l, _buffer, _pos);
             _pos += sizeof(long);
 		}
 
-        public void WriteBigEndian(short s)
+        public void WriteLittleEndian(short s)
         {
-            EndianBitConverter.Big.CopyBytes(s, _buffer, _pos);
+			EndianBitConverter.Little.CopyBytes(s, _buffer, _pos);
             _pos += sizeof(short);
 		}
 
         public Slice CreateSlice()
         {
-			return new Slice(_buffer, (ushort)_pos);
+			return new Slice(_buffer, (ushort)(_pos - 1));
         }
+
+		public Slice CreateSlice(int pos)
+		{
+			return new Slice(_buffer, (ushort)pos);
+		}
     }
 }

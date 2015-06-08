@@ -1,27 +1,27 @@
 ﻿import commandBase = require("commands/commandBase");
-import counter = require("models/counter/counter");
+import counterChange = require("models/counter/counterChange");
 import counterStorage = require("models/counter/counterStorage");
 
 class updateCounterCommand extends commandBase {
 
-    /**
-    * @param counterStorage - the counter storage that is being used
-    * @param editedCounter - the edited counter
-    * @param delta - the change to apply to the counter
-    */
-    constructor(private storage: counterStorage, private editedCounter: counter, private delta: number) {
+    constructor(private cs: counterStorage, private group: string, private counterName: string, private delta: number, private isNew: boolean) {
         super();
     }
 
-    execute(): JQueryPromise<counter[]> {
+    execute(): JQueryPromise<counterChange[]> {
         var args = {
-            counterName: this.editedCounter.id(),
-            group: this.editedCounter.group(),
+            group: this.group,
+            counterName: this.counterName,
             delta: this.delta
         };
+        var url = "/change/" + this.group + "/" + this.counterName + this.urlEncodeArgs({delta: this.delta });
+        var action = this.post(url, null, this.cs, { dataType: undefined });
 
-        var url = "/change" + this.urlEncodeArgs(args);
-        return this.post(url, null, this.storage, { dataType: undefined });
+        var successMessage = this.isNew ? "Successfully created a new counter!" : "Successfully updated a counter!";
+        action.done(() => this.reportSuccess(successMessage));
+        var failMessage = this.isNew ? "Failed to create a new counter!" : "Successfully to update counter!";
+        action.fail((response: JQueryXHR) => this.reportError(failMessage, response.responseText, response.statusText));
+        return action;
     }
 }
 

@@ -1,25 +1,23 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web.Http;
 using Raven.Abstractions.Data;
-// -----------------------------------------------------------------------
-//  <copyright file="FileSystemsController.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
 using Raven.Abstractions.FileSystem;
 using Raven.Database.Extensions;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web.Http;
+// -----------------------------------------------------------------------
+//  <copyright file="FileSystemsController.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
 
 namespace Raven.Database.FileSystem.Controllers
 {
@@ -46,8 +44,8 @@ namespace Raven.Database.FileSystem.Controllers
 
 			// If admin, show all file systems
 
-			var fileSystemsDocument = GetFileSystemsDocuments();
-			var fileSystemsData = GetFileSystemsData(fileSystemsDocument);
+			var fileSystemsDocuments = GetResourcesDocuments(Constants.FileSystem.Prefix);
+			var fileSystemsData = GetFileSystemsData(fileSystemsDocuments);
 			var fileSystemsNames = fileSystemsData.Select(fileSystemObject => fileSystemObject.Name).ToArray();
 
 			List<string> approvedFileSystems = null;
@@ -82,29 +80,19 @@ namespace Raven.Database.FileSystem.Controllers
 				});
 			}
 
-			var lastDocEtag = Etag.Empty;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-			});
-
-			if (MatchEtag(lastDocEtag))
-				return GetEmptyMessage(HttpStatusCode.NotModified);
-
 			if (approvedFileSystems != null)
 			{
-				fileSystemsData = fileSystemsData.Where(databaseData => approvedFileSystems.Contains(databaseData.Name)).ToList();
-				fileSystemsNames = fileSystemsNames.Where(databaseName => approvedFileSystems.Contains(databaseName)).ToArray();
+				fileSystemsData = fileSystemsData.Where(data => approvedFileSystems.Contains(data.Name)).ToList();
+				fileSystemsNames = fileSystemsNames.Where(name => approvedFileSystems.Contains(name)).ToArray();
 			}
 
 			var responseMessage = getAdditionalData ? GetMessageWithObject(fileSystemsData) : GetMessageWithObject(fileSystemsNames);
-			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage.WithNoCache();
 		}
 
 		private static List<FileSystemData> GetFileSystemsData(IEnumerable<RavenJToken> fileSystems)
 		{
-			var fileSystemsData = fileSystems
+			return fileSystems
 				.Select(fileSystem =>
 				{
 					var bundles = new string[] { };
@@ -125,21 +113,10 @@ namespace Raven.Database.FileSystem.Controllers
 						IsAdminCurrentTenant = true,
 					};
 				}).ToList();
-			return fileSystemsData;
 		}
 
 		private class FileSystemData : TenantData
 		{
-		}
-
-		private RavenJArray GetFileSystemsDocuments()
-		{
-			var start = GetStart();
-			var nextPageStart = start; // will trigger rapid pagination
-			var fileSystemsDocuments = Database.Documents.GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, start,
-				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
-
-			return fileSystemsDocuments;
 		}
 
 		[HttpGet]
@@ -159,7 +136,7 @@ namespace Raven.Database.FileSystem.Controllers
 		[RavenRoute("fs/stats")]
 		public async Task<HttpResponseMessage> Stats()
 		{
-			var fileSystemsDocument = GetFileSystemsDocuments();
+			var fileSystemsDocument = GetResourcesDocuments(Constants.FileSystem.Prefix);
 			var fileSystemsData = GetFileSystemsData(fileSystemsDocument);
 			var fileSystemsNames = fileSystemsData.Select(fileSystemObject => fileSystemObject.Name).ToArray();
 

@@ -7,14 +7,14 @@ class getCounterGroupsCommand extends commandBase {
     /**
     * @param ownerDb The database the collections will belong to.
     */
-    constructor(private storage: counterStorage) {
+    constructor(private cs: counterStorage) {
         super();
 
     }
 
     execute(): JQueryPromise<counterGroup[]> {
-        var selector = (groups: counterGroupDto[]) => groups.map(g => new counterGroup(g));
-        return this.query("/groups", null, this.storage, selector);
+        var selector = (groups: counterGroupDto[]) => groups.map((g: counterGroupDto) => counterGroup.fromDto(g, this.cs));
+        return this.query("/groups", null, this.cs, selector);
     }
 }
 

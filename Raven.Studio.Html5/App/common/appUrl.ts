@@ -572,7 +572,7 @@ class appUrl {
         else if (res && res instanceof filesystem) {
             return appUrl.baseUrl + "/fs/" + res.name;
         } else if (res && res instanceof counterStorage) {
-            return appUrl.baseUrl + "/counters/" + res.name;
+            return appUrl.baseUrl + "/cs/" + res.name;
         }
 
         return this.baseUrl;

@@ -277,41 +277,15 @@ namespace Raven.Database.Counters.Controllers
 
 		[RavenRoute("cs/{counterStorageName}/counters")]
 		[HttpGet]
-		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string inputGroupName = null)
+		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
+			var counterResults = new Dictionary<Tuple<string,string>,List<long>>();
 			using (var reader = Storage.CreateReader())
 			{
-				//TODO: implement
-				/*var prefix = (inputGroupName == null) ? string.Empty : (inputGroupName + Constants.CountersSeperator);
-				//todo: get only the counter prefixes: foo/bar/
-				var results = (
-					from fullCounterName in reader.GetFullCounterNames(prefix)
-					let groupName = fullCounterName.Split(Constants.CountersSeperator)[0]
-					let counterName = fullCounterName.Split(Constants.CountersSeperator)[1]
-					let counter = reader.GetCounterValuesByPrefix(groupName, counterName)
-					/*let overallTotalPositive = counter.CounterValues.Where(x => x.IsPositive).Sum(x => x.Value)
-					let overallTotalNegative = counter.CounterValues.Where(x => !x.IsPositive).Sum(x => x.Value)#1#
-					select new CounterView
-					{
-						Name = counterName,
-						Group = groupName,
-						OverallTotal = CounterStorage.CalculateOverallTotal(counter),
-						Servers = (from counterValue in counter.CounterValues
-								  group counterValue by counterValue.GetServerId into g
-								  select new CounterView.ServerValue{
-									  Name = g.Select(x => x.ServerName).ToString(),
-									  Positive = g.Where(x => x.IsPositive).Select(x => x.Value).FirstOrDefault(),
-									  Negative = g.Where(x => !x.IsPositive).Select(x => x.Value).FirstOrDefault(),
-								  }).ToList()
-						/*Servers = counter.CounterValues.Select(s => new CounterView.ServerValue
-						{
-							Negative = s.Negative, 
-							Positive = s.Positive, 
-							Name = CounterStorage.Reader.ServerNameFor(s.SourceId)
-						}).ToList()#1#
-					}).ToList();
-				return Request.CreateResponse(HttpStatusCode.OK, results);*/
-				return Request.CreateResponse(HttpStatusCode.OK);
+				var groupsPrefix = (group == null) ? string.Empty : (group + Constants.Counter.Separator);
+				var counterByPrefixes = reader.GetCountersByPrefixes(groupsPrefix, skip, take);
+				var counters = counterByPrefixes.Select(groupWithCounterName => reader.GetCounterSummary(groupWithCounterName)).ToList();
+				return GetMessageWithObject(counters);
 			}
 		}
 
@@ -348,13 +322,13 @@ namespace Raven.Database.Counters.Controllers
 				countersByPrefix.CounterValues.ForEach(x =>
 				{
 					ServerValue serverValue;
-					var serverId = x.GetServerId();
+					var serverId = x.ServerId();
 					if (serverValuesDictionary.TryGetValue(serverId, out serverValue) == false)
 					{
 						serverValue = new ServerValue();
 						serverValuesDictionary.Add(serverId, serverValue);
 					}
-					serverValue.UpdateValue(x.IsPositive, x.Value);
+					serverValue.UpdateValue(x.IsPositive(), x.Value);
 				});
 
                 var serverValues =
