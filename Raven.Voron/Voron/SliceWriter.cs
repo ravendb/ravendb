@@ -8,18 +8,21 @@ namespace Voron
     {
 		private int _pos;
 		private readonly byte[] _buffer;
+	    private readonly EndianBitConverter _bitConverter;
 
-	    public SliceWriter(byte[] outsideBuffer)
+		public SliceWriter(byte[] outsideBuffer, EndianBitConverter bitConverter = null)
 	    {
 		    _buffer = outsideBuffer;
 			_pos = 0;
+			_bitConverter = bitConverter ?? EndianBitConverter.Little;
 	    }
 
-	    public SliceWriter(int size)
+		public SliceWriter(int size, EndianBitConverter bitConverter = null)
 	    {
 		    _buffer = new byte[size];
 		    _pos = 0;
-	    }
+			_bitConverter = bitConverter ?? EndianBitConverter.Little;
+		}
 
 		public void WriteString(string s)
 	    {
@@ -33,39 +36,39 @@ namespace Voron
 			_pos += (bytes.Length);
 		}
 
-		public void WriteLittleEndian(byte b)
+		public void Write(byte b)
 		{
 			_buffer[_pos] = b;
 			_pos += sizeof(byte);
 		}
 
-		public void WriteLittleEndian(char i)
+		public void Write(char i)
 		{
-			EndianBitConverter.Little.CopyBytes(i, _buffer, _pos);
+			_bitConverter.CopyBytes(i, _buffer, _pos);
 			_pos += sizeof(char);
 		}
 
-		public void WriteLittleEndian(double d)
+		public void Write(double d)
 		{
-			EndianBitConverter.Little.CopyBytes(d, _buffer, _pos);
+			_bitConverter.CopyBytes(d, _buffer, _pos);
 			_pos += sizeof(double);
 		}
 
-		public void WriteLittleEndian(int i)
+		public void Write(int i)
         {
-			EndianBitConverter.Little.CopyBytes(i, _buffer, _pos);
+			_bitConverter.CopyBytes(i, _buffer, _pos);
             _pos += sizeof(int);
 		}
 
-		public void WriteLittleEndian(long l)
+		public void Write(long l)
         {
-			EndianBitConverter.Little.CopyBytes(l, _buffer, _pos);
+			_bitConverter.CopyBytes(l, _buffer, _pos);
             _pos += sizeof(long);
 		}
 
-        public void WriteLittleEndian(short s)
+        public void Write(short s)
         {
-			EndianBitConverter.Little.CopyBytes(s, _buffer, _pos);
+			_bitConverter.CopyBytes(s, _buffer, _pos);
             _pos += sizeof(short);
 		}
 
