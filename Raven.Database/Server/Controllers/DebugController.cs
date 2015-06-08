@@ -739,6 +739,14 @@ namespace Raven.Database.Server.Controllers
 				PreparedTransactions = Database.TransactionalStorage.GetPreparedTransactions()
 			});
 		}
+
+		[HttpGet]
+		[RavenRoute("debug/subscriptions")]
+		[RavenRoute("databases/{databaseName}/debug/subscriptions")]
+		public HttpResponseMessage Subscriptions()
+		{
+			return GetMessageWithObject(Database.Subscriptions.GetDebugInfo());
+		}
 	}
 
 	public class RouteInfo
