@@ -193,6 +193,8 @@ namespace Raven.Client.UniqueConstraints
 				if (constraintDoc == null)
 					continue;
 
+				session.Advanced.Evict(constraintDoc);
+
 				var constraintId = constraintsIds[i];
 				var relatedId = constraintDoc.GetRelatedIdFor(constraintId.Key);
 
@@ -231,6 +233,8 @@ namespace Raven.Client.UniqueConstraints
 
 			if (constraintDoc == null)
 				return default(T);
+
+			session.Advanced.Evict(constraintDoc);
 
 			return await session.LoadAsync<T>(constraintDoc.GetRelatedIdFor(escapedValue));
 		}

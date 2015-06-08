@@ -918,7 +918,8 @@
     <Compile Include="Suggestions\SuggestionsLazy.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
-    <Compile Include="TestBase\Animal_Search.cs" />
+    <Compile Include="TestBase\Animals_Count.cs" />
+    <Compile Include="TestBase\Animals_Search.cs" />
     <Compile Include="TestBase\FakeModelHelpers.cs" />
     <Compile Include="TestBase\FakeModels.cs" />
     <Compile Include="TestBase\RavenTestBaseTests.cs" />
