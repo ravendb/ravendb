@@ -13,6 +13,7 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -29,6 +30,7 @@ using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
+using Raven.Client.Linq.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -286,6 +288,7 @@ namespace Raven.Tests.Helpers
             bool ensureDatabaseExists = true,
             Action<DocumentStore> configureStore = null,
             string activeBundles = null,
+		
             IEnumerable<IEnumerable> seedData = null)
         {
             databaseName = NormalizeDatabaseName(databaseName);
@@ -762,10 +765,17 @@ namespace Raven.Tests.Helpers
 			documentDatabase.DatabaseCommands.Put("Raven/StudioConfig", null, doc, metadata);
 		}
 
+	/*    private void isServerExsist(string url)
+	    {
+		    checkPorts.CompareTo(url);
+
+	    }*/
+
 		protected void WaitForUserToContinueTheTest(bool debug = true, string url = null)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
+
 
 			using (var documentStore = new DocumentStore
 			{
@@ -774,6 +784,18 @@ namespace Raven.Tests.Helpers
 			{
                 var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
                 var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+				var request = WebRequest.Create(documentsPage);
+
+				try
+				{
+					var response = request.GetResponse();
+				}
+				catch (WebException ex)
+				{
+					
+					throw new NotSupportedException("when using a local store WaitForUserToContinueTheTest must be called with store parameter",ex);
+				}
+
                 Process.Start(documentsPage); // start the server
 
 				do
