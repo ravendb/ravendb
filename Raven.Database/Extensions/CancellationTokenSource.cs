@@ -53,7 +53,12 @@ namespace Raven.Database.Extensions
             }, null, this.dueTime, -1);
         }
 
-        public void Delay()
+	    ~CancellationTimeout()
+	    {
+			DisposeInternal();
+	    }
+
+	    public void Delay()
         {
 			if (isTimerDisposed)
 				return;
@@ -88,11 +93,17 @@ namespace Raven.Database.Extensions
 
         public void Dispose()
         {
+			GC.SuppressFinalize(this);
+	        DisposeInternal();
+        }
+
+	    private void DisposeInternal()
+	    {
 			if (isTimerDisposed)
 				return;
 
-	        lock (locker)
-	        {
+			lock (locker)
+			{
 				if (isTimerDisposed)
 					return;
 
@@ -100,7 +111,7 @@ namespace Raven.Database.Extensions
 
 				if (timer != null)
 					timer.Dispose();
-	        }
-        }
+			}
+	    }
     }
 }
