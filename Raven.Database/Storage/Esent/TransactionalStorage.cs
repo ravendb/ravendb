@@ -756,35 +756,40 @@ namespace Raven.Storage.Esent
 		    Action afterStorageCommit = null;
 
 		    disposerLock.EnterReadLock();
-		    try
-		    {
-			    afterStorageCommit = ExecuteBatch(action, batchNestingAllowed ? dtcTransactionContext.Value : null);
+	        try
+	        {
+		        afterStorageCommit = ExecuteBatch(action, batchNestingAllowed ? dtcTransactionContext.Value : null);
 
-			    if (dtcTransactionContext.Value != null)
-			    {
-				    dtcTransactionContext.Value.AfterCommit((Action) afterStorageCommit.Clone());
-				    afterStorageCommit = null; // delay until transaction will be committed
-			    }
-		    }
-		    catch (EsentErrorException e)
+		        if (dtcTransactionContext.Value != null)
+		        {
+			        dtcTransactionContext.Value.AfterCommit((Action) afterStorageCommit.Clone());
+			        afterStorageCommit = null; // delay until transaction will be committed
+		        }
+	        }
+		    catch (Exception ex)
 		    {
 			    if (disposed)
 			    {
-				    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
+				    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + ex);
 				    if (Environment.StackTrace.Contains(".Finalize()") == false)
-					    throw e;
+					    throw ex;
 				    return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 			    }
 
-			    switch (e.Error)
+			    EsentErrorException e = ex as EsentErrorException;
+			    if (e != null)
 			    {
-				    case JET_err.WriteConflict:
-				    case JET_err.SessionWriteConflict:
-				    case JET_err.WriteConflictPrimaryIndex:
-					    throw new ConcurrencyException("Concurrent modification to the same document are not allowed", e);
-				    default:
-					    throw;
+				    switch (e.Error)
+				    {
+					    case JET_err.WriteConflict:
+					    case JET_err.SessionWriteConflict:
+					    case JET_err.WriteConflictPrimaryIndex:
+						    throw new ConcurrencyException("Concurrent modification to the same document are not allowed", e);
+					    default:
+						    throw;
+				    }
 			    }
+			    throw;
 		    }
 		    finally
 		    {
