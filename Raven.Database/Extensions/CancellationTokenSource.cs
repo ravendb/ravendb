@@ -29,28 +29,30 @@ namespace Raven.Database.Extensions
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
         }
 
-        public CancellationTimeout(CancellationTokenSource source, TimeSpan dueTime)
+        public CancellationTimeout(CancellationTokenSource cancellationTokenSource, TimeSpan dueTime)
         {
-            if (source == null)
-                throw new ArgumentNullException("source");
+            if (cancellationTokenSource == null)
+                throw new ArgumentNullException("cancellationTokenSource");
             if (dueTime < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException("dueTime");
 
             isTimerDisposed = false;
-            CancellationTokenSource = source;
+            CancellationTokenSource = cancellationTokenSource;
             this.dueTime = (long)dueTime.TotalMilliseconds;
-            timer = new Timer(self =>
-            {
-                Dispose(); 
+			timer = new Timer(self =>
+			{
+				var source = self as CancellationTokenSource;
+				if (source == null)
+					return;
 
-                try
-                {
-                    CancellationTokenSource.Cancel();
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-            }, null, this.dueTime, -1);
+				try
+				{
+					source.Cancel();
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			}, cancellationTokenSource, this.dueTime, -1);
         }
 
 	    ~CancellationTimeout()
