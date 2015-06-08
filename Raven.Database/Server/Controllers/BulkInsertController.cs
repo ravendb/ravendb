@@ -116,6 +116,8 @@ namespace Raven.Database.Server.Controllers
                     status.Documents = documents;
 	                CurrentOperationContext.User.Value = null;
 	                CurrentOperationContext.Headers.Value = null;
+
+					timeout.Dispose();
                 }
 			}, tre.Token);
 
