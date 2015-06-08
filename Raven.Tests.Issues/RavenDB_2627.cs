@@ -774,7 +774,8 @@ namespace Raven.Tests.Issues
 				store.DatabaseCommands.Put("items/1", null, new RavenJObject(), new RavenJObject());
 
 				Assert.True(subscriberException.Task.Wait(waitForDocTimeout));
-				Assert.True(subscription.IsErrored);
+				Assert.True(subscription.IsErroredBecauseOfSubscriber);
+				Assert.Equal("Fake exception", subscription.LastSubscriberException.Message);
 
 				Assert.True(SpinWait.SpinUntil(() => subscription.IsClosed, waitForDocTimeout));
 
@@ -812,7 +813,7 @@ namespace Raven.Tests.Issues
 				RavenJObject doc;
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-				Assert.False(subscription.IsErrored);
+				Assert.False(subscription.IsErroredBecauseOfSubscriber);
 			}
 		}
 

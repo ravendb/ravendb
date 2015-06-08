@@ -21,6 +21,10 @@ namespace Raven.Database.Actions
 		private readonly ConcurrentDictionary<long, SubscriptionConnectionOptions> openSubscriptions = 
 			new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
 
+		private readonly ConcurrentDictionary<long, ConcurrentQueue<SubscriptionConnectionOptions>> pendingClients =
+			new ConcurrentDictionary<long, ConcurrentQueue<SubscriptionConnectionOptions>>();
+
+
 		public SubscriptionActions(DocumentDatabase database, ILog log)
 			: base(database, null, null, log)
 		{
@@ -85,12 +89,28 @@ namespace Raven.Database.Actions
 			{
 				// last connected client didn't send at least two 'client-alive' notifications - let the requesting client to open it
 
-				ReleaseSubscription(id);
-				openSubscriptions.TryAdd(id, options);
+				ForceReleaseAndOpenForNewClient(id, options);
 				return;
 			}
 
+			switch (options.Strategy)
+			{
+				case SubscriptionOpeningStrategy.LastTakesOver:
+					ForceReleaseAndOpenForNewClient(id, options);
+					return;
+				case SubscriptionOpeningStrategy.QueueIn:
+					var pendingQueue = pendingClients.GetOrAdd(id, new ConcurrentQueue<SubscriptionConnectionOptions>());
+					pendingQueue.Enqueue(options);
+					break;
+			}
+
 			throw new SubscriptionInUseException("Subscription is already in use. There can be only a single open subscription connection per subscription.");
+		}
+
+		private void ForceReleaseAndOpenForNewClient(long id, SubscriptionConnectionOptions options)
+		{
+			ReleaseSubscription(id);
+			openSubscriptions.TryAdd(id, options);
 		}
 
 		public void ReleaseSubscription(long id)
