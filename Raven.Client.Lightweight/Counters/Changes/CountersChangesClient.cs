@@ -23,7 +23,7 @@ namespace Raven.Client.Counters.Changes
                                        ICredentials credentials,
                                        HttpJsonRequestFactory jsonRequestFactory, Convention conventions,
                                        Action onDispose)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
+            : base(url, apiKey, credentials, jsonRequestFactory, conventions.ShouldCacheRequest, onDispose)
         {
 
         }

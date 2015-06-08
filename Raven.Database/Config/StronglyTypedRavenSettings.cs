@@ -304,6 +304,7 @@ namespace Raven.Database.Config
 		}
 
 		public IntegerSetting MaxClauseCount { get; private set; }
+
 		public BooleanSetting AllowScriptsToAdjustNumberOfSteps { get; private set; }
 
 		public IntegerSetting IndexAndTransformerReplicationLatencyInSec { get; private set; }

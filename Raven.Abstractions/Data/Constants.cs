@@ -284,6 +284,9 @@ namespace Raven.Abstractions.Data
 		// Queries
 		public const string MaxClauseCount = "Raven/MaxClauseCount";
 
+		public const string MaxClauseCount = "Raven/MaxClauseCount";
+
+
 		// General
 		public static class Database
 		{

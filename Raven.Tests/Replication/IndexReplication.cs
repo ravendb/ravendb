@@ -271,7 +271,8 @@ namespace Raven.Tests.Replication
 					Url = source.Url
 				});
 
-				replicationRequest.ExecuteRequest();
+				replicationRequest.ExecuteRequest();				
+
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);

@@ -105,8 +105,11 @@ namespace Raven.Server
 			}
 			BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
 
+			BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
+
 			owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
 			options = owinHttpServer.Options;
+			
 			serverThingsForTests = new ServerThingsForTests(options);
 			Func<HttpMessageHandler> httpMessageHandlerFactory = ()=>new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
 			documentStore.HttpMessageHandlerFactory = httpMessageHandlerFactory;

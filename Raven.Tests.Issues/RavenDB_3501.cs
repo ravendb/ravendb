@@ -46,8 +46,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Too_much_clauses_should_throw_proper_exception()
 		{
-			using (var server = GetNewServer(port:8090))
-			using (var store = NewRemoteDocumentStore(ravenDbServer:server))
+			using (var store = NewRemoteDocumentStore())
 			{
 				var list = new List<string>();
 				using (var session = store.OpenSession())
@@ -55,7 +54,7 @@ namespace Raven.Tests.Issues
 					for (var i = 0; i < MaxClauseCountInTest + 5; i++)
 					{
 						list.Add(i.ToString(CultureInfo.InvariantCulture));
-						session.Store(new Student { Email = "student@" + i });
+						session.Store(new Student {Email = "student@" + i});
 					}
 					session.SaveChanges();
 				}
@@ -82,8 +81,7 @@ namespace Raven.Tests.Issues
 		[InlineData(MaxClauseCountInTest)]
 		public void In_Query_should_respect_MaxClauseCount_setting(int numberOfInItems)
 		{
-			using (var server = GetNewServer(port: 8090))
-			using (var store = NewRemoteDocumentStore(ravenDbServer: server))
+			using (var store = NewRemoteDocumentStore())
 			{
 				var list = new List<string>();
 				using (var session = store.OpenSession())
@@ -92,7 +90,7 @@ namespace Raven.Tests.Issues
 					{
 						list.Add(i.ToString(CultureInfo.InvariantCulture));
 
-						session.Store(new Student { Email = "student@" + i });
+						session.Store(new Student {Email = "student@" + i});
 					}
 					session.SaveChanges();
 				}
@@ -108,7 +106,7 @@ namespace Raven.Tests.Issues
 					var query = session.Advanced.DocumentQuery<Student, Students_ByEmailDomain>()
 												.Where(queryString);
 					var value = query.Lazily().Value;
-
+					
 					Assert.Equal(128, value.Count());
 				}
 			}

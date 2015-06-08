@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,23 +10,28 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Client;
 using Raven.Client.Counters;
+using Raven.Database.Extensions;
 using Raven.Tests.Helpers;
 
 namespace Raven.Tests.Counters
 {
 	public class RavenBaseCountersTest : RavenTestBase
 	{
-		private readonly IDocumentStore ravenStore;
+		protected readonly IDocumentStore ravenStore;
 		private readonly ConcurrentDictionary<string, int> storeCount;
-		protected const string DefaultCounteStorageName = "FooBarCounter_ThisIsRelativelyUniqueCounterName";
+		protected readonly string DefaultCounteStorageName = "ThisIsRelativelyUniqueCounterName";
 
 		protected RavenBaseCountersTest()
 		{
+			foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueCounterName*"))
+				IOExtensions.DeleteDirectory(folder);
+
 			ravenStore = NewRemoteDocumentStore(fiddler:true);
+			DefaultCounteStorageName += Guid.NewGuid();
 			storeCount = new ConcurrentDictionary<string, int>();
 		}
 
-		protected ICounterStore NewRemoteCountersStore(string counterStorageName = DefaultCounteStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
+		protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
 		{
 			ravenStore = ravenStore ?? this.ravenStore;
 			storeCount.AddOrUpdate(ravenStore.Identifier, id => 1, (id, val) => val++);		
@@ -34,7 +40,7 @@ namespace Raven.Tests.Counters
 			{
 				Url = ravenStore.Url,
 				Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
-				DefaultCounterStorageName = counterStorageName + storeCount[ravenStore.Identifier]
+				Name = counterStorageName + storeCount[ravenStore.Identifier]
 			};
 			counterStore.Initialize(createDefaultCounter);
 			return counterStore;
@@ -53,9 +59,15 @@ namespace Raven.Tests.Counters
 
 		public override void Dispose()
 		{
-			base.Dispose();
-
 			if (ravenStore != null) ravenStore.Dispose();
+
+			try
+			{
+				base.Dispose();
+			}
+			catch (AggregateException) //TODO: do not forget to investigate where counter storage is not being disposed
+			{
+			}
 		}
 
 		protected async Task<bool> WaitForReplicationBetween(ICounterStore source, ICounterStore destination, string groupName, string counterName, int timeoutInSec = 30)
@@ -71,16 +83,12 @@ namespace Raven.Tests.Counters
 				if ((DateTime.Now - waitStartingTime).TotalSeconds > timeoutInSec)
 					break;
 
-				using (var sourceClient = source.NewCounterClient())
-				using (var destinationClient = destination.NewCounterClient())
+				var sourceValue = await source.GetOverallTotalAsync(groupName, counterName);
+				var targetValue = await destination.GetOverallTotalAsync(groupName, counterName);
+				if (sourceValue == targetValue)
 				{
-					var sourceValue = await sourceClient.Commands.GetOverallTotalAsync(groupName, counterName);
-					var targetValue = await destinationClient.Commands.GetOverallTotalAsync(groupName, counterName);
-					if (sourceValue == targetValue)
-					{
-						hasReplicated = true;
-						break;
-					}
+					hasReplicated = true;
+					break;
 				}
 
 				Thread.Sleep(50);
@@ -91,25 +99,17 @@ namespace Raven.Tests.Counters
 
 		protected static async Task SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
 		{
-			using (var client = source.NewCounterClient())
+			var replicationDocument = new CountersReplicationDocument();
+			foreach (var destStore in destinations)
 			{
-				var replicationDocument = new CountersReplicationDocument();
-				foreach (var destStore in destinations)
+				replicationDocument.Destinations.Add(new CounterReplicationDestination
 				{
-					using (var destClient = destStore.NewCounterClient())
-					{
-						replicationDocument.Destinations.Add(new CounterReplicationDestination
-						{
-							CounterStorageName = destClient.CounterStorageName,
-							ServerUrl = destClient.ServerUrl
-						});
-
-					}
-				}
-
-				await client.Replication.SaveReplicationsAsync(replicationDocument);
+					CounterStorageName = destStore.Name,
+					ServerUrl = destStore.Url
+				});
 			}
-		}	
 
+			await source.SaveReplicationsAsync(replicationDocument);
+		}
 	}
 }

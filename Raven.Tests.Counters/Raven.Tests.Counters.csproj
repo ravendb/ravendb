@@ -78,6 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AdminClientTests.cs" />
+    <Compile Include="BackupRestoreTests.cs" />
     <Compile Include="CounterFailoverTests.cs" />
     <Compile Include="CounterLoadBalancingTests.cs" />
     <Compile Include="CounterReplicationTests.cs" />

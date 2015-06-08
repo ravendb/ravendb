@@ -104,6 +104,7 @@ namespace Raven.Database.Server.WebApi.Filters
 			});
 		}
 
+
 		private static void HandleBadRequest(HttpActionExecutedContext ctx, BadRequestException e)
 		{
 			ctx.Response = new HttpResponseMessage

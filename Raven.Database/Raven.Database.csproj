@@ -220,6 +220,8 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Counters\Backup\BackupOperation.cs" />
+    <Compile Include="Counters\Backup\RestoreOperation.cs" />
     <Compile Include="JsConsole\AdminJsConsole.cs" />
     <Compile Include="JsConsole\AdminJsScript.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
@@ -449,6 +451,7 @@
     <Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />
     <Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />
     <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
+    <Compile Include="Smuggler\SmugglerCounterApi.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseApi.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />

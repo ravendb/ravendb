@@ -17,10 +17,9 @@ namespace Raven.Tests.Counters
 		[InlineData(-2)]
 		public async Task CountrsReset_should_work(int delta)
 		{
-			using (var store = NewRemoteCountersStore())
-			using (var client = store.NewCounterClient(CounterStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
-				await store.CreateCounterStorageAsync(new CounterStorageDocument
+				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
@@ -29,25 +28,24 @@ namespace Raven.Tests.Counters
 				}, CounterStorageName);
 
 				const string CounterGroupName = "FooBarGroup";
-				await client.Commands.ChangeAsync(CounterGroupName, CounterName,delta);
+				await store.ChangeAsync(CounterGroupName, CounterName, delta);
 
-				var total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
+				var total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(delta);
+				await store.ResetAsync(CounterGroupName, CounterName);
 
-				await client.Commands.ResetAsync(CounterGroupName, CounterName);
-
-				total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
+				total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(0);
-			}			
+		
+			}	
 		}
 
 		[Fact]
 		public async Task CountersIncrement_should_work()
 		{
-			using (var store = NewRemoteCountersStore())
-			using (var client = store.NewCounterClient(CounterStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
-				await store.CreateCounterStorageAsync(new CounterStorageDocument
+				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
@@ -56,14 +54,14 @@ namespace Raven.Tests.Counters
 				}, CounterStorageName);
 
 				const string CounterGroupName = "FooBarGroup12";
-				await client.Commands.IncrementAsync(CounterGroupName, CounterName);
+				await store.IncrementAsync(CounterGroupName, CounterName);
 
-				var total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
+				var total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(1);
 
-				await client.Commands.IncrementAsync(CounterGroupName, CounterName);
+				await store.IncrementAsync(CounterGroupName, CounterName);
 
-				total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
+				total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(2);
 			}
 		}
@@ -71,10 +69,9 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Counters_change_should_work()
 		{
-			using (var store = NewRemoteCountersStore())
-			using (var client = store.NewCounterClient(CounterStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
-				await store.CreateCounterStorageAsync(new CounterStorageDocument
+				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
@@ -83,14 +80,14 @@ namespace Raven.Tests.Counters
 				}, CounterStorageName);
 
 				const string CounterGroupName = "FooBarGroup";
-				await client.Commands.ChangeAsync(CounterGroupName, CounterName, 5);
+				await store.ChangeAsync(CounterGroupName, CounterName, 5);
 
-				var total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
+				var total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(5);
 
-				await client.Commands.ChangeAsync(CounterGroupName,CounterName, -30);
+				await store.ChangeAsync(CounterGroupName, CounterName, -30);
 
-				total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
+				total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(-25);
 			}
 		}

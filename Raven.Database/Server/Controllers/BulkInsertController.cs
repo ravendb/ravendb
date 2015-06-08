@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -14,7 +13,6 @@ using System.Web.Http;
 using Raven.Unix.Native;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
