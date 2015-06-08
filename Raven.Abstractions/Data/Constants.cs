@@ -313,6 +313,8 @@ namespace Raven.Abstractions.Data
 			public const string DataDirectory = "Raven/Counters/DataDir";
 
 			public const string UrlPrefix = "cs";
+
+			public const string Separator = "/";
 		}
 
 		// Subscriptions

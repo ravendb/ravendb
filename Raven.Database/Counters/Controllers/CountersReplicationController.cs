@@ -14,7 +14,7 @@ namespace Raven.Database.Counters.Controllers
     {
 		[RavenRoute("cs/{counterStorageName}/lastEtag")]
 		[HttpGet]
-		public HttpResponseMessage GetLastEtag(string serverId)
+		public HttpResponseMessage GetLastEtag(Guid serverId)
 		{
 			using (var reader = Storage.CreateReader())
 			{
@@ -55,26 +55,27 @@ namespace Raven.Database.Counters.Controllers
 					var currentCounter = writer.GetCounterValue(counter.FullCounterName);
 
 					//if current counter exists and current value is less than received value
-		            if (currentCounter != null && currentCounter.Value <= counter.CounterValue.Value)
+		            if (currentCounter != -1 && currentCounter <= counter.Value)
 						continue;
 
 					wroteCounter = true;
 
-					if (String.IsNullOrWhiteSpace(counter.FullCounterName))
+					if (string.IsNullOrWhiteSpace(counter.FullCounterName))
 						return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
 					
-					var counterChangeAction = writer.Store(counter.FullCounterName, counter.CounterValue);
+					var counterValue = new CounterValue(counter.FullCounterName, counter.Value);
+					var counterChangeAction = writer.Store(counterValue);
 					counterChangeNotifications.Add(new ReplicationChangeNotification
 					{
-						GroupName = counter.GroupName,
-						CounterName = counter.CounterName,
+						GroupName = counterValue.Group(),
+						CounterName = counterValue.CounterName(),
 						Action = counterChangeAction,
 					});
 				}
 
 				var serverId = replicationMessage.ServerId;
-	            if (String.IsNullOrWhiteSpace(serverId))
-		            return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty server Id");
+	            //if (String.IsNullOrWhiteSpace(serverId))
+		        //    return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty server Id");
 
 				if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
                 {
