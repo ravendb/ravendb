@@ -92,6 +92,7 @@ class appUrl {
         statusDebugPersistAutoIndex: ko.computed(() => appUrl.forStatusDebugPersistAutoIndex(appUrl.currentDatabase())),
         statusDebugExplainReplication: ko.computed(() => appUrl.forStatusDebugExplainReplication(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
+        dataSubscriptions: ko.computed(() => appUrl.forDataSubscriptions(appUrl.currentDatabase())),
 
         statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
         statusStorageBreakdown: ko.computed(() => appUrl.forStatusStorageBreakdown(appUrl.currentDatabase())),
@@ -402,6 +403,10 @@ class appUrl {
             url += "&index=" + index;
         }
         return url;
+    }
+
+    static forDataSubscriptions(db: database): string {
+        return "#databases/status/debug/dataSubscriptions?" + appUrl.getEncodedDbPart(db);
     }
 
     static forDatabaseSettings(db: database): string {
