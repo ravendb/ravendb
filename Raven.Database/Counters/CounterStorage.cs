@@ -329,6 +329,9 @@ namespace Raven.Database.Counters
 					do
 					{
 						//the last byte contains the sign
+						//we consistently use utf8 encoding in the system, 
+						//thats why single character will be one-byte width
+
 						var signByte = it.CurrentKey[it.CurrentKey.Size - 1];
 						var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
 						if (Convert.ToChar(signByte) == ValueSign.Positive)
