@@ -156,8 +156,8 @@ namespace Raven.Tests.Helpers
         /// <param name="indexes">A collection of indexes to execute.</param>
         /// <param name="transformers">A collection of transformers to execute.</param>
         /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
-        /// <param name="waitForAllIndexesToBeNotStale">When you query an index, the query will wait for the index to complete it's indexing and not be stale -before- the query is executred.</param>
-        /// <remarks>Besides the document store being instantiated, it is also Initialized.<br/>Also, if you provide some indexes to be used, make sure you understand that they might be stale when you query them. To make sure you're querying against indexes that have completed their indexing (ie. index is not stale), use the <code>waitForAllIndexesToBeNotStale</code> parameter to determine if you wish to query against a stale or not-stale query.</remarks>
+        /// <param name="noStaleQueries">When you query an index, the query will wait for the index to complete it's indexing and not be stale -before- the query is executed.</param>
+        /// <remarks>Besides the document store being instantiated, it is also Initialized.<br/>Also, if you provide some indexes to be used, make sure you understand that they might be stale when you query them. To make sure you're querying against indexes that have completed their indexing (ie. index is not stale), use the <code>noStaleQueries</code> parameter to determine if you wish to query against a stale or not-stale query.</remarks>
         /// <returns>A new instance of an EmbeddableDocumentStore.</returns>
         public EmbeddableDocumentStore NewDocumentStore(
             bool runInMemory = true,
@@ -173,7 +173,7 @@ namespace Raven.Tests.Helpers
             IEnumerable<AbstractIndexCreationTask> indexes = null,
             IEnumerable<AbstractTransformerCreationTask> transformers = null,
             IEnumerable<IEnumerable> seedData = null,
-            bool waitForAllIndexesToBeNotStale = true)
+            bool noStaleQueries = false)
         {
             databaseName = NormalizeDatabaseName(databaseName);
 
@@ -230,13 +230,8 @@ namespace Raven.Tests.Helpers
                     ExecuteIndexes(indexes, documentStore);
                 }
 
-                if (waitForAllIndexesToBeNotStale)
+                if (noStaleQueries)
                 {
-                    documentStore.Conventions.DefaultQueryingConsistency =
-                        ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite;
-
-                    // When querying any map/reduce indexes, we'll wait until
-                    // the index has stopped being stale.
                     documentStore.Listeners.RegisterListener(new NoStaleQueriesListener());
                 }
 

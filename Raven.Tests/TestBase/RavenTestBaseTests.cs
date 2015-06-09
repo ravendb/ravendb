@@ -70,7 +70,7 @@ namespace Raven.Tests.TestBase
 
             var documentStore = NewDocumentStore(seedData: seedData, 
                 indexes: indexes,
-                waitForAllIndexesToBeNotStale: true);
+                noStaleQueries: true);
 
             // Act.
             IList<Animals_Count.AnimalCountResult> results;
