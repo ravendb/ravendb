@@ -115,7 +115,7 @@ class appUrl {
         filesystemVersioning: ko.computed(() => appUrl.forFilesystemVersioning(appUrl.currentFilesystem())),
 
         couterStorages: ko.computed(() => appUrl.forCounterStorages()),
-        counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),
+        counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(null, appUrl.currentCounterStorage())),
         counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
@@ -131,9 +131,10 @@ class appUrl {
         return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
     }
 
-    static forCounterStorageCounters(counterStorage: counterStorage) {
-        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
-        return "#counterstorages/counters?" + counterStroragePart;
+    static forCounterStorageCounters(gruopName: string, counterStorage: counterStorage) {
+        var groupPart = gruopName ? "group=" + encodeURIComponent(gruopName) : "";
+        var counterStoragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        return "#counterstorages/counters?" + groupPart + counterStoragePart;
     }
 
     static forCounterStorageReplication(counterStorage: counterStorage) {

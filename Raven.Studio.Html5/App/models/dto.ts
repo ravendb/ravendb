@@ -1004,6 +1004,11 @@ interface filterSettingDto {
     ShouldMatch: boolean;
 }
 
+interface resourceStyleMap {
+    resourceName: string;
+    styleMap: any;
+}
+
 interface counterStorageDto {
     Name: string;
     Path?: string;

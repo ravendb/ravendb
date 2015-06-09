@@ -10,19 +10,29 @@
                     <div class="col-md-12" data-bind="visible: $root.isNew() == false">
                         <label class="col-md-6" for="total">Current Value:</label>
                         <div class="col-md-6">
-                            <input type="text" class="form-control" id="total" data-bind="value: value" />
+                            <span id="total" data-bind="text: value"></span>
                         </div>
                     </div>
                     <div class="col-md-12">
                         <label class="col-md-6" for="group">Group:</label>
                         <div class="col-md-6">
+                            <!-- ko if: $root.isNew() -->
                             <input required type="text" class="form-control" id="group" placeholder="Group Name" data-bind="value: group, valueUpdate: 'afterkeydown'">
+                            <!-- /ko -->
+                            <!-- ko ifnot: $root.isNew() -->
+                            <span data-bind="text: group"></span>
+                            <!-- /ko -->
                         </div>
                     </div>
                     <div class="col-md-12">
                         <label class="col-md-6" for="counterName">Counter Name:</label>
                         <div class="col-md-6">
+                            <!-- ko if: $root.isNew() -->
                             <input required type="text" class="form-control" id="counterName" placeholder="Counter Name" data-bind="value: counterName, valueUpdate: 'afterkeydown'">
+                            <!-- /ko -->
+                            <!-- ko ifnot: $root.isNew() -->
+                            <span data-bind="text: counterName"></span>
+                            <!-- /ko -->
                         </div>
                     </div>
                     <div class="col-md-12">
@@ -30,6 +40,9 @@
                         <div class="col-md-6" style="display: inline-block">
                             <input class="form-control" required type="number" id="counterDelta" placeholder="Counter Delta" data-bind="value: delta, valueUpdate: 'afterkeydown'">
                         </div>
+                    </div>
+                    <div class="col-md-12" data-bind="visible: $root.isNew()">
+                        *Using an existing group and counter name will update its value
                     </div>
                 </div>
             </div>

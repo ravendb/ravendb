@@ -1,13 +1,14 @@
-﻿class counterSummary {
-    id = ko.observable<string>();
+﻿class counterSummary implements documentBase {
+    static separator = "/";
+    Id: string;
     Group: string;
     Name: string;
     Increments: number;
     Decrements: number;
-    Total: number;
+    Total: number; 
 
     constructor(dto: counterSummaryDto) {
-        this.id(dto.Group + "/" + dto.CounterName);
+        this.Id = dto.Group + counterSummary.separator + dto.CounterName;
         this.Group = dto.Group;
         this.Name = dto.CounterName;
         this.Increments = dto.Increments;
@@ -15,17 +16,20 @@
         this.Total = dto.Total;
     }
 
+    getEntityName() {
+        return this.Group;
+    }
+
     getDocumentPropertyNames(): Array<string> {
-        return [ "Total", "Increments", "Decrements"];
+        return [ "Id", "Total", "Increments", "Decrements"];
     }
 
     getId() {
-        return this.id();
+        return this.Id;
     }
 
     getUrl() {
-        //TODO: generate url
-        return "123";
+        return this.getId() + counterSummary.separator;
     }
 } 
 

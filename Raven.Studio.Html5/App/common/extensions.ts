@@ -345,11 +345,11 @@ class extensions {
         functionPrototype.memoize = function (thisVal) {
             var self = this;
             var cache = {};
-            return (arg) => {
-                if (arg in cache) {
-                    return cache[arg];
+            return (arg1, arg2) => {
+                if (arg2 in cache) {
+                    return cache[arg2];
                 } else {
-                    return cache[arg] = self.call(thisVal, arg);
+                    return cache[arg2] = self.call(thisVal, arg1, arg2);
                 }
             };
         };

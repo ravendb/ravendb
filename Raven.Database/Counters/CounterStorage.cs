@@ -23,7 +23,6 @@ using Raven.Database.Util;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
-using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Raven.Abstractions.Data.Constants;
 
@@ -58,8 +57,6 @@ namespace Raven.Database.Counters
 
 		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
 		{			
-			jsonSerializer = new JsonSerializer();
-			bufferPool = new BufferPool(1024, Int32.MaxValue);
 			CounterStorageUrl = string.Format("{0}cs/{1}", serverUrl, storageName);
 			Name = storageName;
 			ResourceName = string.Concat(Constants.Counter.UrlPrefix, "/", storageName);
@@ -71,12 +68,13 @@ namespace Raven.Database.Counters
 			transportState = recievedTransportState ?? new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			replicationTask = new ReplicationTask(this);
-
 			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
-
 			metricsCounters = new CountersMetricsManager();
 			Configuration = configuration;
 			ExtensionsState = new AtomicDictionary<object>();
+			jsonSerializer = new JsonSerializer();
+			bufferPool = new BufferPool(1024, Int32.MaxValue);
+
 			Initialize();
 		}
 
@@ -84,14 +82,14 @@ namespace Raven.Database.Counters
 		{
 			using (var tx = CounterStorageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				storageEnvironment.CreateTree(tx, "servers->lastEtag");
-				storageEnvironment.CreateTree(tx, "counters");
-				storageEnvironment.CreateTree(tx, "groups");
-				storageEnvironment.CreateTree(tx, "counters->etags");
-				storageEnvironment.CreateTree(tx, "groupAndCounterName");
+				storageEnvironment.CreateTree(tx, TreeNames.ServersLastEtag);
+				storageEnvironment.CreateTree(tx, TreeNames.Counters);
+				storageEnvironment.CreateTree(tx, TreeNames.CountersGroups);
+				storageEnvironment.CreateTree(tx, TreeNames.CountersToEtag);
+				storageEnvironment.CreateTree(tx, TreeNames.GroupAndCounterName);
 				
-				var etags = CounterStorageEnvironment.CreateTree(tx, "etags->counters");
-				var metadata = CounterStorageEnvironment.CreateTree(tx, "$metadata");
+				var etags = CounterStorageEnvironment.CreateTree(tx, TreeNames.EtagsToCounters);
+				var metadata = CounterStorageEnvironment.CreateTree(tx, TreeNames.Metadata);
 				var id = metadata.Read("id");
 
 				if (id == null) // new counter db
@@ -122,6 +120,11 @@ namespace Raven.Database.Counters
 			}
 		}
 
+		string IResourceStore.Name
+		{
+			get { return Name; }
+		}
+
 		[CLSCompliant(false)]
 		public CountersMetricsManager MetricsCounters
 		{
@@ -141,6 +144,21 @@ namespace Raven.Database.Counters
 		public ReplicationTask ReplicationTask
 		{
 			get { return replicationTask; }
+		}
+
+		public StorageEnvironment CounterStorageEnvironment
+		{
+			get { return storageEnvironment; }
+		}
+
+		private BufferPool BufferPool
+		{
+			get { return bufferPool; }
+		}
+
+		private JsonSerializer JsonSerializer
+		{
+			get { return jsonSerializer; }
 		}
 
 		public AtomicDictionary<object> ExtensionsState { get; private set; }
@@ -260,13 +278,13 @@ namespace Raven.Database.Counters
 			{
 				this.transaction = transaction;
 				this.parent = parent;
-				serversLastEtag = transaction.State.GetTree(transaction, "servers->lastEtag");
-				counters = transaction.State.GetTree(transaction, "counters");
-				countersGroups = transaction.State.GetTree(transaction, "groups");
-				countersToEtags = transaction.State.GetTree(transaction, "counters->etags");
-				etagsToCounters = transaction.State.GetTree(transaction, "etags->counters");
-				groupAndCounterName = transaction.State.GetTree(transaction, "groupAndCounterName");
-				metadata = transaction.State.GetTree(transaction, "$metadata");
+				serversLastEtag = transaction.State.GetTree(transaction, TreeNames.ServersLastEtag);
+				counters = transaction.State.GetTree(transaction, TreeNames.Counters);
+				countersGroups = transaction.State.GetTree(transaction, TreeNames.CountersGroups);
+				countersToEtags = transaction.State.GetTree(transaction, TreeNames.CountersToEtag);
+				etagsToCounters = transaction.State.GetTree(transaction, TreeNames.EtagsToCounters);
+				groupAndCounterName = transaction.State.GetTree(transaction, TreeNames.GroupAndCounterName);
+				metadata = transaction.State.GetTree(transaction, TreeNames.Metadata);
 			}
 
 			public long GetCountersCount()
@@ -538,13 +556,13 @@ namespace Raven.Database.Counters
 				this.parent = parent;
 				this.transaction = transaction;
 				reader = new Reader(parent, transaction);
-				serversLastEtag = transaction.State.GetTree(transaction, "servers->lastEtag");
-				counters = transaction.State.GetTree(transaction, "counters");
-				countersGroups = transaction.State.GetTree(transaction, "groups");
-				etagsToCounters = transaction.State.GetTree(transaction, "etags->counters");
-				countersToEtag = transaction.State.GetTree(transaction, "counters->etags");
-				groupAndCounterName = transaction.State.GetTree(transaction, "groupAndCounterName");
-				metadata = transaction.State.GetTree(transaction, "$metadata");
+				serversLastEtag = transaction.State.GetTree(transaction, TreeNames.ServersLastEtag);
+				counters = transaction.State.GetTree(transaction, TreeNames.Counters);
+				countersGroups = transaction.State.GetTree(transaction, TreeNames.CountersGroups);
+				countersToEtag = transaction.State.GetTree(transaction, TreeNames.CountersToEtag);
+				etagsToCounters = transaction.State.GetTree(transaction, TreeNames.EtagsToCounters);
+				groupAndCounterName = transaction.State.GetTree(transaction, TreeNames.GroupAndCounterName);
+				metadata = transaction.State.GetTree(transaction, TreeNames.Metadata);
 				etagBuffer = parent.BufferPool.TakeBuffer(sizeof (long));
 			}
 
@@ -605,8 +623,8 @@ namespace Raven.Database.Counters
 			// full counter name: foo/bar/server-id/+
 			private unsafe bool Store(string groupName, string counterName, Guid serverId, char sign, Action<Slice> storeAction)
 			{
-				int groupSize = Encoding.UTF8.GetByteCount(groupName);
-				int counterNameSize = Encoding.UTF8.GetByteCount(counterName);
+				var groupSize = Encoding.UTF8.GetByteCount(groupName);
+				var counterNameSize = Encoding.UTF8.GetByteCount(counterName);
 				var fullCounterNameSize = groupSize + 
 										  (sizeof(byte) * 3) + 
 										  counterNameSize + 
@@ -779,23 +797,15 @@ namespace Raven.Database.Counters
 			public long Etag { get; set; }
 		}
 
-		string IResourceStore.Name
+		private static class TreeNames
 		{
-			get { return Name; }
-		}
-
-		public StorageEnvironment CounterStorageEnvironment
-		{
-			get { return storageEnvironment; }
-		}
-
-		internal BufferPool BufferPool
-		{
-			get { return bufferPool; }
-		}
-		internal JsonSerializer JsonSerializer
-		{
-			get { return jsonSerializer; }
+			public const string ServersLastEtag = "servers->lastEtag";
+			public const string Counters = "counters";
+			public const string CountersGroups = "groups";
+			public const string CountersToEtag = "counters->etags";
+			public const string EtagsToCounters = "etags->counters";
+			public const string GroupAndCounterName = "groupAndCounterName";
+			public const string Metadata = "$metadata";
 		}
 	}
 }

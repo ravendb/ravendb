@@ -2,17 +2,21 @@
 import pagedList = require("common/pagedList");
 import getCountersCommand = require("commands/counter/getCountersCommand");
 import pagedResultSet = require("common/pagedResultSet");
+import cssGenerator = require("common/cssGenerator");
 
 class counterGroup {
     static allGroupsGroupName = "All Groups";
     private countersList: pagedList;
+    private static groupColorMaps: resourceStyleMap[] = [];
     countersCount = ko.observable<number>(0);
     countersCountWithThousandsSeparator = ko.computed(() => this.countersCount().toLocaleString());
     isAllGroupsGroup = false;
+    colorClass = "";
 
     constructor(public name: string, private ownerCounterStorage: counterStorage, count: number = 0) {
         this.countersCount(count);
         this.isAllGroupsGroup = name === counterGroup.allGroupsGroupName;
+        this.colorClass = counterGroup.getGroupCssClass(name, ownerCounterStorage);
     }
 
     activate() {
@@ -33,6 +37,14 @@ class counterGroup {
 
     static fromDto(dto: counterGroupDto, storage: counterStorage): counterGroup {
         return new counterGroup(dto.Name, storage, dto.Count);
+    }
+
+    static getGroupCssClass(entityName: string, cs: counterStorage): string {
+        if (entityName === counterGroup.allGroupsGroupName) {
+            return "all-documents-collection";
+        }
+
+        return cssGenerator.getCssClass(entityName, counterGroup.groupColorMaps, cs);
     }
 
     private createPagedList(): pagedList {

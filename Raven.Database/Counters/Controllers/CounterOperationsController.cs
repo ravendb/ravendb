@@ -34,6 +34,9 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public HttpResponseMessage CounterChange(string groupName, string counterName, long delta)
 		{
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var writer = Storage.CreateWriter())
 			{
 				var counterChangeAction = writer.Store(groupName, counterName, delta);
@@ -114,9 +117,11 @@ namespace Raven.Database.Counters.Controllers
 								OperationId = operationId
 							});
 
-							foreach (var counterChange in changeBatch)
+							foreach (var change in changeBatch)
 							{
-								writer.Store(counterChange.Group, counterChange.Name, counterChange.Delta);
+								AssertName(change.Group);
+								AssertName(change.Name);
+								writer.Store(change.Group, change.Name, change.Delta);
 							}
 							writer.Commit();
 
@@ -238,7 +243,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		public class BatchStatus : IOperationState
+		private class BatchStatus : IOperationState
 		{
 			public int Counters { get; set; }
 			public bool Completed { get; set; }
@@ -250,10 +255,13 @@ namespace Raven.Database.Counters.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("cs/{counterStorageName}/reset/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/reset")]
 		[HttpPost]
 		public HttpResponseMessage CounterReset(string groupName, string counterName)
 		{
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var writer = Storage.CreateWriter())
 			{
 				var counterChangeAction = writer.Reset(groupName, counterName);
@@ -279,7 +287,8 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
-			var counterResults = new Dictionary<Tuple<string,string>,List<long>>();
+			AssertName(group, true);
+
 			using (var reader = Storage.CreateReader())
 			{
 				var groupsPrefix = (group == null) ? string.Empty : (group + Constants.Counter.Separator);
@@ -293,6 +302,9 @@ namespace Raven.Database.Counters.Controllers
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var reader = Storage.CreateReader())
 			{
 				var overallTotal = reader.GetCounterOverallTotal(groupName, counterName);
@@ -306,7 +318,10 @@ namespace Raven.Database.Counters.Controllers
 		[RavenRoute("cs/{counterStorageName}/getCounterServersValues/{groupName}/{counterName}")]
         [HttpGet]
         public HttpResponseMessage GetCounterServersValues(string groupName, string counterName)
-		{				
+		{
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var reader = Storage.CreateReader())
 			{
 				if (reader.CounterExists(groupName, counterName) == false)
@@ -340,6 +355,16 @@ namespace Raven.Database.Counters.Controllers
                     }).ToList();
                 return Request.CreateResponse(HttpStatusCode.OK, serverValues);
             }
+		}
+
+		private static void AssertName(string name, bool skipNullCheck = false)
+		{
+			var isNull = string.IsNullOrEmpty(name);
+			if (skipNullCheck == false && isNull)
+				throw new ArgumentException("A name can't be null");
+
+			if (isNull == false && name.IndexOf('/') > -1)
+				throw new ArgumentException("A name can't contain the '/' character");
 		}
 
 		private class ServerValue

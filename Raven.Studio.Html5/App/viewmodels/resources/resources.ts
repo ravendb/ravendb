@@ -215,7 +215,7 @@ class resources extends viewModelBase {
     }
 
     getCounterStorageCountersUrl(cs: counterStorage) {
-        return appUrl.forCounterStorageCounters(cs);
+        return appUrl.forCounterStorageCounters(null, cs);
     }
 
     selectResource(rs: resource, activateResource: boolean = true) {

@@ -1,7 +1,6 @@
 ﻿import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import counterChange = require("models/counter/counterChange");
-import updateCounterCommand = require("commands/counter/updateCounterCommand");
 
 class editCounterDialog extends dialogViewModelBase {
 
@@ -62,6 +61,9 @@ class editCounterDialog extends dialogViewModelBase {
         var message = "";
         if (!$.trim(name)) {
             message = "An empty " + fieldName + " is forbidden for use!";
+        }
+        else if (name.indexOf("/") > -1) {
+            message = "A '/' character is forbidden for use!";
         }
         else if (name.length > this.maxNameLength) {
             message = "The  " + fieldName + " length can't exceed " + this.maxNameLength + " characters!";

@@ -111,7 +111,7 @@ class documents extends viewModelBase {
         this.selectedDocumentsText = ko.computed(() => {
             if (!!this.selectedDocumentIndices()) {
                 var documentsText = "document";
-                if (this.selectedDocumentIndices().length != 1) {
+                if (this.selectedDocumentIndices().length !== 1) {
                     documentsText += "s";
                 }
                 return documentsText;
@@ -197,9 +197,8 @@ class documents extends viewModelBase {
         var db = this.activeDatabase();
 
         this.fetchCollections(db).done(results => {
-            this.updateCollections(results, db);
+            this.updateCollections(results);
             //TODO: add a button to refresh the documents and than use this.refreshCollectionsData();
-
             deferred.resolve();
         });
 
@@ -296,7 +295,7 @@ class documents extends viewModelBase {
             });
     }
 
-    private updateCollections(receivedCollections: Array<collection>, db: database) {
+    private updateCollections(receivedCollections: Array<collection>) {
         var deletedCollections = [];
 
         this.collections().forEach((col: collection) => {
@@ -318,7 +317,7 @@ class documents extends viewModelBase {
 
         //if the collection is deleted, go to the all documents collection
         var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
-        if (!currentCollection || currentCollection.documentCount() == 0) {
+        if (!currentCollection || currentCollection.documentCount() === 0) {
             this.selectCollection(this.allDocumentsCollection);
         }
     }
@@ -340,7 +339,7 @@ class documents extends viewModelBase {
     }
 
     private reloadDocumentsData(db: database) {
-        if (db.name == this.activeDatabase().name) {
+        if (db.name === this.activeDatabase().name) {
             this.refreshCollections().done(() => {
                 this.refreshCollectionsData();
             });
