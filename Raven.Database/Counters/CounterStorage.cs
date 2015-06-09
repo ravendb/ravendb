@@ -292,7 +292,7 @@ namespace Raven.Database.Counters
 			public IEnumerable<string> GetCountersByPrefixes(string groupsPrefix, int skip = 0, int take = Int32.MaxValue)
 			{
 				Debug.Assert(take > 0);
-				Debug.Assert(skip > 0);
+				Debug.Assert(skip >= 0);
 
 				using (var it = groupAndCounterName.Iterate())
 				{
