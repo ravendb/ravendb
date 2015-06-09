@@ -116,33 +116,42 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
+		/// Selects the shard ids appropriate for the specified data.
+		/// </summary>
+		/// <returns>Return a list of shards ids that will be search. Returning null means search all shards.</returns>
+		public virtual IList<string> PotentialShardsFor(ShardRequestData requestData, List<string> potentialShardIds)
+		{
+			return potentialShardIds;
+		}
+
+		/// <summary>
 		///  Selects the shard ids appropriate for the specified data.
-		///  </summary><returns>Return a list of shards ids that will be search. Returning null means search all shards.</returns>
+		///  </summary>
+		/// <returns>Return a list of shards ids that will be search. Returning null means search all shards.</returns>
 		public virtual IList<string> PotentialShardsFor(ShardRequestData requestData)
 		{
 			if (requestData.Query != null)
 			{
 				Regex regex;
 				if (regexToCaptureShardIdFromQueriesByType.TryGetValue(requestData.EntityType, out regex) == false)
-					return null; // we have no special knowledge, let us just query everything
+					return PotentialShardsFor(requestData, null); // we have no special knowledge, let us just query everything
 	
 				var collection = regex.Matches(requestData.Query.Query);
 				if (collection.Count == 0)
-					return null; // we don't have the sharding field, we have to query over everything
+					return PotentialShardsFor(requestData, null); // we don't have the sharding field, we have to query over everything
 
 				var translateQueryValueToShardId = queryResultToStringByType[requestData.EntityType];
 
 				var potentialShardsFor = collection.Cast<Match>().Select(match => translateQueryValueToShardId(match.Groups["shardId"].Value)).ToList();
 
 				if (potentialShardsFor.Any(queryShardId => ShardIds.Contains(queryShardId, StringComparer.OrdinalIgnoreCase)) == false)
-					return null; // we couldn't find the shard ids here, maybe there is something wrong in the query, sending to all shards
+					return PotentialShardsFor(requestData, null); // we couldn't find the shard ids here, maybe there is something wrong in the query, sending to all shards
 
-				return potentialShardsFor;
+				return PotentialShardsFor(requestData, potentialShardsFor);
 			}
 
 			if (requestData.Keys.Count == 0) // we are only optimized for keys
-				return null;
-
+				return PotentialShardsFor(requestData, null);
 
 			// we are looking for search by key, let us see if we can narrow it down by using the 
 			// embedded shard id.
@@ -151,17 +160,17 @@ namespace Raven.Client.Shard
 			{
 				var start = key.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.OrdinalIgnoreCase);
 				if (start == -1)
-					return null; // if we couldn't figure it out, select from all
+					return PotentialShardsFor(requestData, null); // if we couldn't figure it out, select from all
 
 				var maybeShardId = key.Substring(0, start);
 
 				if (ShardIds.Any(x => string.Equals(maybeShardId, x, StringComparison.OrdinalIgnoreCase)))
 					list.Add(maybeShardId);
 				else
-					return null; // we couldn't find it there, select from all
+					return PotentialShardsFor(requestData, null); // we couldn't find it there, select from all
 		
 			}
-			return list.ToArray();
+			return PotentialShardsFor(requestData, list);
 		}
 	}
 }
