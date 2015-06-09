@@ -74,7 +74,11 @@ namespace Raven.Client.Document.Batches
 			{
 				Url = "/facets/" + index,
 				Method = "POST",
-				Content = unescapedFacetsJson
+				Content = unescapedFacetsJson,
+                Query = string.Format("{0}&facetStart={1}&facetPageSize={2}",
+                                            query.GetQueryString(),
+                                            start,
+                                            pageSize)
 			};
 
 		}

@@ -82,6 +82,22 @@ namespace Raven.Tests.Faceted
                         });
 
                     Assert.Equal(facetResultsA.Results["Category"].Values.Count, facetResultsB.Results["Category"].Values.Count);
+
+                    var facetResultsC = s.Query<Item, Index>()
+                        .Where(x => x.Active)
+                        .ToFacetsLazy(new Facet[]
+                        {
+                            new Facet
+                            {
+                                Name = "Category"
+                            },
+                            new Facet
+                        {
+                            Name = "Age",
+                            Ranges = Enumerable.Range(0,2048).Select(x=> "[Dx"+ x + " TO Dx" + (x+1)+"]").ToList()
+                        }
+                        }).Value;
+                    Assert.Equal(facetResultsA.Results["Category"].Values.Count, facetResultsC.Results["Category"].Values.Count);
                 }
             }
         }
