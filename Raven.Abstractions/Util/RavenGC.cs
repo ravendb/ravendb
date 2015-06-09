@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Util
 
 	public static class RavenGC
 	{
-		private static readonly ConcurrentSet<WeakReference<Action>> _releaseMemoryBeforeGC = new ConcurrentSet<WeakReference<Action>>();
+        private static readonly ConcurrentSet<WeakReference<IRavenGarbageCollectionListener>> _releaseMemoryBeforeGC = new ConcurrentSet<WeakReference<IRavenGarbageCollectionListener>>();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private static long memoryBeforeLastForcedGC;
@@ -57,32 +57,32 @@ namespace Raven.Abstractions.Util
 			get { return lastForcedGCTime; }
 		}
 
-		public static void Register(Action action)
+        public static void Register(IRavenGarbageCollectionListener action)
 		{
-			_releaseMemoryBeforeGC.Add(new WeakReference<Action>(action));
+            _releaseMemoryBeforeGC.Add(new WeakReference<IRavenGarbageCollectionListener>(action));
 		}
 
-		public static void Unregister(Action action)
+        public static void Unregister(IRavenGarbageCollectionListener action)
 		{
 			_releaseMemoryBeforeGC.RemoveWhere(reference =>
 			{
-				Action target;
+                IRavenGarbageCollectionListener target;
 				return reference.TryGetTarget(out target) == false || target == action;
 			});
 		}
 
 		private static void ReleaseMemoryBeforeGC()
 		{
-			var inactiveHandlers = new List<WeakReference<Action>>();
+            var inactiveHandlers = new List<WeakReference<IRavenGarbageCollectionListener>>();
 
 			foreach (var lowMemoryHandler in _releaseMemoryBeforeGC)
 			{
-				Action handler;
+                IRavenGarbageCollectionListener handler;
 				if (lowMemoryHandler.TryGetTarget(out handler))
 				{
 					try
 					{
-						handler();
+						handler.GarbageCollectionAboutToHappen();
 					}
 					catch (Exception e)
 					{
@@ -221,4 +221,9 @@ namespace Raven.Abstractions.Util
 		});
 		private static double memoryDifferenceLastGc;
 	}
+
+    public interface IRavenGarbageCollectionListener
+    {
+        void GarbageCollectionAboutToHappen();
+    }
 }
