@@ -32,14 +32,12 @@ namespace Raven.Database.Prefetching
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly BaseBatchSizeAutoTuner autoTuner;
 		private readonly WorkContext context;
-		private readonly ConcurrentDictionary<string, HashSet<Etag>> documentsToRemove =
-			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, HashSet<Etag>> documentsToRemove = new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ReaderWriterLockSlim updatedDocumentsLock = new ReaderWriterLockSlim();
 		private readonly SortedKeyList<Etag> updatedDocuments = new SortedKeyList<Etag>();
 
-		private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches =
-			new ConcurrentDictionary<Etag, FutureIndexBatch>();
+		private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches = new ConcurrentDictionary<Etag, FutureIndexBatch>();
 
 		private readonly ConcurrentJsonDocumentSortedList prefetchingQueue = new ConcurrentJsonDocumentSortedList();
 
@@ -50,7 +48,8 @@ namespace Raven.Database.Prefetching
 		{
 			this.context = context;
 			this.autoTuner = autoTuner;
-			PrefetchingUser = prefetchingUser;
+			this.PrefetchingUser = prefetchingUser;
+
 			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
@@ -101,14 +100,14 @@ namespace Raven.Database.Prefetching
 			return results;
 		}
 
-		private void HandleCollectingDocumentsAfterCommit(Etag reqestedEtag)
+		private void HandleCollectingDocumentsAfterCommit(Etag requestedEtag)
 		{
 			if(ShouldHandleUnusedDocumentsAddedAfterCommit == false)
 				return;
 
 			if (DisableCollectingDocumentsAfterCommit)
 			{
-				if (lowestInMemoryDocumentAddedAfterCommit != null && reqestedEtag.CompareTo(lowestInMemoryDocumentAddedAfterCommit.Etag) > 0)
+				if (lowestInMemoryDocumentAddedAfterCommit != null && requestedEtag.CompareTo(lowestInMemoryDocumentAddedAfterCommit.Etag) > 0)
 				{
 					lowestInMemoryDocumentAddedAfterCommit = null;
 					DisableCollectingDocumentsAfterCommit = false;
@@ -148,8 +147,8 @@ namespace Raven.Database.Prefetching
 		public bool CanUsePrefetcherToLoadFrom(Etag fromEtag)
 		{
 			var nextEtagToIndex = GetNextDocEtag(fromEtag);
-			var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 
+			var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 			if (firstEtagInQueue == null) // queue is empty, let it use this prefetcher
 				return true;
 
@@ -199,9 +198,11 @@ namespace Raven.Database.Prefetching
 			var jsonDocs = GetJsonDocsFromDisk(etag, untilEtag);
 			
             using(prefetchingQueue.EnterWriteLock())
-			foreach (var jsonDocument in jsonDocs)
-				prefetchingQueue.Add(jsonDocument);
-			}
+            {
+                foreach (var jsonDocument in jsonDocs)
+                    prefetchingQueue.Add(jsonDocument);
+            }
+	    }
 
 		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, List<JsonDocument> items, int? take)
 		{
@@ -243,7 +244,7 @@ namespace Raven.Database.Prefetching
 
 		public IEnumerable<JsonDocument> DebugGetDocumentsInPrefetchingQueue()
 		{
-			return prefetchingQueue.Clone();
+			return prefetchingQueue.Clone().Values;
 		}
 
 		public List<object> DebugGetDocumentsInFutureBatches()
