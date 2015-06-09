@@ -87,6 +87,8 @@ class query extends viewModelBase {
     indexSuggestions = ko.observableArray<indexSuggestion>([]);
     showSuggestions: KnockoutComputed<boolean>;
 
+    csvUrl = ko.observable<string>();
+
     static containerSelector = "#queryContainer";
 
     constructor() {
@@ -420,7 +422,8 @@ class query extends viewModelBase {
             var queryCommand = new queryIndexCommand(selectedIndex, database, 0, 25, queryText, sorts, transformer, showFields, indexEntries, useAndOperator, this.isCacheDisable());
 
             this.rawJsonUrl(appUrl.forResourceQuery(database) + queryCommand.getUrl());
-            this.exportUrl = ko.computed(() => (appUrl.forResourceQuery(database) + queryCommand.getCsvUrl() + (this.token() ? "&singleUseAuthToken=" + this.token().Token : "")));
+            this.csvUrl(queryCommand.getCsvUrl());
+            this.exportUrl = ko.computed(() => (appUrl.forResourceQuery(database) + this.csvUrl() + (this.token() ? "&singleUseAuthToken=" + this.token().Token : "")));
 
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator, this.isCacheDisable());
