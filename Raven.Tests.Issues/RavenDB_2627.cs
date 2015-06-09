@@ -960,5 +960,58 @@ namespace Raven.Tests.Issues
 				Assert.Equal(25, user.Age);
 			}
 		}
+
+		[Fact]
+		public void DisposingOneSubscriptionShouldNotAffectOnNotificationsOfOthers()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id1 = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+				var id2 = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+
+				var subscription1 = store.Subscriptions.Open<User>(id1, new SubscriptionConnectionOptions());
+				var items1 = new BlockingCollection<User>();
+				subscription1.Subscribe(items1.Add);
+
+				var subscription2 = store.Subscriptions.Open<User>(id2, new SubscriptionConnectionOptions());
+				var items2 = new BlockingCollection<User>();
+				subscription2.Subscribe(items2.Add);
+
+				store.Changes().WaitForAllPendingSubscriptions();
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new User(), "users/1");
+					s.Store(new User(), "users/2");
+					s.SaveChanges();
+				}
+
+				User user;
+
+				Assert.True(items1.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/1", user.Id);
+				Assert.True(items1.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/2", user.Id);
+
+				Assert.True(items2.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/1", user.Id);
+				Assert.True(items2.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/2", user.Id);
+
+				subscription1.Dispose();
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new User(), "users/3");
+					s.Store(new User(), "users/4");
+					s.SaveChanges();
+				}
+
+				Assert.True(items2.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/3", user.Id);
+				Assert.True(items2.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/4", user.Id);
+			}
+		}
 	}
 }

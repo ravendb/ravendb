@@ -417,11 +417,6 @@ namespace Raven.Client.Document
 			if(endedBulkInsertsObserver != null)
 				endedBulkInsertsObserver.Dispose();
 
-			var disposableChanges = changes as IDisposable;
-
-			if (disposableChanges != null)
-				disposableChanges.Dispose();
-
 			cts.Cancel();
 
 			newDocuments.Set();
