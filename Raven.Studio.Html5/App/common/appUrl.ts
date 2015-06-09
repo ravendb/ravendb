@@ -893,7 +893,11 @@ class appUrl {
     }
 
     static forCurrentFilesystem(): computedAppUrls {
-        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs.
+        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs and Cs.
+    }
+
+    static forCurrentCounterStorage(): computedAppUrls {
+        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs and Cs.
     }
 
     private static getEncodedResourcePart(res?: resource) {
