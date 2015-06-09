@@ -983,6 +983,10 @@ namespace Raven.Client.Connection.Async
 				return new GetRequest()
 				{
 					Url = "/facets/" + x.IndexName,
+                    Query = string.Format("{0}&facetStart={1}&facetPageSize={2}",
+							x.Query.GetQueryString(),
+							x.PageStart,
+							x.PageSize),
 					Method = "POST",
 					Content = serializedFacets
 				};
