@@ -66,7 +66,7 @@ namespace Raven.Database.Prefetching
         {
             Debug.Assert(slim.IsWriteLockHeld);
 
-            innerList.Add(value.Etag, value);
+            innerList[value.Etag] = value;
 
             loadedSize += value.SerializedSizeOnDisk;
         }
