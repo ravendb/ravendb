@@ -46,13 +46,13 @@ namespace Raven.Database.Smuggler
 						Directory.CreateDirectory(exportOptions.ToFile);
 				}
 
-				exportOptions.ToFile = Path.Combine(exportOptions.ToFile, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-0", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
+				exportOptions.ToFile = Path.Combine(exportOptions.ToFile, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-0", CultureInfo.InvariantCulture) + ".counter-incremental-dump");
 				if (File.Exists(exportOptions.ToFile))
 				{
 					var counter = 1;
 					while (true)
 					{
-						exportOptions.ToFile = Path.Combine(Path.GetDirectoryName(exportOptions.ToFile), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + "-" + counter + ".ravendb-incremental-dump");
+						exportOptions.ToFile = Path.Combine(Path.GetDirectoryName(exportOptions.ToFile), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + "-" + counter + ".counter-incremental-dump");
 
 						if (File.Exists(exportOptions.ToFile) == false)
 							break;
@@ -125,39 +125,38 @@ namespace Raven.Database.Smuggler
 
 		private async Task ExportCounterData(CounterConnectionStringOptions @from, JsonTextWriter jsonWriter)
 		{
-			throw new NotImplementedException();
-//			var counterStorageNames = await counterStore.Admin.GetCounterStoragesNamesAsync();
-//			foreach (var storageName in counterStorageNames)
-//			{
-//				var counterStorageInfo = await counterStore.Admin.GetCounterStorageInfo(storageName);
-//				jsonWriter.WriteStartObject();
-//					
-//					jsonWriter.WritePropertyName("CounterStorageName");
-//					jsonWriter.WriteValue(counterStorageInfo.StorageName);
-//					
-//					jsonWriter.WritePropertyName("Counters");					
-//					jsonWriter.WriteStartArray();
-//						foreach (var counterInfo in counterStorageInfo.Counters)
-//						{
-//							jsonWriter.WriteStartObject();
-//								jsonWriter.WritePropertyName("Group");
-//								jsonWriter.WriteValue(counterInfo.Group);
-//								
-//								jsonWriter.WritePropertyName("Name");
-//								jsonWriter.WriteValue(counterInfo.Name);
-//
-//								jsonWriter.WritePropertyName("Positive");
-//								jsonWriter.WriteValue(counterInfo.PositiveCount);
-//
-//								jsonWriter.WritePropertyName("Negative");
-//								jsonWriter.WriteValue(counterInfo.NegativeCount);
-//								
-//							jsonWriter.WriteEndObject();
-//						}
-//					jsonWriter.WriteEndArray();
-//
-//				jsonWriter.WriteEndObject();
-//			}
+			var counterStorageNames = await counterStore.Admin.GetCounterStoragesNamesAsync();
+			foreach (var storageName in counterStorageNames)
+			{
+				var counterStorageInfo = await counterStore.Admin.GetCounterStorageSummary(storageName);
+				jsonWriter.WriteStartObject();
+					
+					jsonWriter.WritePropertyName("CounterStorageName");
+					jsonWriter.WriteValue(storageName);
+					
+					jsonWriter.WritePropertyName("Counters");					
+					jsonWriter.WriteStartArray();
+						foreach (var counterInfo in counterStorageInfo)
+						{
+							jsonWriter.WriteStartObject();
+								jsonWriter.WritePropertyName("Group");
+								jsonWriter.WriteValue(counterInfo.Group);
+								
+								jsonWriter.WritePropertyName("Name");
+								jsonWriter.WriteValue(counterInfo.CounterName);
+
+								jsonWriter.WritePropertyName("Positive");
+								jsonWriter.WriteValue(counterInfo.Increments);
+
+								jsonWriter.WritePropertyName("Negative");
+								jsonWriter.WriteValue(counterInfo.Decrements);
+								
+							jsonWriter.WriteEndObject();
+						}
+					jsonWriter.WriteEndArray();
+
+				jsonWriter.WriteEndObject();
+			}
 		}
 
 		public async Task ImportData(SmugglerImportOptions<CounterConnectionStringOptions> importOptions)

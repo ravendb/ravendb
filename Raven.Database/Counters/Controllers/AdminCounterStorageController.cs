@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -61,7 +62,48 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage(HttpStatusCode.Created);
         }
 
-		[HttpDelete]
+	    [HttpGet]
+	    [RavenRoute("admin/cs/{*id}")]
+	    public async Task<HttpResponseMessage> Get(string id)
+	    {
+		    var counterNameFormat = CheckNameFormat(id, Database.Configuration.Counter.DataDirectory);
+		    if (counterNameFormat.Message != null)
+		    {
+			    return GetMessageWithObject(new
+			    {
+				    Error = counterNameFormat.Message
+			    }, counterNameFormat.ErrorCode);
+		    }
+
+		    if (Authentication.IsLicensedForCounters == false)
+		    {
+			    return GetMessageWithObject(new
+			    {
+				    Error = "Your license does not allow the use of Counters!"
+			    }, HttpStatusCode.BadRequest);
+		    }
+		    
+		    var counterStorage = await CountersLandlord.GetCounterInternal(id);
+		    if (counterStorage == null)
+		    {
+			    return GetMessageWithObject(new
+			    {
+				    Message = string.Format("Didn't find counter storage (name = {0})", id)
+			    }, HttpStatusCode.NotFound);
+		    }
+
+		    var counterSummaries = new List<CounterSummary>();
+		    using (var reader = counterStorage.CreateReader())
+		    {
+			    counterSummaries.AddRange(
+					reader.GetAllCounterGroupAndNames()
+						  .Select(reader.GetCounterSummary));
+		    }
+
+			return GetMessageWithObject(counterSummaries);
+	    }
+
+	    [HttpDelete]
 		[RavenRoute("admin/cs/{*id}")]
 		public HttpResponseMessage Delete(string id)
 		{

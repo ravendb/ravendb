@@ -283,7 +283,7 @@ namespace Raven.Database.Counters.Controllers
 			using (var reader = Storage.CreateReader())
 			{
 				var groupsPrefix = (group == null) ? string.Empty : (group + Constants.Counter.Separator);
-				var counterByPrefixes = reader.GetCountersByPrefixes(groupsPrefix, skip, take);
+				var counterByPrefixes = reader.GetCounterGroupAndNamesByPrefixes(groupsPrefix, skip, take);
 				var counters = counterByPrefixes.Select(groupWithCounterName => reader.GetCounterSummary(groupWithCounterName)).ToList();
 				return GetMessageWithObject(counters);
 			}

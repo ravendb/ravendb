@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
@@ -289,16 +290,26 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			public IEnumerable<string> GetCountersByPrefixes(string groupsPrefix, int skip = 0, int take = Int32.MaxValue)
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public IEnumerable<string> GetAllCounterGroupAndNames()
+			{
+				return GetCounterGroupAndNamesByPrefixes(null);
+			}
+
+			public IEnumerable<string> GetCounterGroupAndNamesByPrefixes(string groupsPrefix, int skip = 0, int take = Int32.MaxValue)
 			{
 				Debug.Assert(take > 0);
-				Debug.Assert(skip > 0);
 
 				using (var it = groupAndCounterName.Iterate())
 				{
-					it.RequiredPrefix = groupsPrefix;
-					it.Skip(skip);
-					if (it.Seek(it.RequiredPrefix) == false)
+					if (groupsPrefix != null)
+						it.RequiredPrefix = groupsPrefix;
+
+					if(skip > 0)
+						it.Skip(skip);
+
+					if ((groupsPrefix != null && it.Seek(it.RequiredPrefix) == false) ||
+						(groupsPrefix == null && it.Seek(Slice.BeforeAllKeys) == false))
 						yield break;
 
 					do
@@ -373,7 +384,7 @@ namespace Raven.Database.Counters
 						};
 					} while (it.MoveNext());
 				}
-			}
+			}		
 
 			public long GetCounterValue(string fullCounterName)
 			{

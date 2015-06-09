@@ -24,6 +24,19 @@ namespace Raven.Client.Counters
 				this.parent = parent;
 			}
 
+			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName, CancellationToken token = default(CancellationToken))
+			{
+				parent.AssertInitialized();
+
+				var requestUriString = String.Format("{0}/admin/cs/{1}", parent.Url, counterStorageName);
+
+				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+				{
+					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+					return response.ToObject<CounterSummary[]>(parent.JsonSerializer);
+				}
+			}
+
 			/// <summary>
 			/// Create new counter storage on the server.
 			/// </summary>
@@ -91,7 +104,7 @@ namespace Raven.Client.Counters
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/cs/counterStorageNames", parent.Url);
+				var requestUriString = String.Format("{0}/cs", parent.Url);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{

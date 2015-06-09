@@ -220,7 +220,6 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
-    <Compile Include="Counters\CounterSummary.cs" />
     <Compile Include="JsConsole\AdminJsConsole.cs" />
     <Compile Include="JsConsole\AdminJsScript.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />

@@ -156,6 +156,7 @@
     <Compile Include="Counters\CounterChange.cs" />
     <Compile Include="Counters\CounterReplicationDestination.cs" />
     <Compile Include="Counters\CountersReplicationDocument.cs" />
+    <Compile Include="Counters\CounterSummary.cs" />
     <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Counters\Notifications\BulkOperationNotification.cs" />
     <Compile Include="Counters\Notifications\ChangeNotification.cs" />
@@ -483,7 +484,5 @@
   </Target>
   -->
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <ItemGroup>
-    <Folder Include="Threading\" />
-  </ItemGroup>
+  <ItemGroup />
 </Project>
