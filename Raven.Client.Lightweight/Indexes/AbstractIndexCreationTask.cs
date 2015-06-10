@@ -275,12 +275,12 @@ namespace Raven.Client.Indexes
 
         private bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
         {
-            if (serverDef.Equals(indexDefinition))
+            if (serverDef.Equals(indexDefinition, false))
                 return true;
 
             // now we need to check if this is a legacy index...
             var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
-            return serverDef.Equals(legacyIndexDefinition);
+            return serverDef.Equals(legacyIndexDefinition, false);
         }
 
         private void ReplicateIndexesIfNeeded(IDatabaseCommands databaseCommands)
