@@ -289,7 +289,7 @@ namespace Raven.Database.Counters
 
 			public long GetCountersCount()
 			{
-				return countersToEtags.State.EntriesCount;
+				return groupAndCounterName.State.EntriesCount;
 			}
 
 			public long GetGroupsCount()
@@ -315,8 +315,7 @@ namespace Raven.Database.Counters
 				using (var it = groupAndCounterName.Iterate())
 				{
 					it.RequiredPrefix = groupsPrefix;
-					it.Skip(skip);
-					if (it.Seek(it.RequiredPrefix) == false)
+					if (it.Seek(it.RequiredPrefix) == false || it.Skip(skip) == false)
 						yield break;
 
 					do
