@@ -774,9 +774,10 @@ namespace Raven.Tests.Issues
 				store.DatabaseCommands.Put("items/1", null, new RavenJObject(), new RavenJObject());
 
 				Assert.True(subscriberException.Task.Wait(waitForDocTimeout));
-				Assert.True(subscription.IsErrored);
+				Assert.True(subscription.IsErroredBecauseOfSubscriber);
+				Assert.Equal("Fake exception", subscription.LastSubscriberException.Message);
 
-				Assert.True(SpinWait.SpinUntil(() => subscription.IsClosed, waitForDocTimeout));
+				Assert.True(SpinWait.SpinUntil(() => subscription.IsConnectionClosed, waitForDocTimeout));
 
 				var subscriptionConfig = store.Subscriptions.GetSubscriptions(0, 1).First();
 
@@ -812,7 +813,7 @@ namespace Raven.Tests.Issues
 				RavenJObject doc;
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-				Assert.False(subscription.IsErrored);
+				Assert.False(subscription.IsErroredBecauseOfSubscriber);
 			}
 		}
 
@@ -917,7 +918,7 @@ namespace Raven.Tests.Issues
 				Assert.False(docs.TryTake(out doc, waitForDocTimeout), doc != null ? doc.ToString() : string.Empty);
 				Assert.False(docs.TryTake(out doc, waitForDocTimeout), doc != null ? doc.ToString() : string.Empty);
 
-				Assert.True(subscription.IsClosed);
+				Assert.True(subscription.IsConnectionClosed);
 
 				subscription.Dispose();
 			}
@@ -957,6 +958,59 @@ namespace Raven.Tests.Issues
 				Assert.True(users.TryTake(out user, waitForDocTimeout));
 				Assert.Equal("users/3", user.Id);
 				Assert.Equal(25, user.Age);
+			}
+		}
+
+		[Fact]
+		public void DisposingOneSubscriptionShouldNotAffectOnNotificationsOfOthers()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id1 = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+				var id2 = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+
+				var subscription1 = store.Subscriptions.Open<User>(id1, new SubscriptionConnectionOptions());
+				var items1 = new BlockingCollection<User>();
+				subscription1.Subscribe(items1.Add);
+
+				var subscription2 = store.Subscriptions.Open<User>(id2, new SubscriptionConnectionOptions());
+				var items2 = new BlockingCollection<User>();
+				subscription2.Subscribe(items2.Add);
+
+				store.Changes().WaitForAllPendingSubscriptions();
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new User(), "users/1");
+					s.Store(new User(), "users/2");
+					s.SaveChanges();
+				}
+
+				User user;
+
+				Assert.True(items1.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/1", user.Id);
+				Assert.True(items1.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/2", user.Id);
+
+				Assert.True(items2.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/1", user.Id);
+				Assert.True(items2.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/2", user.Id);
+
+				subscription1.Dispose();
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new User(), "users/3");
+					s.Store(new User(), "users/4");
+					s.SaveChanges();
+				}
+
+				Assert.True(items2.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/3", user.Id);
+				Assert.True(items2.TryTake(out user, waitForDocTimeout));
+				Assert.Equal("users/4", user.Id);
 			}
 		}
 	}
