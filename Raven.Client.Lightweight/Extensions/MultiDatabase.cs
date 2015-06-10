@@ -60,7 +60,7 @@ namespace Raven.Client.Extensions
         public static string GetRootDatabaseUrl(string url)
         {
             var databaseUrl = url;
-            var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
+			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
             if (indexOfDatabases != -1)
                 databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
             if (databaseUrl.EndsWith("/"))
@@ -74,7 +74,7 @@ namespace Raven.Client.Extensions
                 return null;
 
             var databaseUrl = url;
-            var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
+			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
             if (indexOfDatabases != -1)
             {
                 databaseUrl = databaseUrl.Substring(indexOfDatabases + "/databases/".Length);

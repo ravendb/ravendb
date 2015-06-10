@@ -87,7 +87,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[RavenRoute("databases/{databaseName}/replication/explain/{*docId}")]
 		public HttpResponseMessage ExplainGet(string docId)
 		{
-			if (string.IsNullOrEmpty(docId))
+			if (string.IsNullOrEmpty(docId)) 
 				return GetMessageWithString("Document key is required.", HttpStatusCode.BadRequest);
 
 			var destinationUrl = GetQueryStringValue("destinationUrl");
@@ -262,17 +262,18 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var array = await ReadJsonArrayAsync();
 			if (ReplicationTask != null)
 				ReplicationTask.HandleHeartbeat(src);
-			
+
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var conflictResolvers = DocsReplicationConflictResolvers;
+				var conflictResolvers = DocsReplicationConflictResolvers; 
 
 				string lastEtag = Etag.Empty.ToString();
 
 				var docIndex = 0;
-
-				while (docIndex < array.Length)
+				var retries = 0;
+				while (retries< 3 && docIndex < array.Length)
 				{
+					var lastIndex = docIndex;
 					using (Database.DocumentLock.Lock())
 					{
 						Database.TransactionalStorage.Batch(actions =>
@@ -295,8 +296,23 @@ namespace Raven.Database.Bundles.Replication.Controllers
 								ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
 							}
 
-							SaveReplicationSource(src, lastEtag, array.Length, collections);
+                                                        SaveReplicationSource(src, lastEtag, array.Length, collections);
+							retries = lastIndex == docIndex? retries: 0;
 						});
+					}
+
+					if (lastIndex == docIndex)
+					{
+						
+						if (retries == 3)
+						{
+							Log.Warn("Replication processing did not end up replicating any documents for 3 times in a row, stopping operation", retries);
+				}
+						else
+						{
+							Log.Warn("Replication processing did not end up replicating any documents, due to possible storage error, retry number: {0}", retries);
+			}
+						retries++;
 					}
 				}
 			}
@@ -357,7 +373,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var array = await ReadBsonArrayAsync();
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var conflictResolvers = AttachmentReplicationConflictResolvers;
+				var conflictResolvers = AttachmentReplicationConflictResolvers; 
 
 				Database.TransactionalStorage.Batch(actions =>
 				{
@@ -469,7 +485,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							Database.Documents.Put(docKey, Etag.Empty, document.DataAsJson, document.Metadata, null);
 							Database.Documents.Delete(Constants.RavenReplicationSourcesBasePath + "/" + src, document.Etag, null);
 
-							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId)
+							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId) 
 								document = null;
 						}
 					}
@@ -489,8 +505,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					if (sourceReplicationInformation == null)
 						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 
-					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false
-						&& sourceReplicationInformation.LastModified.HasValue
+					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false 
+						&& sourceReplicationInformation.LastModified.HasValue 
 						&& (SystemTime.UtcNow - sourceReplicationInformation.LastModified.Value).TotalMinutes < 10)
 					{
 						log.Info(string.Format("Replication source mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.Source, src));
@@ -507,19 +523,19 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				var lowMemory = availableMemory < 0.2 * MemoryStatistics.TotalPhysicalMemory && availableMemory < Database.Configuration.AvailableMemoryForRaisingBatchSizeLimit * 2;
 				if (lowMemory)
 				{
-					int size;
+				    int size;
 					var lastBatchSize = sourceReplicationInformation.LastBatchSize;
 					if (lastBatchSize.HasValue && maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-						size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
+                        size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
 					else if (lastBatchSize.HasValue)
-						size = lastBatchSize.Value;
+                        size = lastBatchSize.Value;
 					else if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-						size = maxNumberOfItemsToReceiveInSingleBatch.Value;
+					    size = maxNumberOfItemsToReceiveInSingleBatch.Value;
 					else
-						size = 128;
+					    size = 128;
 
-					sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
-						Math.Max(size / 2, 64);
+				    sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
+                        Math.Max(size / 2, 64);
 				}
 				else
 				{
@@ -629,7 +645,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-
+		
 		[HttpPost]
 		[RavenRoute("replication/replicate-indexes")]
 		[RavenRoute("databases/{databaseName}/replication/replicate-indexes")]

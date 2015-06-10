@@ -35,7 +35,7 @@ using Newtonsoft.Json.Converters;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -491,14 +491,10 @@ namespace Newtonsoft.Json.Tests.Converters
                     Value2 = DuplicateNameEnum2.foo_bar_NOT_USED
                 });
 
-                Console.WriteLine(Encoding.UTF8.GetString(ms.ToArray(), 0, (int)ms.Length));
-
                 string xml = @"<DuplicateEnumNameTestClass xmlns=""http://schemas.datacontract.org/2004/07/Newtonsoft.Json.Tests.Converters"" xmlns:i=""http://www.w3.org/2001/XMLSchema-instance"">
     <Value>foo_bar</Value>
     <Value2>foo_bar</Value2>
 </DuplicateEnumNameTestClass>";
-
-                Console.WriteLine(xml);
 
                 var o = (DuplicateEnumNameTestClass)s.ReadObject(new MemoryStream(Encoding.UTF8.GetBytes(xml)));
 

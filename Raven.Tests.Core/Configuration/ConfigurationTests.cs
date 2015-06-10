@@ -183,7 +183,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value, actual => actual.TimeToWaitBeforeMarkingIdleIndexAsAbandoned);
 
             configurationComparer.Assert(expected => expected.WebSockets.InitialBufferPoolSize.Value, actual => actual.WebSockets.InitialBufferPoolSize);
-
+			
 			configurationComparer.Assert(expected => expected.Monitoring.Snmp.Port.Value, actual => actual.Monitoring.Snmp.Port);
 			configurationComparer.Assert(expected => expected.Monitoring.Snmp.Community.Value, actual => actual.Monitoring.Snmp.Community);
 			configurationComparer.Assert(expected => expected.Monitoring.Snmp.Enabled.Value, actual => actual.Monitoring.Snmp.Enabled);
@@ -259,6 +259,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.AllowScriptsToAdjustNumberOfSteps.Value, actual => actual.AllowScriptsToAdjustNumberOfSteps);
 			configurationComparer.Assert(expected => expected.FileSystem.PreventSchemaUpdate.Value, actual => actual.Storage.PreventSchemaUpdate);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.WorkingDir.Value.ToFullPath(null)), actual => actual.WorkingDirectory);
+			configurationComparer.Assert(expected => expected.MaxClauseCount.Value, actual => actual.MaxClauseCount);
 			configurationComparer.Assert(expected => expected.Cluster.HeartbeatTimeout.Value, actual => actual.Cluster.HeartbeatTimeout);
 			configurationComparer.Assert(expected => expected.Cluster.ElectionTimeout.Value, actual => actual.Cluster.ElectionTimeout);
 			configurationComparer.Assert(expected => expected.Cluster.MaxEntriesPerRequest.Value, actual => actual.Cluster.MaxEntriesPerRequest);

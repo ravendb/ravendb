@@ -275,12 +275,25 @@ namespace Raven.Client.Indexes
 
         private bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
         {
-            if (serverDef.Equals(indexDefinition))
-                return true;
+           
+			var oldIndexId = serverDef.IndexId;
 
-            // now we need to check if this is a legacy index...
-            var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
-            return serverDef.Equals(legacyIndexDefinition);
+			try
+			{
+				serverDef.IndexId = indexDefinition.IndexId;
+
+				if (serverDef.Equals(indexDefinition, false))
+					return true;
+
+				// now we need to check if this is a legacy index...
+				var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
+        
+            return serverDef.Equals(legacyIndexDefinition, false);
+			}
+			finally
+			{
+				serverDef.IndexId = oldIndexId;
+			}
         }
 
         private void ReplicateIndexesIfNeeded(IDatabaseCommands databaseCommands)
@@ -327,14 +340,15 @@ namespace Raven.Client.Indexes
         private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
         {
             IndexDefinition legacyIndexDefinition;
-            documentConvention.PrettifyGeneratedLinqExpressions = false;
+			var oldPrettifyGeneratedLinqExpressions = documentConvention.PrettifyGeneratedLinqExpressions;
+			documentConvention.PrettifyGeneratedLinqExpressions = false;
             try
             {
                 legacyIndexDefinition = CreateIndexDefinition();
             }
             finally
             {
-                documentConvention.PrettifyGeneratedLinqExpressions = true;
+				documentConvention.PrettifyGeneratedLinqExpressions = oldPrettifyGeneratedLinqExpressions;
             }
             return legacyIndexDefinition;
         }

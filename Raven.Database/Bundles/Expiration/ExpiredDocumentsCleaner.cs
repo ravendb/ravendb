@@ -81,8 +81,8 @@ namespace Raven.Bundles.Expiration
 					QueryResultWithIncludes queryResult;
 					using(var cts = new CancellationTokenSource())
 					using (Database.DisableAllTriggersForCurrentThread())
+					using (cts.TimeoutAfter(TimeSpan.FromMinutes(5)))
 					{
-						cts.TimeoutAfter(TimeSpan.FromMinutes(5));
 						queryResult = Database.Queries.Query(RavenDocumentsByExpirationDate, new IndexQuery
 						{
 							Start = start,

@@ -31,11 +31,11 @@ using System.Numerics;
 #endif
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 #if NET20
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
-using System.Runtime.CompilerServices;
 
 #endif
 
@@ -246,13 +246,13 @@ namespace Raven.Imports.Newtonsoft.Json
 
         /// <summary>
         /// Get or set how strings are escaped when writing JSON text.
-        /// </summary>        
+        /// </summary>
         public StringEscapeHandling StringEscapeHandling
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _stringEscapeHandling; }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return _stringEscapeHandling; }
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			set
             {
                 _stringEscapeHandling = value;
                 OnStringEscapeHandlingChanged();
@@ -356,7 +356,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Writes the beginning of a Json object.
+        /// Writes the beginning of a JSON object.
         /// </summary>
         public virtual void WriteStartObject()
         {
@@ -364,7 +364,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Writes the end of a Json object.
+        /// Writes the end of a JSON object.
         /// </summary>
         public virtual void WriteEndObject()
         {
@@ -372,7 +372,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Writes the beginning of a Json array.
+        /// Writes the beginning of a JSON array.
         /// </summary>
         public virtual void WriteStartArray()
         {
@@ -424,7 +424,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Writes the end of the current Json object or array.
+        /// Writes the end of the current JSON object or array.
         /// </summary>
         public virtual void WriteEnd()
         {

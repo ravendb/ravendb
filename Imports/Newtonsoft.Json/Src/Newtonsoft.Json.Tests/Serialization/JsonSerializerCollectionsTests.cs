@@ -26,7 +26,8 @@
 using System;
 using System.Collections;
 using System.Collections.Specialized;
-#if !(NET35 || NET20 || PORTABLE || ASPNETCORE50 || PORTABLE40)
+using System.Runtime.Serialization;
+#if !(NET35 || NET20 || PORTABLE || DNXCORE50 || PORTABLE40)
 using System.Collections.Concurrent;
 #endif
 using System.Collections.Generic;
@@ -45,7 +46,7 @@ using Newtonsoft.Json.Tests.TestObjects;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -70,6 +71,57 @@ namespace Newtonsoft.Json.Tests.Serialization
             ExceptionAssert.Throws<JsonSerializationException>(
                 () => JsonConvert.DeserializeObject<NameValueCollectionTestClass>("{Collection:[]}"),
                 "Cannot create and populate list type System.Collections.Specialized.NameValueCollection. Path 'Collection', line 1, position 13.");
+        }
+#endif
+
+#if !(NET35 || NET20 || PORTABLE || PORTABLE40)
+        public class SomeObject
+        {
+            public string Text1 { get; set; }
+        }
+
+        public class CustomConcurrentDictionary : ConcurrentDictionary<string, List<SomeObject>>
+        {
+            [OnDeserialized]
+            internal void OnDeserializedMethod(StreamingContext context)
+            {
+                ((IDictionary)this).Add("key2", new List<SomeObject>
+                {
+                    new SomeObject
+                    {
+                        Text1 = "value2"
+                    }
+                });
+            }
+        }
+
+        [Test]
+        public void SerializeCustomConcurrentDictionary()
+        {
+            IDictionary d = new CustomConcurrentDictionary();
+            d.Add("key", new List<SomeObject>
+            {
+                new SomeObject
+                {
+                    Text1 = "value1"
+                }
+            });
+
+            string json  = JsonConvert.SerializeObject(d, Formatting.Indented);
+
+            Assert.AreEqual(@"{
+  ""key"": [
+    {
+      ""Text1"": ""value1""
+    }
+  ]
+}", json);
+
+            CustomConcurrentDictionary d2 = JsonConvert.DeserializeObject<CustomConcurrentDictionary>(json);
+
+            Assert.AreEqual(2, d2.Count);
+            Assert.AreEqual("value1", d2["key"][0].Text1);
+            Assert.AreEqual("value2", d2["key2"][0].Text1);
         }
 #endif
 
@@ -607,7 +659,7 @@ namespace Newtonsoft.Json.Tests.Serialization
             Assert.AreEqual(3, v2["Third"]);
         }
 
-#if !(NET35 || NET20 || PORTABLE || ASPNETCORE50 || PORTABLE40)
+#if !(NET35 || NET20 || PORTABLE || DNXCORE50 || PORTABLE40)
         [Test]
         public void DeserializeConcurrentDictionary()
         {
@@ -1321,7 +1373,7 @@ namespace Newtonsoft.Json.Tests.Serialization
             Assert.AreEqual(1, (int)((JObject)o.Data[2])["one"]);
         }
 
-#if !(NETFX_CORE || ASPNETCORE50)
+#if !(NETFX_CORE || DNXCORE50)
         [Test]
         public void SerializeArrayAsArrayList()
         {
@@ -1522,16 +1574,10 @@ namespace Newtonsoft.Json.Tests.Serialization
 
             List<Product> products = JsonConvert.DeserializeObject<List<Product>>(json);
 
-            Console.WriteLine(products.Count);
-            // 2
-
             Product p1 = products[0];
 
-            Console.WriteLine(p1.Name);
-            // Product 1
-
             Assert.AreEqual(2, products.Count);
-            Assert.AreEqual("Product 1", products[0].Name);
+            Assert.AreEqual("Product 1", p1.Name);
         }
 
 #if !(NET40 || NET35 || NET20 || PORTABLE40)

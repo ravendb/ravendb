@@ -31,9 +31,9 @@ using System.Numerics;
 #endif
 using System.Text;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Xml;
 using Raven.Imports.Newtonsoft.Json.Utilities;
-using System.Runtime.CompilerServices;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -161,7 +161,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Writes the beginning of a Json object.
+        /// Writes the beginning of a JSON object.
         /// </summary>
         public override void WriteStartObject()
         {
@@ -171,7 +171,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Writes the beginning of a Json array.
+        /// Writes the beginning of a JSON array.
         /// </summary>
         public override void WriteStartArray()
         {
@@ -216,7 +216,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Writes the property name of a name/value pair on a Json object.
+        /// Writes the property name of a name/value pair on a JSON object.
         /// </summary>
         /// <param name="name">The name of the property.</param>
         public override void WritePropertyName(string name)
@@ -368,15 +368,15 @@ namespace Raven.Imports.Newtonsoft.Json
         /// <param name="value">The <see cref="String"/> value to write.</param>
         public override void WriteValue(string value)
         {
-            InternalWriteValue(JsonToken.String);
+	        InternalWriteValue(JsonToken.String);
 
-            if (value == null)
-                WriteValueInternal(JsonConvert.Null, JsonToken.Null);
-            else
-                WriteEscapedString(value, true);
+	        if (value != null)
+		        WriteEscapedString(value, true);
+	        else
+		        WriteValueInternal(JsonConvert.Null, JsonToken.Null);
         }
 
-        private void WriteEscapedString(string value, bool quote)
+	    private void WriteEscapedString(string value, bool quote)
         {
             EnsureWriteBuffer();
             JavaScriptUtils.WriteEscapedJavaScriptString(_writer, value, _quoteChar, quote, _charEscapeFlags, StringEscapeHandling, ref _writeBuffer);
@@ -710,8 +710,8 @@ namespace Raven.Imports.Newtonsoft.Json
             _writer.Write(ws);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void EnsureWriteBuffer()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void EnsureWriteBuffer()
         {
             if (_writeBuffer == null)
                 _writeBuffer = new char[35]; // maximum buffer sized used when writing iso date

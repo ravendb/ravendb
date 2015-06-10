@@ -207,24 +207,26 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var currentEtag = Etag.Parse(iterator.CurrentKey.ToString());
 
-					if (currentEtag.CompareTo(etag) <= 0)
-					{
-						ushort version;
-						var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
+				    if (currentEtag.CompareTo(etag) > 0) 
+                        break;
 
-						var key = value.Value<string>("key");
-                        var etagSlice = (Slice)currentEtag.ToString();
+				    ushort version;
+				    var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
 
-                        tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
-                        listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
-                        listsByNameAndKey.Delete(writeBatch.Value, (Slice)AppendToKey(nameKey, key));
-					}
+				    var key = value.Value<string>("key");
+				    var etagSlice = (Slice)currentEtag.ToString();
+
+				    tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
+				    listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
+				    listsByNameAndKey.Delete(writeBatch.Value, (Slice)AppendToKey(nameKey, key));
+
+				    generalStorageActions.MaybePulseTransaction();
 				}
 				while (iterator.MoveNext());
 			}
 		}
 
-		public void RemoveAllOlderThan(string name, DateTime dateTime)
+		public void RemoveAllOlderThan(string name, DateTime cutoff)
 		{
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
@@ -243,7 +245,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
 					var createdAt = value.Value<DateTime>("createdAt");
 					
-					if(createdAt > dateTime)
+					if(createdAt > cutoff)
 						break;
 
 					var key = value.Value<string>("key");

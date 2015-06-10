@@ -28,6 +28,11 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 
+import generateClassCommand = require("commands/database/documents/generateClassCommand");
+import showDataDialog = require("viewmodels/common/showDataDialog");
+
+
+
 class documents extends viewModelBase {
 
     displayName = "documents";
@@ -422,8 +427,7 @@ class documents extends viewModelBase {
     deleteSelectedDocs() {
         if (!this.selectedCollection().isSystemDocuments && this.hasAllDocumentsSelected()) {
             this.deleteCollection(this.selectedCollection());
-        }
-        else {
+        } else {
             var grid = this.getDocumentsGrid();
             if (grid) {
                 grid.deleteSelectedItems();
@@ -442,6 +446,21 @@ class documents extends viewModelBase {
         var grid = this.getDocumentsGrid();
         if (grid) {
             grid.copySelectedDocIds();
+        }
+    }
+
+    generateDocCode() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            var selectedItem = <Document>grid.getSelectedItems(1).first();
+
+            var metadata = selectedItem["__metadata"];
+            var id = metadata["id"];
+            var generate = new generateClassCommand(this.activeDatabase(),id, "csharp");
+            var deffered = generate.execute();
+            deffered.done((code: JSON) => {
+                app.showDialog(new showDataDialog("Generated Class", code["Code"]));
+            });
         }
     }
 

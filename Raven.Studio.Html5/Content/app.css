@@ -8335,6 +8335,11 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   white-space: pre-line;
 }
 .scrollable-menu {
+  height: 200px;
+  max-height: 300px;
+  overflow-x: hidden;
+}
+.scrollable-resource-menu {
   height: auto;
   max-height: 300px;
   overflow-x: hidden;
@@ -8413,5 +8418,8 @@ a.global_help_link:focus {
 .tight {
   margin-top: 3px;
   margin-bottom: 3px;
+}
+.text-height-fix {
+  line-height: 34px;
 }
 /*# sourceMappingURL=app.css.map */

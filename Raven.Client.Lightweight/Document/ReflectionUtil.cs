@@ -32,8 +32,8 @@ namespace Raven.Client.Document
 			if (localFullName.TryGetValue(entityType, out result))
 				return result;
 
-			var asmName = new AssemblyName(entityType.Assembly().FullName).Name;
-			if (entityType.IsGenericType())
+			var asmName = new AssemblyName(entityType.Assembly.FullName).Name;
+			if (entityType.IsGenericType)
 			{
 				var genericTypeDefinition = entityType.GetGenericTypeDefinition();
 				var sb = new StringBuilder(genericTypeDefinition.FullName);

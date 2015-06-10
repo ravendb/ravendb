@@ -268,7 +268,7 @@ namespace Raven.Client.Document
 			}
 			catch (Exception ex)
 			{
-				if (ex is SubscriptionInUseException || ex is SubscriptionDoesNotExistExeption)
+				if (ex is SubscriptionInUseException || ex is SubscriptionDoesNotExistException)
 				{
 					// another client has connected to the subscription or it has been deleted meanwhile - we cannot open it so we need to finish
 					OnCompletedNotification();

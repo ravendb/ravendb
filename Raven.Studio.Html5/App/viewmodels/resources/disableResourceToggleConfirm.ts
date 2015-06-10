@@ -1,6 +1,7 @@
 ﻿import dialog = require("plugins/dialog");
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import shell = require("viewmodels/shell");
 import resource = require("models/resources/resource");
 import shell = require("viewmodels/shell");
 

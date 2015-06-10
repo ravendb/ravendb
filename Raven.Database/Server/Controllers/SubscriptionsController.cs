@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
@@ -26,6 +27,8 @@ namespace Raven.Database.Server.Controllers
 {
 	public class SubscriptionsController : RavenDbApiController
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		[HttpPost]
 		[RavenRoute("subscriptions/create")]
 		[RavenRoute("databases/{databaseName}/subscriptions/create")]
@@ -176,48 +179,63 @@ namespace Raven.Database.Server.Controllers
 				using (var cts = new CancellationTokenSource())
 				using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 				{
-					Etag lastProcessedDocEtag = null;
+                    Etag lastProcessedDocEtag = null;
+
 					var batchSize = 0;
 					var batchDocCount = 0;
+					var processedDocuments = 0;
 					var hasMoreDocs = false;
 
 					var config = subscriptions.GetSubscriptionConfig(id);
 					var startEtag = config.AckEtag;
 					var criteria = config.Criteria;
 
+                    Action<JsonDocument> addDocument = doc =>
+                    {
+	                    processedDocuments++;
+                        timeout.Delay();
+
+                        if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
+                            return;
+
+                        if (batchDocCount >= options.MaxDocCount)
+                            return;
+
+                        lastProcessedDocEtag = doc.Etag;
+
+                        if (doc.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+                            return;
+
+                        if (MatchCriteria(criteria, doc) == false)
+                            return;
+
+                        doc.ToJson().WriteTo(writer);
+                        writer.WriteRaw(Environment.NewLine);
+
+                        batchSize += doc.SerializedSizeOnDisk;
+                        batchDocCount++;
+                    };
+
+                    int nextStart = 0;
+					var retries = 0;
 					do
 					{
+						var lastIndex = processedDocuments;
 						Database.TransactionalStorage.Batch(accessor =>
 						{
 							// we may be sending a LOT of documents to the user, and most 
 							// of them aren't going to be relevant for other ops, so we are going to skip
 							// the cache for that, to avoid filling it up very quickly
 							using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-							{
-								Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, doc =>
-								{
-									timeout.Delay();
-
-									if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
-										return;
-
-									if (batchDocCount >= options.MaxDocCount)
-										return;
-
-									lastProcessedDocEtag = doc.Etag;
-
-									if (doc.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
-										return;
-
-									if (MatchCriteria(criteria, doc) == false) 
-										return;
-
-									doc.ToJson().WriteTo(writer);
-									writer.WriteRaw(Environment.NewLine);
-
-									batchSize += doc.SerializedSizeOnDisk;
-									batchDocCount++;
-								});
+							{    
+                                if (!string.IsNullOrWhiteSpace(criteria.KeyStartsWith))
+                                {
+                                    Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                }
+                                else
+                                {
+                                    Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                }
 							}
 
 							if (lastProcessedDocEtag == null)
@@ -229,8 +247,22 @@ namespace Raven.Database.Server.Controllers
 
 								startEtag = lastProcessedDocEtag;
 							}
+
+							retries = lastIndex == batchDocCount ? retries : 0;
 						});
-					} while (hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
+						if (lastIndex == processedDocuments)
+						{
+							if (retries == 3)
+							{
+								log.Warn("Subscription processing did not end up replicating any documents for 3 times in a row, stopping operation", retries);
+							}
+							else
+							{
+								log.Warn("Subscription processing did not end up replicating any documents, due to possible storage error, retry number: {0}", retries);
+							}
+							retries++;
+						}
+					} while (retries< 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
 
 					writer.WriteEndArray();
 

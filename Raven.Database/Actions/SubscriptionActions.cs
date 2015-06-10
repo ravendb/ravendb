@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
@@ -68,7 +69,7 @@ namespace Raven.Database.Actions
 			SubscriptionConnectionOptions existingOptions;
 
 			if(openSubscriptions.TryGetValue(id, out existingOptions) == false)
-				throw new SubscriptionDoesNotExistExeption("Didn't get existing open subscription while it's expected. Subscription id: " + id);
+				throw new SubscriptionDoesNotExistException("Didn't get existing open subscription while it's expected. Subscription id: " + id);
 
 			if (existingOptions.ConnectionId.Equals(options.ConnectionId, StringComparison.OrdinalIgnoreCase))
 			{
@@ -147,7 +148,7 @@ namespace Raven.Database.Actions
 				var listItem = accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, id.ToString("D19"));
 
 				if(listItem == null)
-					throw new SubscriptionDoesNotExistExeption("There is no subscription configuration for specified identifier (id: " + id + ")");
+					throw new SubscriptionDoesNotExistException("There is no subscription configuration for specified identifier (id: " + id + ")");
 
 				config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
 			});
@@ -190,6 +191,57 @@ namespace Raven.Database.Actions
 				{
 					var config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
 					subscriptions.Add(config);
+				}
+			});
+
+			return subscriptions;
+		}
+
+		public class SubscriptionDebugInfo : SubscriptionConfig
+		{
+			public bool IsOpen { get; set; }
+			public SubscriptionConnectionOptions ConnectionOptions { get; set; }
+		}
+
+		public List<object> GetDebugInfo()
+		{
+			var subscriptions = new List<object>();
+
+			TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var listItem in accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, 0, int.MaxValue))
+				{
+					var config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
+
+					SubscriptionConnectionOptions options = null;
+					openSubscriptions.TryGetValue(config.SubscriptionId, out options);
+
+					var debugInfo = new
+					{
+						config.SubscriptionId,
+						config.AckEtag,
+						TimeOfLastClientActivity = config.TimeOfLastClientActivity != default(DateTime) ? config.TimeOfLastClientActivity : (DateTime?)null,
+						TimeOfSendingLastBatch = config.TimeOfSendingLastBatch != default(DateTime) ? config.TimeOfSendingLastBatch : (DateTime?)null,
+						Criteria = new
+						{
+							config.Criteria.KeyStartsWith,
+							config.Criteria.BelongsToAnyCollection,
+							PropertiesMatch = config.Criteria.PropertiesMatch == null ? null : config.Criteria.PropertiesMatch.Select(x => new
+							{
+								x.Key,x.Value
+							}).ToList(),
+							PropertiesNotMatch = config.Criteria.PropertiesNotMatch == null ? null : config.Criteria.PropertiesNotMatch.Select(x => new
+							{
+								x.Key, x.Value
+							}).ToList()
+						},
+						IsOpen = options != null,
+						ConnectionOptions = options
+					};
+
+					
+					
+					subscriptions.Add(debugInfo);
 				}
 			});
 

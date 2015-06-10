@@ -81,7 +81,11 @@ namespace Raven.Tests.Shard.BlogModel
 																ShardAccessStrategy = new SequentialShardAccessStrategy(),
 																ShardResolutionStrategy = new BlogShardResolutionStrategy(3),
 															});
-			ShardedDocumentStore = (ShardedDocumentStore) ShardedDocumentStore.Initialize();
+			ShardedDocumentStore.Initialize();
+			foreach (var ravenDbServer in Servers)
+			{
+				ravenDbServer.Value.Server.ResetNumberOfRequests();
+			}
 		}
 
 		protected void AssertNumberOfRequests(RavenDbServer server, int numberOfRequests)

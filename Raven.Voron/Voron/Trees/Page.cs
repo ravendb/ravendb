@@ -305,6 +305,12 @@ namespace Voron.Trees
 			get { return (_header->Flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed; }
 		}
 
+		public bool HasPrefixes
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return _prefixSection->NextPrefixId > 0; }
+		}
+
         public ushort NumberOfEntries
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -467,6 +473,21 @@ namespace Voron.Trees
 		{
 			public byte PrefixId;
 			public ushort PrefixUsage;
+			public PrefixNode PrefixNode;
+		}
+
+		public PrefixNode[] GetPrefixes()
+		{
+			var prefixes = new PrefixNode[_prefixSection->NextPrefixId];
+
+			for (byte prefixId = 0; prefixId < _prefixSection->NextPrefixId; prefixId++)
+			{
+				var prefix = new PrefixNode();
+				prefix.Set(_base + _prefixSection->PrefixOffsets[prefixId], PageNumber);
+				prefixes[prefixId] = prefix;
+			}
+
+			return prefixes;
 		}
 
 	    private bool TryUseExistingPrefix(MemorySlice key, out PrefixedSlice prefixedSlice)
@@ -477,13 +498,13 @@ namespace Voron.Trees
 				return false;
 		    }
 
-			var prefix = new PrefixNode();
-
 		    BestPrefixMatch bestMatch = null;
 
 			for (byte prefixId = 0; prefixId < _prefixSection->NextPrefixId; prefixId++)
 			{
 				AssertPrefixNode(prefixId);
+
+				var prefix = new PrefixNode();
 
 				prefix.Set(_base + _prefixSection->PrefixOffsets[prefixId], PageNumber);
 
@@ -493,7 +514,10 @@ namespace Voron.Trees
 
 				if (length == prefix.PrefixLength) // full prefix usage
 				{
-					prefixedSlice = new PrefixedSlice(prefixId, length, key.Skip(length));
+					prefixedSlice = new PrefixedSlice(prefixId, length, key.Skip(length))
+					{
+						Prefix = prefix
+					};
 					return true;
 				}
 
@@ -504,19 +528,24 @@ namespace Voron.Trees
 					bestMatch = new BestPrefixMatch
 					{
 						PrefixId = prefixId,
-						PrefixUsage = length
+						PrefixUsage = length,
+						PrefixNode = prefix
 					};
 				}
 				else if (length > bestMatch.PrefixUsage)
 				{
 					bestMatch.PrefixId = prefixId;
 					bestMatch.PrefixUsage = length;
+					bestMatch.PrefixNode = prefix;
 				}
 			}
 
 		    if (bestMatch != null && bestMatch.PrefixUsage > MinPrefixLength(key))
 		    {
-			    prefixedSlice = new PrefixedSlice(bestMatch.PrefixId, bestMatch.PrefixUsage, key.Skip(bestMatch.PrefixUsage));
+			    prefixedSlice = new PrefixedSlice(bestMatch.PrefixId, bestMatch.PrefixUsage, key.Skip(bestMatch.PrefixUsage))
+			    {
+				    Prefix = bestMatch.PrefixNode
+			    };
 			    return true;
 		    }
 
@@ -606,7 +635,7 @@ namespace Voron.Trees
             return node;
         }
 
-		private void WritePrefix(Slice prefix, int prefixId)
+		public void WritePrefix(Slice prefix, int prefixId)
 		{
 			var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefix.Size;
 			prefixNodeSize += prefixNodeSize & 1;
@@ -676,6 +705,18 @@ namespace Voron.Trees
 		        copy.ClearPrefixInfo();
 
 		        var slice = CreateNewEmptyKey();
+
+		        if (KeysPrefixed && HasPrefixes)
+		        {
+					var prefixes = GetPrefixes();
+
+					for (int prefixId = 0; prefixId < prefixes.Length; prefixId++)
+					{
+						var prefix = prefixes[prefixId];
+
+						copy.WritePrefix(new Slice(prefix.ValuePtr, prefix.PrefixLength), prefixId);
+					}
+		        }
 
 				for (int j = 0; j < i; j++)
 				{
@@ -961,6 +1002,11 @@ namespace Voron.Trees
         {
             if (NumberOfEntries == 0)
                 return;
+
+			if (IsBranch && NumberOfEntries < 2)
+			{
+				throw new InvalidOperationException("The branch page " + PageNumber + " has " + NumberOfEntries + " entry");
+			}
 
             var prev = GetNodeKey(0);
             var pages = new HashSet<long>();

@@ -76,7 +76,6 @@ namespace Raven.Abstractions.Smuggler
 
 		Task SeedIdentityFor(string identityName, long identityValue);
 
-		RavenJToken DisableVersioning(RavenJObject metadata);
 		string GetIdentifier();
 	}
 }

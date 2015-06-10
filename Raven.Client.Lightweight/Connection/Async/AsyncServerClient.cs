@@ -277,13 +277,13 @@ namespace Raven.Client.Connection.Async
 		public async Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
 		{
 			var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
-			using (var webRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
 			{
-				webRequest.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+				request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
 				try
 				{
-					await webRequest.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+					await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
 					if (overwrite == false) throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 				}
 				catch (ErrorResponseException e)
@@ -1033,6 +1033,10 @@ namespace Raven.Client.Connection.Async
 				return new GetRequest()
 				{
 					Url = "/facets/" + x.IndexName,
+                    Query = string.Format("{0}&facetStart={1}&facetPageSize={2}",
+							x.Query.GetQueryString(),
+							x.PageStart,
+							x.PageSize),
 					Method = "POST",
 					Content = serializedFacets
 				};
@@ -2345,7 +2349,7 @@ namespace Raven.Client.Connection.Async
 						JsonDocument resolvedDocument;
 						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
 						{
-							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata).ConfigureAwait(false);
+							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata, token).ConfigureAwait(false);
 							return true;
 						}
 					}

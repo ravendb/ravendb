@@ -44,7 +44,7 @@ namespace Raven.Database.Server.Connections
         bool, // end of message?
         int>; // count
 
-    public class WebSocketTransportFactory
+    public static class WebSocketTransportFactory 
     {
         public const string ChangesApiWebsocketSuffix = "/changes/websocket";
         public const string WatchTrafficWebsocketSuffix = "/traffic-watch/websocket";
@@ -52,16 +52,20 @@ namespace Raven.Database.Server.Connections
         public const string WebsocketValidateSuffix = "/websocket/validate";
 
         private static CancellationTokenSource ravenGcCancellation = new CancellationTokenSource();
-        private static readonly Action DisconnectWebSockets = () =>
+        private class DisconnectWebSockets : IRavenGarbageCollectionListener
         {
-            ravenGcCancellation.Cancel();
-            ravenGcCancellation = new CancellationTokenSource();
+            public static DisconnectWebSockets Instance = new DisconnectWebSockets();
+            public void GarbageCollectionAboutToHappen()
+            {
+                ravenGcCancellation.Cancel();
+                ravenGcCancellation = new CancellationTokenSource();
+            }
         };
 
         static WebSocketTransportFactory()
         {
-            RavenGC.Register(DisconnectWebSockets);
-            AppDomain.CurrentDomain.DomainUnload += (s, e) => RavenGC.Unregister(DisconnectWebSockets);
+            RavenGC.Register(DisconnectWebSockets.Instance);
+            AppDomain.CurrentDomain.DomainUnload += (s, e) => RavenGC.Unregister(DisconnectWebSockets.Instance);
         }
 
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)

@@ -10,7 +10,7 @@ namespace Voron.Tests.Trees
 	public class Deletes : StorageTest
 	{
 
-		[Fact]
+		[PrefixesFact]
 		public void CanAddVeryLargeValueAndThenDeleteIt()
 		{
 			var random = new Random();
@@ -54,7 +54,7 @@ namespace Voron.Tests.Trees
 			
 		}
 
-		 [Fact]
+		 [PrefixesFact]
 		 public void CanDeleteAtRoot()
 		 {
              using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

@@ -29,7 +29,7 @@ using System.Collections.Generic;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -68,13 +68,6 @@ namespace Newtonsoft.Json.Tests.Converters
 
             result = JsonConvert.SerializeObject(now, converter);
             Assert.AreEqual("new Date(976918263055)", result);
-        }
-
-        [Test]
-        public void sdfs()
-        {
-            int i = Convert.ToInt32("+1");
-            Console.WriteLine(i);
         }
 
         [Test]

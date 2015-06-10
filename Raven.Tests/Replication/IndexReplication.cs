@@ -5,7 +5,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+
 using FluentAssertions;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -17,9 +19,10 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Helpers;
+
 using Xunit;
 
-namespace Raven.Tests.Core.Replication
+namespace Raven.Tests.Replication
 {
 	public class IndexReplication : RavenTestBase
 	{
@@ -107,7 +110,7 @@ namespace Raven.Tests.Core.Replication
 
 			using (var session = source.OpenSession(databaseName))
 			{
-				session.Store(replicationDocument,Constants.RavenReplicationDestinations);
+				session.Store(replicationDocument, Constants.RavenReplicationDestinations);
 				session.SaveChanges();
 			}
 
@@ -343,7 +346,7 @@ namespace Raven.Tests.Core.Replication
 		{
 			var requestFactory = new HttpRavenRequestFactory();
 			using (var sourceServer = GetNewServer(9077))
-			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer,fiddler:true))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
 			using (var destinationServer1 = GetNewServer(9078))
 			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1, fiddler: true))
 			using (var destinationServer2 = GetNewServer())
@@ -456,7 +459,7 @@ namespace Raven.Tests.Core.Replication
 				Assert.False(indexStatsBeforeReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 				
 				//this should fire http request to index replication endpoint -> so the index is replicated
-				userIndex.Execute(source.DatabaseCommands.ForDatabase("testDB"),source.Conventions);
+				userIndex.Execute(source.DatabaseCommands.ForDatabase("testDB"), source.Conventions);
 			
 				var indexStatsAfterReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
 				Assert.True(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
@@ -611,11 +614,11 @@ namespace Raven.Tests.Core.Replication
 				session.SaveChanges();
 
 				id = dummy.Id;
-			}
+	}
 
 			WaitForDocument(destination1.DatabaseCommands.ForDatabase("testDB"), id);
 			WaitForDocument(destination2.DatabaseCommands.ForDatabase("testDB"), id);
 			WaitForDocument(destination3.DatabaseCommands.ForDatabase("testDB"), id);
-		}
+}
 	}
 }

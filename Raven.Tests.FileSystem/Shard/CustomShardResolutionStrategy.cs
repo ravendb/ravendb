@@ -116,5 +116,37 @@ namespace Raven.Tests.FileSystem.Shard
 
 			Assert.Equal("/Asia/test2", fileName);
 		}
-	}
+
+        [Fact]
+        public void CanIgnoreMultiKeysToShard()
+        {
+            var client1 = NewAsyncClient(0, fileSystemName: "shard1");
+            var client2 = NewAsyncClient(1, fileSystemName: "shard2");
+            var client3 = client2;
+
+            var shards = new Dictionary<string, IAsyncFilesCommands>
+		    {
+			    {"Europe", client1},
+			    {"Asia", client2},
+                {"Middle-East", client3},
+		    };
+
+            NotSupportedException notSuppotedEx = null;
+
+            try
+            {
+	            new ShardStrategy(shards).ShardAccessStrategy
+					.ApplyAsync(new List<IAsyncFilesCommands>(), new ShardRequestData(), async (commands, i) => 1)
+					.Wait();
+            }
+            catch (AggregateException ex)
+            {
+                notSuppotedEx = ex.InnerException as NotSupportedException;
+            }
+
+            Assert.NotNull(notSuppotedEx);
+            Assert.Contains("Multiple keys in shard dictionary for", notSuppotedEx.Message);
+        }
+    
+    }
 }

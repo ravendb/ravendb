@@ -53,7 +53,7 @@ namespace Raven.Imports.Newtonsoft.Json
         internal const DateFormatHandling DefaultDateFormatHandling = DateFormatHandling.IsoDateFormat;
         internal const DateTimeZoneHandling DefaultDateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind;
         internal const DateParseHandling DefaultDateParseHandling = DateParseHandling.DateTime;
-        internal const FloatParseHandling DefaultFloatParseHandling = FloatParseHandling.Decimal;
+        internal const FloatParseHandling DefaultFloatParseHandling = FloatParseHandling.PreferDecimalFallbackToDouble;
         internal const FloatFormatHandling DefaultFloatFormatHandling = FloatFormatHandling.String;
         internal const StringEscapeHandling DefaultStringEscapeHandling = StringEscapeHandling.Default;
         internal const FormatterAssemblyStyle DefaultFormatterAssemblyStyle = FormatterAssemblyStyle.Simple;
@@ -203,7 +203,23 @@ namespace Raven.Imports.Newtonsoft.Json
         /// Gets or sets the <see cref="IReferenceResolver"/> used by the serializer when resolving references.
         /// </summary>
         /// <value>The reference resolver.</value>
-        public IReferenceResolver ReferenceResolver { get; set; }
+        [ObsoleteAttribute("ReferenceResolver property is obsolete. Use the ReferenceResolverProvider property to set the IReferenceResolver: settings.ReferenceResolverProvider = () => resolver")]
+        public IReferenceResolver ReferenceResolver
+        {
+            get
+            {
+                if (ReferenceResolverProvider == null)
+                    return null;
+                return ReferenceResolverProvider();
+            }
+            set { ReferenceResolverProvider = () => value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a function that creates the <see cref="IReferenceResolver"/> used by the serializer when resolving references.
+        /// </summary>
+        /// <value>A function that creates the <see cref="IReferenceResolver"/> used by the serializer when resolving references.</value>
+        public Func<IReferenceResolver> ReferenceResolverProvider { get; set; }
 
         /// <summary>
         /// Gets or sets the <see cref="ITraceWriter"/> used by the serializer when writing trace messages.
@@ -234,7 +250,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         /// <summary>
-        /// Get or set how <see cref="DateTime"/> and <see cref="DateTimeOffset"/> values are formatting when writing JSON text.
+        /// Get or set how <see cref="DateTime"/> and <see cref="DateTimeOffset"/> values are formatted when writing JSON text, and the expected date format when reading JSON text.
         /// </summary>
         public string DateFormatString
         {

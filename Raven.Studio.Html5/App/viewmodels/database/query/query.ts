@@ -89,6 +89,8 @@ class query extends viewModelBase {
     indexSuggestions = ko.observableArray<indexSuggestion>([]);
     showSuggestions: KnockoutComputed<boolean>;
 
+    csvUrl = ko.observable<string>();
+
     static containerSelector = "#queryContainer";
 
     constructor() {
@@ -422,14 +424,14 @@ class query extends viewModelBase {
 
             var useAndOperator = this.isDefaultOperatorOr() === false;
 
-            var queryCommand = new queryIndexCommand(selectedIndex, database, 0, 25, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
-            if (this.isCacheDisable()) queryCommand.cacheDisable();
-            var db = this.activeDatabase();
-            this.rawJsonUrl(appUrl.forResourceQuery(db) + queryCommand.getUrl());
-            this.exportUrl = ko.computed(() => (appUrl.forResourceQuery(db) + queryCommand.getCsvUrl() + (this.token() ? "&singleUseAuthToken=" + this.token().Token : "")));
+            var queryCommand = new queryIndexCommand(selectedIndex, database, 0, 25, queryText, sorts, transformer, showFields, indexEntries, useAndOperator, this.isCacheDisable());
+
+            this.rawJsonUrl(appUrl.forResourceQuery(database) + queryCommand.getUrl());
+            this.csvUrl(queryCommand.getCsvUrl());
+            this.exportUrl = ko.computed(() => (appUrl.forResourceQuery(database) + this.csvUrl() + (this.token() ? "&singleUseAuthToken=" + this.token().Token : "")));
 
             var resultsFetcher = (skip: number, take: number) => {
-                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
+                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator, this.isCacheDisable());
                 return command.execute()
                     .always(() => {
                         this.isLoading(false);
@@ -463,7 +465,7 @@ class query extends viewModelBase {
                         }
                     })
                     .fail(() => {
-                        recentQueriesStorage.removeIndexFromRecentQueries(db, selectedIndex);
+                        recentQueriesStorage.removeIndexFromRecentQueries(database, selectedIndex);
                     });
             };
             var resultsList = new pagedList(resultsFetcher);

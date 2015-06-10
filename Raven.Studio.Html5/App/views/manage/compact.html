@@ -21,7 +21,7 @@
                             <label for="databaseName" class="col-sm-2 control-label">Database to compact</label>
                             <div class="col-sm-3">
                                 <input tabindex="2" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: resourceName, disable: $parent.isBusy, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Database name to compact">
-                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
+                                <ul class="dropdown-menu scrollable-menu" role="menu" style="height: 300px; display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
                                     <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
                                             <span data-bind="text: $data"></span>
@@ -64,7 +64,7 @@
                             <label for="filesystemName" class="col-sm-2 control-label">Filesystem to compact</label>
                             <div class="col-sm-3">
                                 <input tabindex="2" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="value: resourceName, disable: $parent.isBusy, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Filesystem name to compact">
-                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#filesystemName', foreach: searchResults">
+                                <ul class="dropdown-menu scrollable-menu" role="menu" style="height: 300px; display: none;" data-bind="autoComplete: '#filesystemName', foreach: searchResults">
                                     <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
                                             <span data-bind="text: $data"></span>

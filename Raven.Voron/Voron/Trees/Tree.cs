@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Remoting.Messaging;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -70,6 +71,10 @@ namespace Voron.Trees
 
         public static Tree Create(Transaction tx, bool keysPrefixing, TreeFlags flags = TreeFlags.None)
         {
+			var globalKeysPrefixingSetting = (CallContext.GetData("Voron/Trees/KeysPrefixing") as bool?);
+	        if (globalKeysPrefixingSetting != null)
+				keysPrefixing = globalKeysPrefixingSetting.Value;
+
             var newRootPage = NewPage(tx, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf, 1);
             var tree = new Tree(tx, newRootPage.PageNumber)
             {
@@ -187,9 +192,19 @@ namespace Voron.Trees
             if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot add a value in a read only transaction");
 
-            if (key.Size + Constants.NodeHeaderSize > AbstractPager.NodeMaxSize)
-                throw new ArgumentException(
-                    "Key size is too big, must be at most " + (AbstractPager.NodeMaxSize - Constants.NodeHeaderSize) + " bytes, but was " + key.Size, "key");
+			if (KeysPrefixing == false)
+			{
+				if (key.Size + AbstractPager.RequiredSpaceForNewNode > AbstractPager.NodeMaxSize)
+					throw new ArgumentException(
+						"Key size is too big, must be at most " + (AbstractPager.NodeMaxSize - AbstractPager.RequiredSpaceForNewNode) + " bytes, but was " + key.Size, "key");
+
+			}
+			else
+			{
+				if (key.Size + AbstractPager.RequiredSpaceForNewNodePrefixedKeys > AbstractPager.NodeMaxSizePrefixedKeys)
+					throw new ArgumentException(
+						"Key size is too big, must be at most " + (AbstractPager.NodeMaxSizePrefixedKeys - AbstractPager.RequiredSpaceForNewNodePrefixedKeys) + " bytes, but was " + key.Size, "key");
+			}
 
             Lazy<Cursor> lazy;
             NodeHeader* node;
@@ -326,6 +341,12 @@ namespace Voron.Trees
                 p.DebugValidate(_tx, rootPageNumber);
                 if (p.IsBranch == false)
                     continue;
+
+				if (p.NumberOfEntries < 2)
+				{
+					throw new InvalidOperationException("The branch page " + p.PageNumber + " has " + p.NumberOfEntries + " entry");
+				}
+
                 for (int i = 0; i < p.NumberOfEntries; i++)
                 {
                     var page = p.GetNode(i)->PageNumber;

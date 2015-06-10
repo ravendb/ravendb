@@ -30,9 +30,9 @@ namespace Newtonsoft.Json.Tests.TestObjects
 {
     public class MetroPropertyNameResolver : DefaultContractResolver
     {
-        protected internal override string ResolvePropertyName(string propertyName)
+        protected override string ResolvePropertyName(string propertyName)
         {
-#if !(NETFX_CORE || ASPNETCORE50)
+#if !(NETFX_CORE || DNXCORE50)
             return ":::" + propertyName.ToUpper(CultureInfo.InvariantCulture) + ":::";
 #else
             return ":::" + propertyName.ToUpper() + ":::";

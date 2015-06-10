@@ -9,7 +9,7 @@ namespace Voron.Tests.Bugs
 {
 	public class MultiReads : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void MultiReadShouldKeepItemOrder()
 		{
 			foreach (var treeName in CreateTrees(Env, 1, "tree"))

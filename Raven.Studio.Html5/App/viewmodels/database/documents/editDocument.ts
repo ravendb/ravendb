@@ -22,6 +22,8 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import genUtils = require("common/generalUtils");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
+import generateClassCommand = require("commands/database/documents/generateClassCommand");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class editDocument extends viewModelBase {
 
@@ -899,6 +901,15 @@ class editDocument extends viewModelBase {
         }
 
         return "";
+    }
+
+    generateCode() {
+        var doc: document = this.document();
+        var generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
+        var deffered = generate.execute();
+        deffered.done((code: JSON) => {
+            app.showDialog(new showDataDialog("Generated Class", code["Code"]));
+        });
     }
 }
 

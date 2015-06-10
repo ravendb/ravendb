@@ -12,7 +12,7 @@ namespace Raven.Database.Prefetching
 {
 	using System.Linq;
 
-	public class Prefetcher
+	public class Prefetcher : IRavenGarbageCollectionListener
 	{
 		private readonly WorkContext workContext;
 		private List<PrefetchingBehavior> prefetchingBehaviors = new List<PrefetchingBehavior>();
@@ -20,7 +20,7 @@ namespace Raven.Database.Prefetching
 		public Prefetcher(WorkContext workContext)
 		{
 			this.workContext = workContext;
-			RavenGC.Register(ClearPrefetchingBehaviors);
+			RavenGC.Register(this);
 		}
 
 		public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner)
@@ -82,7 +82,7 @@ namespace Raven.Database.Prefetching
 
 		public void Dispose()
 		{
-			RavenGC.Unregister(ClearPrefetchingBehaviors);
+			RavenGC.Unregister(this);
 
 			foreach (var prefetchingBehavior in prefetchingBehaviors)
 			{
@@ -90,7 +90,7 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		public void ClearPrefetchingBehaviors()
+		public void GarbageCollectionAboutToHappen()
 		{
 			foreach (var prefetchingBehavior in prefetchingBehaviors)
 			{

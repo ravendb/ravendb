@@ -53,7 +53,13 @@ namespace Voron.Impl.Paging
 
         public const int PageSize = 4096;
 		public readonly static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
-	    public readonly static int NodeMaxSize = PageMaxSpace/2 - 1;
+
+	    public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
+		public static readonly int RequiredSpaceForNewNodePrefixedKeys = Constants.NodeHeaderSize + Constants.NodeOffsetSize + Constants.PrefixedSliceHeaderSize;
+
+		public readonly static int NodeMaxSize = PageMaxSpace / 2 - 1;
+	    public static readonly int NodeMaxSizePrefixedKeys = (PageMaxSpace - (Constants.PrefixInfoSectionSize + (Page.PrefixCount*Constants.PrefixNodeHeaderSize) + Page.PrefixCount /* possible 2-byte alignment for each prefix */))/2 - 1;
+
         private PagerState _pagerState;
         private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
 

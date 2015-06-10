@@ -818,7 +818,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				VisitEnumerableMethodCall(expression, negated);
 				return;
 			}
-			if (declaringType.IsGenericType() &&
+			if (declaringType.IsGenericType &&
 				declaringType.GetGenericTypeDefinition() == typeof(List<>))
 			{
 				VisitListMethodCall(expression);
@@ -1112,7 +1112,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				case "Select":
 				{
-					if (expression.Arguments[0].Type.IsGenericType() &&
+					if (expression.Arguments[0].Type.IsGenericType &&
 							expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IQueryable<>) &&
 					    expression.Arguments[0].Type != expression.Arguments[1].Type)
 					{

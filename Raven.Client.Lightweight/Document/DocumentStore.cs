@@ -377,7 +377,7 @@ namespace Raven.Client.Document
 
 			AssertValidConfiguration();
 
-		    jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler, Conventions.AcceptGzipContent);
+		    jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, Conventions.AcceptGzipContent);
 
 		    try
 			{
@@ -870,7 +870,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public HttpMessageHandler HttpMessageHandler { get; set; }
+		public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
 
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{

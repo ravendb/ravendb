@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
@@ -622,11 +623,6 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public Task<RavenJObject> GetMetadataForAsync<T>(T instance)
-		{
-			throw new NotImplementedException("GetMetadataForAsync currently not supported by sharded document store");
-		}
-
 		public async Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken))
 		{
 			DocumentMetadata value;
@@ -751,5 +747,57 @@ namespace Raven.Client.Shard
 	    {
 	        throw new NotSupportedException("Async kazy requests are not supported for sharded store");
 	    }
+
+		public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
+		{
+			var metadata = await GetDocumentMetadataAsync(instance);
+			return metadata.Metadata;
+		}
+
+		private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
+			{
+				string id;
+				if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
+					|| (instance is IDynamicMetaObjectProvider &&
+					   GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
+				{
+					AssertNoNonUniqueInstance(instance, id);
+					var jsonDocument = await GetJsonDocumentAsync(id);
+					value = GetDocumentMetadataValue(instance, id, jsonDocument);
+				}
+				else
+				{
+					throw new InvalidOperationException("Could not find the document key for " + instance);
+				}
+			}
+			return value;
+		}
+
+		/// <summary>
+		/// Get the json document by key from the store
+		/// </summary>
+		private async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
+		{
+			 var shardRequestData = new ShardRequestData
+			{
+				EntityType = typeof(object),
+				Keys = { documentKey }
+			};
+			var dbCommands = GetCommandsToOperateOn(shardRequestData);
+
+			var documents = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands,
+																	shardRequestData,
+																	(commands, i) => commands.GetAsync(documentKey));
+
+			var document = documents.FirstOrDefault(x => x != null);
+			if (document != null)
+				return document;
+
+			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+			 
+		}
 	}
 }

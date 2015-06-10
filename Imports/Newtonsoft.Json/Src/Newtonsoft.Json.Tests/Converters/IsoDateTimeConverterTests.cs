@@ -29,7 +29,7 @@ using Newtonsoft.Json.Tests.TestObjects;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -126,7 +126,7 @@ namespace Newtonsoft.Json.Tests.Converters
             Assert.AreEqual(2006, d.Year);
         }
 
-#if !(NETFX_CORE || ASPNETCORE50)
+#if !(NETFX_CORE || DNXCORE50)
         [Test]
         public void SerializeFormattedDateTimeNewZealandCulture()
         {
@@ -275,7 +275,7 @@ namespace Newtonsoft.Json.Tests.Converters
             //   "LastModified": "2009-04-12T20:44:55"
             // }
 
-            Console.WriteLine(jsonText);
+            Assert.AreEqual(@"{""Name"":""Keith"",""BirthDate"":""1980-03-08T00:00:00"",""LastModified"":""2009-04-12T20:44:55""}", jsonText);
         }
 
 #if !NET20

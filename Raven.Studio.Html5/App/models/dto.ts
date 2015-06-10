@@ -619,7 +619,8 @@ interface databaseDocumentDto {
 
 interface restoreRequestDto {
     BackupLocation: string;
-    
+	IndexesLocation: string;
+	JournalsLocation: string;
 }
 
 interface databaseRestoreRequestDto extends restoreRequestDto {
@@ -819,6 +820,36 @@ interface statusDebugChangesDto {
     WatchIndexes: Array<string>;
     WatchDocuments: Array<string>;
     WatchedFolders: Array<string>;
+}
+
+interface statusDebugDataSubscriptionsDto {
+    SubscriptionId: number;
+    Criteria: subscriptionCriteriaDto;
+    AckEtag: string;
+    TimeOfSendingLastBatch: string;
+    TimeOfLastClientActivity: string;
+    IsOpen: boolean;
+    ConnectionOptions: subscriptionConnectionOptionsDto;
+}
+
+interface subscriptionCriteriaDto {
+    KeyStartsWith: string;
+    BelongsToAnyCollection: Array<string>;
+    PropertiesMatch: Array<{ Key: string; Value; string}>;
+    PropertiesNotMatch: Array<{ Key: string; Value; string }>;
+}
+
+interface subscriptionConnectionOptionsDto {
+    ConnectionId: string;
+    BatchOptions: subscriptionBatchOptionsDto;
+    ClientAliveNotificationInterval: string;
+    IgnoreSubscribersErrors: boolean;
+}
+
+interface subscriptionBatchOptionsDto {
+    MaxSize: number;
+    MaxDocCount: number;
+    AcknowledgmentTimeout: string;
 }
 
 interface statusDebugChangesDocumentStoreDto {

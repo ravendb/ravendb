@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !(NETFX_CORE || PORTABLE || PORTABLE40 || ASPNETCORE50)
+#if !(NETFX_CORE || PORTABLE || PORTABLE40 || DNXCORE50)
 using NUnit.Framework;
 using Raven.Imports.Newtonsoft.Json.Linq;
 

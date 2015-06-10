@@ -110,17 +110,14 @@ namespace Raven.Client.Connection.Implementation
 			conventions = requestParams.Convention;
 			requestTimeMetric = requestParams.RequestTimeMetric;
 
-			if (factory.httpMessageHandler != null) 
-				recreateHandler = () => factory.httpMessageHandler;
-			else
-			{
-				recreateHandler = () => new WebRequestHandler
+			recreateHandler = factory.httpMessageHandler ?? (
+				() => new WebRequestHandler
 				{
 					AllowAutoRedirect = false,
 					UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
 					Credentials = _credentials != null ? _credentials.Credentials : null,
-				};
-			}
+				}
+			);
 
 			httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
 
@@ -650,7 +647,11 @@ namespace Raven.Client.Connection.Implementation
 			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
 
 				var stream = await Response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-				var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
+				var observableLineStream = new ObservableLineStream(stream, () =>
+				{
+					Response.Dispose();
+					factory.HttpClientCache.ReleaseClient(httpClient, _credentials);
+				});
 				observableLineStream.Start();
 				return (IObservable<string>)observableLineStream;
 			}).ConfigureAwait(false);

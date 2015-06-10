@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;

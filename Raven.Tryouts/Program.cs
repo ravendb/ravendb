@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Tests.Core.Replication;
+using Raven.Tests.Replication;
 
 namespace Raven.Tryouts
 {

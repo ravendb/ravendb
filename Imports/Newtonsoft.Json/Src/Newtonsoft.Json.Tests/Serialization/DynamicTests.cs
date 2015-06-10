@@ -41,7 +41,7 @@ using Newtonsoft.Json.Utilities;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
-#elif ASPNETCORE50
+#elif DNXCORE50
 using Xunit;
 using Test = Xunit.FactAttribute;
 using Assert = Newtonsoft.Json.Tests.XUnitAssert;
@@ -122,8 +122,6 @@ namespace Newtonsoft.Json.Tests.Serialization
                 TypeNameHandling = TypeNameHandling.All,
                 TypeNameAssemblyFormat = FormatterAssemblyStyle.Full
             });
-
-            Console.WriteLine(json);
 
             string dynamicChildObjectTypeName = ReflectionUtils.GetTypeName(typeof(DynamicChildObject), FormatterAssemblyStyle.Full, null);
             string expandoObjectTypeName = ReflectionUtils.GetTypeName(typeof(ExpandoObject), FormatterAssemblyStyle.Full, null);
@@ -268,8 +266,6 @@ namespace Newtonsoft.Json.Tests.Serialization
                 NullValueHandling = NullValueHandling.Ignore,
             });
 
-            Console.WriteLine(json);
-
             StringAssert.AreEqual(@"{
   ""Explicit"": false,
   ""Text"": ""Text!"",
@@ -290,8 +286,6 @@ namespace Newtonsoft.Json.Tests.Serialization
             {
                 NullValueHandling = NullValueHandling.Include,
             });
-
-            Console.WriteLine(json);
 
             StringAssert.AreEqual(@"{
   ""Explicit"": false,
@@ -317,8 +311,6 @@ namespace Newtonsoft.Json.Tests.Serialization
             {
                 DefaultValueHandling = DefaultValueHandling.Ignore,
             });
-
-            Console.WriteLine(json);
 
             StringAssert.AreEqual(@"{
   ""Text"": ""Text!"",

@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
@@ -21,6 +22,17 @@ namespace Raven.Database.Bundles.Replication.Triggers
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
+				if (metadata.Remove(Constants.RavenReplicationConflictSkipResolution))
+				{
+					if (key.IndexOf("/conflicts/", StringComparison.OrdinalIgnoreCase) == -1)
+					{
+						metadata["@Http-Status-Code"] = 409;
+						metadata["@Http-Status-Description"] = "Conflict";
+					}
+
+					return;
+				}
+
 				metadata.Remove(Constants.RavenReplicationConflict);// you can't put conflicts
 
 				var oldVersion = Database.Documents.Get(key, transactionInformation);
@@ -42,6 +54,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
 			    {
 			        new RavenJArray(ReplicationData.GetHistory(metadata)) // first item to interleave
 			    };
+
 				foreach (var prop in conflicts)
 				{
 					RavenJObject deletedMetadata;

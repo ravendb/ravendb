@@ -23,7 +23,11 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !(NET35 || NET20 || NETFX_CORE || ASPNETCORE50)
+#if !(NET35 || NET20 || NETFX_CORE || DNXCORE50)
+using System.Diagnostics;
+using System.Reflection;
+using Microsoft.FSharp.Core;
+using Microsoft.FSharp.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,6 +88,56 @@ namespace Newtonsoft.Json.Tests.Converters
         }
 
         [Test]
+        public void SerializePerformance()
+        {
+            List<Shape> values = new List<Shape>
+            {
+                Shape.NewRectangle(10.0, 5.0),
+                Shape.NewCircle(7.5)
+            };
+
+            string json = JsonConvert.SerializeObject(values, Formatting.Indented);
+
+            Stopwatch ts = new Stopwatch();
+            ts.Start();
+
+            for (int i = 0; i < 2000; i++)
+            {
+                JsonConvert.SerializeObject(values);
+            }
+
+            ts.Stop();
+
+            Console.WriteLine(ts.Elapsed.TotalSeconds);
+        }
+
+        [Test]
+        public void DeserializePerformance()
+        {
+            string json = @"[
+  {""Case"":""Rectangle"",""Fields"":[10.0,5.0]},
+  {""Case"":""Rectangle"",""Fields"":[10.0,5.0]},
+  {""Case"":""Rectangle"",""Fields"":[10.0,5.0]},
+  {""Case"":""Rectangle"",""Fields"":[10.0,5.0]},
+  {""Case"":""Rectangle"",""Fields"":[10.0,5.0]}
+]";
+
+            JsonConvert.DeserializeObject<List<Shape>>(json);
+
+            Stopwatch ts = new Stopwatch();
+            ts.Start();
+
+            for (int i = 0; i < 2000; i++)
+            {
+                JsonConvert.DeserializeObject<List<Shape>>(json);
+            }
+
+            ts.Stop();
+
+            Console.WriteLine(ts.Elapsed.TotalSeconds);
+        }
+
+        [Test]
         public void SerializeUnionWithFields()
         {
             string json = JsonConvert.SerializeObject(Shape.NewRectangle(10.0, 5.0));
@@ -114,6 +168,79 @@ namespace Newtonsoft.Json.Tests.Converters
 
             Assert.AreEqual(5.0, r.length);
             Assert.AreEqual(10.0, r.width);
+        }
+
+        public class Union
+        {
+            public List<UnionCase> Cases;
+            public Converter<object, int> TagReader { get; set; }
+        }
+
+        public class UnionCase
+        {
+            public int Tag;
+            public string Name;
+            public PropertyInfo[] Fields;
+            public Converter<object, object[]> FieldReader;
+            public Converter<object[], object> Constructor;
+        }
+
+        private Union CreateUnion(Type t)
+        {
+            Union u = new Union();
+
+            u.TagReader = FSharpFunc<object, int>.ToConverter(FSharpValue.PreComputeUnionTagReader(t, null));
+            u.Cases = new List<UnionCase>();
+
+            UnionCaseInfo[] cases = FSharpType.GetUnionCases(t, null);
+
+            foreach (UnionCaseInfo unionCaseInfo in cases)
+            {
+                UnionCase unionCase = new UnionCase();
+                unionCase.Tag = unionCaseInfo.Tag;
+                unionCase.Name = unionCaseInfo.Name;
+                unionCase.Fields = unionCaseInfo.GetFields();
+                unionCase.FieldReader = FSharpFunc<object, object[]>.ToConverter(FSharpValue.PreComputeUnionReader(unionCaseInfo, null));
+                unionCase.Constructor = FSharpFunc<object[], object>.ToConverter(FSharpValue.PreComputeUnionConstructor(unionCaseInfo, null));
+
+                u.Cases.Add(unionCase);
+            }
+
+            return u;
+        }
+
+        [Test]
+        public void Serialize()
+        {
+            Shape value = Shape.NewRectangle(10.0, 5.0);
+
+            Union union = CreateUnion(value.GetType());
+
+            int tag = union.TagReader.Invoke(value);
+
+            UnionCase caseInfo = union.Cases.Single(c => c.Tag == tag);
+
+            object[] fields = caseInfo.FieldReader.Invoke(value);
+
+            Assert.AreEqual(10, fields[0]);
+            Assert.AreEqual(5, fields[1]);
+        }
+
+        [Test]
+        public void Deserialize()
+        {
+            Union union = CreateUnion(typeof(Shape.Rectangle));
+
+            UnionCase caseInfo = union.Cases.Single(c => c.Name == "Rectangle");
+
+            Shape.Rectangle value = (Shape.Rectangle)caseInfo.Constructor.Invoke(new object[]
+            {
+                10.0, 5.0
+            });
+
+            Assert.AreEqual("Newtonsoft.Json.Tests.TestObjects.Shape+Rectangle", value.ToString());
+            Assert.AreEqual(10, value.width);
+            Assert.AreEqual(5, value.length);
         }
 
         [Test]
@@ -150,6 +277,26 @@ namespace Newtonsoft.Json.Tests.Converters
         public void DeserializeBasicUnion_UnexpectedProperty()
         {
             ExceptionAssert.Throws<JsonSerializationException>(() => JsonConvert.DeserializeObject<Currency>(@"{""Case123"":""AUD""}"), "Unexpected property 'Case123' found when reading union. Path 'Case123', line 1, position 11.");
+        }
+
+        [Test]
+        public void SerializeUnionWithTypeNameHandlingAndReferenceTracking()
+        {
+            string json = JsonConvert.SerializeObject(Shape.NewRectangle(10.0, 5.0), new JsonSerializerSettings
+            {
+                PreserveReferencesHandling = PreserveReferencesHandling.All,
+                TypeNameHandling = TypeNameHandling.All
+            });
+
+            Assert.AreEqual(@"{""Case"":""Rectangle"",""Fields"":[10.0,5.0]}", json);
+
+            Shape c = JsonConvert.DeserializeObject<Shape>(json);
+            Assert.AreEqual(true, c.IsRectangle);
+
+            Shape.Rectangle r = (Shape.Rectangle)c;
+
+            Assert.AreEqual(5.0, r.length);
+            Assert.AreEqual(10.0, r.width);
         }
     }
 }

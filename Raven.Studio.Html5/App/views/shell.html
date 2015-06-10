@@ -201,7 +201,7 @@
 
 
                             </a>
-                            <ul class="dropdown-menu" data-bind="foreach: listedResources, visible: $root.listedResources().length > 0">
+                            <ul class="dropdown-menu scrollable-resource-menu" role="menu" data-bind="foreach: listedResources, visible: $root.listedResources().length > 0">
                                 <li>
                                     <a href="#" data-bind="click: $root.selectResource.bind($root, $data)">
                                         <span data-bind="attr: { class: $root.iconName($data) }"></span>

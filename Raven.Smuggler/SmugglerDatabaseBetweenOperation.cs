@@ -259,7 +259,9 @@ namespace Raven.Smuggler
 									document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
 
 								if(databaseOptions.ShouldDisableVersioningBundle)
-									document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
+									document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
+
+								document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
 
 								if (!string.IsNullOrEmpty(databaseOptions.TransformScript))
 								{
@@ -314,7 +316,9 @@ namespace Raven.Smuggler
 											document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
 
 										if (databaseOptions.ShouldDisableVersioningBundle)
-											document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
+											document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
+
+										document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
 
 										document.Remove("@metadata");
 										metadata.Remove("@id");
@@ -368,7 +372,7 @@ namespace Raven.Smuggler
 			}
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+	    [Obsolete("Use RavenFS instead.")]
 		private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerDatabaseOptions databaseOptions, int exportBatchSize)
 		{
 			Etag lastEtag = databaseOptions.StartAttachmentsEtag;
@@ -513,13 +517,6 @@ namespace Raven.Smuggler
 				metadata.Remove(Constants.RavenReplicationSource);
 				metadata.Remove(Constants.RavenReplicationVersion);
 			}
-
-			return metadata;
-		}
-
-		public static RavenJToken DisableVersioning(RavenJObject metadata)
-		{
-			metadata.Add(Constants.RavenIgnoreVersioning, true);
 
 			return metadata;
 		}
