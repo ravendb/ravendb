@@ -13,166 +13,156 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Prefetching
 {
-	public class ConcurrentJsonDocumentSortedList
-	{
-		private readonly ReaderWriterLockSlim slim = new ReaderWriterLockSlim();
+    public class ConcurrentJsonDocumentSortedList
+    {
+        private readonly ReaderWriterLockSlim slim = new ReaderWriterLockSlim();
 
-		private readonly IList<JsonDocument> innerList;
+        private readonly SortedList<Etag, JsonDocument> innerList;
 
-	    private int loadedSize;
+        private int loadedSize;
 
-		public ConcurrentJsonDocumentSortedList()
-		{
-			innerList = new List<JsonDocument>();
-		}
+        public ConcurrentJsonDocumentSortedList()
+        {
+            innerList = new SortedList<Etag, JsonDocument>();
+        }
 
-		public IEnumerable<JsonDocument> Clone()
-		{
-			try
-			{
-				slim.EnterReadLock();
-				return new List<JsonDocument>(innerList);
-			}
-			finally
-			{
-				slim.ExitReadLock();
-			}
-		}
 
-		public int Count
-		{
-			get
-			{
-				try
-				{
-					slim.EnterReadLock();
-					return innerList.Count;
-				}
-				finally
-				{
-					slim.ExitReadLock();
-				}
-			}
-		}
+        public SortedList<Etag, JsonDocument> Clone()
+        {
+            try
+            {
+                slim.EnterReadLock();
+                return new SortedList<Etag, JsonDocument>(innerList);
+            }
+            finally
+            {
+                slim.ExitReadLock();
+            }
+        }
 
-	    public IDisposable EnterWriteLock()
-	    {
-	        slim.EnterWriteLock();
-	        return new DisposableAction(slim.ExitWriteLock);
-	    }
+        public int Count
+        {
+            get
+            {
+                try
+                {
+                    slim.EnterReadLock();
+                    return innerList.Count;
+                }
+                finally
+                {
+                    slim.ExitReadLock();
+                }
+            }
+        }
 
-		public void Add(JsonDocument value)
-		{
+        public IDisposable EnterWriteLock()
+        {
+            slim.EnterWriteLock();
+            return new DisposableAction(slim.ExitWriteLock);
+        }
+
+        public void Add(JsonDocument value)
+        {
             Debug.Assert(slim.IsWriteLockHeld);
-		    var index = CalculateEtagIndex(value.Etag);
-		    innerList.Insert(index, value);
-		    loadedSize += value.SerializedSizeOnDisk;
-		}
 
-		public bool TryPeek(out JsonDocument result)
-		{
-			try
-			{
-				slim.EnterReadLock();
-				result = innerList.FirstOrDefault();
+            innerList[value.Etag] = value;
 
-				return result != null;
-			}
-			finally
-			{
-				slim.ExitReadLock();
-			}
-		}
+            loadedSize += value.SerializedSizeOnDisk;
+        }
 
-		public bool TryDequeue(out JsonDocument result)
-		{
-			try
-			{
-				slim.EnterWriteLock();
-				result = innerList.FirstOrDefault();
-				if (result != null)
-			    {
-					innerList.RemoveAt(0);
-			        loadedSize -= result.SerializedSizeOnDisk;
-			    }
+        public bool TryPeek(out JsonDocument result)
+        {
+            try
+            {
+                slim.EnterReadLock();
 
-				return result != null;
-			}
-			finally
-			{
-				slim.ExitWriteLock();
-			}
-		}
+                result = innerList.Values.FirstOrDefault();
 
-		public Etag NextDocumentETag()
-		{
-			JsonDocument result;
-			return TryPeek(out result) == false ? null : result.Etag;
-		}
+                return result != null;
+            }
+            finally
+            {
+                slim.ExitReadLock();
+            }
+        }
 
-		private int CalculateEtagIndex(Etag etag)
-		{
-			int i;
-			for (i = innerList.Count; i > 0; i--)
-			{
-				var elementEtag = innerList[i - 1].Etag;
-				if (elementEtag.CompareTo(etag) < 0)
-					return i;
-			}
+        public bool TryDequeue(out JsonDocument result)
+        {
+            try
+            {
+                slim.EnterWriteLock();
+                result = innerList.Values.FirstOrDefault();
+                if (result != null)
+                {
+                    innerList.RemoveAt(0);
+                    loadedSize -= result.SerializedSizeOnDisk;
+                }
 
-			return i;
-		}
+                return result != null;
+            }
+            finally
+            {
+                slim.ExitWriteLock();
+            }
+        }
 
-		public int LoadedSize
-		{
-			get
-			{
-				slim.EnterReadLock();
-				try
-				{
-					return loadedSize;
-				}
-				finally
-				{
-					slim.ExitReadLock();
-				}
-			}
-		}
+        public Etag NextDocumentETag()
+        {
+            JsonDocument result;
+            return TryPeek(out result) == false ? null : result.Etag;
+        }
 
-		public void RemoveAfter(Etag etag)
-		{
-			slim.EnterWriteLock();
-			try
-			{
-				for (var i = innerList.Count - 1; i >= 0; i--)
-				{
-					var doc = innerList[i];
 
-					if (doc.Etag.CompareTo(etag) < 0)
-						break;
+        public int LoadedSize
+        {
+            get
+            {
+                slim.EnterReadLock();
+                try
+                {
+                    return loadedSize;
+                }
+                finally
+                {
+                    slim.ExitReadLock();
+                }
+            }
+        }
 
-					innerList.RemoveAt(i);
-					loadedSize -= doc.SerializedSizeOnDisk;
-				}
-			}
-			finally
-			{
-				slim.ExitWriteLock();
-			}
-		}
+        public void RemoveAfter(Etag etag)
+        {
+            slim.EnterWriteLock();
+            try
+            {
+                for (var i = innerList.Count - 1; i >= 0; i--)
+                {
+                    var doc = innerList.Values[i];
+                    if (doc.Etag.CompareTo(etag) < 0)
+                        break;
 
-		public void Clear()
-		{
-			slim.EnterWriteLock();
-			try
-			{
-				innerList.Clear();
-				loadedSize = 0;
-			}
-			finally
-			{
-				slim.ExitWriteLock();
-			}
-		}
-	}
+                    innerList.RemoveAt(i);
+                    loadedSize -= doc.SerializedSizeOnDisk;
+                }
+            }
+            finally
+            {
+                slim.ExitWriteLock();
+            }
+        }
+
+        public void Clear()
+        {
+            slim.EnterWriteLock();
+            try
+            {
+                innerList.Clear();
+                loadedSize = 0;
+            }
+            finally
+            {
+                slim.ExitWriteLock();
+            }
+        }
+    }
 }

@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
@@ -26,6 +27,8 @@ namespace Raven.Database.Server.Controllers
 {
 	public class SubscriptionsController : RavenDbApiController
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		[HttpPost]
 		[RavenRoute("subscriptions/create")]
 		[RavenRoute("databases/{databaseName}/subscriptions/create")]
@@ -180,6 +183,7 @@ namespace Raven.Database.Server.Controllers
 
 					var batchSize = 0;
 					var batchDocCount = 0;
+					var processedDocuments = 0;
 					var hasMoreDocs = false;
 
 					var config = subscriptions.GetSubscriptionConfig(id);
@@ -188,6 +192,7 @@ namespace Raven.Database.Server.Controllers
 
                     Action<JsonDocument> addDocument = doc =>
                     {
+	                    processedDocuments++;
                         timeout.Delay();
 
                         if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
@@ -212,9 +217,10 @@ namespace Raven.Database.Server.Controllers
                     };
 
                     int nextStart = 0;
-
+					var retries = 0;
 					do
 					{
+						var lastIndex = processedDocuments;
 						Database.TransactionalStorage.Batch(accessor =>
 						{
 							// we may be sending a LOT of documents to the user, and most 
@@ -241,8 +247,22 @@ namespace Raven.Database.Server.Controllers
 
 								startEtag = lastProcessedDocEtag;
 							}
+
+							retries = lastIndex == batchDocCount ? retries : 0;
 						});
-					} while (hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
+						if (lastIndex == processedDocuments)
+						{
+							if (retries == 3)
+							{
+								log.Warn("Subscription processing did not end up replicating any documents for 3 times in a row, stopping operation", retries);
+							}
+							else
+							{
+								log.Warn("Subscription processing did not end up replicating any documents, due to possible storage error, retry number: {0}", retries);
+							}
+							retries++;
+						}
+					} while (retries< 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
 
 					writer.WriteEndArray();
 
