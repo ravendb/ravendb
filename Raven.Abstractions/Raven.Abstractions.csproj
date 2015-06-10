@@ -396,6 +396,7 @@
     <Compile Include="Smuggler\SmugglerDatabaseOptions.cs" />
     <Compile Include="Smuggler\SmugglerFilesApiBase.cs" />
     <Compile Include="Smuggler\SmugglerFilesOptions.cs" />
+    <Compile Include="Smuggler\SmugglerHelper.cs" />
     <Compile Include="Smuggler\SmugglerMode.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />
     <Compile Include="Spatial\ShapeConverter.cs" />

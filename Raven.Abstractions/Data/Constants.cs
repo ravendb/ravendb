@@ -122,7 +122,9 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationVersion = "Raven-Replication-Version";
 		public const string RavenReplicationHistory = "Raven-Replication-History";
 		public const string RavenReplicationConflict = "Raven-Replication-Conflict";
+		public const string RavenReplicationConflictSkipResolution = "Raven-Replication-Conflict-Skip-Resolution";
 		public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
+		public const string RavenReplicationConflictDocumentForcePut = "Raven-Replication-Conflict-Document-Force-Put";
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 		public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		public const string RavenReplicationDestinationsBasePath = "Raven/Replication/Destinations/";
