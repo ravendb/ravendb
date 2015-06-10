@@ -112,6 +112,7 @@ namespace Raven.Database.Actions
 		{
 			ReleaseSubscription(id);
 			openSubscriptions.TryAdd(id, options);
+			UpdateClientActivityDate(id);
 		}
 
 		public void ReleaseSubscription(long id)
