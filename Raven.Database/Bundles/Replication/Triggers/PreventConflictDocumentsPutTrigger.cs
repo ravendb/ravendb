@@ -4,6 +4,7 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
+
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 
@@ -16,23 +17,26 @@ namespace Raven.Bundles.Replication.Triggers
 	{
 		public override void OnPut(string key, Json.Linq.RavenJObject document, Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
 		{
+			if (metadata.Remove(Constants.RavenReplicationConflictDocumentForcePut))
+				return;
+
 			metadata.Remove(Constants.RavenReplicationConflictDocument); // or conflict documents
 		}
 
 		public override VetoResult AllowPut(string key, Json.Linq.RavenJObject document, Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
 		{
-			if (metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
+			if (metadata.ContainsKey(Constants.RavenReplicationConflictDocument) && metadata.ContainsKey(Constants.RavenReplicationConflictDocumentForcePut) == false)
 				return VetoResult.Deny("You cannot PUT a document with metadata " + Constants.RavenReplicationConflictDocument);
 			JsonDocument documentByKey = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				documentByKey = accessor.Documents.DocumentByKey(key);		
+				documentByKey = accessor.Documents.DocumentByKey(key);
 			});
 			if (documentByKey == null)
 				return VetoResult.Allowed;
 			if (documentByKey.Metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
 				return VetoResult.Deny("Conflict documents (with " + Constants.RavenReplicationConflictDocument +
-					                ") are read only and can only be modified by RavenDB when you resolve the conflict");
+									") are read only and can only be modified by RavenDB when you resolve the conflict");
 			return VetoResult.Allowed;
 		}
 	}
