@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
 using Raven.Database.Bundles.Replication.Impl;
@@ -39,16 +40,27 @@ namespace Raven.Bundles.Replication.Triggers
 				var documentMetadata = GetDocumentMetadata(key);
 				if (documentMetadata != null)
 				{
-					RavenJArray history = new RavenJArray(ReplicationData.GetHistory(documentMetadata));
+					var history = new RavenJArray(ReplicationData.GetHistory(documentMetadata));
 					metadata[Constants.RavenReplicationHistory] = history;
 
 					if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) && 
 						documentMetadata.ContainsKey(Constants.RavenReplicationSource))
 					{
-						history.Add(new RavenJObject
+						var newHistoryEntry = new RavenJObject
 						{
 							{Constants.RavenReplicationVersion, documentMetadata[Constants.RavenReplicationVersion]},
 							{Constants.RavenReplicationSource, documentMetadata[Constants.RavenReplicationSource]}
+						};
+
+						if(history.Contains(newHistoryEntry,RavenJTokenEqualityComparer.Default) == false)
+							history.Add(newHistoryEntry);
+					}
+					else //no replication data -> start history from start
+					{
+						history.Add(new RavenJObject
+						{
+							{Constants.RavenReplicationVersion, 0},
+							{Constants.RavenReplicationSource, RavenJToken.FromObject(Database.TransactionalStorage.Id)}
 						});
 					}
 
