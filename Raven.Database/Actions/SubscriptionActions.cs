@@ -78,7 +78,6 @@ namespace Raven.Database.Actions
 			if (existingOptions.ConnectionId.Equals(options.ConnectionId, StringComparison.OrdinalIgnoreCase))
 			{
 				// reopen subscription on already existing connection - might happen after network connection problems the client tries to reopen
-
 				UpdateClientActivityDate(id);
 				return; 
 			}
@@ -88,7 +87,6 @@ namespace Raven.Database.Actions
 			if (SystemTime.UtcNow - config.TimeOfLastClientActivity > TimeSpan.FromTicks(existingOptions.ClientAliveNotificationInterval.Ticks * 3))
 			{
 				// last connected client didn't send at least two 'client-alive' notifications - let the requesting client to open it
-
 				ForceReleaseAndOpenForNewClient(id, options);
 				return;
 			}
@@ -96,12 +94,15 @@ namespace Raven.Database.Actions
 			switch (options.Strategy)
 			{
 				case SubscriptionOpeningStrategy.LastTakesOver:
+					if (existingOptions.Strategy != SubscriptionOpeningStrategy.Forced)
+					{
+						ForceReleaseAndOpenForNewClient(id, options);
+						return;
+					}
+					break;
+				case SubscriptionOpeningStrategy.Forced:
 					ForceReleaseAndOpenForNewClient(id, options);
 					return;
-				case SubscriptionOpeningStrategy.QueueIn:
-					var pendingQueue = pendingClients.GetOrAdd(id, new ConcurrentQueue<SubscriptionConnectionOptions>());
-					pendingQueue.Enqueue(options);
-					break;
 			}
 
 			throw new SubscriptionInUseException("Subscription is already in use. There can be only a single open subscription connection per subscription.");

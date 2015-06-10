@@ -231,10 +231,12 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// It determines if the subscription is closed.
 		/// </summary>
-		public bool IsClosed { get; private set; }
+		public bool IsConnectionClosed { get; private set; }
 
 		private async Task StartPullingDocs()
 		{
+			SubscriptionConnectionException = null;
+
 			pullingTask = PullDocuments().ObserveException();
 
 			try
@@ -256,7 +258,7 @@ namespace Raven.Client.Document
 			{
 				try
 				{
-					startPullingTask = null; // prevent from calling Wait() on this in Dispose
+					startPullingTask = null; // prevent from calling Wait() on this in Dispose because we are already inside this task
 					await DisposeAsync().ConfigureAwait(false);
 				}
 				catch (Exception e)
@@ -268,7 +270,7 @@ namespace Raven.Client.Document
 
 		private async Task RestartPullingTask()
 		{
-			await Time.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
+			await Time.Delay(options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
 			try
 			{
 				await ensureOpenSubscription().ConfigureAwait(false);
@@ -289,13 +291,14 @@ namespace Raven.Client.Document
 		{
 			SubscriptionConnectionException = ex;
 
-			if (ex is SubscriptionInUseException || ex is SubscriptionDoesNotExistException || // another client has connected to the subscription or it has been deleted meanwhile - we cannot open it so we need to finish
+			if (ex is SubscriptionInUseException || // another client has connected to the subscription
+				ex is SubscriptionDoesNotExistException ||  // subscription has been deleted meanwhile
 			    ex is SubscriptionClosedException) // someone forced us to drop the connection by calling Subscriptions.Release
 			{
-				IsClosed = true;
+				IsConnectionClosed = true;
 
-				startPullingTask = null; // prevent from calling Wait() on this in Dispose
-				pullingTask = null; // prevent from calling Wait() on this in Dispose
+				startPullingTask = null; // prevent from calling Wait() on this in Dispose because we can be already inside this task
+				pullingTask = null; // prevent from calling Wait() on this in Dispose because we can be already inside this task
 
 				Dispose();
 
@@ -451,7 +454,7 @@ namespace Raven.Client.Document
 				}
 			}
 
-			if (IsClosed)
+			if (IsConnectionClosed)
 				return new CompletedTask();
 
 			return CloseSubscription();
@@ -462,7 +465,7 @@ namespace Raven.Client.Document
 			using (var closeRequest = CreateCloseRequest())
 			{
 				await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
-				IsClosed = true;
+				IsConnectionClosed = true;
 			}
 		}
 	}

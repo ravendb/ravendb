@@ -777,7 +777,7 @@ namespace Raven.Tests.Issues
 				Assert.True(subscription.IsErroredBecauseOfSubscriber);
 				Assert.Equal("Fake exception", subscription.LastSubscriberException.Message);
 
-				Assert.True(SpinWait.SpinUntil(() => subscription.IsClosed, waitForDocTimeout));
+				Assert.True(SpinWait.SpinUntil(() => subscription.IsConnectionClosed, waitForDocTimeout));
 
 				var subscriptionConfig = store.Subscriptions.GetSubscriptions(0, 1).First();
 
@@ -918,7 +918,7 @@ namespace Raven.Tests.Issues
 				Assert.False(docs.TryTake(out doc, waitForDocTimeout), doc != null ? doc.ToString() : string.Empty);
 				Assert.False(docs.TryTake(out doc, waitForDocTimeout), doc != null ? doc.ToString() : string.Empty);
 
-				Assert.True(subscription.IsClosed);
+				Assert.True(subscription.IsConnectionClosed);
 
 				subscription.Dispose();
 			}
