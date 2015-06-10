@@ -8,7 +8,7 @@ import fileDownloader = require("common/fileDownloader");
 import resource = require("models/resources/resource");
 
 import shell = require("viewmodels/shell");
-import database = require("models/database");
+import database = require("models/resources/database");
 
 
 class trafficWatch extends viewModelBase {

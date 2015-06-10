@@ -29,7 +29,7 @@ import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
-import showDataDialog = require("viewmodels/showDataDialog");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 
 

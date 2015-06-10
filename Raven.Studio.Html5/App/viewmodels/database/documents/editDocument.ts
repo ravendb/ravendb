@@ -22,8 +22,8 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import genUtils = require("common/generalUtils");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
-import generateClassCommand = require("commands/generateClassCommand");
-import showDataDialog = require("viewmodels/showDataDialog");
+import generateClassCommand = require("commands/database/documents/generateClassCommand");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class editDocument extends viewModelBase {
 
