@@ -480,6 +480,15 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
     <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
+    <Compile Include="TimeSeries\KeyValueStateMachine.cs" />
+    <Compile Include="TimeSeries\PeriodDuration.cs" />
+    <Compile Include="TimeSeries\PeriodType.cs" />
+    <Compile Include="TimeSeries\PointCandleSchema.cs" />
+    <Compile Include="TimeSeries\Range.cs" />
+    <Compile Include="TimeSeries\RollupRange.cs" />
+    <Compile Include="TimeSeries\TimeSeriesQuery.cs" />
+    <Compile Include="TimeSeries\TimeSeriesServer.cs" />
+    <Compile Include="TimeSeries\TimeSeriesStorage.cs" />
     <Compile Include="Util\DatabaseHelper.cs" />
     <Compile Include="Util\DevelopmentHelper.cs" />
     <Compile Include="Util\CultureHelper.cs" />
