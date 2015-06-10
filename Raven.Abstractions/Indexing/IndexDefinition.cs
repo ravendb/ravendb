@@ -153,31 +153,34 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
-		/// <summary>
-		/// Equals the specified other.
-		/// </summary>
-		/// <param name="other">The other.</param>
-		/// <returns></returns>
-		public bool Equals(IndexDefinition other)
-		{
-			if (ReferenceEquals(null, other))
-				return false;
-			if (ReferenceEquals(this, other))
-				return true;
-			return Maps.SequenceEqual(other.Maps) &&
-					Equals(other.IndexId, IndexId) &&
-					Equals(other.Reduce, Reduce) &&
-					Equals(other.MaxIndexOutputsPerDocument, MaxIndexOutputsPerDocument) &&
-					DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
-					DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
-					DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
-					DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
-					DictionaryExtensions.ContentEquals(other.Suggestions, Suggestions) &&
-					DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
-					DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
-		}
+        /// <summary>
+        /// Equals the specified other.
+        /// </summary>
+        /// <param name="other">The other.</param>
+        /// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
+        /// <returns></returns>
+        public bool Equals(IndexDefinition other, bool compareIndexIds = true)
+        {
+            if (ReferenceEquals(null, other))
+                return false;
 
+            if (ReferenceEquals(this, other))
+                return true;
 
+            if (compareIndexIds && !Equals(other.IndexId, IndexId))
+                return false;
+
+            return Maps.SequenceEqual(other.Maps) &&
+                    Equals(other.Reduce, Reduce) &&
+                    Equals(other.MaxIndexOutputsPerDocument, MaxIndexOutputsPerDocument) &&
+                    DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
+                    DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
+                    DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
+                    DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
+                    DictionaryExtensions.ContentEquals(other.Suggestions, Suggestions) &&
+                    DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
+                    DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
+        }
 
 		private static int DictionaryHashCode<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> x)
 		{
