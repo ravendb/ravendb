@@ -175,15 +175,20 @@ namespace Raven.Abstractions.Indexing
 		/// Equals the specified other.
 		/// </summary>
 		/// <param name="other">The other.</param>
+        /// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
 		/// <returns></returns>
-		public bool Equals(IndexDefinition other)
+        public bool Equals(IndexDefinition other, bool compareIndexIds = true)
 		{
 			if (ReferenceEquals(null, other))
 				return false;
+
 			if (ReferenceEquals(this, other))
 				return true;
+
+            if (compareIndexIds && !Equals(other.IndexId, IndexId))
+                return false;
+
 			return Maps.SequenceEqual(other.Maps) &&
-					Equals(other.IndexId, IndexId) &&
 					Equals(other.Reduce, Reduce) &&
 					Equals(other.MaxIndexOutputsPerDocument, MaxIndexOutputsPerDocument) &&
 					DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
@@ -194,8 +199,6 @@ namespace Raven.Abstractions.Indexing
 					DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
 					DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
 		}
-
-
 
 		private static int DictionaryHashCode<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> x)
 		{
