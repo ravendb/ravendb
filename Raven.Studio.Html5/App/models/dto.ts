@@ -821,6 +821,36 @@ interface statusDebugChangesDto {
     WatchedFolders: Array<string>;
 }
 
+interface statusDebugDataSubscriptionsDto {
+    SubscriptionId: number;
+    Criteria: subscriptionCriteriaDto;
+    AckEtag: string;
+    TimeOfSendingLastBatch: string;
+    TimeOfLastClientActivity: string;
+    IsOpen: boolean;
+    ConnectionOptions: subscriptionConnectionOptionsDto;
+}
+
+interface subscriptionCriteriaDto {
+    KeyStartsWith: string;
+    BelongsToAnyCollection: Array<string>;
+    PropertiesMatch: Array<{ Key: string; Value; string}>;
+    PropertiesNotMatch: Array<{ Key: string; Value; string }>;
+}
+
+interface subscriptionConnectionOptionsDto {
+    ConnectionId: string;
+    BatchOptions: subscriptionBatchOptionsDto;
+    ClientAliveNotificationInterval: string;
+    IgnoreSubscribersErrors: boolean;
+}
+
+interface subscriptionBatchOptionsDto {
+    MaxSize: number;
+    MaxDocCount: number;
+    AcknowledgmentTimeout: string;
+}
+
 interface statusDebugChangesDocumentStoreDto {
     WatchAllDocuments: boolean;
     WatchAllIndexes: boolean;

@@ -89,4 +89,6 @@ interface computedAppUrls {
     counterStorageReplication: KnockoutComputed<string>;
     counterStorageStats: KnockoutComputed<string>;
     counterStorageConfiguration: KnockoutComputed<string>;
+
+    dataSubscriptions: KnockoutComputed<string>;
 }

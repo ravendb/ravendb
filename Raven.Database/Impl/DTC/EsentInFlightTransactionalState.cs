@@ -30,8 +30,7 @@ namespace Raven.Database.Impl.DTC
 		private readonly DocumentDatabase _database;
 		private readonly TransactionalStorage storage;
 		private readonly CommitTransactionGrbit txMode;
-		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts =
-			new ConcurrentDictionary<string, EsentTransactionContext>();
+		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts = new ConcurrentDictionary<string, EsentTransactionContext>();
 
 		private long transactionContextNumber;
 		private readonly Timer timer;

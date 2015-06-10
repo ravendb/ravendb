@@ -119,7 +119,7 @@ namespace Raven.Smuggler
 		}
 
 		public JsonDocument GetDocument(string key)
-		{			
+		{
 			return Store.DatabaseCommands.Get(key);
 		}
 
@@ -139,24 +139,24 @@ namespace Raven.Smuggler
 
 			try
 			{
-				while (true)
+			while (true)
+			{
+				try
 				{
-					try
-					{
 						await ((AsyncServerClient)Store.AsyncDatabaseCommands).GetDocumentsAsync(lastEtag, Math.Min(Options.BatchSize, take));
 						
-					}
-					catch (Exception e)
-					{
-						if (retries-- == 0)
-							throw;
+				}
+				catch (Exception e)
+				{
+					if (retries-- == 0)
+						throw;
 
 						Store.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(timeout *= 2);
-						LastRequestErrored = true;
-						ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
-					}
+					LastRequestErrored = true;
+					ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
 				}
 			}
+		}
 			finally
 			{
 				Store.JsonRequestFactory.RequestTimeout = originalRequestTimeout;
@@ -370,20 +370,11 @@ namespace Raven.Smuggler
 
 			return new CompletedTask();
 		}
-
-	    public RavenJToken DisableVersioning(RavenJObject metadata)
-	    {
-		    if (metadata != null)
-		    {
-			    metadata.Add(Constants.RavenIgnoreVersioning, true);
 		    }
-
-		    return metadata;
 	    }
 
 	    public string GetIdentifier()
 	    {
 		    return ((AsyncServerClient) Store.AsyncDatabaseCommands).Url;
-	    }
 	}
-}
+}}

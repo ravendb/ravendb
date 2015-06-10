@@ -271,7 +271,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				var docIndex = 0;
 				var retries = 0;
-				while (docIndex < array.Length)
+				while (retries< 3 && docIndex < array.Length)
 				{
 					var lastIndex = docIndex;
 					using (Database.DocumentLock.Lock())

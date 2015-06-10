@@ -7,6 +7,10 @@ import moment = require("moment");
 import fileDownloader = require("common/fileDownloader");
 import resource = require("models/resources/resource");
 
+import shell = require("viewmodels/shell");
+import database = require("models/database");
+
+
 class trafficWatch extends viewModelBase {
     logConfig = ko.observable<{ Resource: resource; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
     watchClient: trafficWatchClient;
@@ -100,7 +104,7 @@ class trafficWatch extends viewModelBase {
 
 
     configureConnection() {
-        var configDialog = new watchTrafficConfigDialog();
+        var configDialog = new watchTrafficConfigDialog(shell.databases);
         app.showDialog(configDialog);
 
         configDialog.configurationTask.done((x: any) => {

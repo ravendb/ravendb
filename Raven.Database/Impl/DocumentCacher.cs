@@ -70,7 +70,7 @@ namespace Raven.Database.Impl
 			{
 				// this is a bug in the framework
 				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
-				// in this case, we just threat it as uncachable
+				// in this case, we just treat it as uncacheable
 				return null;
 			}
 			if (cachedDocument == null)
@@ -108,7 +108,7 @@ namespace Raven.Database.Impl
 			{
 				// this is a bug in the framework
 				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
-				// in this case, we just threat it as uncachable
+                // in this case, we just treat it as uncacheable
 			}
 
 		}
@@ -123,7 +123,7 @@ namespace Raven.Database.Impl
 			{
 				// this is a bug in the framework
 				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
-				// in this case, we just threat it as uncachable
+                // in this case, we just treat it as uncacheable
 			}
 		}
 
