@@ -63,12 +63,27 @@ namespace Raven.Client.Connection.Profiling
 
 		public void Clear()
 		{
-			items = new LinkedList<T>();
+            // WARNING: We can acquire a read lock and still 'write' because readers wont care (because of what they do)
+            // to get a different reference, however this may not hold true if the logic changes.
+
+            try
+            {
+                rwLock.EnterReadLock();
+
+                items = new LinkedList<T>();
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
 		}
 
 		public void ClearHalf()
 		{
-            LinkedList<T> current;
+            // WARNING: We can acquire a read lock and still 'write' because readers wont care (because of what they do)
+            // to get a different reference, however this may not hold true if the logic changes.
+
+            LinkedList<T> current;            
             try
             {
                 rwLock.EnterReadLock();
