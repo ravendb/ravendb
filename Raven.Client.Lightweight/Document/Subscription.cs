@@ -312,7 +312,9 @@ namespace Raven.Client.Document
 		{
 			changes.ConnectionStatusChanged += ChangesApiConnectionChanged;
 
-			putDocumentsObserver = changes.ForAllDocuments().Subscribe(notification =>
+			var allDocsObservable = changes.ForAllDocuments();
+
+			putDocumentsObserver = allDocsObservable.Subscribe(notification =>
 			{
 				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
 				{
@@ -320,12 +322,18 @@ namespace Raven.Client.Document
 				}
 			});
 
-			endedBulkInsertsObserver = changes.ForBulkInsert().Subscribe(notification =>
+			var bulkInsertObservable = changes.ForBulkInsert();
+			endedBulkInsertsObserver = bulkInsertObservable.Subscribe(notification =>
 			{
 				if (notification.Type == DocumentChangeTypes.BulkInsertEnded)
 				{
 					newDocuments.Set();
 				}
+			});
+
+			Task.WaitAll(new Task[]
+			{
+				allDocsObservable.Task, bulkInsertObservable.Task
 			});
 		}
 
