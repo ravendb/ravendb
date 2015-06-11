@@ -8,10 +8,11 @@ namespace Raven.Client.Connection.Profiling
 	internal class ConcurrentLruLSet<T>
 	{
 		private readonly int maxCapacity;
-		private readonly Action<T> onDrop;
-        private readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
+		private readonly Action<T> onDrop;        
+        private readonly object syncRoot = new object();
 
-		private LinkedList<T> items = new LinkedList<T>();        
+		private LinkedList<T> items = new LinkedList<T>();
+        private Dictionary<T, LinkedListNode<T>> itemsLookupTable = new Dictionary<T, LinkedListNode<T>>();
 
 		public ConcurrentLruLSet(int maxCapacity, Action<T> onDrop = null)
 		{
@@ -21,80 +22,69 @@ namespace Raven.Client.Connection.Profiling
 
 		public T FirstOrDefault(Func<T, bool> predicate)
 		{
-            try
+            lock (syncRoot)
             {
-                rwLock.EnterReadLock();
-
                 return items.FirstOrDefault(predicate);
             }
-            finally
-            {
-                rwLock.ExitReadLock();
-            }		
 		}
 
 		public void Push(T item)
 		{
-            LinkedListNode<T> linkedListNode = null;
+            LinkedListNode<T> droppedNode = null;
 
-            try
+            lock (syncRoot)
             {
-                rwLock.EnterWriteLock();
 
-
-                // this ensures the item is at the head of the list
-                items.Remove(item);
-                items.AddLast(item);
+                LinkedListNode<T> node;
+                if (itemsLookupTable.TryGetValue(item, out node))
+                {
+                    // this ensures the item is at the head of the list
+                    items.Remove(node);
+                    items.AddLast(node);
+                }
+                else
+                {
+                    node = items.AddLast(item);
+                    itemsLookupTable[item] = node;
+                }
 
                 if (items.Count > maxCapacity)
                 {
-                    linkedListNode = items.First;
+                    droppedNode = items.First;
+                    
                     items.RemoveFirst();
+                    itemsLookupTable.Remove(droppedNode.Value);
                 }
             }
-            finally
-            {
-                rwLock.ExitWriteLock();
-            }
 
-            if (onDrop != null && linkedListNode != null)
-                onDrop(linkedListNode.Value);
+            if (onDrop != null && droppedNode != null)
+                onDrop(droppedNode.Value);
 		}
 
 		public void Clear()
 		{
-            // WARNING: We can acquire a read lock and still 'write' because readers wont care (because of what they do)
-            // to get a different reference, however this may not hold true if the logic changes.
-
-            try
+            lock (syncRoot)
             {
-                rwLock.EnterReadLock();
-
                 items = new LinkedList<T>();
-            }
-            finally
-            {
-                rwLock.ExitReadLock();
+                itemsLookupTable.Clear();
             }
 		}
 
 		public void ClearHalf()
 		{
-            // WARNING: We can acquire a read lock and still 'write' because readers wont care (because of what they do)
-            // to get a different reference, however this may not hold true if the logic changes.
-
-            LinkedList<T> current;            
-            try
+            LinkedList<T> current;
+            lock (syncRoot)
             {
-                rwLock.EnterReadLock();
-
                 current = items;
 
-                items = new LinkedList<T>(current.Skip(current.Count / 2));
-            }
-            finally
-            {
-                rwLock.ExitReadLock();
+                items = new LinkedList<T>();
+                itemsLookupTable.Clear();
+
+                foreach ( var item in current.Skip(current.Count / 2))
+                {
+                    var node = items.AddLast(item);
+                    itemsLookupTable[item] = node;
+                }
             }
 
             if (onDrop != null)
@@ -104,17 +94,14 @@ namespace Raven.Client.Connection.Profiling
             }
 		}
 
-		public void Remove(T val)
+        public void Remove(T item)
 		{
-            try
+            lock (syncRoot)
             {
-                rwLock.EnterWriteLock();
+                var node = itemsLookupTable[item];
 
-                items.Remove(val);
-            }
-            finally
-            {
-                rwLock.ExitWriteLock();
+                items.Remove(node);
+                itemsLookupTable.Remove(item);
             }
 		}
 	}
