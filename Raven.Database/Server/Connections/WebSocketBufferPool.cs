@@ -19,11 +19,21 @@ namespace Raven.Database.Server.Connections
 		private readonly Version dotNetVersion = Environment.Version;
 		private readonly Version dotNetVersion_4_5_2 = Version.Parse("4.0.30319.34000");
 
+		public static WebSocketBufferPool Instance;
+
 		public WebSocketBufferPool(int webSocketPoolSizeInBytes)
 		{
 			numberOfBuffersToAllocate = webSocketPoolSizeInBytes/BufferSize;
 
 			AllocateBuffers();
+		}
+
+		public static void Initialize(int webSocketPoolSizeInBytes)
+		{
+			if (Instance != null)
+				return;
+
+			Instance = new WebSocketBufferPool(webSocketPoolSizeInBytes);
 		}
 
 		private void AllocateBuffers()
