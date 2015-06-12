@@ -215,7 +215,7 @@ namespace Raven.Database.Server.Connections
             long waitTimeBetweenMessages = 0;
             long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
             CoolDownWithDataLossInMiliseconds = waitTimeBetweenMessages;
-            PreAllocatedBuffer = options.WebSocketBufferPool.TakeBuffer();
+            PreAllocatedBuffer = WebSocketBufferPool.Instance.TakeBuffer();
         }
 
         protected virtual WebSocketsRequestParser CreateWebSocketsRequestParser()
@@ -363,7 +363,7 @@ namespace Raven.Database.Server.Connections
             }
             finally
             {
-                _options.WebSocketBufferPool.ReturnBuffer(PreAllocatedBuffer);
+                WebSocketBufferPool.Instance.ReturnBuffer(PreAllocatedBuffer);
             }
         }
 
