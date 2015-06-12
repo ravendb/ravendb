@@ -1221,7 +1221,10 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
 			var duration = Stopwatch.StartNew();
-			var result = new JsonDocumentsToReplicate();
+			var result = new JsonDocumentsToReplicate
+			{
+			    LastEtag = Etag.Empty,
+			};
 			try
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
