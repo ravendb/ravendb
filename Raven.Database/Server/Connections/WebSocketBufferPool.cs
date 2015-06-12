@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Raven.Database.Server.Connections
 {
@@ -15,6 +15,7 @@ namespace Raven.Database.Server.Connections
 		private const int BufferSize = 1024;
 		private readonly int numberOfBuffersToAllocate = 128;
 		private readonly ConcurrentStack<ArraySegment<byte>> buffersOnGen2OrLoh = new ConcurrentStack<ArraySegment<byte>>();
+		private readonly ConcurrentQueue<byte[]> buffersNotOnGen2 = new ConcurrentQueue<byte[]>();
 		private readonly Version dotNetVersion = Environment.Version;
 		private readonly Version dotNetVersion_4_5_2 = Version.Parse("4.0.30319.34000");
 
@@ -42,31 +43,41 @@ namespace Raven.Database.Server.Connections
 				// there was a bug (fixed in .NET 4.5.2) which doesn't allow us to specify non-zero offset in ArraySegment
 				// https://connect.microsoft.com/VisualStudio/feedback/details/812310/bug-websockets-can-only-use-0-offset-internal-buffer
 
-				var newBuffers = new List<byte[]>();
-
-				for (var i = 0; i < numberOfBuffersToAllocate; i++)
+				while (buffersNotOnGen2.Count < numberOfBuffersToAllocate)
 				{
-					newBuffers.Add(new byte[BufferSize]);
+					buffersNotOnGen2.Enqueue(new byte[BufferSize]);
 				}
+
+				var promotingBuffersToGen2Duration = Stopwatch.StartNew();
 
 				while (true)
 				{
+					bool atLeastOneSentToGen2 = false;
+
+					byte[] buffer = null;
+
+					while (buffersNotOnGen2.TryDequeue(out buffer) && GC.GetGeneration(buffer) == GC.MaxGeneration)
+					{
+						atLeastOneSentToGen2 = true;
+						buffersOnGen2OrLoh.Push(new ArraySegment<byte>(buffer));
+					}
+
+					if (atLeastOneSentToGen2)
+						break;
+
+					if(buffer != null)
+						buffersNotOnGen2.Enqueue(buffer);
+
 					// force to move to Gen2
 					for (int i = 0; i < GC.MaxGeneration; i++)
 					{
 						GC.Collect(i, GCCollectionMode.Forced, true);
 					}
-					bool atLeastOneSentToGen2 = false;
-					foreach (var buffer in newBuffers)
+
+					if (promotingBuffersToGen2Duration.Elapsed > TimeSpan.FromSeconds(1) && buffer != null)
 					{
-						if (GC.GetGeneration(buffer) == GC.MaxGeneration)
-						{
-							atLeastOneSentToGen2 = true;
-							buffersOnGen2OrLoh.Push(new ArraySegment<byte>(buffer));
-						}
+						buffersOnGen2OrLoh.Push(new ArraySegment<byte>(buffer));
 					}
-					if (atLeastOneSentToGen2)
-						break;
 				}
 			}
 		}
