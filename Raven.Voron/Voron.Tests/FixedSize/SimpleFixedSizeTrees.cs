@@ -6,6 +6,7 @@
 
 using System;
 using System.Text;
+using Voron.Trees.Fixed;
 using Xunit;
 
 namespace Voron.Tests.FixedSize
@@ -37,6 +38,70 @@ namespace Voron.Tests.FixedSize
 		}
 
 		[Fact]
+		public void CanAdd_Mixed()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test");
+
+				fst.Add(2);
+				fst.Add(6);
+				fst.Add(1);
+				fst.Add(3);
+				fst.Add(-3);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test");
+
+				Assert.True(fst.Contains(1));
+				Assert.True(fst.Contains(2));
+				Assert.False(fst.Contains(5));
+				Assert.True(fst.Contains(6));
+				Assert.False(fst.Contains(4));
+				Assert.True(fst.Contains(-3));
+				Assert.True(fst.Contains(3));
+				tx.Commit();
+			}
+		}
+
+		[Fact]
+		public void CanIterate()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test");
+
+				fst.Add(3);
+				fst.Add(1);
+				fst.Add(2);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test");
+
+				var it = fst.Iterate();
+				Assert.True(it.Seek(long.MinValue));
+				Assert.Equal(1L, it.Key);
+				Assert.True(it.MoveNext());
+				Assert.Equal(2L, it.Key);
+				Assert.True(it.MoveNext());
+				Assert.Equal(3L, it.Key);
+				Assert.False(it.MoveNext());
+
+
+				tx.Commit();
+			}
+		}
+
+
+		[Fact]
 		public void CanRemove()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -53,7 +118,7 @@ namespace Voron.Tests.FixedSize
 			{
 				var fst = tx.State.Root.FixedTreeFor("test");
 
-				fst.Remove(2);
+				fst.Delete(2);
 
 				tx.Commit();
 			}
@@ -112,7 +177,7 @@ namespace Voron.Tests.FixedSize
 			{
 				var fst = tx.State.Root.FixedTreeFor("test", 8);
 
-				fst.Remove(2);
+				fst.Delete(2);
 
 				tx.Commit();
 			}

@@ -5,9 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.Eventing.Reader;
 using System.Runtime.CompilerServices;
+using System.Runtime.Remoting.Messaging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Trees.Fixed
@@ -43,87 +46,141 @@ namespace Voron.Trees.Fixed
 													header->ValueSize + " for " + _treeName);
 		}
 
+		public int EntrySize { get { return _entrySize; } }
+
 		public void Add(long key, Slice val = null)
 		{
-			byte* ptr;
-			FixedSizeTreeHeader.Embedded* header;
-			byte* dataStart;
+			if (_valSize == 0 && val != null)
+				throw new InvalidOperationException("When the value size is zero, no value can be specified");
+			if (_valSize != 0 && val == null)
+				throw new InvalidOperationException("When the value size is not zero, the value must be specified");
+			if(val != null && val.Size != _valSize)
+				throw new InvalidOperationException("The value size must be " + _valSize + " but was " + val.Size);
+			
 			switch (_flags)
 			{
 				case null:
-					// new, just create it & go
-					ptr = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + _entrySize);
-					header = (FixedSizeTreeHeader.Embedded*)ptr;
-					header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-					header->ValueSize = _valSize;
-					header->NumberOfEntries = 1;
-					_flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-
-					dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
-					*(long*)(dataStart) = key;
-					if (val != null)
-					{
-						if(val.Size != _valSize)
-							throw new InvalidOperationException("The value size must be " + _valSize + " but was " + val.Size);
-						val.CopyTo(dataStart + sizeof(long));
-					}
+					AddNewEntry(key, val);
 					break;
 				case FixedSizeTreeHeader.OptionFlags.Embedded:
-					ptr = _parent.DirectRead(_treeName);
-					dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
-					header = (FixedSizeTreeHeader.Embedded*)ptr;
-					var startingEntryCount = header->NumberOfEntries;
-					var pos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, key);
-					var newEntriesCount = startingEntryCount;
-					if (startingEntryCount == pos || KeyFor(dataStart, pos) != key)
-					{
-						newEntriesCount++; // new entry, need more space
-						if (newEntriesCount > _maxEmbeddedEntries)
-						{
-							// convert to large mode
-						}
-					}
+					AddEmbeddedEntry(key, val);
+					break;
+				case FixedSizeTreeHeader.OptionFlags.Large:
+					var ptr = (FixedSizeTreeHeader.Large*) _parent.DirectRead(_treeName);
+					var page = _tx.GetReadOnlyPage(ptr->RootPageNumber);
+					
 
-					byte* newData = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + (newEntriesCount * _entrySize));
-					int srcCopyStart = pos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
-					MemoryUtils.CopyInline(newData, ptr, srcCopyStart);
-					header = (FixedSizeTreeHeader.Embedded*)newData;
-					header->NumberOfEntries = newEntriesCount;
-					var newEntryStart = newData + srcCopyStart;
-					*((long*)newEntryStart) = key;
-					if (val != null)
-					{
-						if(val.Size != _valSize)
-							throw new InvalidOperationException("The value size must be " + _valSize + " but was " + val.Size);
-						val.CopyTo(newEntryStart + sizeof(long));
-					}
-					MemoryUtils.CopyInline(newEntryStart + _entrySize, ptr + srcCopyStart, (startingEntryCount - pos) * _entrySize);
 					break;
 			}
 		}
 
+		private void AddEmbeddedEntry(long key, Slice val)
+		{
+			var ptr = _parent.DirectRead(_treeName);
+			var dataStart = ptr + sizeof (FixedSizeTreeHeader.Embedded);
+			var header = (FixedSizeTreeHeader.Embedded*) ptr;
+			var startingEntryCount = header->NumberOfEntries;
+			var pos = BinarySearch(dataStart, startingEntryCount, key);
+			var newEntriesCount = startingEntryCount;
+			if (lastMatch != 0)
+			{
+				newEntriesCount++; // new entry, need more space
+			}
+			if (lastMatch > 0)
+				pos++; // we need to put this _after_ the previous one
+			var newSize = (newEntriesCount*_entrySize);
+			TemporaryPage tmp;
+			using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
+			{
+				int srcCopyStart = pos*_entrySize;
+				MemoryUtils.CopyInline(tmp.TempPagePointer, dataStart, srcCopyStart);
+				var newEntryStart = tmp.TempPagePointer + srcCopyStart;
+				*((long*) newEntryStart) = key;
+				if (val != null)
+				{
+					val.CopyTo(newEntryStart + sizeof (long));
+				}
+				MemoryUtils.CopyInline(newEntryStart + _entrySize, dataStart + srcCopyStart, (startingEntryCount - pos)*_entrySize);
+
+				if (newEntriesCount > _maxEmbeddedEntries)
+				{
+					// convert to large database
+					_flags = FixedSizeTreeHeader.OptionFlags.Large;
+					var allocatePage = _tx.AllocatePage(1, PageFlags.Leaf);
+					var largeHeader = (FixedSizeTreeHeader.Large*) _parent.DirectAdd(_treeName, sizeof (FixedSizeTreeHeader.Large));
+					largeHeader->NumberOfEntries = newEntriesCount;
+					largeHeader->ValueSize = _valSize;
+					largeHeader->Flags = FixedSizeTreeHeader.OptionFlags.Large;
+					largeHeader->RootPageNumber = allocatePage.PageNumber;
+
+					var fixedSizePage = new FixedSizePage(this, allocatePage.Base);
+					fixedSizePage.Header->Flags = PageFlags.FixedSize | PageFlags.Leaf;
+					fixedSizePage.Header->PageNumber = allocatePage.PageNumber;
+					fixedSizePage.Header->NumberOfEntries = newEntriesCount;
+					fixedSizePage.Header->ValueSize = _valSize;
+					MemoryUtils.CopyInline(fixedSizePage.Data, tmp.TempPagePointer,
+						newSize);
+				}
+				else
+				{
+					byte* newData = _parent.DirectAdd(_treeName, sizeof (FixedSizeTreeHeader.Embedded) + newSize);
+					header = (FixedSizeTreeHeader.Embedded*) newData;
+					header->ValueSize = _valSize;
+					header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+					header->NumberOfEntries = newEntriesCount;
+
+					MemoryUtils.CopyInline(newData + sizeof (FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
+						newSize);
+				}
+			}
+		}
+
+		private void AddNewEntry(long key, Slice val)
+		{
+			// new, just create it & go
+			var ptr = _parent.DirectAdd(_treeName, sizeof (FixedSizeTreeHeader.Embedded) + _entrySize);
+			var header = (FixedSizeTreeHeader.Embedded*) ptr;
+			header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+			header->ValueSize = _valSize;
+			header->NumberOfEntries = 1;
+			_flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+
+			byte* dataStart = ptr + sizeof (FixedSizeTreeHeader.Embedded);
+			*(long*) (dataStart) = key;
+			if (val == null) return;
+			val.CopyTo(dataStart + sizeof (long));
+		}
+
+		private long lastMatch;
 		private int BinarySearch(byte* p, int len, long val)
 		{
 			int low = 0;
 			int high = len - 1;
-			int position = 0;
 
-			long res = 0;
+			switch (val)
+			{
+				case Int64.MinValue:
+					lastMatch = -1;
+					return low;
+				case Int64.MaxValue:
+					lastMatch = 1;
+					return high;
+			}
+
+			int position = 0;
 			while (low <= high)
 			{
 				position = (low + high) >> 1;
 
-				res = val - KeyFor(p, position);
-				if (res == 0)
+				lastMatch = val - KeyFor(p, position);
+				if (lastMatch == 0)
 					break;
 
-				if (res < 0)
+				if (lastMatch > 0)
 					low = position + 1;
 				else
 					high = position - 1;
 			}
-			if (res > 0)
-				return position + 1;
 			return position;
 		}
 
@@ -132,6 +189,84 @@ namespace Voron.Trees.Fixed
 		{
 			var lp = (long*)(p + (num * _entrySize));
 			return lp[0];
+		}
+
+		public interface IFixedSizeIterator
+		{
+			bool Seek(long key);
+			long Key { get; }
+			Slice Value { get; }
+			bool MoveNext();
+		}
+
+		public class NullIterator : IFixedSizeIterator
+		{
+			public bool Seek(long key)
+			{
+				return false;
+			}
+
+			public long Key { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
+			public Slice Value { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
+			public bool MoveNext()
+			{
+				return false;
+			}
+		}
+
+		public class EmbeddedIterator : IFixedSizeIterator
+		{
+			private readonly FixedSizeTree _fst;
+			private int _pos;
+			private readonly FixedSizeTreeHeader.Embedded* _header;
+			private readonly byte* _dataStart;
+
+			public EmbeddedIterator(FixedSizeTree fst)
+			{
+				_fst = fst;
+				var ptr = _fst._parent.DirectRead(_fst._treeName);
+				_header = (FixedSizeTreeHeader.Embedded*)ptr;
+				_dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
+			}
+
+			public bool Seek(long key)
+			{
+				switch (_fst._flags)
+				{
+					case FixedSizeTreeHeader.OptionFlags.Embedded:
+						_pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key);
+						return _pos != _header->NumberOfEntries;
+					case null:
+						return false;
+				}
+				return false;
+			}
+
+			public long Key
+			{
+				get
+				{
+					if (_pos == _header->NumberOfEntries)
+						throw new InvalidOperationException("Invalid position, cannot read past end of tree");
+					return _fst.KeyFor(_dataStart, _pos);
+				}
+			}
+
+			public Slice Value
+			{
+				get
+				{
+					if (_pos == _header->NumberOfEntries)
+						throw new InvalidOperationException("Invalid position, cannot read past end of tree");
+
+					return new Slice(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
+				}
+			}
+
+			public bool MoveNext()
+			{
+				return ++_pos < _header->NumberOfEntries;
+			}
 		}
 
 		public bool Contains(long key)
@@ -144,14 +279,14 @@ namespace Voron.Trees.Fixed
 					var ptr = _parent.DirectRead(_treeName);
 					var header = (FixedSizeTreeHeader.Embedded*)ptr;
 					var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
-					var pos = BinarySearch(dataStart, header->NumberOfEntries, key);
-					return KeyFor(dataStart, pos) == key;
+					BinarySearch(dataStart, header->NumberOfEntries, key);
+					return lastMatch == 0;
 			}
 
 			return false;
 		}
 
-		public void Remove(long key)
+		public void Delete(long key)
 		{
 			switch (_flags)
 			{
@@ -160,11 +295,10 @@ namespace Voron.Trees.Fixed
 					break;
 				case FixedSizeTreeHeader.OptionFlags.Embedded:
 					byte* ptr = _parent.DirectRead(_treeName);
-					byte* dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
-					FixedSizeTreeHeader.Embedded* header = (FixedSizeTreeHeader.Embedded*)ptr;
+					var header = (FixedSizeTreeHeader.Embedded*)ptr;
 					var startingEntryCount = header->NumberOfEntries;
 					var pos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, key);
-					if (startingEntryCount == pos || KeyFor(dataStart, pos) != key)
+					if (lastMatch != 0)
 					{
 						return;  // not here, nothing to do
 					}
@@ -176,8 +310,8 @@ namespace Voron.Trees.Fixed
 						return;
 					}
 
-					byte* newData = _parent.DirectAdd(_treeName, 
-						sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount-1) * _entrySize));
+					byte* newData = _parent.DirectAdd(_treeName,
+						sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - 1) * _entrySize));
 
 					int srcCopyStart = pos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
 					MemoryUtils.CopyInline(newData, ptr, srcCopyStart);
@@ -199,9 +333,22 @@ namespace Voron.Trees.Fixed
 					var header = (FixedSizeTreeHeader.Embedded*)ptr;
 					var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
 					var pos = BinarySearch(dataStart, header->NumberOfEntries, key);
-					if (pos == header->NumberOfEntries || KeyFor(dataStart, pos) != key)
+					if (lastMatch != 0)
 						return null;
-					return new Slice(dataStart + (pos*_entrySize) + sizeof (long), _valSize);
+					return new Slice(dataStart + (pos * _entrySize) + sizeof(long), _valSize);
+			}
+
+			return null;
+		}
+
+		public IFixedSizeIterator Iterate()
+		{
+			switch (_flags)
+			{
+				case null:
+					return new NullIterator();
+				case FixedSizeTreeHeader.OptionFlags.Embedded:
+					return new EmbeddedIterator(this);
 			}
 
 			return null;
