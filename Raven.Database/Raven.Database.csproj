@@ -481,6 +481,7 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
     <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
+    <Compile Include="TimeSeries\Controllers\TimeSeriesController.cs" />
     <Compile Include="TimeSeries\KeyValueStateMachine.cs" />
     <Compile Include="TimeSeries\PeriodDuration.cs" />
     <Compile Include="TimeSeries\PeriodType.cs" />
@@ -1368,9 +1369,7 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="TimeSeries\Controllers\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!--  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />-->
   <Target Name="BeforeBuild">

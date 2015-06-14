@@ -278,7 +278,7 @@ namespace Raven.Abstractions.Data
 
 			public const string DataDirectory = "Raven/TimeSeries/DataDir";
 
-			public const string UrlPrefix = "time-series";
+			public const string UrlPrefix = "ts";
 		}
 
 		// Backup
