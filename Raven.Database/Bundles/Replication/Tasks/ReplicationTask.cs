@@ -1120,7 +1120,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private string GetDebugInfomration()
 		{
-			return "is-replicated=true&from=" + Uri.EscapeDataString(docDb.ServerUrl);
+			return Constants.IsIndexReplicatedUrlParamName + "=true&from=" + Uri.EscapeDataString(docDb.ServerUrl);
 		}
 
 		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, ReplicationStrategy destination, Dictionary<string, int> replicatedIndexTombstones)
