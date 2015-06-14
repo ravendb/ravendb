@@ -29,31 +29,38 @@ namespace Raven.Database.Extensions
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
         }
 
-        public CancellationTimeout(CancellationTokenSource source, TimeSpan dueTime)
+        public CancellationTimeout(CancellationTokenSource cancellationTokenSource, TimeSpan dueTime)
         {
-            if (source == null)
-                throw new ArgumentNullException("source");
+            if (cancellationTokenSource == null)
+                throw new ArgumentNullException("cancellationTokenSource");
             if (dueTime < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException("dueTime");
 
             isTimerDisposed = false;
-            CancellationTokenSource = source;
+            CancellationTokenSource = cancellationTokenSource;
             this.dueTime = (long)dueTime.TotalMilliseconds;
-            timer = new Timer(self =>
-            {
-                Dispose(); 
+			timer = new Timer(self =>
+			{
+				var source = self as CancellationTokenSource;
+				if (source == null)
+					return;
 
-                try
-                {
-                    CancellationTokenSource.Cancel();
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-            }, null, this.dueTime, -1);
+				try
+				{
+					source.Cancel();
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			}, cancellationTokenSource, this.dueTime, -1);
         }
 
-        public void Delay()
+	    ~CancellationTimeout()
+	    {
+			DisposeInternal();
+	    }
+
+	    public void Delay()
         {
 			if (isTimerDisposed)
 				return;
@@ -88,11 +95,17 @@ namespace Raven.Database.Extensions
 
         public void Dispose()
         {
+			GC.SuppressFinalize(this);
+	        DisposeInternal();
+        }
+
+	    private void DisposeInternal()
+	    {
 			if (isTimerDisposed)
 				return;
 
-	        lock (locker)
-	        {
+			lock (locker)
+			{
 				if (isTimerDisposed)
 					return;
 
@@ -100,7 +113,7 @@ namespace Raven.Database.Extensions
 
 				if (timer != null)
 					timer.Dispose();
-	        }
-        }
+			}
+	    }
     }
 }

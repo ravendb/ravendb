@@ -27,7 +27,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
-    public class SmugglerRemoteDatabaseOperations : ISmugglerDatabaseOperations
+	public class SmugglerRemoteDatabaseOperations : ISmugglerDatabaseOperations
 	{
 		private readonly Func<DocumentStore> store;
 
@@ -53,21 +53,21 @@ namespace Raven.Smuggler
 
 		private readonly SmugglerJintHelper jintHelper = new SmugglerJintHelper();
 
-	    public SmugglerDatabaseOptions Options { get; private set; }
+		public SmugglerDatabaseOptions Options { get; private set; }
 
 		public bool LastRequestErrored { get; set; }
 
 		public SmugglerRemoteDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported, Func<bool> isIdentitiesSmugglingSupported)
 		{
 			this.store = store;
-			
+
 			this.operation = operation;
 			this.isDocsStreamingSupported = isDocsStreamingSupported;
 			this.isTransformersSupported = isTransformersSupported;
 			this.isIdentitiesSmugglingSupported = isIdentitiesSmugglingSupported;
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public Task DeleteAttachment(string key)
 		{
 			return Store.AsyncDatabaseCommands.DeleteAttachmentAsync(key, null);
@@ -78,7 +78,7 @@ namespace Raven.Smuggler
 			return Store.AsyncDatabaseCommands.DeleteAsync(key, null);
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
 		{
 			throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");
@@ -100,7 +100,7 @@ namespace Raven.Smuggler
 			};
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
 		{
 			var attachments = await Store.AsyncDatabaseCommands.GetAttachmentsAsync(start, etag, maxRecords);
@@ -108,18 +108,18 @@ namespace Raven.Smuggler
 			return attachments.ToList();
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public async Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
 		{
 			var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
-			if (attachment == null) 
+			if (attachment == null)
 				return null;
 
 			return attachment.Data().ReadData();
 		}
 
 		public JsonDocument GetDocument(string key)
-		{			
+		{
 			return Store.DatabaseCommands.Get(key);
 		}
 
@@ -144,7 +144,7 @@ namespace Raven.Smuggler
 					try
 					{
 						await ((AsyncServerClient)Store.AsyncDatabaseCommands).GetDocumentsAsync(lastEtag, Math.Min(Options.BatchSize, take));
-						
+
 					}
 					catch (Exception e)
 					{
@@ -216,7 +216,7 @@ namespace Raven.Smuggler
 			throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public async Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
 			if (attachmentExportInfo != null)
@@ -283,8 +283,8 @@ namespace Raven.Smuggler
 			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
 		}
 
-	    public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
-	    {
+		public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+		{
 			if (metadata != null)
 			{
 				metadata.Remove(Constants.RavenReplicationHistory);
@@ -292,10 +292,10 @@ namespace Raven.Smuggler
 				metadata.Remove(Constants.RavenReplicationVersion);
 			}
 
-		    return metadata;
-	    }
+			return metadata;
+		}
 
-	    public void Initialize(SmugglerDatabaseOptions databaseOptions)
+		public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
 			Options = databaseOptions;
 			jintHelper.Initialize(databaseOptions);
@@ -314,7 +314,7 @@ namespace Raven.Smuggler
 					var configuration = (RavenJObject)request.ReadResponseJson();
 
 					var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
-					if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+					if (maxNumberOfItemsToProcessInSingleBatch <= 0)
 						return;
 
 					var current = databaseOptions.BatchSize;
@@ -365,25 +365,15 @@ namespace Raven.Smuggler
 			if (isIdentitiesSmugglingSupported() == false)
 				return new CompletedTask();
 
-			if(identityName != null)
+			if (identityName != null)
 				return Store.AsyncDatabaseCommands.SeedIdentityForAsync(identityName, identityValue);
 
 			return new CompletedTask();
 		}
 
-	    public RavenJToken DisableVersioning(RavenJObject metadata)
-	    {
-		    if (metadata != null)
-		    {
-			    metadata.Add(Constants.RavenIgnoreVersioning, true);
-		    }
-
-		    return metadata;
-	    }
-
-	    public string GetIdentifier()
-	    {
-		    return ((AsyncServerClient) Store.AsyncDatabaseCommands).Url;
-	    }
+		public string GetIdentifier()
+		{
+			return ((AsyncServerClient)Store.AsyncDatabaseCommands).Url;
+		}
 	}
 }

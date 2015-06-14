@@ -401,15 +401,15 @@ namespace Raven.Database.Server.Controllers
 			};
 		}
 
-		[HttpGet]
-		[RavenRoute("debug/slow-dump-ref-csv")]
+	    [HttpGet]
+	    [RavenRoute("debug/slow-dump-ref-csv")]
 		[RavenRoute("databases/{databaseName}/debug/slow-dump-ref-csv")]
-		public HttpResponseMessage DumpRefsToCsv(int sampleCount = 10)
-		{
-			return new HttpResponseMessage
-			{
-				Content = new PushStreamContent((stream, content, context) =>
-				{
+        public HttpResponseMessage DumpRefsToCsv(int sampleCount = 10)
+	    {
+		    return new HttpResponseMessage
+		    {
+			    Content = new PushStreamContent((stream, content, context) =>
+			    {
 					using (var writer = new StreamWriter(stream))
 					{
 						writer.WriteLine("ref count,document key,sample references");
@@ -418,28 +418,28 @@ namespace Raven.Database.Server.Controllers
 							accessor.Indexing.DumpAllReferancesToCSV(writer, sampleCount);
 						});
 						writer.Flush();
-						stream.Flush();
+                        stream.Flush();
 					}
-				})
-				{
-					Headers =
-					{
-						ContentDisposition = new ContentDispositionHeaderValue("attachment")
-						{
-							FileName = "doc-refs.csv",
-						},
-						ContentType = new MediaTypeHeaderValue("application/octet-stream")
-					}
-				}
-			};
-		}
+			    })
+			    {
+				    Headers =
+				    {
+					    ContentDisposition = new ContentDispositionHeaderValue("attachment")
+					    {
+						    FileName = "doc-refs.csv",
+					    },
+					    ContentType = new MediaTypeHeaderValue("application/octet-stream")
+				    }
+			    }
+		    };
+	    }
 
 		[HttpGet]
 		[RavenRoute("debug/docrefs")]
 		[RavenRoute("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage DocRefs(string id)
 		{
-			var op = GetQueryStringValue("op");
+		    var op = GetQueryStringValue("op");
 			op = op == "from" ? "from" : "to";
 
 			var totalCountReferencing = -1;
@@ -460,7 +460,7 @@ namespace Raven.Database.Server.Controllers
 				Results = results
 			});
 		}
-		//DumpAllReferancesToCSV
+        //DumpAllReferancesToCSV
 		[HttpGet]
 		[RavenRoute("debug/d0crefs-t0ps")]
 		[RavenRoute("databases/{databaseName}/debug/d0crefs-t0ps")]
@@ -741,6 +741,14 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+		[RavenRoute("debug/subscriptions")]
+		[RavenRoute("databases/{databaseName}/debug/subscriptions")]
+		public HttpResponseMessage Subscriptions()
+		{
+			return GetMessageWithObject(Database.Subscriptions.GetDebugInfo());
+}
+
+		[HttpGet]
 		[RavenRoute("databases/{databaseName}/debug/thread-pool")]
 		[RavenRoute("debug/thread-pool")]
 		public HttpResponseMessage ThreadPool()
@@ -760,7 +768,7 @@ namespace Raven.Database.Server.Controllers
 					WaitingTasks = Database.ReducingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
 					RunningTasks = Database.ReducingThreadPool.GetRunningTasks().Select(x => x.Description),
 					ThreadPoolStats = Database.ReducingThreadPool.GetThreadPoolStats()
-				}
+	}
 			});
 		}
 

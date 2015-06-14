@@ -954,7 +954,9 @@ namespace Raven.Abstractions.Smuggler
                         document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
 
 					if(Options.ShouldDisableVersioningBundle)
-						document["@metadata"] = Operations.DisableVersioning(metadata);
+						document["@metadata"] = SmugglerHelper.DisableVersioning(metadata);
+
+					document["@metadata"] = SmugglerHelper.HandleConflictDocuments(metadata);
                 }
 
                 if (Options.UseContinuationFile)

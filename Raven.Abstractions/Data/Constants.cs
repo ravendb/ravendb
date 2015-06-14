@@ -166,7 +166,7 @@ namespace Raven.Abstractions.Data
 
 		public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesCryptoServiceProvider);
 
-	    //Quotas
+		//Quotas
 		public const string DocsHardLimit = "Raven/Quotas/Documents/HardLimit";
 
 		public const string DocsSoftLimit = "Raven/Quotas/Documents/SoftLimit";
@@ -188,8 +188,10 @@ namespace Raven.Abstractions.Data
 
 		public const string RavenReplicationConflict = "Raven-Replication-Conflict";
 
+		public const string RavenReplicationConflictSkipResolution = "Raven-Replication-Conflict-Skip-Resolution";
 		public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
 
+		public const string RavenReplicationConflictDocumentForcePut = "Raven-Replication-Conflict-Document-Force-Put";
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 
 		public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
