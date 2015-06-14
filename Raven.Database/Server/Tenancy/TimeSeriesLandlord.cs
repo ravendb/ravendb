@@ -4,11 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions;
+using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
+using Raven.Database.TimeSeries;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
 using System;
@@ -19,8 +21,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.TimeSeries;
-using Raven.Database.TimeSeries;
+using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -30,117 +31,111 @@ namespace Raven.Database.Server.Tenancy
 
 		public override string ResourcePrefix { get { return Constants.TimeSeries.Prefix; } }
 
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+		public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
-		public TimeSeriesLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
+		public TimeSeriesLandlord(DocumentDatabase systemDatabase)
+			: base(systemDatabase)
 		{
-		    Enabled = systemDatabase.Documents.Get("Raven/TimeSeries/Enabled", null) != null;
 			Init();
 		}
 
-	    public bool Enabled { get; set; }
-
-	    public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
+		public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
 
 		public void Init()
-        {
-            if (initialized)
-                return;
-            initialized = true;
-            systemDatabase.Notifications.OnDocumentChange += (database, notification, doc) =>
-            {
-                if (notification.Id == null)
-                    return;
+		{
+			if (initialized)
+				return;
+			initialized = true;
+			systemDatabase.Notifications.OnDocumentChange += (database, notification, doc) =>
+			{
+				if (notification.Id == null)
+					return;
 				if (notification.Id.StartsWith(ResourcePrefix, StringComparison.InvariantCultureIgnoreCase) == false)
-                    return;
+					return;
 				var dbName = notification.Id.Substring(ResourcePrefix.Length);
-                Logger.Info("Shutting down TimeSeries {0} because the tenant time series document has been updated or removed", dbName);
+				Logger.Info("Shutting down time series {0} because the tenant time series document has been updated or removed", dbName);
 				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
-            };
-        }
+			};
+		}
 
-		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
+		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledTimeSeriesStorage = false)
 		{
 			if (string.IsNullOrWhiteSpace(tenantId))
 				throw new ArgumentException("tenantId");
-			var document = GetTenantDatabaseDocument(tenantId);
+			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledTimeSeriesStorage);
 			if (document == null)
 				return null;
 
-			return CreateConfiguration(tenantId, document, "Raven/TimeSeries/DataDir", systemDatabase.Configuration);		
-        }
+			return CreateConfiguration(tenantId, document, Constants.TimeSeries.DataDirectory, systemDatabase.Configuration);
+		}
 
+		protected InMemoryRavenConfiguration CreateConfiguration(
+						string tenantId,
+						TimeSeriesStorageDocument document,
+						string folderPropName,
+						InMemoryRavenConfiguration parentConfiguration)
+		{
+			var config = new InMemoryRavenConfiguration
+			{
+				Settings = new NameValueCollection(parentConfiguration.Settings),
+			};
 
-        protected InMemoryRavenConfiguration CreateConfiguration(
-                        string tenantId,
-                        TimeSeriesStorageDocument document,
-                        string folderPropName,
-                        InMemoryRavenConfiguration parentConfiguration)
-        {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+			SetupTenantConfiguration(config);
 
-            SetupTenantConfiguration(config);
+			config.CustomizeValuesForDatabaseTenant(tenantId);
 
-            config.CustomizeValuesForDatabaseTenant(tenantId);
+			config.Settings[Constants.TimeSeries.DataDirectory] = parentConfiguration.TimeSeries.DataDirectory;
+			//config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
+			//TODO: what time series storage dir path?
+			//config.Settings["Raven/TimeSeries/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
-            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-            config.Settings["Raven/TimeSeries/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+			foreach (var setting in document.Settings)
+			{
+				config.Settings[setting.Key] = setting.Value;
+			}
+			Unprotect(document);
 
-            foreach (var setting in document.Settings)
-            {
-                config.Settings[setting.Key] = setting.Value;
-            }
-            Unprotect(document);
+			foreach (var securedSetting in document.SecuredSettings)
+			{
+				config.Settings[securedSetting.Key] = securedSetting.Value;
+			}
 
-            foreach (var securedSetting in document.SecuredSettings)
-            {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
-            }
+			config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
+			//config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
+			config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
+			config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+			config.TimeSeriesName = tenantId;
 
-            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+			config.Initialize();
+			config.CopyParentSettings(parentConfiguration);
+			return config;
+		}
 
-            config.TimeSeriesDatabaseName = tenantId;
-
-            config.Initialize();
-            config.CopyParentSettings(parentConfiguration);
-            return config;
-        }
-
-        private TimeSeriesStorageDocument GetTenantDatabaseDocument(string tenantId)
+		private TimeSeriesStorageDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledTimeSeriesStorage = false)
 		{
 			JsonDocument jsonDocument;
 			using (systemDatabase.DisableAllTriggersForCurrentThread())
 				jsonDocument = systemDatabase.Documents.Get(ResourcePrefix + tenantId, null);
-			if (jsonDocument == null ||
-				jsonDocument.Metadata == null ||
+			if (jsonDocument == null || jsonDocument.Metadata == null ||
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
 				return null;
 
-            var document = jsonDocument.DataAsJson.JsonDeserialization<TimeSeriesStorageDocument>();
-			if (document.Settings.Keys.Contains("Raven/TimeSeries/DataDir") == false)
-				throw new InvalidOperationException("Could not find Raven/TimeSeries/DataDir");
+			var document = jsonDocument.DataAsJson.JsonDeserialization<TimeSeriesStorageDocument>();
+			if (document.Settings.Keys.Contains(Constants.TimeSeries.DataDirectory) == false)
+				throw new InvalidOperationException("Could not find " + Constants.TimeSeries.DataDirectory);
 
-			if (document.Disabled)
-				throw new InvalidOperationException("The time series has been disabled.");
+			if (document.Disabled && !ignoreDisabledTimeSeriesStorage)
+				throw new InvalidOperationException("The timeSeries storage has been disabled.");
 
 			return document;
 		}
 
-
-
 		public bool TryGetOrCreateResourceStore(string tenantId, out Task<TimeSeriesStorage> timeSeries)
 		{
 			if (Locks.Contains(DisposingLock))
-				throw new ObjectDisposedException("TimeSeriessLandlord", "Server is shutting down, can't access any time series");
-
+				throw new ObjectDisposedException("TimeSeriesLandlord", "Server is shutting down, can't access any timeSeriess");
 
 			if (Locks.Contains(tenantId))
 				throw new InvalidOperationException("TimeSeries '" + tenantId + "' is currently locked and cannot be accessed");
@@ -172,7 +167,7 @@ namespace Raven.Database.Server.Tenancy
 			{
 				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 				var cs = new TimeSeriesStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
-				AssertLicenseParameters();
+				AssertLicenseParameters(config);
 
 				// if we have a very long init process, make sure that we reset the last idle time for this db.
 				LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
@@ -181,60 +176,60 @@ namespace Raven.Database.Server.Tenancy
 			{
 				if (task.Status == TaskStatus.Faulted) // this observes the task exception
 				{
-					Logger.WarnException("Failed to create TimeSeries " + tenantId, task.Exception);
+					Logger.WarnException("Failed to create timeSeriess " + tenantId, task.Exception);
 				}
 				return task;
 			}).Unwrap());
 			return true;
 		}
 
-        public void Unprotect(TimeSeriesStorageDocument configDocument)
-        {
-            if (configDocument.SecuredSettings == null)
-            {
-                configDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
+		public void Unprotect(TimeSeriesStorageDocument configDocument)
+		{
+			if (configDocument.SecuredSettings == null)
+			{
+				configDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+				return;
+			}
 
-            foreach (var prop in configDocument.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Convert.FromBase64String(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                try
-                {
-                    var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                    configDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
-                }
-                catch (Exception e)
-                {
-                    Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-                    configDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
-                }
-            }
-        }
+			foreach (var prop in configDocument.SecuredSettings.ToList())
+			{
+				if (prop.Value == null)
+					continue;
+				var bytes = Convert.FromBase64String(prop.Value);
+				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+				try
+				{
+					var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+					configDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+				}
+				catch (Exception e)
+				{
+					Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
+					configDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
+				}
+			}
+		}
 
-        public void Protect(TimeSeriesStorageDocument configDocument)
-        {
-            if (configDocument.SecuredSettings == null)
-            {
-                configDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
+		public void Protect(TimeSeriesStorageDocument configDocument)
+		{
+			if (configDocument.SecuredSettings == null)
+			{
+				configDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+				return;
+			}
 
-            foreach (var prop in configDocument.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Encoding.UTF8.GetBytes(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                configDocument.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
-            }
-        }
+			foreach (var prop in configDocument.SecuredSettings.ToList())
+			{
+				if (prop.Value == null)
+					continue;
+				var bytes = Encoding.UTF8.GetBytes(prop.Value);
+				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+				var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
+				configDocument.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
+			}
+		}
 
-		private void AssertLicenseParameters()
+		private void AssertLicenseParameters(InMemoryRavenConfiguration config)
 		{
 			string maxDatabases;
 			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfTimeSeries", out maxDatabases))
@@ -249,16 +244,21 @@ namespace Raven.Database.Server.Tenancy
 							numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
 					if (databases.Count >= numberOfAllowedFileSystems)
 						throw new InvalidOperationException(
-							"You have reached the maximum number of TimeSeries that you can have according to your license: " +
+							"You have reached the maximum number of timeSeriess that you can have according to your license: " +
 							numberOfAllowedFileSystems + Environment.NewLine +
-							"You can either upgrade your RavenDB license or delete a time series from the server");
+							"You can either upgrade your RavenDB license or delete a timeSeries from the server");
 				}
 			}
 
-			//TODO: implement license validation for TimeSeries
+			if (Authentication.IsLicensedForTimeSeries == false)
+			{
+				throw new InvalidOperationException("Your license does not allow the use of the TimeSeries");
+			}
+
+			Authentication.AssertLicensedBundles(config.ActiveBundles);
 		}
 
-		 
+
 		public async Task<TimeSeriesStorage> GetTimeSeriesInternal(string name)
 		{
 			Task<TimeSeriesStorage> cs;

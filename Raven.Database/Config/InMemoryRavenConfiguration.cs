@@ -50,6 +50,8 @@ namespace Raven.Database.Config
         public FileSystemConfiguration FileSystem { get; private set; }
 
 		public CounterConfiguration Counter { get; private set; }
+		
+		public TimeSeriesConfiguration TimeSeries { get; private set; }
 
 		public EncryptionConfiguration Encryption { get; private set; }
 
@@ -68,6 +70,7 @@ namespace Raven.Database.Config
 			Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
 			Counter = new CounterConfiguration();
+			TimeSeries = new TimeSeriesConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
 			WebSockets = new WebSocketsConfiguration();
@@ -93,6 +96,8 @@ namespace Raven.Database.Config
         public string FileSystemName { get; set; }
 
         public string CounterStorageName { get; set; }
+
+        public string TimeSeriesName { get; set; }
 
 		public void PostInit()
 		{
@@ -1097,7 +1102,7 @@ namespace Raven.Database.Config
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
 
 
-	    [Browsable(false)]
+		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{
@@ -1454,6 +1459,28 @@ namespace Raven.Database.Config
 			{
 				get { return countersDataDirectory; }
 				set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+			}
+		}
+
+		public class TimeSeriesConfiguration
+		{
+			public void InitializeFrom(InMemoryRavenConfiguration configuration)
+			{
+				workingDirectory = configuration.WorkingDirectory;
+			}
+
+			private string workingDirectory;
+
+			private string timeSeriesDataDirectory;
+
+			/// <summary>
+			/// The directory for the RavenDB time series. 
+			/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+			/// </summary>
+			public string DataDirectory
+			{
+				get { return timeSeriesDataDirectory; }
+				set { timeSeriesDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
 			}
 		}
 

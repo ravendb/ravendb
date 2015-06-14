@@ -21,10 +21,7 @@ namespace Raven.Database.TimeSeries.Controllers
 		public HttpResponseMessage TimeSeries(bool getAdditionalData = false)
 		{
 			if (EnsureSystemDatabase() == false)
-				return
-					GetMessageWithString(
-						"The request '" + InnerRequest.RequestUri.AbsoluteUri + "' can only be issued on the system database",
-						HttpStatusCode.BadRequest);
+				return GetMessageWithString("The request '" + InnerRequest.RequestUri.AbsoluteUri + "' can only be issued on the system database", HttpStatusCode.BadRequest);
 
 			// This method is NOT secured, and anyone can access it.
 			// Because of that, we need to provide explicit security here.
@@ -38,11 +35,11 @@ namespace Raven.Database.TimeSeries.Controllers
 			// If admin, show all file systems
 
 
-			var counterStoragesDocuments = GetResourcesDocuments(Constants.Counter.Prefix);
-			var counterStoragesData = GetCounterStoragesData(counterStoragesDocuments);
-			var counterStoragesNames = counterStoragesData.Select(x => x.Name).ToArray();
+			var timeSeriesDocuments = GetResourcesDocuments(Constants.TimeSeries.Prefix);
+			var timeSeriesData = GetTimeSeriesData(timeSeriesDocuments);
+			var timeSeriesNames = timeSeriesData.Select(x => x.Name).ToArray();
 
-			List<string> approvedCounterStorages = null;
+			List<string> approvedTimeSeriesStorages = null;
 			if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
 				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
@@ -57,10 +54,10 @@ namespace Raven.Database.TimeSeries.Controllers
 
 				if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
-					approvedCounterStorages = authorizer.GetApprovedResources(user, this, counterStoragesNames);
+					approvedTimeSeriesStorages = authorizer.GetApprovedResources(user, this, timeSeriesNames);
 				}
 
-				counterStoragesData.ForEach(x =>
+				timeSeriesData.ForEach(x =>
 				{
 					var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
 					if (principalWithDatabaseAccess != null)
@@ -75,27 +72,27 @@ namespace Raven.Database.TimeSeries.Controllers
 				});
 			}
 
-			if (approvedCounterStorages != null)
+			if (approvedTimeSeriesStorages != null)
 			{
-				counterStoragesData = counterStoragesData.Where(data => approvedCounterStorages.Contains(data.Name)).ToList();
-				counterStoragesNames = counterStoragesNames.Where(name => approvedCounterStorages.Contains(name)).ToArray();
+				timeSeriesData = timeSeriesData.Where(data => approvedTimeSeriesStorages.Contains(data.Name)).ToList();
+				timeSeriesNames = timeSeriesNames.Where(name => approvedTimeSeriesStorages.Contains(name)).ToArray();
 			}
 
-			var responseMessage = getAdditionalData ? GetMessageWithObject(counterStoragesData) : GetMessageWithObject(counterStoragesNames);
+			var responseMessage = getAdditionalData ? GetMessageWithObject(timeSeriesData) : GetMessageWithObject(timeSeriesNames);
 			return responseMessage.WithNoCache();
 		}
 
-		private class CounterStorageData : TenantData
+		private class TimeSeriesData : TenantData
 		{
 		}
 
-		private static List<CounterStorageData> GetCounterStoragesData(IEnumerable<RavenJToken> counterStorages)
+		private static List<TimeSeriesData> GetTimeSeriesData(IEnumerable<RavenJToken> timeSeries)
 		{
-			return counterStorages
-				.Select(counterStorage =>
+			return timeSeries
+				.Select(ts =>
 				{
 					var bundles = new string[] { };
-					var settings = counterStorage.Value<RavenJObject>("Settings");
+					var settings = ts.Value<RavenJObject>("Settings");
 					if (settings != null)
 					{
 						var activeBundles = settings.Value<string>("Raven/ActiveBundles");
@@ -104,10 +101,10 @@ namespace Raven.Database.TimeSeries.Controllers
 							bundles = activeBundles.Split(';');
 						}
 					}
-					return new CounterStorageData
+					return new TimeSeriesData
 					{
-						Name = counterStorage.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.Counter.Prefix, string.Empty),
-						Disabled = counterStorage.Value<bool>("Disabled"),
+						Name = ts.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.TimeSeries.Prefix, string.Empty),
+						Disabled = ts.Value<bool>("Disabled"),
 						Bundles = bundles,
 						IsAdminCurrentTenant = true,
 					};

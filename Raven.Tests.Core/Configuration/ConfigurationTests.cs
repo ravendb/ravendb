@@ -24,31 +24,32 @@ namespace Raven.Tests.Core.Configuration
 	public class ConfigurationTests
 	{
 		private readonly HashSet<string> propertyPathsToIgnore = new HashSet<string>
-		                                                         {
-			                                                         "DatabaseName",
-																	 "FileSystemName",
-																	 "CounterStorageName",
-																	 "Settings",
-																	 "Container",
-																	 "Catalog",
-																	 "RunInUnreliableYetFastModeThatIsNotSuitableForProduction",
-																	 "CreateAnalyzersDirectoryIfNotExisting",
-																	 "CreatePluginsDirectoryIfNotExisting",
-																	 "Port",
-																	 "IndexingScheduler.LastAmountOfItemsToIndexToRemember",
-																	 "IndexingScheduler.LastAmountOfItemsToReduceToRemember",
-																	 "InitialNumberOfItemsToProcessInSingleBatch",
-																	 "InitialNumberOfItemsToReduceInSingleBatch",
-																	 "ActiveBundles",
-																	 "CustomTaskScheduler",
-																	 "HeadersToIgnore",
-																	 "UseDefaultOAuthTokenServer",
-																	 "OAuthTokenServer",
-																	 "ServerUrl",
-																	 "AccessControlAllowOrigin",
-																	 "VirtualDirectory",
-																	 "OAuthTokenKey"
-		                                                         };
+		{
+			"DatabaseName",
+			"FileSystemName",
+			"CounterStorageName",
+			"TimeSeriesName",
+			"Settings",
+			"Container",
+			"Catalog",
+			"RunInUnreliableYetFastModeThatIsNotSuitableForProduction",
+			"CreateAnalyzersDirectoryIfNotExisting",
+			"CreatePluginsDirectoryIfNotExisting",
+			"Port",
+			"IndexingScheduler.LastAmountOfItemsToIndexToRemember",
+			"IndexingScheduler.LastAmountOfItemsToReduceToRemember",
+			"InitialNumberOfItemsToProcessInSingleBatch",
+			"InitialNumberOfItemsToReduceInSingleBatch",
+			"ActiveBundles",
+			"CustomTaskScheduler",
+			"HeadersToIgnore",
+			"UseDefaultOAuthTokenServer",
+			"OAuthTokenServer",
+			"ServerUrl",
+			"AccessControlAllowOrigin",
+			"VirtualDirectory",
+			"OAuthTokenKey",
+		};
 
 		[Fact]
 		public void NotChangingWorkingDirectoryShouldNotImpactPaths()
@@ -65,6 +66,7 @@ namespace Raven.Tests.Core.Configuration
 			Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(basePath));
 			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(basePath));
 			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(basePath));
+			Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(basePath));
 		}
 
 		[Fact]
@@ -85,6 +87,7 @@ namespace Raven.Tests.Core.Configuration
 			Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(WorkingDirectoryValue));
 		}
 
 		[Fact]
@@ -107,6 +110,7 @@ namespace Raven.Tests.Core.Configuration
 			Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(WorkingDirectoryValue));
 		}
 
 		[Fact]
@@ -125,7 +129,11 @@ namespace Raven.Tests.Core.Configuration
 			Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
 			Assert.NotEqual(basePath, workingDirectory);
 			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
+			Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(@"\\"));
+			Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(@"\\"));
 			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
+			Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(@"\\"));
+			Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(@"\\"));
 		}
 
 		[Fact]
@@ -242,6 +250,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.FileSystem.DataDir.Value.ToFullPath(null)) + @"Indexes", actual => actual.FileSystem.IndexStoragePath);
 			configurationComparer.Assert(expected => expected.FileSystem.DefaultStorageTypeName.Value, actual => actual.FileSystem.DefaultStorageTypeName);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.Counter.DataDir.Value.ToFullPath(null)), actual => actual.Counter.DataDirectory);
+			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.TimeSeries.DataDir.Value.ToFullPath(null)), actual => actual.TimeSeries.DataDirectory);
 			configurationComparer.Assert(expected => expected.MaxConcurrentMultiGetRequests.Value, actual => actual.MaxConcurrentMultiGetRequests);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.DataDir.Value.ToFullPath(null)) + @"Indexes", actual => actual.IndexStoragePath);
 			configurationComparer.Assert(expected => expected.DefaultStorageTypeName.Value, actual => actual.DefaultStorageTypeName);

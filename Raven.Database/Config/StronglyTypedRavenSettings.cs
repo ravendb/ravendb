@@ -30,6 +30,8 @@ namespace Raven.Database.Config
 
 		public CounterConfiguration Counter { get; private set; }
 
+		public TimeSeriesConfiguration TimeSeries { get; private set; }
+
 		public EncryptionConfiguration Encryption { get; private set; }
 
 		public IndexingConfiguration Indexing { get; set; }
@@ -48,6 +50,7 @@ namespace Raven.Database.Config
 			Prefetcher = new PrefetcherConfiguration();
 			FileSystem = new FileSystemConfiguration();
 			Counter = new CounterConfiguration();
+			TimeSeries = new TimeSeriesConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
 			WebSockets = new WebSocketsConfiguration();
@@ -521,6 +524,11 @@ namespace Raven.Database.Config
 		}
 
 		public class CounterConfiguration
+		{
+			public StringSetting DataDir { get; set; }
+		}
+
+		public class TimeSeriesConfiguration
 		{
 			public StringSetting DataDir { get; set; }
 		}

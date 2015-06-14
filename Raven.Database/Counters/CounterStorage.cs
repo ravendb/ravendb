@@ -55,7 +55,7 @@ namespace Raven.Database.Counters
 
 		public int ReplicationTimeoutInMs { get; private set; }
 
-		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
+		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState receivedTransportState = null)
 		{			
 			CounterStorageUrl = string.Format("{0}cs/{1}", serverUrl, storageName);
 			Name = storageName;
@@ -65,7 +65,7 @@ namespace Raven.Database.Counters
 				: CreateStorageOptionsFromConfiguration(configuration.Counter.DataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
-			transportState = recievedTransportState ?? new TransportState();
+			transportState = receivedTransportState ?? new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			replicationTask = new ReplicationTask(this);
 			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
@@ -601,7 +601,7 @@ namespace Raven.Database.Counters
 				var sign = counterValue.IsPositive() ? ValueSign.Positive : ValueSign.Negative;
 				var doesCounterExist = Store(counterValue.Group(), counterValue.CounterName(), counterValue.ServerId(), sign, counterKey =>
 				{
-					var sliceWriter = new SliceWriter(parent.BufferPool.TakeBuffer(sizeof(long)));
+					var sliceWriter = new SliceWriter(parent.BufferPool.TakeBuffer(sizeof(long)), EndianBitConverter.Little);
 					try
 					{
 						sliceWriter.Write(counterValue.Value);
@@ -693,7 +693,7 @@ namespace Raven.Database.Counters
 
 			private SliceWriter GetFullCounterNameAsSliceWriter(string groupName, string counterName, Guid serverId, char sign, int fullCounterNameSize)
 			{
-				var sliceWriter = new SliceWriter(parent.BufferPool.TakeBuffer(fullCounterNameSize));				
+				var sliceWriter = new SliceWriter(parent.BufferPool.TakeBuffer(fullCounterNameSize), EndianBitConverter.Little);				
 				sliceWriter.Write(groupName);
 				
 				sliceWriter.Write(Constants.Counter.Separator);
@@ -782,7 +782,7 @@ namespace Raven.Database.Counters
 		{
 			var groupSize = Encoding.UTF8.GetByteCount(group);
 			var counterNameSize = Encoding.UTF8.GetByteCount(counterName);
-			var sliceWriter = new SliceWriter(groupSize + counterNameSize + (sizeof(byte) * 2));
+			var sliceWriter = new SliceWriter(groupSize + counterNameSize + (sizeof(byte) * 2), EndianBitConverter.Little);
 			sliceWriter.Write(group);
 			sliceWriter.Write(Constants.Counter.Separator);
 			sliceWriter.Write(counterName);
