@@ -84,11 +84,15 @@ interface computedAppUrls {
 
     filesystemVersioning: KnockoutComputed<string>;
 
-    couterStorages:KnockoutComputed<string>;
+    counterStorages:KnockoutComputed<string>;
     counterStorageCounters: KnockoutComputed<string>;
     counterStorageReplication: KnockoutComputed<string>;
     counterStorageStats: KnockoutComputed<string>;
     counterStorageConfiguration: KnockoutComputed<string>;
+
+    timeSeries: KnockoutComputed<string>;
+    timeSeriesStats: KnockoutComputed<string>;
+    timeSeriesConfiguration: KnockoutComputed<string>;
 
     dataSubscriptions: KnockoutComputed<string>;
 }

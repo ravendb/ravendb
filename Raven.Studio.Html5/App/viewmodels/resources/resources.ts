@@ -28,6 +28,8 @@ import createDefaultFsSettingsCommand = require("commands/filesystem/createDefau
 import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 import counterStorage = require("models/counter/counterStorage");
 import createCounterStorageCommand = require("commands/resources/createCounterStorageCommand");
+import timeSeries = require("models/timeSeries/timeSeries");
+import createTimeSeriesCommand = require("commands/resources/createTimeSeriesCommand");
 
 class resources extends viewModelBase {
     resources: KnockoutComputed<resource[]>;
@@ -35,6 +37,7 @@ class resources extends viewModelBase {
     databases = ko.observableArray<database>();
     fileSystems = ko.observableArray<fileSystem>();
     counterStorages = ko.observableArray<counterStorage>();
+    timeSeries = ko.observableArray<timeSeries>();
     searchText = ko.observable("");
     selectedResource = ko.observable<resource>();
     fileSystemsStatus = ko.observable<string>("loading");
@@ -52,12 +55,14 @@ class resources extends viewModelBase {
     databaseType = database.type;
     fileSystemType = fileSystem.type;
     counterStorageType = counterStorage.type;
+    timeSeriesType = timeSeries.type;
     visibleResource = ko.observable("");
     visibleOptions = [
         { value: "", name: "Show all" }, 
         { value: database.type, name: "Show databases" }, 
         { value: fileSystem.type, name: "Show file systems" }, 
-        { value: counterStorage.type, name: "Show counter storages" }
+        { value: counterStorage.type, name: "Show counter storages" },
+        { value: timeSeries.type, name: "Show time sereis" }
     ];
 
     constructor() {
@@ -66,15 +71,16 @@ class resources extends viewModelBase {
         this.databases = shell.databases;
         this.fileSystems = shell.fileSystems;
         this.counterStorages = shell.counterStorages;
+        this.timeSeries = shell.timeSeries;
         this.resources = shell.resources;
         
         this.systemDb = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase(); 
         this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterResources());
 
-        var currentDatabse = this.activeDatabase();
-        if (!!currentDatabse) {
-            this.selectResource(currentDatabse, false);
+        var currentDatabase = this.activeDatabase();
+        if (!!currentDatabase) {
+            this.selectResource(currentDatabase, false);
         }
 
         var currentFileSystem = this.activeFilesystem();
@@ -85,6 +91,11 @@ class resources extends viewModelBase {
         var currentCounterStorage = this.activeCounterStorage();
         if (!!currentCounterStorage) {
             this.selectResource(currentCounterStorage, false);
+        }
+
+        var currentTimeSeries = this.activeTimeSeries();
+        if (!!currentTimeSeries) {
+            this.selectResource(currentTimeSeries, false);
         }
 
         var updatedUrl = appUrl.forResources();
@@ -204,6 +215,13 @@ class resources extends viewModelBase {
             cs.isVisible(isMatch);
         });
         this.counterStorages().map((cs: counterStorage) => cs.isChecked(!cs.isVisible() ? false : cs.isChecked()));
+
+        this.timeSeries().forEach(cs => {
+            var typeMatch = !this.visibleResource() || this.visibleResource() === timeSeries.type;
+            var isMatch = (!filter || (cs.name.toLowerCase().indexOf(filterLower) >= 0)) && typeMatch;
+            cs.isVisible(isMatch);
+        });
+        this.timeSeries().map((ts: timeSeries) => ts.isChecked(!ts.isVisible() ? false : ts.isChecked()));
     }
 
     getDocumentsUrl(db: database) {
@@ -216,6 +234,10 @@ class resources extends viewModelBase {
 
     getCounterStorageCountersUrl(cs: counterStorage) {
         return appUrl.forCounterStorageCounters(null, cs);
+    }
+
+    getTimeSeriesUrl(ts: timeSeries) {
+        return appUrl.forTimeSeriesSeries(null, ts);
     }
 
     selectResource(rs: resource, activateResource: boolean = true) {
@@ -266,6 +288,8 @@ class resources extends viewModelBase {
                 return this.fileSystems;
             case TenantType.CounterStorage:
                 return this.counterStorages;
+            case TenantType.TimeSeries:
+                return this.timeSeries;
             default:
                 throw "Unknown type";
         }
@@ -440,6 +464,17 @@ class resources extends viewModelBase {
 
                 settings["Raven/Counters/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
                 this.showCsCreationAdvancedStepsIfNecessary(counterStorageName, bundles, settings);
+            });
+
+        createResourceViewModel.createTimeSeriesPart
+            .creationTask
+            .done((timeSeriesName: string, bundles: string[], timeSeriesPath: string) => {
+                var settings = {
+                    "Raven/ActiveBundles": bundles.join(";")
+                }
+
+                settings["Raven/TimeSeries/DataDir"] = (!this.isEmptyStringOrWhitespace(timeSeriesPath)) ? timeSeriesPath : "~\\TimeSeries\\" + timeSeriesName;
+                this.showCsCreationAdvancedStepsIfNecessary(timeSeriesName, bundles, settings);
             });
 
         app.showDialog(createResourceViewModel);
@@ -633,6 +668,27 @@ class resources extends viewModelBase {
         this.filterResources();
         return newCounterStorage;
         //return this.addNewResource(this.counterStorages, counterStorageName, () => new counterStorage(counterStorageName, true, false, bundles));
+    }
+
+    private showTsCreationAdvancedStepsIfNecessary(timeSeriesName: string, bundles: string[], settings: {}) {
+
+        new createTimeSeriesCommand(timeSeriesName, settings)
+            .execute()
+            .done(() => {
+            var newTimeSeries = this.addNewTimeSeries(timeSeriesName, bundles);
+            this.selectResource(newTimeSeries);
+        });
+    }
+
+    private addNewTimeSeries(timeSeriesName: string, bundles: string[]): timeSeries {
+        var foundTimeSeries = this.timeSeries.first((ts: timeSeries) => ts.name === timeSeriesName);
+        if (!!foundTimeSeries)
+            return foundTimeSeries;
+
+        var newTimeSeries = new timeSeries(timeSeriesName, true, false, bundles);
+        this.timeSeries.unshift(newTimeSeries);
+        this.filterResources();
+        return newTimeSeries;
     }
 
     addNewResource(resourcesArray: KnockoutObservableArray<resource>, resourceName: string, createResource: () => resource) {

@@ -14,7 +14,7 @@ namespace Raven.Abstractions.TimeSeries
 
         public string TimeSeriesSize { get; set; }
 
-		// public double RequestsPerSecond { get; set; }
+		public double RequestsPerSecond { get; set; }
     }
 
     public class TimeSeriesMetrics

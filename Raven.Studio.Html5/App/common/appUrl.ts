@@ -1,6 +1,7 @@
 import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
+import timeSeries = require("models/timeSeries/timeSeries");
 import resource = require("models/resources/resource");
 import router = require("plugins/router");
 import collection = require("models/database/documents/collection");
@@ -23,6 +24,7 @@ class appUrl {
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
+    private static currentTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
     
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
@@ -115,11 +117,16 @@ class appUrl {
 
         filesystemVersioning: ko.computed(() => appUrl.forFilesystemVersioning(appUrl.currentFilesystem())),
 
-        couterStorages: ko.computed(() => appUrl.forCounterStorages()),
+        counterStorages: ko.computed(() => appUrl.forCounterStorages()),
         counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(null, appUrl.currentCounterStorage())),
         counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
+
+        timeSeries: ko.computed(() => appUrl.forTimeSeries()),
+        timeSeriesSeries: ko.computed(() => appUrl.forTimeSeriesSeries(null, appUrl.currentTimeSeries())),
+        timeSeriesStats: ko.computed(() => appUrl.forTimeSeriesStats(appUrl.currentTimeSeries())),
+        timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries()))
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -151,6 +158,26 @@ class appUrl {
     static forCounterStorageConfiguration(counterStorage: counterStorage) {
         var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
         return "#counterstorages/configuration?" + counterStroragePart;
+    }
+
+    static forTimeSeriesSeries(name: string, ts: timeSeries) {
+        var part = name ? "name=" + encodeURIComponent(name) : "";
+        var counterStoragePart = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#counterstorages/counters?" + part + counterStoragePart;
+    }
+
+    static forTimeSeriesStats(ts: timeSeries) {
+        var part = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/stats?" + part;
+    }
+
+    static forTimeSeriesConfiguration(ts: timeSeries) {
+        var part = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/configuration?" + part;
+    }
+
+    static getEncodedTimeSeriesPart(ts: timeSeries): string {
+        return ts ? "&timeseries=" + encodeURIComponent(ts.name) : "";
     }
 
     static forUpgrade(db: database) {
@@ -250,6 +277,10 @@ class appUrl {
 
     static forCounterStorages(): string {
         return "#counterstorages";
+    }
+
+    static forTimeSeries(): string {
+        return "#timeseries";
     }
 
     /**

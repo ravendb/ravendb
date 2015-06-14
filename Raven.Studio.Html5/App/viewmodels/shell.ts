@@ -10,6 +10,7 @@ import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
+import timeSeries = require("models/timeSeries/timeSeries");
 import documentClass = require("models/database/documents/document");
 import collection = require("models/database/documents/collection");
 import uploadItem = require("models/filesystem/uploadItem");
@@ -41,6 +42,8 @@ import getFileSystemsCommand = require("commands/filesystem/getFileSystemsComman
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getCounterStorageStatsCommand = require("commands/counter/getCounterStorageStatsCommand");
+import getTimeSeriesCommand = require("commands/timeSeries/getTimeSeriesCommand");
+import getTimeSeriesStatsCommand = require("commands/timeSeries/getTimeSeriesStatsCommand");
 import getSystemDocumentCommand = require("commands/database/documents/getSystemDocumentCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 
@@ -99,15 +102,23 @@ class shell extends viewModelBase {
         && this.lastActivatedResource().type === TenantType.CounterStorage
         && (this.appUrls.isAreaActive("counterstorages")() || this.appUrls.isAreaActive("resources")()));
 
+    static timeSeries = ko.observableArray<timeSeries>();
+    isActiveTimeSeriesDisabled: KnockoutComputed<boolean>;
+    canShowTimeSeriesNavbar = ko.computed(() =>
+        !!this.lastActivatedResource()
+        && this.lastActivatedResource().type === TenantType.TimeSeries
+        && (this.appUrls.isAreaActive("timeseries")() || this.appUrls.isAreaActive("resources")()));
+
     canShowResourcesNavbar = ko.computed(() => {
         var canDb = this.canShowDatabaseNavbar();
         var canFs = this.canShowFileSystemNavbar();
-        var canCnt = this.canShowCountersNavbar();
-        return canDb || canFs || canCnt;
+        var canCs = this.canShowCountersNavbar();
+        var canTs = this.canShowTimeSeriesNavbar();
+        return canDb || canFs || canCs || canTs;
     });
 
     static resources = ko.computed(() => {
-        var result: resource[] = [].concat(shell.databases(), shell.fileSystems(), shell.counterStorages());
+        var result: resource[] = [].concat(shell.databases(), shell.fileSystems(), shell.counterStorages(), shell.timeSeries());
         return result.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
     });
 
@@ -154,6 +165,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.activateDatabase(db));
         ko.postbox.subscribe("ActivateFilesystem", (fs: fileSystem) => this.activateFileSystem(fs));
         ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => this.activateCounterStorage(cs));
+        ko.postbox.subscribe("ActivateTimeSeries", (ts: timeSeries) => this.activateTimeSeries(ts));
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
         ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
@@ -175,11 +187,12 @@ class shell extends viewModelBase {
         this.isActiveDatabaseDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeDatabase()));
         this.isActiveFileSystemDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeFilesystem()));
         this.isActiveCounterStorageDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeCounterStorage()));
+        this.isActiveTimeSeriesDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeTimeSeries()));
 
         this.listedResources = ko.computed(() => {
             var currentResource = this.lastActivatedResource();
             if (!!currentResource) {
-                return shell.resources().filter(rs => (rs.type != currentResource.type || (rs.type == currentResource.type && rs.name != currentResource.name)) && rs.name != '<system>');
+                return shell.resources().filter(rs => (rs.type !== currentResource.type || (rs.type === currentResource.type && rs.name !== currentResource.name)) && rs.name !== '<system>');
             }
             return shell.resources();
         });
@@ -220,11 +233,13 @@ class shell extends viewModelBase {
             { route: "filesystems/settings*details", title: "Settings", moduleId: "viewmodels/filesystem/settings/settings", nav: true, hash: this.appUrls.filesystemSettings },
             { route: "filesystems/configuration", title: "Configuration", moduleId: "viewmodels/filesystem/configurations/configuration", nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: "filesystems/edit", title: "Edit File", moduleId: "viewmodels/filesystem/files/filesystemEditFile", nav: false },
-            { route: ["", "counterstorages"], title: "Counter Storages", moduleId: "viewmodels/counter/counterStorages", nav: true, hash: this.appUrls.couterStorages },
             { route: "counterstorages/counters", title: "Counters", moduleId: "viewmodels/counter/counters", nav: true, hash: this.appUrls.counterStorageCounters },
-            { route: "counterstorages/replication", title: "Teplication", moduleId: "viewmodels/counter/counterStorageReplication", nav: true, hash: this.appUrls.counterStorageReplication },
+            { route: "counterstorages/replication", title: "Replication", moduleId: "viewmodels/counter/counterStorageReplication", nav: true, hash: this.appUrls.counterStorageReplication },
             { route: "counterstorages/stats", title: "Stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
-            { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration }
+            { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration },
+            { route: "timeseries/series", title: "Series", moduleId: "viewmodels/timeSeries/timeSeries", nav: true, hash: this.appUrls.timeSeries },
+            { route: "timeseries/stats", title: "Stats", moduleId: "viewmodels/timeSeries/timeSeriesStats", nav: true, hash: this.appUrls.timeSeriesStats },
+            { route: "timeseries/configuration", title: "Configuration", moduleId: "viewmodels/timeSeries/timeSeriesConfiguration", nav: true, hash: this.appUrls.timeSeriesConfiguration }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
@@ -261,6 +276,9 @@ class shell extends viewModelBase {
                     navigationLinksWidth += 600;
                 }
                 else if (this.canShowCountersNavbar()) {
+                    navigationLinksWidth += 600; //todo: calculate
+                }
+                else if (this.canShowTimeSeriesNavbar()) {
                     navigationLinksWidth += 600; //todo: calculate
                 }
 
@@ -378,6 +396,24 @@ class shell extends viewModelBase {
         }
     }
 
+    private activateTimeSeries(ts: timeSeries) {
+        var changesSubscriptionArray = () => [
+            //TODO: enable changes api for counter storages, server side
+        ];
+        var isNotATimeSeries = this.currentConnectedResource instanceof timeSeries === false;
+        this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTimeSeriesStats(ts), changesSubscriptionArray);
+
+        shell.resources().forEach((r: resource) => r.isSelected(r instanceof timeSeries && r.name === ts.name));
+    }
+
+    private fetchTimeSeriesStats(ts: timeSeries) {
+        if (!!ts && !ts.disabled() && ts.isLicensed()) {
+            new getTimeSeriesStatsCommand(ts, true)
+                .execute()
+                .done((result: timeSeriesStatisticsDto) => ts.saveStatistics(result));
+        }
+    }
+
     private updateChangesApi(rs: resource, isPreviousDifferentKind: boolean, fetchStats: () => void, subscriptionsArray: () => changeSubscription[]) {
         fetchStats();
 
@@ -469,6 +505,12 @@ class shell extends viewModelBase {
             .done((results: counterStorage[]) => shell.updateResourceObservableArray(shell.counterStorages, results, active));
     }
 
+    static reloadTimeSeries(active: timeSeries): JQueryPromise<timeSeries[]> {
+        return new getTimeSeriesCommand()
+            .execute()
+            .done((results: timeSeries[]) => shell.updateResourceObservableArray(shell.timeSeries, results, active));
+    }
+
     private reloadDataAfterReconnection(rs: resource) {
         if (rs.name === "<system>") {
             this.fetchStudioConfig();
@@ -479,6 +521,7 @@ class shell extends viewModelBase {
             var databasesLoadTask = shell.reloadDatabases(this.activeDatabase());
             var fileSystemsLoadTask = shell.reloadFilesystems(this.activeFilesystem());
             var counterStoragesLoadTask = shell.reloadCounterStorages(this.activeCounterStorage());
+            var timeSeriesLoadTask = shell.reloadTimeSeries(this.activeTimeSeries());
 
             $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
                 .done(() => {
