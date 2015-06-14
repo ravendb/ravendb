@@ -28,6 +28,7 @@ using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
+using Raven.Abstractions;
 
 namespace Raven.Client.Connection.Implementation
 {
@@ -678,7 +679,7 @@ namespace Raven.Client.Connection.Implementation
 		        Content = new JsonContent(tokenToWrite),
 		        Headers =
 		        {
-			        TransferEncodingChunked = true
+						TransferEncodingChunked = !EnvironmentUtils.RunningOnPosix
 		        }
 	        });
         }
@@ -703,7 +704,7 @@ namespace Raven.Client.Connection.Implementation
 				Content = content,
 				Headers =
 				{
-					TransferEncodingChunked = true,
+						TransferEncodingChunked = !EnvironmentUtils.RunningOnPosix,
 				}
 			});
 		}
@@ -763,7 +764,7 @@ namespace Raven.Client.Connection.Implementation
 
 		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(Action<Stream, TaskCompletionSource<object>> action)
 		{
-			httpClient.DefaultRequestHeaders.TransferEncodingChunked = true;
+			httpClient.DefaultRequestHeaders.TransferEncodingChunked = !EnvironmentUtils.RunningOnPosix;
 
             return await RunWithAuthRetry(async () =>
             {
