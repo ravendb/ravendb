@@ -90,6 +90,8 @@ namespace Raven.Database.Config
         public string FileSystemName { get; set; }
 
         public string CountersDatabaseName { get; set; }
+        
+		public string TimeSeriesDatabaseName { get; set; }
 
 		public void PostInit()
 		{
@@ -1104,7 +1106,7 @@ namespace Raven.Database.Config
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
 
 
-	    [Browsable(false)]
+		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{

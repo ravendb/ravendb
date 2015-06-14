@@ -1,43 +1,92 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Raven.Abstractions;
+using Raven.Abstractions.Util;
+using Raven.Database.Config;
+using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Connections;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
 using Voron.Util.Conversion;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.TimeSeries
 {
-	public class TimeSeriesStorage : IDisposable
+	public class TimeSeriesStorage : IResourceStore, IDisposable
 	{
-		private readonly StorageEnvironment _storageEnvironment;
+		private readonly StorageEnvironment storageEnvironment;
 
-		public Guid Id { get; set; }
+		public Guid ServerId { get; set; }
 
-		public TimeSeriesStorage(StorageEnvironmentOptions options)
+		public string Name { get; private set; }
+		public string ResourceName { get; private set; }
+		public TransportState TransportState { get; private set; }
+		public AtomicDictionary<object> ExtensionsState { get; private set; }
+		public InMemoryRavenConfiguration Configuration { get; private set; }
+		public DateTime LastWrite { get; set; }
+
+		public TimeSeriesStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState receivedTransportState = null)
 		{
-			_storageEnvironment = new StorageEnvironment(options);
+			Name = storageName;
+			ResourceName = string.Concat(Constants.TimeSeries.UrlPrefix, "/", storageName);
 
-			using (var tx = _storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
+				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
+
+			storageEnvironment = new StorageEnvironment(options);
+
+			Configuration = configuration;
+			Initialize();
+		}
+
+		private void Initialize()
+		{
+			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var metadata = _storageEnvironment.CreateTree(tx, "$metadata");
-				_storageEnvironment.CreateTree(tx, "data", keysPrefixing: true);
-				var result = metadata.Read("id");
-				if (result == null) // new db
+				storageEnvironment.CreateTree(tx, "data", keysPrefixing: true);
+
+				var metadata = storageEnvironment.CreateTree(tx, "$metadata");
+				var id = metadata.Read("id");
+				if (id == null) // new db
 				{
-					Id = Guid.NewGuid();
-					metadata.Add("id", new MemoryStream(Id.ToByteArray()));
+					ServerId = Guid.NewGuid();
+					metadata.Add("id", ServerId.ToByteArray());
 				}
 				else
 				{
 					int used;
-					Id = new Guid(result.Reader.ReadBytes(16, out used));
+					ServerId = new Guid(id.Reader.ReadBytes(16, out used));
 				}
-				 
+
 				tx.Commit();
 			}
+		}
+
+		private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
+		{
+			bool result;
+			if (bool.TryParse(settings[Constants.RunInMemory] ?? "false", out result) && result)
+				return StorageEnvironmentOptions.CreateMemoryOnly();
+
+			bool allowIncrementalBackupsSetting;
+			if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)
+				throw new ArgumentException(Constants.Voron.AllowIncrementalBackups + " settings key contains invalid value");
+
+			var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
+			var filePathFolder = new DirectoryInfo(directoryPath);
+			if (filePathFolder.Exists == false)
+				filePathFolder.Create();
+
+			var tempPath = settings[Constants.Voron.TempPath];
+			var journalPath = settings[Constants.RavenTxJournalPath];
+			var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
+			options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+			return options;
 		}
 
 		public Reader CreateReader()
@@ -47,6 +96,7 @@ namespace Raven.Database.TimeSeries
 
 		public Writer CreateWriter()
 		{
+			LastWrite = SystemTime.UtcNow;
 			return new Writer(this);
 		}
 
@@ -71,7 +121,7 @@ namespace Raven.Database.TimeSeries
 			{
 				_storage = storage;
 				_storeComputedPeriods = storeComputedPeriods;
-				_tx = _storage._storageEnvironment.NewTransaction(TransactionFlags.Read);
+				_tx = _storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
 				_tree = _tx.State.GetTree(_tx, "data");
 			}
 
@@ -174,7 +224,7 @@ namespace Raven.Database.TimeSeries
 				}
 
 
-				using (var periodTx = _storage._storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+				using (var periodTx = _storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var periodTree = periodTx.State.GetTree(periodTx, "period_" + query.Duration.Type + "-" + query.Duration.Duration);
 					using (var writer = new RollupWriter(periodTree))
@@ -393,7 +443,7 @@ namespace Raven.Database.TimeSeries
 
 			public Writer(TimeSeriesStorage storage)
 			{
-				_tx = storage._storageEnvironment.NewTransaction(TransactionFlags.ReadWrite); 
+				_tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite); 
 				_tree = _tx.State.GetTree(_tx, "data");
 				_ignoreErrors = true;
 			}
@@ -438,6 +488,7 @@ namespace Raven.Database.TimeSeries
 
 			public void Dispose()
 			{
+				
 				if (_tx != null)
 					_tx.Dispose();
 			}
@@ -540,8 +591,8 @@ namespace Raven.Database.TimeSeries
 
 		public void Dispose()
 		{
-			if (_storageEnvironment != null)
-				_storageEnvironment.Dispose();
+			if (storageEnvironment != null)
+				storageEnvironment.Dispose();
 		}
 	}
 }

@@ -6,14 +6,14 @@ using Xunit;
 
 namespace Raven.Tests.TimeSeries
 {
-	public class TimeSeriesRollupsOutOfRange
+	public class TimeSeriesRollupsOutOfRange : TimeSeriesTest
 	{
 		[Fact]
 		public void HourlyData_QueryPer3Hours_StartedAt4()
 		{
 			var start = new DateTime(2015, 4, 1, 4, 0, 0);
 
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				var r = tss.CreateReader();
 				Assert.Throws<InvalidOperationException>(() =>
@@ -35,7 +35,7 @@ namespace Raven.Tests.TimeSeries
 		{
 			var start = new DateTime(2015, 4, 1, 9, 0, 0);
 
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				var r = tss.CreateReader();
 				Assert.Throws<InvalidOperationException>(() =>
@@ -57,7 +57,7 @@ namespace Raven.Tests.TimeSeries
 		{
 			var start = new DateTime(2015, 4, 1, 0, 0, 0);
 
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				var r = tss.CreateReader();
 				Assert.Throws<InvalidOperationException>(() =>
@@ -78,7 +78,7 @@ namespace Raven.Tests.TimeSeries
 		{
 			var start = new DateTime(2015, 4, 1, 0, 0, 0);
 
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				var r = tss.CreateReader();
 				var exception = Assert.Throws<InvalidOperationException>(() =>
@@ -100,7 +100,7 @@ namespace Raven.Tests.TimeSeries
 		{
 			var start = new DateTime(2015, 1, 1, 0, 0, 0);
 
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				var r = tss.CreateReader();
 
@@ -123,7 +123,7 @@ namespace Raven.Tests.TimeSeries
 		{
 			var start = new DateTime(2019, 1, 1, 0, 0, 0);
 
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				var r = tss.CreateReader();
 

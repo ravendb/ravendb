@@ -7,12 +7,12 @@ using Xunit;
 
 namespace Raven.Tests.TimeSeries
 {
-	public class TimeSeriesTests
+	public class TimeSeriesTests : TimeSeriesTest
 	{
 		[Fact]
 		public void CanQueryData()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				WriteTestData(tss);
 
@@ -59,7 +59,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void CanQueryDataOnSeries()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				WriteTestData(tss);
 
@@ -85,7 +85,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void CanQueryDataInSpecificDurationSum()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				WriteTestData(tss);
 
@@ -146,7 +146,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void CanQueryDataInSpecificDurationAverage()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				WriteTestData(tss);
 
@@ -221,7 +221,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void CanQueryDataInSpecificDurationAverageUpdateRollup()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				WriteTestData(tss);
 
@@ -414,7 +414,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void CanQueryDataInSpecificDuration_LowerDurationThanActualOnDisk()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				WriteTestData(tss);
 
@@ -530,7 +530,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void MissingDataInSeries()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				WriteTestData(tss);
 

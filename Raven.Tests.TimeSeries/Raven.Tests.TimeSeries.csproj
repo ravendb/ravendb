@@ -52,6 +52,7 @@
     </Compile>
     <Compile Include="RollupsRanges.cs" />
     <Compile Include="TimeSeriesRollupsOutOfRange.cs" />
+    <Compile Include="TimeSeriesTest.cs" />
     <Compile Include="TimeSeriesTests.cs" />
   </ItemGroup>
   <ItemGroup>

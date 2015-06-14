@@ -6,12 +6,12 @@ using Xunit;
 
 namespace Raven.Tests.TimeSeries
 {
-	public class RollupsRanges
+	public class RollupsRanges : TimeSeriesTest
 	{
 		[Fact]
 		public void ByDays()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				var start = new DateTime(2015, 4, 6, 0, 0, 0);
 
@@ -75,7 +75,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void ByMonths()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
 
@@ -154,7 +154,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void ByYear()
 		{
-			using (var tss = new TimeSeriesStorage(StorageEnvironmentOptions.CreateMemoryOnly()))
+			using (var tss = GetStorage())
 			{
 				var start = new DateTime(2014, 1, 1, 0, 0, 0);
 
