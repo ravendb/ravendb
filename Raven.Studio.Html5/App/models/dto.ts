@@ -44,7 +44,7 @@ interface logNotificationDto {
     RequestUri: string;
     TenantName: string;
     CustomInfo: string;
-    TenantType: logTenantType;
+    TenantType: TenantType;
     InnerRequestsCount?: number;
 
 }
@@ -258,6 +258,7 @@ interface licenseStatusDto {
         maxRamUtilization: string;
         maxParallelism: string;
         ravenfs: string;
+        counterStorage: string;
     }
 }
 
@@ -1022,9 +1023,9 @@ interface collectionStats {
     TopDocs: any[];
 }
 
-enum logTenantType {
+enum TenantType {
     Database = 0,
-    Filesystem = 1,
+    FileSystem = 1,
     CounterStorage = 2
 }
 
@@ -1034,21 +1035,34 @@ interface filterSettingDto {
     ShouldMatch: boolean;
 }
 
+interface resourceStyleMap {
+    resourceName: string;
+    styleMap: any;
+}
+
 interface counterStorageDto {
     Name: string;
     Path?: string;
 }
 
 interface counterDto {
-    Name: string;
+    CurrentValue: number;
     Group: string;
-    OverallTotal: number;
-    Servers: counterServerValueDto[];
+    CounterName: string;
+    Delta: number;
+}
+
+interface counterSummaryDto {
+    Group: string;
+    CounterName: string;
+    Increments: number;
+    Decrements: number;
+    Total: number;
 }
 
 interface counterGroupDto {
     Name: string;
-    NumOfCounters?: number;
+    Count: number;
 }
 
 interface counterServerValueDto {
@@ -1099,6 +1113,9 @@ interface tenantDto {
 }
 
 interface fileSystemDto extends tenantDto {
+}
+
+interface counterStorageDto extends tenantDto {
 }
 
 interface customFunctionsDto {

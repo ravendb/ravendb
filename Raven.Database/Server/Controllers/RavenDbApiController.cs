@@ -1,7 +1,16 @@
-﻿using System.Security.Principal;
-
-using metrics;
-
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Security.Principal;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -18,18 +27,6 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Http.Controllers;
-using System.Web.Http.Routing;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -182,7 +179,7 @@ namespace Raven.Database.Server.Controllers
 
 		public override HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
-			var result =base.GetMessageWithString(msg, code, etag);
+			var result = base.GetMessageWithString(msg, code, etag);
 			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
@@ -675,7 +672,7 @@ namespace Raven.Database.Server.Controllers
 			Database.WorkContext.MetricsCounters.RequestDurationLastMinute.AddRecord(duration);
 	    }
 
-	    public bool ClientIsV3OrHigher
+		protected bool ClientIsV3OrHigher
 	    {
 	        get
 	        {
@@ -686,6 +683,16 @@ namespace Raven.Database.Server.Controllers
 	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
 	        }
 	    }
+
+		protected RavenJArray GetResourcesDocuments(string resourcePrefix)
+		{
+			var start = GetStart();
+			var nextPageStart = start; // will trigger rapid pagination
+			var resourcesDocuments = Database.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
+				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+
+			return resourcesDocuments;
+		}
 
 		protected class TenantData
 		{

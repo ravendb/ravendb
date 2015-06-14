@@ -15,6 +15,7 @@ using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Server.WebApi.Attributes;
 

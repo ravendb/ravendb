@@ -2,15 +2,15 @@
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Database.FileSystem.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
+using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
-using System.Text.RegularExpressions;
-using Raven.Abstractions.FileSystem.Notifications;
-using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.FileSystem.Controllers
 {
@@ -25,7 +25,7 @@ namespace Raven.Database.FileSystem.Controllers
 			string[] names = null;
 			Storage.Batch(accessor => { names = accessor.GetConfigNames(Paging.Start, Paging.PageSize).ToArray(); });
 
-            return this.GetMessageWithObject(names)
+            return GetMessageWithObject(names)
                        .WithNoCache();
 		}
 
@@ -36,7 +36,7 @@ namespace Raven.Database.FileSystem.Controllers
             RavenJObject config = null;
             Storage.Batch(accessor => { config = accessor.GetConfig(name); });
                 
-            return this.GetMessageWithObject(config)
+            return GetMessageWithObject(config)
                         .WithNoCache();
 		}
 
@@ -82,7 +82,7 @@ namespace Raven.Database.FileSystem.Controllers
 				};
 			});
 
-            return this.GetMessageWithObject(results)
+            return GetMessageWithObject(results)
                        .WithNoCache();
 		}
 

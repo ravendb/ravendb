@@ -272,26 +272,26 @@ namespace Raven.Database.Server.Controllers
             return nvc[key];
         }
 
-		public string[] GetQueryStringValues(string key)
+	    protected string[] GetQueryStringValues(string key)
 		{
 			var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
 			return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
 		}
 
-		public Etag GetEtagFromQueryString()
+	    protected Etag GetEtagFromQueryString()
 		{
 			var etagAsString = GetQueryStringValue("etag");
 			return etagAsString != null ? Etag.Parse(etagAsString) : null;
 		}
 
-		public void WriteETag(Etag etag, HttpResponseMessage msg)
+	    protected void WriteETag(Etag etag, HttpResponseMessage msg)
 		{
 			if (etag == null)
 				return;
 			WriteETag(etag.ToString(), msg);
 		}
 
-		public void WriteETag(string etag, HttpResponseMessage msg)
+	    protected static void WriteETag(string etag, HttpResponseMessage msg)
 		{
 			if (string.IsNullOrWhiteSpace(etag))
 				return;
@@ -299,7 +299,7 @@ namespace Raven.Database.Server.Controllers
 			msg.Headers.ETag = new EntityTagHeaderValue("\"" + etag + "\"");
 		}
 
-		public void WriteHeaders(RavenJObject headers, Etag etag, HttpResponseMessage msg)
+	    protected void WriteHeaders(RavenJObject headers, Etag etag, HttpResponseMessage msg)
 		{
 			foreach (var header in headers)
 			{

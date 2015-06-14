@@ -1,6 +1,7 @@
 ﻿import commandBase = require("commands/commandBase");
-import counter = require("models/counter/counter");
+import counterSummary = require("models/counter/counterSummary");
 import counterStorage = require("models/counter/counterStorage");
+import pagedResultSet = require("common/pagedResultSet");
 
 class getCountersCommand extends commandBase {
 
@@ -10,20 +11,24 @@ class getCountersCommand extends commandBase {
     * @param take - number of entries to take
     * @param counterGroupName - the counter group to take the entries from
     */
-    constructor(private storage: counterStorage, private skip: number, private take: number, private counterGroupName?: string) {
+    constructor(private cs: counterStorage, private skip: number, private take: number, private group: string = null) {
         super();
     }
 
-    execute(): JQueryPromise<counter[]> {
+    execute(): JQueryPromise<pagedResultSet> {
         var args = {
             skip: this.skip,
             take: this.take,
-            counterGroupName: this.counterGroupName
+            group: this.group
         };
 
         var url = "/counters";
-        var selector = (dtos: counterDto[]) => dtos.map(d => new counter(d));
-        return this.query(url, args, this.storage, selector);
+        var doneTask = $.Deferred();
+        var selector = (dtos: counterSummaryDto[]) => dtos.map(d => new counterSummary(d));
+        var task = this.query(url, args, this.cs, selector);
+        task.done((summaries: counterSummary[]) => doneTask.resolve(new pagedResultSet(summaries, summaries.length)));
+        task.fail(xhr => doneTask.reject(xhr));
+        return doneTask;
     }
 }
 

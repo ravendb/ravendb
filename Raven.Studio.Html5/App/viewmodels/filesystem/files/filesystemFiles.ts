@@ -113,7 +113,7 @@ class filesystemFiles extends viewModelBase {
     folderChanged(newFolder: string) {
         this.loadFiles();
 
-        this.inRevisionsFolder(newFolder == filesystemFiles.revisionsFolderId);
+        this.inRevisionsFolder(newFolder === filesystemFiles.revisionsFolderId);
 
         // treat notifications events
         if (!newFolder) {

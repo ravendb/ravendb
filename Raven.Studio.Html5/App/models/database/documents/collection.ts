@@ -4,9 +4,9 @@ import getSystemDocumentsCommand = require("commands/database/documents/getSyste
 import getAllDocumentsCommand = require("commands/database/documents/getAllDocumentsCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/resources/database");
+import cssGenerator = require("common/cssGenerator");
 
 class collection {
-
     colorClass = ""; 
     documentCount: any = ko.observable(0);
     documentsCountWithThousandsSeparator = ko.computed(() => this.documentCount().toLocaleString());
@@ -18,7 +18,7 @@ class collection {
     private documentsList: pagedList;
     public static allDocsCollectionName = "All Documents";
     private static systemDocsCollectionName = "System Documents";
-    private static collectionColorMaps: databaseCollectionStyleMap[] = [];
+    private static collectionColorMaps: resourceStyleMap[] = [];
 
     constructor(public name: string, public ownerDatabase: database, docCount: number = 0) {
         this.collectionName = name;
@@ -43,7 +43,7 @@ class collection {
     }
 
     clearCollection() {
-        if (this.isAllDocuments === true && !!this.documentsList) {
+        if (this.isAllDocuments && !!this.documentsList) {
             this.documentsList.clear();
         }
     }
@@ -70,7 +70,6 @@ class collection {
     }
 
     static getCollectionCssClass(entityName: string, db: database): string {
-
         if (entityName === collection.allDocsCollectionName) {
             return "all-documents-collection";
         }
@@ -79,26 +78,7 @@ class collection {
             return "system-documents-collection";
         }
 
-        var databaseStyleMap = this.collectionColorMaps.first(map => map.databaseName == db.name);
-        if (!databaseStyleMap) {
-            databaseStyleMap = {
-                databaseName: db.name,
-                styleMap: {}
-            };
-            this.collectionColorMaps.push(databaseStyleMap);
-        }
-
-        var existingStyle = databaseStyleMap.styleMap[entityName];
-        if (existingStyle) {
-            return existingStyle;
-        } 
-
-        // We don't have an existing style. Assign one in the form of 'collection-style-X', where X is a number between 0 and maxStyleCount. These styles are found in app.less.
-        var maxStyleCount = 32;
-        var styleNumber = Object.keys(databaseStyleMap.styleMap).length % maxStyleCount;
-        var style = "collection-style-" + styleNumber;
-        databaseStyleMap.styleMap[entityName] = style;
-        return style;
+        return cssGenerator.getCssClass(entityName, collection.collectionColorMaps, db);
     }
 
     private createPagedList(): pagedList {

@@ -9,8 +9,8 @@ class deleteDatabaseCommand extends commandBase {
     private multipleDatabasesPath = "/admin/databases/batch-delete";
     private oneFileSystemPath = "/admin/fs/";
     private multipleFileSystemsPath = "/admin/fs/batch-delete";
-    private oneCounterStoragePath = "/admin/counterstorage/";
-    private multipleCounterStoragesPath = "/admin/counterstorage/batch-delete";
+    private oneCounterStoragePath = "/admin/cs/";
+    private multipleCounterStoragesPath = "/admin/cs/batch-delete";
 
     constructor(private resources: Array<resource>, private isHardDelete: boolean) {
         super();
@@ -18,8 +18,8 @@ class deleteDatabaseCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
 
-        var deleteTask;
-        if (this.resources.length == 1) {
+        var deleteTask: JQueryPromise<any>;
+        if (this.resources.length === 1) {
             deleteTask = this.deleteOneResource();
         } else {
             deleteTask = this.deleteMultipleResources();
@@ -36,8 +36,8 @@ class deleteDatabaseCommand extends commandBase {
             "hard-delete": this.isHardDelete
         };
         
-        var disableOneResourcePath = (resource.type == database.type) ? this.oneDatabasePath :
-            (resource.type == filesystem.type) ? this.oneFileSystemPath : this.oneCounterStoragePath;
+        var disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
+            (resource.type == TenantType.FileSystem) ? this.oneFileSystemPath : this.oneCounterStoragePath;
         var url = disableOneResourcePath + encodeURIComponent(resource.name) + this.urlEncodeArgs(args);
         var deleteTask = this.del(url, null, null, { dataType: undefined });
 
@@ -49,9 +49,9 @@ class deleteDatabaseCommand extends commandBase {
     private deleteMultipleResources(): JQueryPromise<any> {
         this.reportInfo("Deleting " + this.resources.length + " resources...");
 
-        var dbToDelete = this.resources.filter(r => r.type == database.type);
-        var fsToDelete = this.resources.filter(r => r.type == filesystem.type);
-        var cntToDelete = this.resources.filter(r => r.type == counterStorage.type);
+        var dbToDelete = this.resources.filter(r => r.type === TenantType.Database);
+        var fsToDelete = this.resources.filter(r => r.type === TenantType.FileSystem);
+        var cntToDelete = this.resources.filter(r => r.type === TenantType.CounterStorage);
 
         var deleteTasks = [];
 

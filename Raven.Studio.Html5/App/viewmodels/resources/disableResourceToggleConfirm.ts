@@ -3,6 +3,7 @@ import disableResourceToggleCommand = require("commands/resources/disableResourc
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import shell = require("viewmodels/shell");
 import resource = require("models/resources/resource");
+import shell = require("viewmodels/shell");
 
 class disableResourceToggleConfirm extends dialogViewModelBase {
 

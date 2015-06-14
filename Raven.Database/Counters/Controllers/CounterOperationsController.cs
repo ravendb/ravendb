@@ -34,6 +34,9 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public HttpResponseMessage CounterChange(string groupName, string counterName, long delta)
 		{
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var writer = Storage.CreateWriter())
 			{
 				var counterChangeAction = writer.Store(groupName, counterName, delta);
@@ -114,9 +117,11 @@ namespace Raven.Database.Counters.Controllers
 								OperationId = operationId
 							});
 
-							foreach (var counterChange in changeBatch)
+							foreach (var change in changeBatch)
 							{
-								writer.Store(counterChange.Group, counterChange.Name, counterChange.Delta);
+								AssertName(change.Group);
+								AssertName(change.Name);
+								writer.Store(change.Group, change.Name, change.Delta);
 							}
 							writer.Commit();
 
@@ -238,7 +243,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		public class BatchStatus : IOperationState
+		private class BatchStatus : IOperationState
 		{
 			public int Counters { get; set; }
 			public bool Completed { get; set; }
@@ -250,10 +255,13 @@ namespace Raven.Database.Counters.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("cs/{counterStorageName}/reset/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/reset")]
 		[HttpPost]
 		public HttpResponseMessage CounterReset(string groupName, string counterName)
 		{
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var writer = Storage.CreateWriter())
 			{
 				var counterChangeAction = writer.Reset(groupName, counterName);
@@ -277,41 +285,16 @@ namespace Raven.Database.Counters.Controllers
 
 		[RavenRoute("cs/{counterStorageName}/counters")]
 		[HttpGet]
-		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string inputGroupName = null)
+		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
+			AssertName(group, true);
+
 			using (var reader = Storage.CreateReader())
 			{
-				//TODO: implement
-				/*var prefix = (inputGroupName == null) ? string.Empty : (inputGroupName + Constants.CountersSeperator);
-				//todo: get only the counter prefixes: foo/bar/
-				var results = (
-					from fullCounterName in reader.GetFullCounterNames(prefix)
-					let groupName = fullCounterName.Split(Constants.CountersSeperator)[0]
-					let counterName = fullCounterName.Split(Constants.CountersSeperator)[1]
-					let counter = reader.GetCounterValuesByPrefix(groupName, counterName)
-					/*let overallTotalPositive = counter.CounterValues.Where(x => x.IsPositive).Sum(x => x.Value)
-					let overallTotalNegative = counter.CounterValues.Where(x => !x.IsPositive).Sum(x => x.Value)#1#
-					select new CounterView
-					{
-						Name = counterName,
-						Group = groupName,
-						OverallTotal = CounterStorage.CalculateOverallTotal(counter),
-						Servers = (from counterValue in counter.CounterValues
-								  group counterValue by counterValue.GetServerId into g
-								  select new CounterView.ServerValue{
-									  Name = g.Select(x => x.ServerName).ToString(),
-									  Positive = g.Where(x => x.IsPositive).Select(x => x.Value).FirstOrDefault(),
-									  Negative = g.Where(x => !x.IsPositive).Select(x => x.Value).FirstOrDefault(),
-								  }).ToList()
-						/*Servers = counter.CounterValues.Select(s => new CounterView.ServerValue
-						{
-							Negative = s.Negative, 
-							Positive = s.Positive, 
-							Name = CounterStorage.Reader.ServerNameFor(s.SourceId)
-						}).ToList()#1#
-					}).ToList();
-				return Request.CreateResponse(HttpStatusCode.OK, results);*/
-				return Request.CreateResponse(HttpStatusCode.OK);
+				var groupsPrefix = (group == null) ? string.Empty : (group + Constants.Counter.Separator);
+				var counterByPrefixes = reader.GetCountersByPrefixes(groupsPrefix, skip, take);
+				var counters = counterByPrefixes.Select(groupWithCounterName => reader.GetCounterSummary(groupWithCounterName)).ToList();
+				return GetMessageWithObject(counters);
 			}
 		}
 
@@ -319,6 +302,9 @@ namespace Raven.Database.Counters.Controllers
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var reader = Storage.CreateReader())
 			{
 				var overallTotal = reader.GetCounterOverallTotal(groupName, counterName);
@@ -332,7 +318,10 @@ namespace Raven.Database.Counters.Controllers
 		[RavenRoute("cs/{counterStorageName}/getCounterServersValues/{groupName}/{counterName}")]
         [HttpGet]
         public HttpResponseMessage GetCounterServersValues(string groupName, string counterName)
-		{				
+		{
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var reader = Storage.CreateReader())
 			{
 				if (reader.CounterExists(groupName, counterName) == false)
@@ -348,13 +337,13 @@ namespace Raven.Database.Counters.Controllers
 				countersByPrefix.CounterValues.ForEach(x =>
 				{
 					ServerValue serverValue;
-					var serverId = x.GetServerId();
+					var serverId = x.ServerId();
 					if (serverValuesDictionary.TryGetValue(serverId, out serverValue) == false)
 					{
 						serverValue = new ServerValue();
 						serverValuesDictionary.Add(serverId, serverValue);
 					}
-					serverValue.UpdateValue(x.IsPositive, x.Value);
+					serverValue.UpdateValue(x.IsPositive(), x.Value);
 				});
 
                 var serverValues =
@@ -366,6 +355,16 @@ namespace Raven.Database.Counters.Controllers
                     }).ToList();
                 return Request.CreateResponse(HttpStatusCode.OK, serverValues);
             }
+		}
+
+		private static void AssertName(string name, bool skipNullCheck = false)
+		{
+			var isNull = string.IsNullOrEmpty(name);
+			if (skipNullCheck == false && isNull)
+				throw new ArgumentException("A name can't be null");
+
+			if (isNull == false && name.IndexOf('/') > -1)
+				throw new ArgumentException("A name can't contain the '/' character");
 		}
 
 		private class ServerValue

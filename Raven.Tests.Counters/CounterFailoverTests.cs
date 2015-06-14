@@ -192,7 +192,7 @@ namespace Raven.Tests.Counters
 				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
 				Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
 
-				storeA.ReplicationInformer.MaxIntervalBetweenUpdatesInMillisec = 0; 
+				storeA.ReplicationInformer.MaxIntervalBetweenUpdatesInMilliseconds = 0; 
 
 				SetDisabledStateOnCounter(storeA.Name, ravenStoreA, true);
 

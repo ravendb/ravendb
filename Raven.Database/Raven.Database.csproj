@@ -222,6 +222,7 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
+    <Compile Include="Counters\CounterSummary.cs" />
     <Compile Include="JsConsole\AdminJsConsole.cs" />
     <Compile Include="JsConsole\AdminJsScript.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
@@ -663,7 +664,6 @@
     <Compile Include="FileSystem\Controllers\FileSystemsController.cs" />
     <Compile Include="FileSystem\Extensions\ConfigurationExtension.cs" />
     <Compile Include="FileSystem\Extensions\EnumExtensions.cs" />
-    <Compile Include="FileSystem\Extensions\HttpExtensions.cs" />
     <Compile Include="FileSystem\Extensions\MetadataExtensions.cs" />
     <Compile Include="FileSystem\Extensions\StreamExtensions.cs" />
     <Compile Include="FileSystem\Infrastructure\Historian.cs" />

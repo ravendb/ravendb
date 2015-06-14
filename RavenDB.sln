@@ -104,6 +104,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.StorageExporter", "Raven.StorageExporter\Raven.StorageExporter.csproj", "{44C65E90-D6D8-40D6-A114-9FB12EFB0D90}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.TimeSeries", "Raven.Tests.TimeSeries\Raven.Tests.TimeSeries.csproj", "{662D9514-F553-4263-B2E5-B81BBE09A069}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{380DAFCC-64ED-417B-BC95-C514901C2427}"
+	ProjectSection(SolutionItems) = preProject
+		WebEssentials-Settings.json = WebEssentials-Settings.json
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

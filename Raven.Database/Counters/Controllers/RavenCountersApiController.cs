@@ -15,7 +15,6 @@ using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;

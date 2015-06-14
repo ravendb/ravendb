@@ -71,9 +71,9 @@ class documents extends viewModelBase {
         this.hasDocuments = ko.computed(() => {
             var selectedCollection: collection = this.selectedCollection();
             if (!!selectedCollection) {
-                if (selectedCollection.name == collection.allDocsCollectionName) {
+                if (selectedCollection.name === collection.allDocsCollectionName) {
                     var db: database = this.activeDatabase();
-                    return db.itemCount() > 0;
+                    return !!db.statistics() ? db.statistics().countOfDocuments() > 0 : false;
                 }
                 return this.selectedCollection().documentCount() > 0;
             }
@@ -82,8 +82,8 @@ class documents extends viewModelBase {
         this.hasAnyDocumentsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
         this.hasAllDocumentsSelected = ko.computed(() => {
             var numOfSelectedDocuments = this.selectedDocumentIndices().length;
-            if (!!this.selectedCollection() && numOfSelectedDocuments != 0) {
-                return numOfSelectedDocuments == this.selectedCollection().documentCount();
+            if (!!this.selectedCollection() && numOfSelectedDocuments !== 0) {
+                return numOfSelectedDocuments === this.selectedCollection().documentCount();
             }
             return false;
         });
@@ -116,7 +116,7 @@ class documents extends viewModelBase {
         this.selectedDocumentsText = ko.computed(() => {
             if (!!this.selectedDocumentIndices()) {
                 var documentsText = "document";
-                if (this.selectedDocumentIndices().length != 1) {
+                if (this.selectedDocumentIndices().length !== 1) {
                     documentsText += "s";
                 }
                 return documentsText;
@@ -202,9 +202,8 @@ class documents extends viewModelBase {
         var db = this.activeDatabase();
 
         this.fetchCollections(db).done(results => {
-            this.updateCollections(results, db);
+            this.updateCollections(results);
             //TODO: add a button to refresh the documents and than use this.refreshCollectionsData();
-
             deferred.resolve();
         });
 
@@ -214,7 +213,7 @@ class documents extends viewModelBase {
     collectionsLoaded(collections: Array<collection>, db: database) {
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection = collection.createAllDocsCollection(db);
-        this.allDocumentsCollection.documentCount = ko.computed(() => db.itemCount());
+        this.allDocumentsCollection.documentCount = ko.computed(() => !!db.statistics() ? db.statistics().countOfDocuments() : 0);
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
@@ -237,7 +236,7 @@ class documents extends viewModelBase {
 
     //TODO: this binding has notification leak!
     selectedCollectionChanged(selected: collection) {
-        if (selected) {
+        if (!!selected) {
             var customColumnsCommand = selected.isAllDocuments ?
                 getCustomColumnsCommand.forAllDocuments(this.activeDatabase()) : getCustomColumnsCommand.forCollection(selected.name, this.activeDatabase());
 
@@ -301,11 +300,11 @@ class documents extends viewModelBase {
             });
     }
 
-    private updateCollections(receivedCollections: Array<collection>, db: database) {
+    private updateCollections(receivedCollections: Array<collection>) {
         var deletedCollections = [];
 
         this.collections().forEach((col: collection) => {
-            if (!receivedCollections.first((receivedCol: collection) => col.name == receivedCol.name) && col.name != 'System Documents' && col.name != 'All Documents') {
+            if (!receivedCollections.first((receivedCol: collection) => col.name === receivedCol.name) && col.name !== "System Documents" && col.name !== "All Documents") {
                 deletedCollections.push(col);
             }
         });
@@ -313,7 +312,7 @@ class documents extends viewModelBase {
         this.collections.removeAll(deletedCollections);
 
         receivedCollections.forEach((receivedCol: collection) => {
-            var foundCollection = this.collections().first((col: collection) => col.name == receivedCol.name);
+            var foundCollection = this.collections().first((col: collection) => col.name === receivedCol.name);
             if (!foundCollection) {
                 this.collections.push(receivedCol);
             } else {
@@ -323,7 +322,7 @@ class documents extends viewModelBase {
 
         //if the collection is deleted, go to the all documents collection
         var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
-        if (!currentCollection || currentCollection.documentCount() == 0) {
+        if (!currentCollection || currentCollection.documentCount() === 0) {
             this.selectCollection(this.allDocumentsCollection);
         }
     }
@@ -332,7 +331,7 @@ class documents extends viewModelBase {
         var selectedCollection: collection = this.selectedCollection();
 
         this.collections().forEach((collection: collection) => {
-            if (collection.name == selectedCollection.name) {
+            if (collection.name === selectedCollection.name) {
                 var docsGrid = this.getDocumentsGrid();
                 if (!!docsGrid) {
                     docsGrid.refreshCollectionData();
@@ -345,7 +344,7 @@ class documents extends viewModelBase {
     }
 
     private reloadDocumentsData(db: database) {
-        if (db.name == this.activeDatabase().name) {
+        if (db.name === this.activeDatabase().name) {
             this.refreshCollections().done(() => {
                 this.refreshCollectionsData();
             });

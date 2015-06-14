@@ -9,8 +9,8 @@ class disableResourceToggleCommand extends commandBase {
     private multipleDatabasesPath = "/admin/databases/batch-toggle-disable";
     private oneFileSystemPath = "/admin/fs/";
     private multipleFileSystemsPath = "/admin/fs/batch-toggle-disable";
-    private oneCounterStoragePath = "/admin/counterstorage/";
-    private multipleCounterStoragesPath = "/admin/counterstorage/batch-toggle-disable";
+    private oneCounterStoragePath = "/admin/cs/";
+    private multipleCounterStoragesPath = "/admin/cs/batch-toggle-disable";
 
     /**
     * @param resources - The array of resources to toggle
@@ -41,8 +41,8 @@ class disableResourceToggleCommand extends commandBase {
             isSettingDisabled: this.isSettingDisabled
         };
 
-        var disableOneResourcePath = (resource.type == database.type) ? this.oneDatabasePath :
-            (resource.type == filesystem.type) ? this.oneFileSystemPath : this.oneCounterStoragePath;
+        var disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
+            (resource.type == TenantType.FileSystem) ? this.oneFileSystemPath : this.oneCounterStoragePath;
         var url = disableOneResourcePath + resource.name + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null, null, { dataType: undefined });
 
@@ -55,9 +55,9 @@ class disableResourceToggleCommand extends commandBase {
     private disableMultipleResources(action: string): JQueryPromise<any> {
         this.reportInfo("Trying to " + action + " " + this.resources.length + " resources...");
 
-        var dbToToggle = this.resources.filter(r => r.type == database.type);
-        var fsToToggle = this.resources.filter(r => r.type == filesystem.type);
-        var cntToToggle = this.resources.filter(r => r.type == counterStorage.type);
+        var dbToToggle = this.resources.filter(r => r.type === TenantType.Database);
+        var fsToToggle = this.resources.filter(r => r.type === TenantType.FileSystem);
+        var cntToToggle = this.resources.filter(r => r.type === TenantType.CounterStorage);
 
         var toggleTasks:Array<JQueryPromise<resource[]>> = [];
 

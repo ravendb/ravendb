@@ -29,7 +29,6 @@ namespace Raven.Client.Counters.Replication
 		public const int DefaultIntervalBetweenUpdatesInMinutes = 5;
 
 		private bool currentlyExecuting;
-		private int requestCount;
 		private bool firstTime;
 		private readonly object updateReplicationInformationSyncObj = new object();
 		private Task refreshReplicationInformationTask;
@@ -69,7 +68,7 @@ namespace Raven.Client.Counters.Replication
 			failureCounters = new FailureCounters();
 			firstTime = true;
 			lastReplicationUpdate = SystemTime.UtcNow;
-			MaxIntervalBetweenUpdatesInMillisec = TimeSpan.FromMinutes(DefaultIntervalBetweenUpdatesInMinutes).TotalMilliseconds;
+			MaxIntervalBetweenUpdatesInMilliseconds = TimeSpan.FromMinutes(DefaultIntervalBetweenUpdatesInMinutes).TotalMilliseconds;
 		}
 
 		internal void OnReplicationUpdate()
@@ -203,7 +202,8 @@ namespace Raven.Client.Counters.Replication
 			return replicationIndex < localReplicationDestinations.Count && replicationIndex > 0;
 		}
 
-		public double MaxIntervalBetweenUpdatesInMillisec { get; set; }
+		public double MaxIntervalBetweenUpdatesInMilliseconds { get; set; }
+
 		public Convention Conventions
 		{
 			get { return convention; }
@@ -426,7 +426,7 @@ namespace Raven.Client.Counters.Replication
 			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
-			var updateInterval = TimeSpan.FromMilliseconds(MaxIntervalBetweenUpdatesInMillisec);
+			var updateInterval = TimeSpan.FromMilliseconds(MaxIntervalBetweenUpdatesInMilliseconds);
 			if (lastReplicationUpdate.AddMinutes(updateInterval.TotalMinutes) > SystemTime.UtcNow && firstTime == false)
 				return new CompletedTask();
 

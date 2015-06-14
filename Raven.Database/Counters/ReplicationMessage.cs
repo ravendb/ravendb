@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Database.Counters
@@ -10,7 +11,9 @@ namespace Raven.Database.Counters
 		}
 
         public string SendingServerName { get; set; }
+
         public List<ReplicationCounter> Counters { get; set; }
-	    public string ServerId { get; set; }
+
+	    public Guid ServerId { get; set; }
     }
 }

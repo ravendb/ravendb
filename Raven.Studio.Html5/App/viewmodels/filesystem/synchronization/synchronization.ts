@@ -3,7 +3,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 
 class synchronization extends viewModelBase {
-
     router: DurandalRootRouter;
     static statusRouter: DurandalRouter; //TODO: is it better way of exposing this router to child router?
 
