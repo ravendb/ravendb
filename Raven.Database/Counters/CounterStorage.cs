@@ -199,7 +199,7 @@ namespace Raven.Database.Counters
 				IncomingReplications = metrics.IncomingReplications.CreateMeterData(),
 				OutgoingReplications = metrics.OutgoingReplications.CreateMeterData(),
 
-				RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+				RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
 				IncSizes = metrics.IncSizeMetrics.CreateHistogramData(),
 				DecSizes = metrics.DecSizeMetrics.CreateHistogramData(),
 

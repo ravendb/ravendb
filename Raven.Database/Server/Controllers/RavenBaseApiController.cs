@@ -120,6 +120,7 @@ namespace Raven.Database.Server.Controllers
             landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
+			timeSeriesLandlord = (TimeSeriesLandlord)controllerContext.Configuration.Properties[typeof(TimeSeriesLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 			clusterManager = ((Reference<ClusterManager>)controllerContext.Configuration.Properties[typeof(ClusterManager)]).Value;
 			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
@@ -786,6 +787,17 @@ namespace Raven.Database.Server.Controllers
                 if (Configuration == null)
                     return countersLandlord;
                 return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
+            }
+        }
+
+        private TimeSeriesLandlord timeSeriesLandlord;
+        public TimeSeriesLandlord TimeSeriesLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+					return timeSeriesLandlord;
+                return (TimeSeriesLandlord)Configuration.Properties[typeof(TimeSeriesLandlord)];
             }
         }
 

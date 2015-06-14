@@ -5,10 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions;
+using Raven.Abstractions.Counters;
+using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
+using Raven.Database.Util;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -435,6 +438,11 @@ namespace Raven.Database.TimeSeries
 				if (_tx != null)
 					_tx.Dispose();
 			}
+
+			public long GetTimeSeriesCount()
+			{
+				throw new InvalidOperationException();
+			}
 		}
 
 		public class Writer : IDisposable
@@ -599,6 +607,27 @@ namespace Raven.Database.TimeSeries
 		{
 			if (storageEnvironment != null)
 				storageEnvironment.Dispose();
+		}
+
+		public TimeSeriesStats CreateStats()
+		{
+			using (var reader = CreateReader())
+			{
+				var stats = new TimeSeriesStats
+				{
+					Name = Name,
+					Url = TimeSeriesUrl,
+					TimeSeriesCount = reader.GetTimeSeriesCount(),
+					TimeSeriesSize = SizeHelper.Humane(TimeSeriesEnvironment.Stats().UsedDataFileSizeInBytes),
+					// RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondCounter.CurrentValue, 3),
+				};
+				return stats;
+			}
+		}
+
+		public StorageEnvironment TimeSeriesEnvironment
+		{
+			get { return storageEnvironment; }
 		}
 	}
 }

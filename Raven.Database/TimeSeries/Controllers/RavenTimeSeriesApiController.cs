@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenCountersApiController.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="a.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -23,16 +23,16 @@ using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 
-namespace Raven.Database.Counters.Controllers
+namespace Raven.Database.TimeSeries.Controllers
 {
-	public abstract class RavenCountersApiController : RavenBaseApiController
+	public abstract class RavenTimeSeriesApiController : RavenBaseApiController
 	{
 		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
 		private PagingInfo paging;
 		private NameValueCollection queryString;
 
-		private CountersLandlord landlord;
+		private TimeSeriesLandlord landlord;
 		private RequestManager requestManager;
         
 		new public RequestManager RequestManager
@@ -45,20 +45,20 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-	    public CounterStorage CounterStorage
+	    public TimeSeriesStorage TimeSeries
 	    {
 	        get
 	        {
-		        if (string.IsNullOrWhiteSpace(CounterStorageName))
-			        throw new InvalidOperationException("Could not find counter storage name in path.. maybe it is missing or the request URL is malformed?");
+		        if (string.IsNullOrWhiteSpace(TimeSeriesName))
+			        throw new InvalidOperationException("Could not find time series storage name in path.. maybe it is missing or the request URL is malformed?");
 
-		        var counterStorage = CountersLandlord.GetCounterInternal(CounterStorageName);
-                if (counterStorage == null)
+		        var timeSeriesStorage = TimeSeriesLandlord.GetTimeSeriesInternal(TimeSeriesName);
+                if (timeSeriesStorage == null)
                 {
-                    throw new InvalidOperationException("Could not find a counter storage named: " + CounterStorageName);
+                    throw new InvalidOperationException("Could not find a time series storage named: " + TimeSeriesName);
                 }
 
-                return counterStorage.Result;
+                return timeSeriesStorage.Result;
 	        }
 	    }
 
@@ -71,7 +71,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
-					RequestManager.SetThreadLocalState(ReadInnerHeaders, CounterStorageName);
+					RequestManager.SetThreadLocalState(ReadInnerHeaders, TimeSeriesName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 				}, httpException => GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable));
 			}
@@ -92,10 +92,10 @@ namespace Raven.Database.Counters.Controllers
             if (IsInternalRequest == false)
 				RequestManager.IncrementRequestCount();
 
-			var fileSystemInternal = await CountersLandlord.GetCounterInternal(CounterStorageName);
+			var fileSystemInternal = await TimeSeriesLandlord.GetTimeSeriesInternal(TimeSeriesName);
 			if (fileSystemInternal == null)
 			{
-				var msg = "Could not find a counters named: " + CounterStorageName;
+				var msg = "Could not find a timeSeriess named: " + TimeSeriesName;
 				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
 			}
 
@@ -111,26 +111,26 @@ namespace Raven.Database.Counters.Controllers
 		protected override void InnerInitialization(HttpControllerContext controllerContext)
 		{
 			base.InnerInitialization(controllerContext);
-			landlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
+			landlord = (TimeSeriesLandlord)controllerContext.Configuration.Properties[typeof(TimeSeriesLandlord)];
 			requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 
 			var values = controllerContext.Request.GetRouteData().Values;
 			if (values.ContainsKey("MS_SubRoutes"))
 			{
 				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("counterStorageName"));
+				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("timeSeriesStorageName"));
 
 				if (selectedData != null)
-					CounterStorageName = selectedData.Values["counterStorageName"] as string;
+					TimeSeriesName = selectedData.Values["timeSeriesStorageName"] as string;
 			}
 			else
 			{
 				if (values.ContainsKey("cou"))
-					CounterStorageName = values["counterStorageName"] as string;
+					TimeSeriesName = values["timeSeriesStorageName"] as string;
 			}
 		}
 
-		public string CounterStorageName { get; private set; }
+		public string TimeSeriesName { get; private set; }
 
 		private NameValueCollection QueryString
 		{
@@ -169,17 +169,17 @@ namespace Raven.Database.Counters.Controllers
 
 	    public override InMemoryRavenConfiguration ResourceConfiguration
 	    {
-	        get { return CounterStorage.Configuration; }
+	        get { return TimeSeries.Configuration; }
 	    }
 
 	    public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
 		{
-			var tenantId = CounterStorageName;
+			var tenantId = TimeSeriesName;
 
 		    if (string.IsNullOrWhiteSpace(tenantId))
 			    return true;
 
-		    Task<CounterStorage> resourceStoreTask;
+		    Task<TimeSeriesStorage> resourceStoreTask;
 			bool hasDb;
 			try
 			{
@@ -187,7 +187,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 			catch (Exception e)
 			{
-				var msg = "Could not open counter named: " + tenantId;
+				var msg = "Could not open timeSeries named: " + tenantId;
 				Logger.WarnException(msg, e);
 				throw new HttpException(503, msg, e);
 			}
@@ -197,7 +197,7 @@ namespace Raven.Database.Counters.Controllers
 				{
                     if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
 					{
-						var msg = "The counter " + tenantId +
+						var msg = "The timeSeries " + tenantId +
 								  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";
 						Logger.Warn(msg);
 						throw new HttpException(503, msg);
@@ -207,7 +207,7 @@ namespace Raven.Database.Counters.Controllers
 						Controller = this,
 						IgnoreRequest = false,
 						TenantId = tenantId,
-						Counters = resourceStoreTask.Result
+						TimeSeries = resourceStoreTask.Result
 					};
 					rm.OnBeforeRequest(args);
 					if (args.IgnoreRequest)
@@ -215,7 +215,7 @@ namespace Raven.Database.Counters.Controllers
 				}
 				catch (Exception e)
 				{
-					var msg = "Could open counters named: " + tenantId;
+					var msg = "Could open timeSeriess named: " + tenantId;
 					Logger.WarnException(msg, e);
 					throw new HttpException(503, msg, e);
 				}
@@ -224,7 +224,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 			else
 			{
-				var msg = "Could not find a counter named: " + tenantId;
+				var msg = "Could not find a timeSeries named: " + tenantId;
 				Logger.Warn(msg);
 				throw new HttpException(503, msg);
 			}
@@ -233,34 +233,34 @@ namespace Raven.Database.Counters.Controllers
 
 		public override string TenantName
 		{
-			get { return TenantNamePrefix + CounterStorageName; }
+			get { return TenantNamePrefix + TimeSeriesName; }
 		}
 
-		private const string TenantNamePrefix = "cs/";
+		private const string TenantNamePrefix = "ts/";
 
 		public override void MarkRequestDuration(long duration)
         {
             if (Storage == null)
                 return;
-            Storage.MetricsCounters.RequestDurationMetric.Update(duration);
+            // Storage.MetricsTimeSeries.RequestDurationMetric.Update(duration);
         }
 
 		public override InMemoryRavenConfiguration SystemConfiguration
 		{
-			get { return CountersLandlord.SystemConfiguration; }
+			get { return TimeSeriesLandlord.SystemConfiguration; }
 		}
 
-		public CounterStorage Storage
+		public TimeSeriesStorage Storage
 		{
 			get
 			{
-				var counter = CountersLandlord.GetCounterInternal(CounterStorageName);
-				if (counter == null)
+				var timeSeries = TimeSeriesLandlord.GetTimeSeriesInternal(TimeSeriesName);
+				if (timeSeries == null)
 				{
-					throw new InvalidOperationException("Could not find a counter storage named: " + CounterStorageName);
+					throw new InvalidOperationException("Could not find a timeSeries storage named: " + TimeSeriesName);
 				}
 
-				return counter.Result;
+				return timeSeries.Result;
 			}
 		}
 	}

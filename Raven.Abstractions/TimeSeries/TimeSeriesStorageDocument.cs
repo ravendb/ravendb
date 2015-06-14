@@ -6,7 +6,7 @@ namespace Raven.Abstractions.TimeSeries
     public class TimeSeriesStorageDocument
     {
         /// <summary>
-        /// The ID can be either the time series storage name ("TimeSereisName") or the full document name ("Raven/TimeSereis/TimeSereisName").
+        /// The ID can be either the time series storage name ("TimeSeriesName") or the full document name ("Raven/TimeSereis/TimeSereisName").
         /// </summary>
         public string Id { get; set; }
 
