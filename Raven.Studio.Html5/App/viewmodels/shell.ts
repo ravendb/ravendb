@@ -53,9 +53,15 @@ import latestBuildReminder = require("viewmodels/latestBuildReminder");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
+import environmentColor = require("models/environmentColor");
 
 class shell extends viewModelBase {
     private router = router;
+
+     
+    static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8", "#000000"));
+    selectedColor = shell.selectedEnvironmentColorStatic;
+    
 
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
@@ -736,6 +742,11 @@ class shell extends viewModelBase {
             .execute()
             .done((doc: documentClass) => {
                 appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
+                var envColor = doc["EnvironmentColor"];
+                if (envColor != null) {
+                    //selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8", "#000000"));
+                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor, envColor.TextColor));
+                }
             });
     }
 

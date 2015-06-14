@@ -5,6 +5,8 @@ import appUrl = require("common/appUrl");
 import documentClass = require("models/document");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
+import environmentColor = require("models/environmentColor");
+import shell = require("viewmodels/shell");
 
 class studioConfig extends viewModelBase {
 
@@ -14,7 +16,25 @@ class studioConfig extends viewModelBase {
     disableEventSource = ko.observable<boolean>(false);
     timeUntilRemindToUpgrade = ko.observable<string>();
     mute: KnockoutComputed<boolean>;
+
+    public environmentColors: environmentColor[] = [
+        new environmentColor("Default", "#f8f8f8", "#000000"),
+        new environmentColor("Development", "#FF4141", "#FFFFFF"),
+        new environmentColor("QA", "#2EE15E", "#FFFFFF"),
+        new environmentColor("Production", "#85C2FF", "#FFFFFF")
+    ];
+
+    lastSellectedColor: environmentColor;
+    selectedColor = shell.selectedEnvironmentColorStatic;
+    setOptionStyle(option, item: environmentColor) {
+        option.style.color = item.textColor;
+        option.style.backgroundColor = item.backgroundColor;
+
+    }
+
     timeUntilRemindToUpgradeMessage: KnockoutComputed<string>;
+
+
     private documentId = "Raven/StudioConfig";
 
     constructor() {
@@ -37,6 +57,17 @@ class studioConfig extends viewModelBase {
             }
             return 'mute for a week'; 
         });
+
+        
+        //this.selectedColor.subscribe((newValue) => {
+        //    if (this.lastSellectedColor != null && this.lastSellectedColor.name != shell.selectedEnvironmentColorStatic().name) {
+        //        this.setEnviromentColor(newValue);
+        //    }
+        //    this.lastSellectedColor = shell.selectedEnvironmentColorStatic();
+        //});
+
+        this.lastSellectedColor = shell.selectedEnvironmentColorStatic();
+
     }
 
     canActivate(args): any {
@@ -66,6 +97,13 @@ class studioConfig extends viewModelBase {
                 self.timeUntilRemindToUpgrade(serverBuildReminder.get());
             }
         });
+    }
+
+    setEnviromentColor(envColor: environmentColor) {
+        var newDocument = this.configDocument();
+        newDocument["EnvironmentColor"] = envColor.toDto();
+        var saveTask = this.saveStudioConfig(newDocument);
+        saveTask.fail(() => this.selectedColor(this.lastSellectedColor));
     }
 
     setSystemDatabaseWarning(warnSetting: boolean) {
