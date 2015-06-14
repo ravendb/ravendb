@@ -223,6 +223,7 @@ class shell extends viewModelBase {
             { route: ["", "counterstorages"], title: "Counter Storages", moduleId: "viewmodels/counter/counterStorages", nav: true, hash: this.appUrls.couterStorages },
             { route: "counterstorages/counters", title: "Counters", moduleId: "viewmodels/counter/counters", nav: true, hash: this.appUrls.counterStorageCounters },
             { route: "counterstorages/replication", title: "Teplication", moduleId: "viewmodels/counter/counterStorageReplication", nav: true, hash: this.appUrls.counterStorageReplication },
+            { route: "counterstorages/tasks*details", title: "Stats", moduleId: "viewmodels/counter/tasks/tasks", nav: true, hash: this.appUrls.counterStorageStats },
             { route: "counterstorages/stats", title: "Stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
             { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration }
         ]).buildNavigationModel();
@@ -505,7 +506,7 @@ class shell extends viewModelBase {
         var deletedResources = [];
 
         resourceObservableArray().forEach((rs: resource) => {
-            if (rs.name != '<system>') {
+            if (rs.name !== "<system>") {
                 var existingResource = recievedResourceArray.first((recievedResource: resource) => recievedResource.name == rs.name);
                 if (existingResource == null) {
                     deletedResources.push(rs);
@@ -1007,6 +1008,13 @@ class shell extends viewModelBase {
 	navigateToClusterSettings() {
 		this.navigate(this.appUrls.adminSettingsCluster());
 	}
+
+    static getResourcesNamesComputed(): KnockoutComputed<string[]> {
+        return ko.computed(() => {
+            var resourcesNames = shell.resources().map((rs: resource) => rs.name);
+            return resourcesNames.distinct();
+        });
+    }
 }
 
 export = shell;

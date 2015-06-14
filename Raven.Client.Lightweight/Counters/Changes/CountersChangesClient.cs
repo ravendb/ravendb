@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Counters.Notifications;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -14,10 +15,10 @@ namespace Raven.Client.Counters.Changes
 
     public class CountersChangesClient : RemoteChangesClientBase<ICountersChanges, CountersConnectionState>, ICountersChanges
     {
-		private readonly ConcurrentSet<string> watchedChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> watchedLocalChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> watchedReplicationChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> watchedBulkOperations = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> watchedChanges = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<string> watchedCountersInGroup = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<string> watchedBulkOperations = new ConcurrentSet<string>();
 
 		public CountersChangesClient(string url, string apiKey,
                                        ICredentials credentials,
@@ -32,17 +33,17 @@ namespace Raven.Client.Counters.Changes
         {
 			foreach (var matchingChange in watchedChanges)
             {
-				await Send("watch-change", matchingChange).ConfigureAwait(false);
+				await Send("watch-counter-change", matchingChange).ConfigureAwait(false);
             }
 
-			foreach (var matchingLocalChange in watchedLocalChanges)
+			foreach (var matchingLocalChange in watchedPrefixes)
 			{
-				await Send("watch-local-change", matchingLocalChange).ConfigureAwait(false);
+				await Send("watch-counters-prefix", matchingLocalChange).ConfigureAwait(false);
 			}
 
-			foreach (var matchingReplicationChange in watchedReplicationChanges)
+			foreach (var matchingReplicationChange in watchedCountersInGroup)
 			{
-				await Send("watch-replication-change", matchingReplicationChange).ConfigureAwait(false);
+				await Send("watch-counters-in-group", matchingReplicationChange).ConfigureAwait(false);
 			}
 
 			foreach (var matchingBulkOperation in watchedBulkOperations)
@@ -62,18 +63,18 @@ namespace Raven.Client.Counters.Changes
                         counter.Value.Send(changeNotification);
                     }
                     break;
-				case "LocalChangeNotification":
-					var localChangeNotification = value.JsonDeserialization<LocalChangeNotification>();
+				case "StartingWithNotification":
+					var counterStartingWithNotification = value.JsonDeserialization<StartingWithNotification>();
 					foreach (var counter in connections)
 					{
-						counter.Value.Send(localChangeNotification);
+						counter.Value.Send(counterStartingWithNotification);
 					}
 					break;
-				case "ReplicationChangeNotification":
-					var replicationChangeNotification = value.JsonDeserialization<ReplicationChangeNotification>();
+				case "InGroupNotification":
+					var countersInGroupNotification = value.JsonDeserialization<InGroupNotification>();
                     foreach (var counter in connections)
                     {
-						counter.Value.Send(replicationChangeNotification);
+						counter.Value.Send(countersInGroupNotification);
                     }
                     break;
 				case "BulkOperationNotification":
@@ -97,20 +98,20 @@ namespace Raven.Client.Counters.Changes
 				throw new ArgumentException("Counter name cannot be empty");
 
 			var fullCounterName = FullCounterName(groupName, counterName);
-			var key = string.Concat("change/", fullCounterName);
+			var key = string.Concat("counter-change/", fullCounterName);
 			var counter = Counters.GetOrAdd(key, s =>
 			{
 				var changeSubscriptionTask = AfterConnection(() =>
 				{
 					watchedChanges.TryAdd(fullCounterName);
-					return Send("watch-change", fullCounterName);
+					return Send("watch-counter-change", fullCounterName);
 				});
 
 				return new CountersConnectionState(
 					() =>
 					{
 						watchedChanges.TryRemove(fullCounterName);
-						Send("unwatch-change", fullCounterName);
+						Send("unwatch-counter-change", fullCounterName);
 						Counters.Remove(key);
 					},
 					changeSubscriptionTask);
@@ -128,80 +129,79 @@ namespace Raven.Client.Counters.Changes
 
 	    private static string FullCounterName(string groupName, string counterName)
 	    {
-		    return string.Concat(groupName, "/", counterName);
+			return string.Concat(groupName, Constants.Counter.Separator, counterName);
 	    }
 
-	    public IObservableWithTask<LocalChangeNotification> ForLocalCounterChange(string groupName, string counterName)
+		public IObservableWithTask<StartingWithNotification> ForCountersStartingWith(string groupName, string prefixForName)
 	    {
 			if (string.IsNullOrWhiteSpace(groupName))
 				throw new ArgumentException("Group name cannot be empty!");
 
-			if (string.IsNullOrWhiteSpace(counterName))
-				throw new ArgumentException("Counter name cannot be empty");
+			if (string.IsNullOrWhiteSpace(prefixForName))
+				throw new ArgumentException("Prefix for counter name cannot be empty");
 
-			var fullCounterName = FullCounterName(groupName, counterName);
-			var key = string.Concat("change/", fullCounterName);
+			var counterPrefix = FullCounterName(groupName, prefixForName);
+			var key = string.Concat("counters-starting-with/", counterPrefix);
 			var counter = Counters.GetOrAdd(key, s =>
 			{
 				var changeSubscriptionTask = AfterConnection(() =>
 				{
-					watchedChanges.TryAdd(fullCounterName);
-					return Send("watch-local-change", fullCounterName);
+					watchedPrefixes.TryAdd(counterPrefix);
+					return Send("watch-counters-prefix", counterPrefix);
 				});
 
 				return new CountersConnectionState(
 					() =>
 					{
-						watchedChanges.TryRemove(fullCounterName);
-						Send("unwatch-local-change", fullCounterName);
+						watchedPrefixes.TryRemove(counterPrefix);
+						Send("unwatch-counters-prefix", counterPrefix);
 						Counters.Remove(key);
 					},
 					changeSubscriptionTask);
 			});
 
-			var taskedObservable = new TaskedObservable<LocalChangeNotification, CountersConnectionState>(
-								counter,
-								notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
-												string.Equals(notification.CounterName, counterName, StringComparison.OrdinalIgnoreCase));
-			counter.OnLocalChangeNotification += taskedObservable.Send;
+			var taskedObservable = new TaskedObservable<StartingWithNotification, CountersConnectionState>(
+				counter,
+				notification =>
+				{
+					var t = string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
+					        notification.CounterName.StartsWith(prefixForName, StringComparison.OrdinalIgnoreCase);
+					return t;
+				});
+			counter.OnCountersStartingWithNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
 
 			return taskedObservable;
 	    }
 
-	    public IObservableWithTask<ReplicationChangeNotification> ForReplicationChange(string groupName, string counterName)
+		public IObservableWithTask<InGroupNotification> ForCountersInGroup(string groupName)
 	    {
 			if (string.IsNullOrWhiteSpace(groupName))
 				throw new ArgumentException("Group name cannot be empty!");
 
-			if (string.IsNullOrWhiteSpace(counterName))
-				throw new ArgumentException("Counter name cannot be empty");
-
-			var fullCounterName = FullCounterName(groupName, counterName);
-			var key = string.Concat("change/", fullCounterName);
+			var key = string.Concat("counters-in-group/", groupName);
 			var counter = Counters.GetOrAdd(key, s =>
 			{
 				var changeSubscriptionTask = AfterConnection(() =>
 				{
-					watchedChanges.TryAdd(fullCounterName);
-					return Send("watch-replication-change", fullCounterName);
+					watchedCountersInGroup.TryAdd(groupName);
+					return Send("watch-counters-in-group", groupName);
 				});
 
 				return new CountersConnectionState(
 					() =>
 					{
-						watchedChanges.TryRemove(fullCounterName);
-						Send("unwatch-replication-change", fullCounterName);
+						watchedCountersInGroup.TryRemove(groupName);
+						Send("unwatch-counters-in-group", groupName);
 						Counters.Remove(key);
 					},
 					changeSubscriptionTask);
 			});
 
-			var taskedObservable = new TaskedObservable<ReplicationChangeNotification, CountersConnectionState>(
+			var taskedObservable = new TaskedObservable<InGroupNotification, CountersConnectionState>(
 								counter,
-								notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
-												string.Equals(notification.CounterName, counterName, StringComparison.OrdinalIgnoreCase));
-			counter.OnReplicationChangeNotification += taskedObservable.Send;
+								notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase));
+			counter.OnCountersInGroupNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
 
 			return taskedObservable;

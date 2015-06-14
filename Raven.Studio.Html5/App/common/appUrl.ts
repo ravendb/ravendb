@@ -118,6 +118,7 @@ class appUrl {
         couterStorages: ko.computed(() => appUrl.forCounterStorages()),
         counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(null, appUrl.currentCounterStorage())),
         counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
+        counterStorageTasks: ko.computed(() => appUrl.forCounterStorageTasks(appUrl.currentCounterStorage())),
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
     };
@@ -132,15 +133,30 @@ class appUrl {
         return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
     }
 
-    static forCounterStorageCounters(gruopName: string, counterStorage: counterStorage) {
+    static forCounterStorageCounters(gruopName: string, cs: counterStorage) {
         var groupPart = gruopName ? "group=" + encodeURIComponent(gruopName) : "";
-        var counterStoragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+        var counterStoragePart = appUrl.getEncodedCounterStoragePart(cs);
         return "#counterstorages/counters?" + groupPart + counterStoragePart;
     }
 
-    static forCounterStorageReplication(counterStorage: counterStorage) {
-        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+    static forCounterStorageReplication(cs: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(cs);
         return "#counterstorages/replication?" + counterStroragePart;
+    }
+
+    static forCounterStorageTasks(cs: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(cs);
+        return "#counterstorages/tasks?" + counterStroragePart;
+    }
+
+    static forImportCounterStorage(cs: counterStorage): string {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(cs);
+        return "#databases/tasks/importCounterStorage?" + counterStroragePart;
+    }
+
+    static forExportCounterStorage(cs: counterStorage): string {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(cs);
+        return "#databases/tasks/exportCounterStorage?" + counterStroragePart;
     }
 
     static forCounterStorageStats(counterStorage: counterStorage) {

@@ -87,6 +87,7 @@ interface computedAppUrls {
     couterStorages:KnockoutComputed<string>;
     counterStorageCounters: KnockoutComputed<string>;
     counterStorageReplication: KnockoutComputed<string>;
+    counterStorageTasks: KnockoutComputed<string>;
     counterStorageStats: KnockoutComputed<string>;
     counterStorageConfiguration: KnockoutComputed<string>;
 

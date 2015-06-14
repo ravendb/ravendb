@@ -48,7 +48,7 @@ namespace Raven.Database.Counters.Controllers
             bool wroteCounter = false;
             using (var writer = Storage.CreateWriter())
             {
-				var counterChangeNotifications = new List<ReplicationChangeNotification>();
+				var counterChangeNotifications = new List<ChangeNotification>();
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
@@ -65,11 +65,11 @@ namespace Raven.Database.Counters.Controllers
 					
 					var counterValue = new CounterValue(counter.FullCounterName, counter.Value);
 					var counterChangeAction = writer.Store(counterValue);
-					counterChangeNotifications.Add(new ReplicationChangeNotification
+					counterChangeNotifications.Add(new ChangeNotification
 					{
 						GroupName = counterValue.Group(),
 						CounterName = counterValue.CounterName(),
-						Action = counterChangeAction,
+						Action = counterChangeAction
 					});
 				}
 
@@ -82,7 +82,14 @@ namespace Raven.Database.Counters.Controllers
 					writer.RecordLastEtagFor(serverId, lastEtag);
                     writer.Commit();
 
-					counterChangeNotifications.ForEach(Storage.Publisher.RaiseNotification);
+	                using (var reader = Storage.CreateReader())
+	                {
+		                counterChangeNotifications.ForEach(change =>
+		                {
+			                change.Total = reader.GetCounterTotalValue(change.GroupName, change.CounterName);
+							Storage.Publisher.RaiseNotification(change);
+		                });
+	                }
                 }
 
 	            return new HttpResponseMessage(HttpStatusCode.OK);

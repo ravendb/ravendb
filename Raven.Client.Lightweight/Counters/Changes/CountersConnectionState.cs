@@ -47,18 +47,18 @@ namespace Raven.Client.Counters.Changes
 				onCounterChangeNotification(changeNotification);
         }
 
-		public event Action<LocalChangeNotification> OnLocalChangeNotification = (x) => { };
-		public void Send(LocalChangeNotification changeNotification)
+		public event Action<StartingWithNotification> OnCountersStartingWithNotification = (x) => { };
+		public void Send(StartingWithNotification changeNotification)
 		{
-			var onCounterChangeNotification = OnLocalChangeNotification;
+			var onCounterChangeNotification = OnCountersStartingWithNotification;
 			if (onCounterChangeNotification != null)
 				onCounterChangeNotification(changeNotification);
 		}
 
-		public event Action<ReplicationChangeNotification> OnReplicationChangeNotification = (x) => { };
-		public void Send(ReplicationChangeNotification changeNotification)
+		public event Action<InGroupNotification> OnCountersInGroupNotification = (x) => { };
+		public void Send(InGroupNotification changeNotification)
 		{
-			var onCounterChangeNotification = OnReplicationChangeNotification;
+			var onCounterChangeNotification = OnCountersInGroupNotification;
 			if (onCounterChangeNotification != null)
 				onCounterChangeNotification(changeNotification);
 		}

@@ -1272,6 +1272,12 @@ namespace Raven.Database.Config
                 Settings[Constants.FileSystem.DataDirectory] = Path.Combine(Settings[Constants.FileSystem.DataDirectory], "FileSystems", tenantId);
         }
 
+		public void CustomizeValuesForCounterStorageTenant(string tenantId)
+		{
+			if (string.IsNullOrEmpty(Settings[Constants.Counter.DataDirectory]) == false)
+				Settings[Constants.Counter.DataDirectory] = Path.Combine(Settings[Constants.Counter.DataDirectory], "Counters", tenantId);
+		}
+
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
 		{
 			Port = defaultConfiguration.Port;

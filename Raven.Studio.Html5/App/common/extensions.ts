@@ -121,8 +121,9 @@ class extensions {
     }
 
     private static installArrayExtensions() {
-        // Array.remove
         var arrayPrototype: any = Array.prototype;
+
+        // Array.remove
         arrayPrototype.remove = function (item) {
             var self: any[] = this;
             var index = self.indexOf(item);
@@ -205,7 +206,7 @@ class extensions {
             return self.length;
         };
 
-        // Array.count
+        // Array.distinct
         arrayPrototype.distinct = function () {
             var distinctElements = [];
             for (var i = 0; i < this.length; i++) {
@@ -216,6 +217,13 @@ class extensions {
             }
 
             return distinctElements;
+        };
+
+        // Array.distinct
+        arrayPrototype.concatUnique = function (values) {
+            for (var i = 0; i < values.length; i++)
+                if (this.indexOf(values[i]) === -1)
+                    this.push(values[i]);
         };
     }
 

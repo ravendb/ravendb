@@ -127,25 +127,14 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-		public event Action<object, LocalChangeNotification> OnLocalChangeNotification = delegate { };
+		public event Action<object, ChangeNotification> OnChangeNotification = delegate { };
 
-		public void Send(LocalChangeNotification localChangeNotification)
+		public void Send(ChangeNotification localChangeNotification)
 		{
-			OnLocalChangeNotification(this, localChangeNotification);
+			OnChangeNotification(this, localChangeNotification);
 			foreach (var connectionState in connections)
 			{
 				connectionState.Value.CounterStorage.Send(localChangeNotification);
-			}
-		}
-
-		public event Action<object, CounterStorageNotification> OnReplicationChangeNotification = delegate { };
-
-		public void Send(ReplicationChangeNotification replicationChangeNotification)
-		{
-			OnReplicationChangeNotification(this, replicationChangeNotification);
-			foreach (var connectionState in connections)
-			{
-				connectionState.Value.CounterStorage.Send(replicationChangeNotification);
 			}
 		}
 

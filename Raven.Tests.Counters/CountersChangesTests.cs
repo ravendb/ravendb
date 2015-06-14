@@ -14,6 +14,7 @@ namespace Raven.Tests.Counters
 	{
 		private const string GroupName = "Foo";
 		private const string CounterName = "Bar";
+		private const string CounterName2 = "Bar2";
 
 		[Fact]
 		public async Task NotificationReceivedWhenCounterAddedAndIncremented()
@@ -23,7 +24,7 @@ namespace Raven.Tests.Counters
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
 					.ForChange(GroupName, CounterName)
-					.Timeout(TimeSpan.FromSeconds(2))
+					.Timeout(TimeSpan.FromSeconds(3))
 					.Take(1).ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
@@ -33,53 +34,57 @@ namespace Raven.Tests.Counters
 				Assert.Equal(GroupName, counterChange.GroupName);
 				Assert.Equal(CounterName, counterChange.CounterName);
 				Assert.Equal(CounterChangeAction.Add, counterChange.Action);
+				Assert.Equal(1, counterChange.Total);
 
 				notificationTask = changes.Task.Result
 					.ForChange(GroupName, CounterName)
-					.Timeout(TimeSpan.FromSeconds(2))
+					.Timeout(TimeSpan.FromSeconds(3))
 					.Take(1).ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				await store.IncrementAsync(GroupName, CounterName);
+				await store.ChangeAsync(GroupName, CounterName, 6);
 
 				counterChange = await notificationTask;
 				Assert.Equal(GroupName, counterChange.GroupName);
 				Assert.Equal(CounterName, counterChange.CounterName);
 				Assert.Equal(CounterChangeAction.Increment, counterChange.Action);
+				Assert.Equal(7, counterChange.Total);
 			}
 		}
 
 		[Fact]
-		public async Task NotificationReceivedWhenLocalCounterAddedAndDecremented()
+		public async Task NotificationReceivedForCountersStartingWith()
 		{
 			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
 			{
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
-					.ForLocalCounterChange(GroupName, CounterName)
-					.Timeout(TimeSpan.FromSeconds(2))
+					.ForCountersStartingWith(GroupName, CounterName.Substring(0, 2))
+					.Timeout(TimeSpan.FromSeconds(300))
 					.Take(1).ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				await store.IncrementAsync(GroupName, CounterName);
+				await store.ChangeAsync(GroupName, CounterName, 2);
 
 				var counterChange = await notificationTask;
 				Assert.Equal(GroupName, counterChange.GroupName);
 				Assert.Equal(CounterName, counterChange.CounterName);
 				Assert.Equal(CounterChangeAction.Add, counterChange.Action);
+				Assert.Equal(2, counterChange.Total);
 
 				notificationTask = changes.Task.Result
-					.ForLocalCounterChange(GroupName, CounterName)
-					.Timeout(TimeSpan.FromSeconds(2))
+					.ForCountersStartingWith(GroupName, CounterName)
+					.Timeout(TimeSpan.FromSeconds(300))
 					.Take(1).ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				await store.DecrementAsync(GroupName, CounterName);
+				await store.DecrementAsync(GroupName, CounterName2);
 
 				counterChange = await notificationTask;
 				Assert.Equal(GroupName, counterChange.GroupName);
-				Assert.Equal(CounterName, counterChange.CounterName);
-				Assert.Equal(CounterChangeAction.Decrement, counterChange.Action);
+				Assert.Equal(CounterName2, counterChange.CounterName);
+				Assert.Equal(CounterChangeAction.Add, counterChange.Action);
+				//Assert.Equal(-1, counterChange.Total);
 			}
 		}
 
@@ -94,7 +99,49 @@ namespace Raven.Tests.Counters
 
 				var changesB = storeB.Changes();
 				var notificationTask = changesB.Task.Result
-					.ForReplicationChange(GroupName, CounterName)
+					.ForChange(GroupName, CounterName)
+					.Timeout(TimeSpan.FromSeconds(30))
+					.Take(1).ToTask();
+
+				changesB.WaitForAllPendingSubscriptions();
+
+				await storeA.IncrementAsync(GroupName, CounterName);
+
+				var counterChange = await notificationTask;
+				Assert.Equal(GroupName, counterChange.GroupName);
+				Assert.Equal(CounterName, counterChange.CounterName);
+				Assert.Equal(CounterChangeAction.Add, counterChange.Action);
+
+				//now connecting to changes in storeA
+				var changesA = storeA.Changes();
+				notificationTask = changesA.Task.Result
+					.ForChange(GroupName, CounterName)
+					.Timeout(TimeSpan.FromSeconds(30))
+					.Take(1).ToTask();
+
+				changesA.WaitForAllPendingSubscriptions();
+
+				await storeB.IncrementAsync(GroupName, CounterName);
+
+				counterChange = await notificationTask;
+				Assert.Equal(GroupName, counterChange.GroupName);
+				Assert.Equal(CounterName, counterChange.CounterName);
+				Assert.Equal(CounterChangeAction.Increment, counterChange.Action);
+			}
+		}
+
+		[Fact]
+		public async Task NotificationReceivedWhenSubscribingToGroup()
+		{
+			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
+			{
+				await SetupReplicationAsync(storeA, storeB);
+				await SetupReplicationAsync(storeB, storeA);
+
+				var changesB = storeB.Changes();
+				var notificationTask = changesB.Task.Result
+					.ForCountersInGroup(GroupName)
 					.Timeout(TimeSpan.FromSeconds(30))
 					.Take(1).ToTask();
 				await storeA.IncrementAsync(GroupName, CounterName);
@@ -109,17 +156,17 @@ namespace Raven.Tests.Counters
 				//now connecting to changes in storeA
 				var changesA = storeA.Changes();
 				notificationTask = changesA.Task.Result
-					.ForReplicationChange(GroupName, CounterName)
+					.ForCountersInGroup(GroupName)
 					.Timeout(TimeSpan.FromSeconds(30))
 					.Take(1).ToTask();
 
 				changesA.WaitForAllPendingSubscriptions();
 
-				await storeB.IncrementAsync(GroupName, CounterName);
+				await storeB.IncrementAsync(GroupName, CounterName2);
 
 				counterChange = await notificationTask;
 				Assert.Equal(GroupName, counterChange.GroupName);
-				Assert.Equal(CounterName, counterChange.CounterName);
+				Assert.Equal(CounterName2, counterChange.CounterName);
 				Assert.Equal(CounterChangeAction.Increment, counterChange.Action);
 			}
 		}

@@ -10,18 +10,18 @@ namespace Voron
 		private readonly byte[] _buffer;
 	    private readonly EndianBitConverter _bitConverter;
 
-		public SliceWriter(byte[] outsideBuffer, EndianBitConverter bitConverter = null)
+		public SliceWriter(byte[] outsideBuffer, EndianBitConverter bitConverter)
 	    {
 		    _buffer = outsideBuffer;
 			_pos = 0;
-			_bitConverter = bitConverter ?? EndianBitConverter.Little;
+			_bitConverter = bitConverter;
 	    }
 
-		public SliceWriter(int size, EndianBitConverter bitConverter = null)
+		public SliceWriter(int size, EndianBitConverter bitConverter)
 	    {
 		    _buffer = new byte[size];
 		    _pos = 0;
-			_bitConverter = bitConverter ?? EndianBitConverter.Little;
+			_bitConverter = bitConverter;
 		}
 
 	    public byte[] Buffer
@@ -79,7 +79,7 @@ namespace Voron
 
         public Slice CreateSlice()
         {
-			return new Slice(_buffer, (ushort)(_pos - 1));
+			return new Slice(_buffer, (ushort)(_pos));
         }
 
 		public Slice CreateSlice(int pos)

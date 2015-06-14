@@ -81,12 +81,12 @@ namespace Raven.Database.Server.Tenancy
 
             SetupTenantConfiguration(config);
 
-            config.CustomizeValuesForDatabaseTenant(tenantId);
+			config.CustomizeValuesForCounterStorageTenant(tenantId);
 
-	        config.Settings[Constants.Counter.DataDirectory] = parentConfiguration.Counter.DataDirectory;
+	        /*config.Settings[Constants.Counter.DataDirectory] = parentConfiguration.Counter.DataDirectory;
             //config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
 			//TODO: what counters storage dir path?
-            //config.Settings["Raven/Counters/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+            //config.Settings["Raven/Counters/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;*/
 
             foreach (var setting in document.Settings)
             {
@@ -99,7 +99,7 @@ namespace Raven.Database.Server.Tenancy
                 config.Settings[securedSetting.Key] = securedSetting.Value;
             }
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Counter.DataDirectory);
             //config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
             config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
 

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Raven.Abstractions.Counters.Notifications;
 using Raven.Database.Util;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.Connections
 {
@@ -10,12 +11,13 @@ namespace Raven.Database.Server.Connections
 		private readonly Action<object> enqueue;
 
 		private readonly ConcurrentSet<string> matchingChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingLocalChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingReplicationChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingPrefixes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingGroups = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ConcurrentSet<string> matchingBulkOperations = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly string localChangeNotificationType = typeof(LocalChangeNotification).Name;
 		private readonly string changeNotificationType = typeof(ChangeNotification).Name;
-		private readonly string replicaitonChangeNotificationType = typeof(ReplicationChangeNotification).Name;
+		private readonly string startingWithNotification = typeof(StartingWithNotification).Name;
+		private readonly string inGroupNotificationType = typeof(InGroupNotification).Name;
+		private readonly string bulkOperationNotification = typeof(BulkOperationNotification).Name;
 
 		public object DebugStatus
 		{
@@ -24,8 +26,8 @@ namespace Raven.Database.Server.Connections
 				return new
 				{
 					WatchedChanges = matchingChanges.ToArray(),
-					WatchedLocalChanges = matchingLocalChanges.ToArray(),
-					WatchedReplicationChanges = matchingReplicationChanges.ToArray(),
+					WatchedLocalChanges = matchingPrefixes.ToArray(),
+					WatchedReplicationChanges = matchingGroups.ToArray(),
 					WatchedBulkOperationsChanges = matchingBulkOperations.ToArray()
 				};
 			}
@@ -46,24 +48,24 @@ namespace Raven.Database.Server.Connections
 			matchingChanges.TryRemove(name);
 		}
 
-		public void WatchLocalChange(string name)
+		public void WatchPrefix(string name)
 		{
-			matchingLocalChanges.TryAdd(name);
+			matchingPrefixes.TryAdd(name);
 		}
 
-		public void UnwatchLocalChange(string name)
+		public void UnwatchPrefix(string name)
 		{
-			matchingLocalChanges.TryRemove(name);
+			matchingPrefixes.TryRemove(name);
 		}
 
-		public void WatchReplicationChange(string name)
+		public void WatchCountersInGroup(string name)
 		{
-			matchingReplicationChanges.TryAdd(name);
+			matchingGroups.TryAdd(name);
 		}
 
-		public void UnwatchReplicationChange(string name)
+		public void UnwatchCountersInGroup(string name)
 		{
-			matchingReplicationChanges.TryRemove(name);
+			matchingGroups.TryRemove(name);
 		}
 
 		public void WatchCounterBulkOperation(string operationId)
@@ -76,43 +78,32 @@ namespace Raven.Database.Server.Connections
 			matchingBulkOperations.TryRemove(operationId);
 		}
 
-		public void Send(LocalChangeNotification notification)
+		public void Send(ChangeNotification notification)
 		{
 			var counterPrefix = GetCounterPrefix(notification.GroupName, notification.CounterName);
-
-			if (matchingLocalChanges.Contains(counterPrefix))
-			{
-				var value = new { Value = notification, Type = localChangeNotificationType };
-				enqueue(value);
-			}
 
 			if (matchingChanges.Contains(counterPrefix))
 			{
 				var value = new { Value = notification, Type = changeNotificationType };
 				enqueue(value);
 			}
-		}
 
-		public void Send(ReplicationChangeNotification notification)
-		{
-			var counterPrefix = GetCounterPrefix(notification.GroupName, notification.CounterName);
-			
-			if (matchingReplicationChanges.Contains(counterPrefix))
+			if (matchingPrefixes.Any(prefix => counterPrefix.StartsWith(prefix)))
 			{
-				var value = new  { Value = notification, Type = replicaitonChangeNotificationType };
+				var value = new { Value = notification, Type = startingWithNotification };
 				enqueue(value);
 			}
 
-			if (matchingChanges.Contains(counterPrefix))
+			if (matchingGroups.Contains(notification.GroupName))
 			{
-				var value = new { Value = notification, Type = changeNotificationType };
+				var value = new { Value = notification, Type = inGroupNotificationType };
 				enqueue(value);
 			}
 		}
 
 		private static string GetCounterPrefix(string groupName, string counterName)
 		{
-			return string.Concat(groupName, "/", counterName);
+			return string.Concat(groupName, Constants.Counter.Separator, counterName);
 		}
 
 		public void Send(BulkOperationNotification notification)
@@ -121,7 +112,7 @@ namespace Raven.Database.Server.Connections
 				matchingBulkOperations.Contains(notification.OperationId.ToString()) == false)
 				return;
 
-			var value = new { Value = notification, Type = notification.GetType().Name };
+			var value = new { Value = notification, Type = bulkOperationNotification };
 			enqueue(value);
 		}
 	}

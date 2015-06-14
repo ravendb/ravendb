@@ -43,12 +43,16 @@ namespace Raven.Database.Counters.Controllers
 				writer.Commit(delta != 0);
 
 				Storage.MetricsCounters.ClientRequests.Mark();
-				Storage.Publisher.RaiseNotification(new LocalChangeNotification
+				using (var reader = Storage.CreateReader())
 				{
-					GroupName = groupName,
-					CounterName = counterName,
-					Action = counterChangeAction
-				});
+					Storage.Publisher.RaiseNotification(new ChangeNotification
+					{
+						GroupName = groupName,
+						CounterName = counterName,
+						Action = counterChangeAction,
+						Total = reader.GetCounterTotalValue(groupName, counterName)
+					});
+				}
 
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
@@ -271,11 +275,12 @@ namespace Raven.Database.Counters.Controllers
 					writer.Commit();
 
 					Storage.MetricsCounters.Resets.Mark();
-					Storage.Publisher.RaiseNotification(new LocalChangeNotification
+					Storage.Publisher.RaiseNotification(new ChangeNotification
 					{
 						GroupName = groupName,
 						CounterName = counterName,
 						Action = counterChangeAction,
+						Total = 0
 					});
 				}
 
