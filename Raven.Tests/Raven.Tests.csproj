@@ -249,7 +249,6 @@
     <Compile Include="Issues\GermanUmlauts.cs" />
     <Compile Include="Issues\IndexationTests.cs" />
     <Compile Include="Issues\RavenDB-3136.cs" />
-    <Compile Include="Issues\RavenDB-3540.cs" />
     <Compile Include="Issues\RavenDB2537.cs" />
     <Compile Include="Issues\RavenDB_2486.cs" />
     <Compile Include="Issues\RavenDB2408.cs" />
@@ -264,7 +263,6 @@
     <Compile Include="Issues\RavenDB_2909.cs" />
     <Compile Include="Issues\RavenDB_3106.cs" />
     <Compile Include="Issues\RavenDB_3276.cs" />
-    <Compile Include="Issues\RavenDB_3435.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDb-1934.cs" />
