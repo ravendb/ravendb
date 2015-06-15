@@ -5,13 +5,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Counters.Notifications;
@@ -20,6 +18,7 @@ using Raven.Database.Impl;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -49,6 +48,8 @@ namespace Raven.Database.Counters
 
 		public Guid ServerId { get; private set; }
 
+		public Guid TombstoneId { get; private set; }
+
 		public string Name { get; private set; }
 
 		public string ResourceName { get; private set; }
@@ -74,6 +75,8 @@ namespace Raven.Database.Counters
 			ExtensionsState = new AtomicDictionary<object>();
 			jsonSerializer = new JsonSerializer();
 
+			//TODO: generate deterministic guid
+			TombstoneId = new Guid("00000000-0000-0000-0000-000000000000");
 			Initialize();
 		}
 
@@ -342,13 +345,16 @@ namespace Raven.Database.Counters
 
 					do
 					{
-						//the last byte contains the sign
+						/*//the last byte contains the sign
 						//we consistently use utf8 encoding in the system, 
-						//thats why single character will be one-byte width
+						//thats why single character will be one-byte width*/
 
-						var signByte = it.CurrentKey[it.CurrentKey.Size - 1];
+						var counterValue = new CounterValue(it.CurrentKey.ToString(), 0);
+						if (counterValue.ServerId().Equals(parent.TombstoneId))
+							throw new Exception(string.Format("Counter was already deleted. Group: {0}, Counter Name: {1}", counterSummary.Group, counterSummary.CounterName));
+
 						var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-						if (char.ConvertFromUtf32(signByte).Equals(ValueSign.Positive))
+						if (counterValue.IsPositive())
 							counterSummary.Increments += value;
 						else
 							counterSummary.Decrements += value;
@@ -687,6 +693,17 @@ namespace Raven.Database.Counters
 					return counterChangeAction;
 				}
 				return CounterChangeAction.None;
+			}
+
+			public void Delete(string groupName, string counterName)
+			{
+				//TODO: implement
+				Store(groupName, counterName, parent.TombstoneId, ValueSign.Positive, counterKey =>
+				{
+					EndianBitConverter.Little.CopyBytes(DateTime.Now.Ticks, Buffer.CounterValue, 0);
+					var slice = new Slice(Buffer.CounterValue);
+					counters.Add(counterKey, slice);
+				});
 			}
 
 			public void RecordLastEtagFor(Guid serverId, long lastEtag)
