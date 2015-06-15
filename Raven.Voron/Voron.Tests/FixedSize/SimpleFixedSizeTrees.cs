@@ -13,6 +13,42 @@ namespace Voron.Tests.FixedSize
 {
 	public class SimpleFixedSizeTrees : StorageTest
 	{
+		
+
+		[Fact]
+		public void TimeSeries()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("watches/12831-12345", valSize: 8);
+
+				fst.Add(DateTime.Today.AddHours(8).Ticks, new Slice(BitConverter.GetBytes(80D)));
+				fst.Add(DateTime.Today.AddHours(9).Ticks, new Slice(BitConverter.GetBytes(65D)));
+				fst.Add(DateTime.Today.AddHours(10).Ticks, new Slice(BitConverter.GetBytes(44D)));
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var fst = tx.State.Root.FixedTreeFor("watches/12831-12345", valSize:8);
+
+				var it = fst.Iterate();
+				Assert.True(it.Seek(DateTime.Today.AddHours(7).Ticks));
+				var buffer = new byte[8];
+				it.Value.CopyTo(buffer);
+				Assert.Equal(80D, BitConverter.ToDouble(buffer,0));
+				Assert.True(it.MoveNext());
+				it.Value.CopyTo(buffer);
+				Assert.Equal(65D, BitConverter.ToDouble(buffer, 0));
+				Assert.True(it.MoveNext());
+				it.Value.CopyTo(buffer);
+				Assert.Equal(44d, BitConverter.ToDouble(buffer, 0));
+				Assert.False(it.MoveNext());
+
+				tx.Commit();
+			}
+		}
 		[Fact]
 		public void CanAdd()
 		{
