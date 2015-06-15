@@ -59,7 +59,7 @@ class shell extends viewModelBase {
     private router = router;
 
      
-    static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8", "#000000"));
+    static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
     selectedColor = shell.selectedEnvironmentColorStatic;
 
     selectedEnviromentText = ko.computed(() => {
@@ -741,7 +741,7 @@ class shell extends viewModelBase {
                 var envColor = doc["EnvironmentColor"];
                 if (envColor != null) {
                     //selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8", "#000000"));
-                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor, envColor.TextColor));
+                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
                 }
             });
     }
