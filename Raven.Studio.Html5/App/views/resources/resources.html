@@ -262,10 +262,10 @@
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getTimeSeriesUrl($data) }"><i class="fa fa-sort-numeric-desc"></i> cs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getTimeSeriesUrl($data) }"><i class="fa fa-clock-o"></i> cs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
-                    <a class="resource-name"><i class="fa fa-sort-numeric-desc"></i> fs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name"><i class="fa fa-clock-o"></i> fs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                 </h4>
                 <br />
