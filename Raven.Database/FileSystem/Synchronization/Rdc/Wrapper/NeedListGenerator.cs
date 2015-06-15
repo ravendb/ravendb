@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
 using Raven.Abstractions;
 
@@ -22,7 +23,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 		public NeedListGenerator(ISignatureRepository seedSignatureRepository, ISignatureRepository sourceSignatureRepository)
 		{
             if (EnvironmentUtils.RunningOnPosix)
-                throw new Exception("RdcLibrary not supported when RunningOnPosix");
+                throw new FeatureNotSupportedOnPosixException("RdcLibrary not supported when RunningOnPosix");
             
 			try
 			{
