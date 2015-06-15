@@ -99,8 +99,8 @@ namespace Raven.Database.Extensions
 	        DisposeInternal();
         }
 
-	    private void DisposeInternal()
-	    {
+		private void DisposeInternal()
+		{
 			if (isTimerDisposed)
 				return;
 
@@ -110,10 +110,10 @@ namespace Raven.Database.Extensions
 					return;
 
 				isTimerDisposed = true;
-
-				if (timer != null)
-					timer.Dispose();
 			}
-	    }
+
+			if (timer != null)
+				timer.Dispose();
+		}
     }
 }
