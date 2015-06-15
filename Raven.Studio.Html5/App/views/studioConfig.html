@@ -57,16 +57,7 @@
             <div class="col-md-4 control-label" data-bind="text: 'Enviroment'"></div>
             <div class="col-md-8">
                 <div class="btn-group" style="padding-top:0px">
-                    <select class="form-control" data-bind="options: environmentColors, value: selectedColor, optionsText: 'name', optionsAfterRender: setOptionStyle, style:{backgroundColor:selectedColor().backgroundColor, color:selectedColor().textColor }"></select>
-                    <!--<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                        <span data-bind="visible: mute">On</span>
-                        <span data-bind="visible: !mute()">Off</span>
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#" data-bind="click: setUpgradeReminder.bind($root, true)">On</a></li>
-                        <li><a href="#" data-bind="click: setUpgradeReminder.bind($root, false)">Off</a></li>
-                    </ul>-->
+                    <select class="form-control" data-bind="options: environmentColors, value: selectedColor, optionsText: 'name', optionsAfterRender: setOptionStyle, style:{backgroundColor:selectedColor().backgroundColor, color:selectedColor().textColor, cursor:'pointer' }"></select>
                 </div>
             </div>
         </div>

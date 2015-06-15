@@ -19,17 +19,17 @@ class studioConfig extends viewModelBase {
 
     public environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8", "#000000"),
-        new environmentColor("Development", "#FF4141", "#FFFFFF"),
-        new environmentColor("QA", "#2EE15E", "#FFFFFF"),
-        new environmentColor("Production", "#85C2FF", "#FFFFFF")
-    ];
+        new environmentColor("Development", "#FFE6E6", "#000000"),
+        new environmentColor("QA", "#CCFFCC", "#000000"),
+        new environmentColor("Production", "#C2BCFF", "#000000")
+    ]; 
 
-    lastSellectedColor: environmentColor;
-    selectedColor = shell.selectedEnvironmentColorStatic;
+    selectedColor = ko.observable<environmentColor>();
+
+
     setOptionStyle(option, item: environmentColor) {
         option.style.color = item.textColor;
         option.style.backgroundColor = item.backgroundColor;
-
     }
 
     timeUntilRemindToUpgradeMessage: KnockoutComputed<string>;
@@ -58,15 +58,15 @@ class studioConfig extends viewModelBase {
             return 'mute for a week'; 
         });
 
-        
-        //this.selectedColor.subscribe((newValue) => {
-        //    if (this.lastSellectedColor != null && this.lastSellectedColor.name != shell.selectedEnvironmentColorStatic().name) {
-        //        this.setEnviromentColor(newValue);
-        //    }
-        //    this.lastSellectedColor = shell.selectedEnvironmentColorStatic();
-        //});
+        var color = this.environmentColors.filter((color) => color.name == shell.selectedEnvironmentColorStatic().name);
+        this.selectedColor(!!color[0] ? color[0] : this.environmentColors[0]);
 
-        this.lastSellectedColor = shell.selectedEnvironmentColorStatic();
+        var self = this;
+        this.selectedColor.subscribe((newValue) => {
+                self.setEnviromentColor(newValue);
+
+        });
+
 
     }
 
@@ -97,13 +97,15 @@ class studioConfig extends viewModelBase {
                 self.timeUntilRemindToUpgrade(serverBuildReminder.get());
             }
         });
+
+       
     }
 
     setEnviromentColor(envColor: environmentColor) {
         var newDocument = this.configDocument();
         newDocument["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
-        saveTask.fail(() => this.selectedColor(this.lastSellectedColor));
+        saveTask.done(() => shell.selectedEnvironmentColorStatic(this.selectedColor()));
     }
 
     setSystemDatabaseWarning(warnSetting: boolean) {
