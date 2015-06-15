@@ -319,6 +319,14 @@ namespace Voron.Trees
             set { _header->FixedSize_NumberOfEntries = value; }
         }
 
+		public ushort FixedSize_StartPosition
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return _header->FixedSize_StartPosition; }
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			set { _header->FixedSize_StartPosition = value; }
+		}
+
         public ushort FixedSize_ValueSize
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
