@@ -39,7 +39,7 @@
     }
 
     isTimeSeries() {
-        return this.type === TenantType.CounterStorage;
+        return this.type === TenantType.TimeSeries;
     }
 }
 
