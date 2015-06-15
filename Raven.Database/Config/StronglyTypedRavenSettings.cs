@@ -253,6 +253,7 @@ namespace Raven.Database.Config
             FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate],false);
 
 			Counter.DataDir = new StringSetting(settings[Constants.Counter.DataDirectory], @"~\Counters");
+			TimeSeries.DataDir = new StringSetting(settings[Constants.TimeSeries.DataDirectory], @"~\TimeSeries");
 
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
 			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);

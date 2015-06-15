@@ -605,11 +605,12 @@ class appUrl {
     static forResourceQuery(res: resource): string {
         if (res && res instanceof database && !res.isSystem) {
             return appUrl.baseUrl + "/databases/" + res.name;
-        }
-        else if (res && res instanceof filesystem) {
+        } else if (res && res instanceof filesystem) {
             return appUrl.baseUrl + "/fs/" + res.name;
         } else if (res && res instanceof counterStorage) {
             return appUrl.baseUrl + "/cs/" + res.name;
+        } else if (res && res instanceof timeSeries) {
+            return appUrl.baseUrl + "/ts/" + res.name;
         }
 
         return this.baseUrl;
@@ -759,12 +760,16 @@ class appUrl {
     static getResource(): resource {
         var appFileSystem = appUrl.getFileSystem();
         var appCounterStorage = appUrl.getCounterStorage();
+        var appTimeSeries = appUrl.getTimeSeries();
 
         if (!!appFileSystem) {
             return appFileSystem;
         }
         else if (!!appCounterStorage) {
             return appCounterStorage;
+        }
+        else if (!!appTimeSeries) {
+            return appTimeSeries;
         }
         else {
             return appUrl.getDatabase();
@@ -859,6 +864,33 @@ class appUrl {
             return null;
         }
     }
+ 
+    /**
+    * Gets the time series from the current web browser address. Returns null if no time series name was found.
+    */
+    static getTimeSeries(): timeSeries {
+
+        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
+
+        var timeSeriesIndicator = "timeseries=";
+        var hash = window.location.hash;
+        var tsIndex = hash.indexOf(timeSeriesIndicator);
+        if (tsIndex >= 0) {
+            // A database is specified in the address.
+            var tsSegmentEnd = hash.indexOf("&", tsIndex);
+            if (tsSegmentEnd === -1) {
+                tsSegmentEnd = hash.length;
+            }
+
+            var timeSeriesName = hash.substring(tsIndex + timeSeriesIndicator.length, tsSegmentEnd);
+            var unescapedTimeSeriesName = decodeURIComponent(timeSeriesName);
+            var ts = new timeSeries(unescapedTimeSeriesName);
+            return ts;
+        } else {
+            // No time series is specified in the URL.
+            return null;
+        }
+    }
 
     /**
     * Gets the server URL.
@@ -895,10 +927,16 @@ class appUrl {
                     currentResourceName = fsInUrl;
                     currentResourceType = filesystem.type;
                 } else {
-                    var cntInUrl = routerInstruction.queryParams[counterStorage.type];
-                    if (cntInUrl) {
-                        currentResourceName = cntInUrl;
+                    var csInUrl = routerInstruction.queryParams[counterStorage.type];
+                    if (csInUrl) {
+                        currentResourceName = csInUrl;
                         currentResourceType = counterStorage.type;
+                    } else {
+                        var tsInUrl = routerInstruction.queryParams[timeSeries.type];
+                        if (tsInUrl) {
+                            currentResourceName = tsInUrl;
+                            currentResourceType = timeSeries.type;
+                        }
                     }
                 }
             }
@@ -933,6 +971,10 @@ class appUrl {
     }
 
     static forCurrentCounterStorage(): computedAppUrls {
+        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs and Cs.
+    }
+
+    static forCurrentTimeSeries(): computedAppUrls {
         return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs and Cs.
     }
 

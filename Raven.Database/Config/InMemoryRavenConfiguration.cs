@@ -119,6 +119,7 @@ namespace Raven.Database.Config
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
 			Counter.InitializeFrom(this);
+			TimeSeries.InitializeFrom(this);
 
 			MaxClauseCount = ravenSettings.MaxClauseCount.Value;
 
@@ -323,6 +324,7 @@ namespace Raven.Database.Config
 				FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
 
 			Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
+			TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
 
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
