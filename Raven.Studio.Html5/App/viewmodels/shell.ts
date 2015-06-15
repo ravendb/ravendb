@@ -523,7 +523,7 @@ class shell extends viewModelBase {
             var counterStoragesLoadTask = shell.reloadCounterStorages(this.activeCounterStorage());
             var timeSeriesLoadTask = shell.reloadTimeSeries(this.activeTimeSeries());
 
-            $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
+            $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
                 .done(() => {
                     var connectedResource = this.currentConnectedResource;
                     var resourceObservableArray: any = shell.databases;
@@ -536,6 +536,10 @@ class shell extends viewModelBase {
                     else if (isNotDatabase && connectedResource instanceof counterStorage) {
                         resourceObservableArray = shell.counterStorages;
                         activeResourceObservable = this.activeCounterStorage; 
+                    }
+                    else if (isNotDatabase && connectedResource instanceof timeSeries) {
+                        resourceObservableArray = shell.timeSeries;
+                        activeResourceObservable = this.activeTimeSeries; 
                     }
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
             });
@@ -590,6 +594,7 @@ class shell extends viewModelBase {
             this.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase, TenantType.Database)),
             this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
             this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
+            this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
             this.globalChangesApi.watchDocsStartingWith("Raven/StudioConfig", () => this.fetchStudioConfig()),
             this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
@@ -663,6 +668,9 @@ class shell extends viewModelBase {
         else if (resourceType === TenantType.CounterStorage) {
             newResource = new counterStorage(resourceName, true, dto.Disabled);
         }
+        else if (resourceType === TenantType.TimeSeries) {
+            newResource = new timeSeries(resourceName, true, dto.Disabled);
+        }
 
         return newResource;
     }
@@ -671,8 +679,8 @@ class shell extends viewModelBase {
         rs.activate();
 
         var locationHash = window.location.hash;
-        var isMainPage = locationHash == appUrl.forResources();
-        if (isMainPage == false) {
+        var isMainPage = locationHash === appUrl.forResources();
+        if (isMainPage === false) {
             var updatedUrl = appUrl.forCurrentPage(rs);
             this.navigate(updatedUrl);  
         }
@@ -734,6 +742,17 @@ class shell extends viewModelBase {
         return deferred;
     }
 
+    loadTimeSeries(): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
+        new getTimeSeriesCommand()
+            .execute()
+            .done((results: timeSeries[]) => shell.timeSeries(results))
+            .always(() => deferred.resolve());
+
+        return deferred;
+    }
+
     loadServerConfig() {
         var deferred = $.Deferred();
 
@@ -753,7 +772,8 @@ class shell extends viewModelBase {
         var databasesLoadTask: JQueryPromise<any> = this.loadDatabases();
         var fileSystemsLoadTask: JQueryPromise<any> = this.loadFileSystems();
         var counterStoragesLoadTask: JQueryPromise<any> = this.loadCounterStorages();
-        $.when(serverConfigsLoadTask, databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
+        var timeSeriesLoadTask: JQueryPromise<any> = this.loadTimeSeries();
+        $.when(serverConfigsLoadTask, databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
             .always(() => {
                 var locationHash = window.location.hash;
                 if (appUrl.getFileSystem()) { //filesystems section
@@ -762,7 +782,10 @@ class shell extends viewModelBase {
                 else if (appUrl.getCounterStorage()) { //counter storages section
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages, appUrl.forResources);
                 }
-                else if ((locationHash.indexOf(appUrl.forAdminSettings()) == -1)) { //databases section
+                else if (appUrl.getTimeSeries()) { //time series section
+                    this.activateResource(appUrl.getTimeSeries(), shell.timeSeries, appUrl.forResources);
+                }
+                else if ((locationHash.indexOf(appUrl.forAdminSettings()) === -1)) { //databases section
                     this.activateResource(appUrl.getDatabase(), shell.databases, appUrl.forResources);
                 }
             });
@@ -770,7 +793,7 @@ class shell extends viewModelBase {
 
     private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, url) {
         if (!!resource) {
-            var newResource = resourceObservableArray.first(rs => rs.name == resource.name);
+            var newResource = resourceObservableArray.first(rs => rs.name === resource.name);
             if (newResource != null) {
                 newResource.activate();
             } else {
@@ -784,13 +807,16 @@ class shell extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
 
         if (!!this.activeDatabase()) {
-            shell.databases().length == 1 ? this.activeDatabase(null) : this.activeDatabase().activate();
+            shell.databases().length === 1 ? this.activeDatabase(null) : this.activeDatabase().activate();
         }
         else if (!!this.activeFilesystem()) {
             this.activeFilesystem().activate();
         }
         else if (!!this.activeCounterStorage()) {
             this.activeCounterStorage().activate();
+        }
+        else if (!!this.activeTimeSeries()) {
+            this.activeTimeSeries().activate();
         }
 
         this.navigate(appUrl.forResources());
@@ -1031,8 +1057,12 @@ class shell extends viewModelBase {
             return "fa fa-database";
         } else if (rs.type === TenantType.FileSystem) {
             return "fa fa-file-image-o";
-        } else {
+        } else if (rs.type === TenantType.CounterStorage) {
             return "fa fa-calculator";
+        } else if (rs.type === TenantType.TimeSeries) {
+            return "fa fa-clock-o";
+        } else {
+            return "fa";
         }
     }
 

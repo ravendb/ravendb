@@ -7,7 +7,7 @@ class timeSeries extends resource {
     static type = "timeSeries";
 
     constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
-        super(name, TenantType.FileSystem, isAdminCurrentTenant);
+        super(name, TenantType.TimeSeries, isAdminCurrentTenant);
         this.fullTypeName = "Time Series";
         this.disabled(isDisabled);
         this.activeBundles(bundles);
