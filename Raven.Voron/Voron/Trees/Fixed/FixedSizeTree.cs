@@ -142,7 +142,7 @@ namespace Voron.Trees.Fixed
                 dataStart[0] = long.MinValue;
                 dataStart[1] = page.PageNumber;
 
-                ActuallySplitPage(page, key, val, dataStart, 2);
+	            ActuallySplitPage(page, key, val, dataStart + 2);
 
                 return;
             }
@@ -152,17 +152,18 @@ namespace Voron.Trees.Fixed
             
             parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
             var entriesToMove = parentPage.FixedSize_NumberOfEntries - (parentPage.LastSearchPosition + 1);
-            if (entriesToMove > 0)
+			var newEntryPos = parentPage.Base + Constants.PageHeaderSize + ((parentPage.LastSearchPosition+1) * BranchEntrySize);
+			if (entriesToMove > 0)
             {
-                StdLib.memmove(parentPage.Base + Constants.PageHeaderSize + ((parentPage.LastSearchPosition + 1) * BranchEntrySize),
-                    parentPage.Base + Constants.PageHeaderSize + (parentPage.LastSearchPosition * BranchEntrySize),
+	            StdLib.memmove(newEntryPos + BranchEntrySize,
+                    newEntryPos,
                     entriesToMove*BranchEntrySize);
             }
-            parentPage.FixedSize_NumberOfEntries++;
-            ActuallySplitPage(page, key, val, (long*)(parentPage.Base + Constants.PageHeaderSize), parentPage.LastSearchPosition);
+	        parentPage.FixedSize_NumberOfEntries++;
+	        ActuallySplitPage(page, key, val, (long*) newEntryPos);
         }
 
-        private void ActuallySplitPage(Page page, long key, Slice val, long* parentKeys, int keysIndex)
+        private void ActuallySplitPage(Page page, long key, Slice val, long* parentKeys)
         {
             var rightPage = _tx.AllocatePage(1, PageFlags.Leaf | PageFlags.FixedSize);
             rightPage.FixedSize_ValueSize = _valSize;
@@ -188,8 +189,8 @@ namespace Voron.Trees.Fixed
 
                 rightKey = ((long*)(rightPage.Base + Constants.PageHeaderSize))[0];
             }
-            parentKeys[keysIndex] = rightKey;
-            parentKeys[keysIndex+1] = rightPage.PageNumber;
+            parentKeys[0] = rightKey;
+            parentKeys[1] = rightPage.PageNumber;
         }
 
         private void AddEmbeddedEntry(long key, Slice val)
