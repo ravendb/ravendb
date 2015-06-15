@@ -56,8 +56,8 @@
         <div class="form-group">
             <div class="col-md-4 control-label" data-bind="text: 'Enviroment'"></div>
             <div class="col-md-8">
-                <div class="btn-group" style="padding-top:0px">
-                    <select class="form-control" data-bind="options: environmentColors, value: selectedColor, optionsText: 'name', optionsAfterRender: setOptionStyle, style:{backgroundColor:selectedColor().backgroundColor, color:selectedColor().textColor, cursor:'pointer' }"></select>
+                <div id="select-color" class="btn-group" style="padding-top:0">
+                    <select class="form-control" data-bind="options: environmentColors, value: selectedColor, optionsText: 'name'"></select>
                 </div>
             </div>
         </div>

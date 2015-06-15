@@ -17,24 +17,15 @@ class studioConfig extends viewModelBase {
     timeUntilRemindToUpgrade = ko.observable<string>();
     mute: KnockoutComputed<boolean>;
 
-    public environmentColors: environmentColor[] = [
+    environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8", "#000000"),
         new environmentColor("Development", "#FFE6E6", "#000000"),
         new environmentColor("QA", "#CCFFCC", "#000000"),
         new environmentColor("Production", "#C2BCFF", "#000000")
-    ]; 
-
+    ];
     selectedColor = ko.observable<environmentColor>();
 
-
-    setOptionStyle(option, item: environmentColor) {
-        option.style.color = item.textColor;
-        option.style.backgroundColor = item.backgroundColor;
-    }
-
     timeUntilRemindToUpgradeMessage: KnockoutComputed<string>;
-
-
     private documentId = "Raven/StudioConfig";
 
     constructor() {
@@ -53,21 +44,17 @@ class studioConfig extends viewModelBase {
             if (this.mute()) {
                 var lastBuildCheck = this.timeUntilRemindToUpgrade();
                 var lastBuildCheckMoment = moment(lastBuildCheck);
-                return 'muted for another ' + lastBuildCheckMoment.add('days', 7).fromNow(true);
+                return "muted for another " + lastBuildCheckMoment.add("days", 7).fromNow(true);
             }
-            return 'mute for a week'; 
+            return "mute for a week"; 
         });
 
-        var color = this.environmentColors.filter((color) => color.name == shell.selectedEnvironmentColorStatic().name);
-        this.selectedColor(!!color[0] ? color[0] : this.environmentColors[0]);
-
+        var color = this.environmentColors.filter((color) => color.name === shell.selectedEnvironmentColorStatic().name);
+        var selectedColor = !!color[0] ? color[0] : this.environmentColors[0];
+        this.selectedColor(selectedColor);
+        
         var self = this;
-        this.selectedColor.subscribe((newValue) => {
-                self.setEnviromentColor(newValue);
-
-        });
-
-
+        this.selectedColor.subscribe((newValue) => self.setEnviromentColor(newValue));
     }
 
     canActivate(args): any {
@@ -87,25 +74,35 @@ class studioConfig extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        this.updateHelpLink('4J5OUB');
+        this.updateHelpLink("4J5OUB");
     }
 
     attached() {
         var self = this;
         $(window).bind('storage', (e: any) => {
-            if (e.originalEvent.key == serverBuildReminder.localStorageName) {
+            if (e.originalEvent.key === serverBuildReminder.localStorageName) {
                 self.timeUntilRemindToUpgrade(serverBuildReminder.get());
             }
         });
 
-       
+        $("select").selectpicker();
+        this.pickColor();
+
+        $("#select-color li").each((index, element) => {
+            var color = this.environmentColors[index];
+            $(element).css("color", color.textColor);
+            $(element).css("backgroundColor", color.backgroundColor);
+        });
     }
 
     setEnviromentColor(envColor: environmentColor) {
         var newDocument = this.configDocument();
         newDocument["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
-        saveTask.done(() => shell.selectedEnvironmentColorStatic(this.selectedColor()));
+        saveTask.done(() => {
+            shell.selectedEnvironmentColorStatic(this.selectedColor());
+            this.pickColor();
+        });
     }
 
     setSystemDatabaseWarning(warnSetting: boolean) {
@@ -116,6 +113,10 @@ class studioConfig extends viewModelBase {
             var saveTask = this.saveStudioConfig(newDocument);
             saveTask.fail(() => this.warnWhenUsingSystemDatabase(!warnSetting));
         }
+    }
+
+    private pickColor() {
+        $("#select-color button").css("backgroundColor", this.selectedColor().backgroundColor);
     }
 
     setEventSourceDisabled(setting: boolean) {
