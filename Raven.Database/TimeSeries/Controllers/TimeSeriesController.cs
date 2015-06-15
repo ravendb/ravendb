@@ -39,7 +39,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			var timeSeriesData = GetTimeSeriesData(timeSeriesDocuments);
 			var timeSeriesNames = timeSeriesData.Select(x => x.Name).ToArray();
 
-			List<string> approvedTimeSeriesStorages = null;
+			List<string> approvedTimeSeries = null;
 			if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
 				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
@@ -54,7 +54,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
 				if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
-					approvedTimeSeriesStorages = authorizer.GetApprovedResources(user, this, timeSeriesNames);
+					approvedTimeSeries = authorizer.GetApprovedResources(user, this, timeSeriesNames);
 				}
 
 				timeSeriesData.ForEach(x =>
@@ -72,10 +72,10 @@ namespace Raven.Database.TimeSeries.Controllers
 				});
 			}
 
-			if (approvedTimeSeriesStorages != null)
+			if (approvedTimeSeries != null)
 			{
-				timeSeriesData = timeSeriesData.Where(data => approvedTimeSeriesStorages.Contains(data.Name)).ToList();
-				timeSeriesNames = timeSeriesNames.Where(name => approvedTimeSeriesStorages.Contains(name)).ToArray();
+				timeSeriesData = timeSeriesData.Where(data => approvedTimeSeries.Contains(data.Name)).ToList();
+				timeSeriesNames = timeSeriesNames.Where(name => approvedTimeSeries.Contains(name)).ToArray();
 			}
 
 			var responseMessage = getAdditionalData ? GetMessageWithObject(timeSeriesData) : GetMessageWithObject(timeSeriesNames);
