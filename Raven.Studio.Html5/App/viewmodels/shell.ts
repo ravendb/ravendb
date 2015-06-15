@@ -192,7 +192,7 @@ class shell extends viewModelBase {
         this.listedResources = ko.computed(() => {
             var currentResource = this.lastActivatedResource();
             if (!!currentResource) {
-                return shell.resources().filter(rs => (rs.type !== currentResource.type || (rs.type === currentResource.type && rs.name !== currentResource.name)) && rs.name !== '<system>');
+                return shell.resources().filter(rs => (rs.type !== currentResource.type || (rs.type === currentResource.type && rs.name !== currentResource.name)) && rs.name !== "<system>");
             }
             return shell.resources();
         });
@@ -253,7 +253,7 @@ class shell extends viewModelBase {
 
         window.addEventListener("beforeunload", self.destroyChangesApi.bind(self));
         
-        $(window).bind('storage', (e:any) => {
+        $(window).bind("storage", (e:any) => {
             if (e.originalEvent.key == eventSourceSettingStorage.localStorageName) {
                 if (!JSON.parse(e.originalEvent.newValue)) {
                     self.destroyChangesApi();
@@ -1051,20 +1051,6 @@ class shell extends viewModelBase {
             .done((doc: documentClass) => {
                 //
             });
-    }
-
-    iconName(rs: resource) {
-        if (rs.type === TenantType.Database) {
-            return "fa fa-database";
-        } else if (rs.type === TenantType.FileSystem) {
-            return "fa fa-file-image-o";
-        } else if (rs.type === TenantType.CounterStorage) {
-            return "fa fa-calculator";
-        } else if (rs.type === TenantType.TimeSeries) {
-            return "fa fa-clock-o";
-        } else {
-            return "fa";
-        }
     }
 
     logOut() {

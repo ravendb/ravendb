@@ -483,7 +483,7 @@
     <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="TimeSeries\Controllers\AdminTimeSeriesController.cs" />
-    <Compile Include="TimeSeries\Controllers\StatsController.cs" />
+    <Compile Include="TimeSeries\Controllers\TimeSeriesStatsController.cs" />
     <Compile Include="TimeSeries\Controllers\RavenTimeSeriesApiController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesController.cs" />
     <Compile Include="TimeSeries\KeyValueStateMachine.cs" />
@@ -661,7 +661,7 @@
     <Compile Include="FileSystem\Controllers\RdcController.cs" />
     <Compile Include="FileSystem\Controllers\SearchController.cs" />
     <Compile Include="FileSystem\Controllers\StaticFSController.cs" />
-    <Compile Include="FileSystem\Controllers\StatsController.cs" />
+    <Compile Include="FileSystem\Controllers\FileSystemsStatsController.cs" />
     <Compile Include="FileSystem\Controllers\StorageController.cs" />
     <Compile Include="FileSystem\Controllers\SynchronizationController.cs" />
     <Compile Include="FileSystem\Controllers\FileSystemsController.cs" />

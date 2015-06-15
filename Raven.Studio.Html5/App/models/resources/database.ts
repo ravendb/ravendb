@@ -10,6 +10,7 @@ class database extends resource {
     recentQueriesLocalStorageName: string;
     mergedIndexLocalStoragePrefix: string;
     static type = "database";
+    iconName: KnockoutComputed<string>;
 
     constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, clusterWide = false) {
         super(name, TenantType.Database, isAdminCurrentTenant);
@@ -19,6 +20,7 @@ class database extends resource {
         this.indexingDisabled(isIndexingDisabled);
 		this.rejectClientsMode(isRejectClientsMode);
 	    this.clusterWide(clusterWide);
+        this.iconName = ko.computed(() => !this.clusterWide() ? "fa fa-database" : "fa-cubes");
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "");
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {

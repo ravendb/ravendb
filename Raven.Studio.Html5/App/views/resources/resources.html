@@ -88,10 +88,10 @@
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i data-bind="css: { 'fa-database': !clusterWide() , 'fa-cubes': clusterWide() }" class="fa"></i> db/<span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i data-bind="attr: { class: iconName }" class="fa"></i> db/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
-                    <a class="resource-name"><i class="fa fa-database"></i> db/<span data-bind="text: name"></span></a>
+                    <a class="resource-name"><i  data-bind="attr: { class: iconName }"></i> db/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                 </h4>
                 <br/>
@@ -163,10 +163,10 @@
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getFileSystemFilesUrl($data) }"><i class="fa fa-file-image-o"></i> fs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getFileSystemFilesUrl($data) }"><i data-bind="attr: { class: iconName }"></i> fs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
-                    <a class="resource-name"><i class="fa fa-file-image-o"></i> fs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name"><i data-bind="attr: { class: iconName }"></i> fs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                 </h4>
                 <br />
@@ -212,10 +212,10 @@
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getCounterStorageCountersUrl($data) }"><i class="fa fa-sort-numeric-desc"></i> cs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getCounterStorageCountersUrl($data) }"><i data-bind="attr: { class: iconName }"></i> cs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
-                    <a class="resource-name"><i class="fa fa-sort-numeric-desc"></i> fs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name"><i data-bind="attr: { class: iconName }"></i> fs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                 </h4>
                 <br />
@@ -262,10 +262,10 @@
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getTimeSeriesUrl($data) }"><i class="fa fa-clock-o"></i> cs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getTimeSeriesUrl($data) }"><i data-bind="attr: { class: iconName }"></i> cs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
-                    <a class="resource-name"><i class="fa fa-clock-o"></i> fs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name"><i data-bind="attr: { class: iconName }"></i> fs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                 </h4>
                 <br />

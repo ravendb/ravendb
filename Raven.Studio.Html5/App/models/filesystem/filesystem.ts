@@ -6,6 +6,7 @@ class filesystem extends resource {
     statistics = ko.observable<fileSystemStatistics>();
     files = ko.observableArray<filesystemFileHeaderDto>();
     static type = "filesystem";
+    iconName = "fa fa-file-image-o";
 
     constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
         super(name, TenantType.FileSystem, isAdminCurrentTenant);
