@@ -56,7 +56,7 @@ namespace Raven.Database.Counters
 
 		public int ReplicationTimeoutInMs { get; private set; }
 
-		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
+		public CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState receivedTransportState = null)
 		{			
 			CounterStorageUrl = string.Format("{0}cs/{1}", serverUrl, storageName);
 			Name = storageName;
@@ -66,7 +66,7 @@ namespace Raven.Database.Counters
 				: CreateStorageOptionsFromConfiguration(configuration.Counter.DataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
-			transportState = recievedTransportState ?? new TransportState();
+			transportState = receivedTransportState ?? new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			replicationTask = new ReplicationTask(this);
 			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
@@ -196,7 +196,7 @@ namespace Raven.Database.Counters
 				IncomingReplications = metrics.IncomingReplications.CreateMeterData(),
 				OutgoingReplications = metrics.OutgoingReplications.CreateMeterData(),
 
-				RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+				RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
 				IncSizes = metrics.IncSizeMetrics.CreateHistogramData(),
 				DecSizes = metrics.DecSizeMetrics.CreateHistogramData(),
 
@@ -590,8 +590,7 @@ namespace Raven.Database.Counters
 				{
 					EndianBitConverter.Little.CopyBytes(counterValue.Value, Buffer.CounterValue, 0);
 					var slice = new Slice(Buffer.CounterValue);
-					counters.Add(counterKey, slice);
-				});
+					counters.Add(counterKey, slice);				});
 
 				if (doesCounterExist)
 					return counterValue.Value >= 0 ? CounterChangeAction.Increment : CounterChangeAction.Decrement;

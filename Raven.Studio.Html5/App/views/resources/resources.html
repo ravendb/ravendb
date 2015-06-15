@@ -6,7 +6,7 @@
 					<i class="fa fa-database fa-5x"></i>
 					<br />
 					<br />
-					No databases, file systems or counter storages are available. <br />
+					No databases, file systems, counter storages or time series are available. <br />
 					<small>
 						<span data-bind="visible: isGlobalAdmin">Go ahead and <a href="#" data-bind="click: newResource">create one now</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a></span>
 					</small>
@@ -34,7 +34,7 @@
         <li>
             <h3>
                 <a href="#resources">
-                    Databases, File Systems and Counter Storages
+                    Databases, File Systems, Counter Storages and Time Series
                 </a>
             </h3>
         </li>
@@ -245,6 +245,56 @@
                     <li class="divider"></li>
                     <li role="presentation" class="delete-resource">
                         <a title="Delete Selected Counter Storage" data-bind="click: function () { $root.deleteSelectedResources([$data]); return true; }">
+                            <i class="fa fa-fw fa-trash-o"></i>
+                            <span>Delete</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <!-- /ko -->
+
+        <!-- ko if: $data.isTimeSeries() -->
+        <div class="resource cs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
+            <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
+                <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: $root.isGlobalAdmin()" />
+            </div>
+            <div class="details">
+                <h4>
+                    <!-- ko if: !$data.disabled() && $data.isLicensed() -->
+                    <a class="resource-name" data-bind="attr: { href: $root.getTimeSeriesUrl($data) }"><i class="fa fa-clock-o"></i> cs/<span data-bind="text: name"></span></a>
+                    <!-- /ko -->
+                    <!-- ko if: $data.disabled() || !$data.isLicensed() -->
+                    <a class="resource-name"><i class="fa fa-clock-o"></i> fs/<span data-bind="text: name"></span></a>
+                    <!-- /ko -->
+                </h4>
+                <br />
+                <!-- ko if: !$data.disabled() && $data.isLicensed() -->
+                <!--TODO: implement stats-->
+                <span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
+                <!-- /ko -->
+                <!-- ko if: $data.disabled -->
+                <span class="stats-disabled">Disabled</span>
+                <!-- /ko -->
+                <!-- ko if: !$data.disabled() && !$data.isLicensed() -->
+                <span class="stats-disabled">Unlicensed</span>
+                <!-- /ko -->
+            </div>
+
+            <div class="btn-group" data-bind="click: function () { $root.optionsClicked(true); }, visible: $root.isGlobalAdmin()">
+                <a class="dropdown-toggle" data-toggle="dropdown">
+                    <i class="fa fa-cogs fa-lg"></i>
+                </a>
+                <ul class="dropdown-menu" role="menu">
+                    <li role="presentation">
+                        <a data-bind="click: function () { $root.toggleSelectedResources([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Time Series' : 'Disable Selected Time Series' }">
+                            <i class="fa fa-fw" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>
+                            <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
+                        </a>
+                    </li>
+                    <li class="divider"></li>
+                    <li role="presentation" class="delete-resource">
+                        <a title="Delete Selected Time Series" data-bind="click: function () { $root.deleteSelectedResources([$data]); return true; }">
                             <i class="fa fa-fw fa-trash-o"></i>
                             <span>Delete</span>
                         </a>

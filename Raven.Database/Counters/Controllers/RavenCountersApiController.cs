@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="a.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RavenCountersApiController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -242,7 +242,7 @@ namespace Raven.Database.Counters.Controllers
         {
             if (Storage == null)
                 return;
-            Storage.MetricsCounters.RequestDuationMetric.Update(duration);
+            Storage.MetricsCounters.RequestDurationMetric.Update(duration);
         }
 
 		public override InMemoryRavenConfiguration SystemConfiguration

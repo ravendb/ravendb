@@ -67,12 +67,39 @@ namespace Raven.Database.Server.Security
 				var license = ValidateLicense.CurrentLicense;
 				if (license.IsCommercial == false)
 				{
-					return true; // we allow the use of ravenfs in the OSS version
+					return true; // we allow the use of counters in the OSS version
 				}
 				if (license.Attributes.TryGetValue("counters", out countersValue))
 				{
 					bool active;
 					if (bool.TryParse(countersValue, out active))
+						return active;
+				}
+				return false;
+			}
+		}
+
+		public static bool IsLicensedForTimeSeries
+		{
+			get
+			{
+				if (licenseEnabled != null)
+				{
+					if (SystemTime.UtcNow < licenseEnabled.Value)
+						return true;
+					licenseEnabled = null;
+				}
+
+				string timeSeriesValue;
+				var license = ValidateLicense.CurrentLicense;
+				if (license.IsCommercial == false)
+				{
+					return true; // we allow the use of time series in the OSS version
+				}
+				if (license.Attributes.TryGetValue("timeSeries", out timeSeriesValue))
+				{
+					bool active;
+					if (bool.TryParse(timeSeriesValue, out active))
 						return active;
 				}
 				return false;

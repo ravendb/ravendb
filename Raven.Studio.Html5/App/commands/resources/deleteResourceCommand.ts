@@ -1,8 +1,5 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
-import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resources/resource");
-import counterStorage = require("models/counter/counterStorage");
 
 class deleteDatabaseCommand extends commandBase {
     private oneDatabasePath = "/admin/databases/";
@@ -11,6 +8,8 @@ class deleteDatabaseCommand extends commandBase {
     private multipleFileSystemsPath = "/admin/fs/batch-delete";
     private oneCounterStoragePath = "/admin/cs/";
     private multipleCounterStoragesPath = "/admin/cs/batch-delete";
+    private oneTimeSeriesPath = "/admin/ts/";
+    private multipleTimeSeriesPath = "/admin/ts/batch-delete";
 
     constructor(private resources: Array<resource>, private isHardDelete: boolean) {
         super();
@@ -35,9 +34,10 @@ class deleteDatabaseCommand extends commandBase {
         var args = {
             "hard-delete": this.isHardDelete
         };
-        
+
         var disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
-            (resource.type == TenantType.FileSystem) ? this.oneFileSystemPath : this.oneCounterStoragePath;
+            resource.type === TenantType.FileSystem ? this.oneFileSystemPath :
+            resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;
         var url = disableOneResourcePath + encodeURIComponent(resource.name) + this.urlEncodeArgs(args);
         var deleteTask = this.del(url, null, null, { dataType: undefined });
 
@@ -51,7 +51,8 @@ class deleteDatabaseCommand extends commandBase {
 
         var dbToDelete = this.resources.filter(r => r.type === TenantType.Database);
         var fsToDelete = this.resources.filter(r => r.type === TenantType.FileSystem);
-        var cntToDelete = this.resources.filter(r => r.type === TenantType.CounterStorage);
+        var csToDelete = this.resources.filter(r => r.type === TenantType.CounterStorage);
+        var tsToDelete = this.resources.filter(r => r.type === TenantType.TimeSeries);
 
         var deleteTasks = [];
 
@@ -63,8 +64,12 @@ class deleteDatabaseCommand extends commandBase {
             deleteTasks.push(this.deleteTask(fsToDelete, this.multipleFileSystemsPath));
         }
 
-        if (cntToDelete.length > 0) {
-            deleteTasks.push(this.deleteTask(cntToDelete, this.multipleCounterStoragesPath));
+        if (csToDelete.length > 0) {
+            deleteTasks.push(this.deleteTask(csToDelete, this.multipleCounterStoragesPath));
+        }
+
+        if (tsToDelete.length > 0) {
+            deleteTasks.push(this.deleteTask(tsToDelete, this.multipleTimeSeriesPath));
         }
 
         var mergedPromise = $.Deferred();

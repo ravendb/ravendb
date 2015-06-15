@@ -10,6 +10,7 @@ import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
+import timeSeries = require("models/timeSeries/timeSeries");
 import documentClass = require("models/database/documents/document");
 import collection = require("models/database/documents/collection");
 import uploadItem = require("models/filesystem/uploadItem");
@@ -41,6 +42,8 @@ import getFileSystemsCommand = require("commands/filesystem/getFileSystemsComman
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getCounterStorageStatsCommand = require("commands/counter/getCounterStorageStatsCommand");
+import getTimeSeriesCommand = require("commands/timeSeries/getTimeSeriesCommand");
+import getTimeSeriesStatsCommand = require("commands/timeSeries/getTimeSeriesStatsCommand");
 import getSystemDocumentCommand = require("commands/database/documents/getSystemDocumentCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 
@@ -99,15 +102,23 @@ class shell extends viewModelBase {
         && this.lastActivatedResource().type === TenantType.CounterStorage
         && (this.appUrls.isAreaActive("counterstorages")() || this.appUrls.isAreaActive("resources")()));
 
+    static timeSeries = ko.observableArray<timeSeries>();
+    isActiveTimeSeriesDisabled: KnockoutComputed<boolean>;
+    canShowTimeSeriesNavbar = ko.computed(() =>
+        !!this.lastActivatedResource()
+        && this.lastActivatedResource().type === TenantType.TimeSeries
+        && (this.appUrls.isAreaActive("timeseries")() || this.appUrls.isAreaActive("resources")()));
+
     canShowResourcesNavbar = ko.computed(() => {
         var canDb = this.canShowDatabaseNavbar();
         var canFs = this.canShowFileSystemNavbar();
-        var canCnt = this.canShowCountersNavbar();
-        return canDb || canFs || canCnt;
+        var canCs = this.canShowCountersNavbar();
+        var canTs = this.canShowTimeSeriesNavbar();
+        return canDb || canFs || canCs || canTs;
     });
 
     static resources = ko.computed(() => {
-        var result: resource[] = [].concat(shell.databases(), shell.fileSystems(), shell.counterStorages());
+        var result: resource[] = [].concat(shell.databases(), shell.fileSystems(), shell.counterStorages(), shell.timeSeries());
         return result.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
     });
 
@@ -154,6 +165,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.activateDatabase(db));
         ko.postbox.subscribe("ActivateFilesystem", (fs: fileSystem) => this.activateFileSystem(fs));
         ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => this.activateCounterStorage(cs));
+        ko.postbox.subscribe("ActivateTimeSeries", (ts: timeSeries) => this.activateTimeSeries(ts));
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
         ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
@@ -175,11 +187,12 @@ class shell extends viewModelBase {
         this.isActiveDatabaseDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeDatabase()));
         this.isActiveFileSystemDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeFilesystem()));
         this.isActiveCounterStorageDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeCounterStorage()));
+        this.isActiveTimeSeriesDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeTimeSeries()));
 
         this.listedResources = ko.computed(() => {
             var currentResource = this.lastActivatedResource();
             if (!!currentResource) {
-                return shell.resources().filter(rs => (rs.type != currentResource.type || (rs.type == currentResource.type && rs.name != currentResource.name)) && rs.name != '<system>');
+                return shell.resources().filter(rs => (rs.type !== currentResource.type || (rs.type === currentResource.type && rs.name !== currentResource.name)) && rs.name !== '<system>');
             }
             return shell.resources();
         });
@@ -220,12 +233,14 @@ class shell extends viewModelBase {
             { route: "filesystems/settings*details", title: "Settings", moduleId: "viewmodels/filesystem/settings/settings", nav: true, hash: this.appUrls.filesystemSettings },
             { route: "filesystems/configuration", title: "Configuration", moduleId: "viewmodels/filesystem/configurations/configuration", nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: "filesystems/edit", title: "Edit File", moduleId: "viewmodels/filesystem/files/filesystemEditFile", nav: false },
-            { route: ["", "counterstorages"], title: "Counter Storages", moduleId: "viewmodels/counter/counterStorages", nav: true, hash: this.appUrls.couterStorages },
             { route: "counterstorages/counters", title: "Counters", moduleId: "viewmodels/counter/counters", nav: true, hash: this.appUrls.counterStorageCounters },
-            { route: "counterstorages/replication", title: "Teplication", moduleId: "viewmodels/counter/counterStorageReplication", nav: true, hash: this.appUrls.counterStorageReplication },
+            { route: "counterstorages/replication", title: "Replication", moduleId: "viewmodels/counter/counterStorageReplication", nav: true, hash: this.appUrls.counterStorageReplication },
             { route: "counterstorages/tasks*details", title: "Stats", moduleId: "viewmodels/counter/tasks/tasks", nav: true, hash: this.appUrls.counterStorageStats },
             { route: "counterstorages/stats", title: "Stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
-            { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration }
+            { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration },
+            { route: "timeseries/series", title: "Series", moduleId: "viewmodels/timeSeries/timeSeries", nav: true, hash: this.appUrls.timeSeries },
+            { route: "timeseries/stats", title: "Stats", moduleId: "viewmodels/timeSeries/timeSeriesStats", nav: true, hash: this.appUrls.timeSeriesStats },
+            { route: "timeseries/configuration", title: "Configuration", moduleId: "viewmodels/timeSeries/timeSeriesConfiguration", nav: true, hash: this.appUrls.timeSeriesConfiguration }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
@@ -262,6 +277,9 @@ class shell extends viewModelBase {
                     navigationLinksWidth += 600;
                 }
                 else if (this.canShowCountersNavbar()) {
+                    navigationLinksWidth += 600; //todo: calculate
+                }
+                else if (this.canShowTimeSeriesNavbar()) {
                     navigationLinksWidth += 600; //todo: calculate
                 }
 
@@ -379,6 +397,24 @@ class shell extends viewModelBase {
         }
     }
 
+    private activateTimeSeries(ts: timeSeries) {
+        var changesSubscriptionArray = () => [
+            //TODO: enable changes api for counter storages, server side
+        ];
+        var isNotATimeSeries = this.currentConnectedResource instanceof timeSeries === false;
+        this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTimeSeriesStats(ts), changesSubscriptionArray);
+
+        shell.resources().forEach((r: resource) => r.isSelected(r instanceof timeSeries && r.name === ts.name));
+    }
+
+    private fetchTimeSeriesStats(ts: timeSeries) {
+        if (!!ts && !ts.disabled() && ts.isLicensed()) {
+            new getTimeSeriesStatsCommand(ts, true)
+                .execute()
+                .done((result: timeSeriesStatisticsDto) => ts.saveStatistics(result));
+        }
+    }
+
     private updateChangesApi(rs: resource, isPreviousDifferentKind: boolean, fetchStats: () => void, subscriptionsArray: () => changeSubscription[]) {
         fetchStats();
 
@@ -470,6 +506,12 @@ class shell extends viewModelBase {
             .done((results: counterStorage[]) => shell.updateResourceObservableArray(shell.counterStorages, results, active));
     }
 
+    static reloadTimeSeries(active: timeSeries): JQueryPromise<timeSeries[]> {
+        return new getTimeSeriesCommand()
+            .execute()
+            .done((results: timeSeries[]) => shell.updateResourceObservableArray(shell.timeSeries, results, active));
+    }
+
     private reloadDataAfterReconnection(rs: resource) {
         if (rs.name === "<system>") {
             this.fetchStudioConfig();
@@ -480,8 +522,9 @@ class shell extends viewModelBase {
             var databasesLoadTask = shell.reloadDatabases(this.activeDatabase());
             var fileSystemsLoadTask = shell.reloadFilesystems(this.activeFilesystem());
             var counterStoragesLoadTask = shell.reloadCounterStorages(this.activeCounterStorage());
+            var timeSeriesLoadTask = shell.reloadTimeSeries(this.activeTimeSeries());
 
-            $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
+            $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
                 .done(() => {
                     var connectedResource = this.currentConnectedResource;
                     var resourceObservableArray: any = shell.databases;
@@ -494,6 +537,10 @@ class shell extends viewModelBase {
                     else if (isNotDatabase && connectedResource instanceof counterStorage) {
                         resourceObservableArray = shell.counterStorages;
                         activeResourceObservable = this.activeCounterStorage; 
+                    }
+                    else if (isNotDatabase && connectedResource instanceof timeSeries) {
+                        resourceObservableArray = shell.timeSeries;
+                        activeResourceObservable = this.activeTimeSeries; 
                     }
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
             });
@@ -548,6 +595,7 @@ class shell extends viewModelBase {
             this.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase, TenantType.Database)),
             this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
             this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
+            this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
             this.globalChangesApi.watchDocsStartingWith("Raven/StudioConfig", () => this.fetchStudioConfig()),
             this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
@@ -621,6 +669,9 @@ class shell extends viewModelBase {
         else if (resourceType === TenantType.CounterStorage) {
             newResource = new counterStorage(resourceName, true, dto.Disabled);
         }
+        else if (resourceType === TenantType.TimeSeries) {
+            newResource = new timeSeries(resourceName, true, dto.Disabled);
+        }
 
         return newResource;
     }
@@ -629,8 +680,8 @@ class shell extends viewModelBase {
         rs.activate();
 
         var locationHash = window.location.hash;
-        var isMainPage = locationHash == appUrl.forResources();
-        if (isMainPage == false) {
+        var isMainPage = locationHash === appUrl.forResources();
+        if (isMainPage === false) {
             var updatedUrl = appUrl.forCurrentPage(rs);
             this.navigate(updatedUrl);  
         }
@@ -692,6 +743,17 @@ class shell extends viewModelBase {
         return deferred;
     }
 
+    loadTimeSeries(): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
+        new getTimeSeriesCommand()
+            .execute()
+            .done((results: timeSeries[]) => shell.timeSeries(results))
+            .always(() => deferred.resolve());
+
+        return deferred;
+    }
+
     loadServerConfig() {
         var deferred = $.Deferred();
 
@@ -711,7 +773,8 @@ class shell extends viewModelBase {
         var databasesLoadTask: JQueryPromise<any> = this.loadDatabases();
         var fileSystemsLoadTask: JQueryPromise<any> = this.loadFileSystems();
         var counterStoragesLoadTask: JQueryPromise<any> = this.loadCounterStorages();
-        $.when(serverConfigsLoadTask, databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
+        var timeSeriesLoadTask: JQueryPromise<any> = this.loadTimeSeries();
+        $.when(serverConfigsLoadTask, databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
             .always(() => {
                 var locationHash = window.location.hash;
                 if (appUrl.getFileSystem()) { //filesystems section
@@ -720,7 +783,10 @@ class shell extends viewModelBase {
                 else if (appUrl.getCounterStorage()) { //counter storages section
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages, appUrl.forResources);
                 }
-                else if ((locationHash.indexOf(appUrl.forAdminSettings()) == -1)) { //databases section
+                else if (appUrl.getTimeSeries()) { //time series section
+                    this.activateResource(appUrl.getTimeSeries(), shell.timeSeries, appUrl.forResources);
+                }
+                else if ((locationHash.indexOf(appUrl.forAdminSettings()) === -1)) { //databases section
                     this.activateResource(appUrl.getDatabase(), shell.databases, appUrl.forResources);
                 }
             });
@@ -728,7 +794,7 @@ class shell extends viewModelBase {
 
     private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, url) {
         if (!!resource) {
-            var newResource = resourceObservableArray.first(rs => rs.name == resource.name);
+            var newResource = resourceObservableArray.first(rs => rs.name === resource.name);
             if (newResource != null) {
                 newResource.activate();
             } else {
@@ -742,13 +808,16 @@ class shell extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
 
         if (!!this.activeDatabase()) {
-            shell.databases().length == 1 ? this.activeDatabase(null) : this.activeDatabase().activate();
+            shell.databases().length === 1 ? this.activeDatabase(null) : this.activeDatabase().activate();
         }
         else if (!!this.activeFilesystem()) {
             this.activeFilesystem().activate();
         }
         else if (!!this.activeCounterStorage()) {
             this.activeCounterStorage().activate();
+        }
+        else if (!!this.activeTimeSeries()) {
+            this.activeTimeSeries().activate();
         }
 
         this.navigate(appUrl.forResources());
@@ -989,8 +1058,12 @@ class shell extends viewModelBase {
             return "fa fa-database";
         } else if (rs.type === TenantType.FileSystem) {
             return "fa fa-file-image-o";
-        } else {
+        } else if (rs.type === TenantType.CounterStorage) {
             return "fa fa-calculator";
+        } else if (rs.type === TenantType.TimeSeries) {
+            return "fa fa-clock-o";
+        } else {
+            return "fa";
         }
     }
 

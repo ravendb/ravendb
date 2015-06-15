@@ -25,7 +25,7 @@ namespace Raven.Database.Counters
 
         public HistogramMetric IncSizeMetrics { get; private set; }
         public HistogramMetric DecSizeMetrics { get; private set; }
-        public HistogramMetric RequestDuationMetric { get; private set; }
+        public HistogramMetric RequestDurationMetric { get; private set; }
         
         public ConcurrentDictionary<string, MeterMetric> ReplicationBatchSizeMeter { get; private set; }
         public ConcurrentDictionary<string, HistogramMetric> ReplicationBatchSizeHistogram { get; private set; }
@@ -47,7 +47,7 @@ namespace Raven.Database.Counters
 
             IncSizeMetrics = counterMetrics.Histogram("counterMetrics", "inc delta sizes");
             DecSizeMetrics = counterMetrics.Histogram("counterMetrics", "dec delta sizes");
-            RequestDuationMetric = counterMetrics.Histogram("counterMetrics", "inc/dec request durations");
+            RequestDurationMetric = counterMetrics.Histogram("counterMetrics", "inc/dec request durations");
             
             ReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();
             ReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();

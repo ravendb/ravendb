@@ -23,8 +23,11 @@
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStorageStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\adminJsScriptCommand.ts" />
+    <TypeScriptCompile Include="App\commands\resources\createTimeSeriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\createCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterGroupsCommand.ts" />
@@ -80,7 +83,7 @@
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterStorageDto.ts" />
+    <TypeScriptCompile Include="App\models\counter\counterStorageStatisticsDto.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
@@ -108,10 +111,14 @@
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDestination.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDetail.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
+    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatisticsDto.ts" />
+    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatistics.ts" />
+    <TypeScriptCompile Include="App\models\timeSeries\timeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counters.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageStats.ts" />
+    <TypeScriptCompile Include="App\viewmodels\resources\createTimeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createResourceBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createCounterStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
@@ -174,6 +181,7 @@
     <Content Include="App\views\database\indexes\cancelSideBySizeConfirm.html" />
     <Content Include="App\views\manage\globalConfig\globalConfigSqlReplication.html" />
     <Content Include="App\views\filesystem\tasks\exportFilesystem.html" />
+    <Content Include="App\views\resources\createTimeSeries.html" />
     <Content Include="App\views\resources\createResource.html" />
     <Content Include="App\views\filesystem\files\fileRenameDialog.html" />
     <Content Include="App\views\filesystem\tasks\importFilesystem.html" />

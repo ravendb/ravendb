@@ -37,6 +37,10 @@
     isCounterStorage() {
         return this.type === TenantType.CounterStorage;
     }
+
+    isTimeSeries() {
+        return this.type === TenantType.CounterStorage;
+    }
 }
 
 export = resource;

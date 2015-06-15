@@ -1,8 +1,8 @@
 ﻿using System;
 using Raven.Database.Counters;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.FileSystem;
+using Raven.Database.TimeSeries;
 
 namespace Raven.Database.Server
 {
@@ -14,5 +14,6 @@ namespace Raven.Database.Server
         public bool IgnoreRequest { get; set; }
         public RavenBaseApiController Controller { get; set; }
 		public CounterStorage Counters { get; set; }
+		public TimeSeriesStorage TimeSeries { get; set; }
 	}
 }

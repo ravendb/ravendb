@@ -1,8 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
-import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resources/resource");
-import counterStorage = require("models/counter/counterStorage");
 
 class disableResourceToggleCommand extends commandBase {
     private oneDatabasePath = "/admin/databases/";
@@ -11,6 +8,8 @@ class disableResourceToggleCommand extends commandBase {
     private multipleFileSystemsPath = "/admin/fs/batch-toggle-disable";
     private oneCounterStoragePath = "/admin/cs/";
     private multipleCounterStoragesPath = "/admin/cs/batch-toggle-disable";
+    private oneTimeSeriesPath = "/admin/ts/";
+    private multipleTimeSeriesPath = "/admin/ts/batch-toggle-disable";
 
     /**
     * @param resources - The array of resources to toggle
@@ -42,7 +41,8 @@ class disableResourceToggleCommand extends commandBase {
         };
 
         var disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
-            (resource.type == TenantType.FileSystem) ? this.oneFileSystemPath : this.oneCounterStoragePath;
+            resource.type === TenantType.FileSystem ? this.oneFileSystemPath :
+            resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;
         var url = disableOneResourcePath + resource.name + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null, null, { dataType: undefined });
 
@@ -57,7 +57,8 @@ class disableResourceToggleCommand extends commandBase {
 
         var dbToToggle = this.resources.filter(r => r.type === TenantType.Database);
         var fsToToggle = this.resources.filter(r => r.type === TenantType.FileSystem);
-        var cntToToggle = this.resources.filter(r => r.type === TenantType.CounterStorage);
+        var csToToggle = this.resources.filter(r => r.type === TenantType.CounterStorage);
+        var tsToToggle = this.resources.filter(r => r.type === TenantType.TimeSeries);
 
         var toggleTasks:Array<JQueryPromise<resource[]>> = [];
 
@@ -69,8 +70,12 @@ class disableResourceToggleCommand extends commandBase {
             toggleTasks.push(this.toggleTask(fsToToggle, this.multipleFileSystemsPath));
         }
 
-        if (cntToToggle.length > 0) {
-            toggleTasks.push(this.toggleTask(cntToToggle, this.multipleCounterStoragesPath));
+        if (csToToggle.length > 0) {
+            toggleTasks.push(this.toggleTask(csToToggle, this.multipleCounterStoragesPath));
+        }
+
+        if (tsToToggle.length > 0) {
+            toggleTasks.push(this.toggleTask(tsToToggle, this.multipleTimeSeriesPath));
         }
 
         var mergedPromise = $.Deferred();

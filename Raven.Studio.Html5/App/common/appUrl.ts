@@ -1,6 +1,7 @@
 import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
+import timeSeries = require("models/timeSeries/timeSeries");
 import resource = require("models/resources/resource");
 import router = require("plugins/router");
 import collection = require("models/database/documents/collection");
@@ -23,6 +24,7 @@ class appUrl {
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
+    private static currentTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
     
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
@@ -115,12 +117,17 @@ class appUrl {
 
         filesystemVersioning: ko.computed(() => appUrl.forFilesystemVersioning(appUrl.currentFilesystem())),
 
-        couterStorages: ko.computed(() => appUrl.forCounterStorages()),
+        counterStorages: ko.computed(() => appUrl.forCounterStorages()),
         counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(null, appUrl.currentCounterStorage())),
         counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
         counterStorageTasks: ko.computed(() => appUrl.forCounterStorageTasks(appUrl.currentCounterStorage())),
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
+
+        timeSeries: ko.computed(() => appUrl.forTimeSeries()),
+        timeSeriesSeries: ko.computed(() => appUrl.forTimeSeriesSeries(null, appUrl.currentTimeSeries())),
+        timeSeriesStats: ko.computed(() => appUrl.forTimeSeriesStats(appUrl.currentTimeSeries())),
+        timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries()))
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -167,6 +174,26 @@ class appUrl {
     static forCounterStorageConfiguration(counterStorage: counterStorage) {
         var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
         return "#counterstorages/configuration?" + counterStroragePart;
+    }
+
+    static forTimeSeriesSeries(name: string, ts: timeSeries) {
+        var part = name ? "name=" + encodeURIComponent(name) : "";
+        var counterStoragePart = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#counterstorages/counters?" + part + counterStoragePart;
+    }
+
+    static forTimeSeriesStats(ts: timeSeries) {
+        var part = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/stats?" + part;
+    }
+
+    static forTimeSeriesConfiguration(ts: timeSeries) {
+        var part = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/configuration?" + part;
+    }
+
+    static getEncodedTimeSeriesPart(ts: timeSeries): string {
+        return ts ? "&timeseries=" + encodeURIComponent(ts.name) : "";
     }
 
     static forUpgrade(db: database) {
@@ -266,6 +293,10 @@ class appUrl {
 
     static forCounterStorages(): string {
         return "#counterstorages";
+    }
+
+    static forTimeSeries(): string {
+        return "#timeseries";
     }
 
     /**
@@ -590,11 +621,12 @@ class appUrl {
     static forResourceQuery(res: resource): string {
         if (res && res instanceof database && !res.isSystem) {
             return appUrl.baseUrl + "/databases/" + res.name;
-        }
-        else if (res && res instanceof filesystem) {
+        } else if (res && res instanceof filesystem) {
             return appUrl.baseUrl + "/fs/" + res.name;
         } else if (res && res instanceof counterStorage) {
             return appUrl.baseUrl + "/cs/" + res.name;
+        } else if (res && res instanceof timeSeries) {
+            return appUrl.baseUrl + "/ts/" + res.name;
         }
 
         return this.baseUrl;
@@ -744,12 +776,16 @@ class appUrl {
     static getResource(): resource {
         var appFileSystem = appUrl.getFileSystem();
         var appCounterStorage = appUrl.getCounterStorage();
+        var appTimeSeries = appUrl.getTimeSeries();
 
         if (!!appFileSystem) {
             return appFileSystem;
         }
         else if (!!appCounterStorage) {
             return appCounterStorage;
+        }
+        else if (!!appTimeSeries) {
+            return appTimeSeries;
         }
         else {
             return appUrl.getDatabase();
@@ -844,6 +880,33 @@ class appUrl {
             return null;
         }
     }
+ 
+    /**
+    * Gets the time series from the current web browser address. Returns null if no time series name was found.
+    */
+    static getTimeSeries(): timeSeries {
+
+        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
+
+        var timeSeriesIndicator = "timeseries=";
+        var hash = window.location.hash;
+        var tsIndex = hash.indexOf(timeSeriesIndicator);
+        if (tsIndex >= 0) {
+            // A database is specified in the address.
+            var tsSegmentEnd = hash.indexOf("&", tsIndex);
+            if (tsSegmentEnd === -1) {
+                tsSegmentEnd = hash.length;
+            }
+
+            var timeSeriesName = hash.substring(tsIndex + timeSeriesIndicator.length, tsSegmentEnd);
+            var unescapedTimeSeriesName = decodeURIComponent(timeSeriesName);
+            var ts = new timeSeries(unescapedTimeSeriesName);
+            return ts;
+        } else {
+            // No time series is specified in the URL.
+            return null;
+        }
+    }
 
     /**
     * Gets the server URL.
@@ -880,10 +943,16 @@ class appUrl {
                     currentResourceName = fsInUrl;
                     currentResourceType = filesystem.type;
                 } else {
-                    var cntInUrl = routerInstruction.queryParams[counterStorage.type];
-                    if (cntInUrl) {
-                        currentResourceName = cntInUrl;
+                    var csInUrl = routerInstruction.queryParams[counterStorage.type];
+                    if (csInUrl) {
+                        currentResourceName = csInUrl;
                         currentResourceType = counterStorage.type;
+                    } else {
+                        var tsInUrl = routerInstruction.queryParams[timeSeries.type];
+                        if (tsInUrl) {
+                            currentResourceName = tsInUrl;
+                            currentResourceType = timeSeries.type;
+                        }
                     }
                 }
             }
@@ -918,6 +987,10 @@ class appUrl {
     }
 
     static forCurrentCounterStorage(): computedAppUrls {
+        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs and Cs.
+    }
+
+    static forCurrentTimeSeries(): computedAppUrls {
         return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs and Cs.
     }
 

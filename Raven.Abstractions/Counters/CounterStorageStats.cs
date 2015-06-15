@@ -54,8 +54,6 @@ namespace Raven.Abstractions.Counters
         public Dictionary<string, HistogramData> ReplicationBatchSizeHistogram { get; set; }
 
         public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
-
-	    public MeterData ClientRuqeusts { get; set; }
     }
 
     public class CounterStorageReplicationStats

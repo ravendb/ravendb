@@ -259,6 +259,7 @@ interface licenseStatusDto {
         maxParallelism: string;
         ravenfs: string;
         counterStorage: string;
+        timeSeries: string;
     }
 }
 
@@ -809,6 +810,7 @@ interface statusDebugChangesDto {
     DocumentStore: statusDebugChangesDocumentStoreDto;
     FileSystem: statusDebugChangesFileSystemDto;
     CounterStorage: statusDebugChangesCounterStorageDto;
+    TimeSeries: statusDebugChangesTimeSeriesDto;
     WatchAllDocuments: boolean;
     WatchAllIndexes: boolean;
     WatchConfig: boolean;
@@ -874,6 +876,13 @@ interface statusDebugChangesFileSystemDto {
 }
 
 interface statusDebugChangesCounterStorageDto {
+    WatchedChanges: Array<string>;
+    WatchedLocalChanges: Array<string>;
+    WatchedReplicationChanges: Array<string>;
+    WatchedBulkOperationsChanges: Array<string>;
+}
+
+interface statusDebugChangesTimeSeriesDto {
     WatchedChanges: Array<string>;
     WatchedLocalChanges: Array<string>;
     WatchedReplicationChanges: Array<string>;
@@ -1026,7 +1035,8 @@ interface collectionStats {
 enum TenantType {
     Database = 0,
     FileSystem = 1,
-    CounterStorage = 2
+    CounterStorage = 2,
+    TimeSeries = 3
 }
 
 interface filterSettingDto {
@@ -1041,6 +1051,11 @@ interface resourceStyleMap {
 }
 
 interface counterStorageDto {
+    Name: string;
+    Path?: string;
+}
+
+interface timeSeriesDto {
     Name: string;
     Path?: string;
 }
@@ -1116,6 +1131,9 @@ interface fileSystemDto extends tenantDto {
 }
 
 interface counterStorageDto extends tenantDto {
+}
+
+interface timeSeriesDto extends tenantDto {
 }
 
 interface customFunctionsDto {
