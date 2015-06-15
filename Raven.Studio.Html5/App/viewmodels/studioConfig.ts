@@ -19,9 +19,9 @@ class studioConfig extends viewModelBase {
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8", "#000000"),
-        new environmentColor("Development", "#FFE6E6", "#000000"),
-        new environmentColor("QA", "#CCFFCC", "#000000"),
-        new environmentColor("Production", "#C2BCFF", "#000000")
+        new environmentColor("Development", "#80FF80", "#000000"),
+        new environmentColor("Staging", "#F5824D", "#000000"),
+        new environmentColor("Production", "#FF8585", "#000000")
     ];
     selectedColor = ko.observable<environmentColor>();
 

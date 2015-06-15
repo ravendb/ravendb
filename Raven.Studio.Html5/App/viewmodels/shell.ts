@@ -61,6 +61,11 @@ class shell extends viewModelBase {
      
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8", "#000000"));
     selectedColor = shell.selectedEnvironmentColorStatic;
+
+    selectedEnviromentText = ko.computed(() => {
+        return this.selectedColor().name + " Enviroment";
+    });
+    canShowEnviromentText = ko.computed(() => this.selectedColor().name != "Default");
     
 
     renewOAuthTokenTimeoutId: number;
