@@ -19,9 +19,9 @@ using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.Tests.Subscriptions
 {
-	public class RavenDB_2627 : RavenTest
+	public class SubscriptionsBasic : RavenTest
 	{
 		private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(20);
 
