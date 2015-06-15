@@ -13,29 +13,17 @@ namespace Voron.Trees
 
 		[FieldOffset(9)]
 		public ushort Lower;
+        
+	    [FieldOffset(9)] public ushort FixedSize_ValueSize;
 
 		[FieldOffset(11)]
 		public ushort Upper;
+
+	    [FieldOffset(11)] public ushort FixedSize_NumberOfEntries;
+
 
 		[FieldOffset(13)]
 		public int OverflowSize;
 	}
 
-	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public struct FixedSizePageHeader
-	{
-		[FieldOffset(0)]
-		public long PageNumber;
-
-		[FieldOffset(8)]
-		public PageFlags Flags;
-
-		[FieldOffset(9)]
-		public byte ValueSize;
-
-		[FieldOffset(10)]
-		public ushort NumberOfEntries;
-
-		// we have 5 bytes left over for more
-	}
 }
