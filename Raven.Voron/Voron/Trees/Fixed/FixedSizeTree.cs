@@ -49,12 +49,18 @@ namespace Voron.Trees.Fixed
 													header->ValueSize + " for " + _treeName);
 		}
 
-		public long[] Debug(byte* p, int entries)
+	    public long[] Debug(Page p)
+	    {
+	        return Debug(p.Base + Constants.PageHeaderSize, p.FixedSize_NumberOfEntries,
+	            p.IsLeaf ? _entrySize : BranchEntrySize);
+	    }
+
+		public long[] Debug(byte* p, int entries, int size)
 		{
 			var a = new long[entries];
 			for (int i = 0; i < entries; i++)
 			{
-				a[i] = *((long*)(p + (_entrySize * i)));
+				a[i] = *((long*)(p + (size * i)));
 			}
 			return a;
 		}
@@ -135,6 +141,8 @@ namespace Voron.Trees.Fixed
 			{
 				_cursor.Push(page);
 				BinarySearch(page, key, BranchEntrySize);
+                if (page.LastMatch < 0 && page.LastSearchPosition > 0)
+			        page.LastSearchPosition--;
 				var childPageNumber = PageValueFor(page.Base + Constants.PageHeaderSize, page.LastSearchPosition, BranchEntrySize);
 				page = _tx.GetReadOnlyPage(childPageNumber);
 			}
@@ -197,12 +205,13 @@ namespace Voron.Trees.Fixed
 		{
 			var rightPage = _tx.AllocatePage(1, PageFlags.Leaf | PageFlags.FixedSize);
 			rightPage.FixedSize_ValueSize = _valSize;
-			rightPage.FixedSize_NumberOfEntries = 1;
 			splitPageNumber = rightPage.PageNumber;
 			// if we are at the end, just create a new one
 			if (page.LastSearchPosition == page.FixedSize_NumberOfEntries)
 			{
-				splitKey = key;
+                rightPage.FixedSize_NumberOfEntries = 1;
+                splitKey = key;
+			    *((long*) (rightPage.Base + Constants.PageHeaderSize)) = key;
 			}
 			else // need to actually split it, we'll move 1/4 of the entries to the right hand side
 			{
@@ -440,9 +449,9 @@ namespace Voron.Trees.Fixed
 			parentPage = _tx.ModifyPage(parentPageNumber, _parent, parentPage);
 			parentPage.FixedSize_NumberOfEntries--;
 			// branch pages must have at least 2 entries, so this is safe to do
-			StdLib.memmove(parentPage.Base + Constants.PageHeaderSize + (parentPage.LastSearchPosition*_entrySize),
-				parentPage.Base + Constants.PageHeaderSize + ((parentPage.LastSearchPosition + 1)*_entrySize),
-				_entrySize*(parentPage.FixedSize_NumberOfEntries - parentPage.LastSearchPosition));
+			StdLib.memmove(parentPage.Base + Constants.PageHeaderSize + (parentPage.LastSearchPosition*BranchEntrySize),
+                parentPage.Base + Constants.PageHeaderSize + ((parentPage.LastSearchPosition + 1) * BranchEntrySize),
+                BranchEntrySize * (parentPage.FixedSize_NumberOfEntries - parentPage.LastSearchPosition));
 			
 			// it has only one entry, we can delete it and switch with the last child item
 			if (parentPage.FixedSize_NumberOfEntries > 1) 

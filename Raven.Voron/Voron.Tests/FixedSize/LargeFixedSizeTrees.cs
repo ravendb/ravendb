@@ -17,7 +17,8 @@ namespace Voron.Tests.FixedSize
         [Theory]
 		[InlineData(8)]
         [InlineData(16)]
-		[InlineData(1024 * 256)]
+        [InlineData(128)]
+        [InlineData(1024 * 256)]
         public void CanAdd_ALot_ForPageSplits(int count)
         {
 	        var bytes = new byte[48];
@@ -52,9 +53,10 @@ namespace Voron.Tests.FixedSize
         }
 
 		[Theory]
-		[InlineData(8)]
-		[InlineData(16)]
-		[InlineData(1024 * 256)]
+        [InlineData(8)]
+        [InlineData(16)]
+		[InlineData(128)]
+        [InlineData(1024*256)]
 		public void CanRemove_ALot_ForPageSplits(int count)
 		{
 			var bytes = new byte[48];
