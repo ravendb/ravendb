@@ -20,13 +20,13 @@ namespace Raven.Tests.Issues
 		private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(20);
 
 		[Fact]
-		public void FirstKeepsOpen_ShouldBeDefaultStrategy()
+		public void OpenIfFree_ShouldBeDefaultStrategy()
 		{
-			Assert.Equal(SubscriptionOpeningStrategy.FirstKeepsOpen, new SubscriptionConnectionOptions().Strategy);
+			Assert.Equal(SubscriptionOpeningStrategy.OpenIfFree, new SubscriptionConnectionOptions().Strategy);
 		}
 
 		[Fact]
-		public void ShouldRejectWhen_FirstKeepsOpen_StrategyIsUsed()
+		public void ShouldRejectWhen_OpenIfFree_StrategyIsUsed()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -36,13 +36,13 @@ namespace Raven.Tests.Issues
 
 				Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
 				{
-					Strategy = SubscriptionOpeningStrategy.FirstKeepsOpen
+					Strategy = SubscriptionOpeningStrategy.OpenIfFree
 				}));
 			}
 		}
 
 		[Fact]
-		public void ShouldReplaceActiveClientWhen_LastTakesOver_StrategyIsUsed()
+		public void ShouldReplaceActiveClientWhen_TakeOver_StrategyIsUsed()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -57,7 +57,7 @@ namespace Raven.Tests.Issues
 				{
 					subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 					{
-						Strategy = SubscriptionOpeningStrategy.LastTakesOver
+						Strategy = SubscriptionOpeningStrategy.TakeOver
 					});
 
 					store.Changes().WaitForAllPendingSubscriptions();
@@ -96,11 +96,11 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ShouldReplaceActiveClientWhen_Forced_StrategyIsUsed()
+		public void ShouldReplaceActiveClientWhen_Force_StrategyIsUsed()
 		{
 			using (var store = NewDocumentStore())
 			{
-				foreach (var strategyToReplace in new []{SubscriptionOpeningStrategy.FirstKeepsOpen, SubscriptionOpeningStrategy.LastTakesOver})
+				foreach (var strategyToReplace in new []{SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver})
 				{
 					var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 					var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
@@ -114,7 +114,7 @@ namespace Raven.Tests.Issues
 
 					var forcedSubscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 					{
-						Strategy = SubscriptionOpeningStrategy.Forced
+						Strategy = SubscriptionOpeningStrategy.Force
 					});
 
 					store.Changes().WaitForAllPendingSubscriptions();
@@ -143,7 +143,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void FirstKeepsOpen_And_LastTakesOver_StrategiesCannotDropClientWith_Forced_Strategy()
+		public void OpenIfFree_And_TakeOver_StrategiesCannotDropClientWith_Force_Strategy()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -151,10 +151,10 @@ namespace Raven.Tests.Issues
 
 				var forcedSubscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 				{
-					Strategy = SubscriptionOpeningStrategy.Forced
+					Strategy = SubscriptionOpeningStrategy.Force
 				});
 
-				foreach (var strategy in new[] { SubscriptionOpeningStrategy.FirstKeepsOpen, SubscriptionOpeningStrategy.LastTakesOver })
+				foreach (var strategy in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver })
 				{
 					Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 					{
@@ -165,7 +165,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void Forced_StrategyUsageCanTakeOverAnotherClientWith_Forced_Strategy()
+		public void Force_StrategyUsageCanTakeOverAnotherClientWith_Force_Strategy()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -180,7 +180,7 @@ namespace Raven.Tests.Issues
 				{
 					subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 					{
-						Strategy = SubscriptionOpeningStrategy.Forced
+						Strategy = SubscriptionOpeningStrategy.Force
 					});
 
 					store.Changes().WaitForAllPendingSubscriptions();

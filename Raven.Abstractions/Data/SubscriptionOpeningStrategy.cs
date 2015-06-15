@@ -11,19 +11,19 @@ namespace Raven.Abstractions.Data
 	public enum SubscriptionOpeningStrategy
 	{
 		/// <summary>
-		/// The first client will open a subscription and keeps it open as long as it sends 'client-alive' notifications.
-		/// Other attempts to open the subscription will end up with SubscriptionInUseException.
+		/// The client will successfully open a subscription only if there isn't any another client currently connected. 
+		/// Otherwise it will end up with SubscriptionInUseException.
 		/// </summary>
-		FirstKeepsOpen,
+		OpenIfFree,
 		/// <summary>
 		/// The connecting client will successfully open a subscription even if there is another active subscription's consumer.
 		/// The new client will take over the subscription while the existing one gets rejected. 
 		/// The subscription will be always processed by the last connected client.
 		/// </summary>
-		LastTakesOver,
+		TakeOver,
 		/// <summary>
 		/// The client opening a subscription with Forced strategy set, will always get it and keeps it open until another client with the same strategy gets connected.
 		/// </summary>
-		Forced
+		Force
 	}
 }
