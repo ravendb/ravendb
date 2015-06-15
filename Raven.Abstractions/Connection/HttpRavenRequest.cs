@@ -63,7 +63,7 @@ namespace Raven.Abstractions.Connection
 			{
 				request.AllowWriteStreamBuffering = allowWriteStreamBuffering.Value;
 				if (allowWriteStreamBuffering.Value == false)
-					request.SendChunked = true;
+					request.SendChunked = !EnvironmentUtils.RunningOnPosix;
 			}
 
 			configureRequest(connectionStringOptions, request);

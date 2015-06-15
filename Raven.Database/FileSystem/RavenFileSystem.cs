@@ -29,6 +29,7 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
 using Raven.Abstractions.Threading;
+using Raven.Abstractions;
 
 namespace Raven.Database.FileSystem
 {
@@ -122,6 +123,8 @@ namespace Raven.Database.FileSystem
         {
             get
             {
+                if (EnvironmentUtils.RunningOnPosix)
+                    return false;
                 try
                 {
                     var rdcLibrary = new RdcLibrary();
