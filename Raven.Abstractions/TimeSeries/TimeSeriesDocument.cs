@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.TimeSeries
 {
-    public class TimeSeriesStorageDocument
+    public class TimeSeriesDocument
     {
         /// <summary>
         /// The ID can be either the time series storage name ("TimeSeriesName") or the full document name ("Raven/TimeSereis/TimeSereisName").
@@ -16,7 +16,7 @@ namespace Raven.Abstractions.TimeSeries
 
         public bool Disabled { get; set; }
 
-		public TimeSeriesStorageDocument()
+		public TimeSeriesDocument()
         {
             Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 			SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

@@ -482,6 +482,7 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
     <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
+    <Compile Include="TimeSeries\Controllers\AdminTimeSeriesController.cs" />
     <Compile Include="TimeSeries\Controllers\CountersStatsController.cs" />
     <Compile Include="TimeSeries\Controllers\RavenTimeSeriesApiController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesController.cs" />

@@ -474,7 +474,7 @@ class resources extends viewModelBase {
                 }
 
                 settings["Raven/TimeSeries/DataDir"] = (!this.isEmptyStringOrWhitespace(timeSeriesPath)) ? timeSeriesPath : "~\\TimeSeries\\" + timeSeriesName;
-                this.showCsCreationAdvancedStepsIfNecessary(timeSeriesName, bundles, settings);
+                this.showTsCreationAdvancedStepsIfNecessary(timeSeriesName, bundles, settings);
             });
 
         app.showDialog(createResourceViewModel);

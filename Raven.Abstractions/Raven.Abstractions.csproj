@@ -422,7 +422,7 @@
     <Compile Include="Spatial\WktSanitizer.cs" />
     <Compile Include="SystemTime.cs" />
     <Compile Include="TimeSeries\TimeSeriesStats.cs" />
-    <Compile Include="TimeSeries\TimeSeriesStorageDocument.cs" />
+    <Compile Include="TimeSeries\TimeSeriesDocument.cs" />
     <Compile Include="Util\AssemblyHelper.cs" />
     <Compile Include="Util\AsyncEnumeratorBridge.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />

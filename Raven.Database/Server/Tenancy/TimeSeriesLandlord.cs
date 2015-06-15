@@ -71,7 +71,7 @@ namespace Raven.Database.Server.Tenancy
 
 		protected InMemoryRavenConfiguration CreateConfiguration(
 						string tenantId,
-						TimeSeriesStorageDocument document,
+						TimeSeriesDocument document,
 						string folderPropName,
 						InMemoryRavenConfiguration parentConfiguration)
 		{
@@ -112,7 +112,7 @@ namespace Raven.Database.Server.Tenancy
 			return config;
 		}
 
-		private TimeSeriesStorageDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledTimeSeriesStorage = false)
+		private TimeSeriesDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledTimeSeriesStorage = false)
 		{
 			JsonDocument jsonDocument;
 			using (systemDatabase.DisableAllTriggersForCurrentThread())
@@ -122,7 +122,7 @@ namespace Raven.Database.Server.Tenancy
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
 				return null;
 
-			var document = jsonDocument.DataAsJson.JsonDeserialization<TimeSeriesStorageDocument>();
+			var document = jsonDocument.DataAsJson.JsonDeserialization<TimeSeriesDocument>();
 			if (document.Settings.Keys.Contains(Constants.TimeSeries.DataDirectory) == false)
 				throw new InvalidOperationException("Could not find " + Constants.TimeSeries.DataDirectory);
 
@@ -183,7 +183,7 @@ namespace Raven.Database.Server.Tenancy
 			return true;
 		}
 
-		public void Unprotect(TimeSeriesStorageDocument configDocument)
+		public void Unprotect(TimeSeriesDocument configDocument)
 		{
 			if (configDocument.SecuredSettings == null)
 			{
@@ -210,7 +210,7 @@ namespace Raven.Database.Server.Tenancy
 			}
 		}
 
-		public void Protect(TimeSeriesStorageDocument configDocument)
+		public void Protect(TimeSeriesDocument configDocument)
 		{
 			if (configDocument.SecuredSettings == null)
 			{

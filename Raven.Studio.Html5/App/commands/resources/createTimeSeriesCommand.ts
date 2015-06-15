@@ -1,9 +1,9 @@
-﻿import commandBase = require("commands/commandBase");
+﻿ import commandBase = require("commands/commandBase");
 
 class createTimeSeriesCommand extends commandBase {
 
     /**
-    * @param filesystemName The file system name we are creating.
+    * @param timeSeriesName The file system name we are creating.
     */
     constructor(private timeSeriesName: string, private settings: {}) {
         super();
@@ -18,14 +18,14 @@ class createTimeSeriesCommand extends commandBase {
 
         this.reportInfo("Creating Time Series '" + this.timeSeriesName + "'");
 
-        var filesystemDoc = {
+        var timeSeriesDoc = {
             "Settings": this.settings,
             "Disabled": false
         };
 
         var url = "/admin/ts/" + this.timeSeriesName;
         
-        var createTask = this.put(url, JSON.stringify(filesystemDoc), null, { dataType: undefined });
+        var createTask = this.put(url, JSON.stringify(timeSeriesDoc), null, { dataType: undefined });
         createTask.done(() => this.reportSuccess(this.timeSeriesName + " created"));
         createTask.fail((response: JQueryXHR) => this.reportError("Failed to create time series", response.responseText, response.statusText));
 
