@@ -105,8 +105,11 @@ namespace Voron.Impl
 				_scratchPagerStates = scratchPagerStates;
 
 				_state = env.State.Clone(this);
-				_journal.GetSnapshots().ForEach(AddJournalSnapshot);
-				return;
+
+                foreach (var snapshot in _journal.GetSnapshots())
+                    AddJournalSnapshot(snapshot);
+
+                return;
 			}
 
 			_state = env.State.Clone(this);
@@ -586,7 +589,7 @@ namespace Voron.Impl
 		}
 
 		private void AddJournalSnapshot(JournalSnapshot snapshot)
-		{
+		{            
 			if (JournalSnapshots.Any(x => x.Number == snapshot.Number))
 				throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.Number +
 													" to the transaction, because it already exists in a snapshot collection");
