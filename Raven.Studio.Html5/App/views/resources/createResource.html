@@ -20,6 +20,9 @@
             <div id="csContainer" class="row" style="min-height: 478px;" data-bind="with: createCounterStoragePart, visible: resourceType() == counterStorageType">
                 <div data-bind="compose: 'resources/createCounterStorage.html'"></div>
             </div>
+            <div id="tsContainer" class="row" style="min-height: 478px;" data-bind="with: createTimeSeriesPart, visible: resourceType() == timeSeriesType">
+                <div data-bind="compose: 'resources/createTimeSeries.html'"></div>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>

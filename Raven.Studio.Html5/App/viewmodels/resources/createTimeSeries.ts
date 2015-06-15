@@ -23,7 +23,7 @@ class createTimeSeries extends createResourceBase {
     }
 
     nextOrCreate() {
-        // For now we're just creating the filesystem.
+        // For now we're just creating the time series.
         this.creationTaskStarted = true;
         dialog.close(this.parent);
         this.creationTask.resolve(this.resourceName(), this.getActiveBundles(), this.resourcePath());

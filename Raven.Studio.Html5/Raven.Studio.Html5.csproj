@@ -181,6 +181,7 @@
     <Content Include="App\views\database\indexes\cancelSideBySizeConfirm.html" />
     <Content Include="App\views\manage\globalConfig\globalConfigSqlReplication.html" />
     <Content Include="App\views\filesystem\tasks\exportFilesystem.html" />
+    <Content Include="App\views\resources\createTimeSeries.html" />
     <Content Include="App\views\resources\createResource.html" />
     <Content Include="App\views\filesystem\files\fileRenameDialog.html" />
     <Content Include="App\views\filesystem\tasks\importFilesystem.html" />
