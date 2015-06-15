@@ -128,7 +128,8 @@ namespace Voron
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
             State = new StorageEnvironmentState(null, null, nextPageNumber)
             {
-                NextPageNumber = nextPageNumber
+                NextPageNumber = nextPageNumber,
+                Options = Options
             };
 
             _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
@@ -147,7 +148,10 @@ namespace Voron
         private void CreateNewDatabase()
         {
             const int initialNextPageNumber = 0;
-            State = new StorageEnvironmentState(null, null, initialNextPageNumber);
+            State = new StorageEnvironmentState(null, null, initialNextPageNumber)
+            {
+                Options = Options
+            };
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
                 var root = Tree.Create(tx, false);

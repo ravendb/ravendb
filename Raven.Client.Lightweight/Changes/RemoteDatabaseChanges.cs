@@ -155,23 +155,9 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
         {
-            var counter = Counters.GetOrAdd("indexes/" + indexName, s =>
-            {
-                var indexSubscriptionTask = AfterConnection(() =>
-                {
-                    watchedIndexes.TryAdd(indexName);
-                    return Send("watch-index", indexName);
-                });
+	        var counter = GetOrAddConnectionState("indexes/" + indexName, "watch-index", "unwatch-index", () => watchedIndexes.TryAdd(indexName), 
+													() => watchedIndexes.TryRemove(indexName), indexName);
 
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        watchedIndexes.TryRemove(indexName);
-                        Send("unwatch-index", indexName);
-                        Counters.Remove("indexes/" + indexName);
-                    },
-                    indexSubscriptionTask);
-            });
             counter.Inc();
             var taskedObservable = new TaskedObservable<IndexChangeNotification, DatabaseConnectionState>(
                 counter,
@@ -186,23 +172,7 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
         {
-            var counter = Counters.GetOrAdd("docs/" + docId, s =>
-            {
-                var documentSubscriptionTask = AfterConnection(() =>
-                {
-                    watchedDocs.TryAdd(docId);
-                    return Send("watch-doc", docId);
-                });
-
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        watchedDocs.TryRemove(docId);
-                        Send("unwatch-doc", docId);
-                        Counters.Remove("docs/" + docId);
-                    },
-                    documentSubscriptionTask);
-            });
+	        var counter = GetOrAddConnectionState("docs/" + docId, "watch-doc", "unwatch-doc", () => watchedDocs.TryAdd(docId), () => watchedDocs.TryRemove(docId), docId);
 
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
@@ -216,22 +186,8 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForAllDocuments()
         {
-            var counter = Counters.GetOrAdd("all-docs", s =>
-            {
-                var documentSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllDocs = true;
-                    return Send("watch-docs", null);
-                });
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        watchAllDocs = false;
-                        Send("unwatch-docs", null);
-                        Counters.Remove("all-docs");
-                    },
-                    documentSubscriptionTask);
-            });
+	        var counter = GetOrAddConnectionState("all-docs", "watch-docs", "unwatch-docs", () => watchAllDocs = true, () => watchAllDocs = false, null);
+
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
                 notification => true);
@@ -244,23 +200,8 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<IndexChangeNotification> ForAllIndexes()
         {
-            var counter = Counters.GetOrAdd("all-indexes", s =>
-            {
-                var indexSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllIndexes = true;
-                    return Send("watch-indexes", null);
-                });
+	        var counter = GetOrAddConnectionState("all-indexes", "watch-indexes", "unwatch-indexes", () => watchAllIndexes = true, () => watchAllIndexes = false, null);
 
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        watchAllIndexes = false;
-                        Send("unwatch-indexes", null);
-                        Counters.Remove("all-indexes");
-                    },
-                    indexSubscriptionTask);
-            });
             var taskedObservable = new TaskedObservable<IndexChangeNotification, DatabaseConnectionState>(
                 counter,
                 notification => true);
@@ -273,23 +214,9 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<TransformerChangeNotification> ForAllTransformers()
         {
-            var counter = Counters.GetOrAdd("all-transformers", s =>
-            {
-                var indexSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllTransformers = true;
-                    return Send("watch-transformers", null);
-                });
+	        var counter = GetOrAddConnectionState("all-transformers", "watch-transformers", "unwatch-transformers", () => watchAllTransformers = true, 
+													() => watchAllTransformers = false, null);
 
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        watchAllTransformers = false;
-                        Send("unwatch-transformers", null);
-                        Counters.Remove("all-transformers");
-                    },
-                    indexSubscriptionTask);
-            });
             var taskedObservable = new TaskedObservable<TransformerChangeNotification, DatabaseConnectionState>(
                 counter,
                 notification => true);
@@ -302,23 +229,9 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
         {
-            var counter = Counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
-            {
-                var documentSubscriptionTask = AfterConnection(() =>
-                {
-                    watchedPrefixes.TryAdd(docIdPrefix);
-                    return Send("watch-prefix", docIdPrefix);
-                });
+	        var counter = GetOrAddConnectionState("prefixes/" + docIdPrefix, "watch-prefix", "unwatch-prefix", () => watchedPrefixes.TryAdd(docIdPrefix), 
+													() => watchedPrefixes.TryRemove(docIdPrefix), docIdPrefix);
 
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        watchedPrefixes.TryRemove(docIdPrefix);
-                        Send("unwatch-prefix", docIdPrefix);
-                        Counters.Remove("prefixes/" + docIdPrefix);
-                    },
-                    documentSubscriptionTask);
-            });
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
                 notification => notification.Id != null && notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
@@ -333,23 +246,8 @@ namespace Raven.Client.Changes
         {
             if (collectionName == null) throw new ArgumentNullException("collectionName");
 
-            var counter = Counters.GetOrAdd("collections/" + collectionName, s =>
-            {
-                var documentSubscriptionTask = AfterConnection(() =>
-                {
-                    watchedCollections.TryAdd(collectionName);
-                    return Send("watch-collection", collectionName);
-                });
-
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        watchedCollections.TryRemove(collectionName);
-                        Send("unwatch-collection", collectionName);
-                        Counters.Remove("collections/" + collectionName);
-                    },
-                    documentSubscriptionTask);
-            });
+	        var counter = GetOrAddConnectionState("collections/" + collectionName, "watch-collection", "unwatch-collection", () => watchedCollections.TryAdd(collectionName), 
+													() => watchedCollections.TryRemove(collectionName), collectionName);
 
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
@@ -372,23 +270,8 @@ namespace Raven.Client.Changes
             if (typeName == null) throw new ArgumentNullException("typeName");
             var encodedTypeName = Uri.EscapeDataString(typeName);
 
-            var counter = Counters.GetOrAdd("types/" + typeName, s =>
-            {
-                var documentSubscriptionTask = AfterConnection(() =>
-                {
-                    watchedTypes.TryAdd(typeName);
-                    return Send("watch-type", encodedTypeName);
-                });
-
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        watchedTypes.TryRemove(typeName);
-                        Send("unwatch-type", encodedTypeName);
-                        Counters.Remove("types/" + typeName);
-                    },
-                    documentSubscriptionTask);
-            });
+	        var counter = GetOrAddConnectionState("types/" + typeName, "watch-type", "unwatch-type", () => watchedTypes.TryAdd(typeName), 
+													() => watchedTypes.TryRemove(typeName), encodedTypeName);
 
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
@@ -417,23 +300,8 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
         {
-            var counter = Counters.GetOrAdd("all-replication-conflicts", s =>
-            {
-                var indexSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllIndexes = true;
-                    return Send("watch-replication-conflicts", null);
-                });
+	        var counter = GetOrAddConnectionState("all-replication-conflicts", "watch-replication-conflicts", "unwatch-replication-conflicts", () => watchAllIndexes = true, () => watchAllIndexes = false, null);
 
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        watchAllIndexes = false;
-                        Send("unwatch-replication-conflicts", null);
-                        Counters.Remove("all-replication-conflicts");
-                    },
-                    indexSubscriptionTask);
-            });
             var taskedObservable = new TaskedObservable<ReplicationConflictNotification, DatabaseConnectionState>(
                 counter,
                 notification => true);
@@ -465,6 +333,21 @@ namespace Raven.Client.Changes
                         Send("unwatch-bulk-operation", id);
                         Counters.Remove("bulk-operations/" + operationId);
                     },
+					existingConnectionState =>
+					{
+						DatabaseConnectionState _;
+						if (Counters.TryGetValue("bulk-operations/" + id, out _))
+							return _.Task;
+
+						Counters.GetOrAdd("bulk-operations/" + id, x => existingConnectionState);
+
+						return AfterConnection(() =>
+						{
+							if (watchedBulkInserts.Contains(id)) // might have been removed in the meantime
+								return Send("watch-bulk-operation", id);
+							return Task;
+						});
+					},
                     documentSubscriptionTask);
             });
 
@@ -476,6 +359,43 @@ namespace Raven.Client.Changes
 
             return taskedObservable;
         }
+
+		private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, Action afterConnection, Action beforeDisconnect, string value)
+		{
+			var counter = Counters.GetOrAdd(name, s =>
+			{
+				var documentSubscriptionTask = AfterConnection(() =>
+				{
+					afterConnection();
+					return Send(watchCommand, value);
+				});
+
+				return new DatabaseConnectionState(
+					() =>
+					{
+						beforeDisconnect();
+						Send(unwatchCommand, value);
+						Counters.Remove(name);
+					},
+					existingConnectionState =>
+					{
+						DatabaseConnectionState _;
+						if (Counters.TryGetValue(name, out _))
+							return _.Task;
+
+						Counters.GetOrAdd(name, x => existingConnectionState);
+
+						return AfterConnection(() =>
+						{
+							afterConnection();
+							return Send(watchCommand, value);
+						});
+					},
+					documentSubscriptionTask);
+			});
+
+			return counter;
+		}
 
         private Task AfterConnection(Func<Task> action)
         {

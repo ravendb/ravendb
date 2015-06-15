@@ -181,7 +181,7 @@ class shell extends viewModelBase {
 
         this.isActiveFileSystemDisabled = ko.computed(() => {
             var activeFs = this.activeFilesystem();
-            return !!activeFs ? activeFs.disabled() || !activeFs.isLicensed()  : false;
+            return !!activeFs ? activeFs.disabled() || !activeFs.isLicensed() : false;
         });
 
         this.isCounterStorageDisabled = ko.computed(() => {
@@ -249,8 +249,8 @@ class shell extends viewModelBase {
         var self = this;
 
         window.addEventListener("beforeunload", self.destroyChangesApi.bind(self));
-        
-        $(window).bind('storage', (e:any) => {
+
+        $(window).bind('storage', (e: any) => {
             if (e.originalEvent.key == eventSourceSettingStorage.localStorageName) {
                 if (!JSON.parse(e.originalEvent.newValue)) {
                     self.destroyChangesApi();
@@ -269,11 +269,9 @@ class shell extends viewModelBase {
                 var navigationLinksWidth = 50;
                 if (this.canShowDatabaseNavbar()) {
                     navigationLinksWidth += 804;
-                }
-                else if (this.canShowFileSystemNavbar()) {
+                } else if (this.canShowFileSystemNavbar()) {
                     navigationLinksWidth += 600;
-                }
-                else if (this.canShowCountersNavbar()) {
+                } else if (this.canShowCountersNavbar()) {
                     navigationLinksWidth += 600; //todo: calculate
                 }
 
@@ -319,7 +317,7 @@ class shell extends viewModelBase {
             if (!!val && val.config.route.split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
-        
+
         sys.error = (e) => {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);
@@ -378,8 +376,8 @@ class shell extends viewModelBase {
             this.currentConnectedResource = rs;
         }
 
-        if ((!rs.disabled() && rs.isLicensed()) && 
-            (isPreviousDifferentKind || shell.currentResourceChangesApi() == null)) {
+        if ((!rs.disabled() && rs.isLicensed()) &&
+        (isPreviousDifferentKind || shell.currentResourceChangesApi() == null)) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             var changes = new changesApi(rs, 5000);
             changes.connectToChangesApiTask.done(() => {
@@ -477,7 +475,7 @@ class shell extends viewModelBase {
                     var resourceObservableArray: any = (connectedResource instanceof database) ? shell.databases : (connectedResource instanceof fileSystem) ? shell.fileSystems : shell.counterStorages;
                     var activeResourceObservable: any = (connectedResource instanceof database) ? this.activeDatabase : (connectedResource instanceof fileSystem) ? this.activeFilesystem : this.activeCounterStorage;
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
-            });
+                });
         }
     }
 
@@ -514,8 +512,7 @@ class shell extends viewModelBase {
         if (!!activeResource && actualResourceObservableArray.contains(activeResource) == false) {
             if (actualResourceObservableArray.length > 0) {
                 resourceObservableArray().first().activate();
-            }
-            else { //if (actualResourceObservableArray.length == 0)
+            } else { //if (actualResourceObservableArray.length == 0)
                 shell.disconnectFromResourceChangesApi();
                 activeResourceObservable(null);
             }
@@ -539,7 +536,7 @@ class shell extends viewModelBase {
 
         if (!!e.Id && (e.Type === "Delete" || e.Type === "Put")) {
             var receivedResourceName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
-            
+
             if (e.Type === "Delete") {
                 var resourceToDelete = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
                 if (!!resourceToDelete) {
@@ -595,11 +592,9 @@ class shell extends viewModelBase {
 
         if (resourceType == logTenantType.Database) {
             newResource = new database(resourceName, true, dto.Disabled);
-        }
-        else if (resourceType == logTenantType.Filesystem) {
+        } else if (resourceType == logTenantType.Filesystem) {
             newResource = new fileSystem(resourceName, true, dto.Disabled);
-        }
-        else if (resourceType == logTenantType.CounterStorage) {
+        } else if (resourceType == logTenantType.CounterStorage) {
             newResource = new counterStorage(resourceName, true, dto.Disabled);
         }
 
@@ -613,7 +608,7 @@ class shell extends viewModelBase {
         var isMainPage = locationHash == appUrl.forResources();
         if (isMainPage == false) {
             var updatedUrl = appUrl.forCurrentPage(rs);
-            this.navigate(updatedUrl);  
+            this.navigate(updatedUrl);
         }
     }
 
@@ -630,7 +625,7 @@ class shell extends viewModelBase {
         this.navigate(editDocUrl);
     }
 
-    loadDatabases(): JQueryPromise<any>{
+    loadDatabases(): JQueryPromise<any> {
         var deferred = $.Deferred();
 
         this.databasesLoadedTask = new getDatabasesCommand()
@@ -650,7 +645,7 @@ class shell extends viewModelBase {
         return deferred;
     }
 
-    loadFileSystems(): JQueryPromise<any>{
+    loadFileSystems(): JQueryPromise<any> {
         var deferred = $.Deferred();
 
         new getFileSystemsCommand()
@@ -663,7 +658,7 @@ class shell extends viewModelBase {
 
     loadCounterStorages(): JQueryPromise<any> {
         return $.Deferred().resolve();
-        
+
         //TODO: uncomment this for counter storages
         /*var deferred = $.Deferred();
 
@@ -699,11 +694,9 @@ class shell extends viewModelBase {
                 var locationHash = window.location.hash;
                 if (appUrl.getFileSystem()) { //filesystems section
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems, appUrl.forResources);
-                }
-                else if (appUrl.getCounterStorage()) { //counter storages section
+                } else if (appUrl.getCounterStorage()) { //counter storages section
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages, appUrl.forResources);
-                }
-                else if ((locationHash.indexOf(appUrl.forAdminSettings()) == -1)) { //databases section
+                } else if ((locationHash.indexOf(appUrl.forAdminSettings()) == -1)) { //databases section
                     this.activateResource(appUrl.getDatabase(), shell.databases, appUrl.forResources);
                 }
             });
@@ -726,11 +719,9 @@ class shell extends viewModelBase {
 
         if (!!this.activeDatabase()) {
             shell.databases().length == 1 ? this.activeDatabase(null) : this.activeDatabase().activate();
-        }
-        else if (!!this.activeFilesystem()) {
+        } else if (!!this.activeFilesystem()) {
             this.activeFilesystem().activate();
-        }
-        else if (!!this.activeCounterStorage()) {
+        } else if (!!this.activeCounterStorage()) {
             this.activeCounterStorage().activate();
         }
 
@@ -753,12 +744,12 @@ class shell extends viewModelBase {
     private handleRavenConnectionFailure(result) {
         NProgress.done();
 
-		if (result.status === 401) {
-			// Unauthorized might be caused by invalid credentials. 
-			// Remove them from both local storage and oauth context.
-			apiKeyLocalStorage.clean();
-			oauthContext.clean();
-		}
+        if (result.status === 401) {
+            // Unauthorized might be caused by invalid credentials. 
+            // Remove them from both local storage and oauth context.
+            apiKeyLocalStorage.clean();
+            oauthContext.clean();
+        }
 
         sys.log("Unable to connect to Raven.", result);
         var tryAgain = 'Try again';
@@ -861,8 +852,7 @@ class shell extends viewModelBase {
     getCurrentActiveFeatureName() {
         if (this.appUrls.isAreaActive('admin')()) {
             return 'Manage Your Server';
-        }
-        else {
+        } else {
             return 'Resources';
         }
     }
@@ -901,7 +891,7 @@ class shell extends viewModelBase {
                             }
                         });
                 }
-        });
+            });
     }
 
     fetchClientBuildVersion() {
@@ -985,6 +975,19 @@ class shell extends viewModelBase {
     onLogOut() {
         window.location.hash = this.appUrls.hasApiKey();
         window.location.reload();
+    }
+
+    static getResoucresNames(): string[]
+    {
+        var arr = shell.databases().map(db => db.name)
+            .concat(shell.fileSystems().map(fs => fs.name)).sort();
+        var result: string[] = [];
+        for (var i = 0; i < arr.length; i++) {
+            if ((arr[i].localeCompare(arr[i+1]))!==0) {
+                result.push(arr[i]);
+            }
+        }
+        return result;
     }
 }
 
