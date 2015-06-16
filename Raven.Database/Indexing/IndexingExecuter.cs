@@ -577,7 +577,7 @@ namespace Raven.Database.Indexing
 					}
 					Log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, indexingBatchForIndex.Index.PublicName, ids);
 				}
-				context.CancellationToken.ThrowIfCancellationRequested();
+
 				token.ThrowIfCancellationRequested();
 				
 				performanceStats = context.IndexStorage.Index(indexingBatchForIndex.IndexId, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue, token);
