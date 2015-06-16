@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
@@ -86,6 +87,7 @@ namespace Raven.Database.Counters
 			{
 				storageEnvironment.CreateTree(tx, TreeNames.ServersLastEtag);
 				storageEnvironment.CreateTree(tx, TreeNames.Counters);
+				storageEnvironment.CreateTree(tx, TreeNames.Tombstones);
 				storageEnvironment.CreateTree(tx, TreeNames.CountersGroups);
 				storageEnvironment.CreateTree(tx, TreeNames.CountersToEtag);
 				storageEnvironment.CreateTree(tx, TreeNames.GroupAndCounterName);
@@ -526,13 +528,14 @@ namespace Raven.Database.Counters
 			private readonly CounterStorage parent;
 			private readonly Transaction transaction;
 			private readonly Reader reader;
-			private readonly Tree counters, serversLastEtag, etagsToCounters, countersToEtag, countersGroups, groupAndCounterName, metadata;
+			private readonly Tree counters, tombstones, serversLastEtag, etagsToCounters, countersToEtag, countersGroups, groupAndCounterName, metadata;
 
 			private static class Buffer
 			{
 				public readonly static byte[] Etag = new byte[sizeof(long)];
 				public readonly static byte[] CounterValue = new byte[sizeof(long)];
 				public static byte[] CounterName = new byte[0];
+				public static long c = DateTime.MaxValue.Ticks;
 			}
 
 			public Writer(CounterStorage parent, Transaction transaction)
@@ -545,6 +548,7 @@ namespace Raven.Database.Counters
 				reader = new Reader(parent, transaction);
 				serversLastEtag = transaction.State.GetTree(transaction, TreeNames.ServersLastEtag);
 				counters = transaction.State.GetTree(transaction, TreeNames.Counters);
+				tombstones = transaction.State.GetTree(transaction, TreeNames.Tombstones);
 				countersGroups = transaction.State.GetTree(transaction, TreeNames.CountersGroups);
 				countersToEtag = transaction.State.GetTree(transaction, TreeNames.CountersToEtag);
 				etagsToCounters = transaction.State.GetTree(transaction, TreeNames.EtagsToCounters);
@@ -570,7 +574,7 @@ namespace Raven.Database.Counters
 			public CounterChangeAction Store(string groupName, string counterName, long delta)
 			{
 				var sign = delta >= 0 ? ValueSign.Positive : ValueSign.Negative;
-				var doesCounterExist = Store(groupName, counterName, parent.ServerId, sign, counterKey =>
+				var doesCounterExist = Store(groupName, counterName, parent.ServerId, sign, (counterKey, groupAndCounterNameSlice) =>
 				{
 					if (sign == ValueSign.Negative)
 						delta = -delta;
@@ -586,11 +590,16 @@ namespace Raven.Database.Counters
 			public CounterChangeAction Store(CounterValue counterValue)
 			{
 				var sign = counterValue.IsPositive() ? ValueSign.Positive : ValueSign.Negative;
-				var doesCounterExist = Store(counterValue.Group(), counterValue.CounterName(), counterValue.ServerId(), sign, counterKey =>
+				var serverId = counterValue.ServerId();
+				var doesCounterExist = Store(counterValue.Group(), counterValue.CounterName(), serverId, sign, (counterKey, groupAndCounterNameSlice) =>
 				{
 					EndianBitConverter.Little.CopyBytes(counterValue.Value, Buffer.CounterValue, 0);
-					var slice = new Slice(Buffer.CounterValue);
-					counters.Add(counterKey, slice);				});
+					var counterValueSlice = new Slice(Buffer.CounterValue);
+					counters.Add(counterKey, counterValueSlice);
+
+					if (serverId == parent.TombstoneId)
+						tombstones.Add(counterValueSlice, groupAndCounterNameSlice);
+				});
 
 				if (doesCounterExist)
 					return counterValue.Value >= 0 ? CounterChangeAction.Increment : CounterChangeAction.Decrement;
@@ -599,7 +608,7 @@ namespace Raven.Database.Counters
 			}
 
 			// full counter name: foo/bar/server-id/+
-			private bool Store(string groupName, string counterName, Guid serverId, string sign, Action<Slice> storeAction)
+			private bool Store(string groupName, string counterName, Guid serverId, string sign, Action<Slice, Slice> storeAction)
 			{
 				var groupSize = Encoding.UTF8.GetByteCount(groupName);
 				var counterNameSize = Encoding.UTF8.GetByteCount(counterName);
@@ -615,15 +624,33 @@ namespace Raven.Database.Counters
 					sign,
 					fullCounterNameSize);
 
-				var groupWithCounterName = sliceWriter.CreateSlice(groupSize + counterNameSize + (2*sizeof (byte)));
-				var doesCounterExist = CreateCounterGroupIfNeeded(groupWithCounterName, sliceWriter, groupSize);
-
-				groupAndCounterName.Add(groupWithCounterName, new byte[0]);
+				var groupAndCounterNameSlice = sliceWriter.CreateSlice(groupSize + counterNameSize + (2*sizeof (byte)));
+				var doesCounterExist = DoesCounterExist(groupAndCounterNameSlice);
+				var groupKey = sliceWriter.CreateSlice(groupSize);
+				if (serverId == parent.TombstoneId)
+				{
+					//if it's a tombstone, we can remove it from the groups and groupAndCounterName trees
+					var readResult = countersGroups.Read(groupKey);
+					if (readResult != null)
+					{
+						if (readResult.Reader.ReadLittleEndianInt64() == 1)
+							countersGroups.Delete(groupKey);
+						else
+							countersGroups.Increment(groupKey, -1);	
+					}
+					groupAndCounterName.Delete(groupAndCounterNameSlice);
+				}
+				else if (doesCounterExist == false)
+				{
+					//TODO: update tombstone
+					//if the counter doesn't exist we need to update the appropriate trees
+					countersGroups.Increment(groupKey, 1);
+					groupAndCounterName.Add(groupAndCounterNameSlice, new byte[0]);
+				}
 
 				//save counter full name and its value into the counters tree
 				var counterKey = sliceWriter.CreateSlice();
-
-				storeAction(counterKey);
+				storeAction(counterKey, groupAndCounterNameSlice);
 
 				RemoveOldEtagIfNeeded(counterKey);
 				UpdateCounterMetadata(counterKey);
@@ -651,22 +678,11 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			private bool CreateCounterGroupIfNeeded(Slice groupWithCounterName, SliceWriter sliceWriter, int groupSize)
-			{
-				var doesCounterExist = DoesCounterExist(groupWithCounterName);
-				if (doesCounterExist == false)
-				{
-					//it's a new counter in the group
-					var groupKey = sliceWriter.CreateSlice(groupSize);
-					countersGroups.Increment(groupKey, 1);
-				}
-				return doesCounterExist;
-			}
-
 			private static SliceWriter GetFullCounterNameAsSliceWriter(string groupName, string counterName, Guid serverId, string sign, int fullCounterNameSize)
 			{
 				EnsureBufferSize(ref Buffer.CounterName, fullCounterNameSize);
-				var sliceWriter = new SliceWriter(Buffer.CounterName, EndianBitConverter.Little);				
+				//TODO: move to Big Endian
+				var sliceWriter = new SliceWriter(Buffer.CounterName);				
 				sliceWriter.Write(groupName);
 				
 				sliceWriter.Write(Constants.Counter.Separator);
@@ -682,32 +698,41 @@ namespace Raven.Database.Counters
 			{
 				var counterValuesByPrefix = GetCounterValuesByPrefix(groupName, counterName);
 				if (counterValuesByPrefix == null)
-					return CounterChangeAction.None;
+					throw new InvalidOperationException(string.Format("Counter doesn't exist. Group: {0}, Counter Name: {1}", groupName, counterName));
 
 				var difference = CalculateOverallTotal(counterValuesByPrefix);
-				if (difference != 0)
-				{
-					difference = -difference;
-					var counterChangeAction = Store(groupName, counterName, difference);
-					return counterChangeAction;
-				}
-				return CounterChangeAction.None;
+				if (difference == 0)
+					return CounterChangeAction.None;
+
+				difference = -difference;
+				var counterChangeAction = Store(groupName, counterName, difference);
+				return counterChangeAction;
 			}
 
 			public void Delete(string groupName, string counterName)
 			{
-				//TODO: implement
-				Store(groupName, counterName, parent.TombstoneId, ValueSign.Positive, counterKey =>
+				var groupAndCounterNameSlice = MergeGroupAndName(groupName, counterName);
+				var counterExists = DoesCounterExist(groupAndCounterNameSlice);
+				if (counterExists == false)
+					throw new InvalidOperationException(string.Format("Counter doesn't exist. Group: {0}, Counter Name: {1}", groupName, counterName));
+
+				/*Store(groupName, counterName, parent.TombstoneId, ValueSign.Positive, counterKey =>
 				{
-					EndianBitConverter.Little.CopyBytes(DateTime.Now.Ticks, Buffer.CounterValue, 0);
+					EndianBitConverter.Big.CopyBytes(DateTime.Now.Ticks, Buffer.CounterValue, 0);
 					var slice = new Slice(Buffer.CounterValue);
 					counters.Add(counterKey, slice);
-				});
+
+					tombstones.Add(slice, groupAndCounterNameSlice);
+				});*/
+				//TODO: tombstones cleanup, older than two weeks
+
 			}
 
 			public void RecordLastEtagFor(Guid serverId, long lastEtag)
 			{
-				serversLastEtag.Add(serverId.ToString(), EndianBitConverter.Little.GetBytes(lastEtag));
+				EndianBitConverter.Big.CopyBytes(lastEtag, Buffer.Etag, 0);
+				var slice = new Slice(Buffer.Etag);
+				serversLastEtag.Add(serverId.ToString(), slice);
 			}
 
 			public void UpdateReplications(CountersReplicationDocument newReplicationDocument)
@@ -771,7 +796,7 @@ namespace Raven.Database.Counters
 		{
 			var groupSize = Encoding.UTF8.GetByteCount(group);
 			var counterNameSize = Encoding.UTF8.GetByteCount(counterName);
-			var sliceWriter = new SliceWriter(groupSize + counterNameSize + (sizeof(byte) * 2), EndianBitConverter.Little);
+			var sliceWriter = new SliceWriter(groupSize + counterNameSize + (sizeof(byte) * 2));
 			sliceWriter.Write(group);
 			sliceWriter.Write(Constants.Counter.Separator);
 			sliceWriter.Write(counterName);
@@ -789,6 +814,7 @@ namespace Raven.Database.Counters
 		{
 			public const string ServersLastEtag = "servers->lastEtag";
 			public const string Counters = "counters";
+			public const string Tombstones = "tombstones";
 			public const string CountersGroups = "groups";
 			public const string CountersToEtag = "counters->etags";
 			public const string EtagsToCounters = "etags->counters";

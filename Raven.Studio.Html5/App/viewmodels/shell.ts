@@ -133,7 +133,7 @@ class shell extends viewModelBase {
 	isInCluster = ko.computed(() => shell.clusterMode());
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-    localLicenseStatus: KnockoutObservable<licenseStatusDto> = license.licenseStatus;
+    localLicenseStatus = license.licenseStatus;
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();

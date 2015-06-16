@@ -145,7 +145,7 @@ namespace Raven.Database.Counters.Controllers
 			if (configuration == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Counter storage wasn't found" };
 
-			var docKey = Constants.FileSystem.Prefix + id;
+			var docKey = Constants.Counter.Prefix + id;
 			Database.Documents.Delete(docKey, null, null);
 
 			if (isHardDeleteNeeded && configuration.RunInMemory == false)

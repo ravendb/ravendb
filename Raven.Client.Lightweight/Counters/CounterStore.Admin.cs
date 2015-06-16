@@ -91,7 +91,7 @@ namespace Raven.Client.Counters
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/cs/counterStorageNames", parent.Url);
+				var requestUriString = String.Format("{0}/cs", parent.Url);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{

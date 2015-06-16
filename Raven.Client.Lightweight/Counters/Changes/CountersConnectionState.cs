@@ -5,39 +5,20 @@ using Raven.Client.Changes;
 
 namespace Raven.Client.Counters.Changes
 {
-    public class CountersConnectionState : IChangesConnectionState
+	public class CountersConnectionState : ConnectionStateBase
     {
-        private readonly Action onZero;
-        private readonly Task task;
-        private int value;
-        public Task Task
-        {
-            get { return task; }
-        }
+		private readonly Func<CountersConnectionState, Task> ensureConnection;
 
-		public CountersConnectionState(Action onZero, Task task)
-        {
-            value = 0;
-            this.onZero = onZero;
-            this.task = task;
-        }
+		public CountersConnectionState(Action onZero, Func<CountersConnectionState, Task> ensureConnection, Task task)
+			: base(onZero, task)
+		{
+			this.ensureConnection = ensureConnection;
+		}
 
-        public void Inc()
-        {
-            lock (this)
-            {
-                value++;
-            }
-        }
-
-        public void Dec()
-        {
-            lock (this)
-            {
-                if (--value == 0)
-                    onZero();
-            }
-        }
+		protected override Task EnsureConnection()
+		{
+			return ensureConnection(this);
+		}
 
 		public event Action<ChangeNotification> OnChangeNotification = (x) => { };
 		public void Send(ChangeNotification changeNotification)
@@ -69,15 +50,6 @@ namespace Raven.Client.Counters.Changes
 			var onBulkOperationNotification = OnBulkOperationNotification;
 			if (onBulkOperationNotification != null)
 				onBulkOperationNotification(bulkOperationNotification);
-        }
-
-        public event Action<Exception> OnError;
-
-        public void Error(Exception e)
-        {
-            var onOnError = OnError;
-            if (onOnError != null)
-                onOnError(e);
         }
     }
 }
