@@ -4,10 +4,18 @@ namespace Voron.Impl.Scratch
 {
 	public sealed class PageFromScratchBuffer
 	{
-		public int ScratchFileNumber;
-		public long PositionInScratchBuffer;
-		public long Size;
-		public int NumberOfPages;
+		public readonly int ScratchFileNumber;
+		public readonly long PositionInScratchBuffer;
+		public readonly long Size;
+		public readonly int NumberOfPages;
+
+        public PageFromScratchBuffer( int scratchFileNumber, long positionInScratchBuffer, long size, int numberOfPages )
+        {
+            this.ScratchFileNumber = scratchFileNumber;
+            this.PositionInScratchBuffer = positionInScratchBuffer;
+            this.Size = size;
+            this.NumberOfPages = numberOfPages;
+        }
 
         public static readonly EqualityComparer Comparer = new EqualityComparer();
 
