@@ -433,6 +433,7 @@
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />
+    <Compile Include="Util\Streams\BufferSharedPools.cs" />
     <Compile Include="Util\Streams\IBufferPool.cs" />
     <Compile Include="Util\Streams\NoBufferPool.cs" />
     <Compile Include="Util\Streams\Substream.cs" />
