@@ -123,23 +123,23 @@ namespace Raven.Database.Counters.Controllers
 				return GetMessageWithString("No counter storages to toggle!", HttpStatusCode.BadRequest);
 			}
 
-			var successfullyToggledFileSystems = new List<string>();
+			var successfullyToggledCounters = new List<string>();
 
 			counterStoragesToToggle.ForEach(id =>
 			{
 				var message = ToggleCounterStorageDisabled(id, isSettingDisabled);
 				if (message.ErrorCode == HttpStatusCode.OK)
 				{
-					successfullyToggledFileSystems.Add(id);
+					successfullyToggledCounters.Add(id);
 				}
 			});
 
-			return GetMessageWithObject(successfullyToggledFileSystems.ToArray());
+			return GetMessageWithObject(successfullyToggledCounters.ToArray());
 		}
 
 		private MessageWithStatusCode DeleteCounterStorage(string id, bool isHardDeleteNeeded)
 		{
-			//get configuration even if the file system is disabled
+			//get configuration even if the counters is disabled
 			var configuration = CountersLandlord.CreateTenantConfiguration(id, true);
 
 			if (configuration == null)

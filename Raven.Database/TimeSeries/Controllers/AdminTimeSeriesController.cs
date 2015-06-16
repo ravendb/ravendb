@@ -123,29 +123,29 @@ namespace Raven.Database.TimeSeries.Controllers
 				return GetMessageWithString("No time series to toggle!", HttpStatusCode.BadRequest);
 			}
 
-			var successfullyToggledFileSystems = new List<string>();
+			var successfullyToggledTimeSeries = new List<string>();
 
 			timeSeriesToToggle.ForEach(id =>
 			{
 				var message = ToggleTimeSeriesDisabled(id, isSettingDisabled);
 				if (message.ErrorCode == HttpStatusCode.OK)
 				{
-					successfullyToggledFileSystems.Add(id);
+					successfullyToggledTimeSeries.Add(id);
 				}
 			});
 
-			return GetMessageWithObject(successfullyToggledFileSystems.ToArray());
+			return GetMessageWithObject(successfullyToggledTimeSeries.ToArray());
 		}
 
 		private MessageWithStatusCode DeleteTimeSeries(string id, bool isHardDeleteNeeded)
 		{
-			//get configuration even if the file system is disabled
+			//get configuration even if the time series is disabled
 			var configuration = TimeSeriesLandlord.CreateTenantConfiguration(id, true);
 
 			if (configuration == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Time series wasn't found" };
 
-			var docKey = Constants.FileSystem.Prefix + id;
+			var docKey = Constants.TimeSeries.Prefix + id;
 			Database.Documents.Delete(docKey, null, null);
 
 			if (isHardDeleteNeeded && configuration.RunInMemory == false)
