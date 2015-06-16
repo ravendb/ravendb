@@ -195,3 +195,5 @@ Tools/Raven.Filesystem.CreateSample/packages/
 RavenDB.sln.ide/
 /Raven.Web/Raven/CompiledIndexCache
 _NCrunch_RavenDB/
+/Raven.Database/LuceneQueryParser.Language.analyzer.lst
+/Raven.Database/LuceneQueryParser.Language.grammar.lst
