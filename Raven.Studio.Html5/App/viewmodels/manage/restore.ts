@@ -117,7 +117,7 @@ class restore extends viewModelBase {
 
         new startDbRestoreCommand(this.dbRestoreOptions.defrag(), restoreDatabaseDto, self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions))
             .execute()
-            .always(() => shell.reloadDatabases(this.activeDatabase()));
+            .always(() => shell.reloadDatabases());
     }
 
     startFsRestore() {
@@ -134,7 +134,7 @@ class restore extends viewModelBase {
 
         new startFsRestoreCommand(this.fsRestoreOptions.defrag(), restoreFilesystemDto, self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions))
             .execute()
-            .always(() => shell.reloadFilesystems(this.activeFilesystem()));
+            .always(() => shell.reloadFileSystems());
     }
 }
 
