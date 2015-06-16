@@ -10,6 +10,8 @@ import customFunctions = require('models/customFunctions');
 import autoCompleterSupport = require('common/autoCompleterSupport');
 import messagePublisher = require("common/messagePublisher");
 
+import documents = require("viewmodels/documents");
+
 class selectColumns extends dialogViewModelBase {
 
     private nextTask = $.Deferred<customColumns>();
@@ -21,16 +23,18 @@ class selectColumns extends dialogViewModelBase {
     private autoCompleteResults = ko.observableArray<KnockoutObservable<string>>([]);
     private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
     private autoCompleterSupport: autoCompleterSupport;
-
+    private columnsNames = ko.observableArray<string>([]);
     maxTableHeight = ko.observable<number>();
     lineHeight: number = 51;
     isScrollNeeded: KnockoutComputed<boolean>;
 
-    constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context, private database: database) {
+    constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context, private database: database, names: string[]) {
         super();
         this.generateCompletionBase();
         this.regenerateBindingSubscriptions();
         this.monitorForNewRows();
+        this.columnsNames(names);
+        this.autoCompleteBase(names.map((name: string)=> ko.observable<string>(name)));
         this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults,true);
 
         this.maxTableHeight(Math.floor($(window).height() * 0.43));
@@ -53,6 +57,7 @@ class selectColumns extends dialogViewModelBase {
     }
 
     private generateCompletionBase() {
+
         this.autoCompleteBase([]);
         this.customColumns.columns().forEach((column: customColumnParams) => this.autoCompleteBase().push(column.binding));
 

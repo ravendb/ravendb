@@ -31,7 +31,6 @@ import generateClassCommand = require("commands/generateClassCommand");
 import showDataDialog = require("viewmodels/showDataDialog");
 
 
-
 class documents extends viewModelBase {
 
     displayName = "documents";
@@ -364,6 +363,7 @@ class documents extends viewModelBase {
 
             // Fetch column widths from virtual table
             var virtualTable = this.getDocumentsGrid();
+            var columnsNames = virtualTable.getColumnsNames();
             var vtColumns = virtualTable.columns();
             this.currentColumnsParams().columns().forEach((column: customColumnParams) => {
                 for (var i = 0; i < vtColumns.length; i++) {
@@ -374,11 +374,10 @@ class documents extends viewModelBase {
                 }
             });
 
-            var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
+            var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
             app.showDialog(selectColumnsViewModel);
             selectColumnsViewModel.onExit().done((cols) => {
                 this.currentColumnsParams(cols);
-
                 var pagedList = this.currentCollection().getDocuments();
                 this.currentCollectionPagedItems(pagedList);
             });
@@ -472,7 +471,7 @@ class documents extends viewModelBase {
         if (gridContents) {
             return ko.dataFor(gridContents);
         }
-
+        
         return null;
     }
 
