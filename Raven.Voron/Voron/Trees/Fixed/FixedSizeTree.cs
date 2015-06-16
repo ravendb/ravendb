@@ -51,7 +51,7 @@ namespace Voron.Trees.Fixed
 
 	    public long[] Debug(Page p)
 	    {
-	        return Debug(p.Base + Constants.PageHeaderSize, p.FixedSize_NumberOfEntries,
+	        return Debug(p.Base + p.FixedSize_StartPosition, p.FixedSize_NumberOfEntries,
 	            p.IsLeaf ? _entrySize : BranchEntrySize);
 	    }
 
@@ -98,7 +98,7 @@ namespace Voron.Trees.Fixed
 			{
 				if (val == null)
 					return;
-				val.CopyTo(page.Base + Constants.PageHeaderSize + (page.LastSearchPosition * _entrySize) + sizeof(long));
+                val.CopyTo(page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long));
 				return;
 			}
 			var headerToWrite = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
@@ -118,14 +118,14 @@ namespace Voron.Trees.Fixed
 			var entriesToMove = page.FixedSize_NumberOfEntries - page.LastSearchPosition;
 			if (entriesToMove > 0)
 			{
-				StdLib.memmove(page.Base + Constants.PageHeaderSize + ((page.LastSearchPosition + 1) * _entrySize),
-					page.Base + Constants.PageHeaderSize + (page.LastSearchPosition * _entrySize),
+                StdLib.memmove(page.Base + page.FixedSize_StartPosition + ((page.LastSearchPosition + 1) * _entrySize),
+                    page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize),
 					entriesToMove * _entrySize);
 			}
 			page.FixedSize_NumberOfEntries++;
-			*((long*)(page.Base + Constants.PageHeaderSize + (page.LastSearchPosition * _entrySize))) = key;
+            *((long*)(page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize))) = key;
 			if (val != null)
-				val.CopyTo((page.Base + Constants.PageHeaderSize + (page.LastSearchPosition * _entrySize) + sizeof(long)));
+                val.CopyTo((page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long)));
 		}
 
 		private Page FindPageFor(long key)
@@ -143,7 +143,7 @@ namespace Voron.Trees.Fixed
 				BinarySearch(page, key, BranchEntrySize);
                 if (page.LastMatch < 0 && page.LastSearchPosition > 0)
 			        page.LastSearchPosition--;
-				var childPageNumber = PageValueFor(page.Base + Constants.PageHeaderSize, page.LastSearchPosition, BranchEntrySize);
+                var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition, BranchEntrySize);
 				page = _tx.GetReadOnlyPage(childPageNumber);
 			}
 
@@ -173,12 +173,13 @@ namespace Voron.Trees.Fixed
 			{
 				var newRootPage = _tx.AllocatePage(1, PageFlags.Branch | PageFlags.FixedSize);
 				newRootPage.FixedSize_ValueSize = _valSize;
-
+			    newRootPage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
+                
 				var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
 				largePtr->RootPageNumber = newRootPage.PageNumber;
 
 				newRootPage.FixedSize_NumberOfEntries = 2;
-				var dataStart = (long*)(newRootPage.Base + Constants.PageHeaderSize);
+                var dataStart = (long*)(newRootPage.Base + newRootPage.FixedSize_StartPosition);
 				dataStart[0] = long.MinValue;
 				dataStart[1] = page.PageNumber;
 				dataStart[2] = splitKey;
@@ -189,7 +190,7 @@ namespace Voron.Trees.Fixed
 			parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
 
 			var entriesToMove = parentPage.FixedSize_NumberOfEntries - (parentPage.LastSearchPosition + 1);
-			var newEntryPos = parentPage.Base + Constants.PageHeaderSize + ((parentPage.LastSearchPosition + 1) * BranchEntrySize);
+            var newEntryPos = parentPage.Base + parentPage.FixedSize_StartPosition + ((parentPage.LastSearchPosition + 1) * BranchEntrySize);
 			if (entriesToMove > 0)
 			{
 				StdLib.memmove(newEntryPos + BranchEntrySize,
@@ -205,24 +206,25 @@ namespace Voron.Trees.Fixed
 		{
 			var rightPage = _tx.AllocatePage(1, PageFlags.Leaf | PageFlags.FixedSize);
 			rightPage.FixedSize_ValueSize = _valSize;
+		    rightPage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
 			splitPageNumber = rightPage.PageNumber;
 			// if we are at the end, just create a new one
 			if (page.LastSearchPosition == page.FixedSize_NumberOfEntries)
 			{
                 rightPage.FixedSize_NumberOfEntries = 1;
                 splitKey = key;
-			    *((long*) (rightPage.Base + Constants.PageHeaderSize)) = key;
+                *((long*)(rightPage.Base + rightPage.FixedSize_StartPosition)) = key;
 			}
 			else // need to actually split it, we'll move 1/4 of the entries to the right hand side
 			{
 				rightPage.FixedSize_NumberOfEntries = (ushort)(page.FixedSize_NumberOfEntries / 4);
 				page.FixedSize_NumberOfEntries -= rightPage.FixedSize_NumberOfEntries;
-				MemoryUtils.Copy(rightPage.Base + Constants.PageHeaderSize,
-					page.Base + Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries * _entrySize),
+                MemoryUtils.Copy(rightPage.Base + rightPage.FixedSize_StartPosition,
+                    page.Base + page.FixedSize_StartPosition + (page.FixedSize_NumberOfEntries * _entrySize),
 					rightPage.FixedSize_NumberOfEntries * _entrySize
 					);
 
-				splitKey = ((long*)(rightPage.Base + Constants.PageHeaderSize))[0];
+                splitKey = ((long*)(rightPage.Base + rightPage.FixedSize_StartPosition))[0];
 			}
 		}
 
@@ -269,7 +271,8 @@ namespace Voron.Trees.Fixed
 					allocatePage.PageNumber = allocatePage.PageNumber;
 					allocatePage.FixedSize_NumberOfEntries = newEntriesCount;
 					allocatePage.FixedSize_ValueSize = _valSize;
-					MemoryUtils.Copy(allocatePage.Base + Constants.PageHeaderSize, tmp.TempPagePointer,
+				    allocatePage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
+                    MemoryUtils.Copy(allocatePage.Base + allocatePage.FixedSize_StartPosition, tmp.TempPagePointer,
 						newSize);
 				}
 				else
@@ -304,7 +307,7 @@ namespace Voron.Trees.Fixed
 
 		private void BinarySearch(Page page, long val, int size)
 		{
-			page.LastSearchPosition = BinarySearch(page.Base + Constants.PageHeaderSize, page.FixedSize_NumberOfEntries, val, size);
+            page.LastSearchPosition = BinarySearch(page.Base + page.FixedSize_StartPosition, page.FixedSize_NumberOfEntries, val, size);
 			page.LastMatch = _lastMatch;
 		}
 
@@ -366,10 +369,10 @@ namespace Voron.Trees.Fixed
 						BinarySearch(page, key, BranchEntrySize);
 						if (page.LastMatch < 0 && page.LastSearchPosition > 0)
 							page.LastSearchPosition--;
-						var childPageNumber = PageValueFor(page.Base + Constants.PageHeaderSize, page.LastSearchPosition, BranchEntrySize);
+                        var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition, BranchEntrySize);
 						page = _tx.GetReadOnlyPage(childPageNumber);
 					}
-					dataStart = page.Base + Constants.PageHeaderSize;
+                    dataStart = page.Base + page.FixedSize_StartPosition;
 
 					BinarySearch(dataStart, page.FixedSize_NumberOfEntries, key, _entrySize);
 					return _lastMatch == 0;
@@ -419,11 +422,11 @@ namespace Voron.Trees.Fixed
 					_flags = FixedSizeTreeHeader.OptionFlags.Embedded;
 
 					MemoryUtils.Copy(ptr + sizeof (FixedSizeTreeHeader.Embedded),
-						page.Base + Constants.PageHeaderSize,
+                        page.Base + page.FixedSize_StartPosition,
 						(_entrySize*page.LastSearchPosition));
 
 					MemoryUtils.Copy(ptr + sizeof (FixedSizeTreeHeader.Embedded) + (_entrySize*page.LastSearchPosition),
-						page.Base + Constants.PageHeaderSize + (_entrySize * page.LastSearchPosition) + _entrySize,
+                        page.Base + page.FixedSize_StartPosition + (_entrySize * page.LastSearchPosition) + _entrySize,
 						(_entrySize*(page.FixedSize_NumberOfEntries - page.LastSearchPosition)));
 
 
@@ -434,8 +437,8 @@ namespace Voron.Trees.Fixed
 
 			if (page.FixedSize_NumberOfEntries > 0)
 			{
-				StdLib.memmove(page.Base + Constants.PageHeaderSize + (page.LastSearchPosition*_entrySize),
-					page.Base + Constants.PageHeaderSize + ((page.LastSearchPosition + 1)*_entrySize),
+                StdLib.memmove(page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize),
+                    page.Base + page.FixedSize_StartPosition + ((page.LastSearchPosition + 1) * _entrySize),
 					_entrySize*(page.FixedSize_NumberOfEntries - page.LastSearchPosition));
 				// deleted and we are done
 				return;
@@ -449,15 +452,15 @@ namespace Voron.Trees.Fixed
 			parentPage = _tx.ModifyPage(parentPageNumber, _parent, parentPage);
 			parentPage.FixedSize_NumberOfEntries--;
 			// branch pages must have at least 2 entries, so this is safe to do
-			StdLib.memmove(parentPage.Base + Constants.PageHeaderSize + (parentPage.LastSearchPosition*BranchEntrySize),
-                parentPage.Base + Constants.PageHeaderSize + ((parentPage.LastSearchPosition + 1) * BranchEntrySize),
+            StdLib.memmove(parentPage.Base + parentPage.FixedSize_StartPosition + (parentPage.LastSearchPosition * BranchEntrySize),
+                parentPage.Base + parentPage.FixedSize_StartPosition + ((parentPage.LastSearchPosition + 1) * BranchEntrySize),
                 BranchEntrySize * (parentPage.FixedSize_NumberOfEntries - parentPage.LastSearchPosition));
 			
 			// it has only one entry, we can delete it and switch with the last child item
 			if (parentPage.FixedSize_NumberOfEntries > 1) 
 				return;
 
-			var lastChildNumber = *(long*) (parentPage.Base + Constants.PageHeaderSize + sizeof (long));
+            var lastChildNumber = *(long*)(parentPage.Base + parentPage.FixedSize_StartPosition + sizeof(long));
 			var childPage = _tx.GetReadOnlyPage(lastChildNumber);
 			MemoryUtils.Copy(parentPage.Base, childPage.Base, parentPage.PageSize);
 			parentPage.PageNumber = parentPageNumber;// overwritten in copy
@@ -517,10 +520,10 @@ namespace Voron.Trees.Fixed
 						BinarySearch(page, key, BranchEntrySize);
 						if (page.LastMatch < 0 && page.LastSearchPosition > 0)
 							page.LastSearchPosition--;
-						var childPageNumber = PageValueFor(page.Base + Constants.PageHeaderSize, page.LastSearchPosition, BranchEntrySize);
+                        var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition, BranchEntrySize);
 						page = _tx.GetReadOnlyPage(childPageNumber);
 					}
-					dataStart = page.Base + Constants.PageHeaderSize;
+                    dataStart = page.Base + page.FixedSize_StartPosition;
 
 					BinarySearch(page, key, _entrySize);
 					if (_lastMatch != 0)
