@@ -255,14 +255,14 @@
         <!-- /ko -->
 
         <!-- ko if: $data.isTimeSeries() -->
-        <div class="resource cs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
+        <div class="resource ts" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
             <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
                 <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: $root.isGlobalAdmin()" />
             </div>
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getTimeSeriesUrl($data) }"><i data-bind="attr: { class: iconName }"></i> cs/<span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getTimeSeriesUrl($data) }"><i data-bind="attr: { class: iconName }"></i> ts/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
                     <a class="resource-name"><i data-bind="attr: { class: iconName }"></i> fs/<span data-bind="text: name"></span></a>
