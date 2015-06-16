@@ -178,8 +178,8 @@ class appUrl {
 
     static forTimeSeriesSeries(name: string, ts: timeSeries) {
         var part = name ? "name=" + encodeURIComponent(name) : "";
-        var counterStoragePart = appUrl.getEncodedTimeSeriesPart(ts);
-        return "#counterstorages/counters?" + part + counterStoragePart;
+        var timeSeriesPart = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/series?" + part + timeSeriesPart;
     }
 
     static forTimeSeriesStats(ts: timeSeries) {

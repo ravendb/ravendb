@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions;
-using Raven.Abstractions.Counters;
 using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
@@ -619,7 +618,7 @@ namespace Raven.Database.TimeSeries
 					Url = TimeSeriesUrl,
 					TimeSeriesCount = reader.GetTimeSeriesCount(),
 					TimeSeriesSize = SizeHelper.Humane(TimeSeriesEnvironment.Stats().UsedDataFileSizeInBytes),
-					// RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondCounter.CurrentValue, 3),
+					// RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondTimeSeries.CurrentValue, 3),
 				};
 				return stats;
 			}

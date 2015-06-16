@@ -1,0 +1,405 @@
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.TimeSeries;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
+using Raven.Client.Connection;
+using Raven.Client.TimeSeries.Actions;
+using Raven.Client.Extensions;
+using Raven.Imports.Newtonsoft.Json.Bson;
+using Raven.Json.Linq;
+
+namespace Raven.Client.TimeSeries.Operations
+{
+	public sealed class TimeSeriesBatchOperation : TimeSeriesOperationsBase, IDisposable
+	{
+		private readonly TimeSeriesBatchOptions _defaultOptions;
+		private readonly AsyncManualResetEvent streamingStarted;
+		private readonly TaskCompletionSource<bool> batchOperationTcs;
+		private readonly CancellationTokenSource cts;
+		private readonly BlockingCollection<TimeSeriesChange> changesQueue;
+		private readonly string singleAuthUrl;
+
+		private bool disposed;
+		private Task batchOperationTask;
+		private Timer closeAndReopenStreamingTimer;
+		private MemoryStream tempStream;
+		private long serverOperationId;
+
+		public Guid OperationId { get; private set; }
+
+		public TimeSeriesBatchOptions DefaultOptions { get { return _defaultOptions; } }		
+
+		internal TimeSeriesBatchOperation(TimeSeriesStore parent, string timeSeriesName, TimeSeriesBatchOptions batchOptions = null)
+			: base(parent, timeSeriesName)
+		{
+			if(batchOptions != null && batchOptions.BatchSizeLimit < 1)
+				throw new ArgumentException("batchOptions.BatchSizeLimit cannot be negative", "batchOptions");
+
+			_defaultOptions = batchOptions ?? new TimeSeriesBatchOptions(); //defaults do exist
+			streamingStarted = new AsyncManualResetEvent();
+			batchOperationTcs = new TaskCompletionSource<bool>();
+			cts = new CancellationTokenSource();
+			changesQueue = new BlockingCollection<TimeSeriesChange>(_defaultOptions.BatchSizeLimit);			
+			singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", ServerUrl, timeSeriesName);
+
+			OperationId = Guid.NewGuid();
+			disposed = false;
+			batchOperationTask = StartBatchOperation();
+			if (streamingStarted.WaitAsync().Wait(DefaultOptions.StreamingInitializeTimeout) == false ||
+			    batchOperationTask.IsFaulted)
+			{
+				throw new InvalidOperationException("Failed to start streaming batch.", batchOperationTask.Exception);
+			}
+			closeAndReopenStreamingTimer = CreateNewTimer();
+		}
+
+		private async Task StartBatchOperation()
+		{
+			if (tempStream != null)
+				tempStream.Dispose();
+
+			tempStream = new MemoryStream();
+			streamingStarted.Reset();
+			using (ConnectionOptions.Expect100Continue(ServerUrl))
+			{
+				var authToken = await GetToken().ConfigureAwait(false);
+				try
+				{
+					authToken = await ValidateThatWeCanUseAuthenticateTokens(authToken).ConfigureAwait(false);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
+				}
+
+				var requestUriString = string.Format("{0}/batch?operationId={1}", TimeSeriesUrl, OperationId);
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post, true, true)
+										.AddOperationHeader("Single-Use-Auth-Token", authToken))
+				{
+					var token = cts.Token;
+
+					var response = await request.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
+					{
+						streamingStarted.Set();
+						try
+						{
+							ContinuouslyWriteQueueToServer(stream, token);
+							source.TrySetResult(null);
+						}
+						catch (Exception e)
+						{
+							source.TrySetException(e);
+							batchOperationTcs.SetException(e);
+						}
+					}, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
+
+					await response.AssertNotFailingResponse();
+
+					using (response)
+					{
+						using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+						{
+							var result = RavenJToken.TryLoad(stream); 
+							if (result == null) //precaution - should prevent NRE in case the crap hits the fan
+								throw new ApplicationException("Invalid response from server... maybe its not json?");
+
+							serverOperationId = result.Value<long>("OperationId");
+						}
+					}
+
+					await IsOperationCompleted(serverOperationId).ConfigureAwait(false);
+					batchOperationTcs.SetResult(true);
+				}
+			}
+		}
+
+		private void CloseAndReopenStreaming(object state)
+		{
+			cts.Cancel();
+			if (batchOperationTask.Status != TaskStatus.Faulted &&
+				batchOperationTask.Status != TaskStatus.Canceled)
+				batchOperationTask.Wait();
+
+			batchOperationTask = StartBatchOperation();
+
+			closeAndReopenStreamingTimer.Dispose();
+			closeAndReopenStreamingTimer = CreateNewTimer();
+		}
+
+		private Timer CreateNewTimer()
+		{
+			return new Timer(CloseAndReopenStreaming, null,
+				TimeSpan.FromMilliseconds(_defaultOptions.ConnectionReopenTimingInMilliseconds),
+				TimeSpan.FromMilliseconds(-1)); //fire timer only once -> then rescedule - handles ConnectionReopenTimingInMilliseconds changing use-case
+		}
+
+		private async Task<bool> IsOperationCompleted(long operationId)
+		{
+			ErrorResponseException errorResponse;
+
+			try
+			{
+				var status = await GetOperationStatusAsync(operationId);
+
+				if (status == null)
+					return true;
+
+				if (status.Value<bool>("Completed"))
+					return true;
+
+				return false;
+			}
+			catch (ErrorResponseException e)
+			{
+				if (e.StatusCode != HttpStatusCode.Conflict)
+					throw;
+
+				errorResponse = e;
+			}
+
+			var errorMessage = RavenJObject.Load(new RavenJsonTextReader(new StringReader(errorResponse.ResponseString)));
+
+			throw new ConcurrencyException(errorMessage.Value<string>("Error"));
+		}
+
+		private async Task<RavenJToken> GetOperationStatusAsync(long id)
+		{
+			var url = ServerUrl + "/operation/status?id=" + id;
+			using (var request = CreateHttpJsonRequest(url, HttpMethods.Get))
+			{
+				try
+				{
+					return await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				}
+				catch (ErrorResponseException e)
+				{
+					if (e.StatusCode == HttpStatusCode.NotFound) return null;
+					throw;
+				}
+			}
+		}
+
+		private void ContinuouslyWriteQueueToServer(Stream stream, CancellationToken token)
+		{
+			try
+			{
+				var batch = new List<TimeSeriesChange>();
+				while (changesQueue.IsCompleted == false)
+				{
+					batch.Clear();
+					if (token.IsCancellationRequested)
+					{
+						FetchAllChangeQueue(batch);	
+						FlushToServer(stream,batch);
+						break;
+					}
+
+					TaskCompletionSource<object> tcs = null;
+					try
+					{
+						TimeSeriesChange timeSeriesChange;
+						while (changesQueue.TryTake(out timeSeriesChange, DefaultOptions.BatchReadTimeoutInMilliseconds, token))
+						{
+							if (timeSeriesChange.Done != null)
+							{
+								tcs = timeSeriesChange.Done;
+								break;
+							}
+
+							batch.Add(timeSeriesChange);
+							if (batch.Count >= DefaultOptions.BatchSizeLimit)
+								break;
+						}
+					}
+					catch (OperationCanceledException)
+					{
+						if(changesQueue.Count > 0)
+							FetchAllChangeQueue(batch);
+					}
+
+					try
+					{
+						FlushToServer(stream, batch);
+						if (tcs != null)
+							tcs.TrySetResult(null);
+					}
+					catch (OperationCanceledException)
+					{
+						if (tcs != null)
+							tcs.TrySetResult(null);						
+					}
+					catch (Exception e)
+					{
+						if (tcs != null)
+							tcs.TrySetException(e);
+					}
+					
+				}
+			}
+			finally
+			{
+				tempStream.Dispose();
+			}
+		}
+
+		private void FetchAllChangeQueue(List<TimeSeriesChange> batch)
+		{
+			TimeSeriesChange timeSeriesChange;
+			while (changesQueue.TryTake(out timeSeriesChange))
+				batch.Add(timeSeriesChange);
+		}
+
+		public Task FlushAsync()
+		{
+			var taskCompletionSource = new TaskCompletionSource<object>();
+			changesQueue.Add(new TimeSeriesChange
+			{
+				Done = taskCompletionSource
+			});
+
+			return taskCompletionSource.Task.ContinueWith(t => CloseAndReopenStreaming(null));
+		}
+
+		private void FlushToServer(Stream requestStream, ICollection<TimeSeriesChange> batchItems)
+		{
+			if (batchItems.Count == 0)
+				return;
+
+			tempStream.SetLength(0);
+			long bytesWritten;
+			WriteCollectionToBuffer(tempStream, AggregateItems(batchItems), out bytesWritten);
+
+			var requestBinaryWriter = new BinaryWriter(requestStream);
+			requestBinaryWriter.Write((int)tempStream.Position);
+
+			tempStream.WriteTo(requestStream);
+			requestStream.Flush();
+		}
+
+		private static ICollection<TimeSeriesChange> AggregateItems(IEnumerable<TimeSeriesChange> batchItems)
+		{
+			var aggregationResult = from item in batchItems
+									group item by new { item.Name, item.Group }
+										into g
+										select new TimeSeriesChange
+										{
+											Name = g.Key.Name,
+											Group = g.Key.Group,
+											Delta = g.Sum(x => x.Delta)
+										};
+
+			var aggregateItems = aggregationResult.ToList();
+			return aggregateItems;
+		}
+
+		private static void WriteCollectionToBuffer(Stream targetStream, ICollection<TimeSeriesChange> items, out long bytesWritten)
+		{
+			using (var gzip = new GZipStream(targetStream, CompressionMode.Compress, leaveOpen: true))
+			using (var stream = new CountingStream(gzip))
+			{
+				var binaryWriter = new BinaryWriter(stream);
+				binaryWriter.Write(items.Count);
+				var bsonWriter = new BsonWriter(binaryWriter)
+				{
+					DateTimeKindHandling = DateTimeKind.Unspecified
+				};
+
+				foreach (var doc in items.Select(RavenJObject.FromObject))
+					doc.WriteTo(bsonWriter);
+
+				bsonWriter.Flush();
+				binaryWriter.Flush();
+				stream.Flush();
+				bytesWritten = stream.NumberOfWrittenBytes;
+			}
+		}
+
+		public void ScheduleChange(string groupName, string timeSeriesName, long delta)
+		{
+			changesQueue.Add(new TimeSeriesChange
+			{
+				Delta = delta,
+				Group = groupName,
+				Name = timeSeriesName
+			});
+		}
+
+		public void ScheduleIncrement(string groupName, string timeSeriesName)
+		{
+			ScheduleChange(groupName, timeSeriesName, 1);
+		}
+
+		public void ScheduleDecrement(string groupName, string timeSeriesName)
+		{
+			ScheduleChange(groupName, timeSeriesName, -1);
+		}
+
+		public void Dispose()
+		{
+			if (disposed)
+				return;
+
+			closeAndReopenStreamingTimer.Dispose();
+			changesQueue.CompleteAdding();
+
+			batchOperationTcs.Task.Wait();
+			if (batchOperationTask.Status != TaskStatus.RanToCompletion ||
+			    batchOperationTask.Status != TaskStatus.Canceled)
+				cts.Cancel();
+
+			if (serverOperationId != default(long))
+			{
+				while (true)
+				{
+					var serverSideOperationWaitingTask = IsOperationCompleted(serverOperationId);
+					serverSideOperationWaitingTask.Wait();
+
+					if (serverSideOperationWaitingTask.Result)
+						break;
+
+					Thread.Sleep(100);
+				}
+			}
+
+			tempStream.Dispose(); //precaution
+			disposed = true;
+		}
+
+		private async Task<string> GetToken()
+		{
+			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
+			var jsonToken = await GetAuthToken().ConfigureAwait(false);
+
+			return jsonToken.Value<string>("Token");
+		}
+
+		private async Task<RavenJToken> GetAuthToken()
+		{
+			using (var request = CreateHttpJsonRequest(singleAuthUrl, HttpMethods.Get, disableRequestCompression: true))
+			{
+				var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				return response;
+			}
+		}
+
+		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
+		{
+			using (var request = CreateHttpJsonRequest(singleAuthUrl, HttpMethods.Get, disableRequestCompression: true, disableAuthentication: true))
+			{
+				request.AddOperationHeader("Single-Use-Auth-Token", token);
+				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				return result.Value<string>("Token");
+			}
+		}
+	}
+}
