@@ -18,6 +18,7 @@ using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Util;
 
 using Xunit;
+using Raven.Abstractions;
 
 namespace Raven.Tests.Core.Configuration
 {
@@ -70,7 +71,10 @@ namespace Raven.Tests.Core.Configuration
 		[Fact]
 		public void ChangingWorkingDirectoryShouldImpactPaths()
 		{
-			const string WorkingDirectoryValue = "C:\\Raven\\";
+			string WorkingDirectoryValue = "C:\\Raven\\";
+            if (EnvironmentUtils.RunningOnPosix == true)
+                WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
+            
 			var inMemoryConfiguration = new InMemoryRavenConfiguration();
 			inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
 			inMemoryConfiguration.Initialize();
@@ -90,7 +94,10 @@ namespace Raven.Tests.Core.Configuration
 		[Fact]
 		public void ChangingWorkingDirectoryShouldImpactRelativePaths()
 		{
-			const string WorkingDirectoryValue = "C:\\Raven\\";
+			string WorkingDirectoryValue = "C:\\Raven\\";
+            if (EnvironmentUtils.RunningOnPosix == true)
+                WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
+            
 			var inMemoryConfiguration = new InMemoryRavenConfiguration();
 			inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
 			inMemoryConfiguration.Settings["Raven/AssembliesDirectory"] = "./my-assemblies";
@@ -112,7 +119,10 @@ namespace Raven.Tests.Core.Configuration
 		[Fact]
 		public void ChangingWorkingDirectoryShouldNotImpactUNCPaths()
 		{
-			const string WorkingDirectoryValue = "C:\\Raven\\";
+			string WorkingDirectoryValue = "C:\\Raven\\";
+            if (EnvironmentUtils.RunningOnPosix == true)
+                WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
+            
 			var inMemoryConfiguration = new InMemoryRavenConfiguration();
 			inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
 			inMemoryConfiguration.Settings["Raven/DataDir"] = @"\\server1\ravendb\data";
@@ -124,8 +134,16 @@ namespace Raven.Tests.Core.Configuration
 
 			Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
 			Assert.NotEqual(basePath, workingDirectory);
-			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
-			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
+            if (EnvironmentUtils.RunningOnPosix == true)
+            {
+                Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"/"));
+                Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"/"));
+            }
+            else
+            {
+                Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
+                Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
+            }
 		}
 
 		[Fact]
