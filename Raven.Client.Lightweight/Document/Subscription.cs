@@ -100,7 +100,7 @@ namespace Raven.Client.Document
 									if (Equals("LastProcessedEtag", reader.Value) == false)
 										return false;
 
-									lastProcessedEtagOnServer = Etag.Parse(reader.ReadAsString().ResultUnwrap());
+									lastProcessedEtagOnServer = Etag.Parse(AsyncHelpers.RunSync(reader.ReadAsString));
 									return true;
 								}))
 								{

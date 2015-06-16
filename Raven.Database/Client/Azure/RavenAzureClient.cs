@@ -53,7 +53,7 @@ namespace Raven.Database.Client.Azure
 			var client = GetClient();
 			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-			var response = client.PutAsync(url, content).ResultUnwrap();
+			var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
 			if (response.IsSuccessStatusCode)
 				return;
 
@@ -85,7 +85,7 @@ namespace Raven.Database.Client.Azure
 			var client = GetClient(TimeSpan.FromHours(1));
 			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-			var response = client.PutAsync(url, content).ResultUnwrap();
+			var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
 
 			if (response.IsSuccessStatusCode)
 				return;
@@ -111,14 +111,14 @@ namespace Raven.Database.Client.Azure
 			var client = GetClient();
 			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("GET", url, requestMessage.Headers);
 
-			var response = client.SendAsync(requestMessage).ResultUnwrap();
+			var response = AsyncHelpers.RunSync(() => client.SendAsync(requestMessage));
 			if (response.StatusCode == HttpStatusCode.NotFound) 
 				return null;
 
 			if (response.IsSuccessStatusCode == false)
 				throw ErrorResponseException.FromResponseMessage(response);
 
-			var data = response.Content.ReadAsStreamAsync().ResultUnwrap();
+			var data = AsyncHelpers.RunSync(() => response.Content.ReadAsStreamAsync());
 			var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
 			return new Blob(data, headers);
