@@ -578,8 +578,8 @@ namespace Raven.Database.Indexing
 					doc = boostedValue.Value;
 					boost = boostedValue.Boost;
 				}
-				IEnumerable<AbstractField> fields = null;
 
+				IEnumerable<AbstractField> fields = null;
 				try
 				{
 				    var dynamicJsonObject = doc as IDynamicJsonObject;
@@ -599,12 +599,7 @@ namespace Raven.Database.Indexing
 
 				if (Math.Abs(boost - 1) > float.Epsilon)
 				{
-					var abstractFields = fields.ToList();
-					foreach (var abstractField in abstractFields)
-					{
-						abstractField.OmitNorms = false;
-					}
-					return abstractFields;
+                    return fields.Select(x => { x.OmitNorms = false; return x; });
 				}
 				return fields;
 			}
@@ -774,10 +769,21 @@ namespace Raven.Database.Indexing
 				using (StopwatchScope.For(convertToLuceneDocumentDuration))
 				{
 					float boost;
-					List<AbstractField> fields;
 					try
 					{
-						fields = GetFields(doc, out boost).ToList();
+						var fields = GetFields(doc, out boost);
+
+                        reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
+                        reduceKeyField.SetValue(reduceKeyAsString);
+                        reduceValueField.SetValue(ToJsonDocument(doc).ToString(Formatting.None));
+
+                        luceneDoc.GetFields().Clear();
+                        luceneDoc.Boost = boost;
+                        luceneDoc.Add(reduceKeyField);
+                        luceneDoc.Add(reduceValueField);
+
+                        foreach (var field in fields)
+                            luceneDoc.Add(field);
 					}
 					catch (Exception e)
 					{
@@ -789,18 +795,6 @@ namespace Raven.Database.Indexing
 							);
 						logIndexing.WarnException("Could not get fields to during reduce for " + parent.PublicName, e);
 						return;
-					}
-
-					reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
-					reduceKeyField.SetValue(reduceKeyAsString);
-					reduceValueField.SetValue(ToJsonDocument(doc).ToString(Formatting.None));
-					luceneDoc.GetFields().Clear();
-					luceneDoc.Boost = boost;
-					luceneDoc.Add(reduceKeyField);
-					luceneDoc.Add(reduceValueField);
-					foreach (var field in fields)
-					{
-						luceneDoc.Add(field);
 					}
 				}
 				batchers.ApplyAndIgnoreAllErrors(
