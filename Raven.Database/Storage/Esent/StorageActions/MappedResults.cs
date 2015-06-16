@@ -225,12 +225,14 @@ namespace Raven.Database.Storage.Esent.StorageActions
 		}
 
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
 			var seenLocally = new HashSet<Tuple<string, int>>();
 			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, MakeKeyGrbit.NewKey);
 				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
 				Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
@@ -258,6 +260,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				}
 				do
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
                     if (getItemsToReduceParams.Take <= 0)
                         break;
 					var indexFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex);
@@ -284,7 +288,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 					{
 						if (seenLocally.Add(rowKey))
 						{
-							foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData))
+							foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData, cancellationToken))
 							{
 								getItemsToReduceParams.Take--;
 								yield return mappedResultInfo;
@@ -303,21 +307,21 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			}
 		}
 
-		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData)
+		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData, CancellationToken cancellationToken)
 		{
 			switch (level)
 			{
 				case 0:
-					return GetMappedResultsForBucket(view, reduceKey, bucket, loadData);
+					return GetMappedResultsForBucket(view, reduceKey, bucket, loadData, cancellationToken);
 				case 1:
 				case 2:
-					return GetReducedResultsForBucket(view, reduceKey, level, bucket, loadData);
+					return GetReducedResultsForBucket(view, reduceKey, level, bucket, loadData, cancellationToken);
 				default:
 					throw new ArgumentException("Invalid level: " + level);
 			}
 		}
 
-		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(int view, string reduceKey, int bucket, bool loadData)
+		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(int view, string reduceKey, int bucket, bool loadData, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_hashed_reduce_key_and_bucket");
 			Api.MakeKey(session, MappedResults, view, MakeKeyGrbit.NewKey);
@@ -342,6 +346,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			bool returnedResults = false;
 			do
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				var indexFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value;
@@ -410,7 +416,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, ReducedResults));
 		}
 
-		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(int view, string reduceKey, int level, int bucket, bool loadData)
+		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(int view, string reduceKey, int level, int bucket, bool loadData, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, ReducedResults, "by_view_level_hashed_reduce_key_and_bucket");
 			Api.MakeKey(session, ReducedResults, view, MakeKeyGrbit.NewKey);
@@ -436,6 +442,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			bool returnedResults = false;
 			do
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				var key = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["reduce_key"]);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["bucket"]).Value;
 				if (bucketFromDb != bucket)
@@ -805,7 +813,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, ReducedResults) && take > 0);
 		}
 
-		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep)
+		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep, CancellationToken cancellationToken)
 		{
 			var allKeysToReduce = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -818,6 +826,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 			do
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				var indexFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions,
 															 tableColumnsCache.ScheduledReductionColumns["view"], 
 															 RetrieveColumnGrbit.RetrieveFromIndex);
@@ -835,6 +845,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 			foreach (var reduceKey in allKeysToReduce)
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				var count = GetNumberOfMappedItemsPerReduceKey(view, reduceKey);
 				var reduceType = count >= limitOfItemsToReduceInSingleStep ? ReduceType.MultiStep : ReduceType.SingleStep;
 				yield return new ReduceTypePerKey(reduceKey, reduceType);
@@ -959,7 +971,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, ReduceKeysStatus) && take > 0);
 		}
 
-		public IEnumerable<int> GetMappedBuckets(int view, string reduceKey)
+		public IEnumerable<int> GetMappedBuckets(int view, string reduceKey, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_hashed_reduce_key_and_bucket");
 			Api.MakeKey(session, MappedResults, view, MakeKeyGrbit.NewKey);
@@ -977,6 +989,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				yield break;
 			do
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				var viewFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
 				if (viewFromDb != view)
 					continue;
@@ -991,12 +1005,14 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned)
+		public IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_hashed_reduce_key_and_bucket");
 			var keysToReduce = new HashSet<string>(keysLeftToReduce);
 			foreach (var reduceKey in keysToReduce)
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				keysLeftToReduce.Remove(reduceKey);
 				
 				Api.MakeKey(session, MappedResults, view, MakeKeyGrbit.NewKey);
@@ -1010,6 +1026,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				
 				do
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					var indexFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
 					var hashKeyFromDb = Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["hashed_reduce_key"]);
 
