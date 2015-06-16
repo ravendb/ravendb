@@ -19,7 +19,7 @@ namespace Raven.Abstractions.Util
 			var result = default(T);
 			try
 			{
-				var taskAwaiter = work().ConfigureAwait(false)
+				var taskAwaiter = Task.Run(work).ConfigureAwait(false)
 									    .GetAwaiter();				
 
 				result = taskAwaiter.GetResult();
@@ -37,7 +37,7 @@ namespace Raven.Abstractions.Util
 		{
 			try
 			{
-				work().ConfigureAwait(false)
+				Task.Run(work).ConfigureAwait(false)
 					  .GetAwaiter()
 					  .GetResult();
 			}
