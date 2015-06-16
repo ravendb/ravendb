@@ -15,7 +15,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
@@ -324,6 +323,8 @@ namespace Raven.Database.Config
 				FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
 
 			Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
+			Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
+
 			TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
 
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
@@ -1468,6 +1469,12 @@ namespace Raven.Database.Config
 				get { return countersDataDirectory; }
 				set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
 			}
+
+			/// <summary>
+			/// Determines how long tombstones will be kept by a counter storage. After the specified time they will be automatically
+			/// Purged on next counter storage startup. Default: 14 days.
+			/// </summary>
+			public TimeSpan TombstoneRetentionTime { get; set; }
 		}
 
 		public class TimeSeriesConfiguration

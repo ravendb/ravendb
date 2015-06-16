@@ -253,6 +253,8 @@ namespace Raven.Database.Config
             FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate],false);
 
 			Counter.DataDir = new StringSetting(settings[Constants.Counter.DataDirectory], @"~\Counters");
+			Counter.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.Counter.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
+
 			TimeSeries.DataDir = new StringSetting(settings[Constants.TimeSeries.DataDirectory], @"~\TimeSeries");
 
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
@@ -527,6 +529,8 @@ namespace Raven.Database.Config
 		public class CounterConfiguration
 		{
 			public StringSetting DataDir { get; set; }
+
+			public TimeSpanSetting TombstoneRetentionTime { get; set; }
 		}
 
 		public class TimeSeriesConfiguration
