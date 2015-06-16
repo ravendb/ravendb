@@ -35,9 +35,7 @@ namespace Raven.Database.Indexing
 
 		private int offset = 0, bufferIndex = 0, dataLen = 0;
 
-        // TODO: Implement a buffer to avoid allocations.
 		private const int IO_BUFFER_SIZE = 4096;
-        // private readonly char[] ioBuffer = new char[IO_BUFFER_SIZE];
         private static ObjectPool<char[]> bufferPool = new ObjectPool<char[]>(() => new char[IO_BUFFER_SIZE], 10);
 
         private readonly ITermAttribute termAtt;
@@ -77,6 +75,7 @@ namespace Raven.Database.Indexing
 		public override bool IncrementToken()
 		{
 			ClearAttributes();
+
 			int length = 0;
 			int start = bufferIndex;
 

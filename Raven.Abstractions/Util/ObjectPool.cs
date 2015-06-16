@@ -1,18 +1,18 @@
 ﻿
 // Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the Roslyn project root for license information.
 
+// define TRACE_LEAKS to get additional diagnostics that can lead to the leak sources. note: it will
+// make everything about 2-3x slower
+// 
+//#define TRACE_LEAKS
+
+// define DETECT_LEAKS to detect possible leaks
+//#if DEBUG
+//    #define DETECT_LEAKS  //for now always enable DETECT_LEAKS in debug.
+//#endif
+
 namespace Raven.Abstractions.Util
 {    
-    // define TRACE_LEAKS to get additional diagnostics that can lead to the leak sources. note: it will
-    // make everything about 2-3x slower
-    // 
-    // #define TRACE_LEAKS
-
-    // define DETECT_LEAKS to detect possible leaks
-    // #if DEBUG
-    // #define DETECT_LEAKS  //for now always enable DETECT_LEAKS in debug.
-    // #endif
-
     using System;
     using System.Diagnostics;
     using System.Threading;
@@ -96,7 +96,7 @@ namespace Raven.Abstractions.Util
                 // If you are seeing this message it means that object has been allocated from the pool 
                 // and has not been returned back. This is not critical, but turns pool into rather 
                 // inefficient kind of "new".
-                Debug.WriteLine($"TRACEOBJECTPOOLLEAKS_BEGIN\nPool detected potential leaking of {typeof(T)}. \n Location of the leak: \n {GetTrace()} TRACEOBJECTPOOLLEAKS_END");
+                Debug.WriteLine(string.Format("TRACEOBJECTPOOLLEAKS_BEGIN\nPool detected potential leaking of {0}. \n Location of the leak: \n {1} TRACEOBJECTPOOLLEAKS_END", typeof(T), GetTrace()));
             }
         }
     }
@@ -236,7 +236,7 @@ namespace Raven.Abstractions.Util
         else
         {
             var trace = CaptureStackTrace();
-            Debug.WriteLine($"TRACEOBJECTPOOLLEAKS_BEGIN\nObject of type {typeof(T)} was freed, but was not from pool. \n Callstack: \n {trace} TRACEOBJECTPOOLLEAKS_END");
+            Debug.WriteLine(string.Format("TRACEOBJECTPOOLLEAKS_BEGIN\nObject of type {0} was freed, but was not from pool. \n Callstack: \n {1} TRACEOBJECTPOOLLEAKS_END", typeof(T), trace));
         }
 
         if (replacement != null)
