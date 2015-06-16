@@ -237,7 +237,8 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.MaxIndexCommitPointStoreTimeInterval.Value, actual => actual.MaxIndexCommitPointStoreTimeInterval);
 			configurationComparer.Assert(expected => expected.MinIndexingTimeIntervalToStoreCommitPoint.Value, actual => actual.MinIndexingTimeIntervalToStoreCommitPoint);
 			configurationComparer.Assert(expected => expected.MaxNumberOfStoredCommitPoints.Value, actual => actual.MaxNumberOfStoredCommitPoints);
-			configurationComparer.Assert(expected => expected.MemoryLimitForProcessing.Value, actual => actual.MemoryLimitForProcessingInMb);
+            // allow +- 16MB tollerance in memory during the test (can happen in slow machines / debug):
+			configurationComparer.AssertInRange(expected => expected.MemoryLimitForProcessing.Value, actual => actual.MemoryLimitForProcessingInMb, 16);
 			configurationComparer.Assert(expected => expected.AvailableMemoryForRaisingBatchSizeLimit.Value, actual => actual.AvailableMemoryForRaisingBatchSizeLimit);
 			configurationComparer.Assert(expected => expected.MaxProcessingRunLatency.Value, actual => actual.MaxProcessingRunLatency);
 			configurationComparer.Assert(expected => expected.DisableClusterDiscovery.Value, actual => actual.DisableClusterDiscovery);
@@ -351,6 +352,28 @@ namespace Raven.Tests.Core.Configuration
 
 				Xunit.Assert.Equal(expectedValue, actualValue);
 			}
+
+            public void AssertInRange<T>(Expression<Func<StronglyTypedRavenSettings, T>> expected, Expression<Func<InMemoryRavenConfiguration, T>> actual, int range)
+            {
+                var propertyPath = actual.ToPropertyPath();
+                if (assertedPropertyPaths.Add(propertyPath) == false)
+                    throw new InvalidOperationException("Cannot assert one property more than once. Path: " + propertyPath);
+
+                if (propertyPathsToCheck.Contains(propertyPath) == false)
+                    throw new InvalidOperationException("Cannot assert property that is not on a list of properties to assert. Path: " + propertyPath);
+
+                var e = expected.Compile();
+                var expectedValue = e(stronglyTypedConfiguration);
+
+                var a = actual.Compile();
+                var actualValue = a(inMemoryConfiguration);
+
+                int low    = Convert.ToInt32(expectedValue) - range;
+                int high   = Convert.ToInt32(expectedValue) + range;
+                int value = Convert.ToInt32(actualValue);
+
+                Xunit.Assert.InRange(value, low, high);
+            }
 
 			public void Validate()
 			{
