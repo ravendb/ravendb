@@ -82,6 +82,17 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Label="YltParsers">
+    <Names>LuceneQuery-Raven-Database-Indexing</Names>
+  </PropertyGroup>
+  <PropertyGroup Label="YltProperties">
+    <YltTools>$(SolutionDir)packages\YaccLexTools.0.2.2\tools\</YltTools>
+    <GplexTool>"$(YltTools)gplex.exe"</GplexTool>
+    <GppgTool>"$(YltTools)gppg.exe"</GppgTool>
+  </PropertyGroup>
+  <PropertyGroup Label="GenerateLuceneQuery-Raven-Database-IndexingProperties">
+    <LuceneQuery-Raven-Database-IndexingParser>$(ProjectDir)Indexing\LuceneQuery</LuceneQuery-Raven-Database-IndexingParser>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
@@ -222,6 +233,8 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
+    <Compile Include="GplexBuffers.cs" />
+    <Compile Include="Indexing\LuceneAST.cs" />
     <Compile Include="JsConsole\AdminJsConsole.cs" />
     <Compile Include="JsConsole\AdminJsScript.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
@@ -448,6 +461,7 @@
     <Compile Include="Server\WebApi\RouteCacher.cs" />
     <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
     <Compile Include="FileSystem\Smuggler\FilesystemDataDumper.cs" />
+    <Compile Include="ShiftReduceParserCode.cs" />
     <Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />
     <Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />
     <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
@@ -1359,11 +1373,47 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />
+  <ItemGroup Label="LuceneQuery-Raven-Database-IndexingFiles">
+    <Compile Include="Indexing\LuceneQuery.Parser.cs">
+      <DependentUpon>LuceneQuery.parser</DependentUpon>
+    </Compile>
+    <Compile Include="Indexing\LuceneQuery.Parser.Generated.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>LuceneQuery.Language.grammar.y</DependentUpon>
+    </Compile>
+    <Compile Include="Indexing\LuceneQuery.Scanner.cs">
+      <DependentUpon>LuceneQuery.parser</DependentUpon>
+    </Compile>
+    <Compile Include="Indexing\LuceneQuery.Scanner.Generated.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>LuceneQuery.Language.analyzer.lex</DependentUpon>
+    </Compile>
+    <None Include="Indexing\LuceneQuery.Language.analyzer.lex">
+      <DependentUpon>LuceneQuery.parser</DependentUpon>
+    </None>
+    <None Include="Indexing\LuceneQuery.Language.grammar.y">
+      <DependentUpon>LuceneQuery.parser</DependentUpon>
+    </None>
+    <None Include="Indexing\LuceneQuery.parser" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!--  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />-->
-  <Target Name="BeforeBuild">
+  <Target Name="BeforeBuild" DependsOnTargets="YltBuildGen">
   </Target>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Target Name="YltBuildGen" DependsOnTargets="GenerateLuceneQuery-Raven-Database-Indexing" />
+  <Target Name="GenerateLuceneQuery-Raven-Database-Indexing" Inputs="$(LuceneQuery-Raven-Database-IndexingParser).Language.analyzer.lex;$(LuceneQuery-Raven-Database-IndexingParser).Language.grammar.y" Outputs="$(LuceneQuery-Raven-Database-IndexingParser).Scanner.Generated.cs;$(LuceneQuery-Raven-Database-IndexingParser).Parser.Generated.cs">
+    <Message Text="Generating scanner for $(LuceneQuery-Raven-Database-IndexingParser) ..." />
+    <Exec Command="$(GplexTool) &quot;/out:$(LuceneQuery-Raven-Database-IndexingParser).Scanner.Generated.cs&quot; &quot;$(LuceneQuery-Raven-Database-IndexingParser).Language.analyzer.lex&quot;" WorkingDirectory="$(ProjectDir)" Outputs="$(GenDir)Scanner.cs">
+      <Output TaskParameter="Outputs" ItemName="LuceneQueryScanner" />
+    </Exec>
+    <Message Text="Generating parser for $(LuceneQuery-Raven-Database-IndexingParser) ..." />
+    <Exec Command="$(GppgTool) /no-lines /gplex &quot;$(LuceneQuery-Raven-Database-IndexingParser).Language.grammar.y&quot; &gt; &quot;$(LuceneQuery-Raven-Database-IndexingParser).Parser.Generated.cs&quot;" WorkingDirectory="$(ProjectDir)" Outputs="$(LuceneQuery-Raven-Database-IndexingParser).Parser.Generated.cs">
+      <Output TaskParameter="Outputs" ItemName="LuceneQuery" />
+    </Exec>
+  </Target>
 </Project>
