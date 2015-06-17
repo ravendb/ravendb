@@ -272,6 +272,33 @@ namespace Voron.Trees
 			}
 		}
 
+		public long MultiCount(Slice key)
+		{
+			Lazy<Cursor> lazy;
+			NodeHeader* node;
+			var page = FindPageFor(key, out node, out lazy);
+			if (page == null || page.LastMatch != 0)
+				return 0;
+
+			Debug.Assert(node != null);
+
+			var fetchedNodeKey = page.GetNodeKey(node);
+			if (fetchedNodeKey.Compare(key) != 0)
+			{
+				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+			}
+
+			if (node->Flags == NodeFlags.MultiValuePageRef)
+			{
+				var tree = OpenMultiValueTree(_tx, key, node);
+
+				return tree.State.EntriesCount;
+			}
+
+			var nestedPage = new Page(NodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, node));
+
+			return nestedPage.NumberOfEntries;
+		}
 		public IIterator MultiRead(Slice key)
 		{
 			Lazy<Cursor> lazy;
