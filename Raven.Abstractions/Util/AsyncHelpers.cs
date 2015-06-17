@@ -9,17 +9,22 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util.Schedulers;
 
 namespace Raven.Abstractions.Util
 {
 	public static class AsyncHelpers
 	{
+		private static readonly TaskFactory Factory = new TaskFactory(new CurrentThreadTaskScheduler());
+
 		public static T RunSync<T>(Func<Task<T>> work)
 		{
 			var result = default(T);
 			try
 			{
-				result = Task.Run(work)
+				result = Factory
+					.StartNew(work)
+					.Unwrap()
 					.ConfigureAwait(false)
 					.GetAwaiter()
 					.GetResult();
@@ -37,7 +42,9 @@ namespace Raven.Abstractions.Util
 		{
 			try
 			{
-				Task.Run(work)
+				Factory
+					.StartNew(work)
+					.Unwrap()
 					.ConfigureAwait(false)
 					.GetAwaiter()
 					.GetResult();
