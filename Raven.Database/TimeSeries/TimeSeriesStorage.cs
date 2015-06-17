@@ -99,7 +99,7 @@ namespace Raven.Database.TimeSeries
 
 		public Reader CreateReader()
 		{
-			return new Reader(this, true);
+			return new Reader(this);
 		}
 
 		public Writer CreateWriter()
@@ -120,17 +120,15 @@ namespace Raven.Database.TimeSeries
 
 		public class Reader : IDisposable
 		{
-			private readonly TimeSeriesStorage _storage;
-			private readonly bool _storeComputedPeriods;
-			private readonly Transaction _tx;
-			private readonly Tree _tree;
+			private readonly TimeSeriesStorage storage;
+			private readonly Transaction tx;
+			private readonly Tree tree;
 
-			public Reader(TimeSeriesStorage storage, bool storeComputedPeriods)
+			public Reader(TimeSeriesStorage storage)
 			{
-				_storage = storage;
-				_storeComputedPeriods = storeComputedPeriods;
-				_tx = _storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
-				_tree = _tx.State.GetTree(_tx, "data");
+				this.storage = storage;
+				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
+				tree = tx.State.GetTree(tx, "data");
 			}
 
 			public IEnumerable<Point> Query(TimeSeriesQuery query)
@@ -232,13 +230,13 @@ namespace Raven.Database.TimeSeries
 				}
 
 
-				using (var periodTx = _storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+				using (var periodTx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var periodTree = periodTx.State.GetTree(periodTx, "period_" + query.Duration.Type + "-" + query.Duration.Duration);
 					using (var writer = new RollupWriter(periodTree))
 					{
 						using (var periodTreeIterator = periodTree.Iterate())
-						using (var rawTreeIterator = _tree.Iterate())
+						using (var rawTreeIterator = tree.Iterate())
 						{
 							var keyBytesLen = Encoding.UTF8.GetByteCount(query.Key) + sizeof (long);
 							var startKeyWriter = new SliceWriter(keyBytesLen);
@@ -381,7 +379,7 @@ namespace Raven.Database.TimeSeries
 			{
 				var buffer = new byte[sizeof(double)];
 
-				return IterateOnTree(query, _tree, (it, keyReader, ticks) =>
+				return IterateOnTree(query, tree, (it, keyReader, ticks) =>
 				{
 					var point = new Point
 					{
@@ -434,8 +432,8 @@ namespace Raven.Database.TimeSeries
 
 			public void Dispose()
 			{
-				if (_tx != null)
-					_tx.Dispose();
+				if (tx != null)
+					tx.Dispose();
 			}
 
 			public long GetTimeSeriesCount()
