@@ -124,11 +124,11 @@ namespace Voron.Tests.FixedSize
 
 				var it = fst.Iterate();
 				Assert.True(it.Seek(long.MinValue));
-				Assert.Equal(1L, it.Key);
+				Assert.Equal(1L, it.CurrentKey);
 				Assert.True(it.MoveNext());
-				Assert.Equal(2L, it.Key);
+				Assert.Equal(2L, it.CurrentKey);
 				Assert.True(it.MoveNext());
-				Assert.Equal(3L, it.Key);
+				Assert.Equal(3L, it.CurrentKey);
 				Assert.False(it.MoveNext());
 
 

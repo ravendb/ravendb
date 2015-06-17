@@ -11,12 +11,13 @@ namespace Voron.Trees.Fixed
 {
 	public unsafe partial class FixedSizeTree
 	{
-		public interface IFixedSizeIterator
+		public interface IFixedSizeIterator : IDisposable
 		{
 			bool Seek(long key);
-			long Key { get; }
+			long CurrentKey { get; }
 			Slice Value { get; }
 			bool MoveNext();
+			ValueReader CreateReaderForCurrent();
 		}
 
 		public class NullIterator : IFixedSizeIterator
@@ -26,11 +27,20 @@ namespace Voron.Trees.Fixed
 				return false;
 			}
 
-			public long Key { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
+			public long CurrentKey { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
 			public Slice Value { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
 			public bool MoveNext()
 			{
 				return false;
+			}
+
+			public void Dispose()
+			{
+			}
+
+			public ValueReader CreateReaderForCurrent()
+			{
+				throw new InvalidOperationException("No current page");
 			}
 		}
 
@@ -62,7 +72,7 @@ namespace Voron.Trees.Fixed
 				return false;
 			}
 
-			public long Key
+			public long CurrentKey
 			{
 				get
 				{
@@ -87,7 +97,15 @@ namespace Voron.Trees.Fixed
 			{
 				return ++_pos < _header->NumberOfEntries;
 			}
-		}
 
+			public ValueReader CreateReaderForCurrent()
+			{
+				return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
+			}
+
+			public void Dispose()
+			{
+			}
+		}
 	}
 }
