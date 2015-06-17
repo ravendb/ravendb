@@ -13,7 +13,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
-using Raven.Client.Counters.Actions;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
@@ -22,7 +21,7 @@ namespace Raven.Client.Counters.Operations
 {
 	public sealed class CountersBatchOperation : CounterOperationsBase, IDisposable
 	{
-		private readonly CountersBatchOptions _defaultOptions;
+		private readonly CountersBatchOptions defaultOptions;
 		private readonly AsyncManualResetEvent streamingStarted;
 		private readonly TaskCompletionSource<bool> batchOperationTcs;
 		private readonly CancellationTokenSource cts;
@@ -37,7 +36,7 @@ namespace Raven.Client.Counters.Operations
 
 		public Guid OperationId { get; private set; }
 
-		public CountersBatchOptions DefaultOptions { get { return _defaultOptions; } }		
+		public CountersBatchOptions DefaultOptions { get { return defaultOptions; } }		
 
 		internal CountersBatchOperation(CounterStore parent, string counterStorageName, CountersBatchOptions batchOptions = null)
 			: base(parent, counterStorageName)
@@ -45,11 +44,11 @@ namespace Raven.Client.Counters.Operations
 			if(batchOptions != null && batchOptions.BatchSizeLimit < 1)
 				throw new ArgumentException("batchOptions.BatchSizeLimit cannot be negative", "batchOptions");
 
-			_defaultOptions = batchOptions ?? new CountersBatchOptions(); //defaults do exist
+			defaultOptions = batchOptions ?? new CountersBatchOptions(); //defaults do exist
 			streamingStarted = new AsyncManualResetEvent();
 			batchOperationTcs = new TaskCompletionSource<bool>();
 			cts = new CancellationTokenSource();
-			changesQueue = new BlockingCollection<CounterChange>(_defaultOptions.BatchSizeLimit);			
+			changesQueue = new BlockingCollection<CounterChange>(defaultOptions.BatchSizeLimit);			
 			singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", ServerUrl, counterStorageName);
 
 			OperationId = Guid.NewGuid();
@@ -139,7 +138,7 @@ namespace Raven.Client.Counters.Operations
 		private Timer CreateNewTimer()
 		{
 			return new Timer(CloseAndReopenStreaming, null,
-				TimeSpan.FromMilliseconds(_defaultOptions.ConnectionReopenTimingInMilliseconds),
+				TimeSpan.FromMilliseconds(defaultOptions.ConnectionReopenTimingInMilliseconds),
 				TimeSpan.FromMilliseconds(-1)); //fire timer only once -> then rescedule - handles ConnectionReopenTimingInMilliseconds changing use-case
 		}
 

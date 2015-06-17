@@ -57,12 +57,12 @@ namespace Raven.Client.Counters.Changes
             switch (type)
             {
 				case "ChangeNotification":
-					var changeNotification = value.JsonDeserialization<ChangeNotification>();
+					var changeNotification =   value.JsonDeserialization<ChangeNotification>();
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(changeNotification);
                     }
-                    break;
+                    break;               
 				case "StartingWithNotification":
 					var counterStartingWithNotification = value.JsonDeserialization<StartingWithNotification>();
 					foreach (var counter in connections)
@@ -99,7 +99,11 @@ namespace Raven.Client.Counters.Changes
 
 			var fullCounterName = FullCounterName(groupName, counterName);
 			var key = string.Concat("counter-change/", fullCounterName);
-			var counter = Counters.GetOrAdd(key, s =>
+			var counter = GetOrAddConnectionState(key, "watch-counter-change", "unwatch-counter-change",
+				() => watchedChanges.TryAdd(fullCounterName),
+				() => watchedChanges.TryRemove(fullCounterName),
+				fullCounterName);
+			/*var counter = Counters.GetOrAdd(key, s =>
 			{
 				var changeSubscriptionTask = AfterConnection(() =>
 				{
@@ -115,12 +119,13 @@ namespace Raven.Client.Counters.Changes
 						Counters.Remove(key);
 					},
 					changeSubscriptionTask);
-			});
+			});*/
 
+			
 			var taskedObservable = new TaskedObservable<ChangeNotification, CountersConnectionState>(
 								counter,
-								notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
-												string.Equals(notification.CounterName, counterName, StringComparison.OrdinalIgnoreCase));
+								notification => string.Equals(notification.GroupName, groupName, StringComparison.InvariantCulture) &&
+												string.Equals(notification.CounterName, counterName, StringComparison.InvariantCulture));
 			counter.OnChangeNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
 
@@ -142,7 +147,11 @@ namespace Raven.Client.Counters.Changes
 
 			var counterPrefix = FullCounterName(groupName, prefixForName);
 			var key = string.Concat("counters-starting-with/", counterPrefix);
-			var counter = Counters.GetOrAdd(key, s =>
+			var counter = GetOrAddConnectionState(key, "watch-counters-prefix", "unwatch-counters-prefix",
+				() => watchedPrefixes.TryAdd(counterPrefix),
+				() => watchedPrefixes.TryRemove(counterPrefix),
+				counterPrefix);
+			/*var counter = Counters.GetOrAdd(key, s =>
 			{
 				var changeSubscriptionTask = AfterConnection(() =>
 				{
@@ -158,14 +167,14 @@ namespace Raven.Client.Counters.Changes
 						Counters.Remove(key);
 					},
 					changeSubscriptionTask);
-			});
+			});*/
 
 			var taskedObservable = new TaskedObservable<StartingWithNotification, CountersConnectionState>(
 				counter,
 				notification =>
 				{
-					var t = string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
-					        notification.CounterName.StartsWith(prefixForName, StringComparison.OrdinalIgnoreCase);
+					var t = string.Equals(notification.GroupName, groupName, StringComparison.InvariantCulture) &&
+							notification.CounterName.StartsWith(prefixForName, StringComparison.InvariantCulture);
 					return t;
 				});
 			counter.OnCountersStartingWithNotification += taskedObservable.Send;
@@ -180,7 +189,12 @@ namespace Raven.Client.Counters.Changes
 				throw new ArgumentException("Group name cannot be empty!");
 
 			var key = string.Concat("counters-in-group/", groupName);
-			var counter = Counters.GetOrAdd(key, s =>
+			var counter = GetOrAddConnectionState(key, "watch-counters-in-group", "unwatch-counters-in-group", 
+				() => watchedCountersInGroup.TryAdd(groupName), 
+				() => watchedCountersInGroup.TryRemove(groupName), 
+				groupName);
+
+			/*var counter = Counters.GetOrAdd(key, s =>
 			{
 				var changeSubscriptionTask = AfterConnection(() =>
 				{
@@ -196,11 +210,11 @@ namespace Raven.Client.Counters.Changes
 						Counters.Remove(key);
 					},
 					changeSubscriptionTask);
-			});
+			});*/
 
 			var taskedObservable = new TaskedObservable<InGroupNotification, CountersConnectionState>(
 								counter,
-								notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase));
+								notification => string.Equals(notification.GroupName, groupName, StringComparison.InvariantCulture));
 			counter.OnCountersInGroupNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
 
@@ -212,7 +226,7 @@ namespace Raven.Client.Counters.Changes
 			var id = operationId != null ? operationId.ToString() : string.Empty;
 
 		    var key = "bulk-operations/" + id;
-		    var counter = Counters.GetOrAdd(key, s =>
+		   var counter = Counters.GetOrAdd(key, s =>
 			{
 				watchedBulkOperations.TryAdd(id);
 				var bulkOperationSubscriptionTask = AfterConnection(() =>
@@ -229,6 +243,21 @@ namespace Raven.Client.Counters.Changes
 						Send("unwatch-bulk-operation", id);
 						Counters.Remove(key);
 					},
+					existingConnectionState =>
+					{
+						CountersConnectionState _;
+						if (Counters.TryGetValue("bulk-operations/" + id, out _))
+							return _.Task;
+
+						Counters.GetOrAdd("bulk-operations/" + id, x => (CountersConnectionState)existingConnectionState);
+
+						return AfterConnection(() =>
+						{
+							if (watchedBulkOperations.Contains(id)) // might have been removed in the meantime
+								return Send("watch-bulk-operation", id);
+							return Task;
+						});
+					},
 					bulkOperationSubscriptionTask);
 			});
 
@@ -241,5 +270,42 @@ namespace Raven.Client.Counters.Changes
 
 			return taskedObservable;
 	    }
+
+		private CountersConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, Action afterConnection, Action beforeDisconnect, string value)
+		{
+			var counter = Counters.GetOrAdd(name, s =>
+			{
+				var counterSubscriptionTask = AfterConnection(() =>
+				{
+					afterConnection();
+					return Send(watchCommand, value);
+				});
+
+				return new CountersConnectionState(
+					() =>
+					{
+						beforeDisconnect();
+						Send(unwatchCommand, value);
+						Counters.Remove(name);
+					},
+					existingConnectionState =>
+					{
+						CountersConnectionState _;
+						if (Counters.TryGetValue(name, out _))
+							return _.Task;
+
+						Counters.GetOrAdd(name, x => existingConnectionState);
+
+						return AfterConnection(() =>
+						{
+							afterConnection();
+							return Send(watchCommand, value);
+						});
+					},
+					counterSubscriptionTask);
+			});
+
+			return counter;
+		}
     }
 }

@@ -1,6 +1,4 @@
-﻿using System.Xml.Schema;
-
-namespace Raven.Abstractions.Counters.Notifications
+﻿namespace Raven.Abstractions.Counters.Notifications
 {
 	public class ChangeNotification : CounterStorageNotification
 	{
@@ -18,7 +16,8 @@ namespace Raven.Abstractions.Counters.Notifications
 		None,
 		Add,
 		Increment,
-		Decrement
+		Decrement,
+		Delete
 	}
 
 	public class StartingWithNotification : ChangeNotification

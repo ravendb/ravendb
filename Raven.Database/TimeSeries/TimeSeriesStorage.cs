@@ -241,7 +241,7 @@ namespace Raven.Database.TimeSeries
 						using (var rawTreeIterator = _tree.Iterate())
 						{
 							var keyBytesLen = Encoding.UTF8.GetByteCount(query.Key) + sizeof (long);
-							var startKeyWriter = new SliceWriter(keyBytesLen, EndianBitConverter.Big);
+							var startKeyWriter = new SliceWriter(keyBytesLen);
 							startKeyWriter.Write(query.Key);
 							var prefixKey = startKeyWriter.CreateSlice();
 
@@ -250,7 +250,7 @@ namespace Raven.Database.TimeSeries
 
 							foreach (var range in GetRanges(query))
 							{
-								var seekWriter = new SliceWriter(keyBytesLen, EndianBitConverter.Big);
+								var seekWriter = new SliceWriter(keyBytesLen);
 								seekWriter.Write(query.Key);
 								seekWriter.Write(range.StartAt.Ticks);
 								var seekSlice = seekWriter.CreateSlice();
@@ -401,7 +401,7 @@ namespace Raven.Database.TimeSeries
 			public static IEnumerable<T> IterateOnTree<T>(TimeSeriesQuery query, Tree tree, Func<TreeIterator, ValueReader, long, T> iteratorFunc)
 			{
 				var keyBytesLen = Encoding.UTF8.GetByteCount(query.Key) + sizeof (long);
-				var startKeyWriter = new SliceWriter(keyBytesLen, EndianBitConverter.Big);
+				var startKeyWriter = new SliceWriter(keyBytesLen);
 				startKeyWriter.Write(query.Key);
 				var prefixKey = startKeyWriter.CreateSlice();
 				startKeyWriter.Write(query.Start.Ticks);
@@ -463,7 +463,7 @@ namespace Raven.Database.TimeSeries
 
 			public void Append(string key, DateTime time, double value)
 			{
-				var sliceWriter = new SliceWriter(keyBuffer, EndianBitConverter.Big);
+				var sliceWriter = new SliceWriter(keyBuffer);
 				try
 				{
 					sliceWriter.Write(key);
@@ -577,7 +577,7 @@ namespace Raven.Database.TimeSeries
 
 			public void Append(string key, DateTime time, Range range)
 			{
-				var sliceWriter = new SliceWriter(_keyBuffer, EndianBitConverter.Big);
+				var sliceWriter = new SliceWriter(_keyBuffer);
 				sliceWriter.Write(key);
 				sliceWriter.Write(time.Ticks);
 				var keySlice = sliceWriter.CreateSlice();

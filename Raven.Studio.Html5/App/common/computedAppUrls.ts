@@ -81,7 +81,6 @@ interface computedAppUrls {
     filesystemSynchronizationDestinations: KnockoutComputed<string>;
     filesystemConfiguration: KnockoutComputed<string>;
     filesystemSynchronizationConfiguration: KnockoutComputed<string>;
-
     filesystemVersioning: KnockoutComputed<string>;
 
     counterStorages:KnockoutComputed<string>;

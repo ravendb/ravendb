@@ -329,9 +329,21 @@ namespace Raven.Abstractions.Data
 
 			public const string DataDirectory = "Raven/Counters/DataDir";
 
+			public const string TombstoneRetentionTime = "Raven/Counter/TombstoneRetentionTime";
+
 			public const string UrlPrefix = "cs";
 
 			public const string Separator = "/";
+		}
+
+		//Time Series
+		public static class TimeSeries
+		{
+			public const string Prefix = "Raven/TimeSeries/";
+
+			public const string DataDirectory = "Raven/TimeSeries/DataDir";
+
+			public const string UrlPrefix = "ts";
 		}
 
 		// Subscriptions

@@ -104,7 +104,7 @@ namespace Raven.Client.Counters
 		internal void AssertInitialized()
 		{
 			if (!isInitialized)
-				throw new InvalidOperationException(string.Format("You cannot open a session or access the counters commands before initializing the counter store. Did you forget calling Initialize()? (Counter store name = {0})", Name));
+				throw new InvalidOperationException(string.Format("You cannot access the counters commands before initializing the counter store. Did you forget calling Initialize()? (Counter store name = {0})", Name));
 		}
 
 		private readonly Lazy<BatchOperationsStore> batch;
@@ -130,7 +130,7 @@ namespace Raven.Client.Counters
 
 		public CounterStoreAdminOperations Admin { get; private set; }
 		
-		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
+		private HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
 		{
 			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, Credentials, Convention.ShouldCacheRequest)
 			{

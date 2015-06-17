@@ -32,7 +32,7 @@ namespace Raven.Database.Counters.Controllers
 	{
 		[RavenRoute("cs/{counterStorageName}/change/{groupName}/{counterName}")]
 		[HttpPost]
-		public HttpResponseMessage CounterChange(string groupName, string counterName, long delta)
+		public HttpResponseMessage Change(string groupName, string counterName, long delta)
 		{
 			AssertName(groupName);
 			AssertName(counterName);
@@ -261,7 +261,7 @@ namespace Raven.Database.Counters.Controllers
 
 		[RavenRoute("cs/{counterStorageName}/reset")]
 		[HttpPost]
-		public HttpResponseMessage CounterReset(string groupName, string counterName)
+		public HttpResponseMessage Reset(string groupName, string counterName)
 		{
 			AssertName(groupName);
 			AssertName(counterName);
@@ -283,6 +283,31 @@ namespace Raven.Database.Counters.Controllers
 						Total = 0
 					});
 				}
+
+				return new HttpResponseMessage(HttpStatusCode.OK);
+			}
+		}
+
+		[RavenRoute("cs/{counterStorageName}/delete")]
+		[HttpDelete]
+		public HttpResponseMessage Delete(string groupName, string counterName)
+		{
+			AssertName(groupName);
+			AssertName(counterName);
+
+			using (var writer = Storage.CreateWriter())
+			{
+				writer.Delete(groupName, counterName);
+				writer.Commit();
+
+				Storage.MetricsCounters.Deletes.Mark();
+				Storage.Publisher.RaiseNotification(new ChangeNotification
+				{
+					GroupName = groupName,
+					CounterName = counterName,
+					Action = CounterChangeAction.Delete,
+					Total = 0
+				});
 
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}

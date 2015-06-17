@@ -118,7 +118,11 @@ class shell extends viewModelBase {
     });
 
     static resources = ko.computed(() => {
-        var result: resource[] = [].concat(shell.databases(), shell.fileSystems(), shell.counterStorages(), shell.timeSeries());
+        var databases: resource[] = shell.databases();
+        var fileSystems: resource[] = shell.fileSystems();
+        var counterStorages: resource[] = shell.counterStorages();
+        var timeSeries: resource[] = shell.timeSeries();
+        var result = databases.concat(fileSystems, counterStorages, timeSeries);
         return result.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
     });
 
@@ -129,7 +133,7 @@ class shell extends viewModelBase {
 	isInCluster = ko.computed(() => shell.clusterMode());
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-    localLicenseStatus: KnockoutObservable<licenseStatusDto> = license.licenseStatus;
+    localLicenseStatus = license.licenseStatus;
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
@@ -254,7 +258,7 @@ class shell extends viewModelBase {
         window.addEventListener("beforeunload", self.destroyChangesApi.bind(self));
         
         $(window).bind("storage", (e:any) => {
-            if (e.originalEvent.key == eventSourceSettingStorage.localStorageName) {
+            if (e.originalEvent.key === eventSourceSettingStorage.localStorageName) {
                 if (!JSON.parse(e.originalEvent.newValue)) {
                     self.destroyChangesApi();
                 } else {
@@ -262,7 +266,7 @@ class shell extends viewModelBase {
                     this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
                     this.notifications = this.createNotifications();
                 }
-            } else if (e.originalEvent.key == apiKeyLocalStorage.localStorageName) {
+            } else if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
                 this.onLogOut();
             }
         });
@@ -443,12 +447,12 @@ class shell extends viewModelBase {
             return this.showApiKeyDialog();
         } else if (hash.match(/#api-key/g)) {
             var match = /#api-key=(.*)/.exec(hash);
-            if (match && match.length == 2) {
+            if (match && match.length === 2) {
                 oauthContext.apiKey(match[1]);
                 apiKeyLocalStorage.setValue(match[1]);
             }
             var splittedHash = hash.split("&#api-key");
-            var url = (splittedHash.length == 1) ? "#resources" : splittedHash[0];
+            var url = (splittedHash.length === 1) ? "#resources" : splittedHash[0];
             window.location.href = url;
         } else {
             var apiKeyFromStorage = apiKeyLocalStorage.get();
@@ -488,28 +492,14 @@ class shell extends viewModelBase {
         }
     }
 
-    static reloadDatabases(active: database): JQueryPromise<database[]> {
-        return new getDatabasesCommand()
-            .execute()
-            .done((results: database[]) => shell.updateResourceObservableArray(shell.databases, results, active));
-    }
+    static reloadDatabases = () => shell.reloadResources(() => new getDatabasesCommand().execute(), shell.databases);
+    static reloadFileSystems = () => shell.reloadResources(() => new getFileSystemsCommand().execute(), shell.fileSystems);
+    static reloadCounterStorages = () => shell.reloadResources(() => new getCounterStoragesCommand().execute(), shell.counterStorages);
+    static reloadTimeSeries = () => shell.reloadResources(() => new getTimeSeriesCommand().execute(), shell.timeSeries);
 
-    static reloadFilesystems(active: fileSystem): JQueryPromise<fileSystem[]> {
-        return new getFileSystemsCommand()
-            .execute()
-            .done((results: fileSystem[]) => shell.updateResourceObservableArray(shell.fileSystems, results, active));
-    }
-
-    static reloadCounterStorages(active: counterStorage): JQueryPromise<counterStorage[]> {
-        return new getCounterStoragesCommand()
-            .execute()
-            .done((results: counterStorage[]) => shell.updateResourceObservableArray(shell.counterStorages, results, active));
-    }
-
-    static reloadTimeSeries(active: timeSeries): JQueryPromise<timeSeries[]> {
-        return new getTimeSeriesCommand()
-            .execute()
-            .done((results: timeSeries[]) => shell.updateResourceObservableArray(shell.timeSeries, results, active));
+    private static reloadResources(getResources: () => JQueryPromise<any>, resourceObservableArray: KnockoutObservableArray<any>) {
+        return getResources()
+            .done((results) => this.updateResourceObservableArray(resourceObservableArray, results));
     }
 
     private reloadDataAfterReconnection(rs: resource) {
@@ -519,10 +509,10 @@ class shell extends viewModelBase {
             this.fetchClientBuildVersion();
             this.fetchLicenseStatus();
 
-            var databasesLoadTask = shell.reloadDatabases(this.activeDatabase());
-            var fileSystemsLoadTask = shell.reloadFilesystems(this.activeFilesystem());
-            var counterStoragesLoadTask = shell.reloadCounterStorages(this.activeCounterStorage());
-            var timeSeriesLoadTask = shell.reloadTimeSeries(this.activeTimeSeries());
+            var databasesLoadTask = shell.reloadDatabases();
+            var fileSystemsLoadTask = shell.reloadFileSystems();
+            var counterStoragesLoadTask = shell.reloadCounterStorages();
+            var timeSeriesLoadTask = shell.reloadTimeSeries();
 
             $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
                 .done(() => {
@@ -547,14 +537,13 @@ class shell extends viewModelBase {
         }
     }
 
-    private static updateResourceObservableArray(resourceObservableArray: KnockoutObservableArray<any>,
-        recievedResourceArray: Array<any>, activeResourceObservable: any) {
+    private static updateResourceObservableArray(resourceObservableArray: KnockoutObservableArray<any>, recievedResourceArray: Array<any>) {
 
         var deletedResources = [];
 
         resourceObservableArray().forEach((rs: resource) => {
             if (rs.name !== "<system>") {
-                var existingResource = recievedResourceArray.first((recievedResource: resource) => recievedResource.name == rs.name);
+                var existingResource = recievedResourceArray.first((recievedResource: resource) => recievedResource.name === rs.name);
                 if (existingResource == null) {
                     deletedResources.push(rs);
                 }
@@ -564,7 +553,7 @@ class shell extends viewModelBase {
         resourceObservableArray.removeAll(deletedResources);
 
         recievedResourceArray.forEach((recievedResource: resource) => {
-            var foundResource: resource = resourceObservableArray().first((rs: resource) => rs.name == recievedResource.name);
+            var foundResource: resource = resourceObservableArray().first((rs: resource) => rs.name === recievedResource.name);
             if (foundResource == null) {
                 resourceObservableArray.push(recievedResource);
             } else {
@@ -700,7 +689,7 @@ class shell extends viewModelBase {
         this.navigate(editDocUrl);
     }
 
-    loadDatabases(): JQueryPromise<any>{
+    private loadDatabases(): JQueryPromise<any>{
         var deferred = $.Deferred();
 
         this.databasesLoadedTask = new getDatabasesCommand()
@@ -721,7 +710,7 @@ class shell extends viewModelBase {
         return deferred;
     }
 
-    loadFileSystems(): JQueryPromise<any>{
+    private loadFileSystems(): JQueryPromise<any>{
         var deferred = $.Deferred();
 
         new getFileSystemsCommand()
@@ -732,7 +721,7 @@ class shell extends viewModelBase {
         return deferred;
     }
 
-    loadCounterStorages(): JQueryPromise<any> {
+    private loadCounterStorages(): JQueryPromise<any> {
         var deferred = $.Deferred();
 
         new getCounterStoragesCommand()
@@ -743,7 +732,7 @@ class shell extends viewModelBase {
         return deferred;
     }
 
-    loadTimeSeries(): JQueryPromise<any> {
+    private loadTimeSeries(): JQueryPromise<any> {
         var deferred = $.Deferred();
 
         new getTimeSeriesCommand()

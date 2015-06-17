@@ -14,7 +14,10 @@ class resetCounterCommand extends commandBase {
         };
 
         var url = "/reset" + this.urlEncodeArgs(args);
-        return this.post(url, args, this.cs);
+        var action = this.post(url, args, this.cs, { dataType: undefined });
+        action.done(() => this.reportSuccess("Successfully reset counter!"));
+        action.fail((response: JQueryXHR) => this.reportError("Failed to reset counter!", response.responseText, response.statusText));
+        return action;
     }
 }
 

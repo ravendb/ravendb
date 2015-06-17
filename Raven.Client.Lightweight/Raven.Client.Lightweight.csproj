@@ -87,6 +87,7 @@
     <Compile Include="AfterStreamExecutedDelegate.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Changes\ConnectionStateBase.cs" />
     <Compile Include="Changes\IConnectableChanges.cs" />
     <Compile Include="Changes\IChangesConnectionState.cs" />
     <Compile Include="Changes\IConnectableChanges`1.cs" />

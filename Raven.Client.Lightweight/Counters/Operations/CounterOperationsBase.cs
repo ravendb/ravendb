@@ -4,10 +4,8 @@ using System.Net.Http;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
-using Raven.Client.Connection.Profiling;
-using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Client.Counters.Actions
+namespace Raven.Client.Counters.Operations
 {
 	/// <summary>
 	/// implements administration level counters functionality
@@ -18,20 +16,14 @@ namespace Raven.Client.Counters.Actions
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Convention convention;
 		protected readonly string ServerUrl;
-		protected readonly JsonSerializer JsonSerializer;
 		protected readonly string CounterStorageUrl;
-		protected readonly CounterStore Parent;
-		protected readonly string CounterStorageName;
 
 		protected CounterOperationsBase(CounterStore parent, string counterStorageName)
 		{
 			credentials = parent.Credentials;
 			jsonRequestFactory = parent.JsonRequestFactory;
 			ServerUrl = parent.Url;
-			Parent = parent;
-			CounterStorageName = counterStorageName;
 			CounterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}", ServerUrl, counterStorageName);
-			JsonSerializer = parent.JsonSerializer;
 			convention = parent.Convention;
 		}
 
