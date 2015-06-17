@@ -387,6 +387,7 @@
     <Compile Include="Raft\Storage\Handlers\DatabaseUpdateCommandHandler.cs" />
     <Compile Include="Raft\Util\RaftHelper.cs" />
     <Compile Include="Raft\ClusterManagerFactory.cs" />
+    <Compile Include="Server\Connections\TimeSeriesConnectionState.cs" />
     <Compile Include="Server\Connections\CounterStorageConnectionState.cs" />
     <Compile Include="Server\Connections\DocumentsConnectionState.cs" />
     <Compile Include="Server\Connections\FileSystemConnectionState.cs" />
@@ -482,7 +483,10 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
     <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
+    <Compile Include="TimeSeries\Backup\BackupOperation.cs" />
+    <Compile Include="TimeSeries\Backup\RestoreOperation.cs" />
     <Compile Include="TimeSeries\Controllers\AdminTimeSeriesController.cs" />
+    <Compile Include="TimeSeries\Controllers\TimeSeriesOperationsController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesStatsController.cs" />
     <Compile Include="TimeSeries\Controllers\RavenTimeSeriesApiController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesController.cs" />
