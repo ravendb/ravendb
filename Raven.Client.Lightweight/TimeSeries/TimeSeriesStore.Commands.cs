@@ -17,7 +17,7 @@ namespace Raven.Client.TimeSeries
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Post, (url, timeSeriesStoreName) =>
 			{
-				var requestUriString = String.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}/change/{2}/{3}?delta={4}",
+				var requestUriString = String.Format(CultureInfo.InvariantCulture, "{0}/ts/{1}/change/{2}/{3}?delta={4}",
 					url, timeSeriesStoreName, groupName, timeSeriesName, delta);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 					return request.ReadResponseJsonAsync().WithCancellation(token);
@@ -41,7 +41,7 @@ namespace Raven.Client.TimeSeries
 
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url,HttpMethods.Post,  (url, timeSeriesStoreName) =>
 			{
-				var requestUriString = String.Format("{0}/cs/{1}/reset/{2}/{3}", url, timeSeriesStoreName, groupName, timeSeriesName);
+				var requestUriString = String.Format("{0}/ts/{1}/reset/{2}/{3}", url, timeSeriesStoreName, groupName, timeSeriesName);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 					return request.ReadResponseJsonAsync().WithCancellation(token);
 			},token);
@@ -53,7 +53,7 @@ namespace Raven.Client.TimeSeries
 
 			return await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Get, async (url, timeSeriesStoreName) =>
 			{
-				var requestUriString = String.Format("{0}/cs/{1}/getTimeSeriesOverallTotal/{2}/{3}", url, timeSeriesStoreName, groupName, timeSeriesName);
+				var requestUriString = String.Format("{0}/ts/{1}/getTimeSeriesOverallTotal/{2}/{3}", url, timeSeriesStoreName, groupName, timeSeriesName);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);

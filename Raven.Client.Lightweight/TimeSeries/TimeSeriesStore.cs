@@ -82,7 +82,7 @@ namespace Raven.Client.TimeSeries
 			
 			AssertInitialized();
 
-			var tenantUrl = Url + "/cs/" + timeSeries;
+			var tenantUrl = Url + "/ts/" + timeSeries;
 
 			using (NoSynchronizationContext.Scope())
 			{

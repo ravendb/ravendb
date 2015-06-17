@@ -37,7 +37,7 @@ namespace Raven.Client.TimeSeries
 
 				parent.AssertInitialized();
 
-				var urlTemplate = "{0}/admin/cs/{1}";
+				var urlTemplate = "{0}/admin/ts/{1}";
 				if (shouldUpateIfExists)
 					urlTemplate += "?update=true";
 
@@ -70,7 +70,7 @@ namespace Raven.Client.TimeSeries
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}?hard-delete={2}", parent.Url, timeSeriesName, hardDelete);
+				var requestUriString = String.Format("{0}/admin/ts/{1}?hard-delete={2}", parent.Url, timeSeriesName, hardDelete);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
@@ -91,7 +91,7 @@ namespace Raven.Client.TimeSeries
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/cs/timeSeriesNames", parent.Url);
+				var requestUriString = String.Format("{0}/ts/timeSeriesNames", parent.Url);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{

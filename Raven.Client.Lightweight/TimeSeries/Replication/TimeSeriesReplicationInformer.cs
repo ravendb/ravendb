@@ -482,7 +482,7 @@ namespace Raven.Client.TimeSeries.Replication
 				   document.DataAsJson["Destinations"].Type == JTokenType.Null;
 		}
 
-		//cs/{timeSeriesName}/replication/heartbeat
+		//ts/{timeSeriesName}/replication/heartbeat
 		protected string GetServerCheckUrl(string baseUrl)
 		{
 			return baseUrl + "/replication/heartbeat";

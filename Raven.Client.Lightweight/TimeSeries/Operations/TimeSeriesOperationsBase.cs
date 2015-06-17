@@ -30,7 +30,7 @@ namespace Raven.Client.TimeSeries.Actions
 			ServerUrl = parent.Url;
 			Parent = parent;
 			TimeSeriesName = timeSeriesName;
-			TimeSeriesUrl = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}", ServerUrl, timeSeriesName);
+			TimeSeriesUrl = string.Format(CultureInfo.InvariantCulture, "{0}/ts/{1}", ServerUrl, timeSeriesName);
 			JsonSerializer = parent.JsonSerializer;
 			convention = parent.Convention;
 		}

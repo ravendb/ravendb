@@ -50,7 +50,7 @@ namespace Raven.Client.TimeSeries.Operations
 			batchOperationTcs = new TaskCompletionSource<bool>();
 			cts = new CancellationTokenSource();
 			changesQueue = new BlockingCollection<TimeSeriesChange>(_defaultOptions.BatchSizeLimit);			
-			singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", ServerUrl, timeSeriesName);
+			singleAuthUrl = string.Format("{0}/ts/{1}/singleAuthToken", ServerUrl, timeSeriesName);
 
 			OperationId = Guid.NewGuid();
 			disposed = false;
