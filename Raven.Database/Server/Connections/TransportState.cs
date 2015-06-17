@@ -121,6 +121,17 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
+		public event Action<object, DataSubscriptionChangeNotification> OnDataSubscriptionChangeNotification = delegate { };
+
+		public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
+		{
+			OnDataSubscriptionChangeNotification(this, dataSubscriptionChangeNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.Send(dataSubscriptionChangeNotification);
+			}
+		}
+
         public ConnectionState For(string id, RavenBaseApiController controller = null)
 		{
 			return connections.GetOrAdd(id, _ =>

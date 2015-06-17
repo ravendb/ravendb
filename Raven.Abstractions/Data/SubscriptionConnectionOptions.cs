@@ -19,7 +19,7 @@ namespace Raven.Abstractions.Data
 			BatchOptions = new SubscriptionBatchOptions();
 			ClientAliveNotificationInterval = TimeSpan.FromMinutes(2);
 			TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(15);
-			Strategy = SubscriptionOpeningStrategy.FirstKeepsOpen;
+			Strategy = SubscriptionOpeningStrategy.OpenIfFree;
 		}
 
 		public string ConnectionId { get; private set; }

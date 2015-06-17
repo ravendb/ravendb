@@ -72,6 +72,12 @@ namespace Raven.Database.Server.Controllers
 
 			Database.Subscriptions.OpenSubscription(id, options);
 
+			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
+			{
+				Id = id,
+				Type = DataSubscriptionChangeTypes.SubscriptionOpened
+			});
+
 			return GetEmptyMessage();
 		}
 
@@ -137,6 +143,12 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			Database.Subscriptions.ReleaseSubscription(id);
+
+			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
+			{
+				Id = id,
+				Type = DataSubscriptionChangeTypes.SubscriptionReleased
+			});
 
 			return GetEmptyMessage();
 		}

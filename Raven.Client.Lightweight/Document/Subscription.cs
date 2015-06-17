@@ -45,6 +45,7 @@ namespace Raven.Client.Document
 		private Task startPullingTask;
 		private IDisposable putDocumentsObserver;
 		private IDisposable endedBulkInsertsObserver;
+		private IDisposable dataSubscriptionReleasedObserver;
 		private bool completed;
 		private bool disposed;
 		private bool firstConnection = true;
@@ -52,7 +53,7 @@ namespace Raven.Client.Document
 		public event Action BeforeBatch = delegate { };
 		public event Action AfterBatch = delegate { };
 
-		internal Subscription(long id, string database, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, Func<Task> ensureOpenSubscription)
+		internal Subscription(long id, string database, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, bool open, Func<Task> ensureOpenSubscription)
 		{
 			this.id = id;
 			this.options = options;
@@ -67,6 +68,20 @@ namespace Raven.Client.Document
 				generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => conventions.GenerateDocumentKeyAsync(database, commands, entity).ResultUnwrap());
 			}
 
+			if (open)
+				Start();
+			else
+			{
+				if (options.Strategy != SubscriptionOpeningStrategy.WaitForFree)
+					throw new InvalidOperationException("Subscription isn't open while its opening strategy is: " + options.Strategy);
+			}
+
+			if (options.Strategy == SubscriptionOpeningStrategy.WaitForFree)
+				WaitForSubscriptionReleased();
+		}
+
+		private void Start()
+		{
 			StartWatchingDocs();
 			startPullingTask = StartPullingDocs();
 		}
@@ -229,7 +244,7 @@ namespace Raven.Client.Document
 		public Exception SubscriptionConnectionException { get; private set; }
 
 		/// <summary>
-		/// It determines if the subscription is closed.
+		/// It determines if the subscription connection is closed.
 		/// </summary>
 		public bool IsConnectionClosed { get; private set; }
 
@@ -337,6 +352,37 @@ namespace Raven.Client.Document
 			});
 		}
 
+		private void WaitForSubscriptionReleased()
+		{
+			var dataSubscriptionObservable = changes.ForDataSubscription(id);
+
+			dataSubscriptionReleasedObserver = dataSubscriptionObservable.Subscribe(notification =>
+			{
+				if (notification.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
+				{
+					try
+					{
+						ensureOpenSubscription().Wait();
+					}
+					catch (Exception)
+					{
+						return;
+					}
+
+					// succeeded in opening the subscription
+					
+					// no longer need to be notified about subscription status changes
+					dataSubscriptionReleasedObserver.Dispose();
+					dataSubscriptionReleasedObserver = null;
+
+					// start standard stuff
+					Start();
+				}
+			});
+
+			dataSubscriptionObservable.Task.Wait();
+		}
+
 		private void ChangesApiConnectionChanged(object sender, EventArgs e)
 		{
 			if (firstConnection)
@@ -427,6 +473,9 @@ namespace Raven.Client.Document
 
 			if(endedBulkInsertsObserver != null)
 				endedBulkInsertsObserver.Dispose();
+
+			if(dataSubscriptionReleasedObserver != null)
+				dataSubscriptionReleasedObserver.Dispose();
 
 			cts.Cancel();
 

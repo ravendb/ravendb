@@ -20,13 +20,13 @@ namespace Raven.Tests.Issues
 		private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(20);
 
 		[Fact]
-		public void FirstKeepsOpen_ShouldBeDefaultStrategy()
+		public void OpenIfFree_ShouldBeDefaultStrategy()
 		{
-			Assert.Equal(SubscriptionOpeningStrategy.FirstKeepsOpen, new SubscriptionConnectionOptions().Strategy);
+			Assert.Equal(SubscriptionOpeningStrategy.OpenIfFree, new SubscriptionConnectionOptions().Strategy);
 		}
 
 		[Fact]
-		public void ShouldRejectWhen_FirstKeepsOpen_StrategyIsUsed()
+		public void ShouldRejectWhen_OpenIfFree_StrategyIsUsed()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -36,13 +36,13 @@ namespace Raven.Tests.Issues
 
 				Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
 				{
-					Strategy = SubscriptionOpeningStrategy.FirstKeepsOpen
+					Strategy = SubscriptionOpeningStrategy.OpenIfFree
 				}));
 			}
 		}
 
 		[Fact]
-		public void ShouldReplaceActiveClientWhen_LastTakesOver_StrategyIsUsed()
+		public void ShouldReplaceActiveClientWhen_TakeOver_StrategyIsUsed()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -57,7 +57,7 @@ namespace Raven.Tests.Issues
 				{
 					subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 					{
-						Strategy = SubscriptionOpeningStrategy.LastTakesOver
+						Strategy = i > 0 ? SubscriptionOpeningStrategy.TakeOver : SubscriptionOpeningStrategy.OpenIfFree
 					});
 
 					store.Changes().WaitForAllPendingSubscriptions();
@@ -96,11 +96,11 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ShouldReplaceActiveClientWhen_Forced_StrategyIsUsed()
+		public void ShouldReplaceActiveClientWhen_ForceAndKeep_StrategyIsUsed()
 		{
 			using (var store = NewDocumentStore())
 			{
-				foreach (var strategyToReplace in new []{SubscriptionOpeningStrategy.FirstKeepsOpen, SubscriptionOpeningStrategy.LastTakesOver})
+				foreach (var strategyToReplace in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.WaitForFree })
 				{
 					var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 					var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
@@ -114,7 +114,7 @@ namespace Raven.Tests.Issues
 
 					var forcedSubscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 					{
-						Strategy = SubscriptionOpeningStrategy.Forced
+						Strategy = SubscriptionOpeningStrategy.ForceAndKeep
 					});
 
 					store.Changes().WaitForAllPendingSubscriptions();
@@ -143,7 +143,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void FirstKeepsOpen_And_LastTakesOver_StrategiesCannotDropClientWith_Forced_Strategy()
+		public void OpenIfFree_And_TakeOver_StrategiesCannotDropClientWith_ForceAndKeep_Strategy()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -151,10 +151,10 @@ namespace Raven.Tests.Issues
 
 				var forcedSubscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 				{
-					Strategy = SubscriptionOpeningStrategy.Forced
+					Strategy = SubscriptionOpeningStrategy.ForceAndKeep
 				});
 
-				foreach (var strategy in new[] { SubscriptionOpeningStrategy.FirstKeepsOpen, SubscriptionOpeningStrategy.LastTakesOver })
+				foreach (var strategy in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver })
 				{
 					Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 					{
@@ -165,7 +165,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void Forced_StrategyUsageCanTakeOverAnotherClientWith_Forced_Strategy()
+		public void ForceAndKeep_StrategyUsageCanTakeOverAnotherClientWith_ForceAndKeep_Strategy()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -180,7 +180,7 @@ namespace Raven.Tests.Issues
 				{
 					subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
 					{
-						Strategy = SubscriptionOpeningStrategy.Forced
+						Strategy = SubscriptionOpeningStrategy.ForceAndKeep
 					});
 
 					store.Changes().WaitForAllPendingSubscriptions();
@@ -214,6 +214,148 @@ namespace Raven.Tests.Issues
 						Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].IsConnectionClosed, TimeSpan.FromSeconds(5)));
 						Assert.True(subscriptions[i - 1].SubscriptionConnectionException is SubscriptionInUseException);
 					}
+				}
+			}
+		}
+
+		[Fact]
+		public void ShouldOpenSubscriptionWith_WaitForFree_StrategyWhenItIsNotInUseByAnotherClient()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+				var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+				{
+					Strategy = SubscriptionOpeningStrategy.WaitForFree
+				});
+
+				var items = new BlockingCollection<User>();
+
+				subscription.Subscribe(items.Add);
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new User());
+					s.Store(new User());
+
+					s.SaveChanges();
+				}
+
+				User user;
+
+				Assert.True(items.TryTake(out user, waitForDocTimeout));
+				Assert.True(items.TryTake(out user, waitForDocTimeout));
+			}
+		}
+
+		[Fact]
+		public void ShouldProcessSubscriptionAfterItGetsReleasedWhen_WaitForFree_StrategyIsSet()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+
+				var userId = 0;
+
+				foreach (var activeClientStrategy in new []{SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.ForceAndKeep})
+				{
+					var active = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+					{
+						Strategy = activeClientStrategy
+					});
+
+					var pending = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+					{
+						Strategy = SubscriptionOpeningStrategy.WaitForFree
+					});
+
+					Assert.Null(pending.SubscriptionConnectionException);
+					Assert.False(pending.IsConnectionClosed);
+
+					bool batchAcknowledged = false;
+					pending.AfterBatch += () => batchAcknowledged = true;
+
+					var items = new BlockingCollection<User>();
+
+					pending.Subscribe(items.Add);
+
+					active.Dispose(); // disconnect the active client, the pending one should be notified the the subscription is free and retry to open it
+
+					using (var s = store.OpenSession())
+					{
+						s.Store(new User(), "users/" + userId++);
+						s.Store(new User(), "users/" + userId++);
+
+						s.SaveChanges();
+					}
+
+					User user;
+
+					Assert.True(items.TryTake(out user, waitForDocTimeout));
+					Assert.Equal("users/" + (userId - 2), user.Id);
+					Assert.True(items.TryTake(out user, waitForDocTimeout));
+					Assert.Equal("users/" + (userId - 1), user.Id);
+
+					Assert.True(SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5))); // let it acknowledge the processed batch before we open another subscription
+
+					pending.Dispose();
+				}
+			}
+		}
+
+		[Fact]
+		public void AllClientsWith_WaitForFree_StrategyShouldGetAccessToSubscription()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+
+				const int numberOfClients = 4;
+
+				var subscriptions = new Subscription<User>[numberOfClients];
+				var processed = new bool[numberOfClients];
+
+				int? processedClient = null;
+
+				for (int i = 0; i < numberOfClients; i++)
+				{
+					var clientNumber = i;
+
+					subscriptions[clientNumber] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+					{
+						Strategy = SubscriptionOpeningStrategy.WaitForFree
+					});
+
+					subscriptions[clientNumber].AfterBatch += () =>
+					{
+						processed[clientNumber] = true;
+					};
+
+					subscriptions[clientNumber].Subscribe(x =>
+					{
+						processedClient = clientNumber;
+					});
+				}
+
+				for (int i = 0; i < numberOfClients; i++)
+				{
+					using (var s = store.OpenSession())
+					{
+						s.Store(new User());
+						s.SaveChanges();
+					}
+
+					Assert.True(SpinWait.SpinUntil(() => processedClient != null, waitForDocTimeout));
+					Assert.True(SpinWait.SpinUntil(() => processed[processedClient.Value], waitForDocTimeout));
+
+					subscriptions[processedClient.Value].Dispose();
+
+					processedClient = null;
+				}
+
+				for (int i = 0; i < numberOfClients; i++)
+				{
+					Assert.True(processed[i]);
 				}
 			}
 		}
