@@ -301,7 +301,7 @@ namespace Voron.Trees.Fixed
                     MemoryUtils.Copy(allocatePage.Base + allocatePage.FixedSize_StartPosition, tmp.TempPagePointer,
                         newSize);
 
-                    return allocatePage.Base + allocatePage.FixedSize_StartPosition + srcCopyStart;
+                    return allocatePage.Base + allocatePage.FixedSize_StartPosition + srcCopyStart + sizeof(long);
                 }
                 else
                 {
@@ -314,7 +314,7 @@ namespace Voron.Trees.Fixed
                     MemoryUtils.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
                         newSize);
 
-                    return newData + sizeof(FixedSizeTreeHeader.Embedded) + srcCopyStart;
+                    return newData + sizeof(FixedSizeTreeHeader.Embedded) + srcCopyStart + sizeof(long);
                 }
             }
         }
