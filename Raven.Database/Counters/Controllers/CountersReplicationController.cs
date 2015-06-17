@@ -86,7 +86,7 @@ namespace Raven.Database.Counters.Controllers
 	                {
 		                counterChangeNotifications.ForEach(change =>
 		                {
-			                change.Total = reader.GetCounterTotalValue(change.GroupName, change.CounterName);
+			                //TODO: change.Total = reader.GetCounterTotalValue(change.GroupName, change.CounterName);
 							Storage.Publisher.RaiseNotification(change);
 		                });
 	                }

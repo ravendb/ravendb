@@ -134,7 +134,7 @@ namespace Raven.Client.Counters.Changes
 
 	    private static string FullCounterName(string groupName, string counterName)
 	    {
-			return string.Concat(groupName, Constants.Counter.Separator, counterName);
+			return string.Concat(groupName, "/", counterName);
 	    }
 
 		public IObservableWithTask<StartingWithNotification> ForCountersStartingWith(string groupName, string prefixForName)

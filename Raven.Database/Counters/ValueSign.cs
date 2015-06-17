@@ -2,7 +2,7 @@
 {
 	public static class ValueSign
 	{
-		public const string Positive = "+";
-		public const string Negative = "-";
+		public const char Positive = '+';
+		public const char Negative = '-';
 	}
 }

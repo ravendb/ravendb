@@ -50,7 +50,7 @@ namespace Raven.Database.Counters.Controllers
 						GroupName = groupName,
 						CounterName = counterName,
 						Action = counterChangeAction,
-						Total = reader.GetCounterTotalValue(groupName, counterName)
+						//TODO: Total = reader.GetCounterTotalValue(groupName, counterName)
 					});
 				}
 
@@ -321,9 +321,10 @@ namespace Raven.Database.Counters.Controllers
 
 			using (var reader = Storage.CreateReader())
 			{
-				var groupsPrefix = (group == null) ? string.Empty : (group + Constants.Counter.Separator);
-				var counterByPrefixes = reader.GetCountersByPrefixes(groupsPrefix, skip, take);
-				var counters = counterByPrefixes.Select(groupWithCounterName => reader.GetCounterSummary(groupWithCounterName)).ToList();
+				var gruop = group ?? string.Empty;
+				var counters = reader.GetCountersSummary(gruop, skip, take);
+				/*var counterByPrefixes = reader.GetCountersByPrefixes(groupsPrefix, skip, take);
+				var counters = counterByPrefixes.Select(groupWithCounterName => reader.GetCounterSummary(groupWithCounterName)).ToList();*/
 				return GetMessageWithObject(counters);
 			}
 		}

@@ -272,6 +272,7 @@ namespace Voron.Trees
 			}
 		}
 
+		//TODO: write a test for this
 		public long MultiCount(Slice key)
 		{
 			Lazy<Cursor> lazy;
@@ -299,6 +300,7 @@ namespace Voron.Trees
 
 			return nestedPage.NumberOfEntries;
 		}
+
 		public IIterator MultiRead(Slice key)
 		{
 			Lazy<Cursor> lazy;
