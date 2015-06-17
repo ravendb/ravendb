@@ -261,18 +261,6 @@ namespace Raven.Abstractions.Data
 
 		public const int NumberOfCachedRequests = 1024;
 
-		//Time Series
-		public static class TimeSeries
-		{
-			public const string Prefix = "Raven/TimeSeries/";
-
-			public const string DataDirectory = "Raven/TimeSeries/DataDir";
-
-			public const string UrlPrefix = "ts";
-
-			public const string Separator = "/";
-		}
-
 		// Backup
 
 		public const string DatabaseDocumentFilename = "Database.Document";
@@ -344,6 +332,8 @@ namespace Raven.Abstractions.Data
 			public const string DataDirectory = "Raven/TimeSeries/DataDir";
 
 			public const string UrlPrefix = "ts";
+
+			public const string Separator = "/";
 		}
 
 		// Subscriptions
