@@ -1,22 +1,18 @@
-﻿using System;
+﻿using Sparrow.Platform;
+using System;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading.Tasks;
-using Voron.Impl;
 
-namespace Voron.Util
+namespace Sparrow
 {
-    public unsafe static class MemoryUtils
+    public unsafe static class Memory
     {
-        public static PrefixedSliceComparer MemoryComparerInstance = Compare;
-
-
         [SecurityCritical]
         [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
-
         public static int Compare(byte* p1, byte* p2, int size)
         {
             return CompareInline(p1, p2, size);
@@ -89,7 +85,7 @@ namespace Voron.Util
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void BulkCopy(byte* dest, byte* src, int n)
         {
-            StdLib.memcpy(dest, src, n);            
+            UnmanagedMemory.Copy(dest, src, n);            
         }
 
         public unsafe static void Copy(byte* dest, byte* src, int n)

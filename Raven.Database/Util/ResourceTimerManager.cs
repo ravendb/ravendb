@@ -8,6 +8,7 @@ using System.Threading;
 
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
+using Sparrow.Collections;
 
 namespace Raven.Database.Util
 {

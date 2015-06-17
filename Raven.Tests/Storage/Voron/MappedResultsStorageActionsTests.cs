@@ -20,6 +20,7 @@ namespace Raven.Tests.Storage.Voron
 
 	using Xunit;
 	using Xunit.Extensions;
+    using Sparrow.Collections;
 
 	[Trait("VoronTest", "StorageActionsTests")]
 	public class MappedResultsStorageActionsTests : TransactionalStorageTestBase

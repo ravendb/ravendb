@@ -21,6 +21,7 @@ using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
+using Sparrow.Collections;
 
 namespace Raven.Database.Indexing
 {

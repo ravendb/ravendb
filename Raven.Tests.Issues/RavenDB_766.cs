@@ -16,6 +16,7 @@ namespace Raven.Tests.Issues
 	using Raven.Json.Linq;
 	using Xunit;
 	using Xunit.Extensions;
+    using Sparrow.Collections;
 
 	public class RavenDB_766 : RavenTest
 	{

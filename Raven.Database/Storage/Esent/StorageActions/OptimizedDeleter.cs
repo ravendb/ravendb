@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Util;
 using System.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Storage.Esent.StorageActions
 {

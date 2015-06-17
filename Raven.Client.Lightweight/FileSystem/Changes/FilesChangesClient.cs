@@ -7,6 +7,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

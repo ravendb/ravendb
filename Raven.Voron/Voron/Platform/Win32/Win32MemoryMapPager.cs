@@ -11,6 +11,7 @@ using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
+using Sparrow;
 
 namespace Voron.Platform.Win32
 {
@@ -277,7 +278,7 @@ namespace Voron.Platform.Win32
 			ThrowObjectDisposedIfNeeded();
 
 			int toCopy = pagesToWrite * PageSize;
-            MemoryUtils.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+            Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
 
 			return toCopy;
 		}

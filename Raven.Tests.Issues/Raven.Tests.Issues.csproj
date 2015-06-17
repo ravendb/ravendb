@@ -511,6 +511,10 @@
       <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Bundles\Raven.Tests.Bundles.csproj">
       <Project>{83AB5B46-5502-40DD-BA5F-83499F19B953}</Project>
       <Name>Raven.Tests.Bundles</Name>

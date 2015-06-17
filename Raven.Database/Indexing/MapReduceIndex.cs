@@ -34,6 +34,7 @@ using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Spatial4n.Core.Exceptions;
+using Sparrow.Collections;
 
 namespace Raven.Database.Indexing
 {

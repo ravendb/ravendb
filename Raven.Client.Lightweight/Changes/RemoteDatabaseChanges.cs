@@ -8,6 +8,7 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +28,7 @@ namespace Raven.Client.Changes
         private readonly ConcurrentSet<string> watchedCollections = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
+
         private bool watchAllDocs;
         private bool watchAllIndexes;
         private bool watchAllTransformers;

@@ -29,6 +29,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using global::Voron.Impl;
 
 	using Index = Raven.Database.Storage.Voron.Impl.Index;
+    using Sparrow.Collections;
 
 	internal class MappedResultsStorageActions : StorageActionsBase, IMappedResultsStorageAction
 	{

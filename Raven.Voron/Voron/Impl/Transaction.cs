@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Sparrow;
+using Sparrow.Platform;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
@@ -160,7 +161,7 @@ namespace Voron.Impl
 			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
 
 			var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-            MemoryUtils.Copy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
+            Memory.Copy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
 
 			_allocatedPagesInTransaction++;
 
@@ -181,7 +182,7 @@ namespace Voron.Impl
 			
             _transactionHeaderPage = allocation;
 
-			StdLib.memset(page.Base, 0, AbstractPager.PageSize);
+			UnmanagedMemory.Set(page.Base, 0, AbstractPager.PageSize);
 			_txHeader = (TransactionHeader*)page.Base;
 			_txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
@@ -248,7 +249,7 @@ namespace Voron.Impl
 
 		    var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
-            MemoryUtils.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
+            Memory.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
 			newPage.LastMatch = page.LastMatch;
 			tree.RecentlyFoundPages.Reset(num);

@@ -2,6 +2,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Util;
 using Raven.Abstractions.Util;
+using Sparrow;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 

@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Sparrow;
+using Sparrow.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -887,7 +889,7 @@ namespace Voron.Impl.Journal
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                 var count = txPage.NumberOfPages * AbstractPager.PageSize;
-                MemoryUtils.BulkCopy(write, scratchPage, count);
+                Memory.BulkCopy(write, scratchPage, count);
                 write += count;
             }
 
@@ -898,7 +900,7 @@ namespace Voron.Impl.Journal
 		    if (remainder != 0)
 		    {
                 // zero the remainder of the page
-				StdLib.memset(compressionBuffer + len, 0, remainder);
+				UnmanagedMemory.Set(compressionBuffer + len, 0, remainder);
 		    }
 
 			var pages = new IntPtr[compressedPages + 1];

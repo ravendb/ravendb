@@ -23,6 +23,7 @@ using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.WebApi
 {

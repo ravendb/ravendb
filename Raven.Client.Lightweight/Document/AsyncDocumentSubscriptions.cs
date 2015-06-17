@@ -16,6 +16,7 @@ using Raven.Client.Util;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Client.Document
 {
