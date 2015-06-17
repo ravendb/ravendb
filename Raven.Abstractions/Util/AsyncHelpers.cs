@@ -6,8 +6,8 @@
 
 using System;
 using System.Runtime.ExceptionServices;
-using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Util
@@ -19,10 +19,10 @@ namespace Raven.Abstractions.Util
 			var result = default(T);
 			try
 			{
-				var taskAwaiter = Task.Run(work).ConfigureAwait(false)
-									    .GetAwaiter();				
-
-				result = taskAwaiter.GetResult();
+				result = Task.Run(work)
+					.ConfigureAwait(false)
+					.GetAwaiter()
+					.GetResult();
 			}
 			catch (AggregateException ex)
 			{
@@ -37,9 +37,10 @@ namespace Raven.Abstractions.Util
 		{
 			try
 			{
-				Task.Run(work).ConfigureAwait(false)
-					  .GetAwaiter()
-					  .GetResult();
+				Task.Run(work)
+					.ConfigureAwait(false)
+					.GetAwaiter()
+					.GetResult();
 			}
 			catch (AggregateException ex)
 			{
