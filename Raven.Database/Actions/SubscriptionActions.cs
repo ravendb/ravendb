@@ -94,13 +94,13 @@ namespace Raven.Database.Actions
 			switch (options.Strategy)
 			{
 				case SubscriptionOpeningStrategy.TakeOver:
-					if (existingOptions.Strategy != SubscriptionOpeningStrategy.Force)
+					if (existingOptions.Strategy != SubscriptionOpeningStrategy.ForceAndKeep)
 					{
 						ForceReleaseAndOpenForNewClient(id, options);
 						return;
 					}
 					break;
-				case SubscriptionOpeningStrategy.Force:
+				case SubscriptionOpeningStrategy.ForceAndKeep:
 					ForceReleaseAndOpenForNewClient(id, options);
 					return;
 			}
