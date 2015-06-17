@@ -64,7 +64,7 @@ namespace Raven.Client.Document
 			if (typeof (T) != typeof (RavenJObject))
 			{
 				isStronglyTyped = true;
-				generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => conventions.GenerateDocumentKeyAsync(database, commands, entity).ResultUnwrap());
+				generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => AsyncHelpers.RunSync(() => conventions.GenerateDocumentKeyAsync(database, commands, entity)));
 			}
 
 			StartWatchingDocs();
