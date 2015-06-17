@@ -496,6 +496,7 @@
     <Compile Include="TimeSeries\PointCandleSchema.cs" />
     <Compile Include="TimeSeries\Range.cs" />
     <Compile Include="TimeSeries\RollupRange.cs" />
+    <Compile Include="TimeSeries\SeriesType.cs" />
     <Compile Include="TimeSeries\TimeSeriesQuery.cs" />
     <Compile Include="TimeSeries\TimeSeriesServer.cs" />
     <Compile Include="TimeSeries\TimeSeriesStorage.cs" />

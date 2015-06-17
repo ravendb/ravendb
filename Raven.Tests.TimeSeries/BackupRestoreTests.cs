@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -155,7 +156,7 @@ namespace Raven.Tests.TimeSeries
 
 		private void StoreTimeSeriesChange(long change, TimeSeriesStorage timeSeries)
 		{
-			using (var writer = timeSeries.CreateWriter())
+			using (var writer = timeSeries.CreateWriter(TODO))
 			{
 				writer.Store("Bar", "Foo", change);
 				writer.Commit();
@@ -186,3 +187,4 @@ namespace Raven.Tests.TimeSeries
 		}
 	}
 }
+*/

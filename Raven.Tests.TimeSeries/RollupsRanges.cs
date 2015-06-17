@@ -15,7 +15,7 @@ namespace Raven.Tests.TimeSeries
 			{
 				var start = new DateTime(2015, 4, 6, 0, 0, 0);
 
-				using (var writer = tss.CreateWriter())
+				using (var writer = tss.CreateWriter(SeriesType.Simple()))
 				{
 					for (int i = 10; i < 2000; i++)
 					{
@@ -25,7 +25,7 @@ namespace Raven.Tests.TimeSeries
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(SeriesType.Simple()))
 				{
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
@@ -79,7 +79,7 @@ namespace Raven.Tests.TimeSeries
 			{
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
 
-				using (var writer = tss.CreateWriter())
+				using (var writer = tss.CreateWriter(SeriesType.Simple()))
 				{
 					for (int i = 10; i < 5000; i++)
 					{
@@ -89,7 +89,7 @@ namespace Raven.Tests.TimeSeries
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(SeriesType.Simple()))
 				{
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
@@ -158,7 +158,7 @@ namespace Raven.Tests.TimeSeries
 			{
 				var start = new DateTime(2014, 1, 1, 0, 0, 0);
 
-				using (var writer = tss.CreateWriter())
+				using (var writer = tss.CreateWriter(SeriesType.Simple()))
 				{
 					for (int i = 10; i < 5000; i++)
 					{
@@ -168,7 +168,7 @@ namespace Raven.Tests.TimeSeries
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(SeriesType.Simple()))
 				{
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
