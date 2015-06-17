@@ -3,15 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Voron.Util;
+using Sparrow;
 using Xunit;
 
-namespace Voron.Tests.Util
+namespace Sparrow.Tests
 {
     public class HashingTests
     {
 
-        [PrefixesFact]
         public void XXHash32()
         {
             string value = "abcd";
@@ -42,7 +41,6 @@ namespace Voron.Tests.Util
         }
 
 
-        [PrefixesFact]
         public void NotEquivalenceOfBytesWithString()
         {
             string value = "abcd";

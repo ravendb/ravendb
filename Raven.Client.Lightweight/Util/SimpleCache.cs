@@ -8,12 +8,13 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+using Sparrow.Collections;
 
 namespace Raven.Client.Util
 {
 	public class SimpleCache : IDisposable
 	{
-		private readonly ConcurrentLruLSet<string> lruKeys;
+		private readonly ConcurrentLruSet<string> lruKeys;
 		private readonly ConcurrentDictionary<string, CachedRequest> actualCache;
 
         private readonly ConcurrentDictionary<string, int> lastWritePerDb = new ConcurrentDictionary<string, int>();
@@ -21,7 +22,7 @@ namespace Raven.Client.Util
 		public SimpleCache(int maxNumberOfCacheEntries)
 		{
 			actualCache = new ConcurrentDictionary<string, CachedRequest>();
-			lruKeys = new ConcurrentLruLSet<string>(maxNumberOfCacheEntries, key =>
+			lruKeys = new ConcurrentLruSet<string>(maxNumberOfCacheEntries, key =>
 			{
 				CachedRequest _;
 				actualCache.TryRemove(key, out _);

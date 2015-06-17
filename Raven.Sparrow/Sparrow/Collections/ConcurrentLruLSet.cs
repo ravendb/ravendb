@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
 
-namespace Raven.Client.Connection.Profiling
+namespace Sparrow.Collections
 {
-	internal class ConcurrentLruLSet<T>
+	public class ConcurrentLruSet<T>
 	{
 		private readonly int maxCapacity;
 		private readonly Action<T> onDrop;        
@@ -14,7 +14,7 @@ namespace Raven.Client.Connection.Profiling
 		private LinkedList<T> items = new LinkedList<T>();
         private Dictionary<T, LinkedListNode<T>> itemsLookupTable = new Dictionary<T, LinkedListNode<T>>();
 
-		public ConcurrentLruLSet(int maxCapacity, Action<T> onDrop = null)
+		public ConcurrentLruSet(int maxCapacity, Action<T> onDrop = null)
 		{
 			this.maxCapacity = maxCapacity;
 			this.onDrop = onDrop;

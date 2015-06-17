@@ -62,7 +62,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Collections\ConcurrentLruLSet.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
+    <Compile Include="Hashing.cs" />
     <Compile Include="Memory.cs" />
     <Compile Include="ObjectPool.cs" />
     <Compile Include="Platform\Posix\PosixUnmanagedMemory.cs" />
@@ -71,6 +73,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="RavenDB.snk" />
+    <None Include="readme.md" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
