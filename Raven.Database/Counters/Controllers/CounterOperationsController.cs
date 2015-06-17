@@ -289,7 +289,7 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[RavenRoute("cs/{counterStorageName}/delete")]
-		[HttpPost]
+		[HttpDelete]
 		public HttpResponseMessage Delete(string groupName, string counterName)
 		{
 			AssertName(groupName);

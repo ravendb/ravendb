@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
@@ -77,7 +78,6 @@ namespace Raven.Database.Counters
 			Configuration = configuration;
 			ExtensionsState = new AtomicDictionary<object>();
 			jsonSerializer = new JsonSerializer();
-			//TombstoneId = 
 
 			Initialize();
 			purgeTombstonesTimer = new Timer(BackgroundActionsCallback, null, TimeSpan.Zero, TimeSpan.FromHours(1));
@@ -456,11 +456,11 @@ namespace Raven.Database.Counters
 					var result = new Counter();
 					do
 					{
-						result.CounterValues.Add(new CounterValue
-						(
-							it.CurrentKey.ToString(),
-							it.CreateReaderForCurrent().ReadLittleEndianInt64()
-						));
+						var counterValue = new CounterValue(it.CurrentKey.ToString(), it.CreateReaderForCurrent().ReadLittleEndianInt64());
+						if (counterValue.ServerId().Equals(parent.tombstoneId) && counterValue.Value == DateTime.MaxValue.Ticks)
+							continue;
+
+						result.CounterValues.Add(counterValue);
 					} while (it.MoveNext());
 					return result;
 				}
@@ -559,6 +559,7 @@ namespace Raven.Database.Counters
 				public readonly static byte[] Etag = new byte[sizeof(long)];
 				public readonly static byte[] CounterValue = new byte[sizeof(long)];
 				public readonly static byte[] TombstoneTicks = new byte[sizeof(long)];
+				public readonly static byte[] Zeroes = new byte[sizeof(long)];
 				public static byte[] FullCounterName = new byte[0];
 				public static byte[] FullTombstoneName = new byte[0];
 			}
@@ -625,7 +626,10 @@ namespace Raven.Database.Counters
 					counters.Add(counterKey, counterValueSlice);
 
 					if (serverId.Equals(parent.tombstoneId))
+					{
 						tombstonesByDate.Add(counterValueSlice, counterKey);
+						//TODO: Do we need to do a reset here or wait for the replication to kick in
+					}
 				});
 
 				if (serverId.Equals(parent.tombstoneId))
@@ -698,7 +702,6 @@ namespace Raven.Database.Counters
 						parent.tombstoneId,
 						ValueSign.Positive,
 						fullCounterNameSize);
-
 				var tombstoneKey = tombstoneSliceWriter.CreateSlice();
 				var tombstone = counters.Read(tombstoneKey);
 				if (tombstone == null)
@@ -776,6 +779,28 @@ namespace Raven.Database.Counters
 				if (counterExists == false)
 					throw new InvalidOperationException(string.Format("Counter doesn't exist. Group: {0}, Counter Name: {1}", groupName, counterName));
 
+				/*using (var it = counters.Iterate())
+				{
+					it.RequiredPrefix = groupAndCounterNameSlice;
+					if (it.Seek(it.RequiredPrefix) == false)
+						return;
+
+					do
+					{
+						var counterValue = new CounterValue(it.CurrentKey.ToString(), 0);
+						var serverId = counterValue.ServerId();
+						if (serverId.Equals(parent.tombstoneId))
+							continue;
+						var sign = counterValue.IsPositive() ? ValueSign.Positive : ValueSign.Negative;
+						Store(groupName, counterName, serverId, sign, counterKey =>
+						{
+							var slice = new Slice(Buffer.Zeroes);
+							counters.Add(counterKey, slice);
+						});
+					} while (it.MoveNext());
+				}*/
+				//need to reset the counter, if we recreate it again we'll start from 0
+				Reset(groupName, counterName);
 				Store(groupName, counterName, parent.tombstoneId, ValueSign.Positive, counterKey =>
 				{
 					EndianBitConverter.Big.CopyBytes(DateTime.Now.Ticks, Buffer.CounterValue, 0);
@@ -783,6 +808,8 @@ namespace Raven.Database.Counters
 					counters.Add(counterKey, slice);
 					tombstonesByDate.Add(slice, groupAndCounterNameSlice);
 				});
+
+				
 			}
 
 			public void RecordLastEtagFor(Guid serverId, long lastEtag)

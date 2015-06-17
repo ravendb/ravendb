@@ -34,6 +34,8 @@ namespace Raven.Client.Counters
 
 		Task ResetAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
 
+		Task DeleteAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
+
 		Task<long> GetOverallTotalAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
 
 		Task<CounterStorageStats> GetCounterStatsAsync(CancellationToken token = default (CancellationToken));

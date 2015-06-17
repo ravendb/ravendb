@@ -23,6 +23,7 @@
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
+    <TypeScriptCompile Include="App\commands\counter\deleteCountersCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStorageStatsCommand.ts" />

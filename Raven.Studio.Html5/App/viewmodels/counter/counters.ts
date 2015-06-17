@@ -153,10 +153,10 @@ class counters extends viewModelBase {
         var grid = this.getDocumentsGrid();
         if (grid) {
             var counterData = grid.getSelectedItems(1).first();
-            var dto = { 
-                CurrentValue: counterData.Total, 
-                Group: counterData.Group, 
-                CounterName: counterData.Name, 
+            var dto = {
+                CurrentValue: counterData.Total,
+                Group: counterData.Group,
+                CounterName: counterData.Name,
                 Delta: 0
             };
             var change = new counterChange(dto);
@@ -171,6 +171,19 @@ class counters extends viewModelBase {
     }
 
     reset() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            var counterData = grid.getSelectedItems(1).first();
+            var confirmation = this.confirmationMessage("Reset Counter", "Are you sure that you want to reset the counter?");
+            confirmation.done(() => {
+                var resetCounter = new resetCounterCommand(this.activeCounterStorage(), counterData.Group, counterData.Name);
+                resetCounter.execute();
+                //TODO: refresh grid
+            });
+        }
+    }
+
+    deleteCounter() {
         var grid = this.getDocumentsGrid();
         if (grid) {
             var counterData = grid.getSelectedItems(1).first();
@@ -219,8 +232,36 @@ class counters extends viewModelBase {
         }
     }
 
+    deleteSelectedCounters() {
+        if (!this.selectedGroup().isAllGroupsGroup && this.hasAllCountersSelected()) {
+            this.deleteGroup(this.selectedGroup());
+        } else {
+            var grid = this.getDocumentsGrid();
+            if (grid) {
+                grid.deleteSelectedItems();
+            }
+        }
+    }
+
     deleteGroup(group: counterGroup) {
-        //TODO: implement this
+        /*if (collection) {
+            var viewModel = new deleteCollection(collection);
+            viewModel.deletionTask.done((result: operationIdDto) => {
+                if (!collection.isAllDocuments) {
+                    this.collections.remove(collection);
+
+                    var selectedCollection: collection = this.selectedCollection();
+                    if (collection.name == selectedCollection.name) {
+                        this.selectCollection(this.allDocumentsCollection);
+                    }
+                } else {
+                    this.selectNone();
+                }
+
+                this.updateGridAfterOperationComplete(collection, result.OperationId);
+            });
+            app.showDialog(viewModel);
+        }*/
     }
 
     private updateGroups(receivedGroups: Array<counterGroup>) {
@@ -266,7 +307,7 @@ class counters extends viewModelBase {
         });
     }
 
-    
+
     private refreshGroups(): JQueryPromise<any> {
         var deferred = $.Deferred();
         var cs = this.activeCounterStorage();
@@ -293,20 +334,6 @@ class counters extends viewModelBase {
             group.activate();
             var countersWithGroupUrl = appUrl.forCounterStorageCounters(group.name, this.activeCounterStorage());
             router.navigate(countersWithGroupUrl, false);
-        }
-    }
-
-    copySelectedDocs() {
-        var grid = this.getDocumentsGrid();
-        if (grid) {
-            grid.copySelectedDocs();
-        }
-    }
-
-    copySelectedDocIds() {
-        var grid = this.getDocumentsGrid();
-        if (grid) {
-            grid.copySelectedDocIds();
         }
     }
 
