@@ -19,7 +19,7 @@ namespace Raven.Tests.Counters
 	{
 		protected readonly IDocumentStore ravenStore;
 		private readonly ConcurrentDictionary<string, int> storeCount;
-		protected readonly string DefaultCounteStorageName = "ThisIsRelativelyUniqueCounterName";
+		protected readonly string DefaultCounterStorageName = "ThisIsRelativelyUniqueCounterName";
 
 		protected RavenBaseCountersTest()
 		{
@@ -27,7 +27,7 @@ namespace Raven.Tests.Counters
 				IOExtensions.DeleteDirectory(folder);
 
 			ravenStore = NewRemoteDocumentStore(fiddler:true);
-			DefaultCounteStorageName += Guid.NewGuid();
+			DefaultCounterStorageName += Guid.NewGuid();
 			storeCount = new ConcurrentDictionary<string, int>();
 		}
 

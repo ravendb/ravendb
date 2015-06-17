@@ -28,8 +28,8 @@ namespace Raven.Tests.Counters
 				{
 					using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
 					{
-						using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA))
-						using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
+						using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreA))
+						using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreB))
 						{
 							storeA.Convention.FailoverBehavior = FailoverBehavior.FailImmediately;
 
@@ -61,8 +61,8 @@ namespace Raven.Tests.Counters
 				{
 					using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
 					{
-						using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA))
-						using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
+						using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreA))
+						using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreB))
 						{
 							await SetupReplicationAsync(storeA, storeB);
 							await storeA.ChangeAsync("group", "counter", 2);
