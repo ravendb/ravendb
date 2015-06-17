@@ -61,15 +61,8 @@ namespace Voron.Trees.Fixed
 
             public bool Seek(long key)
             {
-                switch (_fst._flags)
-                {
-                    case FixedSizeTreeHeader.OptionFlags.Embedded:
-                        _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
-                        return _pos != _header->NumberOfEntries;
-                    case null:
-                        return false;
-                }
-                return false;
+                _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
+                return _pos != _header->NumberOfEntries;
             }
 
             public long CurrentKey
@@ -105,6 +98,93 @@ namespace Voron.Trees.Fixed
 
             public void Dispose()
             {
+            }
+        }
+
+        public class LargeIterator : IFixedSizeIterator
+        {
+            private readonly FixedSizeTree _parent;
+            private Page _currentPage;
+
+            public LargeIterator(FixedSizeTree parent)
+            {
+                _parent = parent;
+            }
+
+            public void Dispose()
+            {
+                
+            }
+
+            public bool Seek(long key)
+            {
+                _currentPage = _parent.FindPageFor(key);
+                var seek = _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
+                if (seek == false)
+                    _currentPage = null;
+                return seek;
+            }
+
+            public long CurrentKey
+            {
+                get
+                {
+                    if (_currentPage == null)
+                        throw new InvalidOperationException("No current page was set");
+
+                    return _parent.KeyFor(_currentPage.Base + _currentPage.FixedSize_StartPosition,
+                        _currentPage.LastSearchPosition, _parent._entrySize);
+                }
+            }
+
+            public Slice Value
+            {
+                get
+                {
+                    if (_currentPage == null)
+                        throw new InvalidOperationException("No current page was set");
+
+                    return new Slice(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
+                }
+            }
+
+            public bool MoveNext()
+            {
+                if (_currentPage == null)
+                    throw new InvalidOperationException("No current page was set");
+
+                while (_currentPage != null)
+                {
+                    _currentPage.LastSearchPosition++;
+                    if (_currentPage.LastSearchPosition < _currentPage.FixedSize_NumberOfEntries)
+                    {
+                        // run out of entries, need to select the next page...
+                        while (_currentPage.IsBranch)
+                        {
+                            _parent._cursor.Push(_currentPage);
+                            var childParentNumber = _parent.PageValueFor(_currentPage.Base + _currentPage.FixedSize_StartPosition,_currentPage.LastSearchPosition);
+                            _currentPage = _parent._tx.GetReadOnlyPage(childParentNumber);
+
+                            _currentPage.LastSearchPosition = 0;
+                        }
+                        return true;// there is another entry in this page
+                    }
+                    if (_parent._cursor.Count == 0)
+                        break;
+                    _currentPage = _parent._cursor.Pop();
+                }
+                _currentPage = null;
+
+                return false;
+            }
+
+            public ValueReader CreateReaderForCurrent()
+            {
+                if (_currentPage == null)
+                    throw new InvalidOperationException("No current page was set");
+
+                return  new ValueReader(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
+            
             }
         }
     }

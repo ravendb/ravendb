@@ -52,6 +52,45 @@ namespace Voron.Tests.FixedSize
             }
         }
 
+        [Theory]
+        [InlineData(8)]
+        [InlineData(16)]
+        [InlineData(128)]
+        [InlineData(1024 * 256)]
+        public void CanCIterate_ALot_ForPageSplits(int count)
+        {
+            var bytes = new byte[48];
+            var slice = new Slice(bytes);
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                for (int i = 0; i < count; i++)
+                {
+                    EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    fst.Add(i, slice);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var total = 0;
+                using (var it = fst.Iterate())
+                {
+                    Assert.True(it.Seek(long.MinValue));
+                    do
+                    {
+                        Assert.Equal(total++, it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                    } while (it.MoveNext());
+                }
+                Assert.Equal(count, total);
+                tx.Commit();
+            }
+        }
+
 		[Theory]
         [InlineData(8)]
         [InlineData(16)]

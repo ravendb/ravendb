@@ -164,7 +164,7 @@ namespace Voron.Trees.Fixed
                 BinarySearch(page, key, BranchEntrySize);
                 if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                     page.LastSearchPosition--;
-                var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition, BranchEntrySize);
+                var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition);
                 page = _tx.GetReadOnlyPage(childPageNumber);
             }
 
@@ -370,9 +370,9 @@ namespace Voron.Trees.Fixed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private long PageValueFor(byte* p, int num, int size)
+        private long PageValueFor(byte* p, int num)
         {
-            var lp = (long*)(p + (num * (size)) + sizeof(long));
+            var lp = (long*)(p + (num * (BranchEntrySize)) + sizeof(long));
             return lp[0];
         }
 
@@ -398,7 +398,7 @@ namespace Voron.Trees.Fixed
                         BinarySearch(page, key, BranchEntrySize);
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
-                        var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition, BranchEntrySize);
+                        var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition);
                         page = _tx.GetReadOnlyPage(childPageNumber);
                     }
                     dataStart = page.Base + page.FixedSize_StartPosition;
@@ -565,7 +565,7 @@ namespace Voron.Trees.Fixed
                         BinarySearch(page, key, BranchEntrySize);
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
-                        var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition, BranchEntrySize);
+                        var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition);
                         page = _tx.GetReadOnlyPage(childPageNumber);
                     }
                     dataStart = page.Base + page.FixedSize_StartPosition;
@@ -587,6 +587,8 @@ namespace Voron.Trees.Fixed
                     return new NullIterator();
                 case FixedSizeTreeHeader.OptionFlags.Embedded:
                     return new EmbeddedIterator(this);
+                case FixedSizeTreeHeader.OptionFlags.Large:
+                    return new LargeIterator(this);
             }
 
             return null;
