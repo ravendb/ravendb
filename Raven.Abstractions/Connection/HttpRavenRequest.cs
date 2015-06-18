@@ -113,26 +113,39 @@ namespace Raven.Abstractions.Connection
 		}
 
 		private void WriteToken(WebRequest httpWebRequest)
-		{
-			using (var stream = httpWebRequest.GetRequestStream())
-			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
-			using (var commpressedData = new GZipStream(countingStream, CompressionMode.Compress))
-			using (var countingStream2 = new CountingStream(commpressedData, l => NumberOfBytesWrittenUncompressed = l))
-			{
-				if (writeBson)
-				{
-					postedToken.WriteTo(new BsonWriter(countingStream2));
-				}
-				else
-				{
-					var streamWriter = new StreamWriter(countingStream2);
-					postedToken.WriteTo(new JsonTextWriter(streamWriter));
-					streamWriter.Flush();
-				}
-				commpressedData.Flush();
-				stream.Flush();
-			}
-		}
+		{            
+            long originalContentLength = httpWebRequest.ContentLength;
+            if (EnvironmentUtils.RunningOnPosix)
+                httpWebRequest.ContentLength = 1; // dummy value to avoid mono's exception in GetRequestStream() which is not thrown by .net in case httpWebRequest.ContentLength <= 0
+
+            using (var stream = httpWebRequest.GetRequestStream())
+            {
+                if (EnvironmentUtils.RunningOnPosix)
+                {
+                    if (originalContentLength == -1)
+                        originalContentLength = 0;
+                    httpWebRequest.ContentLength = originalContentLength;
+                }
+              
+                using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+                using (var commpressedData = new GZipStream(countingStream, CompressionMode.Compress))
+                using (var countingStream2 = new CountingStream(commpressedData, l => NumberOfBytesWrittenUncompressed = l))
+                {
+                    if (writeBson)
+                    {
+                        postedToken.WriteTo(new BsonWriter(countingStream2));
+                    }
+                    else
+                    {
+                        var streamWriter = new StreamWriter(countingStream2);
+                        postedToken.WriteTo(new JsonTextWriter(streamWriter));
+                        streamWriter.Flush();
+                    }
+                    commpressedData.Flush();
+                    stream.Flush();
+                }
+            }
+        }
 
 		public T ExecuteRequest<T>()
 		{
