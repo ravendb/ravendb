@@ -57,7 +57,7 @@ namespace Raven.Tests.Core.ChangesApi
                     {
                         if (change.Type == DocumentChangeTypes.Delete)
                         {
-                            output = "passed_fordocumentdelete";
+                            output2 = "passed_fordocumentdelete";
                         }
                     });
 
@@ -93,7 +93,7 @@ namespace Raven.Tests.Core.ChangesApi
 
                     session.Delete("companies/1");
                     session.SaveChanges();
-                    WaitUntilOutput("passed_fordocumentdelete");
+                    WaitUntilOutput2("passed_fordocumentdelete");
                 }
             }
         }
