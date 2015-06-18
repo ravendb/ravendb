@@ -43,16 +43,13 @@ namespace Raven.Database.Counters.Controllers
 				writer.Commit(delta != 0);
 
 				Storage.MetricsCounters.ClientRequests.Mark();
-				using (var reader = Storage.CreateReader())
+				Storage.Publisher.RaiseNotification(new ChangeNotification
 				{
-					Storage.Publisher.RaiseNotification(new ChangeNotification
-					{
-						GroupName = groupName,
-						CounterName = counterName,
-						Action = counterChangeAction,
-						//TODO: Total = reader.GetCounterTotalValue(groupName, counterName)
-					});
-				}
+					GroupName = groupName,
+					CounterName = counterName,
+					Action = counterChangeAction,
+					Total = writer.GetCounterTotal(groupName, counterName)
+				});
 
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
@@ -317,8 +314,6 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
-			AssertName(group, true);
-
 			using (var reader = Storage.CreateReader())
 			{
 				var gruop = group ?? string.Empty;
@@ -338,7 +333,7 @@ namespace Raven.Database.Counters.Controllers
 
 			using (var reader = Storage.CreateReader())
 			{
-				var overallTotal = reader.GetCounterOverallTotal(groupName, counterName);
+				var overallTotal = reader.GetCounterTotal(groupName, counterName);
 				if (overallTotal == null)
 					return Request.CreateResponse(HttpStatusCode.OK, 0);
 
@@ -355,7 +350,7 @@ namespace Raven.Database.Counters.Controllers
 
 			using (var reader = Storage.CreateReader())
 			{
-				if (reader.CounterExists(groupName, counterName) == false)
+				/*if (reader.CounterExists(groupName, counterName) == false)
 					return Request.CreateResponse(HttpStatusCode.OK, new ServerValue[0]);
 
 				var countersByPrefix = reader.GetCounterValuesByPrefix(groupName, counterName);
@@ -384,18 +379,15 @@ namespace Raven.Database.Counters.Controllers
                         Negative = s.Value.Negative,
                         //Name = reader.ServerNameFor(s.Key)
                     }).ToList();
-                return Request.CreateResponse(HttpStatusCode.OK, serverValues);
+                return Request.CreateResponse(HttpStatusCode.OK, serverValues);*/
+				return Request.CreateResponse(HttpStatusCode.OK);
             }
 		}
 
-		private static void AssertName(string name, bool skipNullCheck = false)
+		private static void AssertName(string name)
 		{
-			var isNull = string.IsNullOrEmpty(name);
-			if (skipNullCheck == false && isNull)
+			if (string.IsNullOrEmpty(name))
 				throw new ArgumentException("A name can't be null");
-
-			if (isNull == false && name.IndexOf('/') > -1)
-				throw new ArgumentException("A name can't contain the '/' character");
 		}
 
 		private class ServerValue

@@ -321,7 +321,7 @@ namespace Raven.Abstractions.Data
 
 			public const string UrlPrefix = "cs";
 
-			public const string Separator = "/";
+			//public const string Separator = "/";
 		}
 
 		//Time Series

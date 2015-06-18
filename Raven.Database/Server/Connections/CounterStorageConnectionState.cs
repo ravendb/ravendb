@@ -103,7 +103,7 @@ namespace Raven.Database.Server.Connections
 
 		private static string GetCounterPrefix(string groupName, string counterName)
 		{
-			return string.Concat(groupName, Constants.Counter.Separator, counterName);
+			return string.Concat(groupName, "/", counterName);
 		}
 
 		public void Send(BulkOperationNotification notification)

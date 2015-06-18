@@ -22,11 +22,6 @@ namespace Voron
 		    _pos = 0;
 		}
 
-	    public byte[] Buffer
-	    {
-		    get { return _buffer; }
-	    }
-
 	    public void Write(string s)
 	    {
 			var stringBytes = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, _pos);
@@ -79,6 +74,11 @@ namespace Voron
         {
 			return new Slice(_buffer, (ushort)(_pos));
         }
+
+	    public void ResetSliceWriter()
+	    {
+		    _pos = 0;
+	    }
 
 		public Slice CreateSlice(int pos)
 		{

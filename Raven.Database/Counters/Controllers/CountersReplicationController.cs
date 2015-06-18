@@ -52,7 +52,8 @@ namespace Raven.Database.Counters.Controllers
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
-					var currentCounter = writer.GetCounterValue(counter.FullCounterName);
+					var sign = counter.Value >= 0 ? ValueSign.Positive : ValueSign.Negative;
+					var currentCounter = writer.GetSingleCounterValue(counter.GroupName, counter.CounterName, counter.ServerId, sign);
 
 					//if current counter exists and current value is less than received value
 		            if (currentCounter != -1 && currentCounter <= counter.Value)
@@ -60,15 +61,14 @@ namespace Raven.Database.Counters.Controllers
 
 					wroteCounter = true;
 
-					if (string.IsNullOrWhiteSpace(counter.FullCounterName))
-						return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
-					
-					var counterValue = new CounterValue(counter.FullCounterName, counter.Value);
-					var counterChangeAction = writer.Store(counterValue);
+					//if (string.IsNullOrWhiteSpace(counter.FullCounterName))
+					//	return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
+
+					var counterChangeAction = writer.Store(counter.GroupName, counter.CounterName, counter.ServerId, sign, counter.Value);
 					counterChangeNotifications.Add(new ChangeNotification
 					{
-						GroupName = counterValue.Group(),
-						CounterName = counterValue.CounterName(),
+						GroupName = counter.GroupName,
+						CounterName = counter.CounterName,
 						Action = counterChangeAction
 					});
 				}
@@ -86,7 +86,7 @@ namespace Raven.Database.Counters.Controllers
 	                {
 		                counterChangeNotifications.ForEach(change =>
 		                {
-			                //TODO: change.Total = reader.GetCounterTotalValue(change.GroupName, change.CounterName);
+			                change.Total = reader.GetCounterTotal(change.GroupName, change.CounterName);
 							Storage.Publisher.RaiseNotification(change);
 		                });
 	                }
