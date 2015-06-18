@@ -25,12 +25,12 @@ namespace Voron.Impl
 
 		private readonly WriteAheadJournal _journal;
 		private Dictionary<Tuple<Tree, MemorySlice>, Tree> _multiValueTrees;
-        private readonly HashSet<long> _dirtyPages = new HashSet<long>(LongEqualityComparer.Instance);
-		private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(LongEqualityComparer.Instance);
+        private readonly HashSet<long> _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
+        private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
-        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(LongEqualityComparer.Instance);
+        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 

@@ -612,7 +612,7 @@ namespace Voron.Impl.Journal
 				_lastDataFileSyncTime = DateTime.UtcNow;
 			}
 
-			public Dictionary<long, int> writtenPages = new Dictionary<long, int>(LongEqualityComparer.Instance);
+            public Dictionary<long, int> writtenPages = new Dictionary<long, int>(NumericEqualityComparer.Instance);
 
 			private void ApplyPagesToDataFileFromScratch(Dictionary<long, PagePosition> pagesToWrite, Transaction transaction, bool alreadyInWriteTx)
 			{

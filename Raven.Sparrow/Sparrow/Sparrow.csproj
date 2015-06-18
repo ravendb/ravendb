@@ -62,8 +62,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Collections\ConcurrentLruLSet.cs" />
+    <Compile Include="Collections\ConcurrentLruSet.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
+    <Compile Include="Comparers.cs" />
     <Compile Include="Hashing.cs" />
     <Compile Include="Memory.cs" />
     <Compile Include="ObjectPool.cs" />
