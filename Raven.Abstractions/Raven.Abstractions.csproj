@@ -406,6 +406,7 @@
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AssemblyHelper.cs" />
     <Compile Include="Util\AsyncEnumeratorBridge.cs" />
+    <Compile Include="Util\AsyncHelpers.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
