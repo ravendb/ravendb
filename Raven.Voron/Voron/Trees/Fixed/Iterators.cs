@@ -18,6 +18,7 @@ namespace Voron.Trees.Fixed
             Slice Value { get; }
             bool MoveNext();
             ValueReader CreateReaderForCurrent();
+			StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema);
         }
 
         public class NullIterator : IFixedSizeIterator
@@ -42,6 +43,11 @@ namespace Voron.Trees.Fixed
             {
                 throw new InvalidOperationException("No current page");
             }
+
+	        public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
+	        {
+				throw new InvalidOperationException("No current page");
+	        }
         }
 
         public class EmbeddedIterator : IFixedSizeIterator
@@ -96,7 +102,13 @@ namespace Voron.Trees.Fixed
                 return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
             }
 
-            public void Dispose()
+	        public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
+	        {
+				var valueReader = CreateReaderForCurrent();
+				return new StructureReader<T>(valueReader.Base, schema);
+	        }
+
+	        public void Dispose()
             {
             }
         }
@@ -183,9 +195,14 @@ namespace Voron.Trees.Fixed
                 if (_currentPage == null)
                     throw new InvalidOperationException("No current page was set");
 
-                return  new ValueReader(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
-            
+                return new ValueReader(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
             }
+
+	        public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
+	        {
+				var valueReader = CreateReaderForCurrent();
+				return new StructureReader<T>(valueReader.Base, schema);    
+	        }
         }
     }
 }
