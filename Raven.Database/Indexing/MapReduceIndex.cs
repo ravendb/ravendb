@@ -417,10 +417,10 @@ namespace Raven.Database.Indexing
 
 		internal static string ReduceKeyToString(object reduceValue)
 		{
-			if (reduceValue is string)
-			{
-				return reduceValue.ToString();
-			}
+            var reduceValueAsString = reduceValue as string;
+            if (reduceValueAsString != null)
+                return reduceValueAsString;
+
 			if (reduceValue is DateTime)
 				return ((DateTime)reduceValue).GetDefaultRavenFormat();
 			if (reduceValue is DateTimeOffset)
@@ -431,6 +431,7 @@ namespace Raven.Database.Indexing
 			var dynamicJsonObject = reduceValue as IDynamicJsonObject;
 			if (dynamicJsonObject != null)
 				return dynamicJsonObject.Inner.ToString(Formatting.None);
+
 			return RavenJToken.FromObject(reduceValue).ToString(Formatting.None);
 		}
 
@@ -514,13 +515,12 @@ namespace Raven.Database.Indexing
 			private readonly MapReduceIndex parent;
 			private readonly int inputCount;
 			private readonly int indexId;
-			readonly AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter;
+			private readonly AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter;
 			private readonly Document luceneDoc = new Document();
-			private readonly Field reduceValueField = new Field(Constants.ReduceValueFieldName, "dummy",
-													 Field.Store.YES, Field.Index.NO);
 
-			private readonly Field reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
-													 Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
+            private readonly Field reduceValueField = new Field(Constants.ReduceValueFieldName, "dummy", Field.Store.YES, Field.Index.NO);
+			private readonly Field reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy", Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
+
             private readonly ConcurrentDictionary<Type, PropertyAccessor> propertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
 			private readonly List<AbstractIndexUpdateTriggerBatcher> batchers;
 
@@ -559,9 +559,8 @@ namespace Raven.Database.Indexing
 				{
 					object reduceKey = viewGenerator.GroupByExtraction(doc);
 					if (reduceKey == null)
-					{
 						throw new InvalidOperationException("Could not find reduce key for " + indexId + " in the result: " + doc);
-					}
+			
 					return ReduceKeyToString(reduceKey);
 				}
 				catch (Exception e)
@@ -666,7 +665,7 @@ namespace Raven.Database.Indexing
 			{
 				var count = 0;
 				var sourceCount = 0;
-				var addDocumentDutation = new Stopwatch();
+				var addDocumentDuration = new Stopwatch();
 				var convertToLuceneDocumentDuration = new Stopwatch();
 				var linqExecutionDuration = new Stopwatch();
 				var deleteExistingDocumentsDuration = new Stopwatch();
@@ -680,10 +679,12 @@ namespace Raven.Database.Indexing
 					try
 					{
 						performance = parent.RecordCurrentBatch("Current Reduce #" + Level, "Reduce Level " + Level, MappedResultsByBucket.Sum(x => x.Count()));
-						if (Level == 2)
+						
+                        if (Level == 2)
 						{
 							RemoveExistingReduceKeysFromIndex(indexWriter, deleteExistingDocumentsDuration);
 						}
+
 						foreach (var mappedResults in MappedResultsByBucket)
 						{
 							var input = mappedResults.Select(x =>
@@ -692,25 +693,26 @@ namespace Raven.Database.Indexing
 								return x;
 							});
 
-							foreach (var doc in parent.RobustEnumerationReduce(input.GetEnumerator(), ViewGenerator.ReduceDefinition, stats,
-								linqExecutionDuration))
+                            IndexingFunc reduceDefinition = ViewGenerator.ReduceDefinition;
+                            foreach (var doc in parent.RobustEnumerationReduce(input.GetEnumerator(), reduceDefinition, stats, linqExecutionDuration))
 							{
-								count++;
-								string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
+								count++;								
 
 								switch (Level)
 								{
 									case 0:
 									case 1:
+                                        string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
 										Actions.MapReduce.PutReducedResult(indexId, reduceKeyAsString, Level + 1, mappedResults.Key, mappedResults.Key / 1024, ToJsonDocument(doc));
 										Actions.General.MaybePulseTransaction();
 										break;
 									case 2:
-										WriteDocumentToIndex(doc, indexWriter, analyzer, convertToLuceneDocumentDuration, addDocumentDutation);
+										WriteDocumentToIndex(doc, indexWriter, analyzer, convertToLuceneDocumentDuration, addDocumentDuration);
 										break;
 									default:
 										throw new InvalidOperationException("Unknown level: " + Level);
 								}
+
 								stats.ReduceSuccesses++;
 							}
 						}
@@ -754,7 +756,7 @@ namespace Raven.Database.Indexing
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, linqExecutionDuration.ElapsedMilliseconds));
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_DeleteExistingDocument, deleteExistingDocumentsDuration.ElapsedMilliseconds));
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
-				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_AddDocument, addDocumentDutation.ElapsedMilliseconds));
+				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_AddDocument, addDocumentDuration.ElapsedMilliseconds));
 				performanceStats.AddRange(writeToIndexStats);
 
 				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, performanceStats);

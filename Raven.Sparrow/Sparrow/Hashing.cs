@@ -123,6 +123,17 @@ namespace Sparrow
                 }
             }
 
+            public static uint Calculate(int[] buf, int len = -1, uint seed = 0)
+            {
+                if (len == -1)
+                    len = buf.Length;
+
+                fixed (int* buffer = buf)
+                {
+                    return Calculate((byte*)buffer, len * sizeof(int), seed);
+                }
+            }
+
             private static uint PRIME32_1 = 2654435761U;
             private static uint PRIME32_2 = 2246822519U;
             private static uint PRIME32_3 = 3266489917U;
@@ -276,6 +287,17 @@ namespace Sparrow
                 }
             }
 
+            public static ulong Calculate(int[] buf, int len = -1, ulong seed = 0)
+            {
+                if (len == -1)
+                    len = buf.Length;
+
+                fixed (int* buffer = buf)
+                {
+                    return Calculate((byte*)buffer, len * sizeof(int), seed);
+                }
+            }
+
             private static ulong PRIME64_1 = 11400714785074694791UL;
             private static ulong PRIME64_2 = 14029467366897019727UL;
             private static ulong PRIME64_3 = 1609587929392839161UL;
@@ -288,5 +310,26 @@ namespace Sparrow
                 return (value << count) | (value >> (64 - count));
             }
         }
+
+        public static int Combine( int x, int y )
+        {
+            return CombineInline(x, y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CombineInline( int x, int y )
+        {
+            long key = x << 32 | y;
+
+            key = (~key) + (key << 18); // key = (key << 18) - key - 1;
+            key = key ^ (key >> 31);
+            key = key * 21; // key = (key + (key << 2)) + (key << 4);
+            key = key ^ (key >> 11);
+            key = key + (key << 6);
+            key = key ^ (key >> 22);
+
+            return (int) key;
+        }
+
     }
 }
