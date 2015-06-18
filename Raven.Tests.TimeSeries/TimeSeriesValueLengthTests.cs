@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.TimeSeries
 {
-	public class TimeSeriesTypesTests : TimeSeriesTest
+	public class TimeSeriesValueLengthTests : TimeSeriesTest
 	{
 		[Fact]
 		public void CanQueryData()
@@ -31,12 +31,11 @@ namespace Raven.Tests.TimeSeries
 					new {Key = "Time", At = start.AddHours(2), Value = 50},
 				};
 
-				var seriesType = SeriesType.Custom(SeriesType.Int, SeriesType.Char(5), SeriesType.Long);
-				using (var writer = tss.CreateWriter(seriesType))
+				using (var writer = tss.CreateWriter(3))
 				{
 					foreach (var item in data)
 					{
-						writer.Append(item.Key, item.At, seriesType.Values(item.Value, item.Key, item.At.Ticks));
+						writer.Append(item.Key, item.At, item.Value, StringToIndex(item.Key), item.At.Ticks);
 					}
 					writer.Commit();
 				}
@@ -78,6 +77,20 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal("Money", money[2].DebugKey);
 				}
 			}
+		}
+
+		private double StringToIndex(string key)
+		{
+			switch (key)
+			{
+				case "Time":
+					return 1;
+				case "Is":
+					return 2;
+				case "Money":
+					return 3;
+			}
+			throw new ArgumentOutOfRangeException();
 		}
 	}
 }

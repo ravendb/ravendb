@@ -37,7 +37,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			AssertName(groupName);
 			AssertName(timeSeriesName);
 
-			using (var writer = Storage.CreateWriter(SeriesType.Simple()))
+			using (var writer = Storage.CreateWriter())
 			{
 				var timeSeriesChangeAction = writer.Store(groupName, timeSeriesName, delta);
 				writer.Commit(delta != 0);
@@ -113,7 +113,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	            {
 		            foreach (var changeBatch in changeBatches)
 		            {
-						using (var writer = Storage.CreateWriter(SeriesType.Simple()))
+						using (var writer = Storage.CreateWriter())
 						{
 							Storage.Publisher.RaiseNotification(new BulkOperationNotification
 							{
@@ -266,7 +266,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			AssertName(groupName);
 			AssertName(timeSeriesName);
 
-			using (var writer = Storage.CreateWriter(SeriesType.Simple()))
+			using (var writer = Storage.CreateWriter())
 			{
 				var timeSeriesChangeAction = writer.Reset(groupName, timeSeriesName);
 
@@ -295,7 +295,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			AssertName(groupName);
 			AssertName(timeSeriesName);
 
-			using (var writer = Storage.CreateWriter(SeriesType.Simple()))
+			using (var writer = Storage.CreateWriter())
 			{
 				writer.Delete(groupName, timeSeriesName);
 				writer.Commit();

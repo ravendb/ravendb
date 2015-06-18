@@ -289,7 +289,7 @@ namespace Raven.Tests.TimeSeries
 				}
 
 				var start2 = start.AddMonths(-1).AddDays(5);
-				using (var writer = tss.CreateWriter(SeriesType.Simple()))
+				using (var writer = tss.CreateWriter())
 				{
 					int value = 6;
 					for (int i = 0; i < 4; i++)
@@ -587,8 +587,7 @@ namespace Raven.Tests.TimeSeries
 				new {Key = "Time", At = start.AddHours(2), Value = 50},
 			};
 
-			var seriesType = SeriesType.Simple();
-			var writer = tss.CreateWriter(seriesType);
+			var writer = tss.CreateWriter();
 			foreach (var item in data)
 			{
 				writer.Append(item.Key, item.At, item.Value);

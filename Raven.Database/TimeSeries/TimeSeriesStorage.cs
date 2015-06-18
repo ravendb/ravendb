@@ -98,20 +98,21 @@ namespace Raven.Database.TimeSeries
 			return options;
 		}
 
-		public Reader CreateReader()
+		public Reader CreateReader(byte seriesValueLength = 1)
 		{
-			return CreateReader(SeriesType.Simple());
+			if (seriesValueLength < 1)
+				throw new ArgumentOutOfRangeException("seriesValueLength", "Should be equal or greater than 1");
+		
+			return new Reader(this, seriesValueLength);
 		}
 
-		public Reader CreateReader(SeriesType seriesType)
+		public Writer CreateWriter(byte seriesValueLength = 1)
 		{
-			return new Reader(this, seriesType);
-		}
-
-		public Writer CreateWriter(SeriesType seriesType)
-		{
+			if (seriesValueLength < 1)
+				throw new ArgumentOutOfRangeException("seriesValueLength", "Should be equal or greater than 1");
+			
 			LastWrite = SystemTime.UtcNow;
-			return new Writer(this, seriesType);
+			return new Writer(this, seriesValueLength);
 		}
 
 		public class Point
@@ -124,19 +125,22 @@ namespace Raven.Database.TimeSeries
 			public double Value { get; set; }
 		}
 
+		public const string SeriesTreePrefix = "series-";
+		const string PeriodTreePrefix = "period-";
+
 		public class Reader : IDisposable
 		{
 			private readonly TimeSeriesStorage storage;
-			private readonly SeriesType type;
+			private readonly byte seriesValueLength;
 			private readonly Transaction tx;
 			private readonly Tree tree;
 
-			public Reader(TimeSeriesStorage storage, SeriesType type)
+			public Reader(TimeSeriesStorage storage, byte seriesValueLength)
 			{
 				this.storage = storage;
-				this.type = type;
+				this.seriesValueLength = seriesValueLength;
 				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
-				tree = tx.State.GetTree(tx, type.Type);
+				tree = tx.State.GetTree(tx, SeriesTreePrefix + seriesValueLength);
 			}
 
 			public IEnumerable<Point> Query(TimeSeriesQuery query)
@@ -242,36 +246,21 @@ namespace Raven.Database.TimeSeries
 
 				using (var periodTx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var periodFixedTree = periodTx.State.GetTree(periodTx, "period_type_" + type.Name)
-						.FixedTreeFor(query.Duration.Type + "-" + query.Duration.Duration + "-" + query.Key, type.Size);
-					using (var writer = new RollupWriter(periodFixedTree))
+					var fixedTree = tree.FixedTreeFor(query.Key, seriesValueLength);
+					var periodFixedTree = periodTx.State.GetTree(periodTx, PeriodTreePrefix + seriesValueLength)
+						.FixedTreeFor(query.Duration.Type + "-" + query.Duration.Duration + "-" + query.Key, seriesValueLength);
+					
+					using (var periodWriter = new RollupWriter(periodFixedTree))
 					{
 						using (var periodTreeIterator = periodFixedTree.Iterate())
-						using (var rawTreeIterator = tfree.Iterate())
+						using (var rawTreeIterator = fixedTree.Iterate())
 						{
-							var keyBytesLen = Encoding.UTF8.GetByteCount(query.Key) + sizeof (long);
-							var startKeyWriter = new SliceWriter(keyBytesLen);
-							startKeyWriter.Write(query.Key);
-							var prefixKey = startKeyWriter.CreateSlice();
-
-							periodTreeIterator.RequiredPrefix = prefixKey;
-							rawTreeIterator.RequiredPrefix = prefixKey;
-
 							foreach (var range in GetRanges(query))
 							{
-								var seekWriter = new SliceWriter(keyBytesLen);
-								seekWriter.Write(query.Key);
-								seekWriter.Write(range.StartAt.Ticks);
-								var seekSlice = seekWriter.CreateSlice();
-
 								// seek period tree iterator, if found exact match!!, add and move to the next
-								if (periodTreeIterator.Seek(seekSlice)
-								    && periodTreeIterator.CurrentKey.KeyLength == keyBytesLen)
+								if (periodTreeIterator.Seek(range.StartAt.Ticks))
 								{
-									var keyReader = periodTreeIterator.CurrentKey.CreateReader();
-									keyReader.Skip(keyBytesLen - sizeof (long));
-									var ticks = keyReader.ReadBigEndianInt64();
-									if (ticks == range.StartAt.Ticks)
+									if (periodTreeIterator.CurrentKey == range.StartAt.Ticks)
 									{
 										var structureReader = periodTreeIterator.ReadStructForCurrent(RollupWriter.RangeSchema);
 										range.Volume = structureReader.ReadInt(PointCandleSchema.Volume);
@@ -293,9 +282,9 @@ namespace Raven.Database.TimeSeries
 								{
 									
 								}
-								if (rawTreeIterator.Seek(seekSlice))
+								if (rawTreeIterator.Seek(range.StartAt.Ticks))
 								{
-									GetAllPointsForRange(rawTreeIterator, keyBytesLen, range);
+									GetAllPointsForRange(rawTreeIterator, range);
 								}
 
 								// if not found, create empty periods until the end or the next valid period
@@ -303,7 +292,7 @@ namespace Raven.Database.TimeSeries
 								{
 								}*/
 
-								writer.Append(query.Key, range.StartAt, range);
+								periodWriter.Append(range.StartAt, range);
 								yield return range;
 							}
 						}
@@ -312,7 +301,7 @@ namespace Raven.Database.TimeSeries
 				}
 			}
 
-			private void GetAllPointsForRange(TreeIterator rawTreeIterator, int keyBytesLen, Range range)
+			private void GetAllPointsForRange(FixedSizeTree.IFixedSizeIterator rawTreeIterator, Range range)
 			{
 				var endTicks = range.Duration.AddToDateTime(range.StartAt).Ticks;
 				var buffer = new byte[sizeof(double)];
@@ -320,19 +309,14 @@ namespace Raven.Database.TimeSeries
 
 				do
 				{
-					if (rawTreeIterator.CurrentKey.KeyLength != keyBytesLen) // avoid getting another key (A1, A10, etc)
-						return;
-
-					var keyReader = rawTreeIterator.CurrentKey.CreateReader();
-					keyReader.Skip(keyBytesLen - sizeof(long));
-					var ticks = keyReader.ReadBigEndianInt64();
+					var ticks = rawTreeIterator.CurrentKey;
 					if (ticks >= endTicks)
 						return;
 
 					var point = new Point
 					{
 #if DEBUG
-						DebugKey = keyReader.AsPartialSlice(sizeof(long)).ToString(),
+						DebugKey = range.DebugKey,
 #endif
 						At = new DateTime(ticks),
 					};
@@ -390,7 +374,7 @@ namespace Raven.Database.TimeSeries
 			{
 				var buffer = new byte[sizeof(double)];
 
-				var fixedTree = tree.FixedTreeFor(query.Key, type.Size);
+				var fixedTree = tree.FixedTreeFor(query.Key, seriesValueLength);
 				return IterateOnTree(query, fixedTree, it =>
 				{
 					var point = new Point
@@ -439,21 +423,26 @@ namespace Raven.Database.TimeSeries
 
 		public class Writer : IDisposable
 		{
-			private readonly SeriesType type;
+			private readonly byte seriesValueLength;
 			private readonly Transaction tx;
 
 			private readonly Tree tree;
 			private readonly Dictionary<string, RollupRange> rollupsToClear = new Dictionary<string, RollupRange>();
+			private readonly byte[] valBuffer;
 
-			public Writer(TimeSeriesStorage storage, SeriesType type)
+			public Writer(TimeSeriesStorage storage, byte seriesValueLength)
 			{
-				this.type = type;
-				tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite); 
-				tree = tx.State.GetTree(tx, type.Type);
+				this.seriesValueLength = seriesValueLength;
+				valBuffer = new byte[seriesValueLength];
+				tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
+				tree = tx.State.GetTree(tx, SeriesTreePrefix + seriesValueLength);
 			}
 
-			public void Append(string key, DateTime time, object value)
+			public void Append(string key, DateTime time, params double[] values)
 			{
+				if (values.Length != seriesValueLength)
+					throw new ArgumentOutOfRangeException("values", string.Format("Appended values should be the same length the series values length which is {0} and not {1}", seriesValueLength, values.Length));
+
 				RollupRange range;
 				if (rollupsToClear.TryGetValue(key, out range))
 				{
@@ -470,14 +459,18 @@ namespace Raven.Database.TimeSeries
 				{
 					rollupsToClear.Add(key, new RollupRange(time));
 				}
-				
-				var fixedTree = tree.FixedTreeFor(key, type.Size);
-				fixedTree.Add(time.Ticks, type.ParseValue(value));
+
+				for (int i = 0; i < values.Length; i++)
+				{
+					EndianBitConverter.Big.CopyBytes(values[i], valBuffer, i * 8);
+				}
+
+				var fixedTree = tree.FixedTreeFor(key, seriesValueLength);
+				fixedTree.Add(time.Ticks, valBuffer);
 			}
 
 			public void Dispose()
 			{
-				
 				if (tx != null)
 					tx.Dispose();
 			}
@@ -543,21 +536,15 @@ namespace Raven.Database.TimeSeries
 			}
 
 			private readonly FixedSizeTree _tree;
-
-			private readonly byte[] _keyBuffer = new byte[1024];
+			private readonly string key;
 
 			public RollupWriter(FixedSizeTree tree)
 			{
 				_tree = tree;
 			}
 
-			public void Append(string key, DateTime time, Range range)
+			public void Append(DateTime time, Range range)
 			{
-				var sliceWriter = new SliceWriter(_keyBuffer);
-				sliceWriter.Write(key);
-				sliceWriter.Write(time.Ticks);
-				var keySlice = sliceWriter.CreateSlice();
-
 				var structure = new Structure<PointCandleSchema>(RangeSchema);
 
 				structure.Set(PointCandleSchema.Volume, range.Volume);
@@ -570,8 +557,7 @@ namespace Raven.Database.TimeSeries
 					structure.Set(PointCandleSchema.Sum, range.Sum);
 				}
 
-				var ptr = _tree.DirectAdd(keySlice);
-				structure.Write(ptr);
+				_tree.WriteStructure(time.Ticks, structure);
 			}
 
 			public void Dispose()
