@@ -5,54 +5,150 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util.Schedulers;
 
 namespace Raven.Abstractions.Util
 {
 	public static class AsyncHelpers
 	{
-		private static readonly TaskFactory Factory = new TaskFactory(new CurrentThreadTaskScheduler());
-
-		public static T RunSync<T>(Func<Task<T>> work)
+		public static void RunSync(Func<Task> task)
 		{
-			var result = default(T);
+			var oldContext = SynchronizationContext.Current;
 			try
 			{
-				result = Factory
-					.StartNew(work)
-					.Unwrap()
-					.ConfigureAwait(false)
-					.GetAwaiter()
-					.GetResult();
+				var synch = new ExclusiveSynchronizationContext();
+				SynchronizationContext.SetSynchronizationContext(synch);
+				synch.Post(async _ =>
+				{
+					try
+					{
+						await task();
+					}
+					catch (Exception e)
+					{
+						synch.InnerException = e;
+						throw;
+					}
+					finally
+					{
+						synch.EndMessageLoop();
+					}
+				}, null);
+				synch.BeginMessageLoop();
 			}
 			catch (AggregateException ex)
 			{
 				var exception = ex.ExtractSingleInnerException();
 				ExceptionDispatchInfo.Capture(exception).Throw();
+			}
+			finally
+			{
+				SynchronizationContext.SetSynchronizationContext(oldContext);
+			}
+		}
+
+		public static T RunSync<T>(Func<Task<T>> task)
+		{
+			var result = default(T);
+			var oldContext = SynchronizationContext.Current;
+			try
+			{
+				var synch = new ExclusiveSynchronizationContext();
+				SynchronizationContext.SetSynchronizationContext(synch);
+
+				synch.Post(async _ =>
+				{
+					try
+					{
+						result = await task();
+					}
+					catch (Exception e)
+					{
+						synch.InnerException = e;
+						throw;
+					}
+					finally
+					{
+						synch.EndMessageLoop();
+					}
+				}, null);
+				synch.BeginMessageLoop();
+			}
+			catch (AggregateException ex)
+			{
+				var exception = ex.ExtractSingleInnerException();
+				ExceptionDispatchInfo.Capture(exception).Throw();
+			}
+			finally
+			{
+				SynchronizationContext.SetSynchronizationContext(oldContext);
 			}
 
 			return result;
 		}
 
-		public static void RunSync(Func<Task> work)
+		private class ExclusiveSynchronizationContext : SynchronizationContext
 		{
-			try
+			private readonly AutoResetEvent workItemsWaiting = new AutoResetEvent(false);
+			private readonly Queue<Tuple<SendOrPostCallback, object>> items = new Queue<Tuple<SendOrPostCallback, object>>();
+
+			private bool done;
+			public Exception InnerException { get; set; }
+
+			public override void Send(SendOrPostCallback d, object state)
 			{
-				Factory
-					.StartNew(work)
-					.Unwrap()
-					.ConfigureAwait(false)
-					.GetAwaiter()
-					.GetResult();
+				throw new NotSupportedException("We cannot send to our same thread");
 			}
-			catch (AggregateException ex)
+
+			public override void Post(SendOrPostCallback d, object state)
 			{
-				var exception = ex.ExtractSingleInnerException();
-				ExceptionDispatchInfo.Capture(exception).Throw();
+				lock (items)
+				{
+					items.Enqueue(Tuple.Create(d, state));
+				}
+				workItemsWaiting.Set();
+			}
+
+			public void EndMessageLoop()
+			{
+				Post(_ => done = true, null);
+			}
+
+			public void BeginMessageLoop()
+			{
+				while (!done)
+				{
+					Tuple<SendOrPostCallback, object> task = null;
+					lock (items)
+					{
+						if (items.Count > 0)
+						{
+							task = items.Dequeue();
+						}
+					}
+					if (task != null)
+					{
+						task.Item1(task.Item2);
+						if (InnerException != null) // the method threw an exeption
+						{
+							throw new AggregateException("AsyncHelpers.Run method threw an exception.", InnerException);
+						}
+					}
+					else
+					{
+						workItemsWaiting.WaitOne();
+					}
+				}
+			}
+
+			public override SynchronizationContext CreateCopy()
+			{
+				return this;
 			}
 		}
 	}
