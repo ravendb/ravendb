@@ -23,7 +23,7 @@ namespace Voron.Impl
         [SuppressUnmanagedCodeSecurity]
         [SecurityCritical]
         [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
-        public static extern int memmove(byte* b1, byte* b2, int count);
+        public static extern IntPtr memmove(byte* dest, byte* src, int count);
 
 		[DllImport("msvcrt.dll", EntryPoint = "memset", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
         [SuppressUnmanagedCodeSecurity]
