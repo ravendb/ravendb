@@ -3,12 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Lucene.Net.Search;
 
 namespace Raven.Database.Indexing
 {
     public abstract class LuceneASTNodeBase
     {
         public abstract IEnumerable<LuceneASTNodeBase> Children { get; }
+
+        public virtual Query ToQuery()
+        {
+            return null;
+        }
+
+        public virtual LuceneASTNodeBase Simplify()
+        {
+            return this;
+        }
 
         public PrefixOperator Prefix { get; set; }
 
@@ -46,6 +57,11 @@ namespace Raven.Database.Indexing
         {
             get { yield return Node; }
         }
+        public override Query ToQuery()
+        {
+            throw new NotImplementedException();
+        }
+
         public override string ToString()
         {
             return string.Format("{0}{1}:{2}",GetPrefixString(), FieldName, Node);
@@ -106,6 +122,11 @@ namespace Raven.Database.Indexing
         {
             get { return Matches; }
         }
+        public override Query ToQuery()
+        {
+            throw new NotImplementedException();
+        }
+
         public override string ToString()
         {
             var sb = new StringBuilder(GetPrefixString()).Append("@").Append(MethodName).Append('<')
@@ -120,6 +141,11 @@ namespace Raven.Database.Indexing
         {
             get { yield break; }
         }
+        public override Query ToQuery()
+        {
+            throw new NotImplementedException();
+        }
+
         public PrefixOperator Prefix { get; set; }
         public string Boost { get; set; }
         public string Similarity { get; set; }
@@ -164,6 +190,11 @@ namespace Raven.Database.Indexing
         {
             get { yield break; }
         }
+        public override Query ToQuery()
+        {
+            throw new NotImplementedException();
+        }
+
         public TermLuceneASTNode RangeMin { get; set; }
         public TermLuceneASTNode RangeMax { get; set; }
         public bool InclusiveMin { get; set; }
@@ -191,6 +222,11 @@ namespace Raven.Database.Indexing
                 if (RightNode != null) yield return RightNode;
             }
         }
+        public override Query ToQuery()
+        {
+            throw new NotImplementedException();
+        }
+
         public enum Operator
         {
             AND,
@@ -223,6 +259,10 @@ namespace Raven.Database.Indexing
         public override IEnumerable<LuceneASTNodeBase> Children
         {
             get { yield return Node; }
+        }
+        public override Query ToQuery()
+        {
+            throw new NotImplementedException();
         }
 
         public LuceneASTNodeBase Node { get; set; }

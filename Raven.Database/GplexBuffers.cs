@@ -388,11 +388,52 @@ namespace QUT.GplexBuffers
         /// <returns></returns>
         public override int Read()
         {
-            //
-            //  Characters at positions 
-            //  [data.offset, data.offset + data.bldr.Length)
-            //  are available in data.bldr.
-            //
+            int res = EndOfFile;
+            if (SetPaddingOn)
+            {
+                switch (state)
+                {
+                    case CommaState.None:
+                        //
+                        //  Characters at positions 
+                        //  [data.offset, data.offset + data.bldr.Length)
+                        //  are available in data.bldr.
+                        //
+
+                        if (bPos < data.MaxIndex)
+                        {
+                            // ch0 cannot be EOF
+                            res = (int)data[bPos++];
+                        }
+                        else // Read from underlying stream
+                        {
+                            // Experimental code, blocks of page size
+                            int count = NextBlk(chrs, 0, 4096);
+                            if (count == 0)
+                                return EndOfFile;
+                            else
+                            {
+                                data.Append(chrs, count);
+                                res = (int)data[bPos++];
+                            }
+                        }
+                        if (res == 44)
+                        {
+                            res = 32;
+                            state = CommaState.Comma;
+                        }
+                        break;
+                    case CommaState.Comma:
+                        res = 44;
+                        state = CommaState.AfterComma;
+                        break;
+                    case CommaState.AfterComma:
+                        res = 32;
+                        state = CommaState.None;
+                        break;
+                }
+                return res;
+            }
             if (bPos < data.MaxIndex)
             {
                 // ch0 cannot be EOF
@@ -401,7 +442,6 @@ namespace QUT.GplexBuffers
             else // Read from underlying stream
             {
                 // Experimental code, blocks of page size
-                char[] chrs = new char[4096];
                 int count = NextBlk(chrs, 0, 4096);
                 if (count == 0)
                     return EndOfFile;
@@ -411,8 +451,18 @@ namespace QUT.GplexBuffers
                     return (int)data[bPos++];
                 }
             }
+            
         }
+        char[] chrs = new char[4096];
 
+        public bool SetPaddingOn { get; set; }
+        private CommaState state { get; set; }
+        private enum CommaState
+        {
+            None,
+            Comma,
+            AfterComma
+        }
         public override string GetString(int begin, int limit)
         {
             return data.GetString(begin, limit);

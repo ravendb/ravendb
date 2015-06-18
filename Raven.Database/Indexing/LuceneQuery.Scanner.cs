@@ -1,20 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using ICSharpCode.NRefactory.CSharp.Refactoring;
+using QUT.GplexBuffers;
 using QUT.Gppg;
 
 namespace Raven.Database.Indexing
 {
     internal partial class LuceneQueryScanner
     {
-        public bool InMethod { get; set; }
+        public bool InMethod;
+
         public string HandleTermInMethod()
         {
             var commaIndex = yytext.IndexOf(',');
             if (commaIndex == -1) return yytext;
             var firstTerm = yytext.Substring(0, commaIndex);
             var lastCommaIndex = yytext.LastIndexOf(',');
-            var newSource = yytext.Substring(commaIndex, lastCommaIndex - commaIndex).Replace(",", " , ");
+            var newSource = yytext.Substring(commaIndex, lastCommaIndex - commaIndex);//.Replace(",", " , ");
             var rewind = yytext.Length - lastCommaIndex - 1;
             tokTxt = null;
             tokECol -= rewind;
@@ -25,11 +29,16 @@ namespace Raven.Database.Indexing
             if (lastCommaIndex != commaIndex)
             {
                 var currentContext = MkBuffCtx();
-                SetSource(newSource, 0);
+                byte[] inputBuffer = System.Text.Encoding.Default.GetBytes(newSource);
+                MemoryStream stream = new MemoryStream(inputBuffer);
+                SetSource(stream);
+                (buffer as BuildBuffer).SetPaddingOn = true;
                 bStack.Push(currentContext);
             }
+            //CommaPaddingStream
             return firstTerm;
         }
+
         public void PublicSetSource(string source)
         {
             SetSource(source, 0);

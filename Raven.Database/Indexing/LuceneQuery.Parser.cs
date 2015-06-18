@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Raven.Database.Indexing
@@ -15,6 +16,7 @@ namespace Raven.Database.Indexing
             {
                 return inMethod;
             }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
                 ((LuceneQueryScanner)Scanner).InMethod = value;

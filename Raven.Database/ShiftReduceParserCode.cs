@@ -8,6 +8,8 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace QUT.Gppg {
     /// <summary>
@@ -331,8 +333,9 @@ namespace QUT.Gppg {
             }
             FsaState = StateStack.TopElement();
 
-            if (FsaState.Goto.ContainsKey( rule.LeftHandSide ))
-                FsaState = states[FsaState.Goto[rule.LeftHandSide]];
+            int val;
+            if (FsaState.TryGetValue( rule.LeftHandSide, out val ))
+                FsaState = states[val];
 
             StateStack.Push( FsaState );
             valueStack.Push( CurrentSemanticValue );
@@ -746,8 +749,9 @@ namespace QUT.Gppg {
         internal int number;
 #endif
         internal Dictionary<int, int> ParserTable;   // Terminal -> ParseAction
-        internal Dictionary<int, int> Goto;          // NonTerminal -> State;
+        internal int[] Goto;          // NonTerminal -> State;
         internal int defaultAction; // = 0;		     // ParseAction
+        private int shift;
 
         /// <summary>
         /// State transition data for this state. Pairs of elements of the 
@@ -757,10 +761,28 @@ namespace QUT.Gppg {
         /// <param name="actions">The action list</param>c
         /// <param name="goToList">Next state data</param>
         public State( int[] actions, int[] goToList )
-            : this( actions ) {
-            Goto = new Dictionary<int, int>();
+            : this( actions )
+        {
+            InitGoto(goToList);
+        }
+
+        private void InitGoto(int[] goToList)
+        {
+            int max = goToList.Max(), min = goToList.Min();
+            Goto = new int[max + -min];
+            shift = -min;
             for (int i = 0; i < goToList.Length; i += 2)
-                Goto.Add( goToList[i], goToList[i + 1] );
+                Goto[shift + goToList[i]] =  goToList[i + 1];
+        }
+
+        public bool TryGetValue(int key, out int val)
+        {
+            val = -1;
+            key += shift;
+            if (key < 0 || key >= Goto.Length)
+                return false;
+            val = Goto[key];
+            return true;
         }
 
         /// <summary>
@@ -789,10 +811,9 @@ namespace QUT.Gppg {
         /// <param name="defaultAction">The default action</param>
         /// <param name="goToList">Transitions from this state</param>
         public State( int defaultAction, int[] goToList )
-            : this( defaultAction ) {
-            Goto = new Dictionary<int, int>();
-            for (int i = 0; i < goToList.Length; i += 2)
-                Goto.Add( goToList[i], goToList[i + 1] );
+            : this( defaultAction )
+        {
+            InitGoto(goToList);
         }
     }
 
@@ -846,30 +867,41 @@ namespace QUT.Gppg {
         /// </summary>
         /// <param name="index">index of the element, starting from the bottom</param>
         /// <returns>the selected element</returns>
-        public T this[int index] { get { return array[index]; } }
+        public T this[int index]
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return array[index]; }
+        }
 
         /// <summary>
         /// The current depth of the stack.
         /// </summary>
-        public int Depth { get { return tos; } }
+        public int Depth
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return tos; }
+        }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Push( T value ) {
-            if (tos >= array.Length) {
-                T[] newarray = new T[array.Length * 2];
-                System.Array.Copy( array, newarray, tos );
-                array = newarray;
+            if (tos >= array.Length)
+            {
+                Array.Resize(ref array, array.Length*2);
             }
             array[tos++] = value;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal T Pop() {
             T rslt = array[--tos];
             array[tos] = default( T );
             return rslt;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal T TopElement() { return array[tos - 1]; }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool IsEmpty() { return tos == 0; }
     }
 }
