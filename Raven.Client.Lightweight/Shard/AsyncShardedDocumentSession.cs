@@ -110,6 +110,11 @@ namespace Raven.Client.Shard
 		public IAsyncLazySessionOperations Lazily { get; private set; }
 	    public IAsyncEagerSessionOperations Eagerly { get; private set; }
 
+		public Task<FacetResults[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
+		{
+			throw new NotSupportedException("Multi faceted searching is currently not supported by async sharded document store");
+		}
+
 		public string GetDocumentUrl(object entity)
 		{
 			DocumentMetadata value;

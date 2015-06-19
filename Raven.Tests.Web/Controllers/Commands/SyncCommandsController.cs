@@ -20,7 +20,7 @@ using Raven.Tests.Web.Models.Indexes;
 
 namespace Raven.Tests.Web.Controllers.Commands
 {
-	public class SyncCommandsController : RavenSyncApiController
+	public class SyncCommandsController : RavenApiController
 	{
 		[Route("api/sync/commands/batch")]
 		public HttpResponseMessage Batch()
@@ -422,7 +422,7 @@ namespace Raven.Tests.Web.Controllers.Commands
 		[Route("api/sync/commands/updateByIndex")]
 		public HttpResponseMessage UpdateByIndex()
 		{
-			var operation = DocumentStore.DatabaseCommands.UpdateByIndex(new RavenDocumentsByEntityName().IndexName, new IndexQuery(), new ScriptedPatchRequest { Script = "this.Name = 'John';" }, new BulkOperationOptions { AllowStale = true });
+			var operation = DocumentStore.DatabaseCommands.UpdateByIndex(new RavenDocumentsByEntityName().IndexName, new IndexQuery { Query = "Tag:Orders" }, new ScriptedPatchRequest { Script = "this.Name = 'John';" }, new BulkOperationOptions { AllowStale = true });
 			operation.WaitForCompletion();
 
 			return new HttpResponseMessage();
