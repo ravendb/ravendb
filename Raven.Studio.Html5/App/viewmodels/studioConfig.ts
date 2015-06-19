@@ -18,10 +18,10 @@ class studioConfig extends viewModelBase {
     mute: KnockoutComputed<boolean>;
 
     environmentColors: environmentColor[] = [
-        new environmentColor("Default", "#f8f8f8", "#000000"),
-        new environmentColor("Development", "#FFE6E6", "#000000"),
-        new environmentColor("QA", "#CCFFCC", "#000000"),
-        new environmentColor("Production", "#C2BCFF", "#000000")
+        new environmentColor("Default", "#f8f8f8"),
+        new environmentColor("Development", "#80FF80"),
+        new environmentColor("Staging", "#F5824D"),
+        new environmentColor("Production", "#FF8585")
     ];
     selectedColor = ko.observable<environmentColor>();
 
@@ -90,7 +90,7 @@ class studioConfig extends viewModelBase {
 
         $("#select-color li").each((index, element) => {
             var color = this.environmentColors[index];
-            $(element).css("color", color.textColor);
+            //$(element).css("color", color.textColor);
             $(element).css("backgroundColor", color.backgroundColor);
         });
     }

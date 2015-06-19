@@ -21,6 +21,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
@@ -408,7 +409,7 @@ namespace Raven.Client.Connection.Implementation
 
 		public RavenJToken ReadResponseJson()
 		{
-			return ReadResponseJsonAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(ReadResponseJsonAsync);
 		}
 
 		public async Task<bool> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)

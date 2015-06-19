@@ -422,7 +422,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			    try
 			    {
 
-			        var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
+					var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetDatabaseInternal(db));
 
 			        DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
 			        {

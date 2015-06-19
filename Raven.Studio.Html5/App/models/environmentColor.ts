@@ -3,17 +3,15 @@
     public backgroundColor: string;
     public textColor: string;
 
-    constructor(name: string, backgroundColor: string, textColor: string) {
+    constructor(name: string, backgroundColor: string) {
         this.name = name;
         this.backgroundColor = backgroundColor;
-        this.textColor = textColor;
     }
 
     toDto() :  environmentColorDto {
         return {
             Name: this.name,
-            BackgroundColor: this.backgroundColor,
-            TextColor: this.textColor
+            BackgroundColor: this.backgroundColor
         };
     }
 } 

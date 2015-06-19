@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Threading;
+
 using Raven.Database.Indexing;
 using Raven.Abstractions.Data;
 using Raven.Database.Util;
@@ -32,16 +34,16 @@ namespace Raven.Database.Storage
 		IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(int index, int start, int take);
 
 		void ScheduleReductions(int index, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
-		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams);
+		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken);
 		ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete);
 		void DeleteScheduledReduction(int index, int level, string reduceKey);
 		void PutReducedResult(int index, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
 		void RemoveReduceResults(int index, int level, string reduceKey, int sourceBucket);
-		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int index, int take, int limitOfItemsToReduceInSingleStep);
+		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int index, int take, int limitOfItemsToReduceInSingleStep, CancellationToken cancellationToken);
 		void UpdatePerformedReduceType(int index, string reduceKey, ReduceType performedReduceType);
 		ReduceType GetLastPerformedReduceType(int index, string reduceKey);
-		IEnumerable<int> GetMappedBuckets(int index, string reduceKey);
-		IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned);
+		IEnumerable<int> GetMappedBuckets(int index, string reduceKey, CancellationToken cancellationToken);
+		IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken);
 		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take);
 	}
 

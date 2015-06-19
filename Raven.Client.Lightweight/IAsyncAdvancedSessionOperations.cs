@@ -77,6 +77,12 @@ namespace Raven.Client
 		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
 
 		/// <summary>
+		///     Sends a multiple faceted queries in a single request and calculates the facet results for each of them
+		/// </summary>
+		/// <param name="queries">Array of the faceted queries that will be executed on the server-side</param>
+		Task<FacetResults[]> MultiFacetedSearchAsync(params FacetQuery[] queries);
+
+		/// <summary>
 		///     Returns full document url for a given entity
 		/// </summary>
 		/// <param name="entity">Instance of an entity for which url will be returned</param>

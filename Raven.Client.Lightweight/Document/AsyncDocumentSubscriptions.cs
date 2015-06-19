@@ -82,10 +82,22 @@ namespace Raven.Client.Document
 				? documentStore.AsyncDatabaseCommands
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			await SendOpenSubscriptionRequest(commands, id, options).ConfigureAwait(false);
+			var open = true;
 
-			var subscription = new Subscription<T>(id, database ?? MultiDatabase.GetDatabaseName(documentStore.Url), options, commands, documentStore.Changes(database), documentStore.Conventions, () => 
-				SendOpenSubscriptionRequest(commands, id, options)); // to ensure that subscription is open try to call it with the same connection id
+			try
+			{
+				await SendOpenSubscriptionRequest(commands, id, options).ConfigureAwait(false);
+			}
+			catch (SubscriptionException subscriptionException)
+			{
+				if (options.Strategy != SubscriptionOpeningStrategy.WaitForFree || (subscriptionException is SubscriptionInUseException) == false)
+					throw;
+
+				open = false;
+			}
+
+			var subscription = new Subscription<T>(id, database ?? MultiDatabase.GetDatabaseName(documentStore.Url), options, commands, documentStore.Changes(database), 
+				documentStore.Conventions, open, () => SendOpenSubscriptionRequest(commands, id, options)); // to ensure that subscription is open try to call it with the same connection id
 
 			subscriptions.Add(subscription);
 

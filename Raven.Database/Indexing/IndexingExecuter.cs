@@ -162,7 +162,7 @@ namespace Raven.Database.Indexing
 					var prefetchingBehavior = indexingGroup.PrefetchingBehavior;
 					var indexesToWorkOn = indexingGroup.Indexes;
 
-					var operationCancelled = false;
+					var operationCanceled = false;
 					TimeSpan indexingDuration = TimeSpan.Zero;
 					var lastEtag = Etag.Empty;
 
@@ -203,11 +203,23 @@ namespace Raven.Database.Indexing
 						}
 						catch (OperationCanceledException)
 						{
-							operationCancelled = true;
+							operationCanceled = true;
+						}
+						catch (AggregateException e)
+						{
+							var anyOperationsCanceled = e
+								.InnerExceptions
+								.OfType<OperationCanceledException>()
+								.Any();
+
+							if (anyOperationsCanceled == false)
+								throw;
+
+							operationCanceled = true;
 						}
 						finally
 						{
-							if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
+							if (operationCanceled == false && jsonDocs != null && jsonDocs.Count > 0)
 							{
 								prefetchingBehavior.CleanupDocuments(lastEtag);
 								prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
@@ -301,7 +313,7 @@ namespace Raven.Database.Indexing
 				{
 					using (LogContext.WithDatabase(context.DatabaseName))
 					{
-						var performance = HandleIndexingFor(index, lastEtag, lastModified, CancellationToken.None);
+						var performance = HandleIndexingFor(index, lastEtag, lastModified, context.CancellationToken);
 
 						if (performance != null)
 							indexingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performance);
@@ -566,7 +578,7 @@ namespace Raven.Database.Indexing
 					}
 					Log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, indexingBatchForIndex.Index.PublicName, ids);
 				}
-				context.CancellationToken.ThrowIfCancellationRequested();
+
 				token.ThrowIfCancellationRequested();
 				
 				performanceStats = context.IndexStorage.Index(indexingBatchForIndex.IndexId, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue, token);
