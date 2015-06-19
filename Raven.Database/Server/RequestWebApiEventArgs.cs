@@ -1,12 +1,11 @@
 ﻿using System;
 using Raven.Database.Counters;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.FileSystem;
 
 namespace Raven.Database.Server
 {
-	public class BeforeRequestWebApiEventArgs : EventArgs
+	public class RequestWebApiEventArgs : EventArgs
 	{
 		public string TenantId { get; set; }
 		public DocumentDatabase Database { get; set; }

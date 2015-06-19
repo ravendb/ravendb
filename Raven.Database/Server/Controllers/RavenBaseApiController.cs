@@ -721,7 +721,7 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-	    public abstract bool SetupRequestToProperDatabase(RequestManager requestManager);
+	    public abstract bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args);
 
         public abstract string TenantName { get; }
 
