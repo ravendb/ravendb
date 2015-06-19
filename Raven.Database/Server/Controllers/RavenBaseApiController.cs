@@ -270,6 +270,11 @@ namespace Raven.Database.Server.Controllers
 			return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
 		}
 
+	    public bool ContainsQueryStringKey(string key)
+	    {
+		    return InnerRequest.GetQueryNameValuePairs().Any(x => string.Equals(x.Key, key, StringComparison.OrdinalIgnoreCase));
+	    }
+
 		public Etag GetEtagFromQueryString()
 		{
 			var etagAsString = GetQueryStringValue("etag");
