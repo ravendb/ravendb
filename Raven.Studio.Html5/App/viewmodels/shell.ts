@@ -29,6 +29,7 @@ import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import helpBindingHandler = require("common/helpBindingHandler");
 import changesApi = require("common/changesApi");
+import changesContext = require("common/changesContext");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
@@ -138,7 +139,7 @@ class shell extends viewModelBase {
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
 
     private globalChangesApi: changesApi;
-    static currentResourceChangesApi = ko.observable<changesApi>(null);
+    
     private static changeSubscriptionArray: changeSubscription[];
 
     constructor() {
@@ -336,9 +337,9 @@ class shell extends viewModelBase {
 
     private activateDatabase(db: database) {
         var changeSubscriptionArray = () => [
-            shell.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
-            shell.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
-            shell.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
+            changesContext.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
+            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
+            changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
         ];
         var isNotADatabase = this.currentConnectedResource instanceof database === false;
         this.updateChangesApi(db, isNotADatabase, () => this.fetchDbStats(db), changeSubscriptionArray);
@@ -356,7 +357,7 @@ class shell extends viewModelBase {
 
     private activateFileSystem(fs: fileSystem) {
         var changesSubscriptionArray = () => [
-            shell.currentResourceChangesApi().watchFsFolders("", () => this.fetchFsStats(fs))
+            changesContext.currentResourceChangesApi().watchFsFolders("", () => this.fetchFsStats(fs))
         ];
         var isNotAFileSystem = this.currentConnectedResource instanceof fileSystem === false;
         this.updateChangesApi(fs, isNotAFileSystem, () => this.fetchFsStats(fs), changesSubscriptionArray);
@@ -382,12 +383,12 @@ class shell extends viewModelBase {
         }
 
         if ((!rs.disabled() && rs.isLicensed()) &&
-        (isPreviousDifferentKind || shell.currentResourceChangesApi() == null)) {
+			(isPreviousDifferentKind || changesContext.currentResourceChangesApi() == null)) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             var changes = new changesApi(rs, 5000);
             changes.connectToChangesApiTask.done(() => {
                 fetchStats();
-                shell.currentResourceChangesApi(changes);
+                changesContext.currentResourceChangesApi(changes);
                 shell.changeSubscriptionArray = subscriptionsArray();
             });
         }
@@ -843,14 +844,14 @@ class shell extends viewModelBase {
     }
 
     public static disconnectFromResourceChangesApi() {
-        if (shell.currentResourceChangesApi()) {
+        if (changesContext.currentResourceChangesApi()) {
             shell.changeSubscriptionArray.forEach((subscripbtion: changeSubscription) => subscripbtion.off());
             shell.changeSubscriptionArray = [];
-            shell.currentResourceChangesApi().dispose();
-            if (shell.currentResourceChangesApi().getResourceName() != '<system>') {
+            changesContext.currentResourceChangesApi().dispose();
+            if (changesContext.currentResourceChangesApi().getResourceName() != '<system>') {
                 viewModelBase.isConfirmedUsingSystemDatabase = false;
             }
-            shell.currentResourceChangesApi(null);
+            changesContext.currentResourceChangesApi(null);
         }
     }
 

@@ -1,18 +1,14 @@
-﻿using Raven.Abstractions;
+﻿using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Changes
@@ -27,9 +23,11 @@ namespace Raven.Client.Changes
         private readonly ConcurrentSet<string> watchedCollections = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<long> watchedDataSubscriptions = new ConcurrentSet<long>();
         private bool watchAllDocs;
         private bool watchAllIndexes;
         private bool watchAllTransformers;
+		private bool watchAllDataSubscriptions;
         
         private readonly Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
@@ -57,6 +55,9 @@ namespace Raven.Client.Changes
 
             if (watchAllTransformers)
                 await Send("watch-transformers", null).ConfigureAwait(false);
+
+			if (watchAllDataSubscriptions)
+				await Send("watch-data-subscriptions", null).ConfigureAwait(false);
 
             foreach (var watchedDoc in watchedDocs)
             {
@@ -148,6 +149,13 @@ namespace Raven.Client.Changes
                     }
 
                     break;
+				case "DataSubscriptionChangeNotification":
+					var dataSubscriptionChangeNotification = value.JsonDeserialization<DataSubscriptionChangeNotification>();
+					foreach (var counter in connections)
+					{
+						counter.Value.Send(dataSubscriptionChangeNotification);
+					}
+					break;
                 default:
                     break;
             }
@@ -360,7 +368,36 @@ namespace Raven.Client.Changes
             return taskedObservable;
         }
 
-		private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, Action afterConnection, Action beforeDisconnect, string value)
+	    public IObservableWithTask<DataSubscriptionChangeNotification> ForAllDataSubscriptions()
+	    {
+			var counter = GetOrAddConnectionState("all-data-subscriptions", "watch-data-subscriptions", "unwatch-data-subscriptions", () => watchAllDataSubscriptions = true, () => watchAllDataSubscriptions = false, null);
+
+			var taskedObservable = new TaskedObservable<DataSubscriptionChangeNotification, DatabaseConnectionState>(
+				counter,
+				notification => true);
+
+			counter.OnDataSubscriptionNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
+
+			return taskedObservable;
+	    }
+
+		public IObservableWithTask<DataSubscriptionChangeNotification> ForDataSubscription(long subscriptionId)
+		{
+			var counter = GetOrAddConnectionState("subscriptions/" + subscriptionId, "watch-data-subscription", "unwatch-data-subscription", () => watchedDataSubscriptions.TryAdd(subscriptionId), 
+													() => watchedDataSubscriptions.TryRemove(subscriptionId), subscriptionId.ToString(CultureInfo.InvariantCulture));
+
+			var taskedObservable = new TaskedObservable<DataSubscriptionChangeNotification, DatabaseConnectionState>(
+				counter,
+				notification => notification.Id == subscriptionId);
+
+			counter.OnDataSubscriptionNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
+
+			return taskedObservable;
+		}
+
+	    private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, Action afterConnection, Action beforeDisconnect, string value)
 		{
 			var counter = Counters.GetOrAdd(name, s =>
 			{

@@ -10,29 +10,29 @@ import customFunctions = require('models/customFunctions');
 import autoCompleterSupport = require('common/autoCompleterSupport');
 import messagePublisher = require("common/messagePublisher");
 
+
 class selectColumns extends dialogViewModelBase {
 
     private nextTask = $.Deferred<customColumns>();
     nextTaskStarted = false;
     private form: JQuery;
-
     private activeInput: JQuery;
     private autoCompleteBase = ko.observableArray<KnockoutObservable<string>>([]);
     private autoCompleteResults = ko.observableArray<KnockoutObservable<string>>([]);
     private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
     private autoCompleterSupport: autoCompleterSupport;
-
+    private columnsNames = ko.observableArray<string>([]);
     maxTableHeight = ko.observable<number>();
     lineHeight: number = 51;
     isScrollNeeded: KnockoutComputed<boolean>;
 
-    constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context, private database: database) {
+    constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context, private database: database, names: string[]) {
         super();
+        this.columnsNames(names);
         this.generateCompletionBase();
         this.regenerateBindingSubscriptions();
         this.monitorForNewRows();
-        this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults,true);
-
+        this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults, true);
         this.maxTableHeight(Math.floor($(window).height() * 0.43));
         
         $(window).resize(() => {
@@ -53,9 +53,9 @@ class selectColumns extends dialogViewModelBase {
     }
 
     private generateCompletionBase() {
-        this.autoCompleteBase([]);
-        this.customColumns.columns().forEach((column: customColumnParams) => this.autoCompleteBase().push(column.binding));
 
+        this.autoCompleteBase([]);
+        this.updateColumnsNames();
         var moduleSource = "var exports = {}; " + this.customFunctions.functions + "; return exports;";
         var exports = new Function(moduleSource)();
         for (var funcName in exports) {
@@ -74,7 +74,11 @@ class selectColumns extends dialogViewModelBase {
     }
 
     private monitorForNewRows() {
+        this.customColumns.columns().forEach((column: customColumnParams) => column.binding.subscribe(() => {
+            this.updateColumnsNames();
+        }));
         this.customColumns.columns.subscribe((changes: Array<{ index: number; status: string; value: customColumnParams }>) => {
+            this.updateColumnsNames();
             var somethingRemoved: boolean = false;
             changes.forEach((change) => {
                 if (change.status === "added") {
@@ -83,6 +87,9 @@ class selectColumns extends dialogViewModelBase {
                         );
                 }
                 else if (change.status === "deleted") {
+                    this.completionSearchSubscriptions.push(
+                        change.value.binding.subscribe(this.searchForCompletions.bind(this))
+                        );
                     somethingRemoved = true;
                 }
 
@@ -91,6 +98,18 @@ class selectColumns extends dialogViewModelBase {
                 }
             });
         }, null, "arrayChange");
+    }
+
+    private updateColumnsNames() {
+        var customColumnsArray = this.customColumns.columns();
+        var customColumnsNamesArray = customColumnsArray.map((column: customColumnParams) => column.binding());
+        var allColumns = this.columnsNames();
+        var arrayWithoutCustomNames = allColumns.filter((name: string) => {
+            var filteredNames = customColumnsNamesArray.filter((customName: string) => customName.localeCompare(name) === 0);
+            return filteredNames.length === 0;
+        });
+        var array = arrayWithoutCustomNames.map((name: string) => ko.observable<string>(name));
+        this.autoCompleteBase(array);
     }
 
     attached() {

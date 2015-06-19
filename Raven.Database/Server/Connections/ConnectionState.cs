@@ -30,6 +30,9 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentSet<string> matchingFolders =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ConcurrentSet<long> matchingDataSubscriptions =
+			new ConcurrentSet<long>();
+
 		private IEventsTransport eventsTransport;
 
 		private int watchAllDocuments;
@@ -40,6 +43,7 @@ namespace Raven.Database.Server.Connections
 		private int watchConfig;
 		private int watchConflicts;
 		private int watchSync;
+		private int watchAllDataSubscriptions;
 
 		public ConnectionState(IEventsTransport eventsTransport)
 		{
@@ -250,6 +254,20 @@ namespace Raven.Database.Server.Connections
 			Enqueue(new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" });
 		}
 
+		public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
+		{
+			if (watchAllDataSubscriptions > 0)
+			{
+				Enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
+				return;
+			}
+
+			if (matchingDataSubscriptions.Contains(dataSubscriptionChangeNotification.Id) == false)
+				return;
+
+			Enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
+		}
+
 		public void Send(Notification notification)
 		{
 			if (ShouldSend(notification))
@@ -355,6 +373,26 @@ namespace Raven.Database.Server.Connections
 		public void UnwatchAllReplicationConflicts()
 		{
 			Interlocked.Decrement(ref watchAllReplicationConflicts);
+		}
+
+		public void WatchAllDataSubscriptions()
+		{
+			Interlocked.Increment(ref watchAllDataSubscriptions);
+		}
+
+		public void UnwatchAllDataSubscriptions()
+		{
+			Interlocked.Decrement(ref watchAllDataSubscriptions);
+		}
+
+		public void WatchDataSubscription(long id)
+		{
+			matchingDataSubscriptions.TryAdd(id);
+		}
+
+		public void UnwatchDataSubscription(long id)
+		{
+			matchingDataSubscriptions.TryRemove(id);
 		}
 
 		public void Reconnect(IEventsTransport transport)

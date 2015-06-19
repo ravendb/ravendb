@@ -28,39 +28,6 @@ namespace Raven.Client.Extensions
 
 	public static class TaskExtensions2
 	{
-		/// <summary>
-		/// Waits on a task and if it throws, it unwrapped the inner exception from the AggregateException
-		/// await keyword uses same mechanism.
-		/// </summary>
-		/// <param name="task"></param>
-		internal static void WaitUnwrap(this Task task)
-		{
-			try
-			{
-				task.Wait();
-			}
-			catch (AggregateException ex)
-			{
-				var exception = ex.ExtractSingleInnerException();
-				ExceptionDispatchInfo.Capture(exception).Throw();
-			}
-		}
-
-		public static T ResultUnwrap<T>(this Task<T> task)
-		{
-			T result = default(T);
-			try
-			{
-				result = task.Result;
-			}
-			catch (AggregateException ex)
-			{
-				var exception = ex.ExtractSingleInnerException();
-				ExceptionDispatchInfo.Capture(exception).Throw();
-			}
-			return result;
-		}
-
 		public static Task<object> WithNullResult(this Task task)
 		{
 			return task.WithResult((object)null);
