@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -21,37 +22,37 @@ namespace Raven.Client.Document
 
 		public long Create(SubscriptionCriteria criteria, string database = null)
 		{
-			return innerAsync.CreateAsync(criteria, database).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => innerAsync.CreateAsync(criteria, database));
 		}
 
 		public long Create<T>(SubscriptionCriteria<T> criteria, string database = null)
 		{
-			return innerAsync.CreateAsync(criteria, database).ResultUnwrap();
+			return AsyncHelpers.RunSync(() =>  innerAsync.CreateAsync(criteria, database));
 		}
 
 		public Subscription<RavenJObject> Open(long id, SubscriptionConnectionOptions options, string database = null)
 		{
-			return innerAsync.OpenAsync(id, options, database).ResultUnwrap();
+			return AsyncHelpers.RunSync(() =>  innerAsync.OpenAsync(id, options, database));
 		}
 
 		public Subscription<T> Open<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class 
 		{
-			return innerAsync.OpenAsync<T>(id, options, database).ResultUnwrap();
+			return AsyncHelpers.RunSync(() =>  innerAsync.OpenAsync<T>(id, options, database));
 		}
 
 		public List<SubscriptionConfig> GetSubscriptions(int start, int take, string database = null)
 		{
-			return innerAsync.GetSubscriptionsAsync(start, take, database).ResultUnwrap();
+			return AsyncHelpers.RunSync(() =>  innerAsync.GetSubscriptionsAsync(start, take, database));
 		}
 
 		public void Delete(long id, string database = null)
 		{
-			innerAsync.DeleteAsync(id, database).WaitUnwrap();
+			AsyncHelpers.RunSync(() =>  innerAsync.DeleteAsync(id, database));
 		}
 
 		public void Release(long id, string database = null)
 		{
-			innerAsync.ReleaseAsync(id, database).WaitUnwrap();
+			AsyncHelpers.RunSync(() =>  innerAsync.ReleaseAsync(id, database));
 		}
 
 		public void Dispose()

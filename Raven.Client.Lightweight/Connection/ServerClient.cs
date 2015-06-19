@@ -81,7 +81,7 @@ namespace Raven.Client.Connection
 
 		public JsonDocument Get(string key)
 		{
-			return asyncServerClient.GetAsync(key).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key));
 		}
 
 		public IGlobalAdminDatabaseCommands GlobalAdmin
@@ -96,53 +96,53 @@ namespace Raven.Client.Connection
 										 string skipAfter = null)
 		{
 			return
-				asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude,
+				AsyncHelpers.RunSync(() => asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude,
 												  transformer, transformerParameters, skipAfter)
-								 .ResultUnwrap();
+								 );
 		}
 
 		public RavenJToken ExecuteGetRequest(string requestUrl)
 		{
-			return asyncServerClient.ExecuteGetRequest(requestUrl).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.ExecuteGetRequest(requestUrl));
 		}
 
 		internal T ExecuteWithReplication<T>(string method, Func<OperationMetadata, T> operation)
 		{
 			return
-				asyncServerClient.ExecuteWithReplication(method,
-					operationMetadata => Task.FromResult(operation(operationMetadata))).ResultUnwrap();
+				AsyncHelpers.RunSync(() => asyncServerClient.ExecuteWithReplication(method,
+					operationMetadata => Task.FromResult(operation(operationMetadata))));
 		}
 
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
 		{
-			return asyncServerClient.GetDocumentsAsync(start, pageSize, metadataOnly).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetDocumentsAsync(start, pageSize, metadataOnly));
 		}
 
 		public JsonDocument[] GetDocuments(Etag fromEtag, int pageSize, bool metadataOnly = false)
 		{
-			return asyncServerClient.GetDocumentsAsync(fromEtag, pageSize, metadataOnly).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetDocumentsAsync(fromEtag, pageSize, metadataOnly));
 		}
 
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
-			return asyncServerClient.PutAsync(key, etag, document, metadata).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PutAsync(key, etag, document, metadata));
 		}
 
 		public void Delete(string key, Etag etag)
 		{
-			asyncServerClient.DeleteAsync(key, etag).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.DeleteAsync(key, etag));
 		}
 
 		[Obsolete("Use RavenFS instead.")]
 		public void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
-			asyncServerClient.PutAttachmentAsync(key, etag, data, metadata).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.PutAttachmentAsync(key, etag, data, metadata));
 		}
 
 		[Obsolete("Use RavenFS instead.")]
 		public void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata)
 		{
-			asyncServerClient.UpdateAttachmentMetadataAsync(key, etag, metadata).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.UpdateAttachmentMetadataAsync(key, etag, metadata));
 		}
 
 		[Obsolete("Use RavenFS instead.")]
@@ -156,99 +156,99 @@ namespace Raven.Client.Connection
 		[Obsolete("Use RavenFS instead.")]
 		public Attachment GetAttachment(string key)
 		{
-			return asyncServerClient.GetAttachmentAsync(key).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetAttachmentAsync(key));
 		}
 
 		[Obsolete("Use RavenFS instead.")]
 		public Attachment HeadAttachment(string key)
 		{
-			return asyncServerClient.HeadAttachmentAsync(key).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.HeadAttachmentAsync(key));
 		}
 
 		[Obsolete("Use RavenFS instead.")]
 		public void DeleteAttachment(string key, Etag etag)
 		{
-			asyncServerClient.DeleteAttachmentAsync(key, etag).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.DeleteAttachmentAsync(key, etag));
 		}
 
 		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
-			return asyncServerClient.GlobalAdmin.GetDatabaseNamesAsync(pageSize, start).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GlobalAdmin.GetDatabaseNamesAsync(pageSize, start));
 		}
 
 		public string[] GetIndexNames(int start, int pageSize)
 		{
-			return asyncServerClient.GetIndexNamesAsync(start, pageSize).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexNamesAsync(start, pageSize));
 		}
 
 		public IndexDefinition[] GetIndexes(int start, int pageSize)
 		{
-			return asyncServerClient.GetIndexesAsync(start, pageSize).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexesAsync(start, pageSize));
 		}
 
 		public TransformerDefinition[] GetTransformers(int start, int pageSize)
 		{
-			return asyncServerClient.GetTransformersAsync(start, pageSize).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetTransformersAsync(start, pageSize));
 		}
 
 		public TransformerDefinition GetTransformer(string name)
 		{
-			return asyncServerClient.GetTransformerAsync(name).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetTransformerAsync(name));
 		}
 
 		public void DeleteTransformer(string name)
 		{
-			asyncServerClient.DeleteTransformerAsync(name).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.DeleteTransformerAsync(name));
 		}
 
 		public void ResetIndex(string name)
 		{
-			asyncServerClient.ResetIndexAsync(name).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.ResetIndexAsync(name));
 		}
         public void SetIndexLock(string name, IndexLockMode unLockMode) 
         {
-            asyncServerClient.SetIndexLockAsync(name, unLockMode).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.SetIndexLockAsync(name, unLockMode));
         }
         public void SetIndexPriority(string name, IndexingPriority priority )
         {
-            asyncServerClient.SetIndexPriorityAsync(name, priority).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.SetIndexPriorityAsync(name, priority));
         }
 
 		public IndexDefinition GetIndex(string name)
 		{
-			return asyncServerClient.GetIndexAsync(name).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexAsync(name));
 		}
 
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-			return asyncServerClient.PutIndexAsync(name, definition, false).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, definition, false));
 		}
 
 		public bool IndexHasChanged(string name, IndexDefinition indexDef)
 		{
-			return asyncServerClient.IndexHasChangedAsync(name, indexDef).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.IndexHasChangedAsync(name, indexDef));
 		}
 
 		public string PutTransformer(string name, TransformerDefinition transformerDef)
 		{
-			return asyncServerClient.PutTransformerAsync(name, transformerDef).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PutTransformerAsync(name, transformerDef));
 		}
 
 		public string PutIndex(string name, IndexDefinition definition, bool overwrite)
 		{
-			return asyncServerClient.PutIndexAsync(name, definition, overwrite).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, definition, overwrite));
 		}
 
 		public string PutIndex<TDocument, TReduceResult>(string name,
 			IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
 		{
-			return asyncServerClient.PutIndexAsync(name, indexDef,default(CancellationToken)).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, indexDef, default(CancellationToken)));
 		}
 
 		public string PutIndex<TDocument, TReduceResult>(string name,
 			IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
 		{
-			return asyncServerClient.PutIndexAsync(name, indexDef, overwrite).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, indexDef, overwrite));
 		}
 
 		public string DirectPutIndex(string name, OperationMetadata operationMetadata, bool overwrite,
@@ -262,7 +262,7 @@ namespace Raven.Client.Connection
 		{
 			try
 			{
-				return asyncServerClient.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly).ResultUnwrap();
+				return AsyncHelpers.RunSync(() => asyncServerClient.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly));
 			}
 			catch (Exception e)
 			{
@@ -277,7 +277,7 @@ namespace Raven.Client.Connection
 			out QueryHeaderInformation queryHeaderInfo)
 		{
 			var reference = new Reference<QueryHeaderInformation>();
-			var streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference).ResultUnwrap();
+			var streamQueryAsync = AsyncHelpers.RunSync(() => asyncServerClient.StreamQueryAsync(index, query, reference));
 			queryHeaderInfo = reference.Value;
 			return new AsyncEnumerableWrapper<RavenJObject>(streamQueryAsync);
 		}
@@ -290,53 +290,53 @@ namespace Raven.Client.Connection
 
 		public void DeleteIndex(string name)
 		{
-			asyncServerClient.DeleteIndexAsync(name).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.DeleteIndexAsync(name));
 		}
 
 		public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null,
 			Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false)
 		{
-			return asyncServerClient.GetAsync(ids, includes, transformer, transformerParameters, metadataOnly).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(ids, includes, transformer, transformerParameters, metadataOnly));
 		}
 
 		public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
-			return asyncServerClient.BatchAsync(commandDatas.ToArray()).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.BatchAsync(commandDatas.ToArray()));
 		}
 
 		public void Commit(string txId)
 		{
-			asyncServerClient.CommitAsync(txId).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.CommitAsync(txId));
 		}
 
 		public void Rollback(string txId)
 		{
-			asyncServerClient.RollbackAsync(txId).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.RollbackAsync(txId));
 		}
 
 		public void PrepareTransaction(string txId, Guid? resourceManagerId, byte[] recoveryInformation)
 		{
-			asyncServerClient.PrepareTransactionAsync(txId).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncServerClient.PrepareTransactionAsync(txId));
 		}
 
 		public BuildNumber GetBuildNumber()
 		{
-			return asyncServerClient.GetBuildNumberAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetBuildNumberAsync());
 		}
 
 		public IndexMergeResults GetIndexMergeSuggestions()
 		{
-			return asyncServerClient.GetIndexMergeSuggestionsAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexMergeSuggestionsAsync());
 		}
 
 		public LogItem[] GetLogs(bool errorsOnly)
 		{
-			return asyncServerClient.GetLogsAsync(errorsOnly).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetLogsAsync(errorsOnly));
 		}
 
 		public LicensingStatus GetLicenseStatus()
 		{
-			return asyncServerClient.GetLicenseStatusAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetLicenseStatusAsync());
 		}
 
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
@@ -352,7 +352,7 @@ namespace Raven.Client.Connection
 		[Obsolete("Use RavenFS instead.")]
 		public AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize)
 		{
-			return asyncServerClient.GetAttachmentsAsync(start, startEtag, pageSize).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetAttachmentsAsync(start, startEtag, pageSize));
 		}
 
 		public IDatabaseCommands With(ICredentials credentialsForSession)
@@ -382,44 +382,44 @@ namespace Raven.Client.Connection
 
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null)
 		{
-			return asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, options).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, options));
 		}
 
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests,
 			BulkOperationOptions options = null)
 		{
-			return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, options).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, options));
 		}
 
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch,
 			BulkOperationOptions options = null)
 		{
-			return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, options).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, options));
 		}
 
 		public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
 		{
-			return asyncServerClient.SuggestAsync(index, suggestionQuery).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.SuggestAsync(index, suggestionQuery));
 		}
 
 		public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
 		{
-			return asyncServerClient.MoreLikeThisAsync(query).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.MoreLikeThisAsync(query));
 		}
 
 		public DatabaseStatistics GetStatistics()
 		{
-			return asyncServerClient.GetStatisticsAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetStatisticsAsync());
 		}
 
 		public long NextIdentityFor(string name)
 		{
-			return asyncServerClient.NextIdentityForAsync(name).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.NextIdentityForAsync(name));
 		}
 
 		public long SeedIdentityFor(string name, long value)
 		{
-			return asyncServerClient.SeedIdentityForAsync(name, value).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.SeedIdentityForAsync(name, value));
 		}
 
 		public string UrlFor(string documentKey)
@@ -429,74 +429,74 @@ namespace Raven.Client.Connection
 
 		public JsonDocumentMetadata Head(string key)
 		{
-			return asyncServerClient.HeadAsync(key).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.HeadAsync(key));
 		}
 
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
-			return asyncServerClient.MultiGetAsync(requests).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.MultiGetAsync(requests));
 		}
 
 		public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
 		{
-			return asyncServerClient.GetTermsAsync(index, field, fromValue, pageSize).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetTermsAsync(index, field, fromValue, pageSize));
 		}
 
 		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
 		{
-			return asyncServerClient.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize));
 		}
 
 		public FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries)
 		{
-			return asyncServerClient.GetMultiFacetsAsync(facetedQueries).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetMultiFacetsAsync(facetedQueries));
 		}
 
 		public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
 		{
-			return asyncServerClient.GetFacetsAsync(index, query, facets, start, pageSize).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetFacetsAsync(index, query, facets, start, pageSize));
 		}
 
 		public RavenJObject Patch(string key, PatchRequest[] patches)
 		{
-			return asyncServerClient.PatchAsync(key, patches, null).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches, null));
 		}
 
 		public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
 		{
-			return asyncServerClient.PatchAsync(key, patches, ignoreMissing).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches, ignoreMissing));
 		}
 
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch)
 		{
-			return asyncServerClient.PatchAsync(key, patch, null).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, null));
 		}
 
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
 		{
-			return asyncServerClient.PatchAsync(key, patch, ignoreMissing).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, ignoreMissing));
 		}
 
 		public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
 		{
-			return asyncServerClient.PatchAsync(key, patches, etag).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches, etag));
 		}
 
 		public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault,
 			RavenJObject defaultMetadata)
 		{
-			return asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata));
 		}
 
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
-			return asyncServerClient.PatchAsync(key, patch, etag).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, etag));
 		}
 
 		public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault,
 			RavenJObject defaultMetadata)
 		{
-			return asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata));
 		}
 
 		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
@@ -511,7 +511,7 @@ namespace Raven.Client.Connection
 
 		internal ReplicationDocument DirectGetReplicationDestinations(OperationMetadata operationMetadata)
 		{
-			return asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata));
 		}
 
 		#endregion
@@ -534,7 +534,7 @@ namespace Raven.Client.Connection
 
 		public ReplicationStatistics GetReplicationInfo()
 		{
-			return asyncServerClient.Info.GetReplicationInfoAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncServerClient.Info.GetReplicationInfoAsync());
 		}
 
 		public IAdminDatabaseCommands Admin
@@ -558,7 +558,7 @@ namespace Raven.Client.Connection
 
 			public bool MoveNext()
 			{
-				return asyncEnumerator.MoveNextAsync().ResultUnwrap();
+				return AsyncHelpers.RunSync(() => asyncEnumerator.MoveNextAsync());
 			}
 
 			public void Reset()

@@ -193,6 +193,12 @@ namespace Raven.Client.Document.Async
             return AddLazyOperation<TResult[]>(lazyOp, null, token);
         }
 
+		public Task<FacetResults[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
+		{
+			IncrementRequestCount();
+			return AsyncDatabaseCommands.GetMultiFacetsAsync(queries);
+		}
+
 		public string GetDocumentUrl(object entity)
 		{
 			DocumentMetadata value;

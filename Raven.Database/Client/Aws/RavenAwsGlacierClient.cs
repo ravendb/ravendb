@@ -11,6 +11,7 @@ using System.Web.Http;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 
 namespace Raven.Database.Client.Aws
@@ -49,7 +50,7 @@ namespace Raven.Database.Client.Aws
 			var authorizationHeaderValue = CalculateAuthorizationHeaderValue("POST", url, now, headers);
 			client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
-			var response = client.PostAsync(url, content).ResultUnwrap();
+			var response = AsyncHelpers.RunSync(() => client.PostAsync(url, content));
 			if (response.IsSuccessStatusCode)
 				return ReadArchiveId(response);
 
