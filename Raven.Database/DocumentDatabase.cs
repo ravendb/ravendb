@@ -713,6 +713,14 @@ namespace Raven.Database
 
 			Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 
+			var metrics = WorkContext.MetricsCounters;
+
+			// give it 3 seconds to complete requests
+			for (int i = 0; i < 30 && Interlocked.Read(ref metrics.ConcurrentRequestsCount) > 0; i++)
+			{
+				Thread.Sleep(100);
+			}
+
 			EventHandler onDisposing = Disposing;
 			if (onDisposing != null)
 			{
@@ -749,22 +757,22 @@ namespace Raven.Database
 			}
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (ExtensionsState == null)
-				return;
+			{
+				if (ExtensionsState == null)
+					return;
 
-			foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
-				exceptionAggregator.Execute(value.Dispose);
-		});
+				foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
+					exceptionAggregator.Execute(value.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (toDispose == null)
-				return;
+			{
+				if (toDispose == null)
+					return;
 
-			foreach (IDisposable shouldDispose in toDispose)
-				exceptionAggregator.Execute(shouldDispose.Dispose);
-		});
+				foreach (IDisposable shouldDispose in toDispose)
+					exceptionAggregator.Execute(shouldDispose.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
 			{
@@ -784,11 +792,11 @@ namespace Raven.Database
 			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			var disposable = backgroundTaskScheduler as IDisposable;
-			if (disposable != null)
-				disposable.Dispose();
-		});
+			{
+				var disposable = backgroundTaskScheduler as IDisposable;
+				if (disposable != null)
+					disposable.Dispose();
+			});
 
 
 			if (IndexStorage != null)
