@@ -6,6 +6,7 @@ import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import changesApi = require("common/changesApi");
 import virtualTable = require("widgets/virtualTable/viewModel");
+import changesContext = require("common/changesContext");
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import filesystem = require("models/filesystem/filesystem");
@@ -70,7 +71,7 @@ class status extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [ shell.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
+        return [changesContext.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
     }
 
     private processFsSync(e: synchronizationUpdateNotification) {

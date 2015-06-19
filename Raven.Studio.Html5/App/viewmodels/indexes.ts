@@ -14,6 +14,7 @@ import indexesShell = require("viewmodels/indexesShell");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
 import replaceIndexDialog = require("viewmodels/replaceIndexDialog");
+import changesContext = require("common/changesContext");
 import indexesAndTransformersClipboardDialog = require("viewmodels/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/getPendingIndexReplacementsCommand");
@@ -202,8 +203,8 @@ class indexes extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
-            shell.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, e => this.processReplaceEvent())
+            changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
+            changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, e => this.processReplaceEvent())
         ];
     }
 
