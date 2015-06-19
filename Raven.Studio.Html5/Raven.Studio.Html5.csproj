@@ -146,6 +146,7 @@
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
+    <TypeScriptCompile Include="App\common\changesContext.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\environmentColor.ts" />

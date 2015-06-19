@@ -12,6 +12,7 @@ import changesCallback = require("common/changesCallback");
 import changeSubscription = require("models/changeSubscription");
 import uploadItem = require("models/uploadItem");
 import oauthContext = require("common/oauthContext");
+import changesContext = require("common/changesContext");
 import messagePublisher = require("common/messagePublisher");
 import confirmationDialog = require("viewmodels/confirmationDialog");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
@@ -94,7 +95,23 @@ class viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
 
-        oauthContext.enterApiKeyTask.done(() => this.notifications = this.createNotifications());
+        oauthContext.enterApiKeyTask.done(() => {
+			// we have to wait for changes api to connect as well
+			if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
+				this.notifications = this.createNotifications();
+			} else {
+				// as obtaining changes api connection might take a while, we have to spin until connection is ready
+				var createNotifySpinFunction = () => {
+					if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
+						this.notifications = this.createNotifications();
+					} else {
+						setTimeout(createNotifySpinFunction, 50);
+					}
+				}
+				setTimeout(createNotifySpinFunction, 50);
+			}
+	        
+        });
 
         this.postboxSubscriptions = this.createPostboxSubscriptions();
         this.modelPollingStart();
