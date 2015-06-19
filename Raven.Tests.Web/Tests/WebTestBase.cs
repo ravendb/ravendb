@@ -16,17 +16,17 @@ using Xunit;
 
 namespace Raven.Tests.Web.Tests
 {
-	public abstract class WebTestBase
+	public abstract class WebTestBase : IUseFixture<WebTestFixture>
 	{
 		private readonly HttpClient client;
 
-		private const string Url = "http://localhost:29603";
+		protected string Url { get; private set; }
 
 		protected WebTestBase()
 		{
 			client = new HttpClient
 					 {
-						 Timeout = TimeSpan.FromSeconds(30)
+						 Timeout = TimeSpan.FromSeconds(60)
 					 };
 		}
 
@@ -90,6 +90,11 @@ namespace Raven.Tests.Web.Tests
 			}
 
 			throw new InvalidOperationException(string.Format("Request failed. Status: {0}. Response: {1}.", response, content));
+		}
+
+		public void SetFixture(WebTestFixture data)
+		{
+			Url = data.Url;
 		}
 	}
 }

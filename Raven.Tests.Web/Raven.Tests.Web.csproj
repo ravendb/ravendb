@@ -185,6 +185,7 @@
     <Compile Include="Tests\CommandTests.cs" />
     <Compile Include="Tests\SessionTests.cs" />
     <Compile Include="Tests\WebTestBase.cs" />
+    <Compile Include="WebTestFixture.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Global.asax" />
