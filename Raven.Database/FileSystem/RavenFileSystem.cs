@@ -320,6 +320,12 @@ namespace Raven.Database.FileSystem
 			if (disposed)
 				return;
 
+			// give it 3 seconds to complete requests
+			for (int i = 0; i < 30 && Interlocked.Read(ref metricsCounters.ConcurrentRequestsCount) > 0; i++)
+			{
+				Thread.Sleep(100);
+			}
+
 			AppDomain.CurrentDomain.ProcessExit -= ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload -= ShouldDispose;
 

@@ -386,7 +386,8 @@ namespace Raven.Database.Prefetching
 		    {
 		        size = context.LastActualIndexingBatchInfo.Aggregate(0, (o, c) => o + c.TotalDocumentCount)/count;
 		    }
-			var alreadyLoadedSize = futureIndexBatches.Values.Sum(x =>
+
+			var alreadyLoadedSizeInBytes = futureIndexBatches.Values.Sum(x =>
 			{
 				if (x.Task.IsCompleted)
 					return x.Task.Result.Sum(doc => doc.SerializedSizeOnDisk);
@@ -394,7 +395,8 @@ namespace Raven.Database.Prefetching
 			    return size;
 			});
 
-			if (alreadyLoadedSize > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
+			var alreadyLoadedSizeInMb = alreadyLoadedSizeInBytes / 1024 / 1024;
+			if (alreadyLoadedSizeInMb > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
 				return;
 
 			if(MemoryStatistics.IsLowMemory)

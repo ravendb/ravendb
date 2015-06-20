@@ -530,14 +530,14 @@ namespace Raven.Server
 										Url = uri.AbsoluteUri
 									}.Initialize())
 			{
-				operationId = filesStore.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
+				operationId = AsyncHelpers.RunSync(() => filesStore.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
 																			   {
 																				   BackupLocation = backupLocation,
 																				   FilesystemLocation = restoreLocation,
 																				   FilesystemName = restoreFilesystemName,
 																				   Defrag = defrag,
 																				   RestoreStartTimeout = timeout
-																			   }).ResultUnwrap();
+																			   }));
 				Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
 			}
 

@@ -4,6 +4,7 @@ import shell = require("viewmodels/shell");
 import synchronizationReplicationSetup = require("models/filesystem/synchronizationReplicationSetup");
 import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 import viewModelBase = require("viewmodels/viewModelBase");
+import changesContext = require("common/changesContext");
 
 import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
@@ -34,7 +35,7 @@ class synchronizationDestinations extends viewModelBase {
         super.activate(args);
        
         if (!this.subscription) {
-            this.subscription = shell.currentResourceChangesApi()
+            this.subscription = changesContext.currentResourceChangesApi()
                 .watchFsDestinations((e: filesystemConfigNotification) => {
                     if (e.Name.indexOf("Raven/Synchronization/Destinations") < 0)
                         return;

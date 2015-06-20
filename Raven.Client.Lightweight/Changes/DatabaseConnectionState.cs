@@ -54,6 +54,8 @@ namespace Raven.Client.Changes
 
 		public event Action<ReplicationConflictNotification> OnReplicationConflictNotification;
 
+		public event Action<DataSubscriptionChangeNotification> OnDataSubscriptionNotification;
+
 		public event Action<Exception> OnError;
 
 		public void Send(DocumentChangeNotification documentChangeNotification)
@@ -93,6 +95,13 @@ namespace Raven.Client.Changes
 				onOnBulkInsertChangeNotification(bulkInsertChangeNotification);
 
 			Send((DocumentChangeNotification)bulkInsertChangeNotification);
+		}
+
+		public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
+		{
+			var onOnDataSubscriptionChangeNotification = OnDataSubscriptionNotification;
+			if (onOnDataSubscriptionChangeNotification != null)
+				onOnDataSubscriptionChangeNotification(dataSubscriptionChangeNotification);
 		}
 
 		public void Error(Exception e)

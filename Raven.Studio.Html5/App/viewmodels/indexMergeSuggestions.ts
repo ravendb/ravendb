@@ -9,6 +9,7 @@ import changeSubscription = require('models/changeSubscription');
 import shell = require("viewmodels/shell");
 import moment = require("moment");
 import dialog = require("plugins/dialog");
+import changesContext = require("common/changesContext");
 import optional = require("common/optional");
 
 class indexMergeSuggestions extends viewModelBase {
@@ -40,7 +41,7 @@ class indexMergeSuggestions extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [ shell.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexMergeSuggestions()) ];
+        return [changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexMergeSuggestions()) ];
     }
 
     private fetchStats(): JQueryPromise<databaseStatisticsDto> {
