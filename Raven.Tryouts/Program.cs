@@ -1,25 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Lucene.Net.Search;
-using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.FileSystem;
-using Raven.Client.Indexes;
 using Raven.Client.Shard;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.FileSystem;
-using Raven.Tests.MailingList;
-using Xunit;
 
 namespace Raven.Tryouts
 {
@@ -38,30 +21,25 @@ namespace Raven.Tryouts
     {
         private static void Main()
         {
-            var shards = new Dictionary<string, IDocumentStore>
+            using (var store = new DocumentStore
             {
-                {"_", new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "Shop"}}, //existing data
-                {"ME", new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "Shop_ME"}},
-                {"US", new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "Shop_US"}},
-            };
-
-            var shardStrategy = new ShardStrategy(shards)
-                .ShardingOn<Customer>(c => c.Region)
-                .ShardingOn<Invoice>(i => i.Customer);
-
-            var x = new ShardedDocumentStore(shardStrategy).Initialize();
-            using (var s = x.OpenSession())
+                Url = "http://localhost:8080",
+                DefaultDatabase = "t2"
+            }.Initialize())
             {
-                var customer = new Customer
+                using (var bulkInsert = store.BulkInsert())
                 {
-                    Region = "US"
-                };
-                s.Store(customer);
-                s.Store(new Invoice
-                {
-                    Customer = customer.Id
-                });
-                s.SaveChanges();
+                    for (int i = 0; i < 100; i++)
+                    {
+                        bulkInsert.Store(new Customer
+                        {
+                            Region = "regions/" +i%100
+                        });
+                    }
+                }
+
+                Console.WriteLine("Done");
+                Console.ReadLine();
             }
         }
 
