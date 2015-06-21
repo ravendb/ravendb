@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -73,9 +74,9 @@ namespace Voron.Trees
             if (node->Flags == (NodeFlags.PageRef))
             {
                 var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
-                MemoryUtils.Copy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+                Memory.Copy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
             }
-            MemoryUtils.Copy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
+            Memory.Copy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
 		public static int GetDataSize(Transaction tx, NodeHeader* node)

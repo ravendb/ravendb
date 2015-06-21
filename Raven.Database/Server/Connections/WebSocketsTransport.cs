@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Owin;
@@ -236,7 +238,10 @@ namespace Raven.Database.Server.Connections
 
         }
 
-        public event Action Disconnected;
+	    private readonly DateTime _started = SystemTime.UtcNow;
+	    public TimeSpan Age { get { return SystemTime.UtcNow - _started; }}
+
+	    public event Action Disconnected;
 
         public void SendAsync(object msg)
         {
@@ -246,58 +251,66 @@ namespace Raven.Database.Server.Connections
 
         public virtual async Task Run(IDictionary<string, object> websocketContext)
         {
-            try
-            {
-                var sendAsync = (WebSocketSendAsync)websocketContext["websocket.SendAsync"];
+	        CancellationTokenSource cancellationTokenSource = null;
+	        try
+	        {
+		        var sendAsync = (WebSocketSendAsync) websocketContext["websocket.SendAsync"];
+				cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken)websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken);
 
-                var token = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken)websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken).Token;
+		        var token = cancellationTokenSource.Token;
 
-                var memoryStream = new MemoryStream();
-                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+		        var memoryStream = new MemoryStream();
+		        var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 
-                CreateWaitForClientCloseTask(websocketContext, token);
+		        CreateWaitForClientCloseTask(websocketContext, token);
 
-                while (token.IsCancellationRequested == false)
-                {
-                    var result = await manualResetEvent.WaitAsync(5000);
-                    if (token.IsCancellationRequested)
-                        break;
+		        while (token.IsCancellationRequested == false)
+		        {
+			        var result = await manualResetEvent.WaitAsync(5000);
+			        if (token.IsCancellationRequested)
+				        break;
 
-                    if (result == false)
-                    {
-                        await SendMessage(memoryStream, serializer,
-                            new { Type = "Heartbeat", Time = SystemTime.UtcNow },
-                            sendAsync, token);
+			        if (result == false)
+			        {
+				        await SendMessage(memoryStream, serializer,
+					        new {Type = "Heartbeat", Time = SystemTime.UtcNow},
+					        sendAsync, token);
 
-                        if (lastMessageEnqueuedAndNotSent != null)
-                        {
-                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, token);
-                            lastMessageEnqueuedAndNotSent = null;
-                            lastMessageSentTick = Environment.TickCount;
-                        }
-                        continue;
-                    }
+				        if (lastMessageEnqueuedAndNotSent != null)
+				        {
+					        await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, token);
+					        lastMessageEnqueuedAndNotSent = null;
+					        lastMessageSentTick = Environment.TickCount;
+				        }
+				        continue;
+			        }
 
-                    manualResetEvent.Reset();
+			        manualResetEvent.Reset();
 
-                    object message;
-                    while (msgs.TryDequeue(out message))
-                    {
-                        if (token.IsCancellationRequested)
-                            break;
+			        object message;
+			        while (msgs.TryDequeue(out message))
+			        {
+				        if (token.IsCancellationRequested)
+					        break;
 
-                        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
-                        {
-                            lastMessageEnqueuedAndNotSent = message;
-                            continue;
-                        }
+				        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
+				        {
+					        lastMessageEnqueuedAndNotSent = message;
+					        continue;
+				        }
 
-                        await SendMessage(memoryStream, serializer, message, sendAsync, token);
-                        lastMessageEnqueuedAndNotSent = null;
-                        lastMessageSentTick = Environment.TickCount;
-                    }
-                }
-            }
+				        await SendMessage(memoryStream, serializer, message, sendAsync, token);
+				        lastMessageEnqueuedAndNotSent = null;
+				        lastMessageSentTick = Environment.TickCount;
+			        }
+		        }
+	        }
+	        catch (Exception e)
+	        {
+		        Log.Info("Error when handling web socket connection", e);
+		        if (cancellationTokenSource != null)
+			        cancellationTokenSource.Cancel();
+	        }
             finally
             {
                 OnDisconnection();
@@ -311,17 +324,38 @@ namespace Raven.Database.Server.Connections
                 var buffer = new ArraySegment<byte>(new byte[1024]);
                 var receiveAsync = (WebSocketReceiveAsync)websocketContext["websocket.ReceiveAsync"];
                 var closeAsync = (WebSocketCloseAsync)websocketContext["websocket.CloseAsync"];
-
-                while (cancelToken.IsCancellationRequested == false)
+				
+                while (true)
                 {
                     try
                     {
-                        WebSocketReceiveResult receiveResult = await receiveAsync(buffer, cancelToken);
+	                    bool cancelled = false;
+	                    WebSocketReceiveResult receiveResult = null;
+	                    try
+	                    {
+		                    receiveResult = await receiveAsync(buffer, cancelToken);
+	                    }
+	                    catch (OperationCanceledException)
+	                    {
+		                    cancelled = true;
+	                    }
+	                    if (cancelled)
+	                    {
+		                    try
+		                    {
+								await closeAsync((int)WebSocketCloseStatus.NormalClosure, "Closed for GC release", cancelToken);
+		                    }
+		                    catch (Exception e)
+		                    {
+								Log.WarnException("Error when closing connection web socket transport", e);
+		                    }
+		                    return;
+	                    }
 
-                        if (receiveResult.Item1 == WebSocketCloseMessageType)
+	                    if (receiveResult.Item1 == WebSocketCloseMessageType)
                         {
-                            var clientCloseStatus = (int)websocketContext["websocket.ClientCloseStatus"];
-                            var clientCloseDescription = (string)websocketContext["websocket.ClientCloseDescription"];
+							var clientCloseStatus = (int)websocketContext["websocket.ClientCloseStatus"];
+							var clientCloseDescription = (string)websocketContext["websocket.ClientCloseDescription"];
 
                             if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
                             {

@@ -34,6 +34,15 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class DebugController : RavenDbApiController
 	{
+
+		[HttpGet]
+		[RavenRoute("debug/cache-details")]
+		[RavenRoute("databases/{databaseName}/debug/cache-details")]
+		public HttpResponseMessage CacheDetails()
+		{
+			return GetMessageWithObject(Database.TransactionalStorage.DocumentCacher.GetStatistics());
+		}
+
 		[HttpGet]
 		[RavenRoute("debug/enable-query-timing")]
 		[RavenRoute("databases/{databaseName}/debug/enable-query-timing")]

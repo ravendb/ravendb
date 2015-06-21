@@ -15,6 +15,7 @@ namespace Raven.Abstractions.Util
 	using System;
 	using System.Linq.Expressions;
 	using System.Runtime;
+    using Sparrow.Collections;
 
 	public static class RavenGC
 	{

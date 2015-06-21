@@ -62,6 +62,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #endregion
 
+using Sparrow;
+using Sparrow.Platform;
 using System;
 using System.Runtime.InteropServices;
 using Voron.Impl;
@@ -93,11 +95,11 @@ namespace Voron.Util
 		{
 			if (inputLength < LZ4_64KLIMIT)
 			{
-				StdLib.memset((byte*) _hashtable64K, 0, HASH64K_TABLESIZE*sizeof (ushort));
+				UnmanagedMemory.Set((byte*) _hashtable64K, 0, HASH64K_TABLESIZE*sizeof (ushort));
 				return LZ4_compress64kCtx_64(_hashtable64K, input, output, inputLength, outputLength);
 			}
 
-			StdLib.memset((byte*)_hashtable, 0, HASH_TABLESIZE * sizeof(uint));
+			UnmanagedMemory.Set((byte*)_hashtable, 0, HASH_TABLESIZE * sizeof(uint));
 			return LZ4_compressCtx_64(_hashtable, input, output, inputLength, outputLength);
 		}
 
@@ -672,7 +674,7 @@ namespace Voron.Util
 
 		private unsafe static void BlockCopy(byte* src, byte* dest, int len)
 		{
-            MemoryUtils.Copy(dest, src, len);
+            Memory.Copy(dest, src, len);
 		}
 
 		#endregion

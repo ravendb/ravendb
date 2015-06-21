@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -149,7 +150,7 @@ namespace Voron.Trees
 
             fixed (byte* src = value)
             {
-                MemoryUtils.Copy(pos, src, value.Length);
+                Memory.Copy(pos, src, value.Length);
             }
         }
 
@@ -176,7 +177,7 @@ namespace Voron.Trees
                     if (read == 0)
                         break;
 
-                    MemoryUtils.CopyInline(pos, tempPagePointer, read);
+                    Memory.CopyInline(pos, tempPagePointer, read);
                     pos += read;
 
                     if (read != tempPageBuffer.Length)

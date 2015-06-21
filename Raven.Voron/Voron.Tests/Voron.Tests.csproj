@@ -159,7 +159,6 @@
     <Compile Include="Trees\TreeRenaming.cs" />
     <Compile Include="Trees\Updates.cs" />
     <Compile Include="Util\CrcTests.cs" />
-    <Compile Include="Util\Hashing.cs" />
     <Compile Include="Util\ImmutableAppendOnlyTests.cs" />
     <Compile Include="Util\StreamExtensions.cs" />
   </ItemGroup>
@@ -198,6 +197,10 @@
   -->
   <Import Project="..\..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <ItemGroup>
+    <ProjectReference Include="..\..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>

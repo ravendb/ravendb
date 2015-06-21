@@ -1004,6 +1004,9 @@
     <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Content\bootstrap-select.css.map" />
     <Content Include="Scripts\bootstrap-select.js.map" />
+    <Content Include="Content\bootstrap.css.map">
+      <DependentUpon>bootstrap.css</DependentUpon>
+    </Content>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>

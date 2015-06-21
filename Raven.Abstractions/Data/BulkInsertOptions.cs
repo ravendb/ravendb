@@ -9,6 +9,12 @@
 		{
 			BatchSize = 512;
 			WriteTimeoutMilliseconds = 15 * 1000;
+			ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
+			{
+				MaxDocumentsPerChunk = BatchSize*4,
+				MaxChunkVolumeInBytes = 8 * 1024 * 1024
+				
+			};
 		}
 
 		/// <summary>
@@ -41,5 +47,42 @@
 		/// </summary>
 		/// <value>15000 milliseconds by default</value>
 		public int WriteTimeoutMilliseconds { get; set; }
+
+		/// <summary>
+		/// Represents options of the chunked functionality of the bulk insert operation, 
+		/// which allows opening new connection for each chunk by amount of documents and total size. 
+		/// If Set to null, bulk insert will be performed in a not chunked manner.
+		/// <para>Value:</para>
+		/// <para>Initialize by default</para>
+		/// </summary>
+		/// <value>Initialized by default</value>
+		public ChunkedBulkInsertOptions ChunkedBulkInsertOptions { get; set; }
+	}
+
+	/// <summary>
+	/// Options for the chunked bulk insert operation
+	/// </summary>
+	public class ChunkedBulkInsertOptions
+	{
+		public ChunkedBulkInsertOptions()
+		{
+			MaxDocumentsPerChunk = 2048;
+			MaxChunkVolumeInBytes = 8 * 1024 * 1024;
+		}
+		/// <summary>
+		/// Number of documents to send in each bulk insert sub operation (Default: 2048)
+		/// <para>Value:</para>
+		/// <para>2048 documents by default</para>
+		/// </summary>
+		/// <value>2048 documents by default</value>
+		public int MaxDocumentsPerChunk { get; set; }
+
+		/// <summary>
+		/// Max volume of all the documents could be sent in each bulk insert sub operation (Default: 8MB)
+		/// <para>Value:</para>
+		/// <para>8MB by default</para>
+		/// </summary>
+		/// <value>8MB by default</value>
+		public long MaxChunkVolumeInBytes { get; set; }
 	}
 }

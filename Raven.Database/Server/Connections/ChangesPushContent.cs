@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -22,6 +23,9 @@ namespace Raven.Database.Server.Connections
 		public string Id { get; private set; }
 
 		public bool Connected { get; set; }
+
+		private readonly DateTime _started = SystemTime.UtcNow;
+		public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
 
 		public event Action Disconnected = delegate { };
         public long CoolDownWithDataLossInMiliseconds { get; set; }

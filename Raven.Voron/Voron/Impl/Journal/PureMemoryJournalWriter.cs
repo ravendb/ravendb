@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -56,7 +57,7 @@ namespace Voron.Impl.Journal
 	                continue;
 	            }
 
-                MemoryUtils.Copy(buffer, current.Pointer, count);
+                Memory.Copy(buffer, current.Pointer, count);
 		        return true;
 	        }
 		    return false;
@@ -95,7 +96,7 @@ namespace Voron.Impl.Journal
 
 				for (int index = 0; index < pages.Length; index++)
 				{
-					MemoryUtils.Copy(buffer.Pointer + (index * AbstractPager.PageSize), (byte*)pages[index].ToPointer(), AbstractPager.PageSize);
+					Memory.Copy(buffer.Pointer + (index * AbstractPager.PageSize), (byte*)pages[index].ToPointer(), AbstractPager.PageSize);
 				}
 			}
 			finally
