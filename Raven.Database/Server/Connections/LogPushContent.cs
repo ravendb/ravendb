@@ -4,7 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Server.Controllers;
@@ -20,6 +20,8 @@ namespace Raven.Database.Server.Connections
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 	    private bool hitCapacity = false;
+		private readonly DateTime _started = SystemTime.UtcNow;
+		public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
 
 		public string Id { get; private set; }
 

@@ -47,6 +47,7 @@ namespace Raven.Database.Server.Connections
 				{
 					eventsTransport.Id,
 					eventsTransport.Connected,
+					eventsTransport.Age,
 					WatchAllDocuments = watchAllDocuments > 0,
 					WatchAllIndexes = watchAllIndexes > 0,
                     WatchAllTransformers = watchAllTransformers > 0,

@@ -105,6 +105,7 @@ namespace Raven.Storage.Voron
 		}
 
 		public Guid Id { get; private set; }
+		public IDocumentCacher DocumentCacher { get { return documentCacher; }}
 
 		public IDisposable WriteLock()
 		{
