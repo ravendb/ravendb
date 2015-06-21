@@ -40,7 +40,10 @@ namespace Raven.Database.Counters.Controllers
 			using (var writer = Storage.CreateWriter())
 			{
 				var counterChangeAction = writer.Store(groupName, counterName, delta);
-				writer.Commit(delta != 0);
+				if (delta == 0 && counterChangeAction != CounterChangeAction.Add)
+					return new HttpResponseMessage(HttpStatusCode.OK);
+
+				writer.Commit();
 
 				Storage.MetricsCounters.ClientRequests.Mark();
 				Storage.Publisher.RaiseNotification(new ChangeNotification
@@ -48,6 +51,7 @@ namespace Raven.Database.Counters.Controllers
 					GroupName = groupName,
 					CounterName = counterName,
 					Action = counterChangeAction,
+					Delta = delta,
 					Total = writer.GetCounterTotal(groupName, counterName)
 				});
 
@@ -265,9 +269,8 @@ namespace Raven.Database.Counters.Controllers
 
 			using (var writer = Storage.CreateWriter())
 			{
-				var counterChangeAction = writer.Reset(groupName, counterName);
-
-				if (counterChangeAction != CounterChangeAction.None)
+				var difference = writer.Reset(groupName, counterName);
+				if (difference != 0)
 				{
 					writer.Commit();
 
@@ -276,7 +279,8 @@ namespace Raven.Database.Counters.Controllers
 					{
 						GroupName = groupName,
 						CounterName = counterName,
-						Action = counterChangeAction,
+						Action = difference >= 0 ? CounterChangeAction.Increment : CounterChangeAction.Decrement,
+						Delta = difference,
 						Total = 0
 					});
 				}
@@ -303,6 +307,7 @@ namespace Raven.Database.Counters.Controllers
 					GroupName = groupName,
 					CounterName = counterName,
 					Action = CounterChangeAction.Delete,
+					Delta = 0,
 					Total = 0
 				});
 
@@ -314,12 +319,15 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
+			if (skip < 0)
+				throw new ArgumentException("Bad argument", "skip");
+			if (take <= 0)
+				throw new ArgumentException("Bad argument", "take");
+
 			using (var reader = Storage.CreateReader())
 			{
 				var gruop = group ?? string.Empty;
 				var counters = reader.GetCountersSummary(gruop, skip, take);
-				/*var counterByPrefixes = reader.GetCountersByPrefixes(groupsPrefix, skip, take);
-				var counters = counterByPrefixes.Select(groupWithCounterName => reader.GetCounterSummary(groupWithCounterName)).ToList();*/
 				return GetMessageWithObject(counters);
 			}
 		}
@@ -334,9 +342,6 @@ namespace Raven.Database.Counters.Controllers
 			using (var reader = Storage.CreateReader())
 			{
 				var overallTotal = reader.GetCounterTotal(groupName, counterName);
-				if (overallTotal == null)
-					return Request.CreateResponse(HttpStatusCode.OK, 0);
-
 				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
 			}
         }

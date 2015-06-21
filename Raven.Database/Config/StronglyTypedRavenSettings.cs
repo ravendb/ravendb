@@ -254,6 +254,7 @@ namespace Raven.Database.Config
 
 			Counter.DataDir = new StringSetting(settings[Constants.Counter.DataDirectory], @"~\Counters");
 			Counter.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.Counter.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
+			Counter.DeletedTombstonesInBatch = new IntegerSetting(settings[Constants.Counter.DeletedTombstonesInBatch], 1000);
 
 			TimeSeries.DataDir = new StringSetting(settings[Constants.TimeSeries.DataDirectory], @"~\TimeSeries");
 
@@ -531,6 +532,8 @@ namespace Raven.Database.Config
 			public StringSetting DataDir { get; set; }
 
 			public TimeSpanSetting TombstoneRetentionTime { get; set; }
+
+			public IntegerSetting DeletedTombstonesInBatch { get; set; }
 		}
 
 		public class TimeSeriesConfiguration

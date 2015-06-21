@@ -319,9 +319,9 @@ namespace Raven.Abstractions.Data
 
 			public const string TombstoneRetentionTime = "Raven/Counter/TombstoneRetentionTime";
 
-			public const string UrlPrefix = "cs";
+			public const string DeletedTombstonesInBatch = "Raven/Counter/DeletedTombstonesInBatch";
 
-			//public const string Separator = "/";
+			public const string UrlPrefix = "cs";
 		}
 
 		//Time Series

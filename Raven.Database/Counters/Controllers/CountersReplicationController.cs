@@ -45,18 +45,17 @@ namespace Raven.Database.Counters.Controllers
 			}
 
 	        long lastEtag = 0;
-            bool wroteCounter = false;
+            var wroteCounter = false;
             using (var writer = Storage.CreateWriter())
             {
 				var counterChangeNotifications = new List<ChangeNotification>();
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
-					var sign = counter.Value >= 0 ? ValueSign.Positive : ValueSign.Negative;
-					var currentCounter = writer.GetSingleCounterValue(counter.GroupName, counter.CounterName, counter.ServerId, sign);
+					var currentCounterValue = writer.GetSingleCounterValue(counter.GroupName, counter.CounterName, counter.ServerId, counter.Sign);
 
 					//if current counter exists and current value is less than received value
-		            if (currentCounter != -1 && currentCounter <= counter.Value)
+					if (currentCounterValue != -1 && counter.Value <= currentCounterValue)
 						continue;
 
 					wroteCounter = true;
@@ -64,19 +63,17 @@ namespace Raven.Database.Counters.Controllers
 					//if (string.IsNullOrWhiteSpace(counter.FullCounterName))
 					//	return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
 
-					var counterChangeAction = writer.Store(counter.GroupName, counter.CounterName, counter.ServerId, sign, counter.Value);
+					var counterChangeAction = writer.Store(counter.GroupName, counter.CounterName, counter.ServerId, counter.Sign, counter.Value);
 					counterChangeNotifications.Add(new ChangeNotification
 					{
 						GroupName = counter.GroupName,
 						CounterName = counter.CounterName,
+						Delta = counter.Value - currentCounterValue,
 						Action = counterChangeAction
 					});
 				}
 
 				var serverId = replicationMessage.ServerId;
-	            //if (String.IsNullOrWhiteSpace(serverId))
-		        //    return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty server Id");
-
 				if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
                 {
 					writer.RecordLastEtagFor(serverId, lastEtag);

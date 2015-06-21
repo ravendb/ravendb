@@ -10,6 +10,8 @@ namespace Raven.Database.Counters
 
 		public Guid ServerId { get; set; }
 
+		public char Sign { get; set; }
+
 		public long Value { get; set; }
 
 		public long Etag { get; set; }

@@ -131,7 +131,7 @@ namespace Voron
 			}
 
 			if (Array != null)
-				return Encoding.UTF8.GetString(Array,0, Size);
+				return Encoding.UTF8.GetString(Array, 0, Size);
 
 			return new string((sbyte*)Pointer, 0, Size, Encoding.UTF8);
 		}

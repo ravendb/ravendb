@@ -324,6 +324,7 @@ namespace Raven.Database.Config
 
 			Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
 			Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
+			Counter.DeletedTombstonesInBatch = ravenSettings.Counter.DeletedTombstonesInBatch.Value;
 
 			TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
 
@@ -1475,6 +1476,8 @@ namespace Raven.Database.Config
 			/// Purged on next counter storage startup. Default: 14 days.
 			/// </summary>
 			public TimeSpan TombstoneRetentionTime { get; set; }
+
+			public int DeletedTombstonesInBatch { get; set; }
 		}
 
 		public class TimeSeriesConfiguration
