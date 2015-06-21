@@ -2020,6 +2020,8 @@ namespace Raven.Client.Connection.Async
 
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 		{
+			if (options.ChunkedBulkInsertOptions != null)
+				return new ChunkedRemoteBulkInsertOperation(options,this,changes);
 			return new RemoteBulkInsertOperation(options, this, changes);
 		}
 

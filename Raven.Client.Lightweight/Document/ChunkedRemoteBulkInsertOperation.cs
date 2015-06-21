@@ -1,20 +1,16 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ChunkedRemoteBulkInsertOperation.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
-using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Raven.Smuggler.Client
+namespace Raven.Client.Document
 {
 	public class ChunkedRemoteBulkInsertOperation : ILowLevelBulkInsertOperation
 	{
@@ -23,29 +19,24 @@ namespace Raven.Smuggler.Client
 		private readonly AsyncServerClient client;
 
 		private readonly IDatabaseChanges changes;
-
-		private readonly int chunkSize;
-
+				
 		private int processedItemsInCurrentOperation;
 
 		private RemoteBulkInsertOperation current;
-
-		private readonly long? documentSizeInChunkLimit;
-
-		private long documentSizeInChunk;
+				
+		private long currentChunkSize;
 
 		private bool disposed;
 
 		private Task<int> previousTask;
 
-		public ChunkedRemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, int chunkSize,long? documentSizeInChunkLimit = null)
+		public ChunkedRemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 		{
 			this.options = options;
 			this.client = client;
-			this.changes = changes;
-			this.chunkSize = chunkSize;
-			this.documentSizeInChunkLimit = documentSizeInChunkLimit;
-			documentSizeInChunk = 0;
+			this.changes = changes;			
+			currentChunkSize = 0;
+			current = GetBulkInsertOperation();
 		}
 
 		public Guid OperationId
@@ -62,8 +53,8 @@ namespace Raven.Smuggler.Client
 
 			current.Write(id, metadata, data, dataSize);
 
-			if(documentSizeInChunkLimit.HasValue)
-				documentSizeInChunk += DocumentHelpers.GetRoughSize(data);
+			if (options.ChunkedBulkInsertOptions.MaxChunkVolumeInBytes > 0)
+				currentChunkSize += DocumentHelpers.GetRoughSize(data);
 
 			processedItemsInCurrentOperation++;
 		}
@@ -73,8 +64,8 @@ namespace Raven.Smuggler.Client
 			if (current == null)
 				return current = CreateBulkInsertOperation(Task.FromResult(0));
 
-			if (processedItemsInCurrentOperation < chunkSize)
-				if (!documentSizeInChunkLimit.HasValue || documentSizeInChunk < documentSizeInChunkLimit.Value)
+			if (processedItemsInCurrentOperation < options.ChunkedBulkInsertOptions.MaxDocumentsPerChunk)
+				if (options.ChunkedBulkInsertOptions.MaxChunkVolumeInBytes <= 0 || currentChunkSize < options.ChunkedBulkInsertOptions.MaxChunkVolumeInBytes)
 					return current;
 
 			// if we haven't flushed the previous one yet, we will force 
@@ -86,7 +77,7 @@ namespace Raven.Smuggler.Client
 			}
 			previousTask = current.DisposeAsync();
 
-			documentSizeInChunk = 0;
+			currentChunkSize = 0;
 			processedItemsInCurrentOperation = 0;
 			current = CreateBulkInsertOperation(previousTask);
 			return current;
@@ -94,7 +85,7 @@ namespace Raven.Smuggler.Client
 
 		private RemoteBulkInsertOperation CreateBulkInsertOperation(Task<int> disposeAsync)
 		{
-			var operation = new RemoteBulkInsertOperation(options, client, changes, disposeAsync);
+			var operation = new RemoteBulkInsertOperation(options, client, changes, disposeAsync, existingOperationId:OperationId);
 			if (Report != null)
 				operation.Report += Report;
 
@@ -115,12 +106,12 @@ namespace Raven.Smuggler.Client
 		}
 
 		public event Action<string> Report;
-	    public void Abort()
-	    {
-	        current.Abort();
-	    }
+		public void Abort()
+		{
+			current.Abort();
+		}
 
-	    public void Dispose()
+		public void Dispose()
 		{
 			if (disposed)
 				return;
@@ -131,11 +122,10 @@ namespace Raven.Smuggler.Client
 				disposeAsync.GetAwaiter().GetResult();
 			}
 		}
-
-
+		
 		public bool IsAborted
 		{
-			get { return current.IsAborted; }
+			get { return current != null && current.IsAborted; }
 		}
 	}
 }
