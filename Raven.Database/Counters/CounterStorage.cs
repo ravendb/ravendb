@@ -295,7 +295,6 @@ namespace Raven.Database.Counters
 
 			if (purgeTombstonesTimer != null)
 				exceptionAggregator.Execute(purgeTombstonesTimer.Dispose);
-			purgeTombstonesTimer = null;
 
 			exceptionAggregator.ThrowIfNeeded();
 		}
