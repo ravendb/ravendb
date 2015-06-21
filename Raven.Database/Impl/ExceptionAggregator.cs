@@ -1,6 +1,7 @@
 using System;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
+using Sparrow.Collections;
 
 namespace Raven.Database.Impl
 {

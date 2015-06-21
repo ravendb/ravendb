@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron.Debugging;
@@ -132,7 +133,7 @@ namespace Voron.Trees
 			using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
 			{
 				var mergedPage = tmp.GetTempPage(left.KeysPrefixed);
-                MemoryUtils.Copy(mergedPage.Base, left.Base, left.PageSize);
+                Memory.Copy(mergedPage.Base, left.Base, left.PageSize);
 
 				var previousSearchPosition = right.LastSearchPosition;
 
@@ -153,7 +154,7 @@ namespace Voron.Trees
 					mergedPage.CopyNodeDataToEndOfPage(node, prefixedKey);
 				}
 
-                MemoryUtils.Copy(left.Base, mergedPage.Base, left.PageSize);
+                Memory.Copy(left.Base, mergedPage.Base, left.PageSize);
 			}
 
 			parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
@@ -224,7 +225,7 @@ namespace Voron.Trees
 	        }
 			
 			if(dataPos != null && fromDataSize > 0)
-                MemoryUtils.Copy(dataPos, val, fromDataSize);
+                Memory.Copy(dataPos, val, fromDataSize);
             
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 

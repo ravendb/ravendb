@@ -5,30 +5,19 @@ using Raven.Abstractions.Data;
 using Raven.Database.Util;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
 {
 	public class ConnectionState
 	{
-		private readonly ConcurrentSet<string> matchingIndexes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingDocuments =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingDocumentPrefixes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingDocumentsInCollection =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingDocumentsOfType =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingBulkInserts =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingFolders =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingIndexes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocuments = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocumentPrefixes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocumentsInCollection = 	new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocumentsOfType = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingBulkInserts = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingFolders = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ConcurrentSet<long> matchingDataSubscriptions =
 			new ConcurrentSet<long>();

@@ -1,3 +1,4 @@
+using Sparrow.Collections;
 using System;
 using System.Collections.Generic;
 
@@ -8,7 +9,7 @@ namespace Raven.Client.Connection.Profiling
 	/// </summary>
 	public class ProfilingContext
 	{
-		private readonly ConcurrentLruLSet<ProfilingInformation> leastRecentlyUsedCache = new ConcurrentLruLSet<ProfilingInformation>(NumberOfSessionsToTrack);
+		private readonly ConcurrentLruSet<ProfilingInformation> leastRecentlyUsedCache = new ConcurrentLruSet<ProfilingInformation>(NumberOfSessionsToTrack);
 
 		private const int NumberOfSessionsToTrack = 128;
 

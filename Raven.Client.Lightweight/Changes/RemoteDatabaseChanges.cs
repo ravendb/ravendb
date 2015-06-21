@@ -6,6 +6,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 using System;
 using System.Collections.Generic;
 using System.Net;

@@ -16,6 +16,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 using Xunit.Extensions;
+using Sparrow.Collections;
 
 namespace Raven.Tests.Issues
 {

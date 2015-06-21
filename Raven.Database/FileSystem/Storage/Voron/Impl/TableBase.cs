@@ -44,7 +44,7 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
 
         public virtual void Add(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
         {
-            var stream = new BufferPoolMemoryStream(BufferPool);
+            var stream = new BufferPoolMemoryStream();
             stream.Write(value, 0, value.Length);
             stream.Position = 0;
 
@@ -58,7 +58,7 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
 
 		public virtual void Add(WriteBatch writeBatch, Slice key, RavenJToken value, ushort? expectedVersion = null)
 		{
-            var stream = new BufferPoolMemoryStream(BufferPool);
+            var stream = new BufferPoolMemoryStream();
             value.WriteTo(stream);
             stream.Position = 0;
 
@@ -72,7 +72,7 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
 
         public virtual void Add(WriteBatch writeBatch, Slice key, byte[] value, ushort? expectedVersion = null)
         {
-            var stream = new BufferPoolMemoryStream(BufferPool);
+            var stream = new BufferPoolMemoryStream();
             stream.Write(value, 0, value.Length);
             stream.Position = 0;
 

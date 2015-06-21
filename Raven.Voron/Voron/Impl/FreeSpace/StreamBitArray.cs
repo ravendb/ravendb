@@ -31,6 +31,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+using Sparrow;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -162,7 +163,7 @@ namespace Voron.Impl.FreeSpace
                 fixed (byte* dest = tmpBuffer)                
                 {
                     *(int*)dest = SetCount;
-                    MemoryUtils.Copy(dest + sizeof(int), (byte*)src, tmpBuffer.Length - 1);
+                    Memory.Copy(dest + sizeof(int), (byte*)src, tmpBuffer.Length - 1);
                 }
             }
 

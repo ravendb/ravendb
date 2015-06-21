@@ -22,6 +22,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Client.Document
 {

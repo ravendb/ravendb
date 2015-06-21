@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -100,11 +101,11 @@ namespace Voron
 			if (_val == null)
 			{
                 fixed (byte* b = _buffer)
-                    MemoryUtils.Copy(buffer, b + _pos, count);
+                    Memory.Copy(buffer, b + _pos, count);
 			}
 			else
 			{
-                MemoryUtils.Copy(buffer, _val + _pos, count);
+                Memory.Copy(buffer, _val + _pos, count);
 			}
             _pos += count;
 
@@ -341,10 +342,10 @@ namespace Voron
 					{
 						fixed (byte* b = other._buffer)
 						{
-                            return MemoryUtils.Compare(a, b, len);
+                            return Memory.Compare(a, b, len);
 						}
 					}
-                    return MemoryUtils.Compare(a, other._val, len);
+                    return Memory.Compare(a, other._val, len);
 				}
 			}
 
@@ -352,11 +353,11 @@ namespace Voron
 			{
 				fixed (byte* b = other._buffer)
 				{
-                    return MemoryUtils.Compare(_val, b, len);
+                    return Memory.Compare(_val, b, len);
 				}
 			}
 
-            return MemoryUtils.Compare(_val, other._val, len);
+            return Memory.Compare(_val, other._val, len);
 		}
 
 		public Slice AsSlice()
