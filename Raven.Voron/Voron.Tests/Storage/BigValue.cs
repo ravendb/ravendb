@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
@@ -127,7 +128,7 @@ namespace Voron.Tests.Storage
 		{
 			fixed(byte* b = buffer)
 			fixed (byte* c = memoryStream.GetBuffer())
-                Assert.Equal(0, MemoryUtils.Compare(b, c, buffer.Length));
+                Assert.Equal(0, Memory.Compare(b, c, buffer.Length));
 		}
 
 		[PrefixesFact]

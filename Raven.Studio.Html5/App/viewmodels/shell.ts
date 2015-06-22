@@ -25,6 +25,7 @@ import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeigh
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
 import changesApi = require("common/changesApi");
+import changesContext = require("common/changesContext");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
@@ -49,6 +50,7 @@ import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
+import environmentColor = require("models/environmentColor");
 
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import topology = require("models/database/replication/topology");
@@ -56,6 +58,16 @@ import licensingStatus = require("viewmodels/common/licensingStatus");
 
 class shell extends viewModelBase {
     private router = router;
+
+     
+    static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
+    selectedColor = shell.selectedEnvironmentColorStatic;
+
+    selectedEnviromentText = ko.computed(() => {
+        return this.selectedColor().name + " Enviroment";
+    });
+    canShowEnviromentText = ko.computed(() => this.selectedColor().name != "Default");
+    
 
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
@@ -129,7 +141,7 @@ class shell extends viewModelBase {
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
 
     private globalChangesApi: changesApi;
-    static currentResourceChangesApi = ko.observable<changesApi>(null);
+    
     private static changeSubscriptionArray: changeSubscription[];
 
     constructor() {
@@ -265,11 +277,9 @@ class shell extends viewModelBase {
                 var navigationLinksWidth = 50;
                 if (this.canShowDatabaseNavbar()) {
                     navigationLinksWidth += 804;
-                }
-                else if (this.canShowFileSystemNavbar()) {
+                } else if (this.canShowFileSystemNavbar()) {
                     navigationLinksWidth += 600;
-                }
-                else if (this.canShowCountersNavbar()) {
+                } else if (this.canShowCountersNavbar()) {
                     navigationLinksWidth += 600; //todo: calculate
                 }
 
@@ -329,9 +339,9 @@ class shell extends viewModelBase {
 
     private activateDatabase(db: database) {
         var changeSubscriptionArray = () => [
-            shell.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
-            shell.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
-            shell.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
+            changesContext.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
+            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
+            changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
         ];
         var isNotADatabase = this.currentConnectedResource instanceof database === false;
         this.updateChangesApi(db, isNotADatabase, () => this.fetchDbStats(db), changeSubscriptionArray);
@@ -349,7 +359,7 @@ class shell extends viewModelBase {
 
     private activateFileSystem(fs: fileSystem) {
         var changesSubscriptionArray = () => [
-            shell.currentResourceChangesApi().watchFsFolders("", () => this.fetchFsStats(fs))
+            changesContext.currentResourceChangesApi().watchFsFolders("", () => this.fetchFsStats(fs))
         ];
         var isNotAFileSystem = this.currentConnectedResource instanceof fileSystem === false;
         this.updateChangesApi(fs, isNotAFileSystem, () => this.fetchFsStats(fs), changesSubscriptionArray);
@@ -375,12 +385,12 @@ class shell extends viewModelBase {
         }
 
         if ((!rs.disabled() && rs.isLicensed()) && 
-            (isPreviousDifferentKind || shell.currentResourceChangesApi() == null)) {
+			(isPreviousDifferentKind || changesContext.currentResourceChangesApi() == null)) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             var changes = new changesApi(rs, 5000);
             changes.connectToChangesApiTask.done(() => {
                 fetchStats();
-                shell.currentResourceChangesApi(changes);
+                changesContext.currentResourceChangesApi(changes);
                 shell.changeSubscriptionArray = subscriptionsArray();
             });
     }
@@ -510,8 +520,7 @@ class shell extends viewModelBase {
         if (!!activeResource && actualResourceObservableArray.contains(activeResource) == false) {
             if (actualResourceObservableArray.length > 0) {
                 resourceObservableArray().first().activate();
-            }
-            else { //if (actualResourceObservableArray.length == 0)
+            } else { //if (actualResourceObservableArray.length == 0)
                 shell.disconnectFromResourceChangesApi();
                 activeResourceObservable(null);
             }
@@ -591,11 +600,9 @@ class shell extends viewModelBase {
 
         if (resourceType == logTenantType.Database) {
             newResource = new database(resourceName, true, dto.Disabled);
-        }
-        else if (resourceType == logTenantType.Filesystem) {
+        } else if (resourceType == logTenantType.Filesystem) {
             newResource = new fileSystem(resourceName, true, dto.Disabled);
-        }
-        else if (resourceType == logTenantType.CounterStorage) {
+        } else if (resourceType == logTenantType.CounterStorage) {
             newResource = new counterStorage(resourceName, true, dto.Disabled);
         }
 
@@ -696,11 +703,9 @@ class shell extends viewModelBase {
                 var locationHash = window.location.hash;
                 if (appUrl.getFileSystem()) { //filesystems section
                     this.activateResource(appUrl.getFileSystem(), shell.fileSystems, appUrl.forResources);
-                }
-                else if (appUrl.getCounterStorage()) { //counter storages section
+                } else if (appUrl.getCounterStorage()) { //counter storages section
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages, appUrl.forResources);
-                }
-                else if ((locationHash.indexOf(appUrl.forAdminSettings()) == -1)) { //databases section
+                } else if ((locationHash.indexOf(appUrl.forAdminSettings()) == -1)) { //databases section
                     this.activateResource(appUrl.getDatabase(), shell.databases, appUrl.forResources);
                 }
             });
@@ -723,11 +728,9 @@ class shell extends viewModelBase {
 
         if (!!this.activeDatabase()) {
             shell.databases().length == 1 ? this.activeDatabase(null) : this.activeDatabase().activate();
-        }
-        else if (!!this.activeFilesystem()) {
+        } else if (!!this.activeFilesystem()) {
             this.activeFilesystem().activate();
-        }
-        else if (!!this.activeCounterStorage()) {
+        } else if (!!this.activeCounterStorage()) {
             this.activeCounterStorage().activate();
         }
 
@@ -739,6 +742,11 @@ class shell extends viewModelBase {
             .execute()
             .done((doc: documentClass) => {
                 appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
+                var envColor = doc["EnvironmentColor"];
+                if (envColor != null) {
+                    //selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8", "#000000"));
+                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
+                }
             });
     }
 
@@ -839,22 +847,21 @@ class shell extends viewModelBase {
     }
 
     public static disconnectFromResourceChangesApi() {
-        if (shell.currentResourceChangesApi()) {
+        if (changesContext.currentResourceChangesApi()) {
             shell.changeSubscriptionArray.forEach((subscripbtion: changeSubscription) => subscripbtion.off());
             shell.changeSubscriptionArray = [];
-            shell.currentResourceChangesApi().dispose();
-            if (shell.currentResourceChangesApi().getResourceName() != '<system>') {
+            changesContext.currentResourceChangesApi().dispose();
+            if (changesContext.currentResourceChangesApi().getResourceName() != '<system>') {
                 viewModelBase.isConfirmedUsingSystemDatabase = false;
             }
-            shell.currentResourceChangesApi(null);
+            changesContext.currentResourceChangesApi(null);
         }
     }
     
     getCurrentActiveFeatureName() {
         if (this.appUrls.isAreaActive('admin')()) {
             return 'Manage Your Server';
-        }
-        else {
+        } else {
             return 'Resources';
         }
     }
@@ -987,7 +994,21 @@ class shell extends viewModelBase {
 
 	navigateToClusterSettings() {
 		this.navigate(this.appUrls.adminSettingsCluster());
+
+    static getResoucresNames(): string[]
+    {
+        var arr = shell.databases().map(db => db.name)
+            .concat(shell.fileSystems().map(fs => fs.name)).sort();
+        var result: string[] = [];
+        for (var i = 0; i < arr.length; i++) {
+            if ((arr[i].localeCompare(arr[i+1]))!==0) {
+                result.push(arr[i]);
 	}
+            }
+}
+        }
+        return result;
+    }
 }
 
 export = shell;

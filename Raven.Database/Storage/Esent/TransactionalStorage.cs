@@ -126,10 +126,9 @@ namespace Raven.Storage.Esent
         }
 
         public Guid Id { get; private set; }
+		public IDocumentCacher DocumentCacher { get { return documentCacher; } }
 
-
-
-        public void Dispose()
+	    public void Dispose()
         {
             var tryEnterWriteLock = disposerLock.TryEnterWriteLock(TimeSpan.FromMinutes(2));
             try

@@ -223,7 +223,7 @@ namespace Raven.Abstractions.Extensions
             // as result we can't distigush between json and bson based on first 4 bytes
             // in bson 5-th byte is value type
 	        var bsonType = stream.Header[4];
-	        return stream.ActualHeaderSize < 5 || bsonType > 0x12;
+	        return stream.ActualHeaderSize < 5 || bsonType > (byte)BsonType.RavenDBCustomFloat;
 	    }
 	}
 

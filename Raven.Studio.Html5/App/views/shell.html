@@ -1,5 +1,8 @@
 ﻿<div>
-    <div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation">
+    <div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation" data-bind="style: {backgroundColor:  selectedColor().backgroundColor}">
+
+        <div data-bind="text: selectedEnviromentText(), visible: canShowEnviromentText()" id="enviroment-header">Enviroment</div>
+
         <div class="container-fluid">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#topNavBarCollapse">
@@ -124,6 +127,8 @@
                         </ul>
                     </form>
                 </div>
+
+            
 
                 <div data-bind="visible: canShowFileSystemNavbar, css: { 'menu-item-disabled': isActiveFileSystemDisabled }">
                     <ul class="nav navbar-nav">

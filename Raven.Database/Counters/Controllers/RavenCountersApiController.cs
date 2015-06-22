@@ -15,7 +15,6 @@ using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -173,14 +172,14 @@ namespace Raven.Database.Counters.Controllers
 	        get { return CounterStorage.Configuration; }
 	    }
 
-	    public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
+	    public override bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args)
 		{
 			var tenantId = CounterStorageName;
 
-		    if (string.IsNullOrWhiteSpace(tenantId))
+			if (string.IsNullOrWhiteSpace(tenantId))
 			    return true;
 
-		    Task<CounterStorage> resourceStoreTask;
+			Task<CounterStorage> resourceStoreTask;
 			bool hasDb;
 			try
 			{
@@ -203,14 +202,15 @@ namespace Raven.Database.Counters.Controllers
 						Logger.Warn(msg);
 						throw new HttpException(503, msg);
 					}
-					var args = new BeforeRequestWebApiEventArgs
+
+					args = new RequestWebApiEventArgs
 					{
 						Controller = this,
 						IgnoreRequest = false,
 						TenantId = tenantId,
 						Counters = resourceStoreTask.Result
 					};
-					rm.OnBeforeRequest(args);
+
 					if (args.IgnoreRequest)
 						return false;
 				}
@@ -239,7 +239,7 @@ namespace Raven.Database.Counters.Controllers
 
 		private const string TenantNamePrefix = "cs/";
 
-		public override void MarkRequestDuration(long duration)
+        public override void MarkRequestDuration(long duration)
         {
             if (Storage == null)
                 return;

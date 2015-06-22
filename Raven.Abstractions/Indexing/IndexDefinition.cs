@@ -18,25 +18,6 @@ namespace Raven.Abstractions.Indexing
 	public class IndexDefinition
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="IndexDefinition"/> class.
-		/// </summary>
-		public IndexDefinition()
-		{
-			Maps = new HashSet<string>();
-
-			Indexes = new Dictionary<string, FieldIndexing>();
-			Stores = new Dictionary<string, FieldStorage>();
-			Analyzers = new Dictionary<string, string>();
-			SortOptions = new Dictionary<string, SortOptions>();
-			SuggestionsOptions = new HashSet<string>();
-			TermVectors = new Dictionary<string, FieldTermVector>();
-			SpatialIndexes = new Dictionary<string, SpatialOptions>();
-
-
-			Fields = new List<string>();
-		}
-
-		/// <summary>
 		/// Index identifier (internal).
 		/// </summary>
 		public int IndexId { get; set; }
@@ -76,7 +57,11 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// All the map functions for this index
 		/// </summary>
-		public HashSet<string> Maps { get; set; }
+		public HashSet<string> Maps
+		{
+			get { return maps ?? (maps = new HashSet<string>()); }
+			set { maps = value; }
+		}
 
 		/// <summary>
 		/// Index reduce function
@@ -102,27 +87,47 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Index field storage settings.
 		/// </summary>
-		public IDictionary<string, FieldStorage> Stores { get; set; }
+		public IDictionary<string, FieldStorage> Stores
+		{
+			get { return stores ?? (stores = new Dictionary<string, FieldStorage>()); }
+			set { stores = value; }
+		}
 
 		/// <summary>
 		/// Index field indexing settings.
 		/// </summary>
-		public IDictionary<string, FieldIndexing> Indexes { get; set; }
+		public IDictionary<string, FieldIndexing> Indexes
+		{
+			get { return indexes ?? (indexes = new Dictionary<string, FieldIndexing>()); }
+			set { indexes = value; }
+		}
 
 		/// <summary>
 		/// Index field sorting settings.
 		/// </summary>
-		public IDictionary<string, SortOptions> SortOptions { get; set; }
+		public IDictionary<string, SortOptions> SortOptions
+		{
+			get { return sortOptions ?? (sortOptions = new Dictionary<string, SortOptions>()); }
+			set { sortOptions = value; }
+		}
 
 		/// <summary>
 		/// Index field analyzer settings.
 		/// </summary>
-		public IDictionary<string, string> Analyzers { get; set; }
+		public IDictionary<string, string> Analyzers
+		{
+			get { return analyzers ?? (analyzers = new Dictionary<string, string>()); }
+			set { analyzers = value; }
+		}
 
 		/// <summary>
 		/// List of queryable fields in index.
 		/// </summary>
-		public IList<string> Fields { get; set; }
+		public IList<string> Fields
+		{
+			get { return fields ?? (fields = new List<string>()); }
+			set { fields = value; }
+		}
 
 		/// <summary>
 		/// Index field suggestion settings.
@@ -150,18 +155,30 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Index field term vector settings.
 		/// </summary>
-		public IDictionary<string, FieldTermVector> TermVectors { get; set; }
+		public IDictionary<string, FieldTermVector> TermVectors
+		{
+			get { return termVectors ?? (termVectors = new Dictionary<string, FieldTermVector>()); }
+			set { termVectors = value; }
+		}
 
 		/// <summary>
 		/// Index field spatial settings.
 		/// </summary>
-		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
+		public IDictionary<string, SpatialOptions> SpatialIndexes
+		{
+			get { return spatialIndexes ?? (spatialIndexes = new Dictionary<string, SpatialOptions>()); }
+			set { spatialIndexes = value; }
+		}
 
 		/// <summary>
 		/// Internal map of field names to expressions generating them
 		/// Only relevant for auto indexes and only used internally
 		/// </summary>
-		public IDictionary<string, string> InternalFieldsMapping { get; set; }
+		public IDictionary<string, string> InternalFieldsMapping
+		{
+			get { return internalFieldsMapping ?? (internalFieldsMapping = new Dictionary<string, string>()); }
+			set { internalFieldsMapping = value; }
+		}
 
 		/// <summary>
 		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
@@ -171,34 +188,34 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
-		/// <summary>
-		/// Equals the specified other.
-		/// </summary>
-		/// <param name="other">The other.</param>
+        /// <summary>
+        /// Equals the specified other.
+        /// </summary>
+        /// <param name="other">The other.</param>
         /// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
-		/// <returns></returns>
+        /// <returns></returns>
         public bool Equals(IndexDefinition other, bool compareIndexIds = true)
-		{
-			if (ReferenceEquals(null, other))
-				return false;
+        {
+            if (ReferenceEquals(null, other))
+                return false;
 
-			if (ReferenceEquals(this, other))
-				return true;
+            if (ReferenceEquals(this, other))
+                return true;
 
             if (compareIndexIds && !Equals(other.IndexId, IndexId))
                 return false;
 
-			return Maps.SequenceEqual(other.Maps) &&
-					Equals(other.Reduce, Reduce) &&
-					Equals(other.MaxIndexOutputsPerDocument, MaxIndexOutputsPerDocument) &&
-					DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
-					DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
-					DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
-					DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
+            return Maps.SequenceEqual(other.Maps) &&
+                    Equals(other.Reduce, Reduce) &&
+					(other.MaxIndexOutputsPerDocument == MaxIndexOutputsPerDocument) &&
+                    DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
+                    DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
+                    DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
+                    DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
 					SetExtensions.ContentEquals(other.SuggestionsOptions, SuggestionsOptions) &&
-					DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
-					DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
-		}
+                    DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
+                    DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
+        }
 
 		private static int DictionaryHashCode<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> x)
 		{
@@ -237,7 +254,28 @@ namespace Raven.Abstractions.Indexing
 			return Equals(obj as IndexDefinition);
 		}
 
+		[JsonIgnore]
 		private byte[] cachedHashCodeAsBytes;
+		[JsonIgnore]
+		private HashSet<string> maps;
+		[JsonIgnore]
+		private IDictionary<string, FieldStorage> stores;
+		[JsonIgnore]
+		private IDictionary<string, FieldIndexing> indexes;
+		[JsonIgnore]
+		private IDictionary<string, SortOptions> sortOptions;
+		[JsonIgnore]
+		private IDictionary<string, string> analyzers;
+		[JsonIgnore]
+		private IList<string> fields;
+		[JsonIgnore]
+		private IDictionary<string, SuggestionOptions> suggestions;
+		[JsonIgnore]
+		private IDictionary<string, FieldTermVector> termVectors;
+		[JsonIgnore]
+		private IDictionary<string, SpatialOptions> spatialIndexes;
+		[JsonIgnore]
+		private IDictionary<string, string> internalFieldsMapping;
 
 		/// <summary>
 		/// Provide a cached version of the index hash code, which is used when generating

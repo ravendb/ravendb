@@ -134,6 +134,7 @@
     <Compile Include="RavenDB-3401.cs" />
     <Compile Include="RavenDB-3451.cs" />
     <Compile Include="RavenDB-3509.cs" />
+    <Compile Include="RavenDB-3530.cs" />
     <Compile Include="RavenDB_3230.cs" />
     <Compile Include="RavenDB_3271.cs" />
     <Compile Include="RavenDB_3276.cs" />
@@ -412,6 +413,7 @@
     <Compile Include="RavenDB_3442.cs" />
     <Compile Include="RavenDB_3448.cs" />
     <Compile Include="RavenDB_3462.cs" />
+    <Compile Include="RavenDB_3484.cs" />
     <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_3501.cs" />
     <Compile Include="RavenDB_3525.cs" />
@@ -461,6 +463,7 @@
     <Compile Include="RavenDB_993.cs" />
     <Compile Include="RavenDB_2344.cs" />
     <Compile Include="RavenDB_2907.cs" />
+    <Compile Include="RavenDB_3555.cs" />
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />
@@ -506,6 +509,14 @@
     <ProjectReference Include="..\Raven.Migration\Raven.Migration.csproj">
       <Project>{E6C2EAA5-B5BC-4BE2-B981-0064E819DBEB}</Project>
       <Name>Raven.Migration</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
+      <Name>Raven.Smuggler</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Bundles\Raven.Tests.Bundles.csproj">
       <Project>{83AB5B46-5502-40DD-BA5F-83499F19B953}</Project>

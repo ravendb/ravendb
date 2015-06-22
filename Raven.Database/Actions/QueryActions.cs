@@ -21,6 +21,7 @@ using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Database.Actions
 {
@@ -397,13 +398,8 @@ namespace Raven.Database.Actions
 				}
 				return new DynamicLuceneOrParentDocumntObject(docRetriever, ravenJObject);
 			});
-			var robustEnumerator = new RobustEnumerator(token, 100)
-			{
-				OnError =
-					(exception, o) =>
-					transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
-														exception.Message))
-			};
+            var robustEnumerator = new RobustEnumerator(token, 100, 
+                onError: (exception, o) => transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o), exception.Message)));
 
 			var resultsWithTransformer = robustEnumerator
 				.RobustEnumeration(dynamicJsonObjects.Cast<object>().GetEnumerator(), transformFunc)

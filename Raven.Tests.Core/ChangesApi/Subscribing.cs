@@ -308,5 +308,70 @@ namespace Raven.Tests.Core.ChangesApi
                 WaitUntilOutput("passed_CanSubscribeToAllTransformers_TransformerRemoved");
             }
         }
+
+		[Fact]
+		public void CanSubscribeToAllDataSubscriptions()
+		{
+			using (var store = GetDocumentStore())
+			{
+				store.Changes().Task.Result
+					.ForAllDataSubscriptions().Task.Result
+					.Subscribe(changes =>
+					{
+						if (changes.Type == DataSubscriptionChangeTypes.SubscriptionOpened)
+						{
+							output = "passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened";
+						}
+						if (changes.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
+						{
+							output = "passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased";
+						}
+					});
+
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+
+				WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened");
+
+				subscription.Dispose();
+
+				WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased");
+			}
+		}
+
+		[Fact]
+		public void CanSubscribeToSpecificDataSubscriptionChanges()
+		{
+			using (var store = GetDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+
+				var id2 = store.Subscriptions.Create(new SubscriptionCriteria());
+
+				store.Changes().Task.Result
+					.ForDataSubscription(1).Task.Result
+					.Subscribe(changes =>
+					{
+						if (changes.Type == DataSubscriptionChangeTypes.SubscriptionOpened)
+						{
+							output = "passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened_" + changes.Id;
+						}
+						if (changes.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
+						{
+							output = "passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased_" + changes.Id;
+						}
+					});
+
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+				var subscription2 = store.Subscriptions.Open(id2, new SubscriptionConnectionOptions());
+
+				WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened_" + id);
+
+				subscription.Dispose();
+				subscription2.Dispose();
+
+				WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased_" + id);
+			}
+		}
     }
 }

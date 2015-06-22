@@ -1,6 +1,8 @@
 ﻿import app = require("durandal/app");
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
+import changesContext = require("common/changesContext");
+import resolveConflict = require("viewmodels/filesystem/resolveConflict");
 import resolveConflict = require("viewmodels/filesystem/synchronization/resolveConflict");
 
 import conflictItem = require("models/filesystem/conflictItem");
@@ -32,7 +34,7 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [ shell.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e)) ];
+        return [changesContext.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e)) ];
     }
 
     private processFsConflicts(e: synchronizationConflictNotification) {

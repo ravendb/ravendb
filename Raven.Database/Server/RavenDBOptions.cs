@@ -21,7 +21,6 @@ namespace Raven.Database.Server
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
-		private readonly WebSocketBufferPool webSocketBufferPool;
 
 		private bool preventDisposing;
 
@@ -44,13 +43,14 @@ namespace Raven.Database.Server
 				{
 					systemDatabase = db;
 				}
+
+				WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
 			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
 				ClusterManager = new Reference<ClusterManager>();
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-				webSocketBufferPool = new WebSocketBufferPool(configuration.WebSockets.InitialBufferPoolSize);
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}
 			catch

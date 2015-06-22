@@ -82,8 +82,11 @@ namespace Voron
 		private long _initialLogFileSize;
 		private long _maxLogFileSize;
 
+	    public Func<string, bool> ShouldUseKeyPrefix { get; set; }
+
 		protected StorageEnvironmentOptions()
 		{
+            ShouldUseKeyPrefix = name => false;
 			MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB
 
 			IdleFlushTimeout = 5000; // 5 seconds
@@ -392,7 +395,7 @@ namespace Voron
 					ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
 					_headers[filename] = ptr;
 				}
-                MemoryUtils.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
+                Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
 			}
 
 			public override IVirtualPager CreateScratchPager(string name)

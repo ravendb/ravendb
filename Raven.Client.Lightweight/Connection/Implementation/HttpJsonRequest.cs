@@ -191,9 +191,9 @@ namespace Raven.Client.Connection.Implementation
 				{
 					var requestMessage = getRequestMessage();
 					CopyHeadersToHttpRequestMessage(requestMessage);
-					Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+                    Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
 					SetResponseHeaders(Response);
-					AssertServerVersionSupported();
+				    AssertServerVersionSupported();
 					ResponseStatusCode = Response.StatusCode;
 				}
 				catch (HttpRequestException e)
@@ -300,7 +300,7 @@ namespace Raven.Client.Connection.Implementation
 
 		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync(bool readErrorString)
 		{
-			if (Response.IsSuccessStatusCode) 
+		    if (Response.IsSuccessStatusCode) 
                 return null;
 		    if (Response.StatusCode == HttpStatusCode.Unauthorized ||
 		        Response.StatusCode == HttpStatusCode.NotFound ||
@@ -423,7 +423,7 @@ namespace Raven.Client.Connection.Implementation
 
 		public RavenJToken ReadResponseJson()
 		{
-			return ReadResponseJsonAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(ReadResponseJsonAsync);
 		}
 
 		public async Task<bool> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
@@ -757,7 +757,7 @@ namespace Raven.Client.Connection.Implementation
 					throw new ErrorResponseException(Response, "Failed request");
                 }
 
-            return Response;
+				return Response;
 		    }).ConfigureAwait(false);
 		}
 
@@ -784,7 +784,7 @@ namespace Raven.Client.Connection.Implementation
 					throw new ErrorResponseException(Response, "Failed request");
                 }
 
-            return Response;		
+				return Response;
             }).ConfigureAwait(false);		
 		}
 

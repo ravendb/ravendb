@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
@@ -29,6 +30,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using global::Voron.Impl;
 
 	using Index = Raven.Database.Storage.Voron.Impl.Index;
+    using Sparrow.Collections;
 
 	internal class MappedResultsStorageActions : StorageActionsBase, IMappedResultsStorageAction
 	{
@@ -487,7 +489,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch.Value, (Slice)AppendToKey(viewKey, level, ReduceKeySizeLimited(reduceKeysAndBuckets.ReduceKey), reduceHashKey), idSlice);
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
 		{
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
             var deleter = new ScheduledReductionDeleter(getItemsToReduceParams.ItemsToDelete, o =>
@@ -502,6 +504,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var seenLocally = new HashSet<Tuple<string, int>>();
 			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 			    var reduceKeyHash = HashKey(reduceKey);
                 var viewAndLevelAndReduceKey = (Slice) CreateKey(getItemsToReduceParams.Index, getItemsToReduceParams.Level, ReduceKeySizeLimited(reduceKey), reduceKeyHash);
 				using (var iterator = scheduledReductionsByViewAndLevelAndReduceKey.MultiRead(Snapshot, viewAndLevelAndReduceKey))
@@ -511,6 +515,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					do
 					{
+						cancellationToken.ThrowIfCancellationRequested();
+
 						if (getItemsToReduceParams.Take <= 0)
 							break;
 
@@ -527,7 +533,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						{
 							if (seenLocally.Add(rowKey))
 							{
-								foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData))
+								foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData, cancellationToken))
 								{
 									getItemsToReduceParams.Take--;
 									yield return mappedResultInfo;
@@ -548,21 +554,21 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData)
+		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData, CancellationToken cancellationToken)
 		{
 			switch (level)
 			{
 				case 0:
-					return GetMappedResultsForBucket(view, reduceKey, bucket, loadData);
+					return GetMappedResultsForBucket(view, reduceKey, bucket, loadData, cancellationToken);
 				case 1:
 				case 2:
-					return GetReducedResultsForBucket(view, reduceKey, level, bucket, loadData);
+					return GetReducedResultsForBucket(view, reduceKey, level, bucket, loadData, cancellationToken);
 				default:
 					throw new ArgumentException("Invalid level: " + level);
 			}
 		}
 
-		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(int view, string reduceKey, int level, int bucket, bool loadData)
+		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(int view, string reduceKey, int level, int bucket, bool loadData, CancellationToken cancellationToken)
 		{
 		    var reduceKeyHash = HashKey(reduceKey);
             var viewAndReduceKeyAndLevelAndBucket = (Slice)CreateKey(view, ReduceKeySizeLimited(reduceKey), reduceKeyHash, level, bucket);
@@ -584,6 +590,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					ushort version;
 					var value = LoadStruct(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
@@ -605,7 +613,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(int view, string reduceKey, int bucket, bool loadData)
+		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(int view, string reduceKey, int bucket, bool loadData, CancellationToken cancellationToken)
 		{
 		    var reduceKeyHash = HashKey(reduceKey);
             var viewAndReduceKeyAndSourceBucket = (Slice)CreateKey(view, reduceKey, reduceKeyHash, bucket);
@@ -628,6 +636,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
 					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
@@ -656,7 +666,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var result = new ScheduledReductionInfo();
 			var hasResult = false;
 			var currentEtag = Etag.Empty;
-			foreach (Etag etag in itemsToDelete)
+			foreach (Etag etag in itemsToDelete.Where(x => x != null))
 			{
                 var etagAsString = (Slice)etag.ToString();
 
@@ -767,7 +777,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep)
+		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep, CancellationToken cancellationToken)
 		{
 			if (take <= 0)
 				take = 1;
@@ -785,6 +795,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					ushort version;
 					var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
 
@@ -885,7 +897,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return (ReduceType)value.ReadInt(ReduceKeyTypeFields.ReduceType);
 		}
 
-		public IEnumerable<int> GetMappedBuckets(int view, string reduceKey)
+		public IEnumerable<int> GetMappedBuckets(int view, string reduceKey, CancellationToken cancellationToken)
 		{
             var reduceKeyHash = HashKey(reduceKey);
             var viewAndReduceKey = (Slice) CreateKey(view, reduceKey, reduceKeyHash);
@@ -898,6 +910,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
 
@@ -907,13 +921,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned)
+		public IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken)
 		{
 			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
 			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
 			var keysToReduce = new HashSet<string>(keysLeftToReduce);
 			foreach (var reduceKey in keysToReduce)
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				keysLeftToReduce.Remove(reduceKey);
 				
                 var reduceKeyHash = HashKey(reduceKey);
@@ -927,6 +943,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					do
 					{
+						cancellationToken.ThrowIfCancellationRequested();
+
 						ushort version;
 						var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
 						var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);

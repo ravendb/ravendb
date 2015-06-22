@@ -48,6 +48,8 @@ namespace Raven.Database.Util
         public ConcurrentDictionary<string, HistogramMetric> ReplicationDurationHistogram { get; private set; }
 
         public ConcurrentDictionary<string, ConcurrentQueue<ReplicationPerformanceStats>> ReplicationPerformanceStats { get; private set; }
+
+		public long ConcurrentRequestsCount;
         
         public MetricsCountersManager()
         {

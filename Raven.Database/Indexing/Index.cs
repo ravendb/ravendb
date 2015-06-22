@@ -777,42 +777,36 @@ namespace Raven.Database.Indexing
 			onErrorFunc = (exception, o) =>
 				{
 					string docId = null;
+
 					var invalidSpatialException = exception as InvalidSpatialShapException;
 					if (invalidSpatialException != null)
 						docId = invalidSpatialException.InvalidDocumentId;
 
-					context.AddError(indexId,
-						indexDefinition.Name,
-						docId ?? TryGetDocKey(o),
-										exception,
-										"Map"
-							);
+					context.AddError(indexId, indexDefinition.Name, docId ?? TryGetDocKey(o), exception, "Map");
 
 					logIndexing.WarnException(
-					String.Format("Failed to execute indexing function on {0} on {1}", indexDefinition.Name,
-										TryGetDocKey(o)),
-						exception);
+					String.Format("Failed to execute indexing function on {0} on {1}", indexDefinition.Name, TryGetDocKey(o)), exception);
 
 					stats.IndexingErrors++;
 				};
 
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
-			{
-				BeforeMoveNext = () => Interlocked.Increment(ref stats.IndexingAttempts),
-				CancelMoveNext = () => Interlocked.Decrement(ref stats.IndexingAttempts),
-				OnError = onErrorFunc,
-				MoveNextDuration = linqExecutionDuration
-			}.RobustEnumeration(input, funcs);
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
+				beforeMoveNext: () => Interlocked.Increment(ref stats.IndexingAttempts),
+				cancelMoveNext: () => Interlocked.Decrement(ref stats.IndexingAttempts),
+				onError: onErrorFunc )
+                {
+                    MoveNextDuration = linqExecutionDuration
+                }
+                .RobustEnumeration(input, funcs);
 		}
 
 		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func, IndexingWorkStats stats, Stopwatch linqExecutionDuration)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
-			{
-				BeforeMoveNext = () => Interlocked.Increment(ref stats.ReduceAttempts),
-				CancelMoveNext = () => Interlocked.Decrement(ref stats.ReduceAttempts),
-				OnError = (exception, o) =>
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
+                beforeMoveNext: () => Interlocked.Increment(ref stats.ReduceAttempts),
+				cancelMoveNext: () => Interlocked.Decrement(ref stats.ReduceAttempts),
+				onError: (exception, o) =>
 				{
 					var key = TryGetDocKey(o);
 
@@ -828,9 +822,10 @@ namespace Raven.Database.Indexing
 						exception);
 
 					stats.ReduceErrors++;
-				},
-				MoveNextDuration = linqExecutionDuration
-			}.RobustEnumeration(input, func);
+				}) 
+                {
+				    MoveNextDuration = linqExecutionDuration
+			    }.RobustEnumeration(input, func);
 		}
 
 		// we don't care about tracking map/reduce stats here, since it is merely
@@ -838,11 +833,8 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func, Stopwatch reduceDuringMapLinqExecution)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
-			{
-				BeforeMoveNext = () => { }, // don't care
-				CancelMoveNext = () => { }, // don't care
-				OnError = (exception, o) =>
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
+                onError: (exception, o) =>
 				{
 					var keys = TryGetDocKeys(input, o);
 					var concatenatedKeys = string.Join(";", keys);
@@ -858,9 +850,10 @@ namespace Raven.Database.Indexing
 						String.Format("Failed to execute indexing function on {0} on {1}", indexDefinition.Name,
 										concatenatedKeys),
 						exception);
-				},
-				MoveNextDuration = reduceDuringMapLinqExecution
-			}.RobustEnumeration(input, func);
+				})
+			    {
+				    MoveNextDuration = reduceDuringMapLinqExecution
+			    }.RobustEnumeration(input, func);
 		}
 
 		private static IEnumerable<string> TryGetDocKeys(IEnumerator<object> input, object current)

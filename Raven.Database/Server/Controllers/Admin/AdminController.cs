@@ -530,7 +530,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			    try
 			    {
 
-			        var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
+					var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetDatabaseInternal(db));
 
 			        DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
 			        {
@@ -866,11 +866,9 @@ namespace Raven.Database.Server.Controllers.Admin
 						DebugInfoProvider.CreateInfoPackageForDatabase(package, database, RequestManager, ClusterManager, prefix + "/");
 					});
 
-					var stacktraceRequsted = GetQueryStringValue("stacktrace");
-					if (stacktraceRequsted != null)
-					{
+					bool stacktrace;
+					if (bool.TryParse(GetQueryStringValue("stacktrace"), out stacktrace) && stacktrace)
 						DumpStacktrace(package);
-					}
 				}
 
 				var response = new HttpResponseMessage();
@@ -895,61 +893,56 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 		}
 
-		private void DumpStacktrace(ZipArchive package)
+		private static void DumpStacktrace(ZipArchive package)
 		{
-			var stacktraceRequsted = GetQueryStringValue("stacktrace");
+			var stacktrace = package.CreateEntry("stacktraces.txt", CompressionLevel.Optimal);
 
-			if (stacktraceRequsted != null)
+			var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+			jsonSerializer.Formatting = Formatting.Indented;
+
+			using (var stacktraceStream = stacktrace.Open())
 			{
-				var stacktrace = package.CreateEntry("stacktraces.txt", CompressionLevel.Optimal);
+				string ravenDebugDir = null;
 
-				var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
-				jsonSerializer.Formatting = Formatting.Indented;
-
-				using (var stacktraceStream = stacktrace.Open())
+				try
 				{
-					string ravenDebugDir = null;
+					if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
 
-					try
+					ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+					var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
+					var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
+
+					Directory.CreateDirectory(ravenDebugDir);
+
+					if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
+					else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+
+					var process = new Process { StartInfo = new ProcessStartInfo { Arguments = string.Format("-pid={0} /stacktrace -output={1}", Process.GetCurrentProcess().Id, ravenDebugOutput), FileName = ravenDebugExe, WindowStyle = ProcessWindowStyle.Hidden, } };
+
+					process.Start();
+
+					process.WaitForExit();
+
+					if (process.ExitCode != 0)
+						throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode);
+
+					using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
 					{
-						if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
-
-						ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-						var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
-						var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
-
-						Directory.CreateDirectory(ravenDebugDir);
-
-						if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
-						else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
-
-						var process = new Process { StartInfo = new ProcessStartInfo { Arguments = string.Format("-pid={0} /stacktrace -output={1}", Process.GetCurrentProcess().Id, ravenDebugOutput), FileName = ravenDebugExe, WindowStyle = ProcessWindowStyle.Hidden, } };
-
-						process.Start();
-
-						process.WaitForExit();
-
-						if (process.ExitCode != 0)
-							throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode);
-
-						using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
-						{
-							stackDumpOutputStream.CopyTo(stacktraceStream);
-						}
+						stackDumpOutputStream.CopyTo(stacktraceStream);
 					}
-					catch (Exception ex)
-					{
-						var streamWriter = new StreamWriter(stacktraceStream);
-						jsonSerializer.Serialize(streamWriter, new { Error = "Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex });
-						streamWriter.Flush();
-					}
-					finally
-					{
-						if (ravenDebugDir != null && Directory.Exists(ravenDebugDir)) IOExtensions.DeleteDirectory(ravenDebugDir);
-					}
-
-					stacktraceStream.Flush();
 				}
+				catch (Exception ex)
+				{
+					var streamWriter = new StreamWriter(stacktraceStream);
+					jsonSerializer.Serialize(streamWriter, new { Error = "Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex });
+					streamWriter.Flush();
+				}
+				finally
+				{
+					if (ravenDebugDir != null && Directory.Exists(ravenDebugDir)) IOExtensions.DeleteDirectory(ravenDebugDir);
+				}
+
+				stacktraceStream.Flush();
 			}
 		}
 

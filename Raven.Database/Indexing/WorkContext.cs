@@ -22,6 +22,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Database.Indexing
 {

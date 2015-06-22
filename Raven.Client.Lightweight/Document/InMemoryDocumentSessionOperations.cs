@@ -1164,26 +1164,14 @@ more responsive application.
 				return false;
 
 			var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
-			if (changes != null)
-			{
-				var changedData = new List<DocumentsChanges>();
-				if ((RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) ||
-					(RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false))
-				{
-					changes[documentMetadata.Key] = changedData.ToArray();
-					return false;
-				}
-				else
-				{
-					return true;
-				}
-			}
-			else
-			{
-				return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, null) == false ||
-					RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, null) == false;
+			var changedData = changes != null ? new List<DocumentsChanges>() : null;
+			var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) 
+				|| (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
 
-			}
+			if (changes != null)
+				changes[documentMetadata.Key] = changedData.ToArray();
+
+			return changed;
 		}
 
 		/// <summary>
