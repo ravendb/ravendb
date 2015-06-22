@@ -431,8 +431,9 @@ namespace Raven.Database.Counters
 				{
 					var slice = new Slice(counterIdBuffer);
 					it.RequiredPrefix = slice;
-					if (it.Seek(it.RequiredPrefix) == false)
-						return 0; //TODO: throw exception
+					var seekReault = it.Seek(it.RequiredPrefix);
+					//should always be true
+					Debug.Assert(seekReault == true);
 
 					long total = 0;
 					do
@@ -441,7 +442,7 @@ namespace Raven.Database.Counters
 						reader.Skip(sizeof(long));
 						reader.Read(serverIdBuffer, 0, parent.sizeOfGuid);
 						var serverId = new Guid(serverIdBuffer);
-						//this means that this used to be a deleted counter
+						//this means that this is a tombstone of a counter
 						if (serverId.Equals(parent.tombstoneId))
 							continue;
 
@@ -601,7 +602,7 @@ namespace Raven.Database.Counters
 					var valueReader = it.CreateReaderForCurrent();
 					EnsureBufferSize(ref groupNameBuffer, valueReader.Length);
 					valueReader.Read(groupNameBuffer, 0, valueReader.Length);
-					counterNameAndGroup.GroupName = Encoding.UTF8.GetString(groupNameBuffer, 0, groupNameBuffer.Length);
+					counterNameAndGroup.GroupName = Encoding.UTF8.GetString(groupNameBuffer, 0, valueReader.Length);
 				}
 				return counterNameAndGroup;
 			}
@@ -795,57 +796,7 @@ namespace Raven.Database.Counters
 				RemoveOldEtagIfNeeded(counterKeySlice);
 				UpdateCounterMetadata(counterKeySlice);
 
-				parent.replicationTask.SignalCounterUpdate();
 				return doesCounterExist;
-
-
-				
-
-
-				/*var counterNameSize = Encoding.UTF8.GetByteCount(counterName);
-				var fullCounterNameSize = groupSize + 
-										  (sizeof(byte) * 3) + 
-										  counterNameSize + 
-									      32 + 
-										  sizeof(byte);
-
-				sliceWriter = GetFullCounterNameAsSliceWriter(buffer.FullCounterName,
-					groupName,
-					counterName,
-					serverId,
-					sign,
-					fullCounterNameSize);
-
-				var groupAndCounterNameSlice = sliceWriter.CreateSlice(groupSize + counterNameSize + (2*sizeof (byte)));
-				//var doesCounterExist = DoesCounterExist(groupAndCounterNameSlice);
-				var groupKey = sliceWriter.CreateSlice(groupSize);
-				if (serverId.Equals(parent.tombstoneId))
-				{
-					//if it's a tombstone, we can remove the counter from the GroupsToCounters Tree
-					GetOrCreateCounterId(groupKey, counterName);
-
-					/*var readResult = countersGroups.Read(groupKey);
-					if (readResult != null)
-					{
-						if (readResult.Reader.ReadLittleEndianInt64() == 1)
-							countersGroups.Delete(groupKey);
-						else
-							countersGroups.Increment(groupKey, -1);	
-					}
-					groupAndCounterName.Delete(groupAndCounterNameSlice);#1#
-				}
-				else if (doesCounterExist == false)
-				{
-					//if the counter doesn't exist we need to update the appropriate trees
-					groupToCounters.MultiAdd(groupKey, counterName);
-					/*countersGroups.Increment(groupKey, 1);
-					groupAndCounterName.Add(groupAndCounterNameSlice, new byte[0]);
-
-					DeleteExistingTombstone(groupName, counterName, fullCounterNameSize);#1#
-				}*/
-
-				//save counter full name and its value into the counters tree
-				
 			}
 
 			private void UpdateGroups(string counterName, byte[] counterId, Guid serverId, Slice groupNameSlice)
