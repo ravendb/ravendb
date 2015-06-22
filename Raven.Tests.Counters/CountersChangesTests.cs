@@ -19,7 +19,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task NotificationReceivedWhenCounterAddedAndIncremented()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
@@ -55,7 +55,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task NotificationReceivedForCountersStartingWith()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				var changes = store.Changes();
 				var notificationTask1 = changes.Task.Result
@@ -91,7 +91,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task notification_received_when_counter_in_group_added_and_incremented()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
@@ -128,8 +128,8 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task notification_received_when_replication_counter_added_and_incremented()
 		{
-			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
-			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
+			using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName + "B"))
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				await SetupReplicationAsync(storeB, storeA);
@@ -170,8 +170,8 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task notification_received_when_replication_counter_subscribed_to_group()
 		{
-			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
-			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
+			using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName + "B"))
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				await SetupReplicationAsync(storeB, storeA);
@@ -217,7 +217,7 @@ namespace Raven.Tests.Counters
 		public void NotificationReceivedWhenBatchOperation(int batchSizeLimit, int actionsCount)
 		{
 			int startCount = 0, endCount = 0;
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				using (var batchOperation = store.Advanced.NewBatch(new CountersBatchOptions { BatchSizeLimit = batchSizeLimit }))
 				{

@@ -9,7 +9,7 @@ namespace Raven.Tests.Counters
 	    [Fact]
 	    public async Task Fetching_counter_storage_stats_should_work()
 	    {
-		    using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+		    using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 		    {
 				await store.IncrementAsync("group1", "f");
 				await store.IncrementAsync("group2", "f");

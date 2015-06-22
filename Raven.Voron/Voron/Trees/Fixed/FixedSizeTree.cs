@@ -84,6 +84,11 @@ namespace Voron.Trees.Fixed
                 val.CopyTo(pos);
         }
 
+        public void Add(long key, byte[] val)
+        {
+			Add(key, new Slice(val));
+        }
+
         public byte* DirectAdd(long key)
         {
             byte* pos;

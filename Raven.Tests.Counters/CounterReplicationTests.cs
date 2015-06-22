@@ -9,8 +9,8 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Replication_setup_should_work()
 		{
-			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
-			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
+			using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName + "B"))
 			{
 				await SetupReplicationAsync(storeA, storeB);
 
@@ -24,8 +24,8 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Simple_replication_should_work()
 		{
-			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
-			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
+			using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName + "B"))
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				
@@ -39,8 +39,8 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Two_way_replication_should_work2()
 		{
-			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
-			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
+			using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName + "B"))
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				await SetupReplicationAsync(storeB, storeA);
@@ -56,9 +56,9 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Multiple_replication_should_Work()
 		{
-			using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName + "A"))
-			using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName + "B"))
-			using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName + "C"))
+			using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName + "A"))
+			using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName + "B"))
+			using (var storeC = NewRemoteCountersStore(DefaultCounterStorageName + "C"))
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				await SetupReplicationAsync(storeA, storeC);
