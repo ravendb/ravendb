@@ -502,6 +502,31 @@ class shell extends viewModelBase {
             .done((results) => this.updateResourceObservableArray(resourceObservableArray, results));
     }
 
+    private static updateResourceObservableArray(resourceObservableArray: KnockoutObservableArray<any>, recievedResourceArray: Array<any>) {
+
+        var deletedResources = [];
+
+        resourceObservableArray().forEach((rs: resource) => {
+            if (rs.name !== "<system>") {
+                var existingResource = recievedResourceArray.first((recievedResource: resource) => recievedResource.name === rs.name);
+                if (existingResource == null) {
+                    deletedResources.push(rs);
+                }
+            }
+        });
+
+        resourceObservableArray.removeAll(deletedResources);
+
+        recievedResourceArray.forEach((recievedResource: resource) => {
+            var foundResource: resource = resourceObservableArray().first((rs: resource) => rs.name === recievedResource.name);
+            if (foundResource == null) {
+                resourceObservableArray.push(recievedResource);
+            } else {
+                foundResource.disabled(recievedResource.disabled());
+            }
+        });
+    }
+
     private reloadDataAfterReconnection(rs: resource) {
         if (rs.name === "<system>") {
             this.fetchStudioConfig();
@@ -537,42 +562,18 @@ class shell extends viewModelBase {
         }
     }
 
-    private static updateResourceObservableArray(resourceObservableArray: KnockoutObservableArray<any>, recievedResourceArray: Array<any>) {
-
-        var deletedResources = [];
-
-        resourceObservableArray().forEach((rs: resource) => {
-            if (rs.name !== "<system>") {
-                var existingResource = recievedResourceArray.first((recievedResource: resource) => recievedResource.name === rs.name);
-                if (existingResource == null) {
-                    deletedResources.push(rs);
-                }
-            }
-        });
-
-        resourceObservableArray.removeAll(deletedResources);
-
-        recievedResourceArray.forEach((recievedResource: resource) => {
-            var foundResource: resource = resourceObservableArray().first((rs: resource) => rs.name === recievedResource.name);
-            if (foundResource == null) {
-                resourceObservableArray.push(recievedResource);
-            } else {
-                foundResource.disabled(recievedResource.disabled());
-            }
-        });
-    }
-
     private selectNewActiveResourceIfNeeded(resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any) {
         var activeResource = activeResourceObservable();
-        var actualResourceObservableArray = resourceObservableArray().filter(rs => rs.name != '<system>');
+        var actualResourceObservableArray = resourceObservableArray().filter(rs => rs.name !== "<system>");
 
-        if (!!activeResource && actualResourceObservableArray.contains(activeResource) == false) {
+        if (!!activeResource && actualResourceObservableArray.contains(activeResource) === false) {
             if (actualResourceObservableArray.length > 0) {
                 resourceObservableArray().first().activate();
             }
             else { //if (actualResourceObservableArray.length == 0)
                 shell.disconnectFromResourceChangesApi();
                 activeResourceObservable(null);
+                this.lastActivatedResource(null);
             }
 
             this.navigate(appUrl.forResources());

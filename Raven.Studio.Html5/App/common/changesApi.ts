@@ -24,6 +24,7 @@ class changesApi {
     static isServerSupportingWebSockets: boolean = true;
     private eventSource: EventSource;
     private readyStateOpen = 1;
+    private isDisposing = false;
 
     private isCleanClose: boolean = false;
     private normalClosureCode = 1000;
@@ -80,24 +81,29 @@ class changesApi {
             .done((tokenObject: singleAuthToken) => {
                 this.rs.isLoading(false);
                 var token = tokenObject.Token;
-                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss +  '&isMultyTenantTransport=' +this.isMultyTenantTransport;
+                var connectionString = "singleUseAuthToken=" + token + "&id=" + this.eventsId + "&coolDownWithDataLoss=" + this.coolDownWithDataLoss + "&isMultyTenantTransport=" + this.isMultyTenantTransport;
                 action.call(this, connectionString);
             })
             .fail((e) => {
+                if (this.isDisposing) {
+                    this.connectToChangesApiTask.reject();
+                    return;
+                }
+                    
                 var error = !!e.responseJSON ? e.responseJSON.Error : e.responseText;
-                if (e.status == 0) {
+                if (e.status === 0) {
                     // Connection has closed so try to reconnect every 3 seconds.
                     setTimeout(() => this.connect(action), 3 * 1000);
                 }
-                else if (e.status == ResponseCodes.ServiceUnavailable) {
+                else if (e.status === ResponseCodes.ServiceUnavailable) {
                     // We're still loading the database, try to reconnect every 2 seconds.
-                    if (this.rs.isLoading() == false) {
+                    if (this.rs.isLoading() === false) {
                         this.commandBase.reportError(error);
                     }
                     this.rs.isLoading(true);
                     setTimeout(() => this.connect(action, true), 2 * 1000);
                 }
-                else if (e.status != ResponseCodes.Forbidden) { // authorized connection
+                else if (e.status !== ResponseCodes.Forbidden) { // authorized connection
                     this.commandBase.reportError(error);
                     this.connectToChangesApiTask.reject();
                 }
@@ -107,20 +113,20 @@ class changesApi {
     private connectWebSocket(connectionString: string) {
         var connectionOpened: boolean = false;
 
-        var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-	    var url = wsProtocol + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString;
+        var wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+	    var url = wsProtocol + window.location.host + this.resourcePath + "/changes/websocket?" + connectionString;
 	    this.webSocket = new WebSocket(url);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
-            if (connectionOpened == false) {
+            if (connectionOpened === false) {
                 this.serverNotSupportingWebsocketsErrorHandler();
             } else {
                 this.onError(e);
             }
         };
         this.webSocket.onclose = (e: CloseEvent) => {
-            if (this.isCleanClose == false && changesApi.isServerSupportingWebSockets) {
+            if (this.isCleanClose === false && changesApi.isServerSupportingWebSockets) {
                 // Connection has closed uncleanly, so try to reconnect.
                 this.connect(this.connectWebSocket);
             }
@@ -180,7 +186,7 @@ class changesApi {
     }
 
     private serverNotSupportingWebsocketsErrorHandler() {
-        var warningMessage;
+        var warningMessage: string;
         var details;
 
         if ("EventSource" in window) {
@@ -228,7 +234,7 @@ class changesApi {
             }
 
             //TODO: exception handling?
-            this.commandBase.query('/changes/config', args, this.rs)
+            this.commandBase.query("/changes/config", args, this.rs)
                 .done(() => this.saveSentMessages(needToSaveSentMessages, command, args));
         });
     }
@@ -433,34 +439,36 @@ class changesApi {
 
     watchFsConfig(onChange: (e: filesystemConfigNotification) => void): changeSubscription {
         var callback = new changesCallback<filesystemConfigNotification>(onChange);
-        if (this.allFsConfigHandlers().length == 0) {
-            this.send('watch-config');
+        if (this.allFsConfigHandlers().length === 0) {
+            this.send("watch-config");
         }
         this.allFsConfigHandlers.push(callback);
         return new changeSubscription(() => {
             this.allFsConfigHandlers.remove(callback);
-            if (this.allFsConfigHandlers().length == 0) {
-                this.send('unwatch-config');
+            if (this.allFsConfigHandlers().length === 0) {
+                this.send("unwatch-config");
             }
         });
     }
 
     watchFsDestinations(onChange: (e: filesystemConfigNotification) => void): changeSubscription {
         var callback = new changesCallback<filesystemConfigNotification>(onChange);
-        if (this.allFsDestinationsHandlers().length == 0) {
-            this.send('watch-config');
+        if (this.allFsDestinationsHandlers().length === 0) {
+            this.send("watch-config");
         }
         this.allFsDestinationsHandlers.push(callback);
         return new changeSubscription(() => {
             this.allFsDestinationsHandlers.remove(callback);
-            if (this.allFsDestinationsHandlers().length == 0) {
-                this.send('unwatch-config');
+            if (this.allFsDestinationsHandlers().length === 0) {
+                this.send("unwatch-config");
             }
         });
     }
     
     dispose() {
-        this.connectToChangesApiTask.done(() => {
+        this.isDisposing = true;
+
+        this.connectToChangesApiTask.always(() => {
             var isCloseNeeded: boolean;
 
             if (this.webSocket && this.webSocket.readyState === this.readyStateOpen){
@@ -475,7 +483,7 @@ class changesApi {
             }
 
             if (isCloseNeeded) {
-                this.send('disconnect', undefined, false);
+                this.send("disconnect", undefined, false);
                 this.isCleanClose = true;
             }
         });
