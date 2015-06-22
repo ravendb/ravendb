@@ -292,8 +292,6 @@ namespace Raven.Tests.FileSystem.Smuggler
             {
                 var server = GetServer();
 
-                int fileSize = 10000;
-
                 var smugglerApi = new SmugglerFilesApi();
 
                 var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
@@ -347,8 +345,6 @@ namespace Raven.Tests.FileSystem.Smuggler
             using (var store = NewStore())
             {
                 var server = GetServer();
-
-                int fileSize = 10000;
 
                 var smugglerApi = new SmugglerFilesApi();
 
@@ -477,8 +473,6 @@ namespace Raven.Tests.FileSystem.Smuggler
             using (var store = NewStore())
             {
                 var server = GetServer();
-
-                int fileSize = 10000;
 
                 var smugglerApi = new SmugglerFilesApi();
 

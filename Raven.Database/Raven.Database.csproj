@@ -47,7 +47,7 @@
     <DefineConstants>TRACE;DEBUG;NET_4_0 NET45</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <NoWarn>1607, 1591</NoWarn>
+    <NoWarn>1607, 1591, 618</NoWarn>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <DocumentationFile>
     </DocumentationFile>
@@ -64,7 +64,7 @@
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>
     </DocumentationFile>
-    <NoWarn>1607, 1591</NoWarn>
+    <NoWarn>1607, 1591, 618</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
@@ -77,7 +77,7 @@
     <OutputPath>bin\Profiling\</OutputPath>
     <DefineConstants>TRACE;NET_4_0 NET45 PROFILING</DefineConstants>
     <Optimize>true</Optimize>
-    <NoWarn>1607, 1591</NoWarn>
+    <NoWarn>1607, 1591, 618</NoWarn>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>

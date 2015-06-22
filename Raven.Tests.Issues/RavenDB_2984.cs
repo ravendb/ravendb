@@ -21,7 +21,7 @@ namespace Raven.Tests.Issues
 
 			public string PublicField;
 
-			private string privateField;
+            private string privateField;
 
 			private string PrivateProperty { get; set; }
 
@@ -33,6 +33,16 @@ namespace Raven.Tests.Issues
 					return internalField;
 				}
 			}
+
+            public TestClass()
+            {
+                PublicProperty = string.Empty;
+                PublicField = string.Empty;
+                PrivateProperty = string.Empty;
+
+                privateField = string.Empty;
+                internalField = string.Empty;
+            }
 		}
 
 		[Fact]

@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("© Hibernating Rhinos 2015 - All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
+[assembly: CLSCompliant(false)]
 
 [assembly: AssemblyTitle("Sparrow")]
 [assembly: AssemblyVersion("1.0.0")]
@@ -19,7 +20,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("Sparrow")]
 [assembly: AssemblyDescription("Sparrow is a collection of high performance utilities in use on RavenDB and Voron.")]
 
-[assembly: CLSCompliant(true)]
 [assembly: SuppressIldasm()]
 
 #if DEBUG
