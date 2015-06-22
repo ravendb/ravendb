@@ -1,24 +1,36 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import resource = require("models/resources/resource");
+import license = require("models/auth/license");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class createResourceBase extends viewModelBase {
     creationTask = $.Deferred();
     creationTaskStarted = false;
 
+    static resourceName = ko.observable("");
     resourceName = ko.observable("");
     nameCustomValidityError: KnockoutComputed<string>;
     resourcePath = ko.observable("");
     pathCustomValidityError: KnockoutComputed<string>;
-    storageEngine = ko.observable("");
-   
+    logsPath = ko.observable("");
+    logsCustomValidityError: KnockoutComputed<string>;
+    resourceTempPath = ko.observable("");
+    tempCustomValidityError: KnockoutComputed<string>;
+
     resourceNameCapitalString = "";
     resourceNameString = "";
 
+    storageEngine = ko.observable("");
     allowVoron = ko.observable<boolean>(true);
 	voronWarningVisible = ko.computed(() => !this.allowVoron() && this.storageEngine() === "voron");
+    tempPathVisible = ko.computed(() => this.storageEngine() === "voron");
+    licenseStatus: KnockoutObservable<licenseStatusDto>;
 
-    constructor(private resources: KnockoutObservableArray<resource>, private licenseStatus: KnockoutObservable<licenseStatusDto>) {
+    constructor(protected resources: KnockoutObservableArray<resource>, protected parent: dialogViewModelBase) {
         super();
+
+        this.licenseStatus = license.licenseStatus;
+        this.resourceName = createResourceBase.resourceName;
 
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
@@ -37,6 +49,18 @@ class createResourceBase extends viewModelBase {
             var errorMessage: string = this.isPathLegal(newPath, "Path");
             return errorMessage;
         });
+
+        this.logsCustomValidityError = ko.computed(() => {
+            var newPath = this.logsPath();
+            var errorMessage: string = this.isPathLegal(newPath, "Logs");
+            return errorMessage;
+        });
+
+        this.tempCustomValidityError = ko.computed(() => {
+            var newPath = this.resourceTempPath();
+            var errorMessage: string = this.isPathLegal(newPath, "Temp");
+            return errorMessage;
+        });
     }
 
     deactivate() {
@@ -47,10 +71,14 @@ class createResourceBase extends viewModelBase {
         }
     }
 
+    protected clearResourceName() {
+        this.resourceName("");
+    }
+
     isBundleActive(name: string): boolean {
         var licenseStatus: licenseStatusDto = this.licenseStatus();
 
-        if (licenseStatus == null || licenseStatus.IsCommercial == false) {
+        if (licenseStatus == null || licenseStatus.IsCommercial === false) {
             return true;
         }
         else {
@@ -88,13 +116,16 @@ class createResourceBase extends viewModelBase {
         else if (rg2.test(name)) {
             message = "The " + this.resourceNameString + " name can't start with a dot!";
         }
+                    else if (name[name.length-1] === ".") {
+            message = "The " + this.resourceNameString + " name can't end with a dot!";
+        }
         else if (rg3.test(name)) {
             message = "The name '" + name + "' is forbidden for use!";
         }
-        return message;       
+        return message;
     }
 
-    private isPathLegal(name: string, pathName: string): string {
+    protected isPathLegal(name: string, pathName: string): string {
         var rg1 = /^[^*\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
         var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
         var errorMessage = "";

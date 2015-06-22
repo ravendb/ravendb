@@ -400,7 +400,7 @@ class resources extends viewModelBase {
         var createResourceViewModel = new createResource();
         createResourceViewModel.createDatabasePart
             .creationTask
-            .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, databaseTemp: string, storageEngine: string, incrementalBackup: boolean
+            .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, tempPath: string, storageEngine: string, incrementalBackup: boolean
                 , alertTimeout: string, alertRecurringTimeout: string, clusterWide: boolean) => {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
@@ -418,8 +418,8 @@ class resources extends viewModelBase {
                         settings["Raven/Voron/AllowIncrementalBackups"] = "true";
                     }
                 }
-                if (!this.isEmptyStringOrWhitespace(databaseTemp)) {
-                    settings["Raven/Voron/TempPath"] = databaseTemp;
+                if (!this.isEmptyStringOrWhitespace(tempPath)) {
+                    settings["Raven/Voron/TempPath"] = tempPath;
                 }
                 if (alertTimeout !== "") {
                     settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
@@ -440,7 +440,7 @@ class resources extends viewModelBase {
 
         createResourceViewModel.createFileSystemPart
             .creationTask
-            .done((fileSystemName: string, bundles: string[], fileSystemPath: string, filesystemLogs: string, storageEngine: string) => {
+            .done((fileSystemName: string, bundles: string[], fileSystemPath: string, filesystemLogs: string, tempPath: string, storageEngine: string) => {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
@@ -452,28 +452,37 @@ class resources extends viewModelBase {
                 if (!this.isEmptyStringOrWhitespace(filesystemLogs)) {
                     settings["Raven/TransactionJournalsPath"] = filesystemLogs;
                 }
+                if (!this.isEmptyStringOrWhitespace(tempPath)) {
+                    settings["Raven/Voron/TempPath"] = tempPath;
+                }
                 this.showFsCreationAdvancedStepsIfNecessary(fileSystemName, bundles, settings);
             });
 
         createResourceViewModel.createCounterStoragePart
             .creationTask
-            .done((counterStorageName: string, bundles: string[], counterStoragePath: string) => {
+            .done((counterStorageName: string, bundles: string[], counterStoragePath: string, tempPath: string) => {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
-
                 settings["Raven/Counters/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
+                if (!this.isEmptyStringOrWhitespace(tempPath)) {
+                    settings["Raven/Voron/TempPath"] = tempPath;
+                }
+
                 this.showCsCreationAdvancedStepsIfNecessary(counterStorageName, bundles, settings);
             });
 
         createResourceViewModel.createTimeSeriesPart
             .creationTask
-            .done((timeSeriesName: string, bundles: string[], timeSeriesPath: string) => {
+            .done((timeSeriesName: string, bundles: string[], timeSeriesPath: string, tempPath: string) => {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
-
                 settings["Raven/TimeSeries/DataDir"] = (!this.isEmptyStringOrWhitespace(timeSeriesPath)) ? timeSeriesPath : "~\\TimeSeries\\" + timeSeriesName;
+                if (!this.isEmptyStringOrWhitespace(tempPath)) {
+                    settings["Raven/Voron/TempPath"] = tempPath;
+                }
+
                 this.showTsCreationAdvancedStepsIfNecessary(timeSeriesName, bundles, settings);
             });
 
@@ -649,7 +658,6 @@ class resources extends viewModelBase {
     }
 
     private showCsCreationAdvancedStepsIfNecessary(counterStorageName: string, bundles: string[], settings: {}) {
-
         new createCounterStorageCommand(counterStorageName, settings)
             .execute()
             .done(() => {
@@ -667,11 +675,9 @@ class resources extends viewModelBase {
         this.counterStorages.unshift(newCounterStorage);
         this.filterResources();
         return newCounterStorage;
-        //return this.addNewResource(this.counterStorages, counterStorageName, () => new counterStorage(counterStorageName, true, false, bundles));
     }
 
     private showTsCreationAdvancedStepsIfNecessary(timeSeriesName: string, bundles: string[], settings: {}) {
-
         new createTimeSeriesCommand(timeSeriesName, settings)
             .execute()
             .done(() => {
@@ -689,17 +695,6 @@ class resources extends viewModelBase {
         this.timeSeries.unshift(newTimeSeries);
         this.filterResources();
         return newTimeSeries;
-    }
-
-    addNewResource(resourcesArray: KnockoutObservableArray<resource>, resourceName: string, createResource: () => resource) {
-        var foundResource = resourcesArray.first((rs: resource) => rs.name === resourceName);
-        if (!!foundResource)
-            return foundResource;
-
-        var newResource = createResource();
-        resourcesArray.unshift();
-        this.filterResources();
-        return newResource;
     }
 }
 
