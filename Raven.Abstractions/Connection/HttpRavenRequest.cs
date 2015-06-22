@@ -74,6 +74,9 @@ namespace Raven.Abstractions.Connection
 		public void Write(Stream streamToWrite)
 		{
 			postedStream = streamToWrite;
+            if (EnvironmentUtils.RunningOnPosix) // mono must set ContentLength before GetRequestStream (unlike .net)
+                WebRequest.ContentLength = streamToWrite.Length;
+            
 			using (var stream = WebRequest.GetRequestStream())
 			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
 			using (var commpressedStream = new GZipStream(countingStream, CompressionMode.Compress))
@@ -94,6 +97,9 @@ namespace Raven.Abstractions.Connection
 		public void Write(byte[] data)
 		{
 			postedData = data;
+            if (EnvironmentUtils.RunningOnPosix) // mono must set ContentLength before GetRequestStream (unlike .net)
+                WebRequest.ContentLength = data.Length; 
+            
 			using (var stream = WebRequest.GetRequestStream())
 			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
 			using (var cmp = new GZipStream(countingStream, CompressionMode.Compress))
@@ -114,25 +120,30 @@ namespace Raven.Abstractions.Connection
 
 		private void WriteToken(WebRequest httpWebRequest)
 		{
-			using (var stream = httpWebRequest.GetRequestStream())
-			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
-			using (var commpressedData = new GZipStream(countingStream, CompressionMode.Compress))
-			using (var countingStream2 = new CountingStream(commpressedData, l => NumberOfBytesWrittenUncompressed = l))
-			{
-				if (writeBson)
-				{
-					postedToken.WriteTo(new BsonWriter(countingStream2));
-				}
-				else
-				{
-					var streamWriter = new StreamWriter(countingStream2);
-					postedToken.WriteTo(new JsonTextWriter(streamWriter));
-					streamWriter.Flush();
-				}
-				commpressedData.Flush();
-				stream.Flush();
-			}
-		}
+            if (EnvironmentUtils.RunningOnPosix) // mono must set ContentLength before GetRequestStream (unlike .net)
+                httpWebRequest.ContentLength = postedToken.ToString().Length;
+
+            using (var stream = httpWebRequest.GetRequestStream())
+            {
+                using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+                using (var commpressedData = new GZipStream(countingStream, CompressionMode.Compress))
+                using (var countingStream2 = new CountingStream(commpressedData, l => NumberOfBytesWrittenUncompressed = l))
+                {
+                    if (writeBson)
+                    {
+                        postedToken.WriteTo(new BsonWriter(countingStream2));
+                    }
+                    else
+                    {
+                        var streamWriter = new StreamWriter(countingStream2);
+                        postedToken.WriteTo(new JsonTextWriter(streamWriter));
+                        streamWriter.Flush();
+                    }
+                    commpressedData.Flush();
+                    stream.Flush();
+                }
+            }
+        }
 
 		public T ExecuteRequest<T>()
 		{
@@ -278,6 +289,9 @@ namespace Raven.Abstractions.Connection
 			if (postedStream != null)
 			{
 				postedStream.Position = 0;
+                if (EnvironmentUtils.RunningOnPosix) // mono must set ContentLength before GetRequestStream (unlike .net)
+                    newWebRequest.ContentLength = postedStream.Length;
+                
 				using (var stream = newWebRequest.GetRequestStream())
 				using (var compressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
