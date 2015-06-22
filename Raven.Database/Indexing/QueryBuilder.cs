@@ -50,6 +50,17 @@ namespace Raven.Database.Indexing
 
 		public static Query BuildQuery(string query, IndexQuery indexQuery, RavenPerFieldAnalyzerWrapper analyzer)
 		{
+	/*	    try
+		    {
+		        var parser = new LuceneQueryParser();
+		        parser.Parse(query);
+                var res = parser.LuceneAST.ToQuery(analyzer, indexQuery.DefaultField, indexQuery.DefaultOperator);
+		        if (res != null) return res;
+		    }
+		    catch (Exception e)
+		    {
+		        Console.WriteLine(e.Message);
+		    }*/
 			var originalQuery = query;
 			try
 			{

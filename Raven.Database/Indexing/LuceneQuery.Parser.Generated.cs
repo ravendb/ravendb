@@ -4,9 +4,9 @@
 
 // GPPG version 1.5.2
 // Machine:  TALWEISS-PC
-// DateTime: 6/17/2015 11:39:23 AM
+// DateTime: 6/18/2015 4:16:40 PM
 // UserName: Tal
-// Input file <Indexing\LuceneQuery.Language.grammar.y - 6/16/2015 5:32:59 PM>
+// Input file <Indexing\LuceneQuery.Language.grammar.y - 6/18/2015 4:16:33 PM>
 
 // options: no-lines gplex
 
@@ -61,9 +61,9 @@ internal class ScanObj {
 [GeneratedCodeAttribute( "Gardens Point Parser Generator", "1.5.2")]
 internal partial class LuceneQueryParser: ShiftReduceParser<ValueType, LexLocation>
 {
-  // Verbatim content from Indexing\LuceneQuery.Language.grammar.y - 6/16/2015 5:32:59 PM
+  // Verbatim content from Indexing\LuceneQuery.Language.grammar.y - 6/18/2015 4:16:33 PM
 	public LuceneASTNodeBase LuceneAST {get; set;}
-  // End verbatim content from Indexing\LuceneQuery.Language.grammar.y - 6/16/2015 5:32:59 PM
+  // End verbatim content from Indexing\LuceneQuery.Language.grammar.y - 6/18/2015 4:16:33 PM
 
 #pragma warning disable 649
   private static Dictionary<int, string> aliases;
@@ -400,7 +400,7 @@ internal partial class LuceneQueryParser: ShiftReduceParser<ValueType, LexLocati
       case 28: // term -> QUOTED_TERM
 {
 		//Console.WriteLine("Found rule term -> QUOTED_TERM");
-		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Quoted};
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s.Substring(1,ValueStack[ValueStack.Depth-1].s.Length-2), Type=TermLuceneASTNode.TermType.Quoted};
 	}
         break;
       case 29: // term -> UNQUOTED_TERM

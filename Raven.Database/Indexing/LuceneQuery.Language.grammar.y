@@ -182,7 +182,7 @@ term_exp: prefix_operator term postfix_modifier  {
 	;
 term: QUOTED_TERM        {
 		//Console.WriteLine("Found rule term -> QUOTED_TERM");
-		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.Quoted};
+		$$ = new TermLuceneASTNode(){Term=$1.Substring(1,$1.Length-2), Type=TermLuceneASTNode.TermType.Quoted};
 	}
 	| UNQUOTED_TERM      {
 		//Console.WriteLine("Found rule term -> UNQUOTED_TERM");

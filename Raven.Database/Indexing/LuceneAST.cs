@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Raven.Abstractions.Data;
+using Raven.Database.Indexing.LuceneIntegration;
 
 namespace Raven.Database.Indexing
 {
@@ -11,14 +14,9 @@ namespace Raven.Database.Indexing
     {
         public abstract IEnumerable<LuceneASTNodeBase> Children { get; }
 
-        public virtual Query ToQuery()
+        public virtual Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
         {
             return null;
-        }
-
-        public virtual LuceneASTNodeBase Simplify()
-        {
-            return this;
         }
 
         public PrefixOperator Prefix { get; set; }
@@ -57,9 +55,9 @@ namespace Raven.Database.Indexing
         {
             get { yield return Node; }
         }
-        public override Query ToQuery()
+        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
         {
-            throw new NotImplementedException();
+            return Node.ToQuery(analayzer, FieldName, defaultOperator);
         }
 
         public override string ToString()
@@ -122,9 +120,9 @@ namespace Raven.Database.Indexing
         {
             get { return Matches; }
         }
-        public override Query ToQuery()
+        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
         {
-            throw new NotImplementedException();
+            return new TermsMatchQuery(FieldName, Matches.Select(x => x.Term).ToList());
         }
 
         public override string ToString()
@@ -141,9 +139,32 @@ namespace Raven.Database.Indexing
         {
             get { yield break; }
         }
-        public override Query ToQuery()
+        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
         {
-            throw new NotImplementedException();
+            switch (Type)
+            {
+                case TermType.Quoted:
+                    //removing the quotes from the term
+                    return new TermQuery(new Term(fieldName,Term.Substring(1,Term.Length-2)));
+                    break;
+                case TermType.UnQuoted:
+                    return new TermQuery(new Term(fieldName, Term));
+                    break;
+                case TermType.Float:
+                    return new TermQuery(new Term(fieldName, Term));
+                    break;
+                case TermType.DateTime:
+                    return new TermQuery(new Term(fieldName, Term));
+                    break;
+                case TermType.Int:
+                    return new TermQuery(new Term(fieldName, Term));
+                    break;
+                case TermType.UnAnalized:
+                    return new TermQuery(new Term(fieldName, Term.Substring(2, Term.Length - 4)));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         public PrefixOperator Prefix { get; set; }
@@ -190,9 +211,9 @@ namespace Raven.Database.Indexing
         {
             get { yield break; }
         }
-        public override Query ToQuery()
+        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
         {
-            throw new NotImplementedException();
+            return new TermRangeQuery(fieldName, RangeMin.Term, RangeMax.Term, InclusiveMin, InclusiveMax);
         }
 
         public TermLuceneASTNode RangeMin { get; set; }
@@ -222,9 +243,45 @@ namespace Raven.Database.Indexing
                 if (RightNode != null) yield return RightNode;
             }
         }
-        public override Query ToQuery()
+        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
         {
-            throw new NotImplementedException();
+            var query = new BooleanQuery();
+            switch (Op)
+            {
+                case Operator.AND:
+                    query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.MUST);
+                    query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.MUST);
+                    break;
+                case Operator.OR:
+                    query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.SHOULD);
+                    query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.SHOULD);
+                    break;
+                case Operator.NOT:
+                    query.Add(LeftNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.MUST_NOT);
+                    break;
+                case Operator.Implicit:
+                    switch (defaultOperator)
+                    {
+                        case QueryOperator.Or:
+                            query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.SHOULD);
+                    query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.SHOULD);
+                            break;
+                        case QueryOperator.And:
+                            query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.MUST);
+                            query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.MUST);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException("defaultOperator");
+                    }
+                    break;
+                case Operator.INTERSECT:
+                    query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.MUST);
+                    query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.MUST);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+            return query;
         }
 
         public enum Operator
@@ -260,9 +317,11 @@ namespace Raven.Database.Indexing
         {
             get { yield return Node; }
         }
-        public override Query ToQuery()
+        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
         {
-            throw new NotImplementedException();
+            var query = new BooleanQuery();
+            query.Add(new BooleanClause(Node.ToQuery(analayzer,fieldName,defaultOperator),Occur.MUST));
+            return query;
         }
 
         public LuceneASTNodeBase Node { get; set; }
