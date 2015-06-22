@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -12,9 +13,18 @@ using Sparrow.Collections;
 
 namespace Raven.Database.Config
 {
+	public class LowMemoryHandlerStatistics
+	{
+		public string Name { get; set; }
+		public long EstimatedUsedMemory { get; set; }
+		public string DatabaseName { get; set; }
+		public object Metadata { get; set; }
+	}
     internal interface ILowMemoryHandler
     {
         void HandleLowMemory();
+	    void SoftMemoryRelease();
+	    LowMemoryHandlerStatistics GetStats();
     }
 
     internal static class MemoryStatistics
@@ -44,6 +54,7 @@ namespace Raven.Database.Config
         private static readonly IntPtr lowMemoryNotificationHandle;
         private static readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> LowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
         private static readonly IntPtr LowMemorySimulationEvent = CreateEvent(IntPtr.Zero, false, false, null);
+		private static readonly IntPtr SoftMemoryReleaseEvent = CreateEvent(IntPtr.Zero, false, false, null);
 
         static MemoryStatistics()
         {
@@ -62,8 +73,8 @@ namespace Raven.Database.Config
                 const UInt32 WAIT_TIMEOUT = 0x00000102;
                 while (true)
                 {
-                    var waitForResult = WaitForMultipleObjects(3,
-						new[] { lowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent }, false, 
+                    var waitForResult = WaitForMultipleObjects(4,
+						new[] { lowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent, SoftMemoryReleaseEvent }, false, 
 						5 * 60 * 1000);
 
 				handleWaitResults:
@@ -87,6 +98,10 @@ namespace Raven.Database.Config
 
                             RunLowMemoryHandlers();
                             break;
+						case 3://SoftMemoryReleaseEvent
+							log.Warn("Releasing memory before Garbage Collection operation");
+							RunLowMemoryHandlers();
+		                    break;
                         case WAIT_TIMEOUT:
                             ClearInactiveHandlers();
                             break;
@@ -106,6 +121,11 @@ namespace Raven.Database.Config
         {
             SetEvent(LowMemorySimulationEvent);
         }
+
+	    public static void InitiateSoftMemoryRelease()
+	    {
+		    SetEvent(SoftMemoryReleaseEvent);
+	    }
 
         private static void RunLowMemoryHandlers()
         {
@@ -131,6 +151,58 @@ namespace Raven.Database.Config
 
             inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
         }
+
+		private static void RunSoftMemoryReleaseHandlers()
+		{
+			var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+
+			foreach (var lowMemoryHandler in LowMemoryHandlers)
+			{
+				ILowMemoryHandler handler;
+				if (lowMemoryHandler.TryGetTarget(out handler))
+				{
+					try
+					{
+						handler.SoftMemoryRelease();
+					}
+					catch (Exception e)
+					{
+						log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+					}
+				}
+				else
+					inactiveHandlers.Add(lowMemoryHandler);
+			}
+
+			inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
+		}
+
+	    public static List<LowMemoryHandlerStatistics> GetLowMemoryHandlersStatistics()
+	    {
+		    var lowMemoryHandlersStatistics = new List<LowMemoryHandlerStatistics>();
+			var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+
+			foreach (var lowMemoryHandler in LowMemoryHandlers)
+			{
+				ILowMemoryHandler handler;
+				if (lowMemoryHandler.TryGetTarget(out handler))
+				{
+					try
+					{
+						lowMemoryHandlersStatistics.Add(handler.GetStats());
+					}
+					catch (Exception e)
+					{
+						log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+					}
+				}
+				else
+					inactiveHandlers.Add(lowMemoryHandler);
+			}
+
+			inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
+		    return lowMemoryHandlersStatistics;
+	    }
 
         private static void ClearInactiveHandlers()
         {

@@ -282,7 +282,7 @@ namespace Raven.Database.Queries
 
 					    foreach (var readerFacetInfo in returnedReaders)
 					    {
-                            var termsForField = IndexedTerms.GetTermsAndDocumenstFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name);
+                            var termsForField = IndexedTerms.GetTermsAndDocumenstFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name,Database.Name, Index);
 
 					        Dictionary<string, FacetValue> facetValues;
                             
@@ -340,7 +340,7 @@ namespace Raven.Database.Queries
 
 				        foreach (var readerFacetInfo in returnedReaders)
 				        {
-                            var termsForField = IndexedTerms.GetTermsAndDocumenstFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name);
+                            var termsForField = IndexedTerms.GetTermsAndDocumenstFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, Database.Name, Index);
                             if (isDistinct)
                             {
                                 if (distinctItems.TryGetValue(range.Key, out alreadySeen) == false)

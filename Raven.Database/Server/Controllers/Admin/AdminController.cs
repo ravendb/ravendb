@@ -1023,5 +1023,28 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			return GetEmptyMessage();
 		}
+
+		[HttpGet]
+		[RavenRoute("admin/low-memory-handlers-statistics")]
+		public HttpResponseMessage GetLowMemoryStatistics()
+		{
+			if (EnsureSystemDatabase() == false)
+				return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
+
+			return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x=>x.DatabaseName).Select(x=> new
+			{
+				DatabaseName = x.Key,
+				Types = x.GroupBy(y=>y.Name).Select(y=> new
+				{
+					MemoryHandlerName = y.Key,
+					MemoryHandlers = y.Select(z=> new {
+					z.EstimatedUsedMemory,
+					z.Metadata
+					})
+				})
+			}));
+
+			
+		}
 	}
 }

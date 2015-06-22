@@ -59,7 +59,7 @@ namespace Raven.Tests.Bugs
 				var putResult2 = store.SystemDatabase.Documents.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
 				var putResult3 = store.SystemDatabase.Documents.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
 
-				var docs = store.SystemDatabase.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, null).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
+				var docs = store.SystemDatabase.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, null, string.Empty).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
 
 				Assert.Equal(2, docs.Count);
 				Assert.Equal(putResult1.ETag, docs[0].Etag); // the document taken from memory
@@ -80,7 +80,7 @@ namespace Raven.Tests.Bugs
 				var putResult2 = store.SystemDatabase.Documents.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
 				var putResult3 = store.SystemDatabase.Documents.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
 
-				var docs = store.SystemDatabase.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, null).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
+				var docs = store.SystemDatabase.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, null, string.Empty).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
 				Assert.Equal(2, docs.Count);
 				Assert.Equal(putResult1.ETag, docs[0].Etag);
 				Assert.Equal(putResult3.ETag, docs[1].Etag);
@@ -103,7 +103,7 @@ namespace Raven.Tests.Bugs
 
 				Assert.True(deleted);
 
-				var prefetchingBehavior = store.SystemDatabase.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, null);
+				var prefetchingBehavior = store.SystemDatabase.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, null, string.Empty);
 				var docs = prefetchingBehavior.GetDocumentsBatchFrom(putResult1.ETag.IncrementBy(-1)); // here we can get a document
 				var filteredDocs = docs.Where(prefetchingBehavior.FilterDocuments).ToList(); // but here we should filter it out because it's already deleted!!!
 
