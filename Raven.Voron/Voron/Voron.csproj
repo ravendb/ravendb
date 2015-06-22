@@ -64,6 +64,9 @@
     <Compile Include="Exceptions\InvalidJournalFlushRequest.cs" />
     <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
     <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
+    <Compile Include="Impl\FileHeaders\FixedSizeTreeHeader.cs" />
+    <Compile Include="Trees\Fixed\FixedSizeTree.cs" />
+    <Compile Include="Trees\Fixed\Iterators.cs" />
     <Compile Include="Util\Comparers.cs" />
     <Compile Include="Util\Hashing.cs" />
     <Compile Include="Impl\Backup\MinimalIncrementalBackup.cs" />
