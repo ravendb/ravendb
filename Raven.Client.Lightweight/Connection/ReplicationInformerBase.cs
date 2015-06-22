@@ -335,9 +335,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					bool wasTimeout;
 					var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
 	                
-                    if (avoidThrowing == false)
-                        throw;
-
 					if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
 					{
 						return new AsyncOperationResult<T>
