@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
 			string compiledIndexCacheDirectory = Path.Combine(databaseRoot, "CompiledIndexCache");
 			using (var embeddedStore = new EmbeddableDocumentStore
 			{
-				//DefaultDatabase = "testApp",
+				DefaultDatabase = "testApp",
 				UseEmbeddedHttpServer = true,
 				RunInMemory = false,
 				DataDirectory = dataDirectory,
@@ -33,40 +33,25 @@ namespace Raven.Tests.Issues
 				{
 					Settings = new NameValueCollection
 					{
-						{"Raven/CompiledIndexCacheDirectory", compiledIndexCacheDirectory} // THIS WORKS!
+						{"Raven/CompiledIndexCacheDirectory", compiledIndexCacheDirectory} 
 					}
 				}
 
 			})
 			{
-				embeddedStore.Configuration.Port = 8079;
-
-				embeddedStore.Configuration.CompiledIndexCacheDirectory = compiledIndexCacheDirectory; 
-
 				embeddedStore.Initialize();
-
-				var localStore = new DocumentStore()
-				{
-					Url = "http://localhost:8079",
-					DefaultDatabase = "testDB"
-				};
-				localStore.Initialize();
-
-				localStore.DatabaseCommands.EnsureDatabaseExists("testDB");
-
-
-				localStore.ExecuteIndex(new Index());
-				using (var session = localStore.OpenSession())
+				embeddedStore.DatabaseCommands.EnsureDatabaseExists("testDB");
+				embeddedStore.ExecuteIndex(new Index());
+				using (var session = embeddedStore.OpenSession())
 				{
 					session.Store(new Person{Name = "Hila", Age = 29});
 					session.Store(new Person { Name = "John", Age = 50 });
 					session.SaveChanges();
 					var persons= session.Query<Index>().ToString();
 
-				} 
-				var path = embeddedStore.Configuration.CompiledIndexCacheDirectory;
-				var directoryOfCompiledIndexExsits = Directory.Exists(path);
-				Assert.True(directoryOfCompiledIndexExsits); Assert.Equal("Raven\\CompiledIndexCache", compiledIndexCacheDirectory);
+				}
+				var directoryOfCompiledIndexExsits = Directory.Exists(compiledIndexCacheDirectory);
+				Assert.True(directoryOfCompiledIndexExsits); 
 			}
 		}
 
@@ -78,30 +63,17 @@ namespace Raven.Tests.Issues
 			string compiledIndexCacheDirectory = Path.Combine(databaseRoot, "CompiledIndexCache");
 			using (var embeddedStore = new EmbeddableDocumentStore
 			{
-				//DefaultDatabase = "testApp",
+				DefaultDatabase = "testApp",
 				UseEmbeddedHttpServer = true,
 				RunInMemory = false,
 				DataDirectory = dataDirectory
 			})
 			{
-				embeddedStore.Configuration.Port = 8079;
-
 				embeddedStore.Configuration.CompiledIndexCacheDirectory = compiledIndexCacheDirectory;
-
 				embeddedStore.Initialize();
-
-				var localStore = new DocumentStore()
-				{
-					Url = "http://localhost:8079",
-					DefaultDatabase = "testDB"
-				};
-				localStore.Initialize();
-
-				localStore.DatabaseCommands.EnsureDatabaseExists("testDB");
-
-
-				localStore.ExecuteIndex(new Index());
-				using (var session = localStore.OpenSession())
+				embeddedStore.DatabaseCommands.EnsureDatabaseExists("testDB");
+				embeddedStore.ExecuteIndex(new Index());
+				using (var session = embeddedStore.OpenSession())
 				{
 					session.Store(new Person { Name = "Hila", Age = 29 });
 					session.Store(new Person { Name = "John", Age = 50 });
@@ -109,8 +81,7 @@ namespace Raven.Tests.Issues
 					var persons = session.Query<Index>().ToString();
 
 				}
-				var path = embeddedStore.Configuration.CompiledIndexCacheDirectory;
-				var directoryOfCompiledIndexExsits = Directory.Exists(path);
+				var directoryOfCompiledIndexExsits = Directory.Exists(compiledIndexCacheDirectory);
 				Assert.True(directoryOfCompiledIndexExsits);
 			}
 		}
@@ -122,7 +93,7 @@ namespace Raven.Tests.Issues
 			string compiledIndexCacheDirectory = Path.Combine(databaseRoot, "CompiledIndexCache");
 			using (var embeddedStore = new EmbeddableDocumentStore
 			{
-				//DefaultDatabase = "testApp",
+				DefaultDatabase = "testApp",
 				UseEmbeddedHttpServer = true,
 				RunInMemory = false,
 				DataDirectory = dataDirectory,
@@ -133,19 +104,10 @@ namespace Raven.Tests.Issues
 
 			})
 			{
-				embeddedStore.Configuration.Port = 8079;
-
 				embeddedStore.Initialize();
-
-				var localStore = new DocumentStore()
-				{
-					Url = "http://localhost:8079",
-					DefaultDatabase = "testDB"
-				};
-				localStore.Initialize();
-				localStore.DatabaseCommands.EnsureDatabaseExists("testDB");
-				localStore.ExecuteIndex(new Index());
-				using (var session = localStore.OpenSession())
+				embeddedStore.DatabaseCommands.EnsureDatabaseExists("testDB");
+				embeddedStore.ExecuteIndex(new Index());
+				using (var session = embeddedStore.OpenSession())
 				{
 					session.Store(new Person { Name = "Hila", Age = 29 });
 					session.Store(new Person { Name = "John", Age = 50 });
@@ -153,8 +115,7 @@ namespace Raven.Tests.Issues
 					var persons = session.Query<Index>().ToString();
 
 				}
-				var path = embeddedStore.Configuration.CompiledIndexCacheDirectory;
-				var directoryOfCompiledIndexExsits = Directory.Exists(path);
+				var directoryOfCompiledIndexExsits = Directory.Exists(compiledIndexCacheDirectory);
 				Assert.True(directoryOfCompiledIndexExsits);
 			}
 		}
