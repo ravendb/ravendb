@@ -109,7 +109,7 @@ namespace Raven.Database.TimeSeries
 
 		public static PeriodDuration ParseTreeName(string treeName)
 		{
-			var strings = treeName.Substring("period_".Length)
+			var strings = treeName.Substring(TimeSeriesStorage.PeriodTreePrefix.Length)
 				.Split('-');
 			return new PeriodDuration(GenericUtil.ParseEnum<PeriodType>(strings[0]), int.Parse(strings[1]));
 		}
