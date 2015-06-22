@@ -196,13 +196,12 @@ namespace Raven.Client.Connection.Implementation
 					AssertServerVersionSupported();
 					ResponseStatusCode = Response.StatusCode;
 				}
-				catch (Exception e)
+				catch (HttpRequestException e)
 				{
-					if (Response == null && e is HttpRequestException) //something bad happened and httpClient.SendAsync failed -> i.e. server down, network down
-					{
+					if (Response == null) //something bad happened and httpClient.SendAsync failed -> i.e. server down, network down
 						e.Data.Add(Constants.RequestFailedExceptionMarker, true);
-					}
-					throw;
+
+					throw ErrorResponseException.FromHttpRequestException(e);
 				}
 				finally
 				{
