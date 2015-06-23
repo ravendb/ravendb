@@ -141,9 +141,9 @@ namespace Raven.Tests.TimeSeries
 						Assert.Equal(0, money[i].Value.High);
 					}
 					Assert.Equal(600, money[24].Value.Sum);
-					Assert.Equal(600, money[24].Value.Volume);
+					Assert.Equal(2, money[24].Value.Volume);
 					Assert.Equal(130, money[25].Value.Sum);
-					Assert.Equal(130, money[25].Value.Volume);
+					Assert.Equal(1, money[25].Value.Volume);
 				}
 			}
 		}
