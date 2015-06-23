@@ -58,6 +58,7 @@ namespace Raven.Client.FileSystem.Changes
                     },
                     configurationSubscriptionTask);
             });
+
             var taskedObservable = new TaskedObservable<ConfigurationChangeNotification, FilesConnectionState>(
                 counter,
                 notification => true);

@@ -88,7 +88,9 @@ namespace Raven.Client.Document.Async
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
-		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
+        /// <param name="token">The cancellation token.</param>
+        /// <param name="ids">The ids of the documents to load.</param>
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids, CancellationToken token)
         {
             return Lazily.LoadAsync<T>(ids, null, token);
         }
@@ -98,8 +100,9 @@ namespace Raven.Client.Document.Async
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The id.</param>
+        /// <param name="token">The cancellation token.</param>
         /// <returns></returns>
-		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
+		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, CancellationToken token)
         {
             return Lazily.LoadAsync(id, (Action<T>)null, token);
         }
@@ -208,7 +211,7 @@ namespace Raven.Client.Document.Async
 			return AsyncDatabaseCommands.UrlFor(value.Key);
 		}
 
-		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token = default (CancellationToken))
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token)
         {
 			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
@@ -694,12 +697,13 @@ namespace Raven.Client.Document.Async
 			return LoadAsync<T>(documentKeys, token);
 		}
 
-		/// <summary>
-		/// Begins the async load operation
-		/// </summary>
-		/// <param name="id">The id.</param>
-		/// <returns></returns>
-		public async Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
+        /// <summary>
+        /// Begins the async load operation
+        /// </summary>
+        /// <param name="id">The id.</param>
+        /// <param name="token">The canecllation token.</param>
+        /// <returns></returns>
+        public async Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
 		{
 			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
