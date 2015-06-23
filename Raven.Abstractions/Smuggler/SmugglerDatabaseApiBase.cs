@@ -1,26 +1,23 @@
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Util;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-
 using System.IO.Compression;
-
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Smuggler.Data;
-using Raven.Abstractions.Util;
-using Raven.Abstractions.Extensions;
-using Raven.Json.Linq;
-using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Smuggler
 {
@@ -604,7 +601,7 @@ namespace Raven.Abstractions.Smuggler
             Operations.Configure(Options);
             Operations.Initialize(Options);
 			SupportedFeatures = await DetectServerSupportedFeatures(Operations, importOptions.To);
-			
+
 			Stream sizeStream;
 
             var sw = Stopwatch.StartNew();
@@ -1075,9 +1072,9 @@ namespace Raven.Abstractions.Smuggler
 		{
 			var serverVersion = await ops.GetVersion(server);
             if (string.IsNullOrEmpty(serverVersion))
-            {
+			{
 	            return GetLegacyModeFeatures();
-            }
+			}
 
             var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerDatabaseApiBase>()).ProductVersion;
 
@@ -1142,7 +1139,7 @@ namespace Raven.Abstractions.Smuggler
 			if (index != -1)
 			{
 				connection.DefaultDatabase = connection.Url.Substring(index + "/databases/".Length).Trim(new[] { '/' });
-			}
-		}
+	}
+}
 	}
 }

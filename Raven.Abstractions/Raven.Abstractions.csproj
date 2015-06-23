@@ -21,7 +21,7 @@
     <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -34,7 +34,7 @@
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
@@ -48,7 +48,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
     <Optimize>true</Optimize>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>

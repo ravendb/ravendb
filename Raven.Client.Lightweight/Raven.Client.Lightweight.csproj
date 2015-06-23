@@ -26,7 +26,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Raven.Client.Lightweight.xml</DocumentationFile>
-    <NoWarn>1573, 1587, 1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -37,7 +37,7 @@
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -50,7 +50,7 @@
     <DefineConstants>TRACE;CLIENT</DefineConstants>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
     <Optimize>true</Optimize>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>

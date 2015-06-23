@@ -229,7 +229,6 @@ namespace Raven.Database.Server.Controllers
                         batchDocCount++;
                     };
 
-                    int nextStart = 0;
 					var retries = 0;
 					do
 					{

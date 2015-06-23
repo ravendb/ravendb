@@ -954,7 +954,7 @@ namespace Raven.Database.Config
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
-		private string indexStoragePath, journalStoragePath;
+		private string indexStoragePath;
 		
 		private string countersDataDirectory;
 		private int? maxNumberOfParallelIndexTasks;

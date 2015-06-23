@@ -68,7 +68,7 @@ namespace Raven.Client.Linq
 	    /// <param name="isMapReduce"></param>
 	    /// <param name="resultsTransformer"></param>
 		/// <param name="transformerParameters"></param>
-		public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, Action<RavenJObject> afterStreamExcuted,  string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> transformerParameters)
+		public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, Action<RavenJObject> afterStreamExecuted,  string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> transformerParameters)
 		{
 			FieldsToFetch = fieldsToFetch;
 			FieldsToRename = fieldsTRename;
@@ -77,7 +77,7 @@ namespace Raven.Client.Linq
 			this.indexName = indexName;
 			this.isMapReduce = isMapReduce;
 			this.afterQueryExecuted = afterQueryExecuted;
-		    this.afterStreamExcuted = afterStreamExcuted;
+		    this.afterStreamExcuted = afterStreamExecuted;
 		    this.customizeQuery = customizeQuery;
 		    this.resultsTransformer = resultsTransformer;
 			this.transformerParameters = transformerParameters;

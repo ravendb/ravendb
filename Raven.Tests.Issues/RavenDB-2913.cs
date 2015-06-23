@@ -58,7 +58,7 @@ namespace Raven.Tests.Issues
                     {
                         var res = session.Query<Entity, EntityIndex>().Customize(x => x.WaitForNonStaleResults()).First(x => x.Getter == "modified");
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         
                     }

@@ -37,7 +37,6 @@ namespace Raven.Tests.MailingList
 
 				new Foos().Execute(store);
 
-				string id;
 				using (var session = store.OpenSession())
 				{
 					var foo = new Foo() { Id = "F1", BarId = "B1", Wibble = "hello" };
