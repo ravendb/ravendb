@@ -8,12 +8,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
-using Raven.Database.Util;
-using Raven.Unix;
-using Raven.Abstractions.Data;
-using Raven.Database.Indexing;
 using Raven.Unix.Native;
 
+using Sparrow.Collections;
 
 namespace Raven.Database.Config
 {

@@ -170,7 +170,7 @@ namespace Raven.Database.Server.Connections
 			OnDataSubscriptionChangeNotification(this, dataSubscriptionChangeNotification);
 			foreach (var connectionState in connections)
 			{
-				connectionState.Value.Send(dataSubscriptionChangeNotification);
+				connectionState.Value.DocumentStore.Send(dataSubscriptionChangeNotification);
 			}
 		}
 

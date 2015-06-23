@@ -310,7 +310,7 @@ namespace Raven.Database.FileSystem.Controllers
 	        get { return FileSystem.Configuration; }
 	    }
 
-	    public override bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args)
+		public override async Task<RequestWebApiEventArgs> TrySetupRequestToProperResource()
         {
             if (!RavenFileSystem.IsRemoteDifferentialCompressionInstalled)
                 throw new HttpException(503, "File Systems functionality is not supported. Remote Differential Compression is not installed.");
@@ -322,10 +322,11 @@ namespace Raven.Database.FileSystem.Controllers
                 throw new HttpException(503, "Could not find a file system with no name");
             }
 
-            var landlord = this.FileSystemsLandlord;
+            var landlord = FileSystemsLandlord;
 
             Task<RavenFileSystem> resourceStoreTask;
             bool hasDb;
+			string msg;
             try
             {
                 hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
@@ -333,7 +334,7 @@ namespace Raven.Database.FileSystem.Controllers
             catch (Exception e)
             {
 	            var se = e.SimplifyException();
-	            var msg = "Could not open file system named: " + tenantId + ", " + se.Message;
+	            msg = "Could not open file system named: " + tenantId + ", " + se.Message;
                 Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
@@ -343,40 +344,33 @@ namespace Raven.Database.FileSystem.Controllers
                 {
                     if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
                     {
-                        var msg = "The filesystem " + tenantId +
+                        msg = "The filesystem " + tenantId +
                                   " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";
                         Logger.Warn(msg);
                         throw new HttpException(503, msg);
                     }
-                    
-					args = new RequestWebApiEventArgs()
+
+					landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+
+					return new RequestWebApiEventArgs
                     {
                         Controller = this,
                         IgnoreRequest = false,
                         TenantId = tenantId,
                         FileSystem = resourceStoreTask.Result
                     };
-
-                    if (args.IgnoreRequest)
-                        return false;
                 }
                 catch (Exception e)
                 {
-                    var msg = "Could not open file system named: " + tenantId + ", " + e.InnerException.Message;
+                    msg = "Could not open file system named: " + tenantId + ", " + e.InnerException.Message;
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);
-                }
-
-                landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-            }
-            else
-            {
-                var msg = "Could not find a file system named: " + tenantId;
-                Logger.Warn(msg);
-                throw new HttpException(503, msg);
+                } 
             }
 
-            return true;
+			msg = "Could not find a file system named: " + tenantId;
+			Logger.Warn(msg);
+			throw new HttpException(503, msg);
         }
 
 	    public override string TenantName

@@ -11,16 +11,6 @@ import customColumnParams = require('models/database/documents/customColumnParam
 
 import changesContext = require("common/changesContext");
 
-import conflict = require("models/conflict");
-import indexPriority = require("models/indexPriority");
-import database = require("models/database");
-import conflictVersion = require("models/conflictVersion");
-import transformer = require("models/transformer");
-import indexDefinition = require("models/indexDefinition");
-import customColumns = require("models/customColumns");
-import customColumnParams = require('models/customColumnParams');
-
-import changeSubscription = require('models/changeSubscription');
 import getConflictsCommand = require("commands/database/replication/getConflictsCommand");
 import getReplicationSourcesCommand = require("commands/database/replication/getReplicationSourcesCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");

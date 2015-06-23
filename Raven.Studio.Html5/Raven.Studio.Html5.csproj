@@ -79,7 +79,6 @@
     <TypeScriptCompile Include="App\common\changesContext.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\common\pagedResultSet.ts" />
-    <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\environmentColor.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />

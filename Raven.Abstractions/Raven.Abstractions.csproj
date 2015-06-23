@@ -445,7 +445,6 @@
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />
     <Compile Include="Util\MD5.cs" />
-    <Compile Include="Util\ObjectPool.cs" />
     <Compile Include="Util\NetworkUtil.cs" />
     <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />
@@ -488,7 +487,5 @@
   </Target>
   -->
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <ItemGroup>
-    <Folder Include="Threading\" />
-  </ItemGroup>
+  <ItemGroup />
 </Project>

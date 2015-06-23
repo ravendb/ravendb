@@ -994,19 +994,18 @@ class shell extends viewModelBase {
 
 	navigateToClusterSettings() {
 		this.navigate(this.appUrls.adminSettingsCluster());
+	}
 
-    static getResoucresNames(): string[]
-    {
+	static getResoucresNames(): string[] {
         var arr = shell.databases().map(db => db.name)
             .concat(shell.fileSystems().map(fs => fs.name)).sort();
         var result: string[] = [];
         for (var i = 0; i < arr.length; i++) {
-            if ((arr[i].localeCompare(arr[i+1]))!==0) {
+            if ((arr[i].localeCompare(arr[i + 1])) !== 0) {
                 result.push(arr[i]);
-	}
-            }
-}
-        }
+			}
+		}
+
         return result;
     }
 }

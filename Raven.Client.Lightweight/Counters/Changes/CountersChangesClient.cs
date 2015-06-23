@@ -9,6 +9,8 @@ using Raven.Client.Connection;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
+using Sparrow.Collections;
+
 namespace Raven.Client.Counters.Changes
 {
 

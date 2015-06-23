@@ -2,7 +2,6 @@
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
-import resolveConflict = require("viewmodels/filesystem/resolveConflict");
 import resolveConflict = require("viewmodels/filesystem/synchronization/resolveConflict");
 
 import conflictItem = require("models/filesystem/conflictItem");

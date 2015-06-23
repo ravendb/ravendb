@@ -1,4 +1,6 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.Globalization;
+
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
@@ -432,14 +434,5 @@ namespace Raven.Client.Changes
 
 			return counter;
 		}
-
-        private Task AfterConnection(Func<Task> action)
-        {
-            return Task.ContinueWith(task =>
-            {
-                task.AssertNotFailed();
-                return action();
-            })
-            .Unwrap();
-        }
     }
+}

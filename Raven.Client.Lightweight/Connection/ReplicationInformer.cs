@@ -42,7 +42,7 @@ namespace Raven.Client.Connection
 
 		public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
 		{
-                        return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials))));
+                        return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
 		}
 
 		private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
@@ -137,7 +137,7 @@ namespace Raven.Client.Connection
 
 	    public void RefreshReplicationInformation(AsyncServerClient serverClient)
 		{
-			RefreshReplicationInformationInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials))));
+			RefreshReplicationInformationInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
 		}
 
         public override void RefreshReplicationInformation(ServerClient serverClient)

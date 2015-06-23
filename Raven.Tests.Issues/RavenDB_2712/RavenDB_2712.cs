@@ -7,6 +7,7 @@ using System;
 using System.Threading;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -48,7 +49,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 
 				var server = servers[0];
 				var systemDatabase = server.SystemDatabase;
-				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
+				var database = AsyncHelpers.RunSync(() => server.Server.GetDatabaseInternal("Northwind"));
 				var retriever = database.ConfigurationRetriever;
 
 				retriever.SubscribeToConfigurationDocumentChanges(PeriodicExportSetup.RavenDocumentKey, manualResetEventSlim.Set);

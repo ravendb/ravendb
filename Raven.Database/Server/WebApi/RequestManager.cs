@@ -65,9 +65,8 @@ namespace Raven.Database.Server.WebApi
 
 		public event EventHandler<RequestWebApiEventArgs> BeforeRequest;
 		public event EventHandler<RequestWebApiEventArgs> AfterRequest;
-		public DateTime? LastRequestTime { get; private set; }
 
-		public event EventHandler<BeforeRequestWebApiEventArgs> BeforeRequest;
+		public DateTime? LastRequestTime { get; private set; }
 
 		public virtual void OnBeforeRequest(RequestWebApiEventArgs e)
 		{
@@ -87,7 +86,7 @@ namespace Raven.Database.Server.WebApi
 			AfterRequest += OnAfterRequest;
 			cancellationTokenSource = new CancellationTokenSource();
 			this.landlord = landlord;
-			
+
 			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(landlord.MaxIdleTimeForTenantDatabaseInSec);
 			frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(landlord.FrequencyToCheckForIdleDatabasesInSec);
 
@@ -121,7 +120,7 @@ namespace Raven.Database.Server.WebApi
 			{
 				counters.MetricsCounters.RequestsPerSecondCounter.Mark();
 				Interlocked.Increment(ref counters.MetricsCounters.ConcurrentRequestsCount);
-		}
+			}
 		}
 
 		private void OnAfterRequest(object sender, RequestWebApiEventArgs args)
@@ -196,29 +195,29 @@ namespace Raven.Database.Server.WebApi
 				LastRequestTime = SystemTime.UtcNow;
 				Interlocked.Increment(ref concurrentRequests);
 
-				RequestWebApiEventArgs args;
-				if (controller.TrySetupRequestToProperResource(out args))
+				RequestWebApiEventArgs args = await controller.TrySetupRequestToProperResource();
+				if (args != null)
 				{
 					OnBeforeRequest(args);
 
 					try
 					{
-					if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
-					{
-						response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+						if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
 						{
-                            Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
-						};
+							response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+							{
+								Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
+							};
+						}
+						else
+						{
+							response = await action();
+						}
 					}
-					else
-					{
-						response = await action();
-					}
-				}
 					finally
 					{
 						OnAfterRequest(args);
-			}
+					}
 				}
 			}
 			catch (HttpException httpException)
@@ -290,19 +289,19 @@ namespace Raven.Database.Server.WebApi
 
 
 
-        public void SetThreadLocalState(IEnumerable<KeyValuePair<string, IEnumerable<string>>> innerHeaders, string databaseName)
+		public void SetThreadLocalState(IEnumerable<KeyValuePair<string, IEnumerable<string>>> innerHeaders, string databaseName)
 		{
-            CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() =>
-            {
-                var nameValueCollection = new NameValueCollection();
-                foreach (var innerHeader in innerHeaders)
-                {
-                    nameValueCollection[innerHeader.Key] = innerHeader.Value.FirstOrDefault();                   
-                }
-                
-                return nameValueCollection;
-            });
-          
+			CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() =>
+			{
+				var nameValueCollection = new NameValueCollection();
+				foreach (var innerHeader in innerHeaders)
+				{
+					nameValueCollection[innerHeader.Key] = innerHeader.Value.FirstOrDefault();
+				}
+
+				return nameValueCollection;
+			});
+
 			CurrentOperationContext.User.Value = null;
 
 			LogContext.DatabaseName.Value = databaseName;
@@ -368,17 +367,17 @@ namespace Raven.Database.Server.WebApi
 						sb.Length--;
 					}
 				}
-			    var innerRequest = controller.InnerRequest;
-                var httpRequestHeaders = innerRequest.Headers;
-                var httpContentHeaders = innerRequest.Content == null ? null : innerRequest.Content.Headers;
+				var innerRequest = controller.InnerRequest;
+				var httpRequestHeaders = innerRequest.Headers;
+				var httpContentHeaders = innerRequest.Content == null ? null : innerRequest.Content.Headers;
 				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
 					sw,
-                    new Lazy<HttpHeaders>(() => RavenBaseApiController.CloneRequestHttpHeaders(httpRequestHeaders, httpContentHeaders)),
+					new Lazy<HttpHeaders>(() => RavenBaseApiController.CloneRequestHttpHeaders(httpRequestHeaders, httpContentHeaders)),
 					controller.InnerRequest.Method.Method,
 					response != null ? (int)response.StatusCode : 500,
 					controller.InnerRequest.RequestUri.ToString(),
 					sb != null ? sb.ToString() : null,
-                    controller.InnerRequestsCount
+					controller.InnerRequestsCount
 					);
 			}
 			catch (Exception e)
@@ -401,16 +400,16 @@ namespace Raven.Database.Server.WebApi
 
 			LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.TenantName, curReq);
 
-            if (controller.IsInternalRequest == false)
-            {
-                TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName);    
-            }
+			if (controller.IsInternalRequest == false)
+			{
+				TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName);
+			}
 
 			RememberRecentRequests(logHttpRequestStatsParam, controller.TenantName);
 		}
 
 
-	    private void RememberRecentRequests(LogHttpRequestStatsParams requestLog, string databaseName)
+		private void RememberRecentRequests(LogHttpRequestStatsParams requestLog, string databaseName)
 		{
 			if (string.IsNullOrWhiteSpace(databaseName))
 				databaseName = Constants.SystemDatabase;
@@ -453,7 +452,7 @@ namespace Raven.Database.Server.WebApi
 				ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
 				TenantName = NormalizeTennantName(databaseName),
 				TimeStamp = SystemTime.UtcNow,
-                InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount
+				InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount
 			}
 			);
 		}

@@ -475,7 +475,7 @@ namespace Raven.Database.Indexing
 
 						parallelOperations.Enqueue(parallelStats);
 					});
-				}, description: string.Format("Performing Single Step Reduction for index {0} from Etag {1} for {2} keys", index.Index.PublicName, index.Index.GetLastEtagFromStats(), keysToReduce.Length));
+				}, description: string.Format("Performing Single Step Reduction for index {0} from Etag {1} for {2} keys", index.Index.PublicName, index.Index.GetLastEtagFromStats(), keysToReduce.Count));
 
 				reduceLevelStats.Operations.Add(new ParallelPerformanceStats
 				{

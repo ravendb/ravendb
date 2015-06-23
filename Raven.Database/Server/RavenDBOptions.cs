@@ -92,11 +92,6 @@ namespace Raven.Database.Server
 
 		public Reference<ClusterManager> ClusterManager { get; private set; }
 
-		public WebSocketBufferPool WebSocketBufferPool
-		{
-			get { return webSocketBufferPool; }
-		}
-
 		public void Dispose()
 		{
 			if(preventDisposing)

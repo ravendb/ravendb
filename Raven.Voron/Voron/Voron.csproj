@@ -67,8 +67,6 @@
     <Compile Include="Impl\FileHeaders\FixedSizeTreeHeader.cs" />
     <Compile Include="Trees\Fixed\FixedSizeTree.cs" />
     <Compile Include="Trees\Fixed\Iterators.cs" />
-    <Compile Include="Util\Comparers.cs" />
-    <Compile Include="Util\Hashing.cs" />
     <Compile Include="Impl\Backup\MinimalIncrementalBackup.cs" />
     <Compile Include="Impl\Compaction\StorageCompaction.cs" />
     <Compile Include="Impl\PagePosition.cs" />

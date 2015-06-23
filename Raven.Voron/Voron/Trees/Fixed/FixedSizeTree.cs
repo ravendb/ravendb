@@ -9,6 +9,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+
+using Sparrow;
+
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
@@ -131,7 +134,7 @@ namespace Voron.Trees.Fixed
             if (page.FixedSize_StartPosition != Constants.PageHeaderSize)
             {
                 // we need to move it back, then add the new item
-                StdLib.memmove(page.Base + Constants.PageHeaderSize,
+				Memory.Copy(page.Base + Constants.PageHeaderSize,
                     page.Base + page.FixedSize_StartPosition,
                     page.FixedSize_NumberOfEntries * _entrySize);
                 page.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
@@ -140,7 +143,7 @@ namespace Voron.Trees.Fixed
             var entriesToMove = page.FixedSize_NumberOfEntries - page.LastSearchPosition;
             if (entriesToMove > 0)
             {
-                StdLib.memmove(page.Base + page.FixedSize_StartPosition + ((page.LastSearchPosition + 1) * _entrySize),
+				Memory.Copy(page.Base + page.FixedSize_StartPosition + ((page.LastSearchPosition + 1) * _entrySize),
                     page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize),
                     entriesToMove * _entrySize);
             }
@@ -188,7 +191,7 @@ namespace Voron.Trees.Fixed
 
             if (page.FixedSize_StartPosition != Constants.PageHeaderSize)
             {
-                StdLib.memmove(page.Base + Constants.PageHeaderSize,
+				Memory.Copy(page.Base + Constants.PageHeaderSize,
                     page.Base + page.FixedSize_StartPosition,
                     page.FixedSize_NumberOfEntries * (page.IsLeaf ? _entrySize : BranchEntrySize));
                 page.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
@@ -222,7 +225,7 @@ namespace Voron.Trees.Fixed
             var newEntryPos = parentPage.Base + parentPage.FixedSize_StartPosition + ((parentPage.LastSearchPosition + 1) * BranchEntrySize);
             if (entriesToMove > 0)
             {
-                StdLib.memmove(newEntryPos + BranchEntrySize,
+				Memory.Copy(newEntryPos + BranchEntrySize,
                     newEntryPos,
                     entriesToMove * BranchEntrySize);
             }
@@ -248,7 +251,7 @@ namespace Voron.Trees.Fixed
             {
                 rightPage.FixedSize_NumberOfEntries = (ushort)(page.FixedSize_NumberOfEntries / 4);
                 page.FixedSize_NumberOfEntries -= rightPage.FixedSize_NumberOfEntries;
-                MemoryUtils.Copy(rightPage.Base + rightPage.FixedSize_StartPosition,
+                Memory.Copy(rightPage.Base + rightPage.FixedSize_StartPosition,
                     page.Base + page.FixedSize_StartPosition + (page.FixedSize_NumberOfEntries * _entrySize),
                     rightPage.FixedSize_NumberOfEntries * _entrySize
                     );
@@ -276,11 +279,11 @@ namespace Voron.Trees.Fixed
             using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
             {
                 int srcCopyStart = pos * _entrySize;
-                MemoryUtils.Copy(tmp.TempPagePointer, dataStart, srcCopyStart);
+                Memory.Copy(tmp.TempPagePointer, dataStart, srcCopyStart);
                 var newEntryStart = tmp.TempPagePointer + srcCopyStart;
                 *((long*)newEntryStart) = key;
 
-                MemoryUtils.Copy(newEntryStart + _entrySize, dataStart + srcCopyStart, (startingEntryCount - pos) * _entrySize);
+				Memory.Copy(newEntryStart + _entrySize, dataStart + srcCopyStart, (startingEntryCount - pos) * _entrySize);
 
                 if (newEntriesCount > _maxEmbeddedEntries)
                 {
@@ -298,7 +301,7 @@ namespace Voron.Trees.Fixed
                     allocatePage.FixedSize_NumberOfEntries = newEntriesCount;
                     allocatePage.FixedSize_ValueSize = _valSize;
                     allocatePage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
-                    MemoryUtils.Copy(allocatePage.Base + allocatePage.FixedSize_StartPosition, tmp.TempPagePointer,
+					Memory.Copy(allocatePage.Base + allocatePage.FixedSize_StartPosition, tmp.TempPagePointer,
                         newSize);
 
                     return allocatePage.Base + allocatePage.FixedSize_StartPosition + srcCopyStart + sizeof(long);
@@ -311,7 +314,7 @@ namespace Voron.Trees.Fixed
                     header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
                     header->NumberOfEntries = newEntriesCount;
 
-                    MemoryUtils.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
+					Memory.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
                         newSize);
 
                     return newData + sizeof(FixedSizeTreeHeader.Embedded) + srcCopyStart + sizeof(long);
@@ -450,11 +453,11 @@ namespace Voron.Trees.Fixed
                     header->NumberOfEntries = (byte)page.FixedSize_NumberOfEntries;
                     _flags = FixedSizeTreeHeader.OptionFlags.Embedded;
 
-                    MemoryUtils.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded),
+					Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded),
                         page.Base + page.FixedSize_StartPosition,
                         (_entrySize * page.LastSearchPosition));
 
-                    MemoryUtils.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.LastSearchPosition),
+					Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.LastSearchPosition),
                         page.Base + page.FixedSize_StartPosition + (_entrySize * page.LastSearchPosition) + _entrySize,
                         (_entrySize * (page.FixedSize_NumberOfEntries - page.LastSearchPosition)));
 
@@ -473,7 +476,7 @@ namespace Voron.Trees.Fixed
                     return;
                 }
 
-                StdLib.memmove(page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize),
+				Memory.Copy(page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize),
                     page.Base + page.FixedSize_StartPosition + ((page.LastSearchPosition + 1) * _entrySize),
                     _entrySize * (page.FixedSize_NumberOfEntries - page.LastSearchPosition));
                 // deleted and we are done
@@ -496,7 +499,7 @@ namespace Voron.Trees.Fixed
             else
             {
                 // branch pages must have at least 2 entries, so this is safe to do
-                StdLib.memmove(parentPage.Base + parentPage.FixedSize_StartPosition + (parentPage.LastSearchPosition * BranchEntrySize),
+                Memory.Copy(parentPage.Base + parentPage.FixedSize_StartPosition + (parentPage.LastSearchPosition * BranchEntrySize),
                     parentPage.Base + parentPage.FixedSize_StartPosition + ((parentPage.LastSearchPosition + 1) * BranchEntrySize),
                     BranchEntrySize * (parentPage.FixedSize_NumberOfEntries - parentPage.LastSearchPosition));
             }
@@ -507,7 +510,7 @@ namespace Voron.Trees.Fixed
 
             var lastChildNumber = *(long*)(parentPage.Base + parentPage.FixedSize_StartPosition + sizeof(long));
             var childPage = _tx.GetReadOnlyPage(lastChildNumber);
-            MemoryUtils.Copy(parentPage.Base, childPage.Base, parentPage.PageSize);
+			Memory.Copy(parentPage.Base, childPage.Base, parentPage.PageSize);
             parentPage.PageNumber = parentPageNumber;// overwritten in copy
             _tx.FreePage(lastChildNumber);
         }
@@ -534,12 +537,12 @@ namespace Voron.Trees.Fixed
                 sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - 1) * _entrySize));
 
             int srcCopyStart = pos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
-            MemoryUtils.Copy(newData, ptr, srcCopyStart);
+			Memory.Copy(newData, ptr, srcCopyStart);
             header = (FixedSizeTreeHeader.Embedded*)newData;
             header->NumberOfEntries--;
             header->ValueSize = _valSize;
             header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-            MemoryUtils.Copy(newData + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos) * _entrySize);
+			Memory.Copy(newData + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos) * _entrySize);
         }
 
         public Slice Read(long key)
