@@ -62,6 +62,8 @@ namespace Voron.Trees.Fixed
             public bool Seek(long key)
             {
                 _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
+				if (_fst._lastMatch > 0)
+					_pos++; // We didn't find the key.
                 return _pos != _header->NumberOfEntries;
             }
 
