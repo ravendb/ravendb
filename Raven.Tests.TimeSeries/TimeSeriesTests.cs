@@ -329,12 +329,13 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(24/3*32, time.Length);
 					for (int i = 0; i < 256; i++)
 					{
+						Assert.Equal("Time", time[i].DebugKey);
+						Assert.Equal(PeriodDuration.Hours(3), time[i].Duration);
 						if (i == 40 ||i == 41 || i == 248)
 							continue;
 						Assert.Equal(0, time[i].Value.Volume);
 					}
-					Assert.Equal("Time", time[40].DebugKey);
-					Assert.Equal(PeriodDuration.Hours(3), time[40].Duration);
+					
 					Assert.Equal(1, time[40].Value.Volume);
 					Assert.Equal(6, time[40].Value.Sum);
 					Assert.Equal(6, time[40].Value.Open);
@@ -343,8 +344,6 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(6, time[40].Value.Low);
 
 					Assert.Equal(3, time[41].Value.Volume);
-					Assert.Equal("Time", time[41].DebugKey);
-					Assert.Equal(PeriodDuration.Hours(3), time[41].Duration);
 					Assert.Equal(3, time[41].Value.Volume);
 					Assert.Equal(36, time[41].Value.Sum);
 					Assert.Equal(9, time[41].Value.Open);
@@ -353,8 +352,6 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(9, time[41].Value.Low);
 
 					Assert.Equal("26.3333333333333", (time[248].Value.Sum / time[248].Value.Volume).ToString(CultureInfo.InvariantCulture));
-					Assert.Equal("Time", time[248].DebugKey);
-					Assert.Equal(PeriodDuration.Hours(3), time[248].Duration);
 					Assert.Equal(3, time[248].Value.Volume);
 					Assert.Equal(79, time[248].Value.Sum);
 					Assert.Equal(10, time[248].Value.Open);
@@ -392,11 +389,8 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(17, money[411].Value.Low);
 					Assert.Equal(17, money[411].Value.High);
 
-					Assert.Equal("Money", money[720].DebugKey);
 					Assert.Equal(300, money[720].Value.Sum / money[720].Value.Volume);
 					Assert.Equal(130, money[721].Value.Sum / money[721].Value.Volume);
-					Assert.Equal(PeriodDuration.Hours(2), money[720].Duration);
-					Assert.Equal(PeriodDuration.Hours(2), money[721].Duration);
 					Assert.Equal(2, money[720].Value.Volume);
 					Assert.Equal(1, money[721].Value.Volume);
 					Assert.Equal(54, money[720].Value.Open);

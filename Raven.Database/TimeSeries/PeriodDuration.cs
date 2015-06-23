@@ -106,12 +106,5 @@ namespace Raven.Database.TimeSeries
 					throw new ArgumentOutOfRangeException();
 			}
 		}
-
-		public static PeriodDuration ParseTreeName(string treeName)
-		{
-			var strings = treeName.Substring(TimeSeriesStorage.PeriodTreePrefix.Length)
-				.Split('-');
-			return new PeriodDuration(GenericUtil.ParseEnum<PeriodType>(strings[0]), int.Parse(strings[1]));
-		}
 	}
 }
