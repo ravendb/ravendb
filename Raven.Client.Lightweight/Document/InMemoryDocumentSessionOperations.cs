@@ -1168,7 +1168,7 @@ more responsive application.
 			var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) 
 				|| (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
 
-			if (changes != null)
+			if (changes != null && changedData.Count > 0)
 				changes[documentMetadata.Key] = changedData.ToArray();
 
 			return changed;
