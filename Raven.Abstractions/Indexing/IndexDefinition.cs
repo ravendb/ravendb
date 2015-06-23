@@ -137,9 +137,9 @@ namespace Raven.Abstractions.Indexing
 		{
 			get
 			{
-				if (SuggestionsOptions == null || SuggestionsOptions.Count == 0) 
+				if (SuggestionsOptions == null || SuggestionsOptions.Count == 0)
 					return null;
-				
+
 				return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions());
 			}
 			set
@@ -147,10 +147,14 @@ namespace Raven.Abstractions.Indexing
 				if (value == null)
 					return;
 				SuggestionsOptions = value.Keys.ToHashSet();
-			} 
+			}
 		}
 
-		public ISet<string> SuggestionsOptions { get; set; }
+		public ISet<string> SuggestionsOptions
+		{
+			get { return suggestionsOptions ?? (suggestionsOptions = new HashSet<string>()); }
+			set { suggestionsOptions = value; }
+		}
 
 		/// <summary>
 		/// Index field term vector settings.
@@ -188,34 +192,34 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
-        /// <summary>
-        /// Equals the specified other.
-        /// </summary>
-        /// <param name="other">The other.</param>
-        /// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
-        /// <returns></returns>
-        public bool Equals(IndexDefinition other, bool compareIndexIds = true)
-        {
-            if (ReferenceEquals(null, other))
-                return false;
+		/// <summary>
+		/// Equals the specified other.
+		/// </summary>
+		/// <param name="other">The other.</param>
+		/// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
+		/// <returns></returns>
+		public bool Equals(IndexDefinition other, bool compareIndexIds = true)
+		{
+			if (ReferenceEquals(null, other))
+				return false;
 
-            if (ReferenceEquals(this, other))
-                return true;
+			if (ReferenceEquals(this, other))
+				return true;
 
-            if (compareIndexIds && !Equals(other.IndexId, IndexId))
-                return false;
+			if (compareIndexIds && !Equals(other.IndexId, IndexId))
+				return false;
 
-            return Maps.SequenceEqual(other.Maps) &&
-                    Equals(other.Reduce, Reduce) &&
+			return Maps.SequenceEqual(other.Maps) &&
+					Equals(other.Reduce, Reduce) &&
 					(other.MaxIndexOutputsPerDocument == MaxIndexOutputsPerDocument) &&
-                    DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
-                    DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
-                    DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
-                    DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
+					DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
+					DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
+					DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
+					DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
 					SetExtensions.ContentEquals(other.SuggestionsOptions, SuggestionsOptions) &&
-                    DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
-                    DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
-        }
+					DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
+					DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
+		}
 
 		private static int DictionaryHashCode<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> x)
 		{
@@ -276,6 +280,8 @@ namespace Raven.Abstractions.Indexing
 		private IDictionary<string, SpatialOptions> spatialIndexes;
 		[JsonIgnore]
 		private IDictionary<string, string> internalFieldsMapping;
+		[JsonIgnore]
+		private ISet<string> suggestionsOptions;
 
 		/// <summary>
 		/// Provide a cached version of the index hash code, which is used when generating
@@ -342,10 +348,10 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public bool IsTestIndex { get; set; }
 
-        /// <summary>
-        /// Whatever this is a side by side index
-        /// </summary>
-        public bool IsSideBySideIndex { get; set; }
+		/// <summary>
+		/// Whatever this is a side by side index
+		/// </summary>
+		public bool IsSideBySideIndex { get; set; }
 
 		/// <summary>
 		/// Remove the default values that we don't actually need
