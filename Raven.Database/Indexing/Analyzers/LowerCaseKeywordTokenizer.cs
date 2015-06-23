@@ -1,6 +1,8 @@
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Util;
+using Raven.Abstractions.Util;
+using Sparrow;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
@@ -8,14 +10,14 @@ namespace Raven.Database.Indexing
 {
 	public class LowerCaseKeywordTokenizer : Tokenizer
 	{
+        private static readonly bool isAsciiCasingSameAsInvariant = CultureInfo.InvariantCulture.CompareInfo.Compare("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", CompareOptions.IgnoreCase) == 0;
+        private static readonly TextInfo invariantTextInfo = CultureInfo.InvariantCulture.TextInfo;   
+
 		public LowerCaseKeywordTokenizer(System.IO.TextReader input)
 			: base(input)
 		{
             offsetAtt = AddAttribute<IOffsetAttribute>();
-            termAtt = AddAttribute<ITermAttribute>();
-
-            isAsciiCasingSameAsInvariant = CultureInfo.InvariantCulture.CompareInfo.Compare("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", CompareOptions.IgnoreCase) == 0;
-            invariantTextInfo = CultureInfo.InvariantCulture.TextInfo;   
+            termAtt = AddAttribute<ITermAttribute>();            
 		}
 
 		protected LowerCaseKeywordTokenizer(AttributeSource source, System.IO.TextReader input)
@@ -23,9 +25,6 @@ namespace Raven.Database.Indexing
 		{
             offsetAtt = AddAttribute<IOffsetAttribute>();
             termAtt = AddAttribute<ITermAttribute>();
-
-            isAsciiCasingSameAsInvariant = CultureInfo.InvariantCulture.CompareInfo.Compare("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", CompareOptions.IgnoreCase) == 0;
-            invariantTextInfo = CultureInfo.InvariantCulture.TextInfo;
 		}
 
 		protected LowerCaseKeywordTokenizer(AttributeFactory factory, System.IO.TextReader input)
@@ -33,19 +32,15 @@ namespace Raven.Database.Indexing
 		{
             offsetAtt = AddAttribute<IOffsetAttribute>();
             termAtt = AddAttribute<ITermAttribute>();
-
-            isAsciiCasingSameAsInvariant = CultureInfo.InvariantCulture.CompareInfo.Compare("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", CompareOptions.IgnoreCase) == 0;
-            invariantTextInfo = CultureInfo.InvariantCulture.TextInfo;
 		}
 
 		private int offset = 0, bufferIndex = 0, dataLen = 0;
+
 		private const int IO_BUFFER_SIZE = 4096;
-		private readonly char[] ioBuffer = new char[IO_BUFFER_SIZE];
+        private static ObjectPool<char[]> bufferPool = new ObjectPool<char[]>(() => new char[IO_BUFFER_SIZE], 10);
 
         private readonly ITermAttribute termAtt;
         private readonly IOffsetAttribute offsetAtt;
-        private readonly bool isAsciiCasingSameAsInvariant;
-        private readonly TextInfo invariantTextInfo;
 
 		/// <summary>Returns true iff a character should be included in a token.  This
 		/// tokenizer generates as tokens adjacent sequences of characters which
@@ -76,52 +71,63 @@ namespace Raven.Database.Indexing
             {
                 return invariantTextInfo.ToLower(c);
             }                
-		}
+		}        
 
 		public override bool IncrementToken()
 		{
 			ClearAttributes();
+
 			int length = 0;
 			int start = bufferIndex;
-			char[] buffer = termAtt.TermBuffer();
-			while (true)
-			{
 
-				if (bufferIndex >= dataLen)
-				{
-					offset += dataLen;
-					dataLen = input.Read(ioBuffer, 0, ioBuffer.Length);
-					if (dataLen <= 0)
-					{
-						dataLen = 0; // so next offset += dataLen won't decrement offset
-						if (length > 0)
-							break;
-						return false;
-					}
-					bufferIndex = 0;
-				}
+            char[] ioBuffer = bufferPool.Allocate();
+            try
+            {
+                char[] buffer = termAtt.TermBuffer();
+                while (true)
+                {
+                    if (bufferIndex >= dataLen)
+                    {
+                        offset += dataLen;
+                        dataLen = input.Read(ioBuffer, 0, ioBuffer.Length);
+                        if (dataLen <= 0)
+                        {
+                            dataLen = 0; // so next offset += dataLen won't decrement offset
+                            if (length > 0)
+                                break;
+                            return false;
+                        }
+                        bufferIndex = 0;
+                    }
 
-				char c = ioBuffer[bufferIndex++];
+                    char c = ioBuffer[bufferIndex++];
 
-				if (IsTokenChar(c))
-				{
-					// if it's a token char
+                    if (IsTokenChar(c))
+                    {
+                        // if it's a token char
 
-					if (length == 0)
-						// start of token
-						start = offset + bufferIndex - 1;
-					else if (length == buffer.Length)
-						buffer = termAtt.ResizeTermBuffer(1 + length);
+                        if (length == 0)
+                            // start of token
+                            start = offset + bufferIndex - 1;
+                        else if (length == buffer.Length)
+                            buffer = termAtt.ResizeTermBuffer(1 + length);
 
-					buffer[length++] = Normalize(c); // buffer it, normalized
-				}
-				else if (length > 0)
-					// at non-Letter w/ chars
-					break; // return 'em
-			}
+                        buffer[length++] = Normalize(c); // buffer it, normalized
+                    }
+                    else if (length > 0)
+                        // at non-Letter w/ chars
+                        break; // return 'em
+                }
 
-			termAtt.SetTermLength(length);
-			offsetAtt.SetOffset(CorrectOffset(start), CorrectOffset(start + length));
+                termAtt.SetTermLength(length);
+                offsetAtt.SetOffset(CorrectOffset(start), CorrectOffset(start + length));
+            }
+            finally
+            {
+                if (ioBuffer != null)
+                    bufferPool.Free(ioBuffer);
+            }           
+
 			return true;
 		}
 

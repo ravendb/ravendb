@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Sparrow;
+using Sparrow.Platform;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -75,7 +77,7 @@ namespace Voron.Impl.Journal
 			_recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
 			var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
 
-			StdLib.memset(dataPage, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+			UnmanagedMemory.Set(dataPage, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
 			if (current->Compressed)
 			{
 				if (TryDecompressTransactionPages(options, current, dataPage) == false)
@@ -83,7 +85,7 @@ namespace Voron.Impl.Journal
 			}
 			else
 			{
-                MemoryUtils.Copy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+                Memory.Copy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
 			}
 
 			var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();

@@ -15,7 +15,6 @@ using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -173,22 +172,25 @@ namespace Raven.Database.Counters.Controllers
 	        get { return CounterStorage.Configuration; }
 	    }
 
-	    public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
+		public override async Task<RequestWebApiEventArgs> TrySetupRequestToProperResource()
 		{
 			var tenantId = CounterStorageName;
 
-		    if (string.IsNullOrWhiteSpace(tenantId))
-			    return true;
+			if (string.IsNullOrWhiteSpace(tenantId))
+			{
+				throw new HttpException(503, "Could not find a file system with no name");
+			}
 
-		    Task<CounterStorage> resourceStoreTask;
+			Task<CounterStorage> resourceStoreTask;
 			bool hasDb;
+			string msg;
 			try
 			{
 				hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
 			}
 			catch (Exception e)
 			{
-				var msg = "Could not open counter named: " + tenantId;
+				msg = "Could not open counter named: " + tenantId;
 				Logger.WarnException(msg, e);
 				throw new HttpException(503, msg, e);
 			}
@@ -198,38 +200,33 @@ namespace Raven.Database.Counters.Controllers
 				{
                     if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
 					{
-						var msg = "The counter " + tenantId +
+						msg = "The counter " + tenantId +
 								  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";
 						Logger.Warn(msg);
 						throw new HttpException(503, msg);
 					}
-					var args = new BeforeRequestWebApiEventArgs
+
+					landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+
+					return new RequestWebApiEventArgs
 					{
 						Controller = this,
 						IgnoreRequest = false,
 						TenantId = tenantId,
 						Counters = resourceStoreTask.Result
 					};
-					rm.OnBeforeRequest(args);
-					if (args.IgnoreRequest)
-						return false;
 				}
 				catch (Exception e)
 				{
-					var msg = "Could open counters named: " + tenantId;
+					msg = "Could open counters named: " + tenantId;
 					Logger.WarnException(msg, e);
 					throw new HttpException(503, msg, e);
 				}
+			}
 
-				landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-			}
-			else
-			{
-				var msg = "Could not find a counter named: " + tenantId;
-				Logger.Warn(msg);
-				throw new HttpException(503, msg);
-			}
-			return true;
+			msg = "Could not find a counter named: " + tenantId;
+			Logger.Warn(msg);
+			throw new HttpException(503, msg);
 		}
 
 		public override string TenantName
@@ -239,7 +236,7 @@ namespace Raven.Database.Counters.Controllers
 
 		private const string TenantNamePrefix = "cs/";
 
-		public override void MarkRequestDuration(long duration)
+        public override void MarkRequestDuration(long duration)
         {
             if (Storage == null)
                 return;

@@ -1,7 +1,8 @@
 using System;
 using System.Linq;
 using Raven.Abstractions.Counters.Notifications;
-using Raven.Database.Util;
+
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
 {

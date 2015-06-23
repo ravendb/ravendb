@@ -13,7 +13,42 @@ namespace Raven.Database.Indexing
 	public sealed class RavenPerFieldAnalyzerWrapper : Analyzer
 	{
 		private readonly Analyzer defaultAnalyzer;
-		private readonly IDictionary<string, Analyzer> analyzerMap = new Dictionary<string, Analyzer>();
+		private readonly IDictionary<string, Analyzer> analyzerMap = new Dictionary<string, Analyzer>( new PerFieldAnalyzerComparer() );
+
+        private class PerFieldAnalyzerComparer : IEqualityComparer<string>
+        {
+            public bool Equals(string inDictionary, string value)
+            {
+                if ( value[0] == '@' )
+                {
+                    for (int i = 1; i < inDictionary.Length - value.Length; i++ )
+                    {
+                        if ( inDictionary[i] == '<' )
+                        {
+                            i++;
+                            for ( int v = 0; v < value.Length; v++, i++ )
+                            {
+                                if (value[v] != inDictionary[i])
+                                    return false;
+                            }
+
+                            if (i == inDictionary.Length) // Not ending with '>'
+                                return false;
+
+                            return inDictionary[i] == '>';          
+                        }
+                    }
+                    return false;
+                }
+
+                return string.Equals(inDictionary, value, System.StringComparison.Ordinal);
+            }
+
+            public int GetHashCode(string obj)
+            {
+                return obj.GetHashCode();
+            }
+        }
 
 		public RavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer)
 		{
@@ -32,15 +67,9 @@ namespace Raven.Database.Indexing
 
 		private Analyzer GetAnalyzer(string fieldName)
 		{
-			if (fieldName.StartsWith("@"))
-			{
-				var indexOfFieldStart = fieldName.IndexOf('<');
-				var indexOfFieldEnd = fieldName.LastIndexOf('>');
-				if (indexOfFieldStart != -1 && indexOfFieldEnd != -1)
-				{
-					fieldName = fieldName.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart - 1);
-				}
-			}
+            if (analyzerMap.Count == 0)
+                return defaultAnalyzer;
+
 			Analyzer value;
 			analyzerMap.TryGetValue(fieldName, out value);
 			return value ?? defaultAnalyzer;

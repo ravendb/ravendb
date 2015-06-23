@@ -1137,7 +1137,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private string GetDebugInfomration()
 		{
-			return "is-replicated=true&from=" + Uri.EscapeDataString(docDb.ServerUrl);
+			return Constants.IsIndexReplicatedUrlParamName + "=true&from=" + Uri.EscapeDataString(docDb.ServerUrl);
 		}
 
 		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, ReplicationStrategy destination, Dictionary<string, int> replicatedIndexTombstones)
@@ -1154,7 +1154,9 @@ namespace Raven.Bundles.Replication.Tasks
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated index deletion (index name = {0})", tombstone.Key);
-					replicatedIndexTombstones[tombstone.Key]++;
+				    int value;
+				    replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
+				    replicatedIndexTombstones[tombstone.Key] = value + 1;
 				}
 				catch (Exception e)
 				{
@@ -1165,7 +1167,8 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private void ReplicateTransformerDeletionIfNeeded(List<JsonDocument> transformerTombstones, ReplicationStrategy destination, Dictionary<string, int> replicatedTransformerTombstones)
+		private void ReplicateTransformerDeletionIfNeeded(List<JsonDocument> transformerTombstones, ReplicationStrategy destination,
+            Dictionary<string, int> replicatedTransformerTombstones)
 		{
 			if (transformerTombstones.Count == 0)
 				return;
@@ -1179,7 +1182,9 @@ namespace Raven.Bundles.Replication.Tasks
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated transformer deletion (transformer name = {0})", tombstone.Key);
-					replicatedTransformerTombstones[tombstone.Key]++;
+                    int value;
+                    replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
+                    replicatedTransformerTombstones[tombstone.Key] = value + 1;
 				}
 				catch (Exception e)
 				{
@@ -1233,7 +1238,10 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
 			var duration = Stopwatch.StartNew();
-			var result = new JsonDocumentsToReplicate();
+			var result = new JsonDocumentsToReplicate
+			{
+			    LastEtag = Etag.Empty,
+			};
 			try
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();

@@ -3,7 +3,8 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
-using Raven.Database.Util;
+
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
 {

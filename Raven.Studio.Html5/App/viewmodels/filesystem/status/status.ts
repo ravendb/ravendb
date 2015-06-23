@@ -1,6 +1,7 @@
 ﻿import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import pagedList = require("common/pagedList");
+import changesContext = require("common/changesContext");
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import synchronizationDetail = require("models/filesystem/synchronizationDetail");
@@ -64,7 +65,7 @@ class status extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [ shell.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
+        return [changesContext.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
     }
 
     private processFsSync(e: synchronizationUpdateNotification) {

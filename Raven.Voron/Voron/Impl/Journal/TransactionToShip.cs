@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Diagnostics;
 using System.IO;
 using Voron.Impl.Paging;
@@ -35,7 +36,7 @@ namespace Voron.Impl.Journal
 	        {
 				for (int i = 0; i < CompressedPages.Length; i++)
 	            {
-					MemoryUtils.Copy(p + (i * AbstractPager.PageSize), (byte*)CompressedPages[i].ToPointer(), AbstractPager.PageSize);
+					Memory.Copy(p + (i * AbstractPager.PageSize), (byte*)CompressedPages[i].ToPointer(), AbstractPager.PageSize);
 	            }
 	        }
 	    }

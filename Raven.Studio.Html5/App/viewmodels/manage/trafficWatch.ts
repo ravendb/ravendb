@@ -104,7 +104,7 @@ class trafficWatch extends viewModelBase {
 
 
     configureConnection() {
-        var configDialog = new watchTrafficConfigDialog(shell.databases);
+        var configDialog = new watchTrafficConfigDialog();
         app.showDialog(configDialog);
 
         configDialog.configurationTask.done((x: any) => {

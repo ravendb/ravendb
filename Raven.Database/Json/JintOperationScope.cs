@@ -111,8 +111,12 @@ namespace Raven.Database.Json
 
                 return rja;
             }
-            if (v.IsObject())
-                return ToRavenJObject(v, propertyKey, recursiveCall);
+		    if (v.IsObject())
+		    {
+                if(v.AsObject().IsPropagatedNullObject)
+                    return RavenJValue.Null;
+		        return ToRavenJObject(v, propertyKey, recursiveCall);
+		    }
             if (v.IsRegExp())
                 return null;
 
@@ -122,7 +126,7 @@ namespace Raven.Database.Json
 		public JsValue ToJsObject(Engine engine, RavenJObject doc, string propertyName = null)
         {
 			var jsObject = engine.Object.Construct(Arguments.Empty);
-
+		    jsObject.NullPropagation = true;
             foreach (var prop in doc)
             {
 	            var propertyKey = CreatePropertyKey(prop.Key, propertyName);

@@ -6,6 +6,7 @@
 
 using Raven.Abstractions.Extensions;
 using Raven.Database.Util;
+using Sparrow.Collections;
 using System;
 using System.IO;
 using System.Net;

@@ -1291,6 +1291,7 @@ namespace Raven.Database.Config
 		    Encryption.UseFips = defaultConfiguration.Encryption.UseFips;
 
 		    AssembliesDirectory = defaultConfiguration.AssembliesDirectory;
+			Storage.Voron.AllowOn32Bits = defaultConfiguration.Storage.Voron.AllowOn32Bits;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()

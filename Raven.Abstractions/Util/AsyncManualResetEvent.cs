@@ -18,8 +18,16 @@ namespace Raven.Abstractions.Util
         public async Task<bool> WaitAsync(int timeout)
         {
             var task = tcs.Task;
+            
 			return await Task.WhenAny(task, Task.Delay(timeout)) == task;
 		}
+
+        public async Task<bool> WaitAsync(int timeout, CancellationToken cancellationToken)
+        {
+            var task = tcs.Task;
+
+            return await Task.WhenAny(task, Task.Delay(timeout, cancellationToken)) == task;
+        }
 
         public void Set() { tcs.TrySetResult(true); }
 

@@ -40,7 +40,7 @@ namespace Raven.Client.FileSystem.Impl
         {
             var commands = session.Commands;
 
-            var pipe = new BlockingStream(10);           
+            var pipe = new BlockingStream();           
 
             Task.Run(() => StreamWriter(pipe))
                                 .ContinueWith(x => pipe.CompleteWriting())

@@ -4,6 +4,8 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Util;
 
+using Sparrow.Collections;
+
 namespace Raven.Database.Server.Connections
 {
 	public class DocumentsConnectionState
@@ -28,10 +30,14 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentSet<string> matchingBulkInserts =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ConcurrentSet<long> matchingDataSubscriptions =
+			new ConcurrentSet<long>();
+
 		private int watchAllDocuments;
 		private int watchAllIndexes;
 		private int watchAllTransformers;
 		private int watchAllReplicationConflicts;
+		private int watchAllDataSubscriptions;
 
 		public DocumentsConnectionState(Action<object> enqueue)
 		{
@@ -158,6 +164,26 @@ namespace Raven.Database.Server.Connections
 			matchingBulkInserts.TryRemove(operationId);
 		}
 
+		public void WatchAllDataSubscriptions()
+		{
+			Interlocked.Increment(ref watchAllDataSubscriptions);
+		}
+
+		public void UnwatchAllDataSubscriptions()
+		{
+			Interlocked.Decrement(ref watchAllDataSubscriptions);
+		}
+
+		public void WatchDataSubscription(long id)
+		{
+			matchingDataSubscriptions.TryAdd(id);
+		}
+
+		public void UnwatchDataSubscription(long id)
+		{
+			matchingDataSubscriptions.TryRemove(id);
+		}
+
 		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
 		{
 			if (!matchingBulkInserts.Contains(string.Empty) &&
@@ -246,6 +272,20 @@ namespace Raven.Database.Server.Connections
 			}
 
 			enqueue(new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" });
+		}
+
+		public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
+		{
+			if (watchAllDataSubscriptions > 0)
+			{
+				enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
+				return;
+			}
+
+			if (matchingDataSubscriptions.Contains(dataSubscriptionChangeNotification.Id) == false)
+				return;
+
+			enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
 		}
 	}
 }

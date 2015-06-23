@@ -49,7 +49,10 @@ namespace Raven.Database.Server.Connections
 		public ConnectionState Register(IEventsTransport transport)
 		{
 			timeSensitiveStore.Seen(transport.Id);
-			transport.Disconnected += () => TimeSensitiveStore.Missing(transport.Id);
+			transport.Disconnected += () =>
+			{
+			    Disconnect(transport.Id);
+			};
 			return connections.AddOrUpdate(transport.Id, new ConnectionState(transport), (s, state) =>
 			                                                                             	{
 			                                                                             		state.Reconnect(transport);
@@ -157,6 +160,17 @@ namespace Raven.Database.Server.Connections
 			foreach (var connectionState in connections)
 			{
 				connectionState.Value.CounterStorage.Send(bulkOperationNotification);
+			}
+		}
+
+		public event Action<object, DataSubscriptionChangeNotification> OnDataSubscriptionChangeNotification = delegate { };
+
+		public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
+		{
+			OnDataSubscriptionChangeNotification(this, dataSubscriptionChangeNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.DocumentStore.Send(dataSubscriptionChangeNotification);
 			}
 		}
 

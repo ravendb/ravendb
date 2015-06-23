@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Sparrow;
+using Sparrow.Platform;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -159,14 +161,14 @@ namespace Voron.Impl.Backup
 								totalNumberOfPages += size;
 								finalPager.EnsureContinuous(null, start, size); //maybe increase size
 
-                                MemoryUtils.Copy(finalPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
+                                Memory.Copy(finalPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
 
 								start += size;
 							}
 
 
 							var txPage = finalPager.AcquirePagePointer(0);
-							StdLib.memset(txPage, 0, AbstractPager.PageSize);
+							UnmanagedMemory.Set(txPage, 0, AbstractPager.PageSize);
 							var txHeader = (TransactionHeader*)txPage;
 							txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 							txHeader->FreeSpace = lastTransaction.FreeSpace;

@@ -51,7 +51,7 @@ namespace Raven.Database.Client.Aws
 			var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
 			client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
-			var response = client.PutAsync(url, content).ResultUnwrap();
+			var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
 			if (response.IsSuccessStatusCode)
 				return;
 
@@ -80,14 +80,14 @@ namespace Raven.Database.Client.Aws
 			var client = GetClient();
 			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
 
-			var response = client.SendAsync(requestMessage).ResultUnwrap();
+			var response = AsyncHelpers.RunSync(() => client.SendAsync(requestMessage));
 			if (response.StatusCode == HttpStatusCode.NotFound)
 				return null;
 
 			if (response.IsSuccessStatusCode == false)
 				throw ErrorResponseException.FromResponseMessage(response);
 
-			var data = response.Content.ReadAsStreamAsync().ResultUnwrap();
+			var data = AsyncHelpers.RunSync(() => response.Content.ReadAsStreamAsync());
 			var metadataHeaders = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
 			return new Blob(data, metadataHeaders);

@@ -25,6 +25,7 @@ using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using System.Runtime.CompilerServices;
+using Sparrow;
 
 namespace Raven.Database.Indexing
 {
@@ -121,8 +122,7 @@ namespace Raven.Database.Indexing
 
             if (value == null)
             {
-                yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
-                                 Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                yield return CreateFieldWithCaching(name, Constants.NullValue, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
                 yield break;
             }
 
@@ -531,14 +531,16 @@ namespace Raven.Database.Indexing
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(FieldCacheKey x, FieldCacheKey y)
             {
-                if (x.HashKey.Value != y.HashKey.Value)
+                if (x.HashKey != y.HashKey)
+                {
                     return false;
+                }
                 else // We are thinking it is possible to have collisions. This may not be true ever!
                 {
-                    if (string.Equals(x.name, y.name) &&
-                         Equals(x.index, y.index) &&
-                         Equals(x.store, y.store) &&
-                         Equals(x.termVector, y.termVector))
+                    if ( x.index == y.index &&
+                         x.store == y.store &&
+                         x.termVector == y.termVector &&
+                         string.Equals(x.name, y.name))
                     {
                         if (x.multipleItemsSameField.Length != y.multipleItemsSameField.Length)
                             return false;
@@ -558,7 +560,7 @@ namespace Raven.Database.Indexing
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int GetHashCode(FieldCacheKey obj)
             {
-                return obj.HashKey.Value;
+                return obj.HashKey;
             }
         }
 
@@ -570,8 +572,36 @@ namespace Raven.Database.Indexing
             internal readonly Field.TermVector termVector;
             internal readonly int[] multipleItemsSameField;
 
+            private int _hashKey;
+
             // We can precalculate the hash code because all fields involved are readonly.
-            internal readonly Lazy<int> HashKey;
+            internal int HashKey 
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get 
+                {
+                    if (_hashKey == 0)
+                    {
+                        unsafe
+                        {
+                            int nameHash = (name != null ? name.GetHashCode() : 0);
+                            int fieldHash = (index != null ? (byte)index : -1) << 16 | ((byte)store << 8) | (byte)termVector;
+                            int hash = Hashing.CombineInline(nameHash, fieldHash);
+
+                            if (multipleItemsSameField.Length > 0)
+                            {
+                                fixed (int* buffer = multipleItemsSameField)
+                                {
+                                    _hashKey = (int)Hashing.XXHash32.CalculateInline((byte*)buffer, multipleItemsSameField.Length * sizeof(int), (uint)hash);
+                                }
+                            }
+                            else _hashKey = hash;
+                        }
+                    }
+
+                    return _hashKey;
+                }
+            }
 
             public FieldCacheKey(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
             {
@@ -580,35 +610,19 @@ namespace Raven.Database.Indexing
                 this.store = store;
                 this.termVector = termVector;
                 this.multipleItemsSameField = multipleItemsSameField;
-
-                this.HashKey = new Lazy<int>(CalculateHashCode);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private int CalculateHashCode ()
-            {
-                unchecked
-                {
-                    int hashCode = (name != null ? name.GetHashCode() : 0);
-                    hashCode = (hashCode * 397) ^ (index != null ? index.GetHashCode() : 0);
-                    hashCode = (hashCode * 397) ^ store.GetHashCode();
-                    hashCode = (hashCode * 397) ^ termVector.GetHashCode();
-                    hashCode = multipleItemsSameField.Aggregate(hashCode, (h, x) => h * 397 ^ x);
-                    return hashCode;
-                }
             }
 
             public override int GetHashCode()
             {
-                return this.HashKey.Value;
+                return HashKey;
             }
         }
 
         private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index, Field.TermVector termVector)
         {
             var cacheKey = new FieldCacheKey(name, index, store, termVector, multipleItemsSameFieldCount.ToArray());
+            
             Field field;
-
             if (fieldsCache.TryGetValue(cacheKey, out field) == false)
                 fieldsCache[cacheKey] = field = new Field(name, value, store, index, termVector);
 

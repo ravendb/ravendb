@@ -1846,10 +1846,37 @@ namespace Raven.Client.Connection.Async
 
 			public void Dispose()
 			{
-				reader.Close();
-				streamReader.Close();
-				stream.Close();
-				request.Dispose();
+				try
+				{
+					reader.Close();
+				}
+				catch (Exception)
+				{
+				}
+				try
+				{
+					streamReader.Close();
+				}
+				catch (Exception )
+				{
+					
+				}
+				try
+				{
+					stream.Close();
+				}
+				catch (Exception )
+				{
+					
+				}
+				try
+				{
+					request.Dispose();
+				}
+				catch (Exception )
+				{
+					
+				}
 			}
 
 			public async Task<bool> MoveNextAsync()
@@ -2066,6 +2093,8 @@ namespace Raven.Client.Connection.Async
 
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 		{
+			if (options.ChunkedBulkInsertOptions != null)
+				return new ChunkedRemoteBulkInsertOperation(options,this,changes);
 			return new RemoteBulkInsertOperation(options, this, changes);
 		}
 

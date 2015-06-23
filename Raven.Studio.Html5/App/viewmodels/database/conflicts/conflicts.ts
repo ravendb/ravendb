@@ -9,6 +9,8 @@ import indexDefinition = require("models/database/index/indexDefinition");
 import customColumns = require("models/database/documents/customColumns");
 import customColumnParams = require('models/database/documents/customColumnParams');
 
+import changesContext = require("common/changesContext");
+
 import getConflictsCommand = require("commands/database/replication/getConflictsCommand");
 import getReplicationSourcesCommand = require("commands/database/replication/getReplicationSourcesCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
@@ -40,7 +42,7 @@ class conflicts extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllReplicationConflicts((e) => this.refreshConflictsObservable(new Date().getTime())) 
+            changesContext.currentResourceChangesApi().watchAllReplicationConflicts((e) => this.refreshConflictsObservable(new Date().getTime())) 
         ];
     }
 

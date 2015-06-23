@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Sparrow;
+using Sparrow.Platform;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
@@ -24,12 +25,12 @@ namespace Voron.Impl
 
 		private readonly WriteAheadJournal _journal;
 		private Dictionary<Tuple<Tree, MemorySlice>, Tree> _multiValueTrees;
-        private readonly HashSet<long> _dirtyPages = new HashSet<long>(LongEqualityComparer.Instance);
-		private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(LongEqualityComparer.Instance);
+        private readonly HashSet<long> _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
+        private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
-        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(LongEqualityComparer.Instance);
+        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
@@ -105,8 +106,11 @@ namespace Voron.Impl
 				_scratchPagerStates = scratchPagerStates;
 
 				_state = env.State.Clone(this);
-				_journal.GetSnapshots().ForEach(AddJournalSnapshot);
-				return;
+
+                foreach (var snapshot in _journal.GetSnapshots())
+                    AddJournalSnapshot(snapshot);
+
+                return;
 			}
 
 			_state = env.State.Clone(this);
@@ -157,7 +161,7 @@ namespace Voron.Impl
 			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
 
 			var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-            MemoryUtils.Copy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
+            Memory.Copy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
 
 			_allocatedPagesInTransaction++;
 
@@ -178,7 +182,7 @@ namespace Voron.Impl
 			
             _transactionHeaderPage = allocation;
 
-			StdLib.memset(page.Base, 0, AbstractPager.PageSize);
+			UnmanagedMemory.Set(page.Base, 0, AbstractPager.PageSize);
 			_txHeader = (TransactionHeader*)page.Base;
 			_txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
@@ -245,7 +249,7 @@ namespace Voron.Impl
 
 		    var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
-            MemoryUtils.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
+            Memory.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
 			newPage.LastMatch = page.LastMatch;
 			tree.RecentlyFoundPages.Reset(num);
@@ -586,7 +590,7 @@ namespace Voron.Impl
 		}
 
 		private void AddJournalSnapshot(JournalSnapshot snapshot)
-		{
+		{            
 			if (JournalSnapshots.Any(x => x.Number == snapshot.Number))
 				throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.Number +
 													" to the transaction, because it already exists in a snapshot collection");

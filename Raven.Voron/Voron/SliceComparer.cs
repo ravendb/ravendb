@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -40,12 +41,12 @@ namespace Voron
                         {
                             fixed (byte* b = y.Array)
                             {
-                                r = MemoryUtils.CompareInline(a, b, size);
+                                r = Memory.CompareInline(a, b, size);
                             }
                         }
                         else
                         {
-                            r = MemoryUtils.CompareInline(a, y.Pointer, size);
+                            r = Memory.CompareInline(a, y.Pointer, size);
                         }
                     }
                 }
@@ -55,12 +56,12 @@ namespace Voron
                     {
                         fixed (byte* b = y.Array)
                         {
-                            r = MemoryUtils.CompareInline(x.Pointer, b, size);
+                            r = Memory.CompareInline(x.Pointer, b, size);
                         }
                     }
                     else
                     {
-                        r = MemoryUtils.CompareInline(x.Pointer, y.Pointer, size);
+                        r = Memory.CompareInline(x.Pointer, y.Pointer, size);
                     }
                 }
             }

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Database.Json;
 using Raven.Json.Linq;
@@ -23,7 +24,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 			{
 				var server = servers[0];
 				var systemDatabase = server.SystemDatabase;
-				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
+				var database = AsyncHelpers.RunSync(() => server.Server.GetDatabaseInternal("Northwind"));
 				var retriever = database.ConfigurationRetriever;
 
 				var document = retriever.GetConfigurationDocument<RavenJObject>(Constants.RavenJavascriptFunctions);
@@ -55,7 +56,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 			{
 				var server = servers[0];
 				var systemDatabase = server.SystemDatabase;
-				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
+				var database = AsyncHelpers.RunSync(() => server.Server.GetDatabaseInternal("Northwind"));
 
 				systemDatabase
 				.Documents
@@ -118,7 +119,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 			{
 				var server = servers[0];
 				var systemDatabase = server.SystemDatabase;
-				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
+				var database = AsyncHelpers.RunSync(() => server.Server.GetDatabaseInternal("Northwind"));
 				var retriever = database.ConfigurationRetriever;
 
 				var document = retriever.GetConfigurationDocument<RavenJObject>(Constants.RavenJavascriptFunctions);

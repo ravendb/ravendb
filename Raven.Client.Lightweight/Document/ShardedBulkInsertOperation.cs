@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
@@ -32,7 +33,7 @@ namespace Raven.Client.Document
 			Shards = shardedDocumentStore.ShardStrategy.Shards;
 			Bulks = new Dictionary<string, BulkInsertOperation>();
 			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(shardedDocumentStore.Conventions,
-				entity => shardedDocumentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).ResultUnwrap());
+				entity => AsyncHelpers.RunSync(() => shardedDocumentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity)));
 			shardResolutionStrategy = shardedDocumentStore.ShardStrategy.ShardResolutionStrategy;
 			shardStrategy = this.shardedDocumentStore.ShardStrategy;
 		}

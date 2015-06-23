@@ -18,6 +18,7 @@ using Raven.Database.Util;
 
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
+using Sparrow.Collections;
 
 namespace Raven.Database.Config
 {
