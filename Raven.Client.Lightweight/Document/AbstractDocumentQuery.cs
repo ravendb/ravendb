@@ -596,7 +596,6 @@ namespace Raven.Client.Document
 		protected internal QueryOperation InitializeQueryOperation()
 		{
 			var indexQuery = GetIndexQuery(isAsync: false);
-			this.afterStreamExecutedCallback = afterStreamExecutedCallback;
 
 			if (beforeQueryExecutionAction != null)
 				beforeQueryExecutionAction(indexQuery);

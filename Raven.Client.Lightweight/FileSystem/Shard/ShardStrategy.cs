@@ -16,9 +16,6 @@ namespace Raven.Client.FileSystem.Shard
 
         public delegate string ModifyFileNameFunc(FilesConvention convention, string shardId, string filename);
 
-		private Task _validateShards;
-
-
         public ShardStrategy(IDictionary<string, IAsyncFilesCommands> shards)
 		{
 			if (shards == null) throw new ArgumentNullException("shards");
