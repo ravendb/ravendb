@@ -493,7 +493,6 @@
     <Compile Include="TimeSeries\KeyValueStateMachine.cs" />
     <Compile Include="TimeSeries\PeriodDuration.cs" />
     <Compile Include="TimeSeries\PeriodType.cs" />
-    <Compile Include="TimeSeries\PointCandleSchema.cs" />
     <Compile Include="TimeSeries\Range.cs" />
     <Compile Include="TimeSeries\RollupRange.cs" />
     <Compile Include="TimeSeries\TimeSeriesQuery.cs" />
