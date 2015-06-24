@@ -148,7 +148,7 @@ namespace Raven.Database.TimeSeries
 				this.storage = storage;
 				this.seriesValueLength = seriesValueLength;
 				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
-				tree = tx.State.GetTree(tx, SeriesTreePrefix + seriesValueLength);
+				tree = tx.ReadTree(SeriesTreePrefix + seriesValueLength);
 			}
 
 			public IEnumerable<Point> Query(TimeSeriesQuery query)
@@ -248,6 +248,9 @@ namespace Raven.Database.TimeSeries
 					default:
 						throw new ArgumentOutOfRangeException();
 				}
+
+				if (tree == null)
+					yield break;
 
 				using (var periodTx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 				{
@@ -395,6 +398,9 @@ namespace Raven.Database.TimeSeries
 
 			private IEnumerable<Point> GetRawQueryResult(TimeSeriesQuery query)
 			{
+				if (tree == null)
+					return Enumerable.Empty<Point>();
+
 				var buffer = new byte[sizeof(double)];
 
 				var fixedTree = tree.FixedTreeFor(query.Key, (byte) (seriesValueLength*sizeof (double)));
