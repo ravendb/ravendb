@@ -53,9 +53,23 @@ namespace Raven.Database.Util
 			get { return lastForcedGCTime; }
 		}
 
+		private static long lastTimeMemoryReleasedBeforeGC = 0;
+		private static long minTimeBetweenMemoryReleases = 5*10*1000*1000;
 		private static void ReleaseMemoryBeforeGC()
 		{
-			MemoryStatistics.InitiateSoftMemoryRelease();
+			if (Environment.TickCount - lastTimeMemoryReleasedBeforeGC < minTimeBetweenMemoryReleases)
+				return;
+			
+			Interlocked.Exchange(ref lastTimeMemoryReleasedBeforeGC, Environment.TickCount);
+
+			if (MemoryStatistics.AvailableMemory < ((double)MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemory)/10)
+			{
+				MemoryStatistics.SimulateLowMemoryNotification();
+			}
+			else
+			{
+				MemoryStatistics.InitiateSoftMemoryRelease();
+			}
 		}
 
 		public static bool CollectGarbage(int generation, GCCollectionMode collectionMode = GCCollectionMode.Default, bool forceByUser = false)
