@@ -61,18 +61,12 @@ import topology = require("models/database/replication/topology");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 
 class shell extends viewModelBase {
-    private router = router;
-
-     
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
     selectedColor = shell.selectedEnvironmentColorStatic;
-
-    selectedEnviromentText = ko.computed(() => {
-        return this.selectedColor().name + " Enviroment";
-    });
-    canShowEnviromentText = ko.computed(() => this.selectedColor().name != "Default");
+    selectedEnviromentText = ko.computed(() => this.selectedColor().name + " Enviroment");
+    canShowEnviromentText = ko.computed(() => this.selectedColor().name !== "Default");
     
-
+    private router = router;
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
@@ -395,8 +389,8 @@ class shell extends viewModelBase {
 
     private activateCounterStorage(cs: counterStorage) {
         var changesSubscriptionArray = () => [
-            shell.currentResourceChangesApi().watchAllCounters(() => this.fetchCsStats(cs)),
-            shell.currentResourceChangesApi().watchCounterBulkOperation(() => this.fetchCsStats(cs))
+            changesContext.currentResourceChangesApi().watchAllCounters(() => this.fetchCsStats(cs)),
+            changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.fetchCsStats(cs))
         ];
         var isNotACounterStorage = this.currentConnectedResource instanceof counterStorage === false;
         this.updateChangesApi(cs, isNotACounterStorage, () => this.fetchCsStats(cs), changesSubscriptionArray);
@@ -844,7 +838,7 @@ class shell extends viewModelBase {
 		}
 
         sys.log("Unable to connect to Raven.", result);
-        var tryAgain = 'Try again';
+        var tryAgain = "Try again";
         var messageBoxResultPromise = this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain]);
         messageBoxResultPromise.done(() => {
             NProgress.start();
@@ -856,7 +850,7 @@ class shell extends viewModelBase {
         if (!splashType) {
             NProgress.configure({ showSpinner: false });
             NProgress.done();
-        } else if (splashType == alertType.warning) {
+        } else if (splashType === alertType.warning) {
             NProgress.configure({ showSpinner: true });
             NProgress.start();
         } else {
@@ -901,7 +895,7 @@ class shell extends viewModelBase {
         if (alertElement.is(":hover")) {
             setTimeout(() => this.closeAlertAndShowNext(alertToClose), 1000);
         } else {
-            alertElement.alert('close');
+            alertElement.alert("close");
         }
     }
 
@@ -933,8 +927,8 @@ class shell extends viewModelBase {
         if (changesContext.currentResourceChangesApi()) {
             shell.changeSubscriptionArray.forEach((subscripbtion: changeSubscription) => subscripbtion.off());
             shell.changeSubscriptionArray = [];
-            shell.currentResourceChangesApi().dispose();
-            if (shell.currentResourceChangesApi().getResourceName() !== "<system>") {
+            changesContext.currentResourceChangesApi().dispose();
+            if (changesContext.currentResourceChangesApi().getResourceName() !== "<system>") {
                 viewModelBase.isConfirmedUsingSystemDatabase = false;
             }
             changesContext.currentResourceChangesApi(null);
@@ -945,12 +939,12 @@ class shell extends viewModelBase {
         if (this.appUrls.isAreaActive("admin")()) {
             return "Manage Your Server";
         } else {
-            return 'Resources';
+            return "Resources";
         }
     }
 
     getCurrentActiveFeatureHref() {
-        if (this.appUrls.isAreaActive('admin')()) {
+        if (this.appUrls.isAreaActive("admin")()) {
             return this.appUrls.adminSettings();
         } else {
             return this.appUrls.resources();
@@ -959,11 +953,11 @@ class shell extends viewModelBase {
 
     goToDoc(doc: documentMetadataDto) {
         this.goToDocumentSearch("");
-        this.navigate(appUrl.forEditDoc(doc['@metadata']['@id'], null, null, this.activeDatabase()));
+        this.navigate(appUrl.forEditDoc(doc["@metadata"]["@id"], null, null, this.activeDatabase()));
     }
 
     getDocCssClass(doc: documentMetadataDto) {
-        return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name'], this.activeDatabase());
+        return collection.getCollectionCssClass(doc["@metadata"]["Raven-Entity-Name"], this.activeDatabase());
     }
 
     fetchServerBuildVersion() {
@@ -973,7 +967,7 @@ class shell extends viewModelBase {
                 this.serverBuildVersion(serverBuildResult);
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
-                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion != 13) {
+                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== 13) {
                     new getLatestServerBuildVersionCommand(true, 3000, 3999) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {

@@ -32,7 +32,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
         });
 
         this.nameCustomValidityError = ko.computed(() => {
-            var errorMessage: string = '';
+            var errorMessage: string = "";
             var newResourceName = this.resourceName();
             var foundDb = shell.databases.first((db: database) => newResourceName == db.name);
             var foundFs = shell.fileSystems.first((fs: filesystem) => newResourceName == fs.name);
