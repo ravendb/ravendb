@@ -10,6 +10,8 @@ import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfir
 import shell = require("viewmodels/shell");
 import changeSubscription = require("common/changeSubscription");
 import recentQueriesStorage = require("common/recentQueriesStorage");
+import replaceIndexDialog = require("viewmodels/database/indexes/replaceIndexDialog");
+import changesContext = require("common/changesContext");
 import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
@@ -201,8 +203,8 @@ class indexes extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
-            shell.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, e => this.processReplaceEvent())
+            changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
+            changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, e => this.processReplaceEvent())
         ];
     }
 

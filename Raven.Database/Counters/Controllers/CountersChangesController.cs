@@ -33,6 +33,14 @@ namespace Raven.Database.Counters.Controllers
             {
 				CounterStorage.TransportState.Disconnect(id);
             }
+			else if (Match(cmd, "watch-counters"))
+			{
+				connectionState.WatchAllCounters();
+			}
+			else if (Match(cmd, "unwatch-counters"))
+			{
+				connectionState.UnwatchAllCounters();
+			}
 			else if (Match(cmd, "watch-counter-change"))
 			{
 				connectionState.WatchChange(name);

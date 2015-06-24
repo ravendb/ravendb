@@ -96,7 +96,7 @@ namespace Raven.Database
 			Configuration = configuration;
 			transportState = recievedTransportState ?? new TransportState();
 			ExtensionsState = new AtomicDictionary<object>();
-			
+
 			using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
 			{
 				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
@@ -191,7 +191,7 @@ namespace Raven.Database
 					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 					InitializeTriggersExceptIndexCodecs();
 
-					
+
 
 					ExecuteStartupTasks();
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
@@ -679,21 +679,21 @@ namespace Raven.Database
 		{
 			MetricsCountersManager metrics = WorkContext.MetricsCounters;
 			return new DatabaseMetrics
-			{
-				RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
-				DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
-				IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
-				ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
+		{
+			RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+			DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
+			IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
+			ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
 				RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
 				RequestDurationLastMinute = metrics.RequestDurationLastMinute.GetData(),
-				Requests = metrics.ConcurrentRequests.CreateMeterData(),
-				Gauges = metrics.Gauges,
-				StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
-				StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
-				ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
-				ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
-				ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
-			};
+			Requests = metrics.ConcurrentRequests.CreateMeterData(),
+			Gauges = metrics.Gauges,
+			StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
+			StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
+			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
+		};
 		}
 
 
@@ -732,6 +732,14 @@ namespace Raven.Database
 				return;
 
 			Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+
+			var metrics = WorkContext.MetricsCounters;
+
+			// give it 3 seconds to complete requests
+			for (int i = 0; i < 30 && Interlocked.Read(ref metrics.ConcurrentRequestsCount) > 0; i++)
+			{
+				Thread.Sleep(100);
+			}
 
 			if ( EnvironmentUtils.RunningOnPosix )				
 				MemoryStatistics.StopPosixLowMemThread ();

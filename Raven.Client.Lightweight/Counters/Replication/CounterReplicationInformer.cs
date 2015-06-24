@@ -25,7 +25,7 @@ namespace Raven.Client.Counters.Replication
 	{
 		private readonly HttpJsonRequestFactory requestFactory;
 		private readonly CounterStore counterStore;
-		private readonly Convention convention;
+		private readonly CountersConvention countersConvention;
 		public const int DefaultIntervalBetweenUpdatesInMinutes = 5;
 
 		private bool currentlyExecuting;
@@ -50,20 +50,20 @@ namespace Raven.Client.Counters.Replication
 		{
 			get
 			{
-				if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				if (CountersConventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 					return Empty;
 
 				return ReplicationDestinations;
 			}
 		}
 
-		internal CounterReplicationInformer(HttpJsonRequestFactory requestFactory, CounterStore counterStore, Convention convention, int delayTimeInMiliSec = 1000)
+		internal CounterReplicationInformer(HttpJsonRequestFactory requestFactory, CounterStore counterStore, CountersConvention countersConvention, int delayTimeInMiliSec = 1000)
 		{
 			currentReadStripingBase = 0;
 			ReplicationDestinations = new List<CounterReplicationDestination>();
 			this.requestFactory = requestFactory;
 			this.counterStore = counterStore;
-			this.convention = convention;
+			this.countersConvention = countersConvention;
 			this.delayTimeInMiliSec = delayTimeInMiliSec;
 			failureCounters = new FailureCounters();
 			firstTime = true;
@@ -78,7 +78,7 @@ namespace Raven.Client.Counters.Replication
 
 		public async Task<T> ExecuteWithReplicationAsync<T>(string counterStoreUrl, HttpMethod method, Func<string, string, Task<T>> operation, CancellationToken token)
 		{
-			if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
+			if (currentlyExecuting && CountersConventions.AllowMultipuleAsyncOperations == false)
 				throw new InvalidOperationException("Only a single concurrent async request is allowed per async store instance.");
 
 			currentlyExecuting = true;
@@ -88,8 +88,8 @@ namespace Raven.Client.Counters.Replication
 				var localReplicationDestinations = ReplicationDestinationsAccordingToFailover; // thread safe copy
 
 				//check for supported flags
-				var shouldReadFromAllServers = (Conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) != 0;
-				var shouldFailImmediately = (Conventions.FailoverBehavior & FailoverBehavior.FailImmediately) != 0;
+				var shouldReadFromAllServers = (CountersConventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) != 0;
+				var shouldFailImmediately = (CountersConventions.FailoverBehavior & FailoverBehavior.FailImmediately) != 0;
 
 				AsyncOperationResult<T> operationResult;
 
@@ -204,9 +204,9 @@ namespace Raven.Client.Counters.Replication
 
 		public double MaxIntervalBetweenUpdatesInMilliseconds { get; set; }
 
-		public Convention Conventions
+		public CountersConvention CountersConventions
 		{
-			get { return convention; }
+			get { return countersConvention; }
 		}
 
 		private async Task<AsyncOperationResult<T>> TryExecuteOperationAsync<T>(string url, string counterStoreName, Func<string, string, Task<T>> operation, bool avoidThrowing, OperationCredentials credentials, CancellationToken cancellationToken)
@@ -306,7 +306,7 @@ namespace Raven.Client.Counters.Replication
 							var r = await TryExecuteOperationAsync<object>(counterStoreUrl,null, async (url, counterStoreName) =>
 							{
 								var serverCheckUrl = GetServerCheckUrl(url);
-								var requestParams = new CreateHttpJsonRequestParams(null, serverCheckUrl, HttpMethods.Get, credentials, Conventions.ShouldCacheRequest);
+								var requestParams = new CreateHttpJsonRequestParams(null, serverCheckUrl, HttpMethods.Get, credentials, CountersConventions.ShouldCacheRequest);
 								using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 								{
 									await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -423,7 +423,7 @@ namespace Raven.Client.Counters.Replication
 
 		public Task UpdateReplicationInformationIfNeededAsync()
 		{
-			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+			if (CountersConventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
 			var updateInterval = TimeSpan.FromMilliseconds(MaxIntervalBetweenUpdatesInMilliseconds);

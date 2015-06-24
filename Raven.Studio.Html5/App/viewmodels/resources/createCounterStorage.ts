@@ -1,32 +1,22 @@
-﻿import createResourceBase = require("viewmodels/resources/createResourceBase");
-import dialog = require("plugins/dialog");
-import counterStorage = require("models/counter/counterStorage");
+﻿import dialog = require("plugins/dialog");
+import createResourceBase = require("viewmodels/resources/createResourceBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import shell = require("viewmodels/shell");
 
 class createCounterStorage extends createResourceBase {
-    creationTask = $.Deferred();
-    creationTaskStarted = false;
-   
     resourceNameCapitalString = "Counter storage";
     resourceNameString = "counter storage";
 
-    constructor(private counterStorages: KnockoutObservableArray<counterStorage>, licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
-        super(counterStorages, licenseStatus);
-    }
-
-    deactivate() {
-        // If we were closed via X button or other dialog dismissal, reject the deletion task since
-        // we never started it.
-        if (!this.creationTaskStarted) {
-            this.creationTask.reject();
-        }
+    constructor(parent: dialogViewModelBase) {
+        super(shell.counterStorages, parent);
+        this.storageEngine("voron");
     }
 
     nextOrCreate() {
-        // For now we're just creating the filesystem.
         this.creationTaskStarted = true;
         dialog.close(this.parent);
-        this.creationTask.resolve(this.resourceName(), this.getActiveBundles(), this.resourcePath());
+        this.creationTask.resolve(this.resourceName(), this.getActiveBundles(), this.resourcePath(), this.resourceTempPath());
+        this.clearResourceName();
     }
 
     private getActiveBundles(): string[] {

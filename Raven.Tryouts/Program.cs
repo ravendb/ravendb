@@ -1,21 +1,32 @@
 ﻿using System;
-using Raven.Tests.Core.Replication;
-using Raven.Tests.Replication;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Raven.Abstractions.Commands;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Shard;
+using Raven.Json.Linq;
+using Raven.Tests.MailingList;
 
 namespace Raven.Tryouts
 {
+	public class Customer
+	{
+		public string Region;
+		public string Id;
+	}
+
+	public class Invoice
+	{
+		public string Customer;
+	}
+
 	public class Program
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 1000; i++)
-			{
-				Console.WriteLine(i);
-				using (var test = new IndexReplication())
-				{
-					test.CanReplicateIndex();
-				}
-			}
+			
 		}
 
 	}

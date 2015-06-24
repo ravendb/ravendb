@@ -15,6 +15,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
+using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -30,7 +31,7 @@ namespace Raven.Client.Connection
 
 		private Task refreshReplicationInformationTask;
 
-        public ReplicationInformer(Convention conventions, HttpJsonRequestFactory jsonRequestFactory)
+		public ReplicationInformer(DocumentConvention conventions, HttpJsonRequestFactory jsonRequestFactory)
             : base(conventions, jsonRequestFactory)
         {
         }
@@ -42,7 +43,7 @@ namespace Raven.Client.Connection
 
 		public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
 		{
-			return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)).ResultUnwrap());
+                        return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
 		}
 
 		private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
@@ -137,7 +138,7 @@ namespace Raven.Client.Connection
 
 	    public void RefreshReplicationInformation(AsyncServerClient serverClient)
 		{
-			RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)).ResultUnwrap());
+			RefreshReplicationInformationInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
 		}
 
         public override void RefreshReplicationInformation(ServerClient serverClient)

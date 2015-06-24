@@ -7,13 +7,12 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Client.TimeSeries.Changes
 {
-
-    public class TimeSeriesChangesClient : RemoteChangesClientBase<ITimeSeriesChanges, TimeSeriesConnectionState>, ITimeSeriesChanges
+	public class TimeSeriesChangesClient : RemoteChangesClientBase<ITimeSeriesChanges, TimeSeriesConnectionState, TimeSeriesConvention>, ITimeSeriesChanges
     {
 		private readonly ConcurrentSet<string> watchedChanges = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
@@ -22,9 +21,9 @@ namespace Raven.Client.TimeSeries.Changes
 
 		public TimeSeriesChangesClient(string url, string apiKey,
                                        ICredentials credentials,
-                                       HttpJsonRequestFactory jsonRequestFactory, Convention conventions,
+                                       HttpJsonRequestFactory jsonRequestFactory, TimeSeriesConvention timeSeriesConventions,
                                        Action onDispose)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions.ShouldCacheRequest, onDispose)
+            : base(url, apiKey, credentials, jsonRequestFactory, timeSeriesConventions, onDispose)
         {
 
         }

@@ -1,32 +1,22 @@
-﻿import createResourceBase = require("viewmodels/resources/createResourceBase");
-import dialog = require("plugins/dialog");
-import timeSeries = require("models/timeSeries/timeSeries");
+﻿import dialog = require("plugins/dialog");
+import createResourceBase = require("viewmodels/resources/createResourceBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import shell = require("viewmodels/shell");
 
 class createTimeSeries extends createResourceBase {
-    creationTask = $.Deferred();
-    creationTaskStarted = false;
-   
     resourceNameCapitalString = "Time Series";
     resourceNameString = "time series storage";
 
-    constructor(private timeSeries: KnockoutObservableArray<timeSeries>, licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
-        super(timeSeries, licenseStatus);
-    }
-
-    deactivate() {
-        // If we were closed via X button or other dialog dismissal, reject the deletion task since
-        // we never started it.
-        if (!this.creationTaskStarted) {
-            this.creationTask.reject();
-        }
+    constructor(parent: dialogViewModelBase) {
+        super(shell.timeSeries, parent);
+        this.storageEngine("voron");
     }
 
     nextOrCreate() {
-        // For now we're just creating the time series.
         this.creationTaskStarted = true;
         dialog.close(this.parent);
-        this.creationTask.resolve(this.resourceName(), this.getActiveBundles(), this.resourcePath());
+        this.creationTask.resolve(this.resourceName(), this.getActiveBundles(), this.resourcePath(), this.resourceTempPath());
+        this.clearResourceName();
     }
 
     private getActiveBundles(): string[] {

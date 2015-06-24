@@ -3,6 +3,7 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
+import changesContext = require("common/changesContext");
 import ace = require("ace/ace");
 
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -106,7 +107,7 @@ class configuration extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [ shell.currentResourceChangesApi().watchFsConfig((e: filesystemConfigNotification) => this.processFsConfigNotification(e)) ];
+        return [changesContext.currentResourceChangesApi().watchFsConfig((e: filesystemConfigNotification) => this.processFsConfigNotification(e)) ];
     }
 
     processFsConfigNotification(e: filesystemConfigNotification) {

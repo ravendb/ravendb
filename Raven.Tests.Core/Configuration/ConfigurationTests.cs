@@ -134,15 +134,19 @@ namespace Raven.Tests.Core.Configuration
 
 			Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
 			Assert.NotEqual(basePath, workingDirectory);
-            if (EnvironmentUtils.RunningOnPosix == true)
+            if (EnvironmentUtils.RunningOnPosix)
             {
                 Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"/"));
                 Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"/"));
+				Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(@"/"));
+				Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(@"/"));
             }
             else
             {
                 Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
                 Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
+				Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(@"\\"));
+				Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(@"\\"));
             }
 		}
 

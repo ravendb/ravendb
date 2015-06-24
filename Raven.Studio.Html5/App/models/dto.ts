@@ -491,6 +491,11 @@ interface replicationClientConfigurationDto {
     FailoverBehavior?: string;
 }
 
+interface environmentColorDto {
+    Name: string;
+    BackgroundColor: string;
+}
+
 interface replicationConfigDto {
     DocumentConflictResolution: string;
     AttachmentConflictResolution: string;
@@ -875,13 +880,6 @@ interface statusDebugChangesFileSystemDto {
     WatchedFolders: Array<string>;
 }
 
-interface statusDebugChangesCounterStorageDto {
-    WatchedChanges: Array<string>;
-    WatchedLocalChanges: Array<string>;
-    WatchedReplicationChanges: Array<string>;
-    WatchedBulkOperationsChanges: Array<string>;
-}
-
 interface statusDebugChangesTimeSeriesDto {
     WatchedChanges: Array<string>;
     WatchedLocalChanges: Array<string>;
@@ -1050,54 +1048,9 @@ interface resourceStyleMap {
     styleMap: any;
 }
 
-interface counterStorageDto {
-    Name: string;
-    Path?: string;
-}
-
 interface timeSeriesDto {
     Name: string;
     Path?: string;
-}
-
-interface counterDto {
-    CurrentValue: number;
-    Group: string;
-    CounterName: string;
-    Delta: number;
-}
-
-interface counterSummaryDto {
-    Group: string;
-    CounterName: string;
-    Increments: number;
-    Decrements: number;
-    Total: number;
-}
-
-interface counterGroupDto {
-    Name: string;
-    Count: number;
-}
-
-interface counterServerValueDto {
-    Name: string;
-    Positive: number;
-    Negative: number;
-}
-
-interface counterStorageReplicationDto {
-    Destinations: counterStorageReplicationDestinatinosDto[];
-}
-
-interface counterStorageReplicationDestinatinosDto {
-    Disabled: boolean;
-    ServerUrl: string;
-    CounterStorageName: string;
-    Username: string;
-    Password: string;
-    Domain: string;
-    ApiKey: string;
 }
 
 enum ImportItemType {

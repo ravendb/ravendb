@@ -1,7 +1,7 @@
 ﻿<div class="col-md-7">
     <div class="form-group">
         <label for="fileSystemName">Name</label>
-        <input autofocus data-bind="value: fileSystemName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" type="text" class="form-control" id="fileSystemName" autocomplete="off" placeholder="File System Name">
+        <input autofocus data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" type="text" class="form-control" id="fileSystemName" autocomplete="off" placeholder="File System Name">
     </div>
     <div class="panel-group" id="accordion">
         <div class="panel panel-default">
@@ -15,24 +15,28 @@
             <div id="fsAdvancedOptions" class="panel-collapse collapse">
                 <div class="panel-body">
                     <div class="form-group">
+                        <label for="storageEngine">Storage Engine</label>
+                        <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
+                            <option value="">Default</option>
+                            <option value="esent">Esent</option>
+                            <option value="voron">Voron</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-danger" role="alert" data-bind="visible: voronWarningVisible">
+                        Running Voron in 32-bit mode is error prone. Set Raven/Voron/AllowOn32Bits in configuration to allow Voron on 32-bit.
+                    </div>
+                    <div class="form-group">
                         <label for="filesystemPath">Path</label>
-                        <input data-bind="value: fileSystemPath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/FileSystems/' + fileSystemName() }" type="text" class="form-control" id="filesystemPath" autocomplete="off">
+                        <input data-bind="value: resourcePath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/FileSystems/' + resourceName() }" type="text" class="form-control" id="filesystemPath" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="filesystemLogs">Logs</label>
-                        <input data-bind="value: fileSystemLogsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: (fileSystemPath() || '~/FileSystems/' + fileSystemName()) }" type="text" class="form-control" id="filesystemLogs" autocomplete="off">
+                        <input data-bind="value: logsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/FileSystems/' + resourceName() }" type="text" class="form-control" id="filesystemLogs" autocomplete="off">
                     </div>
-	                <div class="form-group">
-		                <label for="storageEngine">Storage Engine</label>
-		                <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
-			                <option value="">Default</option>
-			                <option value="esent">Esent</option>
-			                <option value="voron">Voron</option>
-		                </select>
-	                </div>
-					<div class="alert alert-danger" role="alert" data-bind="visible: voronWarningVisible">
-						Running Voron in 32-bit mode is error prone. Set Raven/Voron/AllowOn32Bits in configuration to allow Voron on 32-bit.
-					</div>
+                    <div class="form-group" data-bind="visible: tempPathVisible">
+                        <label for="fileSystemTempPath">Temp</label>
+                        <input data-bind="value: resourceTempPath, customValidity: tempCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + resourceName() }" type="text" class="form-control" id="fileSystemTempPath" autocomplete="off">
+                    </div>
                 </div>
             </div>
         </div>

@@ -11,6 +11,7 @@ namespace Raven.Abstractions.Data
 			InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
+	    public const string IsIndexReplicatedUrlParamName = "is-replicated";
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
@@ -319,9 +320,9 @@ namespace Raven.Abstractions.Data
 
 			public const string TombstoneRetentionTime = "Raven/Counter/TombstoneRetentionTime";
 
-			public const string UrlPrefix = "cs";
+			public const string DeletedTombstonesInBatch = "Raven/Counter/DeletedTombstonesInBatch";
 
-			public const string Separator = "/";
+			public const string UrlPrefix = "cs";
 		}
 
 		//Time Series

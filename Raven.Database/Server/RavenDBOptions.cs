@@ -45,6 +45,8 @@ namespace Raven.Database.Server
 				{
 					systemDatabase = db;
 				}
+
+				WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
 			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
@@ -52,7 +54,6 @@ namespace Raven.Database.Server
 				requestManager = new RequestManager(databasesLandlord);
 				ClusterManager = new Reference<ClusterManager>();
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-				webSocketBufferPool = new WebSocketBufferPool(configuration.WebSockets.InitialBufferPoolSize);
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}
 			catch
@@ -98,11 +99,6 @@ namespace Raven.Database.Server
 		}
 
 		public Reference<ClusterManager> ClusterManager { get; private set; }
-
-		public WebSocketBufferPool WebSocketBufferPool
-		{
-			get { return webSocketBufferPool; }
-		}
 
 		public void Dispose()
 		{

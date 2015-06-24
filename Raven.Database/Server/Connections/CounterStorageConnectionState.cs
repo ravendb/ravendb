@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Counters.Notifications;
-using Raven.Database.Util;
-using Raven.Abstractions.Data;
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
 {
@@ -18,6 +18,7 @@ namespace Raven.Database.Server.Connections
 		private readonly string startingWithNotification = typeof(StartingWithNotification).Name;
 		private readonly string inGroupNotificationType = typeof(InGroupNotification).Name;
 		private readonly string bulkOperationNotification = typeof(BulkOperationNotification).Name;
+		private int watchAllCounters;
 
 		public object DebugStatus
 		{
@@ -38,6 +39,16 @@ namespace Raven.Database.Server.Connections
 			this.enqueue = enqueue;
 		}
 
+		public void WatchAllCounters()
+		{
+			Interlocked.Increment(ref watchAllCounters);
+		}
+
+		public void UnwatchAllCounters()
+		{
+			Interlocked.Decrement(ref watchAllCounters);
+		}
+
 		public void WatchChange(string name)
 		{
 			matchingChanges.TryAdd(name);
@@ -48,24 +59,24 @@ namespace Raven.Database.Server.Connections
 			matchingChanges.TryRemove(name);
 		}
 
-		public void WatchPrefix(string name)
+		public void WatchPrefix(string prefix)
 		{
-			matchingPrefixes.TryAdd(name);
+			matchingPrefixes.TryAdd(prefix);
 		}
 
-		public void UnwatchPrefix(string name)
+		public void UnwatchPrefix(string prefix)
 		{
-			matchingPrefixes.TryRemove(name);
+			matchingPrefixes.TryRemove(prefix);
 		}
 
-		public void WatchCountersInGroup(string name)
+		public void WatchCountersInGroup(string group)
 		{
-			matchingGroups.TryAdd(name);
+			matchingGroups.TryAdd(group);
 		}
 
-		public void UnwatchCountersInGroup(string name)
+		public void UnwatchCountersInGroup(string group)
 		{
-			matchingGroups.TryRemove(name);
+			matchingGroups.TryRemove(group);
 		}
 
 		public void WatchCounterBulkOperation(string operationId)
@@ -80,9 +91,8 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(ChangeNotification notification)
 		{
-			var counterPrefix = GetCounterPrefix(notification.GroupName, notification.CounterName);
-
-			if (matchingChanges.Contains(counterPrefix))
+			var counterPrefix = string.Concat(notification.GroupName, "/", notification.CounterName);
+			if (watchAllCounters > 0 || matchingChanges.Contains(counterPrefix))
 			{
 				var value = new { Value = notification, Type = changeNotificationType };
 				enqueue(value);
@@ -99,11 +109,6 @@ namespace Raven.Database.Server.Connections
 				var value = new { Value = notification, Type = inGroupNotificationType };
 				enqueue(value);
 			}
-		}
-
-		private static string GetCounterPrefix(string groupName, string counterName)
-		{
-			return string.Concat(groupName, Constants.Counter.Separator, counterName);
 		}
 
 		public void Send(BulkOperationNotification notification)

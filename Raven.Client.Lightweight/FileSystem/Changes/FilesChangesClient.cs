@@ -12,10 +12,12 @@ using Raven.Client.Connection;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
+using Sparrow.Collections;
+
 namespace Raven.Client.FileSystem.Changes
 {
 
-    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState>, IFilesChanges
+    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState, FilesConvention>, IFilesChanges
     {
         private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
@@ -56,6 +58,7 @@ namespace Raven.Client.FileSystem.Changes
                     },
                     configurationSubscriptionTask);
             });
+
             var taskedObservable = new TaskedObservable<ConfigurationChangeNotification, FilesConnectionState>(
                 counter,
                 notification => true);

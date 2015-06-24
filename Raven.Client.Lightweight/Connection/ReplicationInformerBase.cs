@@ -32,7 +32,7 @@ namespace Raven.Client.Connection
 	{
 		protected readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-		protected readonly Convention Conventions;
+		protected readonly QueryConvention Conventions;
 
 	    private readonly HttpJsonRequestFactory requestFactory;
 
@@ -76,7 +76,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		protected ReplicationInformerBase(Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000)
+		protected ReplicationInformerBase(QueryConvention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000)
 		{
 			Conventions = conventions;
 			this.requestFactory = requestFactory;
@@ -335,9 +335,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					bool wasTimeout;
 					var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
 	                
-                    if (avoidThrowing == false)
-                        throw;
-
 					if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
 					{
 						return new AsyncOperationResult<T>

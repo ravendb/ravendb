@@ -43,7 +43,8 @@ namespace Raven.Database.Counters
 
 		public bool IsPositive()
 		{
-			return fullName.Substring(fullName.Length - 1, 1) == ValueSign.Positive;
+			throw new NotImplementedException();
+			//return fullName.Substring(fullName.Length - 1, 1) == ValueSign.Positive;
 		}
 	}
 }

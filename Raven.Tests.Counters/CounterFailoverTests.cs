@@ -31,7 +31,7 @@ namespace Raven.Tests.Counters
 						using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreA))
 						using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreB))
 						{
-							storeA.Convention.FailoverBehavior = FailoverBehavior.FailImmediately;
+							storeA.CountersConvention.FailoverBehavior = FailoverBehavior.FailImmediately;
 
 							await SetupReplicationAsync(storeA, storeB);
 							await storeA.ChangeAsync("group", "counter", 2);

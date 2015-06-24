@@ -8,12 +8,13 @@
 
 		public CounterChangeAction Action { get; set; }
 
+		public long Delta { get; set; }
+
 		public long Total { get; set; }
 	}
 
 	public enum CounterChangeAction
 	{
-		None,
 		Add,
 		Increment,
 		Decrement,

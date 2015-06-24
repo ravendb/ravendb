@@ -272,15 +272,11 @@ namespace Voron.Impl
 
 		internal class BatchOperation : IComparable<BatchOperation>
 		{
-			private readonly long _originalStreamPosition;
-			private readonly HashSet<Type> _exceptionTypesToIgnore = new HashSet<Type>();
-
-			private readonly Action _reset = null;
+            private readonly long _originalStreamPosition = -1;			
+            private HashSet<Type> _exceptionTypesToIgnore;
 
 			public readonly Stream ValueStream;
-
 			public readonly Slice ValueSlice;
-
 			public readonly IStructure ValueStruct;
 
 			public readonly long ValueLong;
@@ -327,21 +323,16 @@ namespace Voron.Impl
 				{
 					_originalStreamPosition = value.Position;
 					ValueSize = value.Length;
-
-					_reset = () => value.Position = _originalStreamPosition;
 				}
 
-				ValueStream = value;
+                ValueStream = value;
 			}
 
 			private BatchOperation(Slice key, Slice value, ushort? version, string treeName, BatchOperationType type)
 				: this(key, version, treeName, type)
 			{
 				if (value != null)
-				{
-					_originalStreamPosition = 0;
 					ValueSize = value.Size;
-				}
 
 				ValueSlice = value;
 			}
@@ -378,7 +369,12 @@ namespace Voron.Impl
 
 			public HashSet<Type> ExceptionTypesToIgnore
 			{
-				get { return _exceptionTypesToIgnore; }
+				get 
+                {
+                    if ( _exceptionTypesToIgnore == null )
+                        _exceptionTypesToIgnore = new HashSet<Type>();
+                    return _exceptionTypesToIgnore; 
+                }
 			}
 
 			public void SetVersionFrom(BatchOperation other)
@@ -390,10 +386,8 @@ namespace Voron.Impl
 
 			public void Reset()
 			{
-				if (_reset == null)
-					return;
-
-				_reset();
+                if (_originalStreamPosition != -1)
+                    ValueStream.Position = _originalStreamPosition;
 			}
 
 			public void SetIgnoreExceptionOnExecution<T>()

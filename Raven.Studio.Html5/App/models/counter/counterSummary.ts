@@ -21,7 +21,7 @@
     }
 
     getDocumentPropertyNames(): Array<string> {
-        return [ "Id", "Total", "Increments", "Decrements"];
+        return [ "Id", "Group", "Name", "Total"];
     }
 
     getId() {

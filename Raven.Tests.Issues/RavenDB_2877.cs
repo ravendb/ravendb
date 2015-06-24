@@ -53,7 +53,7 @@ namespace Raven.Tests.Issues
 	    }
             
             
-            [Fact]
+        [Fact]
 		public async Task CanHandleHandleLongUrl()
 		{
 			using (var store = NewDocumentStore())
@@ -62,7 +62,7 @@ namespace Raven.Tests.Issues
 				store.InitializeProfiling();
 			    store.Conventions.MaxLengthOfQueryUsingGetUrl = 32;
                 var offices = Enumerable.Range(1, 20).Select(x => new Office() { FacilityName = "Main Offices", OfficeNumber = x });
-				Guid id;
+
 				using (var s = store.OpenSession())
 				{
 				    foreach (var office in offices)

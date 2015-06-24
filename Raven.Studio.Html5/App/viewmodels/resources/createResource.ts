@@ -4,53 +4,59 @@ import createDatabase = require("viewmodels/resources/createDatabase");
 import createFileSystem = require("viewmodels/resources/createFilesystem");
 import createCounterStorage = require("viewmodels/resources/createCounterStorage");
 import createTimeSeries = require("viewmodels/resources/createTimeSeries");
-import license = require("models/auth/license");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import timeSeries = require("models/timeSeries/timeSeries");
-import shell = require("viewmodels/shell");
 
 class createResource extends dialogViewModelBase {
     databaseType = database.type;
     fileSystemType = fileSystem.type;
     counterStorageType = counterStorage.type;
     timeSeriesType = timeSeries.type;
-    resourceType = ko.observable<string>(this.databaseType);
-    resourceTypes = [
-        { value: database.type, name: "Database" }, 
-        { value: fileSystem.type, name: "File System" }, 
-        { value: counterStorage.type, name: "Counter Storage" },
-        { value: timeSeries.type, name: "Time Series" }
-    ];
+    createResourceName = ko.observable<string>("Create Database");
     createDatabasePart: createDatabase;
     createFileSystemPart: createFileSystem;
     createCounterStoragePart: createCounterStorage;
     createTimeSeriesPart: createTimeSeries;
 
-    constructor(/*databases: KnockoutObservableArray<database>, filesystems: KnockoutObservableArray<fileSystem>, licenseStatus: KnockoutObservable<licenseStatusDto>*/) {
+    resourceTypes = ko.observableArray([
+        { resourceType: this.databaseType, title: "Database", iconName: "fa fa-database fa-2x" },
+        { resourceType: this.fileSystemType, title: "File System", iconName: "fa fa-file-image-o fa-2x" },
+        { resourceType: this.counterStorageType, title: "Counter Storage", iconName: "fa fa-sort-numeric-desc fa-2x" },
+        { resourceType: this.timeSeriesType, title: "Time Series", iconName: "fa fa-clock-o fa-2x" }
+    ]);
+    checkedResource = ko.observable<string>(this.databaseType);
+
+    constructor() {
         super();
-        this.createDatabasePart = new createDatabase(shell.databases, license.licenseStatus, this);
-        this.createFileSystemPart = new createFileSystem(shell.fileSystems, license.licenseStatus, this);
-        this.createCounterStoragePart = new createCounterStorage(shell.counterStorages, license.licenseStatus, this);
-        this.createTimeSeriesPart = new createTimeSeries(shell.timeSeries, license.licenseStatus, this);
-        this.resourceType.subscribe((resourceType: string) => {
+        this.createDatabasePart = new createDatabase(this);
+        this.createFileSystemPart = new createFileSystem(this);
+        this.createCounterStoragePart = new createCounterStorage(this);
+        this.createTimeSeriesPart = new createTimeSeries(this);
+        this.checkedResource.subscribe((resourceType: string) => {
+            var createText = "Create ";
             switch (resourceType) {
                 case this.databaseType:
                     this.enableDbTab();
+                    createText += "Database";
                     break;
                 case this.fileSystemType:
                     this.enableFsTab();
+                    createText += "File System";
                     break;
                 case this.counterStorageType:
                     this.enableCsTab();
+                    createText += "Counter Storage";
                     break;
                 case this.timeSeriesType:
                     this.enableTsTab();
+                    createText += "Time Seriese";
                     break;
                 default:
                     break;
             }
+            this.createResourceName(createText);
         });
     }
 
@@ -96,7 +102,7 @@ class createResource extends dialogViewModelBase {
     }
 
     nextOrCreate() {
-        switch (this.resourceType()) {
+        switch (this.checkedResource()) {
             case this.databaseType:
                 this.createDatabasePart.nextOrCreate();
                 break;

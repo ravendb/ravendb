@@ -34,6 +34,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <Prefer32Bit>false</Prefer32Bit>
     <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -41,6 +42,7 @@
     <Optimize>true</Optimize>
     <DefineConstants>TRACE</DefineConstants>
     <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -71,6 +73,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <Prefer32Bit>false</Prefer32Bit>
     <WarningLevel>4</WarningLevel>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />

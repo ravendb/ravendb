@@ -44,7 +44,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
-    <NoWarn>618, 612, 3016, 3005</NoWarn>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -56,6 +56,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -72,6 +73,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <WarningLevel>4</WarningLevel>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="FizzWare.NBuilder">
@@ -92,7 +94,14 @@
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.VisualStudio.DebuggerVisualizers, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+    <Reference Include="Microsoft.VisualStudio.DebuggerVisualizers, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="FluentAssertions">
+      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentAssertions.Core">
+      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="GeoAPI, Version=1.7.4693.18483, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
     </Reference>
@@ -801,6 +810,8 @@
     <Compile Include="Storage\Voron\TasksStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Suggestions\LegacySuggestionsHandling.cs" />
+    <Compile Include="Subscriptions\SubscriptionsBasic.cs" />
+    <Compile Include="Subscriptions\SubscriptionsPaths.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
     <Compile Include="T1.cs" />
@@ -979,6 +990,10 @@
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
       <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
       <Name>Raven.Smuggler</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>

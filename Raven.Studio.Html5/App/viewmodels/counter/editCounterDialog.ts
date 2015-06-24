@@ -6,19 +6,13 @@ class editCounterDialog extends dialogViewModelBase {
 
     public updateTask = $.Deferred();
     updateTaskStarted = false;
-    isNew = ko.observable(false);
     editedCounter = ko.observable<counterChange>();
-    private maxNameLength = 200;
+    isNew: KnockoutComputed<boolean>;
 
     constructor(editedCounter?: counterChange) {
         super();
-
-        if (!editedCounter) {
-            this.isNew(true);
-            this.editedCounter(counterChange.empty());
-        } else {
-            this.editedCounter(editedCounter);
-        }
+        this.editedCounter(!editedCounter ? counterChange.empty() : editedCounter);
+        this.isNew = ko.computed(() => !!this.editedCounter() && this.editedCounter().isNew());
     }
 
     cancel() {
@@ -27,14 +21,14 @@ class editCounterDialog extends dialogViewModelBase {
 
     nextOrCreate() {
         this.updateTaskStarted = true;
-        this.updateTask.resolve(this.editedCounter(), this.isNew());
+        this.updateTask.resolve(this.editedCounter());
         dialog.close(this);
     }
     
     attached() {
         super.attached();
 
-        var inputElementGroupName: any = $("#group")[0];
+        /*var inputElementGroupName: any = $("#group")[0];
         this.editedCounter().group.subscribe((newCounterId) => {
             var errorMessage = this.checkName(newCounterId, "group name");
             inputElementGroupName.setCustomValidity(errorMessage);
@@ -44,9 +38,7 @@ class editCounterDialog extends dialogViewModelBase {
         this.editedCounter().counterName.subscribe((newCounterId) => {
             var errorMessage = this.checkName(newCounterId, "counter name");
             inputElementCounterName.setCustomValidity(errorMessage);
-        });
-
-        //todo: maybe check validity of delta
+        });*/
     }
 
     deactivate() {
@@ -55,20 +47,6 @@ class editCounterDialog extends dialogViewModelBase {
         if (!this.updateTaskStarted) {
             this.updateTask.reject();
         }
-    }
-
-    private checkName(name: string, fieldName): string {
-        var message = "";
-        if (!$.trim(name)) {
-            message = "An empty " + fieldName + " is forbidden for use!";
-        }
-        else if (name.indexOf("/") > -1) {
-            message = "A '/' character is forbidden for use!";
-        }
-        else if (name.length > this.maxNameLength) {
-            message = "The  " + fieldName + " length can't exceed " + this.maxNameLength + " characters!";
-        }
-        return message;
     }
 }
 

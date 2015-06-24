@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
@@ -87,6 +87,9 @@ namespace Raven.Tests.Issues
 
     class FakeLogTransport : IEventsTransport
     {
+		private readonly DateTime _started = SystemTime.UtcNow;
+		public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
+
         public BlockingCollection<LogEventInfo> Messages { get; private set; }
 
         public FakeLogTransport()

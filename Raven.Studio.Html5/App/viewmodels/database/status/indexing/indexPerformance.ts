@@ -3,6 +3,7 @@
 
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
+import changesContext = require("common/changesContext");
 import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexingBatchStatsCommand");
 import getReducingBatchStatsCommand = require("commands/database/debug/getReducingBatchStatsCommand");
 import d3 = require('d3/d3');
@@ -195,7 +196,7 @@ class metrics extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
+        return [changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {

@@ -21,7 +21,7 @@ namespace Raven.Client.Extensions
                 Id = "Raven/Databases/" + name,
                 Settings =
 				{
-					{"Raven/DataDir", Path.Combine("~", Path.Combine("Databases", name))},
+					{"Raven/DataDir", Path.Combine("~", name)},
 				}
             };
         }
@@ -47,6 +47,7 @@ namespace Raven.Client.Extensions
         ///  Returns database url (system or non-system) based on system or non-system DB url.
         /// </summary>
         /// <param name="url"></param>
+        /// <param name="database">The database name.</param>
         /// <returns></returns>
         public static string GetDatabaseUrl(string url, string database)
         {

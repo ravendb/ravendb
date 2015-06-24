@@ -32,7 +32,7 @@ namespace Raven.Client.TimeSeries
 		{
 			JsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
 			JsonRequestFactory = new HttpJsonRequestFactory(Constants.NumberOfCachedRequests);
-			Convention = new Convention();
+			TimeSeriesConvention = new TimeSeriesConvention();
 			Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
 			Advanced = new TimeSeriesStoreAdvancedOperations(this);
 			Admin = new TimeSeriesStoreAdminOperations(this);
@@ -62,7 +62,7 @@ namespace Raven.Client.TimeSeries
 				}, Name).ConfigureAwait(false).GetAwaiter().GetResult();
 			}			
 
-			replicationInformer = new TimeSeriesReplicationInformer(JsonRequestFactory, this, Convention); // make sure it is initialized
+			replicationInformer = new TimeSeriesReplicationInformer(JsonRequestFactory, this, TimeSeriesConvention); // make sure it is initialized
 		}
 
 		public ITimeSeriesChanges Changes(string timeSeries = null)
@@ -90,7 +90,7 @@ namespace Raven.Client.TimeSeries
 					Credentials.ApiKey,
 					Credentials.Credentials,
 					JsonRequestFactory,
-					Convention,
+					TimeSeriesConvention,
 					() => timeSeriesChanges.Remove(timeSeries));
 
 				return client;
@@ -122,7 +122,7 @@ namespace Raven.Client.TimeSeries
 
 		public string Name { get; set; }
 
-		public Convention Convention { get; set; }
+		public TimeSeriesConvention TimeSeriesConvention { get; set; }
 
 		internal JsonSerializer JsonSerializer { get; set; }
 
@@ -132,7 +132,7 @@ namespace Raven.Client.TimeSeries
 		
 		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
 		{
-			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, Credentials, Convention.ShouldCacheRequest)
+			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, Credentials, TimeSeriesConvention.ShouldCacheRequest)
 			{
 				DisableRequestCompression = disableRequestCompression,
 				DisableAuthentication = disableAuthentication
@@ -143,13 +143,13 @@ namespace Raven.Client.TimeSeries
 		{
 			get
 			{
-				return replicationInformer ?? (replicationInformer = new TimeSeriesReplicationInformer(JsonRequestFactory, this, Convention));
+				return replicationInformer ?? (replicationInformer = new TimeSeriesReplicationInformer(JsonRequestFactory, this, TimeSeriesConvention));
 			}
 		}
 
 		private void InitializeSecurity()
 		{
-			if (Convention.HandleUnauthorizedResponseAsync != null)
+			if (TimeSeriesConvention.HandleUnauthorizedResponseAsync != null)
 				return; // already setup by the user
 
 			if (string.IsNullOrEmpty(Credentials.ApiKey) == false)
@@ -161,7 +161,7 @@ namespace Raven.Client.TimeSeries
 			JsonRequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
 			JsonRequestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
 
-			Convention.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
+			TimeSeriesConvention.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
 			{
 				if (credentials.ApiKey == null)
 				{
@@ -172,7 +172,7 @@ namespace Raven.Client.TimeSeries
 				return null;
 			};
 
-			Convention.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
+			TimeSeriesConvention.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
 			{
 				var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 

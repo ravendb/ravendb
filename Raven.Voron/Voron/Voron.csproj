@@ -67,8 +67,6 @@
     <Compile Include="Impl\FileHeaders\FixedSizeTreeHeader.cs" />
     <Compile Include="Trees\Fixed\FixedSizeTree.cs" />
     <Compile Include="Trees\Fixed\Iterators.cs" />
-    <Compile Include="Util\Comparers.cs" />
-    <Compile Include="Util\Hashing.cs" />
     <Compile Include="Impl\Backup\MinimalIncrementalBackup.cs" />
     <Compile Include="Impl\Compaction\StorageCompaction.cs" />
     <Compile Include="Impl\PagePosition.cs" />
@@ -107,7 +105,6 @@
     <Compile Include="Trees\PrefixInfoSection.cs" />
     <Compile Include="Trees\PrefixNodeHeader.cs" />
     <Compile Include="Trees\Tree.MultiTree.cs" />
-    <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\EndOfDiskSpaceEvent.cs" />
     <Compile Include="Util\GenericUtil.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
@@ -172,7 +169,6 @@
     <Compile Include="Util\DisposableAction.cs" />
     <Compile Include="Util\ImmutableAppendOnlyList.cs" />
     <Compile Include="Util\LZ4.cs" />
-    <Compile Include="Util\MemoryUtils.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
@@ -181,7 +177,6 @@
     <Compile Include="Util\Utils.cs" />
     <Compile Include="Util\PageTable.cs" />
     <Compile Include="ValueReader.cs" />
-    <Compile Include="Impl\StdLib.cs" />
     <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
     <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="Platform\Win32\Win32NativeFileMethods.cs" />
@@ -203,5 +198,10 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

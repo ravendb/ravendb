@@ -12,13 +12,13 @@ namespace Raven.Client.Counters
 	{
 		CounterStore.BatchOperationsStore Batch { get; }
 
-		OperationCredentials Credentials { get;  }
+		OperationCredentials Credentials { get; }
 
 		string Name { get; }
 
 		string Url { get; }
 
-		Convention Convention { get; set; }
+		CountersConvention CountersConvention { get; set; }
 
 		CounterReplicationInformer ReplicationInformer { get; }
 

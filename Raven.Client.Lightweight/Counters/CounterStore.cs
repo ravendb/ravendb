@@ -32,7 +32,7 @@ namespace Raven.Client.Counters
 		{
 			JsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
 			JsonRequestFactory = new HttpJsonRequestFactory(Constants.NumberOfCachedRequests);
-			Convention = new Convention();
+			CountersConvention = new CountersConvention();
 			Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
 			Advanced = new CounterStoreAdvancedOperations(this);
 			Admin = new CounterStoreAdminOperations(this);
@@ -62,7 +62,7 @@ namespace Raven.Client.Counters
 				}, Name).ConfigureAwait(false).GetAwaiter().GetResult();
 			}			
 
-			replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this, Convention); // make sure it is initialized
+			replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this, CountersConvention); // make sure it is initialized
 		}
 
 		public ICountersChanges Changes(string counterStorage = null)
@@ -90,7 +90,7 @@ namespace Raven.Client.Counters
 					Credentials.ApiKey,
 					Credentials.Credentials,
 					JsonRequestFactory,
-					Convention,
+					CountersConvention,
 					() => counterStorageChanges.Remove(counterStorage));
 
 				return client;
@@ -122,7 +122,7 @@ namespace Raven.Client.Counters
 
 		public string Name { get; set; }
 
-		public Convention Convention { get; set; }
+		public CountersConvention CountersConvention { get; set; }
 
 		internal JsonSerializer JsonSerializer { get; set; }
 
@@ -132,7 +132,7 @@ namespace Raven.Client.Counters
 		
 		private HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
 		{
-			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, Credentials, Convention.ShouldCacheRequest)
+			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, Credentials, CountersConvention.ShouldCacheRequest)
 			{
 				DisableRequestCompression = disableRequestCompression,
 				DisableAuthentication = disableAuthentication
@@ -143,13 +143,13 @@ namespace Raven.Client.Counters
 		{
 			get
 			{
-				return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this, Convention));
+				return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this, CountersConvention));
 			}
 		}
 
 		private void InitializeSecurity()
 		{
-			if (Convention.HandleUnauthorizedResponseAsync != null)
+			if (CountersConvention.HandleUnauthorizedResponseAsync != null)
 				return; // already setup by the user
 
 			if (string.IsNullOrEmpty(Credentials.ApiKey) == false)
@@ -161,7 +161,7 @@ namespace Raven.Client.Counters
 			JsonRequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
 			JsonRequestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
 
-			Convention.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
+			CountersConvention.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
 			{
 				if (credentials.ApiKey == null)
 				{
@@ -172,7 +172,7 @@ namespace Raven.Client.Counters
 				return null;
 			};
 
-			Convention.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
+			CountersConvention.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
 			{
 				var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 

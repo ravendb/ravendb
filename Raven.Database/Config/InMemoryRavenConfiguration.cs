@@ -324,6 +324,7 @@ namespace Raven.Database.Config
 
 			Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
 			Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
+			Counter.DeletedTombstonesInBatch = ravenSettings.Counter.DeletedTombstonesInBatch.Value;
 
 			TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
 
@@ -956,7 +957,7 @@ namespace Raven.Database.Config
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
-		private string indexStoragePath, journalStoragePath;
+		private string indexStoragePath;
 		
 		private int? maxNumberOfParallelIndexTasks;
 
@@ -1298,6 +1299,7 @@ namespace Raven.Database.Config
 		    Encryption.UseFips = defaultConfiguration.Encryption.UseFips;
 
 		    AssembliesDirectory = defaultConfiguration.AssembliesDirectory;
+			Storage.Voron.AllowOn32Bits = defaultConfiguration.Storage.Voron.AllowOn32Bits;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()
@@ -1475,6 +1477,8 @@ namespace Raven.Database.Config
 			/// Purged on next counter storage startup. Default: 14 days.
 			/// </summary>
 			public TimeSpan TombstoneRetentionTime { get; set; }
+
+			public int DeletedTombstonesInBatch { get; set; }
 		}
 
 		public class TimeSeriesConfiguration

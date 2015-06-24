@@ -251,7 +251,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
             var normalizedKey = CreateKey(key);
-            var metadataDocument = ReadDocumentMetadata(normalizedKey);
+            var sliceKey = (Slice)normalizedKey;
+
+            var metadataDocument = ReadDocumentMetadata(normalizedKey, sliceKey);
 			if (metadataDocument == null)
 			{
 				logger.Debug("Document with key='{0}' was not found", key);
@@ -259,14 +261,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
 			int sizeOnDisk;
-            var documentData = ReadDocumentData(normalizedKey, metadataDocument.Etag, metadataDocument.Metadata, out sizeOnDisk);
+            var documentData = ReadDocumentData(normalizedKey, sliceKey, metadataDocument.Etag, metadataDocument.Metadata, out sizeOnDisk);
 			if (documentData == null)
 			{
 				logger.Warn("Could not find data for {0}, but found the metadata", key);
 				return null;
 			}
 
-			var metadataSize = metadataIndex.GetDataSize(Snapshot, (Slice)normalizedKey);
+            var metadataSize = metadataIndex.GetDataSize(Snapshot, sliceKey);
 
 			return new JsonDocument
 			{
@@ -285,9 +287,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new ArgumentNullException("key");
 
             var normalizedKey = CreateKey(key);
+            var sliceKey = (Slice)normalizedKey;
 
-            if (tableStorage.Documents.Contains(Snapshot, (Slice)normalizedKey, writeBatch.Value))
-                return ReadDocumentMetadata(normalizedKey);
+            if (tableStorage.Documents.Contains(Snapshot, sliceKey, writeBatch.Value))
+                return ReadDocumentMetadata(normalizedKey, sliceKey);
 
 			logger.Debug("Document with key='{0}' was not found", key);
 			return null;
@@ -320,7 +323,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
             var existingEtag = EnsureDocumentEtagMatch(normalizedKey, etag, "DELETE");
-            var documentMetadata = ReadDocumentMetadata(normalizedKey);
+            var documentMetadata = ReadDocumentMetadata(normalizedKey, normalizedKeyAsSlice);
 			metadata = documentMetadata.Metadata;
 
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
@@ -409,7 +412,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return;
 			}
 
-            var metadata = ReadDocumentMetadata(normalizedKey);
+            var metadata = ReadDocumentMetadata(normalizedKey, normalizedKeySlice);
 
 			var newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			afterTouchEtag = newEtag;
@@ -452,7 +455,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private Etag EnsureDocumentEtagMatch(string key, Etag etag, string method)
 		{
-			var metadata = ReadDocumentMetadata(key);
+            var sliceKey = (Slice)key;
+
+			var metadata = ReadDocumentMetadata(key, sliceKey);
 			if (metadata == null)
 				return Etag.InvalidEtag;
 
@@ -514,11 +519,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return isUpdate;
 		}
 
-        private JsonDocumentMetadata ReadDocumentMetadata(string normalizedKey)
+        private JsonDocumentMetadata ReadDocumentMetadata(string normalizedKey, Slice sliceKey)
 		{
 			try
 			{
-				var metadataReadResult = metadataIndex.Read(Snapshot, (Slice)normalizedKey, writeBatch.Value);
+                var metadataReadResult = metadataIndex.Read(Snapshot, sliceKey, writeBatch.Value);
 				if (metadataReadResult == null)
 					return null;
 
@@ -594,10 +599,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return isUpdated;
 		}
 
-        private RavenJObject ReadDocumentData(string normalizedKey, Etag existingEtag, RavenJObject metadata, out int size)
+        private RavenJObject ReadDocumentData(string normalizedKey, Slice sliceKey, Etag existingEtag, RavenJObject metadata, out int size)
 		{
-            var normalizedKeySlice = (Slice)normalizedKey;
-
 			try
 			{
 				size = -1;
@@ -609,7 +612,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					return existingCachedDocument.Document;
 				}
 
-                var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKeySlice, writeBatch.Value);
+                var documentReadResult = tableStorage.Documents.Read(Snapshot, sliceKey, writeBatch.Value);
 				if (documentReadResult == null) //non existing document
 					return null;
 
@@ -637,7 +640,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			    try
 			    {
                     size = -1;
-                    var documentReadResult = tableStorage.Documents.Read(Snapshot, normalizedKeySlice, writeBatch.Value);
+                    var documentReadResult = tableStorage.Documents.Read(Snapshot, sliceKey, writeBatch.Value);
                     if (documentReadResult == null) //non existing document
                         return null;
 
@@ -692,7 +695,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					}
 
                     var normalizedKey = CreateKey(key);
-                    var metadata = ReadDocumentMetadata(normalizedKey);
+                    var metadata = ReadDocumentMetadata(normalizedKey, (Slice) key);
 
 					var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
 					if (string.IsNullOrEmpty(entityName))

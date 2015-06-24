@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Json;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -70,6 +71,12 @@ namespace Raven.Database.Server.Controllers
 				throw new InvalidOperationException("Options cannot be null");
 
 			Database.Subscriptions.OpenSubscription(id, options);
+
+			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
+			{
+				Id = id,
+				Type = DataSubscriptionChangeTypes.SubscriptionOpened
+			});
 
 			return GetEmptyMessage();
 		}
@@ -136,6 +143,12 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			Database.Subscriptions.ReleaseSubscription(id);
+
+			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
+			{
+				Id = id,
+				Type = DataSubscriptionChangeTypes.SubscriptionReleased
+			});
 
 			return GetEmptyMessage();
 		}
@@ -216,7 +229,6 @@ namespace Raven.Database.Server.Controllers
                         batchDocCount++;
                     };
 
-                    int nextStart = 0;
 					var retries = 0;
 					do
 					{
@@ -296,28 +308,31 @@ namespace Raven.Database.Server.Controllers
 			{
 				foreach (var match in criteria.PropertiesMatch)
 				{
-					var value = doc.DataAsJson.SelectToken(match.Key);
+					var tokens = doc.DataAsJson.SelectTokenWithRavenSyntaxReturningFlatStructure(match.Key).Select(x => x.Item1).ToArray();
+									
+					foreach (var curVal in tokens)
+					{
+						if (RavenJToken.DeepEquals(curVal, match.Value) == false)
+							return false;
+					}
 
-					if (value == null)
-						return false;
-
-					if (RavenJToken.DeepEquals(value, match.Value) == false)
-						return false;
+					if (tokens.Length == 0)
+						return false;					
 				}
 			}
 
 			if (criteria.PropertiesNotMatch != null)
 			{
-				foreach (var notMatch in criteria.PropertiesNotMatch)
+				foreach (var match in criteria.PropertiesNotMatch)
 				{
-					var value = doc.DataAsJson.SelectToken(notMatch.Key);
-
-					if (value != null)
+					var tokens = doc.DataAsJson.SelectTokenWithRavenSyntaxReturningFlatStructure(match.Key).Select(x => x.Item1).ToArray();
+										
+					foreach (var curVal in tokens)
 					{
-						if (RavenJToken.DeepEquals(value, notMatch.Value))
+						if (RavenJToken.DeepEquals(curVal, match.Value) == true)
 							return false;
-					}
-				}
+					}					
+				}				
 			}
 
 			return true;

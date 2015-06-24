@@ -57,7 +57,7 @@ namespace Raven.Client.Connection.Implementation
 		private readonly HttpJsonRequestFactory factory;
 		private readonly Func<HttpMessageHandler> recreateHandler; 
 		private readonly IHoldProfilingInformation owner;
-		private readonly Convention conventions;
+		private readonly ConventionBase conventions;
 		private readonly bool disabledAuthRetries;
 		private readonly IRequestTimeMetric requestTimeMetric;
 
@@ -191,18 +191,17 @@ namespace Raven.Client.Connection.Implementation
 				{
 					var requestMessage = getRequestMessage();
 					CopyHeadersToHttpRequestMessage(requestMessage);
-					Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+                    Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
 					SetResponseHeaders(Response);
-					AssertServerVersionSupported();
+				    AssertServerVersionSupported();
 					ResponseStatusCode = Response.StatusCode;
 				}
-				catch (Exception e)
+				catch (HttpRequestException e)
 				{
-					if (Response == null && e is HttpRequestException) //something bad happened and httpClient.SendAsync failed -> i.e. server down, network down
-					{
+					if (Response == null) //something bad happened and httpClient.SendAsync failed -> i.e. server down, network down
 						e.Data.Add(Constants.RequestFailedExceptionMarker, true);
-					}
-					throw;
+
+					throw ErrorResponseException.FromHttpRequestException(e);
 				}
 				finally
 				{
@@ -301,7 +300,7 @@ namespace Raven.Client.Connection.Implementation
 
 		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync(bool readErrorString)
 		{
-			if (Response.IsSuccessStatusCode) 
+		    if (Response.IsSuccessStatusCode) 
                 return null;
 		    if (Response.StatusCode == HttpStatusCode.Unauthorized ||
 		        Response.StatusCode == HttpStatusCode.NotFound ||
@@ -424,7 +423,7 @@ namespace Raven.Client.Connection.Implementation
 
 		public RavenJToken ReadResponseJson()
 		{
-			return ReadResponseJsonAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(ReadResponseJsonAsync);
 		}
 
 		public async Task<bool> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
@@ -758,7 +757,7 @@ namespace Raven.Client.Connection.Implementation
 					throw new ErrorResponseException(Response, "Failed request");
                 }
 
-            return Response;
+				return Response;
 		    }).ConfigureAwait(false);
 		}
 
@@ -785,7 +784,7 @@ namespace Raven.Client.Connection.Implementation
 					throw new ErrorResponseException(Response, "Failed request");
                 }
 
-            return Response;		
+				return Response;
             }).ConfigureAwait(false);		
 		}
 

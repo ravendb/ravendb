@@ -23,6 +23,8 @@ namespace Raven.Database.Storage
 		/// </summary>
 		Guid Id { get; }
 
+		IDocumentCacher DocumentCacher { get; }
+
 		IDisposable DisableBatchNesting();
 
 		IStorageActionsAccessor CreateAccessor();

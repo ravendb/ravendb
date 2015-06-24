@@ -28,13 +28,14 @@ namespace Raven.Client.Document
 
 
 
-		/// <summary>
-		/// Generates the document key.
-		/// </summary>
-		/// <param name="conventions">The conventions.</param>
-		/// <param name="entity">The entity.</param>
-		/// <returns></returns>
-		public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
+        /// <summary>
+        /// Generates the document key.
+        /// </summary>
+        /// <param name="conventions">The conventions.</param>
+        /// <param name="entity">The entity.</param>
+        /// <param name="databaseCommands">Low level database commands.</param>
+        /// <returns></returns>
+        public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
 		{
          var typeTagName = conventions.GetDynamicTagName(entity);
 			if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags

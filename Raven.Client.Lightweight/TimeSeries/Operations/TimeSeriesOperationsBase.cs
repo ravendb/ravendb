@@ -16,7 +16,7 @@ namespace Raven.Client.TimeSeries.Actions
  	{
 		private readonly OperationCredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
-		private readonly Convention convention;
+		private readonly TimeSeriesConvention timeSeriesConvention;
 		protected readonly string ServerUrl;
 		protected readonly JsonSerializer JsonSerializer;
 		protected readonly string TimeSeriesUrl;
@@ -32,7 +32,7 @@ namespace Raven.Client.TimeSeries.Actions
 			TimeSeriesName = timeSeriesName;
 			TimeSeriesUrl = string.Format(CultureInfo.InvariantCulture, "{0}/ts/{1}", ServerUrl, timeSeriesName);
 			JsonSerializer = parent.JsonSerializer;
-			convention = parent.Convention;
+			timeSeriesConvention = parent.TimeSeriesConvention;
 		}
 
 		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
@@ -40,7 +40,7 @@ namespace Raven.Client.TimeSeries.Actions
 			CreateHttpJsonRequestParams @params;
 			if (timeout.HasValue)
 			{
-				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, convention.ShouldCacheRequest)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, timeSeriesConvention.ShouldCacheRequest)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,
@@ -49,7 +49,7 @@ namespace Raven.Client.TimeSeries.Actions
 			}
 			else
 			{
-				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, convention.ShouldCacheRequest)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, timeSeriesConvention.ShouldCacheRequest)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,

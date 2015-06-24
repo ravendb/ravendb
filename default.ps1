@@ -102,6 +102,7 @@ task Test -depends Compile {
 	$test_prjs = @( `
 		"$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
 		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
+		"$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
 		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
 		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `

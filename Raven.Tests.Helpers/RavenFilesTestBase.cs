@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -457,7 +458,7 @@ namespace Raven.Tests.Helpers
         {
             var done = SpinWait.SpinUntil(() =>
             {
-                var backupStatus = filesCommands.Configuration.GetKeyAsync<BackupStatus>(BackupStatus.RavenBackupStatusDocumentKey).ResultUnwrap();
+	            var backupStatus = AsyncHelpers.RunSync(() => filesCommands.Configuration.GetKeyAsync<BackupStatus>(BackupStatus.RavenBackupStatusDocumentKey));
                 if (backupStatus == null)
                     return true;
 

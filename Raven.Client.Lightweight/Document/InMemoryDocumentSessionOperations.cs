@@ -433,6 +433,7 @@ more responsive application.
 		/// <param name="key">The key.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
+        /// <param name="noTracking">Entity tracking is enabled if true, disabled otherwise.</param>
 		/// <returns></returns>
 		object TrackEntity(Type entityType, string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
@@ -1141,8 +1142,7 @@ more responsive application.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		/// <param name="documentMetadata">The document metadata.</param>
-		/// <returns></returns>
-		// protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, List< DocumentsChanges> changes)
+        /// <param name="changes">The dictionary of changes.</param>
 		protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, IDictionary<string, DocumentsChanges[]> changes = null)
 		{
 			if (documentMetadata == null)
@@ -1164,26 +1164,14 @@ more responsive application.
 				return false;
 
 			var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
-			if (changes != null)
-			{
-				var changedData = new List<DocumentsChanges>();
-				if ((RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) ||
-					(RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false))
-				{
-					changes[documentMetadata.Key] = changedData.ToArray();
-					return false;
-				}
-				else
-				{
-					return true;
-				}
-			}
-			else
-			{
-				return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, null) == false ||
-					RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, null) == false;
+			var changedData = changes != null ? new List<DocumentsChanges>() : null;
+			var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) 
+				|| (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
 
-			}
+			if (changes != null && changedData.Count > 0)
+				changes[documentMetadata.Key] = changedData.ToArray();
+
+			return changed;
 		}
 
 		/// <summary>

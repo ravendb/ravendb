@@ -1,6 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import shell = require("viewmodels/shell");
+import changesContext = require("common/changesContext");
 import changeSubscription = require('common/changeSubscription');
 import optional = require("common/optional");
 
@@ -39,9 +40,8 @@ class statistics extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime())),
-            shell.currentResourceChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))
-        ];
+			changesContext.currentResourceChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime())),
+			changesContext.currentResourceChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))];
     }
 
 

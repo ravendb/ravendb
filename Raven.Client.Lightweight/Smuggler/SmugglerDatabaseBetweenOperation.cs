@@ -265,7 +265,7 @@ namespace Raven.Client.Smuggler
 							{
 								doc.Metadata["@id"] = doc.Key;
 								var jsonDoc = doc.ToJson();
-								importOperations.PutDocument(jsonDoc, (int)DocumentHelpers.GetRoughSize(jsonDoc)).WaitUnwrap();
+								AsyncHelpers.RunSync(() => importOperations.PutDocument(jsonDoc, (int)DocumentHelpers.GetRoughSize(jsonDoc)));
 								totalCount++;
 							}
 						});
