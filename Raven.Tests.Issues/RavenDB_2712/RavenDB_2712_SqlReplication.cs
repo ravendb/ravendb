@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
@@ -24,7 +25,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 			{
 				var server = servers[0];
 				var systemDatabase = server.SystemDatabase;
-				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
+				var database = AsyncHelpers.RunSync(() => server.Server.GetDatabaseInternal("Northwind"));
 				var retriever = database.ConfigurationRetriever;
 
 				var document = retriever.GetConfigurationDocument<SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>>(Constants.SqlReplication.SqlReplicationConnectionsDocumentName);
@@ -70,7 +71,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 			{
 				var server = servers[0];
 				var systemDatabase = server.SystemDatabase;
-				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
+				var database = AsyncHelpers.RunSync(() => server.Server.GetDatabaseInternal("Northwind"));
 				var retriever = database.ConfigurationRetriever;
 
 				var document = retriever.GetConfigurationDocument<SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>>(Constants.SqlReplication.SqlReplicationConnectionsDocumentName);

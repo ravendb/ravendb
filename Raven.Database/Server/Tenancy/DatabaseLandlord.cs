@@ -218,6 +218,12 @@ namespace Raven.Database.Server.Tenancy
                 Settings = new NameValueCollection(parentConfiguration.Settings),
             };
 
+	        if (config.Settings["Raven/CompiledIndexCacheDirectory"] == null)
+	        {
+				var compiledIndexCacheDirectory = parentConfiguration.CompiledIndexCacheDirectory;
+				config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
+	        }
+
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForDatabaseTenant(tenantId);

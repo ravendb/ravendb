@@ -11,6 +11,11 @@ namespace Raven.Client.Util
         private byte[] _currentBlock;
         private int _currentBlockIndex;
 
+		public BlockingStream()
+		{
+			_blocks = new BlockingCollection<byte[]>();
+		}
+
         public BlockingStream(int streamWriteCountCache)
         {
             _blocks = new BlockingCollection<byte[]>(streamWriteCountCache);

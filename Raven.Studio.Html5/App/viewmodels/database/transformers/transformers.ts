@@ -6,6 +6,7 @@ import deleteTransformerConfirm = require("viewmodels/database/transformers/dele
 import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
 import shell = require("viewmodels/shell");
+import changesContext = require("common/changesContext");
 import copyTransformerDialog = require("viewmodels/database/transformers/copyTransformerDialog");
 
 class Transformers extends viewModelBase {
@@ -53,7 +54,7 @@ class Transformers extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchAllTransformers((e: transformerChangeNotificationDto) => this.processTransformerEvent(e))];
+        return [changesContext.currentResourceChangesApi().watchAllTransformers((e: transformerChangeNotificationDto) => this.processTransformerEvent(e))];
     }
 
     private processTransformerEvent(e: transformerChangeNotificationDto) {

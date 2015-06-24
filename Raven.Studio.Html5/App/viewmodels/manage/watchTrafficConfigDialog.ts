@@ -21,19 +21,14 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     allResources = ko.observableArray<resource>([]);
     nameCustomValidityError: KnockoutComputed<string>;
     searchResults: KnockoutComputed<Array<string>>;
-    resourcesNames = ko.observableArray<string>();
+    resourcesNames = ko.observableArray<string>([]);
 
-    constructor(private resources: KnockoutObservableArray<resource>) {
+    constructor() {
         super();
-        this.resourcesNames(resources().map((resource) => resource.name));
+        this.resourcesNames(shell.getResoucresNames());
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
             return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
-        });
-
-
-        $(window).resize(() => {
-            this.alignBoxVertically();
         });
 
         this.nameCustomValidityError = ko.computed(() => {

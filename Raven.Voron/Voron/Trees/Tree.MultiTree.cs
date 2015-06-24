@@ -1,4 +1,5 @@
-﻿// -----------------------------------------------------------------------
+﻿using Sparrow;
+// -----------------------------------------------------------------------
 //  <copyright file="Tree.MultiTree.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -139,7 +140,7 @@ namespace Voron.Trees
 			using (tx.Environment.GetTemporaryPage(tx, out tmp))
 			{
 				var tempPagePointer = tmp.TempPagePointer;
-                MemoryUtils.Copy(tempPagePointer, nestedPagePtr, currentSize);
+                Memory.Copy(tempPagePointer, nestedPagePtr, currentSize);
 				Delete(key); // release our current page
 				Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort)currentSize);
 
@@ -246,7 +247,7 @@ namespace Voron.Trees
 			{
 				var nestedPage = new Page(NodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
 				var nestedItem = nestedPage.Search(value);
-				if (nestedItem == null) // value not found
+				if (nestedPage.LastMatch != 0) // value not found
 					return;
 
 				byte* nestedPagePtr;

@@ -4,6 +4,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Database.Indexing;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -33,6 +34,14 @@ namespace Raven.Tests.MailingList
 					Assert.Equal(2, query.ToList().Count());
 				}
 			}
+		}
+
+		[Fact]
+		public void SameHash()
+		{
+			var perFieldAnalyzerComparer = new RavenPerFieldAnalyzerWrapper.PerFieldAnalyzerComparer();
+			Assert.Equal(perFieldAnalyzerComparer.GetHashCode("Name"), perFieldAnalyzerComparer.GetHashCode("@in<Name>"));
+			Assert.True(perFieldAnalyzerComparer.Equals("Name","@in<Name>"));
 		}
 
 		[Fact]

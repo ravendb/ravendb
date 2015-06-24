@@ -1,18 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Threading.Tasks;
-using Raven.Abstractions.Counters.Notifications;
+﻿using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Database.Util;
 using Raven.Json.Linq;
+
+using Sparrow.Collections;
+
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Raven.Client.Counters.Changes
 {
 
-    public class CountersChangesClient : RemoteChangesClientBase<ICountersChanges, CountersConnectionState>, ICountersChanges
+    public class CountersChangesClient : RemoteChangesClientBase<ICountersChanges, CountersConnectionState, CountersConvention>, ICountersChanges
     {
 		private readonly ConcurrentSet<string> watchedChanges = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
@@ -22,9 +24,9 @@ namespace Raven.Client.Counters.Changes
 
 		public CountersChangesClient(string url, string apiKey,
                                        ICredentials credentials,
-                                       HttpJsonRequestFactory jsonRequestFactory, Convention conventions,
+                                       HttpJsonRequestFactory jsonRequestFactory, CountersConvention conventions,
                                        Action onDispose)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions.ShouldCacheRequest, onDispose)
+            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
         {
 
         }

@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Threading;
+
 using Raven.Database.Util;
 using Raven.Tests.Common;
 
@@ -20,6 +22,7 @@ namespace Raven.Tests.Storage.Voron
 
 	using Xunit;
 	using Xunit.Extensions;
+    using Sparrow.Collections;
 
 	[Trait("VoronTest", "StorageActionsTests")]
 	public class MappedResultsStorageActionsTests : TransactionalStorageTestBase
@@ -345,7 +348,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(x =>
 				{
 					var results = x.MapReduce
-						.GetMappedResults(303, new HashSet<string> { "reduceKey1" }, true,100, new HashSet<string>())
+						.GetMappedResults(303, new HashSet<string> { "reduceKey1" }, true,100, new HashSet<string>(), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(1, results.Count);
@@ -364,7 +367,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(x =>
 				{
 					var results = x.MapReduce
-						.GetMappedResults(303, new HashSet<string>{ "reduceKey1" }, true, 100, new HashSet<string>())
+						.GetMappedResults(303, new HashSet<string> { "reduceKey1" }, true, 100, new HashSet<string>(), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);
@@ -407,7 +410,7 @@ namespace Raven.Tests.Storage.Voron
 					x =>
 					{
 						var results = x.MapReduce
-							.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, true, 100, new HashSet<string>())
+							.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, true, 100, new HashSet<string>(), CancellationToken.None)
 							.ToList();
 
 						Assert.Equal(1, results.Count);
@@ -425,7 +428,7 @@ namespace Raven.Tests.Storage.Voron
 					x =>
 					{
 						var results = x.MapReduce
-							.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, true, 100, new HashSet<string>())
+							.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, true, 100, new HashSet<string>(), CancellationToken.None)
 							.ToList();
 
 						Assert.Equal(0, results.Count);
@@ -446,7 +449,7 @@ namespace Raven.Tests.Storage.Voron
 					x =>
 					{
 						var results = x.MapReduce
-							.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+							.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 							.ToList();
 
 						Assert.Equal(3, results.Count);
@@ -468,7 +471,7 @@ namespace Raven.Tests.Storage.Voron
 					x =>
 					{
 						var results = x.MapReduce
-							.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+							.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 							.ToList();
 
 						Assert.Equal(1, results.Count);
@@ -570,13 +573,13 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(0, results.Count);
 
 					results = accessor.MapReduce
-					   .GetMappedResults(404, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+					   .GetMappedResults(404, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 					   .ToList();
 
 					Assert.Equal(0, results.Count);
@@ -596,7 +599,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(3, results.Count);
@@ -616,7 +619,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(1, k2.Count);
 
 					results = accessor.MapReduce
-					   .GetMappedResults(404, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+					   .GetMappedResults(404, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 					   .ToList();
 
 					Assert.Equal(1, results.Count);
@@ -637,7 +640,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(0, results.Count);
@@ -649,7 +652,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(0, keyStats.Count);
 
 					results = accessor.MapReduce
-					   .GetMappedResults(404, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+					   .GetMappedResults(404, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 					   .ToList();
 
 					Assert.Equal(1, results.Count);
@@ -670,7 +673,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(0, results.Count);
@@ -682,7 +685,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(0, keyStats.Count);
 
 					results = accessor.MapReduce
-					   .GetMappedResults(404, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>())
+					   .GetMappedResults(404, new HashSet<string>() { "reduceKey1", "reduceKey2" }, true, 100, new HashSet<string>(), CancellationToken.None)
 					   .ToList();
 
 					Assert.Equal(0, results.Count);
@@ -1216,7 +1219,7 @@ namespace Raven.Tests.Storage.Voron
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce
-					.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string>(), 0, true, new ConcurrentSet<object>()))
+					.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string>(), 0, true, new ConcurrentSet<object>()), CancellationToken.None)
 					.Count()));
 
 				storage.Batch(accessor =>
@@ -1230,7 +1233,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>()))
+						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>()), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(0, results.Count);
@@ -1239,7 +1242,7 @@ namespace Raven.Tests.Storage.Voron
 						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>())
 										  {
 											  Take = 10
-										  })
+										  }, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(1, results.Count);
@@ -1247,7 +1250,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(bucket1, results[0].Bucket);
 
 					results = accessor.MapReduce
-						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1" }, 0, false, new ConcurrentSet<object>()))
+						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1" }, 0, false, new ConcurrentSet<object>()), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(0, results.Count);
@@ -1256,7 +1259,7 @@ namespace Raven.Tests.Storage.Voron
 						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1" }, 0, false, new ConcurrentSet<object>())
 						{
 							Take = 10
-						})
+						}, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(1, results.Count);
@@ -1267,7 +1270,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1", "reduceKey2" }, 1, false, new ConcurrentSet<object>()))
+						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1", "reduceKey2" }, 1, false, new ConcurrentSet<object>()), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(0, results.Count);
@@ -1276,13 +1279,13 @@ namespace Raven.Tests.Storage.Voron
 						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1", "reduceKey2" }, 1, false, new ConcurrentSet<object>())
 						{
 							Take = 10
-						})
+						}, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);
 
 					results = accessor.MapReduce
-						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1", "reduceKey2" }, 0, false, new ConcurrentSet<object>()))
+						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1", "reduceKey2" }, 0, false, new ConcurrentSet<object>()), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(0, results.Count);
@@ -1291,7 +1294,7 @@ namespace Raven.Tests.Storage.Voron
 						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1", "reduceKey2" }, 0, false, new ConcurrentSet<object>())
 						{
 							Take = 10
-						})
+						}, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);
@@ -1311,7 +1314,7 @@ namespace Raven.Tests.Storage.Voron
 						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1" }, 0, true, new ConcurrentSet<object>())
 						{
 							Take = 10
-						})
+						}, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);
@@ -1322,7 +1325,7 @@ namespace Raven.Tests.Storage.Voron
 						.GetItemsToReduce(new GetItemsToReduceParams(303, new List<string> { "reduceKey1" }, 1, true, new ConcurrentSet<object>())
 						{
 							Take = 10
-						})
+						}, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);
@@ -1537,7 +1540,7 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetReduceTypesPerKeys(303, 10, 10).Count()));
+				storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetReduceTypesPerKeys(303, 10, 10, CancellationToken.None).Count()));
 
 				storage.Batch(accessor =>
 				{
@@ -1550,7 +1553,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetReduceTypesPerKeys(303, 10, 10)
+						.GetReduceTypesPerKeys(303, 10, 10, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);
@@ -1564,7 +1567,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetReduceTypesPerKeys(303, 10, 10)
+						.GetReduceTypesPerKeys(303, 10, 10, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);
@@ -1572,7 +1575,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.True(results.Any(x => x.ReduceKey == "reduceKey2" && x.OperationTypeToPerform == ReduceType.MultiStep));
 
 					results = accessor.MapReduce
-						.GetReduceTypesPerKeys(303, 10, 15)
+						.GetReduceTypesPerKeys(303, 10, 15, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);
@@ -1580,13 +1583,13 @@ namespace Raven.Tests.Storage.Voron
 					Assert.True(results.Any(x => x.ReduceKey == "reduceKey2" && x.OperationTypeToPerform == ReduceType.SingleStep));
 
 					results = accessor.MapReduce
-						.GetReduceTypesPerKeys(303, 1, 10)
+						.GetReduceTypesPerKeys(303, 1, 10, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(1, results.Count);
 
 					results = accessor.MapReduce
-						.GetReduceTypesPerKeys(303, 0, 10)
+						.GetReduceTypesPerKeys(303, 0, 10, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(1, results.Count);
@@ -1600,7 +1603,7 @@ namespace Raven.Tests.Storage.Voron
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetReduceTypesPerKeys(303, 10, 10).Count()));
+				storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetReduceTypesPerKeys(303, 10, 10, CancellationToken.None).Count()));
 
                 storage.Batch(accessor =>
                 {
@@ -1614,7 +1617,7 @@ namespace Raven.Tests.Storage.Voron
                 storage.Batch(accessor =>
                 {
                     var results = accessor.MapReduce
-                        .GetReduceTypesPerKeys(303, 10, 10)
+						.GetReduceTypesPerKeys(303, 10, 10, CancellationToken.None)
                         .ToList();
 
                     Assert.Equal(3, results.Count);
@@ -1646,7 +1649,7 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetMappedBuckets(303, "reduceKey1").Count()));
+				storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetMappedBuckets(303, "reduceKey1", CancellationToken.None).Count()));
 
 				storage.Batch(accessor =>
 				{
@@ -1659,25 +1662,25 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetMappedBuckets(303, "reduceKey1")
+						.GetMappedBuckets(303, "reduceKey1", CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);
 
 					results = accessor.MapReduce
-						.GetMappedBuckets(303, "reduceKey2")
+						.GetMappedBuckets(303, "reduceKey2", CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(1, results.Count);
 
 					results = accessor.MapReduce
-						.GetMappedBuckets(404, "reduceKey1")
+						.GetMappedBuckets(404, "reduceKey1", CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(1, results.Count);
 
 					results = accessor.MapReduce
-						.GetMappedBuckets(404, "reduceKey2")
+						.GetMappedBuckets(404, "reduceKey2", CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(0, results.Count);
@@ -1691,7 +1694,7 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, true, 100, new HashSet<string>()).Count()));
+				storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, true, 100, new HashSet<string>(), CancellationToken.None).Count()));
 				storage.Batch(accessor =>
 				{
 					accessor.MapReduce.PutMappedResult(303, "doc1", "reduceKey1", new RavenJObject { { "data", "data1" } });
@@ -1701,7 +1704,7 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-						.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, true, 100, new HashSet<string>())
+						.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, true, 100, new HashSet<string>(), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(1, results.Count);
@@ -1715,7 +1718,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("data1", result.Data["data"]);
 
 					results = accessor.MapReduce
-						.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, false, 100, new HashSet<string>())
+						.GetMappedResults(303, new HashSet<string>() { "reduceKey1" }, false, 100, new HashSet<string>(), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(1, results.Count);
@@ -1724,7 +1727,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Null(result.Data);
 
 					results = accessor.MapReduce
-						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, false, 100, new HashSet<string>())
+						.GetMappedResults(303, new HashSet<string>() { "reduceKey1", "reduceKey2" }, false, 100, new HashSet<string>(), CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(2, results.Count);

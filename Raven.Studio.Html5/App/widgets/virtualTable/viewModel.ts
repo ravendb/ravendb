@@ -404,7 +404,7 @@ class ctor {
 
         var existingColumns = this.columns();
         var desiredColumns = existingColumns.concat([]);
-
+       
         for (var i = 0; i < existingColumns.length; i++) {
             var colName = existingColumns[i].binding;
             delete columnsNeeded[colName];
@@ -711,6 +711,11 @@ class ctor {
         } else {
             return "#";
         }
+    }
+
+    getColumnsNames() {
+        var row = this.items.getAllCachedItems().first();
+        return row.getDocumentPropertyNames();
     }
 
     collectionExists(collectionName: string): boolean {

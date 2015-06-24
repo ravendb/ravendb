@@ -21,7 +21,7 @@ namespace Raven.Abstractions.Smuggler
         public new const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
 	    private int chunkSize;
 	   
-	    private long? totalDocumentSizeInChunkLimitInBytes;
+	    private long totalDocumentSizeInChunkLimitInBytes;
 
         public SmugglerDatabaseOptions()
         {
@@ -69,7 +69,7 @@ namespace Raven.Abstractions.Smuggler
         /// <summary>
 		/// Limit total size of documents in each chunk
 		/// </summary>
-        public long? TotalDocumentSizeInChunkLimitInBytes
+        public long TotalDocumentSizeInChunkLimitInBytes
 		{
 			get { return totalDocumentSizeInChunkLimitInBytes; }
 			set

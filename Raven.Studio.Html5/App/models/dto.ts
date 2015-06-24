@@ -491,6 +491,11 @@ interface replicationClientConfigurationDto {
     FailoverBehavior?: string;
 }
 
+interface environmentColorDto {
+    Name: string;
+    BackgroundColor: string;
+}
+
 interface replicationConfigDto {
     DocumentConflictResolution: string;
     AttachmentConflictResolution: string;

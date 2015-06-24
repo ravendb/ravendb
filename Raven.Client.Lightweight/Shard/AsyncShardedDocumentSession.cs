@@ -110,6 +110,11 @@ namespace Raven.Client.Shard
 		public IAsyncLazySessionOperations Lazily { get; private set; }
 	    public IAsyncEagerSessionOperations Eagerly { get; private set; }
 
+		public Task<FacetResults[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
+		{
+			throw new NotSupportedException("Multi faceted searching is currently not supported by async sharded document store");
+		}
+
 		public string GetDocumentUrl(object entity)
 		{
 			DocumentMetadata value;
@@ -123,7 +128,7 @@ namespace Raven.Client.Shard
 			return commands.UrlFor(value.Key);
 		}
 
-		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token = default (CancellationToken))
+		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
@@ -658,7 +663,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
-		Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token = default (CancellationToken))
+		Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token)
 		{
 			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
 											 .ContinueWith(keysTask =>

@@ -157,10 +157,10 @@ namespace Raven.Database.Client.Aws
 
 			Endpoints.Clear();
 
-			var response = GetClient().GetAsync("http://aws-sdk-configurations.amazonwebservices.com/endpoints.xml").ResultUnwrap();
+			var response = AsyncHelpers.RunSync(() => GetClient().GetAsync("http://aws-sdk-configurations.amazonwebservices.com/endpoints.xml"));
 			if (response.IsSuccessStatusCode)
 			{
-				using (var stream = response.Content.ReadAsStreamAsync().ResultUnwrap())
+				using (var stream = AsyncHelpers.RunSync(() => response.Content.ReadAsStreamAsync()))
 				using (var reader = new StreamReader(stream))
 					LoadEndpointsFromReader(reader);
 

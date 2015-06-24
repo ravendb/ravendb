@@ -3,6 +3,7 @@ import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
 
 import shell = require("viewmodels/shell");
+import changesContext = require("common/changesContext");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 
@@ -30,7 +31,6 @@ import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeigh
 
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
-
 
 
 class documents extends viewModelBase {
@@ -184,9 +184,9 @@ class documents extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
-            shell.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
-            shell.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
+            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
         ];
     }
 
@@ -362,6 +362,7 @@ class documents extends viewModelBase {
     selectColumns() {
         // Fetch column widths from virtual table
         var virtualTable = this.getDocumentsGrid();
+            var columnsNames = virtualTable.getColumnsNames();
         var vtColumns = virtualTable.columns();
         this.currentColumnsParams().columns().forEach((column: customColumnParams) => {
             for (var i = 0; i < vtColumns.length; i++) {
@@ -372,11 +373,10 @@ class documents extends viewModelBase {
             }
         });
 
-        var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
+            var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
-
             var pagedList = this.currentCollection().getDocuments();
             this.currentCollectionPagedItems(pagedList);
         });

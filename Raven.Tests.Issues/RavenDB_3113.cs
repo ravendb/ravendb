@@ -49,8 +49,6 @@ namespace Raven.Tests.Issues
 
 		private static void DoTest(IDocumentStore store, string database = null)
 		{
-			int id;
-
 			if (database == null)
 			{
 				using (var session = store.OpenSession())

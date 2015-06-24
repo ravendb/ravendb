@@ -3,7 +3,9 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -97,7 +99,7 @@ namespace Raven.Client.Connection
 			if (AggressiveCacheDuration != null)
 			{
 				var duration = AggressiveCacheDuration.Value;
-				if(duration.TotalSeconds > 0)
+				if (duration.TotalSeconds > 0)
 					setHeader("Cache-Control", "max-age=" + duration.TotalSeconds);
 
 				if (cachedRequest.ForceServerCheck == false && (SystemTime.UtcNow - cachedRequest.Time) < duration) // can serve directly from local cache
@@ -188,16 +190,17 @@ namespace Raven.Client.Connection
 		///</summary>
 		public TimeSpan? AggressiveCacheDuration
 		{
-			get { return aggressiveCacheDuration.Value; }
-			set { aggressiveCacheDuration.Value = value; }
+			get { return CallContext.LogicalGetData("Raven/Client/AggressiveCacheDuration") as TimeSpan?; }
+			set { CallContext.LogicalSetData("Raven/Client/AggressiveCacheDuration", value); }
 		}
 
 		///<summary>
 		/// Session timeout - Thread Local
 		///</summary>
-		public TimeSpan? RequestTimeout {
-			get { return requestTimeout.Value; }
-			set { requestTimeout.Value = value; }
+		public TimeSpan? RequestTimeout
+		{
+			get { return CallContext.LogicalGetData("Raven/Client/RequestTimeout") as TimeSpan?; }
+			set { CallContext.LogicalSetData("Raven/Client/RequestTimeout", value); }
 		}
 
 		/// <summary>
@@ -205,8 +208,15 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public bool DisableHttpCaching
 		{
-			get { return disableHttpCaching.Value; }
-			set { disableHttpCaching.Value = value; }
+			get
+			{
+				var value = CallContext.LogicalGetData("Raven/Client/DisableHttpCaching");
+				if (value == null) 
+					return false;
+
+				return (bool)value;
+		}
+			set { CallContext.LogicalSetData("Raven/Client/DisableHttpCaching", value); }
 		}
 
 		/// <summary>
@@ -218,10 +228,6 @@ namespace Raven.Client.Connection
 		/// will instruct RavenDB to make unsecured calls (usually only good for testing / internal networks).
 		/// </summary>
 		public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
-
-		private readonly Raven.Abstractions.Threading.ThreadLocal<TimeSpan?> aggressiveCacheDuration = new Raven.Abstractions.Threading.ThreadLocal<TimeSpan?>(() => null);
-		private readonly Raven.Abstractions.Threading.ThreadLocal<TimeSpan?> requestTimeout = new Raven.Abstractions.Threading.ThreadLocal<TimeSpan?>(() => null);
-		private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableHttpCaching = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
 
 		private volatile bool disposed;
 		private int numberOfCacheResets;
@@ -329,9 +335,6 @@ namespace Raven.Client.Connection
 				return;
 			disposed = true;
 			cache.Dispose();
-			aggressiveCacheDuration.Dispose();
-			disableHttpCaching.Dispose();
-			requestTimeout.Dispose();
 			httpClientCache.Dispose();
 		}
 

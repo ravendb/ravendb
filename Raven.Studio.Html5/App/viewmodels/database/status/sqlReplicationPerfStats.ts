@@ -1,5 +1,6 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
+import changesContext = require("common/changesContext");
 import getSqlReplicationPerfStatsCommand = require("commands/database/debug/getSqlReplicationPerfStatsCommand");
 import d3 = require("d3/d3");
 import nv = require('nvd3');
@@ -65,7 +66,7 @@ class sqlReplicationPerfStats extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchDocsStartingWith("Raven/SqlReplication/Status", e => this.processUpdate(e)) ];
+        return [changesContext.currentResourceChangesApi().watchDocsStartingWith("Raven/SqlReplication/Status", e => this.processUpdate(e)) ];
     }
 
     processUpdate(e: documentChangeNotificationDto) {

@@ -30,6 +30,7 @@ using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Database.Bundles.SqlReplication
 {

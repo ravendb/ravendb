@@ -26,7 +26,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Raven.Client.Lightweight.xml</DocumentationFile>
-    <NoWarn>1573, 1587, 1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -37,7 +37,7 @@
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -50,7 +50,7 @@
     <DefineConstants>TRACE;CLIENT</DefineConstants>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
     <Optimize>true</Optimize>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
@@ -134,7 +134,7 @@
     <Compile Include="Counters\Replication\CounterReplicationInformer.cs" />
     <Compile Include="Counters\CounterStore.cs" />
     <Compile Include="Counters\Operations\CountersBatchOperation.cs" />
-    <Compile Include="Counters\Convention.cs" />
+    <Compile Include="Counters\CountersConvention.cs" />
     <Compile Include="Counters\CounterStore.Stats.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -143,6 +143,7 @@
     <Compile Include="Document\AsyncDocumentSubscriptions.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
     <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
+    <Compile Include="Document\ChunkedRemoteBulkInsertOperation.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryStorage.cs" />
     <Compile Include="Document\DTC\ITransactionRecoveryStorage.cs" />
@@ -250,7 +251,6 @@
     <Compile Include="Connection\DocumentConventionJsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Connection\MultiGetOperation.cs" />
-    <Compile Include="Connection\Profiling\ConcurrentBoundedList.cs" />
     <Compile Include="Connection\Profiling\IHoldProfilingInformation.cs" />
     <Compile Include="Connection\Profiling\ProfilingContext.cs" />
     <Compile Include="Connection\Profiling\RequestStatus.cs" />
@@ -412,6 +412,10 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

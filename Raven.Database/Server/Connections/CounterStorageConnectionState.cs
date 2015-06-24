@@ -2,9 +2,10 @@ using System;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Counters.Notifications;
-using Raven.Database.Util;
 using Raven.Abstractions.Data;
 using BatchType = Raven.Abstractions.Counters.Notifications.BatchType;
+
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
 {

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Util;
+using Sparrow.Collections;
 
 namespace Raven.Client.Changes
 {

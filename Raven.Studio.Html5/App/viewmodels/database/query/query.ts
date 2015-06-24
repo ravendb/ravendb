@@ -34,6 +34,7 @@ import transformerType = require("models/database/index/transformer");
 import transformerQueryType = require("models/database/index/transformerQuery");
 import getIndexSuggestionsCommand = require("commands/database/index/getIndexSuggestionsCommand");
 import recentQueriesStorage = require("common/recentQueriesStorage");
+import virtualTable = require("widgets/virtualTable/viewModel");
 
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
@@ -92,6 +93,7 @@ class query extends viewModelBase {
     csvUrl = ko.observable<string>();
 
     static containerSelector = "#queryContainer";
+    static queryGridSelector = "#queryResultsGrid";
 
     constructor() {
         super();
@@ -685,12 +687,24 @@ class query extends viewModelBase {
             .done(() => this.runQuery());
     }
 
+    private getQueryGrid(): virtualTable {
+        var gridContents = $(query.queryGridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
+        }
+
+        return null;
+    }
+
+
     selectColumns() {
         var selectColumnsViewModel: selectColumns = new selectColumns(
             this.currentColumnsParams().clone(),
             this.currentCustomFunctions().clone(),
             this.contextName(),
-            this.activeDatabase());
+            this.activeDatabase(),
+            this.getQueryGrid().getColumnsNames());
+
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols: customColumns) => {
             this.currentColumnsParams(cols);

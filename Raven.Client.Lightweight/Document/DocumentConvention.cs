@@ -13,12 +13,13 @@ using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
+
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
@@ -324,12 +325,14 @@ namespace Raven.Client.Document
 	      return GetTypeTagName(entity.GetType());
 	   }
 
-		/// <summary>
-		/// Generates the document key.
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		/// <returns></returns>
-		public string GenerateDocumentKey(string dbName, IDatabaseCommands databaseCommands, object entity)
+        /// <summary>
+        /// Generates the document key.
+        /// </summary>
+        /// <param name="entity">The entity.</param>
+        /// <param name="dbName">Name of the database</param>
+        /// <param name="databaseCommands">Low level database commands.</param>
+        /// <returns></returns>
+        public string GenerateDocumentKey(string dbName, IDatabaseCommands databaseCommands, object entity)
 		{
 			var type = entity.GetType();
 			foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventions
@@ -672,7 +675,7 @@ namespace Raven.Client.Document
 
 		/// <summary>
 		/// How index and transformer updates should be handled in replicated setup.
-		/// Defaults to <see cref="Document.IndexAndTransformerReplicationMode.All"/>.
+		/// Defaults to <see cref="Document.IndexAndTransformerReplicationMode"/>.
 		/// </summary>
 		public IndexAndTransformerReplicationMode IndexAndTransformerReplicationMode { get; set; }
 
@@ -684,6 +687,8 @@ namespace Raven.Client.Document
 		public bool PreserveDocumentPropertiesNotFoundOnModel { get; set; }
 
 		public bool AcceptGzipContent { get; set; }
+
+		public ClusterBehavior ClusterBehavior { get; set; }
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

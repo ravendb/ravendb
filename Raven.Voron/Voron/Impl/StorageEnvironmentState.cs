@@ -7,8 +7,9 @@ namespace Voron.Impl
 	{
 		public Tree Root { get; set; }
 		public Tree FreeSpaceRoot { get; set; }
+	    public StorageEnvironmentOptions Options { get; set; }
 
-		public long NextPageNumber;
+	    public long NextPageNumber;
 
 		public StorageEnvironmentState() { }
 
@@ -25,7 +26,8 @@ namespace Voron.Impl
 				{
 					Root = Root != null ? Root.Clone(tx) : null,
 					FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone(tx) : null,
-					NextPageNumber = NextPageNumber
+					NextPageNumber = NextPageNumber,
+                    Options = Options
 				};
 		}
 
@@ -46,7 +48,7 @@ namespace Voron.Impl
 				return FreeSpaceRoot;
 
 			if (tx.Flags == TransactionFlags.ReadWrite)
-				return tx.Environment.CreateTree(tx, treeName);
+				return tx.Environment.CreateTree(tx, treeName, Options.ShouldUseKeyPrefix(treeName));
 
 			throw new InvalidOperationException("No such tree: " + treeName);
 		}

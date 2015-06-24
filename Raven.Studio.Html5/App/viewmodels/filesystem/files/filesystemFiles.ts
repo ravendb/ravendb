@@ -3,6 +3,8 @@ import appUrl = require("common/appUrl");
 import app = require("durandal/app");
 import shell = require("viewmodels/shell");
 
+import changesContext = require("common/changesContext");
+
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
@@ -121,7 +123,7 @@ class filesystemFiles extends viewModelBase {
         }
 
         if (!this.folderNotificationSubscriptions[newFolder]) {
-            this.folderNotificationSubscriptions[newFolder] = shell.currentResourceChangesApi()
+            this.folderNotificationSubscriptions[newFolder] = changesContext.currentResourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
                     var callbackFolder = new folder(newFolder);
                     if (!callbackFolder)

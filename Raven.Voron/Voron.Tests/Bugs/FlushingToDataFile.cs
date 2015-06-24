@@ -6,15 +6,14 @@
 
 namespace Voron.Tests.Bugs
 {
+    using Sparrow.Platform;
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-
     using Voron.Impl;
     using Voron.Impl.Paging;
     using Voron.Trees;
-
     using Xunit;
 
     public class FlushingToDataFile : StorageTest
@@ -70,7 +69,7 @@ namespace Voron.Tests.Bugs
 
                     fixed (byte* b = value1)
                     fixed (byte* c = memoryStream.GetBuffer())
-                        Assert.Equal(0, StdLib.memcmp(b, c, value1.Length));
+                        Assert.Equal(0, UnmanagedMemory.Compare(b, c, value1.Length));
                 }
             }
         }

@@ -15,7 +15,6 @@ using Raven.Client.Document;
 using Raven.Client.Smuggler;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Smuggler;
-using Raven.Smuggler.Client;
 
 namespace Raven.Database.Smuggler
 {
@@ -98,13 +97,17 @@ namespace Raven.Database.Smuggler
 
 		private BulkInsertOperation CreateBulkInsertOperation(DocumentStore documentStore)
 		{
-			var result = new ChunkedBulkInsertOperation(documentStore.DefaultDatabase, documentStore, documentStore.Listeners, new BulkInsertOptions
+			var result = documentStore.BulkInsert(documentStore.DefaultDatabase, new BulkInsertOptions
 			{
 				BatchSize = Options.BatchSize,
 				OverwriteExisting = true,
-				Compression = Options.DisableCompressionOnImport ? BulkInsertCompression.None : BulkInsertCompression.GZip
-
-			}, documentStore.Changes(), Options.ChunkSize, Options.TotalDocumentSizeInChunkLimitInBytes);
+				Compression = Options.DisableCompressionOnImport ? BulkInsertCompression.None : BulkInsertCompression.GZip,
+				ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
+				{
+					MaxChunkVolumeInBytes = Options.TotalDocumentSizeInChunkLimitInBytes,
+					MaxDocumentsPerChunk = Options.ChunkSize
+				}
+			});
 
 			result.Report += text => Operations.ShowProgress(text);
 

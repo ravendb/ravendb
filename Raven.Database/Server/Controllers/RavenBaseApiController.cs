@@ -267,7 +267,7 @@ namespace Raven.Database.Server.Controllers
             {
                 nvc = (NameValueCollection) value;
                 return nvc[key];
-		}
+            }
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
             req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
@@ -730,7 +730,7 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-	    public abstract Task<bool> SetupRequestToProperDatabase(RequestManager requestManager);
+		public abstract Task<RequestWebApiEventArgs> TrySetupRequestToProperResource();
 
         public abstract string TenantName { get; }
 

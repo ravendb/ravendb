@@ -915,7 +915,7 @@ namespace Raven.Tests.Smuggler
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public void MaxNumberOfItemsToProcessInSingleBatchShouldBeRespectedByDataDumper()
+        public async Task MaxNumberOfItemsToProcessInSingleBatchShouldBeRespectedByDataDumper()
         {
             var path = Path.Combine(NewDataPath(forceCreateDir: true), "raven.dump");
 
@@ -924,7 +924,7 @@ namespace Raven.Tests.Smuggler
                 var dumper = new DatabaseDataDumper(server.SystemDatabase, options: new SmugglerDatabaseOptions { BatchSize = 4321 });
                 Assert.Equal(4321, dumper.Options.BatchSize);
 
-                dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path }).ResultUnwrap();
+	            await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path });
 
                 Assert.Equal(1234, dumper.Options.BatchSize);
 
@@ -938,14 +938,14 @@ namespace Raven.Tests.Smuggler
                 dumper = new DatabaseDataDumper(server.SystemDatabase, options: new SmugglerDatabaseOptions { BatchSize = 1000 });
                 Assert.Equal(1000, dumper.Options.BatchSize);
 
-                dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path }).ResultUnwrap();
+	            await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path });
 
                 Assert.Equal(1000, dumper.Options.BatchSize);
             }
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public void MaxNumberOfItemsToProcessInSingleBatchShouldBeRespectedBySmuggler()
+        public async Task MaxNumberOfItemsToProcessInSingleBatchShouldBeRespectedBySmuggler()
         {
             var path = Path.Combine(NewDataPath(forceCreateDir: true), "raven.dump");
 
@@ -954,21 +954,21 @@ namespace Raven.Tests.Smuggler
                 var smuggler = new SmugglerDatabaseApi(options: new SmugglerDatabaseOptions { BatchSize = 4321 });
                 Assert.Equal(4321, smuggler.Options.BatchSize);
 
-                smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } }).ResultUnwrap();
+	            await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } });
 
                 Assert.Equal(1234, smuggler.Options.BatchSize);
 
                 smuggler = new SmugglerDatabaseApi(options: new SmugglerDatabaseOptions { BatchSize = 4321 });
                 Assert.Equal(4321, smuggler.Options.BatchSize);
 
-                smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } }).Wait();
+	            await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } });
 
                 Assert.Equal(1234, smuggler.Options.BatchSize);
 
                 smuggler = new SmugglerDatabaseApi(options: new SmugglerDatabaseOptions { BatchSize = 1000 });
                 Assert.Equal(1000, smuggler.Options.BatchSize);
 
-                smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } }).ResultUnwrap();
+	            await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } });
 
                 Assert.Equal(1000, smuggler.Options.BatchSize);
             }
