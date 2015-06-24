@@ -5,39 +5,20 @@ using Raven.Client.Changes;
 
 namespace Raven.Client.TimeSeries.Changes
 {
-    public class TimeSeriesConnectionState : IChangesConnectionState
+    public class TimeSeriesConnectionState : ConnectionStateBase
     {
-        private readonly Action onZero;
-        private readonly Task task;
-        private int value;
-        public Task Task
-        {
-            get { return task; }
-        }
+        private readonly Func<TimeSeriesConnectionState, Task> ensureConnection;
 
-		public TimeSeriesConnectionState(Action onZero, Task task)
-        {
-            value = 0;
-            this.onZero = onZero;
-            this.task = task;
-        }
+		public TimeSeriesConnectionState(Action onZero, Func<TimeSeriesConnectionState, Task> ensureConnection, Task task)
+			: base(onZero, task)
+		{
+			this.ensureConnection = ensureConnection;
+		}
 
-        public void Inc()
-        {
-            lock (this)
-            {
-                value++;
-            }
-        }
-
-        public void Dec()
-        {
-            lock (this)
-            {
-                if (--value == 0)
-                    onZero();
-            }
-        }
+		protected override Task EnsureConnection()
+		{
+			return ensureConnection(this);
+		}
 
 		public event Action<ChangeNotification> OnChangeNotification = (x) => { };
 		public void Send(ChangeNotification changeNotification)
@@ -70,14 +51,25 @@ namespace Raven.Client.TimeSeries.Changes
 			if (onBulkOperationNotification != null)
 				onBulkOperationNotification(bulkOperationNotification);
         }
-
-        public event Action<Exception> OnError;
-
-        public void Error(Exception e)
-        {
-            var onOnError = OnError;
-            if (onOnError != null)
-                onOnError(e);
-        }
     }
+
+	public abstract class ConnectionState<T> : ConnectionStateBase
+		where T: ConnectionStateBase
+	{
+		private readonly Func<T, Task> ensureConnection;
+
+		private T self;
+
+		public ConnectionState(Action onZero, Func<T, Task> ensureConnection, Task task, T self)
+			: base(onZero, task)
+		{
+			this.ensureConnection = ensureConnection;
+			this.self = self;
+		}
+
+		protected override Task EnsureConnection()
+		{
+			return ensureConnection(self);
+		}
+	}
 }

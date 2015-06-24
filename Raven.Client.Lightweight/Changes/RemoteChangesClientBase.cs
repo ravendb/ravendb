@@ -315,5 +315,48 @@ namespace Raven.Client.Changes
 
         public virtual void OnCompleted()
         { }
+
+		protected TConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, Action afterConnection, Action beforeDisconnect, string value)
+		{
+			var counter = Counters.GetOrAdd(name, s =>
+			{
+				Action onZero = () =>
+				{
+					beforeDisconnect();
+					Send(unwatchCommand, value);
+					Counters.Remove(name);
+				};
+
+				Func<TConnectionState, Task> ensureConnection = existingConnectionState =>
+				{
+					TConnectionState _;
+					if (Counters.TryGetValue(name, out _))
+						return _.Task;
+
+					Counters.GetOrAdd(name, x => existingConnectionState);
+
+					return AfterConnection(() =>
+					{
+						afterConnection();
+						return Send(watchCommand, value);
+					});
+				};
+
+				var counterSubscriptionTask = AfterConnection(() =>
+				{
+					afterConnection();
+					return Send(watchCommand, value);
+				});
+
+				return CreateTConnectionState(onZero, ensureConnection, counterSubscriptionTask);
+			});
+
+			return counter;
+		}
+
+	    private static TConnectionState CreateTConnectionState(params object[] args)
+		{
+			return (TConnectionState)Activator.CreateInstance(typeof(TConnectionState), args);
+		}
     }
 }

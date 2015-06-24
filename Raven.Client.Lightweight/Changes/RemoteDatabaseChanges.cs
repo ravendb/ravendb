@@ -5,7 +5,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using Sparrow.Collections;
 using System;
@@ -393,43 +392,6 @@ namespace Raven.Client.Changes
 			counter.OnError += taskedObservable.Error;
 
 			return taskedObservable;
-		}
-
-	    private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, Action afterConnection, Action beforeDisconnect, string value)
-		{
-			var counter = Counters.GetOrAdd(name, s =>
-			{
-				var documentSubscriptionTask = AfterConnection(() =>
-				{
-					afterConnection();
-					return Send(watchCommand, value);
-				});
-
-				return new DatabaseConnectionState(
-					() =>
-					{
-						beforeDisconnect();
-						Send(unwatchCommand, value);
-						Counters.Remove(name);
-					},
-					existingConnectionState =>
-					{
-						DatabaseConnectionState _;
-						if (Counters.TryGetValue(name, out _))
-							return _.Task;
-
-						Counters.GetOrAdd(name, x => existingConnectionState);
-
-						return AfterConnection(() =>
-						{
-							afterConnection();
-							return Send(watchCommand, value);
-						});
-					},
-					documentSubscriptionTask);
-			});
-
-			return counter;
 		}
     }
 }
