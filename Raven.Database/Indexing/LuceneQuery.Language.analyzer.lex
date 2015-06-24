@@ -51,7 +51,9 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 {QuotedTerm}	 { yylval.s = yytext; return (int)Token.QUOTED_TERM;}
 {Comment}        {/* skip */}
 {Decimal}		 { yylval.s = yytext; return (int)Token.FLOAT_NUMBER;}
+"Dx"{Decimal}	 { yylval.s = yytext.Substring(2); return (int)Token.FLOAT_NUMBER;}
 {Number}		 { yylval.s = yytext; return (int)Token.INT_NUMBER;}
+"Ix"{Number}	 { yylval.s = yytext.Substring(2); return (int)Token.INT_NUMBER;}
 {UnquotedTerm}   { 					
 					if(InMethod && bStack.Count == 0) 
 					{
