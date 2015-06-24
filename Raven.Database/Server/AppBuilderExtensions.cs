@@ -29,6 +29,7 @@ using Raven.Database.Server.WebApi.Filters;
 using Raven.Database.Server.WebApi.Handlers;
 
 // ReSharper disable once CheckNamespace
+using Raven.Abstractions.Logging;
 namespace Owin
 {
 	public static class AppBuilderExtensions
@@ -80,7 +81,7 @@ namespace Owin
 
 			app.Use((context, func) => UpgradeToWebSockets(options, context, func));
 
-			app.UseWebApi(CreateHttpCfg(options));
+            app.Use<CustomExceptionMiddleware>().UseWebApi(CreateHttpCfg(options));
 
 
 			return app;
@@ -280,6 +281,8 @@ namespace Owin
 
 		private class InterceptMiddleware : OwinMiddleware
 		{
+            private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
 			public InterceptMiddleware(OwinMiddleware next)
 				: base(next)
 			{
@@ -288,9 +291,37 @@ namespace Owin
 			public override async Task Invoke(IOwinContext context)
 			{
 				// Pre request stuff
-				await Next.Invoke(context);
+                try
+                {
+                    await Next.Invoke(context);
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug("Exception occured when invoking http message (InterceptMiddleware):" + ex.Message);
+                }
 				// Post request stuff
 			}
 		}
+
+        private class CustomExceptionMiddleware : OwinMiddleware
+        {
+
+            private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
+            public CustomExceptionMiddleware(OwinMiddleware next) : base(next)
+            {}
+
+            public override async Task Invoke(IOwinContext context)
+            {
+                try
+                {
+                    await Next.Invoke(context);
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug("Exception occured when invoking http message (CustomExceptionMiddleware):" + ex.Message);
+                }
+            }
+        }
 	}
 }
