@@ -25,7 +25,7 @@ namespace Raven.Client.TimeSeries.Replication
 	{
 		private readonly HttpJsonRequestFactory requestFactory;
 		private readonly TimeSeriesStore timeSeriesStore;
-		private readonly Convention convention;
+		private readonly TimeSeriesConvention timeSeriesConvention;
 		public const int DefaultIntervalBetweenUpdatesInMinutes = 5;
 
 		private bool currentlyExecuting;
@@ -50,20 +50,20 @@ namespace Raven.Client.TimeSeries.Replication
 		{
 			get
 			{
-				if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				if (TimeSeriesConventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 					return Empty;
 
 				return ReplicationDestinations;
 			}
 		}
 
-		internal TimeSeriesReplicationInformer(HttpJsonRequestFactory requestFactory, TimeSeriesStore timeSeriesStore, Convention convention, int delayTimeInMiliSec = 1000)
+		internal TimeSeriesReplicationInformer(HttpJsonRequestFactory requestFactory, TimeSeriesStore timeSeriesStore, TimeSeriesConvention timeSeriesConvention, int delayTimeInMiliSec = 1000)
 		{
 			currentReadStripingBase = 0;
 			ReplicationDestinations = new List<TimeSeriesReplicationDestination>();
 			this.requestFactory = requestFactory;
 			this.timeSeriesStore = timeSeriesStore;
-			this.convention = convention;
+			this.timeSeriesConvention = timeSeriesConvention;
 			this.delayTimeInMiliSec = delayTimeInMiliSec;
 			failureTimeSeries = new FailureTimeSeries();
 			firstTime = true;
@@ -78,7 +78,7 @@ namespace Raven.Client.TimeSeries.Replication
 
 		public async Task<T> ExecuteWithReplicationAsync<T>(string timeSeriesStoreUrl, HttpMethod method, Func<string, string, Task<T>> operation, CancellationToken token)
 		{
-			if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
+			if (currentlyExecuting && TimeSeriesConventions.AllowMultipuleAsyncOperations == false)
 				throw new InvalidOperationException("Only a single concurrent async request is allowed per async store instance.");
 
 			currentlyExecuting = true;
@@ -88,8 +88,8 @@ namespace Raven.Client.TimeSeries.Replication
 				var localReplicationDestinations = ReplicationDestinationsAccordingToFailover; // thread safe copy
 
 				//check for supported flags
-				var shouldReadFromAllServers = (Conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) != 0;
-				var shouldFailImmediately = (Conventions.FailoverBehavior & FailoverBehavior.FailImmediately) != 0;
+				var shouldReadFromAllServers = (TimeSeriesConventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) != 0;
+				var shouldFailImmediately = (TimeSeriesConventions.FailoverBehavior & FailoverBehavior.FailImmediately) != 0;
 
 				AsyncOperationResult<T> operationResult;
 
@@ -204,9 +204,9 @@ namespace Raven.Client.TimeSeries.Replication
 
 		public double MaxIntervalBetweenUpdatesInMilliseconds { get; set; }
 
-		public Convention Conventions
+		public TimeSeriesConvention TimeSeriesConventions
 		{
-			get { return convention; }
+			get { return timeSeriesConvention; }
 		}
 
 		private async Task<AsyncOperationResult<T>> TryExecuteOperationAsync<T>(string url, string timeSeriesStoreName, Func<string, string, Task<T>> operation, bool avoidThrowing, OperationCredentials credentials, CancellationToken cancellationToken)
@@ -306,7 +306,7 @@ namespace Raven.Client.TimeSeries.Replication
 							var r = await TryExecuteOperationAsync<object>(timeSeriesStoreUrl,null, async (url, timeSeriesStoreName) =>
 							{
 								var serverCheckUrl = GetServerCheckUrl(url);
-								var requestParams = new CreateHttpJsonRequestParams(null, serverCheckUrl, HttpMethods.Get, credentials, Conventions.ShouldCacheRequest);
+								var requestParams = new CreateHttpJsonRequestParams(null, serverCheckUrl, HttpMethods.Get, credentials, TimeSeriesConventions.ShouldCacheRequest);
 								using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 								{
 									await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -423,7 +423,7 @@ namespace Raven.Client.TimeSeries.Replication
 
 		public Task UpdateReplicationInformationIfNeededAsync()
 		{
-			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+			if (TimeSeriesConventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
 			var updateInterval = TimeSpan.FromMilliseconds(MaxIntervalBetweenUpdatesInMilliseconds);

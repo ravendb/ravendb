@@ -112,10 +112,12 @@
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\OperationMetadata.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
+    <Compile Include="QueryConvention.cs" />
+    <Compile Include="ConventionBase.cs" />
     <Compile Include="TimeSeries\Changes\TimeSeriesChangesClient.cs" />
     <Compile Include="TimeSeries\Changes\TimeSeriesConnectionState.cs" />
     <Compile Include="TimeSeries\Changes\ITimeSeriesChanges.cs" />
-    <Compile Include="TimeSeries\Convention.cs" />
+    <Compile Include="TimeSeries\TimeSeriesConvention.cs" />
     <Compile Include="TimeSeries\Operations\TimeSeriesOperationsBase.cs" />
     <Compile Include="TimeSeries\Operations\TimeSeriesBatchOperation.cs" />
     <Compile Include="TimeSeries\Replication\TimeSeriesReplicationInformer.cs" />

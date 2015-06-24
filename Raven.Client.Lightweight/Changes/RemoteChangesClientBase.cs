@@ -17,7 +17,7 @@ namespace Raven.Client.Changes
     public abstract class RemoteChangesClientBase<TChangesApi, TConnectionState, TConventions> : IDisposable, IObserver<string>, IConnectableChanges<TChangesApi>
                                 where TConnectionState : class, IChangesConnectionState
                                 where TChangesApi : class, IConnectableChanges
-								where TConventions : Convention
+								where TConventions : ConventionBase
     {
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 

@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace Raven.Client.Counters.Changes
 {
 
-    public class CountersChangesClient : RemoteChangesClientBase<ICountersChanges, CountersConnectionState, CountersConvention>, ICountersChanges
+	public class CountersChangesClient : RemoteChangesClientBase<ICountersChanges, CountersConnectionState, CountersConvention>, ICountersChanges
     {
 		private readonly ConcurrentSet<string> watchedChanges = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
@@ -24,7 +24,7 @@ namespace Raven.Client.Counters.Changes
 
 		public CountersChangesClient(string url, string apiKey,
                                        ICredentials credentials,
-                                       HttpJsonRequestFactory jsonRequestFactory, CountersConvention conventions,
+									   HttpJsonRequestFactory jsonRequestFactory, CountersConvention conventions,
                                        Action onDispose)
             : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
         {

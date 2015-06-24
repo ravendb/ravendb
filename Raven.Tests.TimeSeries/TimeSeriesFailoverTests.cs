@@ -31,7 +31,7 @@ namespace Raven.Tests.TimeSeries
 						using (var storeA = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, ravenStore: ravenStoreA))
 						using (var storeB = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, ravenStore: ravenStoreB))
 						{
-							storeA.Convention.FailoverBehavior = FailoverBehavior.FailImmediately;
+							storeA.TimeSeriesConvention.FailoverBehavior = FailoverBehavior.FailImmediately;
 
 							await SetupReplicationAsync(storeA, storeB);
 							await storeA.ChangeAsync("group", "time series", 2);

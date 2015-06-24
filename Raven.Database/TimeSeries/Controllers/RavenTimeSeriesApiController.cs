@@ -172,63 +172,58 @@ namespace Raven.Database.TimeSeries.Controllers
 	        get { return TimeSeries.Configuration; }
 	    }
 
-	    public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
+		public override async Task<RequestWebApiEventArgs> TrySetupRequestToProperResource()
 		{
 			var tenantId = TimeSeriesName;
+			if (string.IsNullOrWhiteSpace(tenantId))
+				throw new HttpException(503, "Could not find a time series with no name");
 
-		    if (string.IsNullOrWhiteSpace(tenantId))
-			    return true;
-
-		    Task<TimeSeriesStorage> resourceStoreTask;
-			bool hasDb;
+			Task<TimeSeriesStorage> resourceStoreTask;
+			bool hasTimeSeries;
+			string msg;
 			try
 			{
-				hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
+				hasTimeSeries = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
 			}
 			catch (Exception e)
 			{
-				var msg = "Could not open timeSeries named: " + tenantId;
+				msg = "Could not open time series named: " + tenantId;
 				Logger.WarnException(msg, e);
 				throw new HttpException(503, msg, e);
 			}
-			if (hasDb)
+			if (hasTimeSeries)
 			{
 				try
 				{
-                    if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
+					if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
 					{
-						var msg = "The timeSeries " + tenantId +
+						msg = "The time series " + tenantId +
 								  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";
 						Logger.Warn(msg);
 						throw new HttpException(503, msg);
 					}
-					var args = new BeforeRequestWebApiEventArgs
+
+					landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+
+					return new RequestWebApiEventArgs
 					{
 						Controller = this,
 						IgnoreRequest = false,
 						TenantId = tenantId,
 						TimeSeries = resourceStoreTask.Result
 					};
-					rm.OnBeforeRequest(args);
-					if (args.IgnoreRequest)
-						return false;
 				}
 				catch (Exception e)
 				{
-					var msg = "Could open timeSeriess named: " + tenantId;
+					msg = "Could open time series named: " + tenantId;
 					Logger.WarnException(msg, e);
 					throw new HttpException(503, msg, e);
 				}
+			}
 
-				landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-			}
-			else
-			{
-				var msg = "Could not find a timeSeries named: " + tenantId;
-				Logger.Warn(msg);
-				throw new HttpException(503, msg);
-			}
-			return true;
+			msg = "Could not find a time series named: " + tenantId;
+			Logger.Warn(msg);
+			throw new HttpException(503, msg);
 		}
 
 		public override string TenantName
@@ -242,7 +237,7 @@ namespace Raven.Database.TimeSeries.Controllers
         {
             if (Storage == null)
                 return;
-            // Storage.MetricsTimeSeries.RequestDurationMetric.Update(duration);
+            // TODO: Storage.MetricsTimeSeries.RequestDurationMetric.Update(duration);
         }
 
 		public override InMemoryRavenConfiguration SystemConfiguration

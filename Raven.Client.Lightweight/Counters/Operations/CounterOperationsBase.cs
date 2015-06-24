@@ -14,7 +14,7 @@ namespace Raven.Client.Counters.Operations
  	{
 		private readonly OperationCredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
-		private readonly CountersConvention convention;
+		private readonly CountersConvention countersConvention;
 		protected readonly string ServerUrl;
 		protected readonly string CounterStorageUrl;
 
@@ -24,7 +24,7 @@ namespace Raven.Client.Counters.Operations
 			jsonRequestFactory = parent.JsonRequestFactory;
 			ServerUrl = parent.Url;
 			CounterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}", ServerUrl, counterStorageName);
-			convention = parent.Convention;
+			countersConvention = parent.CountersConvention;
 		}
 
 		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
@@ -32,7 +32,7 @@ namespace Raven.Client.Counters.Operations
 			CreateHttpJsonRequestParams @params;
 			if (timeout.HasValue)
 			{
-				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, convention.ShouldCacheRequest)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, countersConvention.ShouldCacheRequest)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,
@@ -41,7 +41,7 @@ namespace Raven.Client.Counters.Operations
 			}
 			else
 			{
-				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, convention.ShouldCacheRequest)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, countersConvention.ShouldCacheRequest)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,

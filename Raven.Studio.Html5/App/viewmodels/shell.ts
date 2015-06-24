@@ -1063,7 +1063,7 @@ class shell extends viewModelBase {
 		this.navigate(this.appUrls.adminSettingsCluster());
 	}
 
-    static getResourcesNamesComputed(): KnockoutComputed<string[]> {
+    static resourcesNamesComputed(): KnockoutComputed<string[]> {
         return ko.computed(() => {
             var resourcesNames = shell.resources().map((rs: resource) => rs.name);
             return resourcesNames.distinct();

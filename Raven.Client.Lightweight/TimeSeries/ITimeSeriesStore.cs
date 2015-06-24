@@ -18,7 +18,7 @@ namespace Raven.Client.TimeSeries
 
 		string Url { get; }
 
-		Convention Convention { get; set; }
+		TimeSeriesConvention TimeSeriesConvention { get; set; }
 
 		TimeSeriesReplicationInformer ReplicationInformer { get; }
 

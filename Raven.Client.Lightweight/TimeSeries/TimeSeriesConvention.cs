@@ -7,28 +7,20 @@ using Raven.Abstractions.Replication;
 namespace Raven.Client.TimeSeries
 {
 	/// <summary>
-	/// The set of conventions used by the <see cref="Convention"/> which allow the users to customize
+	/// The set of conventions used by the <see cref="TimeSeriesConvention"/> which allow the users to customize
 	/// the way the Raven client API behaves
 	/// </summary>
-	public class Convention 
+	public class TimeSeriesConvention : ConventionBase
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="Convention"/> class.
+		/// Initializes a new instance of the <see cref="TimeSeriesConvention"/> class.
 		/// </summary>
-		public Convention()
+		public TimeSeriesConvention()
 		{
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			AllowMultipuleAsyncOperations = true;
 			ShouldCacheRequest = url => true;
 		}
-
-		public double RequestTimeThresholdInMilliseconds { get; set; }
-
-		public FailoverBehavior FailoverBehavior { get; set; }
-
-		public bool AllowMultipuleAsyncOperations { get; set; }
-
-		public Func<string, bool> ShouldCacheRequest { get; set; }
 
 		/// <summary>
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server

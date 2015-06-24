@@ -175,18 +175,15 @@ namespace Raven.Database.Counters.Controllers
 		public override async Task<RequestWebApiEventArgs> TrySetupRequestToProperResource()
 		{
 			var tenantId = CounterStorageName;
-
 			if (string.IsNullOrWhiteSpace(tenantId))
-			{
-				throw new HttpException(503, "Could not find a file system with no name");
-			}
+				throw new HttpException(503, "Could not find a counter storage with no name");
 
 			Task<CounterStorage> resourceStoreTask;
-			bool hasDb;
+			bool hasCounter;
 			string msg;
 			try
 			{
-				hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
+				hasCounter = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
 			}
 			catch (Exception e)
 			{
@@ -194,7 +191,7 @@ namespace Raven.Database.Counters.Controllers
 				Logger.WarnException(msg, e);
 				throw new HttpException(503, msg, e);
 			}
-			if (hasDb)
+			if (hasCounter)
 			{
 				try
 				{

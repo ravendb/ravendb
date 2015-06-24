@@ -78,7 +78,7 @@ namespace Raven.Client.FileSystem
 
         protected override IFilesReplicationInformer GetReplicationInformer()
         {
-            return new FilesReplicationInformer(this.Conventions, this.RequestFactory);
+            return new FilesReplicationInformer(Conventions, RequestFactory);
         }
 
         protected override string BaseUrl

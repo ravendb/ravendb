@@ -18,11 +18,10 @@ namespace Raven.Client.FileSystem.Connection
     /// </summary>
     public class FilesReplicationInformer : ReplicationInformerBase<IAsyncFilesCommands>, IFilesReplicationInformer
     {
-        public FilesReplicationInformer(Convention conventions, HttpJsonRequestFactory requestFactory)
+        public FilesReplicationInformer(FilesConvention conventions, HttpJsonRequestFactory requestFactory)
             : base(conventions, requestFactory)
         {
         }
-
 
         /// <summary>
         /// Refreshes the replication information.

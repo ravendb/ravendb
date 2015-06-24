@@ -146,10 +146,10 @@ namespace Raven.Database.Smuggler
 								jsonWriter.WriteValue(counterInfo.CounterName);
 
 								jsonWriter.WritePropertyName("Positive");
-								jsonWriter.WriteValue(counterInfo.Increments);
+								//TODO: jsonWriter.WriteValue(counterInfo.Increments);
 
 								jsonWriter.WritePropertyName("Negative");
-								jsonWriter.WriteValue(counterInfo.Decrements);
+								//TODO: jsonWriter.WriteValue(counterInfo.Decrements);
 								
 							jsonWriter.WriteEndObject();
 						}

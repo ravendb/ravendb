@@ -10,7 +10,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Linq
 {
@@ -24,9 +23,9 @@ namespace Raven.Client.Linq
 		    public PropertyInfo MaybeProperty;
 		}
 
-		private readonly Convention conventions;
+		private readonly QueryConvention conventions;
 
-		public LinqPathProvider(Convention conventions)
+		public LinqPathProvider(QueryConvention conventions)
 		{
 			this.conventions = conventions;
 		}

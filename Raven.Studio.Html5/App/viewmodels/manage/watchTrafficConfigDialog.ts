@@ -3,8 +3,6 @@ import dialog = require("plugins/dialog");
 import resource = require("models/resources/resource");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import shell = require("viewmodels/shell");
-import database = require("models/resources/database");
-import filesystem = require("models/filesystem/filesystem");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
@@ -14,18 +12,19 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     public configurationTask = $.Deferred();
     
     watchedResourceMode = ko.observable("SingleResourceView");
-    resourceName = ko.observable<string>('');
+    resourceName = ko.observable<string>("");
     lastSearchedwatchedResourceName = ko.observable<string>();
     resourceAutocompletes = ko.observableArray<string>([]);
     maxEntries = ko.observable<number>(1000);
     allResources = ko.observableArray<resource>([]);
     nameCustomValidityError: KnockoutComputed<string>;
     searchResults: KnockoutComputed<Array<string>>;
-    resourcesNames = ko.observableArray<string>([]);
+    resourcesNames: KnockoutComputed<string[]>;
 
     constructor() {
         super();
-        this.resourcesNames(shell.getResoucresNames());
+        this.resourcesNames = shell.resourcesNamesComputed();
+
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
             return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
@@ -34,13 +33,10 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
             var newResourceName = this.resourceName();
-            var foundDb = shell.databases.first((db: database) => newResourceName == db.name);
-            var foundFs = shell.fileSystems.first((fs: filesystem) => newResourceName == fs.name);
-
-            if (!foundDb && !foundFs && newResourceName.length > 0) {
-                errorMessage = "Database or filesystem name doesn't exist!";
+            var foundResource = this.resourcesNames().filter((name: string) => name === newResourceName);
+            if (!foundResource && newResourceName.length > 0) {
+                errorMessage = "Resource name doesn't exist!";
             }
-
             return errorMessage;
         });
     }

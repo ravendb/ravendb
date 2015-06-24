@@ -25,7 +25,7 @@ namespace Raven.Tests.TimeSeries
 					using (var storeB = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, ravenStore: ravenStoreB))
 					using (var storeC = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, ravenStore: ravenStoreC))
 					{
-						storeA.Convention.FailoverBehavior = FailoverBehavior.ReadFromAllServers;
+						storeA.TimeSeriesConvention.FailoverBehavior = FailoverBehavior.ReadFromAllServers;
 						await SetupReplicationAsync(storeA, storeB, storeC);
 
 						//make sure we get replication nodes info
