@@ -125,7 +125,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 			else
 			{
-				if (values.ContainsKey("cou"))
+				if (values.ContainsKey("counterStorageName"))
 					CounterStorageName = values["counterStorageName"] as string;
 			}
 		}
