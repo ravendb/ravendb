@@ -49,6 +49,11 @@ namespace Raven.Client.Connection
 			return url + "/stats";
 		}
 
+		public static string UserInfo(this string url)
+		{
+			return url + "/debug/user-info";
+		}
+
 		public static string AdminStats(this string url)
 		{
 			return MultiDatabase.GetRootDatabaseUrl(url) +"/admin/stats";

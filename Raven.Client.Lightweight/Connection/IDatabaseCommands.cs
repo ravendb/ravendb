@@ -284,6 +284,12 @@ namespace Raven.Client.Connection
 		DatabaseStatistics GetStatistics();
 
 		/// <summary>
+		///     Retrieve the user info
+		/// </summary>
+
+		UserInfo GetUserInfo();
+
+		/// <summary>
 		///     Get the all terms stored in the index for the specified field
 		///     You can page through the results by use fromValue parameter as the
 		///     starting point for the next query

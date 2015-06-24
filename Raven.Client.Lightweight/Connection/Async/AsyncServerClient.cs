@@ -1531,6 +1531,15 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
+		public async Task<UserInfo> GetUserInfoAsync(CancellationToken token = default(CancellationToken))
+		{
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.UserInfo(), HttpMethod.Get, PrimaryCredentials, convention)))
+			{
+				var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+				return json.Deserialize<UserInfo>(convention);
+			}
+		}
+
 		[Obsolete("Use RavenFS instead.")]
 		public Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize, CancellationToken token = default (CancellationToken))
 		{
