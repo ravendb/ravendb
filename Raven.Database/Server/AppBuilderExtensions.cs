@@ -297,7 +297,7 @@ namespace Owin
                 }
                 catch (Exception ex)
                 {
-                    Log.Debug("Exception occured when invoking http message (InterceptMiddleware):" + ex.Message);
+                    Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
                 }
 				// Post request stuff
 			}
@@ -305,7 +305,6 @@ namespace Owin
 
         private class CustomExceptionMiddleware : OwinMiddleware
         {
-
             private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
             public CustomExceptionMiddleware(OwinMiddleware next) : base(next)
@@ -319,7 +318,8 @@ namespace Owin
                 }
                 catch (Exception ex)
                 {
-                    Log.Debug("Exception occured when invoking http message (CustomExceptionMiddleware):" + ex.Message);
+                   
+                    Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
                 }
             }
         }
