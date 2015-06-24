@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Counters.Notifications;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -19,6 +18,7 @@ namespace Raven.Client.Counters.Changes
 		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedCountersInGroup = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedBulkOperations = new ConcurrentSet<string>();
+		private bool watchAllCounters;
 
 		public CountersChangesClient(string url, string apiKey,
                                        ICredentials credentials,
@@ -30,20 +30,23 @@ namespace Raven.Client.Counters.Changes
         }
 
         protected override async Task SubscribeOnServer()
-        {
+		{
+			if (watchAllCounters)
+				await Send("watch-counters", null).ConfigureAwait(false);
+
 			foreach (var matchingChange in watchedChanges)
             {
 				await Send("watch-counter-change", matchingChange).ConfigureAwait(false);
             }
 
-			foreach (var matchingLocalChange in watchedPrefixes)
+			foreach (var matchingPrefix in watchedPrefixes)
 			{
-				await Send("watch-counters-prefix", matchingLocalChange).ConfigureAwait(false);
+				await Send("watch-counters-prefix", matchingPrefix).ConfigureAwait(false);
 			}
 
-			foreach (var matchingReplicationChange in watchedCountersInGroup)
+			foreach (var matchingCountersInGroup in watchedCountersInGroup)
 			{
-				await Send("watch-counters-in-group", matchingReplicationChange).ConfigureAwait(false);
+				await Send("watch-counters-in-group", matchingCountersInGroup).ConfigureAwait(false);
 			}
 
 			foreach (var matchingBulkOperation in watchedBulkOperations)
@@ -57,7 +60,7 @@ namespace Raven.Client.Counters.Changes
             switch (type)
             {
 				case "ChangeNotification":
-					var changeNotification =   value.JsonDeserialization<ChangeNotification>();
+					var changeNotification = value.JsonDeserialization<ChangeNotification>();
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(changeNotification);
@@ -88,6 +91,38 @@ namespace Raven.Client.Counters.Changes
                     break;
             }
         }
+
+		public IObservableWithTask<ChangeNotification> ForAllCounters()
+		{
+			var counter = GetOrAddConnectionState("all-counters", "watch-counter-change", "unwatch-counter-change",
+				() => watchAllCounters = true,
+				() => watchAllCounters = false,
+				null);
+			/*var counter = Counters.GetOrAdd("all-counters", s =>
+			{
+				var documentSubscriptionTask = AfterConnection(() =>
+				{
+					watchAllCounters = true;
+					return Send("watch-docs", null);
+				});
+				return new CountersConnectionState(
+					() =>
+					{
+						watchAllCounters = false;
+						Send("unwatch-docs", null);
+						Counters.Remove("all-docs");
+					},
+					documentSubscriptionTask);
+			});*/
+			var taskedObservable = new TaskedObservable<ChangeNotification, CountersConnectionState>(
+				counter,
+				notification => true);
+
+			counter.OnChangeNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
+
+			return taskedObservable;
+		}
 
 	    public IObservableWithTask<ChangeNotification> ForChange(string groupName, string counterName)
 	    {

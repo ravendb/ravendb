@@ -4,7 +4,7 @@ import counterStorage = require("models/counter/counterStorage");
 
 class updateCounterCommand extends commandBase {
 
-    constructor(private cs: counterStorage, private group: string, private counterName: string, private delta: number, private isNew: boolean) {
+    constructor(private cs: counterStorage, private group: string, private counterName: string, private delta: string, private isNew: boolean) {
         super();
     }
 

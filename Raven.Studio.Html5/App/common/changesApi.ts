@@ -1,11 +1,11 @@
 /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
 
-import resource = require('models/resources/resource');
-import appUrl = require('common/appUrl');
-import changeSubscription = require('common/changeSubscription');
-import changesCallback = require('common/changesCallback');
-import commandBase = require('commands/commandBase');
+import resource = require("models/resources/resource");
+import appUrl = require("common/appUrl");
+import changeSubscription = require("common/changeSubscription");
+import changesCallback = require("common/changesCallback");
+import commandBase = require("commands/commandBase");
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import idGenerator = require("common/idGenerator");
@@ -32,6 +32,7 @@ class changesApi {
     static messageWasShownOnce: boolean = false;
     private successfullyConnectedOnce: boolean = false;
     private sentMessages = [];
+    private commandBase = new commandBase();
 
     private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
@@ -39,12 +40,17 @@ class changesApi {
     private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
     private watchedPrefixes = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
+
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
     private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
     private allFsConfigHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private allFsDestinationsHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private watchedFolders = {};
-    private commandBase = new commandBase();
+
+    private allCountersHandlers = ko.observableArray<changesCallback<counterChangeNotification>>();
+    private watchedCounter = {};
+    private watchedCountersInGroup = {};
+    private allCounterBulkOperationsHandlers = ko.observableArray<changesCallback<counterBulkOperationNotificationDto>>();
     
     constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
         this.eventsId = idGenerator.generateId();
@@ -147,7 +153,7 @@ class changesApi {
 
         this.eventSource.onmessage = (e) => this.onMessage(e);
         this.eventSource.onerror = (e) => {
-            if (connectionOpened == false) {
+            if (connectionOpened === false) {
                 this.connectToChangesApiTask.reject();
             } else {
                 this.onError(e);
@@ -260,104 +266,106 @@ class changesApi {
 
     private onMessage(e: any) {
         var eventDto: changesApiEventDto = JSON.parse(e.data);
-        var type = eventDto.Type;
-        var value = eventDto.Value;
+        var eventType = eventDto.Type;
+        if (eventType === "Heartbeat") // ignore heartbeat
+            return;
 
-        if (type !== "Heartbeat") { // ignore heartbeat
-            if (type === "DocumentChangeNotification") {
-                this.fireEvents(this.allDocsHandlers(), value, (e) => true);
-                for (var key in this.watchedPrefixes) {
-                    var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
-                    this.fireEvents(docCallbacks(), value, (e) => e.Id != null && e.Id.match("^" + key));
-                }
-            } else if (type === "IndexChangeNotification") {
-                this.fireEvents(this.allIndexesHandlers(), value, (e) => true);
-            } else if (type === "TransformerChangeNotification") {
-                this.fireEvents(this.allTransformersHandlers(), value, (e) => true);
-            } else if (type === "BulkInsertChangeNotification") {
-                this.fireEvents(this.allBulkInsertsHandlers(), value, (e) => true);
-            } else if (type === "SynchronizationUpdateNotification") {
-                this.fireEvents(this.allFsSyncHandlers(), value, (e) => true);
-            } else if (type === "ReplicationConflictNotification") {
-                this.fireEvents(this.allReplicationConflicts(), value, (e) => true);
-            } else if (type === "ConflictNotification") {
-                this.fireEvents(this.allFsConflictsHandlers(), value, (e) => true);
-            } else if (type === "FileChangeNotification") {
-                for (var key in this.watchedFolders) {
-                    var folderCallbacks = <KnockoutObservableArray<fileChangeNotification>> this.watchedFolders[key];
-                    this.fireEvents(folderCallbacks(), value, (e) => {
-                        var notifiedFolder = folder.getFolderFromFilePath(e.File);
-                        var match: string[] = null;
-                        if (notifiedFolder && notifiedFolder.path) {
-                            match = notifiedFolder.path.match(key);
-                        }
-                        return match && match.length > 0;
-                    });
-                }
-            } else if (type === "ConfigurationChangeNotification") {
-                if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
-                    this.fireEvents(this.allFsDestinationsHandlers(), value, (e) => true);
-                }
-                this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
+        var value = eventDto.Value;
+        if (eventType === "DocumentChangeNotification") {
+            this.fireEvents(this.allDocsHandlers(), value, (event) => true);
+            for (var key in this.watchedPrefixes) {
+                var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
+                this.fireEvents(docCallbacks(), value, (event) => e.Id != null && e.Id.match("^" + key));
             }
-            else {
-                console.log("Unhandled Changes API notification type: " + type);
+        } else if (eventType === "IndexChangeNotification") {
+            this.fireEvents(this.allIndexesHandlers(), value, (event) => true);
+        } else if (eventType === "TransformerChangeNotification") {
+            this.fireEvents(this.allTransformersHandlers(), value, (event) => true);
+        } else if (eventType === "BulkInsertChangeNotification") {
+            this.fireEvents(this.allBulkInsertsHandlers(), value, (event) => true);
+        } else if (eventType === "SynchronizationUpdateNotification") {
+            this.fireEvents(this.allFsSyncHandlers(), value, (event) => true);
+        } else if (eventType === "ReplicationConflictNotification") {
+            this.fireEvents(this.allReplicationConflicts(), value, (event) => true);
+        } else if (eventType === "ConflictNotification") {
+            this.fireEvents(this.allFsConflictsHandlers(), value, (event) => true);
+        } else if (eventType === "FileChangeNotification") {
+            for (var key in this.watchedFolders) {
+                var folderCallbacks = <KnockoutObservableArray<fileChangeNotification>> this.watchedFolders[key];
+                this.fireEvents(folderCallbacks(), value, (event) => {
+                    var notifiedFolder = folder.getFolderFromFilePath(event.File);
+                    var match: string[] = null;
+                    if (notifiedFolder && notifiedFolder.path) {
+                        match = notifiedFolder.path.match(key);
+                    }
+                    return match && match.length > 0;
+                });
             }
+        } else if (eventType === "ConfigurationChangeNotification") {
+            if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
+                this.fireEvents(this.allFsDestinationsHandlers(), value, (e) => true);
+            }
+            this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
+        } else if (eventType === "ChangeNotification") {
+            this.fireEvents(this.allCountersHandlers(), value, (event) => true);
+        }
+        else {
+            console.log("Unhandled Changes API notification type: " + eventType);
         }
     }
 
     watchAllIndexes(onChange: (e: indexChangeNotificationDto) => void) {
         var callback = new changesCallback<indexChangeNotificationDto>(onChange);
-        if (this.allIndexesHandlers().length == 0) {
-            this.send('watch-indexes');
+        if (this.allIndexesHandlers().length === 0) {
+            this.send("watch-indexes");
         }
         this.allIndexesHandlers.push(callback);
         return new changeSubscription(() => {
             this.allIndexesHandlers.remove(callback);
-            if (this.allIndexesHandlers().length == 0) {
-                this.send('unwatch-indexes');
+            if (this.allIndexesHandlers().length === 0) {
+                this.send("unwatch-indexes");
             }
         });
     }
 
     watchAllTransformers(onChange: (e: transformerChangeNotificationDto) => void) {
         var callback = new changesCallback<transformerChangeNotificationDto>(onChange);
-        if (this.allTransformersHandlers().length == 0) {
-            this.send('watch-transformers');
+        if (this.allTransformersHandlers().length === 0) {
+            this.send("watch-transformers");
         }
         this.allTransformersHandlers.push(callback);
         return new changeSubscription(() => {
             this.allTransformersHandlers.remove(callback);
-            if (this.allTransformersHandlers().length == 0) {
-                this.send('unwatch-transformers');
+            if (this.allTransformersHandlers().length === 0) {
+                this.send("unwatch-transformers");
             }
         });
     }
 
     watchAllReplicationConflicts(onChange: (e: replicationConflictNotificationDto) => void) {
         var callback = new changesCallback<replicationConflictNotificationDto>(onChange);
-        if (this.allReplicationConflicts().length == 0) {
-            this.send('watch-replication-conflicts');
+        if (this.allReplicationConflicts().length === 0) {
+            this.send("watch-replication-conflicts");
         }
         this.allReplicationConflicts.push(callback);
         return new changeSubscription(() => {
             this.allReplicationConflicts.remove(callback);
-            if (this.allReplicationConflicts().length == 0) {
-                this.send('unwatch-replication-conflicts');
+            if (this.allReplicationConflicts().length === 0) {
+                this.send("unwatch-replication-conflicts");
             }
         });
     }
 
     watchAllDocs(onChange: (e: documentChangeNotificationDto) => void) {
         var callback = new changesCallback<documentChangeNotificationDto>(onChange);
-        if (this.allDocsHandlers().length == 0) {
-            this.send('watch-docs');
+        if (this.allDocsHandlers().length === 0) {
+            this.send("watch-docs");
         }
         this.allDocsHandlers.push(callback);
         return new changeSubscription(() => {
             this.allDocsHandlers.remove(callback);
-            if (this.allDocsHandlers().length == 0) {
-                this.send('unwatch-docs');
+            if (this.allDocsHandlers().length === 0) {
+                this.send("unwatch-docs");
             }
         });
     }
@@ -365,29 +373,28 @@ class changesApi {
     watchDocsStartingWith(docIdPrefix: string, onChange: (e: documentChangeNotificationDto) => void): changeSubscription {
         var callback = new changesCallback<documentChangeNotificationDto>(onChange);
         if (typeof (this.watchedPrefixes[docIdPrefix]) === "undefined") {
-            this.send('watch-prefix', docIdPrefix);
+            this.send("watch-prefix", docIdPrefix);
             this.watchedPrefixes[docIdPrefix] = ko.observableArray();
         }
         this.watchedPrefixes[docIdPrefix].push(callback);
-
         return new changeSubscription(() => {
             this.watchedPrefixes[docIdPrefix].remove(callback);
-            if (this.watchedPrefixes[docIdPrefix]().length == 0) {
+            if (this.watchedPrefixes[docIdPrefix]().length === 0) {
                 delete this.watchedPrefixes[docIdPrefix];
-                this.send('unwatch-prefix', docIdPrefix);
+                this.send("unwatch-prefix", docIdPrefix);
             }
         });
     }
 
     watchBulks(onChange: (e: bulkInsertChangeNotificationDto) => void) {
         var callback = new changesCallback<bulkInsertChangeNotificationDto>(onChange);
-        if (this.allBulkInsertsHandlers().length == 0) {
-            this.send('watch-bulk-operation');
+        if (this.allBulkInsertsHandlers().length === 0) {
+            this.send("watch-bulk-operation");
         }
         this.allBulkInsertsHandlers.push(callback);
         return new changeSubscription(() => {
             this.allBulkInsertsHandlers.remove(callback);
-            if (this.allDocsHandlers().length == 0) {
+            if (this.allDocsHandlers().length === 0) {
                 this.send('unwatch-bulk-operation');
             }
         });
@@ -395,28 +402,28 @@ class changesApi {
 
     watchFsSync(onChange: (e: synchronizationUpdateNotification) => void): changeSubscription {
         var callback = new changesCallback<synchronizationUpdateNotification>(onChange);
-        if (this.allFsSyncHandlers().length == 0) {
-            this.send('watch-sync');
+        if (this.allFsSyncHandlers().length === 0) {
+            this.send("watch-sync");
         }
         this.allFsSyncHandlers.push(callback);
         return new changeSubscription(() => {
             this.allFsSyncHandlers.remove(callback);
-            if (this.allFsSyncHandlers().length == 0) {
-                this.send('unwatch-sync');
+            if (this.allFsSyncHandlers().length === 0) {
+                this.send("unwatch-sync");
             }
         });
     }
 
     watchFsConflicts(onChange: (e: synchronizationConflictNotification) => void) : changeSubscription {
         var callback = new changesCallback<synchronizationConflictNotification>(onChange);
-        if (this.allFsConflictsHandlers().length == 0) {
-            this.send('watch-conflicts');
+        if (this.allFsConflictsHandlers().length === 0) {
+            this.send("watch-conflicts");
         }
         this.allFsConflictsHandlers.push(callback);
         return new changeSubscription(() => {
             this.allFsConflictsHandlers.remove(callback);
-            if (this.allFsConflictsHandlers().length == 0) {
-                this.send('unwatch-conflicts');
+            if (this.allFsConflictsHandlers().length === 0) {
+                this.send("unwatch-conflicts");
             }
         });
     }
@@ -424,15 +431,15 @@ class changesApi {
     watchFsFolders(folder: string, onChange: (e: fileChangeNotification) => void): changeSubscription {
         var callback = new changesCallback<fileChangeNotification>(onChange);
         if (typeof (this.watchedFolders[folder]) === "undefined") {
-            this.send('watch-folder', folder);
+            this.send("watch-folder", folder);
             this.watchedFolders[folder] = ko.observableArray();
         }
         this.watchedFolders[folder].push(callback);
         return new changeSubscription(() => {
             this.watchedFolders[folder].remove(callback);
-            if (this.watchedFolders[folder].length == 0) {
+            if (this.watchedFolders[folder].length === 0) {
                 delete this.watchedFolders[folder];
-                this.send('unwatch-folder', folder);
+                this.send("unwatch-folder", folder);
             }
         });
     }
@@ -464,6 +471,68 @@ class changesApi {
             }
         });
     }
+
+    watchAllCounters(onChange: (e: counterChangeNotification) => void) {
+        var callback = new changesCallback<counterChangeNotification>(onChange);
+        if (this.allDocsHandlers().length === 0) {
+            this.send("watch-counters");
+        }
+        this.allCountersHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allCountersHandlers.remove(callback);
+            if (this.allDocsHandlers().length === 0) {
+                this.send("unwatch-counters");
+            }
+        });
+    }
+
+    watchCounterChange(groupName: string, counterName: string, onChange: (e: counterChangeNotification) => void): changeSubscription {
+        var counterId = groupName + "/" + counterName;
+        var callback = new changesCallback<counterChangeNotification>(onChange);
+        if (typeof (this.watchedCounter[counterId]) === "undefined") {
+            this.send("watch-counter-change", counterId);
+            this.watchedCounter[counterId] = ko.observableArray();
+        }
+        this.watchedCounter[counterId].push(callback);
+        return new changeSubscription(() => {
+            this.watchedCounter[counterId].remove(callback);
+            if (this.watchedCounter[counterId]().length === 0) {
+                delete this.watchedCounter[counterId];
+                this.send("unwatch-counter-change", counterId);
+            }
+        });
+    }
+
+
+    watchCountersInGroup(group: string, onChange: (e: countersInGroupNotification) => void): changeSubscription {
+        var callback = new changesCallback<countersInGroupNotification>(onChange);
+        if (typeof (this.watchedCountersInGroup[group]) === "undefined") {
+            this.send("watch-counters-in-group", group);
+            this.watchedCountersInGroup[group] = ko.observableArray();
+        }
+        this.watchedCountersInGroup[group].push(callback);
+        return new changeSubscription(() => {
+            this.watchedCountersInGroup[group].remove(callback);
+            if (this.watchedCountersInGroup[group]().length === 0) {
+                delete this.watchedCountersInGroup[group];
+                this.send("unwatch-counters-in-group", group);
+            }
+        });
+    }
+
+    watchCounterBulkOperation(onChange: (e: counterBulkOperationNotificationDto) => void) {
+        var callback = new changesCallback<counterBulkOperationNotificationDto>(onChange);
+        if (this.allCounterBulkOperationsHandlers().length === 0) {
+            this.send("watch-bulk-operation");
+        }
+        this.allCounterBulkOperationsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allCounterBulkOperationsHandlers.remove(callback);
+            if (this.allDocsHandlers().length === 0) {
+                this.send("unwatch-bulk-operation");
+            }
+        });
+    }
     
     dispose() {
         this.isDisposing = true;
@@ -489,7 +558,7 @@ class changesApi {
         });
     }
 
-    public getResourceName() {
+    getResourceName() {
         return this.rs.name;
     }
 }

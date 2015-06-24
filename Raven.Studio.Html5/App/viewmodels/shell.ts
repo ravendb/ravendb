@@ -385,7 +385,8 @@ class shell extends viewModelBase {
 
     private activateCounterStorage(cs: counterStorage) {
         var changesSubscriptionArray = () => [
-            //TODO: enable changes api for counter storages, server side
+            shell.currentResourceChangesApi().watchAllCounters(() => this.fetchCsStats(cs)),
+            shell.currentResourceChangesApi().watchCounterBulkOperation(() => this.fetchCsStats(cs))
         ];
         var isNotACounterStorage = this.currentConnectedResource instanceof counterStorage === false;
         this.updateChangesApi(cs, isNotACounterStorage, () => this.fetchCsStats(cs), changesSubscriptionArray);

@@ -24,6 +24,7 @@
     <Content Include="App\views\common\confirmationDialog.html" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStorageStatsCommand.ts" />
@@ -86,6 +87,7 @@
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageStatisticsDto.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageStatistics.ts" />
+    <TypeScriptCompile Include="App\models\counter\counterDto.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
     <TypeScriptCompile Include="App\common\idGenerator.ts" />

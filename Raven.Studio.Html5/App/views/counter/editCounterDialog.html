@@ -7,7 +7,7 @@
         <div class="modal-body">
             <div class="row">
                 <div class="col-md-12" data-bind="with: editedCounter">
-                    <div class="col-md-12" data-bind="visible: $root.isNew() == false">
+                    <div class="col-md-12" data-bind="visible: isNew() == false">
                         <label class="col-md-6" for="total">Current Value:</label>
                         <div class="col-md-6">
                             <span id="total" data-bind="text: value"></span>
@@ -16,10 +16,10 @@
                     <div class="col-md-12">
                         <label class="col-md-6" for="group">Group:</label>
                         <div class="col-md-6">
-                            <!-- ko if: $root.isNew() -->
-                            <input required type="text" class="form-control" id="group" placeholder="Group Name" data-bind="value: group, valueUpdate: 'afterkeydown'">
+                            <!-- ko if: isNew() -->
+                            <input required type="text" class="form-control" id="group" placeholder="Group Name" data-bind="value: group, customValidity: groupCustomValidityError, valueUpdate: 'afterkeydown'">
                             <!-- /ko -->
-                            <!-- ko ifnot: $root.isNew() -->
+                            <!-- ko ifnot: isNew() -->
                             <span data-bind="text: group"></span>
                             <!-- /ko -->
                         </div>
@@ -27,21 +27,21 @@
                     <div class="col-md-12">
                         <label class="col-md-6" for="counterName">Counter Name:</label>
                         <div class="col-md-6">
-                            <!-- ko if: $root.isNew() -->
-                            <input required type="text" class="form-control" id="counterName" placeholder="Counter Name" data-bind="value: counterName, valueUpdate: 'afterkeydown'">
+                            <!-- ko if: isNew() -->
+                            <input required type="text" class="form-control" id="counterName" placeholder="Counter Name" data-bind="value: counterName, customValidity: counterNameCustomValidityError, valueUpdate: 'afterkeydown'">
                             <!-- /ko -->
-                            <!-- ko ifnot: $root.isNew() -->
+                            <!-- ko ifnot: isNew() -->
                             <span data-bind="text: counterName"></span>
                             <!-- /ko -->
                         </div>
                     </div>
                     <div class="col-md-12">
-                        <label class="col-md-6" for="counterDelta" data-bind="text: $root.isNew() ? 'Initial Value' : 'Change'"></label>
+                        <label class="col-md-6" for="counterDelta" data-bind="text: isNew() ? 'Initial Value' : 'Change'"></label>
                         <div class="col-md-6" style="display: inline-block">
-                            <input class="form-control" required type="number" id="counterDelta" placeholder="Counter Delta" data-bind="value: delta, valueUpdate: 'afterkeydown'">
+                            <input required class="form-control" id="counterDelta" placeholder="Counter Delta" data-bind="value: delta, customValidity: deltaCustomValidityError, valueUpdate: 'afterkeydown'">
                         </div>
                     </div>
-                    <div class="col-md-12" data-bind="visible: $root.isNew()">
+                    <div class="col-md-12" data-bind="visible: isNew()">
                         *Using an existing group and counter name will update its value
                     </div>
                 </div>

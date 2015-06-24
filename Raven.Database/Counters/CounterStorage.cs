@@ -489,7 +489,7 @@ namespace Raven.Database.Counters
 						yield return new CounterGroup
 						{
 							Name = it.CurrentKey.ToString(),
-							Count = groupToCounters.State.EntriesCount
+							Count = groupToCounters.MultiCount(it.CurrentKey)
 						};
 					} while (it.MoveNext());
 				}

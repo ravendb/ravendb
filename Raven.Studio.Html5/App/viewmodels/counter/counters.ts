@@ -135,8 +135,8 @@ class counters extends viewModelBase {
 
     newCounter() {
         var counterChangeVm = new editCounterDialog();
-        counterChangeVm.updateTask.done((change: counterChange, isNew: boolean) => {
-            var counterCommand = new updateCounterCommand(this.activeCounterStorage(), change.group(), change.counterName(), change.delta(), isNew);
+        counterChangeVm.updateTask.done((change: counterChange) => {
+            var counterCommand = new updateCounterCommand(this.activeCounterStorage(), change.group(), change.counterName(), change.delta(), change.isNew());
             counterCommand.execute();
         });
         app.showDialog(counterChangeVm);
