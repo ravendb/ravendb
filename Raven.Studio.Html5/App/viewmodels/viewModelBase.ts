@@ -41,7 +41,7 @@ class viewModelBase {
     //holds full studio version eg. 3.0.3528
     static clientVersion = ko.observable<string>();
 
-    static hasContinueTestOption = ko.observable<boolean>(false);
+    public static hasContinueTestOption = ko.observable<boolean>(false);
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
      * Possible return values: boolean, promise<boolean>, {redirect: 'some/other/route'}, promise<{redirect: 'some/other/route'}>

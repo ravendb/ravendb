@@ -3,9 +3,9 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 class document implements documentBase {
     __metadata: documentMetadata;
     constructor(dto: documentDto) {
-        this.__metadata = new documentMetadata(dto['@metadata']);
+        this.__metadata = new documentMetadata(dto["@metadata"]);
         for (var property in dto) {
-            if (property !== '@metadata') {
+            if (property !== "@metadata") {
                 this[property] = dto[property];
             }
         }
@@ -26,8 +26,8 @@ class document implements documentBase {
     getDocumentPropertyNames(): Array<string> {
         var propertyNames = [];
         for (var property in this) {
-            var isMeta = property === '__metadata' || property === '__moduleId__';
-            var isFunction = typeof this[property] === 'function';
+            var isMeta = property === "__metadata" || property === "__moduleId__";
+            var isFunction = typeof this[property] === "function";
             if (!isMeta && !isFunction) {
                 propertyNames.push(property);
             }
@@ -46,7 +46,7 @@ class document implements documentBase {
 
         if (includeMeta && this.__metadata) {
             var newDocumentMetadata = new documentMetadata(this.__metadata);
-            dto['@metadata'] = newDocumentMetadata.toDto();
+            dto["@metadata"] = newDocumentMetadata.toDto();
         }
 
         return <any>dto;
@@ -87,7 +87,7 @@ class document implements documentBase {
         }
 
         // TODO: is there a better/more reliable way to do this?
-        var slashIndex = id.lastIndexOf('/');
+        var slashIndex = id.lastIndexOf("/");
         if (slashIndex >= 1) {
             return id.substring(0, 1).toUpperCase() + id.substring(1, slashIndex);
         }
