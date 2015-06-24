@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Changes
 {
-    public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState>, IDatabaseChanges
+    public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState, DocumentConvention>, IDatabaseChanges
     {
         private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
@@ -33,18 +33,15 @@ namespace Raven.Client.Changes
         
         private readonly Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
-	    private readonly DocumentConvention Conventions;
-
-        public RemoteDatabaseChanges(string url, string apiKey,
-                                       ICredentials credentials,
-                                       HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions,
-                                       Action onDispose,                                
-                                       Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
-            : base ( url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
-        {
-            this.Conventions = conventions;
-            this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
-        }
+		public RemoteDatabaseChanges(string url, string apiKey,
+									   ICredentials credentials,
+									   HttpJsonRequestFactory jsonRequestFactory,DocumentConvention conventions,
+									   Action onDispose,
+									   Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
+			: base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
+		{
+			this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
+		}
 
         protected override async Task SubscribeOnServer()
         {

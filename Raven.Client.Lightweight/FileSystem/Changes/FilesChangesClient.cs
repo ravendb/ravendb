@@ -17,7 +17,7 @@ using Sparrow.Collections;
 namespace Raven.Client.FileSystem.Changes
 {
 
-    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState>, IFilesChanges
+    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState, FilesConvention>, IFilesChanges
     {
         private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 

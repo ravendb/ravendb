@@ -91,7 +91,7 @@ namespace Raven.Tests.Core.ChangesApi
 			}
 		}
 
-		private class NoInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>
+		private class NoInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState, DocumentConvention>
 		{
 			public NoInterfaceInheritanceChangesClient()
 				: base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
@@ -109,7 +109,7 @@ namespace Raven.Tests.Core.ChangesApi
 			}
 		}
 
-		private class TypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<ITypedConnectable, MockConnectionState>, ITypedConnectable
+		private class TypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<ITypedConnectable, MockConnectionState, DocumentConvention>, ITypedConnectable
 		{
 			public TypedInterfaceInheritanceChangesClient()
 				: base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
@@ -127,7 +127,7 @@ namespace Raven.Tests.Core.ChangesApi
 			}
 		}
 
-		private class UntypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState>, IUntypedConnectable
+		private class UntypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState, DocumentConvention>, IUntypedConnectable
 		{
 			public UntypedInterfaceInheritanceChangesClient()
 				: base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })

@@ -18,7 +18,7 @@ namespace Raven.Client.Counters
 
 		string Url { get; }
 
-		Convention Convention { get; set; }
+		CountersConvention Convention { get; set; }
 
 		CounterReplicationInformer ReplicationInformer { get; }
 

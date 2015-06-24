@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
@@ -15,38 +16,40 @@ namespace Raven.Database.Indexing
 		private readonly Analyzer defaultAnalyzer;
 		private readonly IDictionary<string, Analyzer> analyzerMap = new Dictionary<string, Analyzer>( new PerFieldAnalyzerComparer() );
 
-        private class PerFieldAnalyzerComparer : IEqualityComparer<string>
+		public class PerFieldAnalyzerComparer : IEqualityComparer<string>
         {
             public bool Equals(string inDictionary, string value)
             {
-                if ( value[0] == '@' )
-                {
-                    for (int i = 1; i < inDictionary.Length - value.Length; i++ )
-                    {
-                        if ( inDictionary[i] == '<' )
-                        {
-                            i++;
-                            for ( int v = 0; v < value.Length; v++, i++ )
-                            {
-                                if (value[v] != inDictionary[i])
-                                    return false;
-                            }
-
-                            if (i == inDictionary.Length) // Not ending with '>'
-                                return false;
-
-                            return inDictionary[i] == '>';          
-                        }
-                    }
-                    return false;
-                }
-
-                return string.Equals(inDictionary, value, System.StringComparison.Ordinal);
+	            if (value.Length == 0 || value[0] != '@') 
+					return string.Equals(inDictionary, value, StringComparison.Ordinal);
+				var start = value.IndexOf('<', 1) + 1;
+				var end = value.IndexOf('>', start + 1);
+				if(end == -1)
+					return string.Equals(inDictionary, value, StringComparison.Ordinal);
+	            return string.CompareOrdinal(inDictionary, 0, value, start, inDictionary.Length) == 0;
             }
 
             public int GetHashCode(string obj)
             {
-                return obj.GetHashCode();
+	            if (obj.Length == 0)
+		            return -1;
+
+	            int start = 0;
+				int end = obj.Length;
+				if (obj[0] == '@')
+				{
+					start = obj.IndexOf('<', 1) + 1;
+					end = obj.IndexOf('>', start + 1);
+					if (end == -1)
+						end = obj.Length;
+				}
+
+	            var hash = 0;
+	            for (int i = start; i < end; i++)
+	            {
+		            hash = obj[i]*397 ^ hash;
+	            }
+	            return hash;
             }
         }
 
