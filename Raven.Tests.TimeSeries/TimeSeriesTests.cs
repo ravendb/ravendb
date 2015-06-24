@@ -31,11 +31,11 @@ namespace Raven.Tests.TimeSeries
 							Key = "Money",
 							Start = DateTime.MinValue,
 							End = DateTime.MaxValue
-						});
+						}).ToArray();
 
-					Assert.Equal(2, result.Count());
-					var time = result.First().ToArray();
-					var money = result.Last().ToArray();
+					Assert.Equal(2, result.Length);
+					var time = result[0].ToArray();
+					var money = result[1].ToArray();
 
 					Assert.Equal(3, time.Length);
 					Assert.Equal(new DateTime(2015, 4, 1, 0, 0, 0), time[0].At);
