@@ -40,7 +40,7 @@ namespace Raven.Tests.TimeSeries
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(3))
 				{
 					var result = r.Query(
 						new TimeSeriesQuery
@@ -54,27 +54,33 @@ namespace Raven.Tests.TimeSeries
 							Key = "Money",
 							Start = DateTime.MinValue,
 							End = DateTime.MaxValue
-						});
+						}).ToArray();
 
-					Assert.Equal(2, result.Count());
-					var time = result.First().ToArray();
-					var money = result.Last().ToArray();
+					Assert.Equal(2, result.Length);
+					var time = result[0].ToArray();
+					var money = result[1].ToArray();
 
 					Assert.Equal(3, time.Length);
-					Assert.Equal(new DateTime(2015, 4, 1, 0, 0, 0), time[0].At);
-					Assert.Equal(new DateTime(2015, 4, 1, 1, 0, 0), time[1].At);
-					Assert.Equal(new DateTime(2015, 4, 1, 2, 0, 0), time[2].At);
-					Assert.Equal(10, time[0].Value);
-					Assert.Equal(19, time[1].Value);
-					Assert.Equal(50, time[2].Value);
-					Assert.Equal("Time", time[0].DebugKey);
-					Assert.Equal("Time", time[1].DebugKey);
-					Assert.Equal("Time", time[2].DebugKey);
-
 					Assert.Equal(3, money.Length);
-					Assert.Equal("Money", money[0].DebugKey);
-					Assert.Equal("Money", money[1].DebugKey);
-					Assert.Equal("Money", money[2].DebugKey);
+
+					for (int i = 0; i < 3; i++)
+					{
+						Assert.Equal("Time", time[i].DebugKey);
+						Assert.Equal(new DateTime(2015, 4, 1, i, 0, 0), time[i].At);
+						Assert.Equal(time[i].At.Ticks, time[i].Values[2]);
+						Assert.Equal(1, time[i].Values[1]);
+
+						Assert.Equal("Money", money[i].DebugKey);
+						Assert.Equal(new DateTime(2015, 4, 1, i, 0, 0), money[i].At);
+						Assert.Equal(money[i].At.Ticks, money[i].Values[2]);
+						Assert.Equal(3, money[i].Values[1]);
+					}
+					Assert.Equal(10, time[0].Values[0]);
+					Assert.Equal(19, time[1].Values[0]);
+					Assert.Equal(50, time[2].Values[0]);
+					Assert.Equal(54, money[0].Values[0]);
+					Assert.Equal(546, money[1].Values[0]);
+					Assert.Equal(130, money[2].Values[0]);
 				}
 			}
 		}

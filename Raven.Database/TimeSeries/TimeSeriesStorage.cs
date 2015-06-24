@@ -401,7 +401,7 @@ namespace Raven.Database.TimeSeries
 				if (tree == null)
 					return Enumerable.Empty<Point>();
 
-				var buffer = new byte[sizeof(double)];
+				var buffer = new byte[seriesValueLength * sizeof(double)];
 
 				var fixedTree = tree.FixedTreeFor(query.Key, (byte) (seriesValueLength*sizeof (double)));
 				return IterateOnTree(query, fixedTree, it =>
