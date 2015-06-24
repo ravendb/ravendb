@@ -121,7 +121,9 @@ namespace Voron.Trees.Fixed
             public bool Seek(long key)
             {
                 _currentPage = _parent.FindPageFor(key);
-                var seek = _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
+	            if (_currentPage.LastMatch > 0)
+		            _currentPage.LastSearchPosition++;
+	            var seek = _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
                 if (seek == false)
                     _currentPage = null;
                 return seek;
