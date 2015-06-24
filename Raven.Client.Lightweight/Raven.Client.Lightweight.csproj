@@ -117,7 +117,7 @@
     <Compile Include="Counters\Replication\CounterReplicationInformer.cs" />
     <Compile Include="Counters\CounterStore.cs" />
     <Compile Include="Counters\Operations\CountersBatchOperation.cs" />
-    <Compile Include="Counters\Convention.cs" />
+    <Compile Include="Counters\CountersConvention.cs" />
     <Compile Include="Counters\CounterStore.Stats.cs">
       <SubType>Code</SubType>
     </Compile>

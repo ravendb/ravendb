@@ -16,7 +16,7 @@ namespace Raven.Client.Counters.Actions
  	{
 		private readonly OperationCredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
-		private readonly Convention convention;
+		private readonly CountersConvention convention;
 		protected readonly string ServerUrl;
 		protected readonly JsonSerializer JsonSerializer;
 		protected readonly string CounterStorageUrl;

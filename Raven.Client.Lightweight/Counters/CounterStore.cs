@@ -32,7 +32,7 @@ namespace Raven.Client.Counters
 		{
 			JsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
 			JsonRequestFactory = new HttpJsonRequestFactory(Constants.NumberOfCachedRequests);
-			Convention = new Convention();
+			Convention = new CountersConvention();
 			Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
 			Advanced = new CounterStoreAdvancedOperations(this);
 			Admin = new CounterStoreAdminOperations(this);
@@ -122,7 +122,7 @@ namespace Raven.Client.Counters
 
 		public string Name { get; set; }
 
-		public Convention Convention { get; set; }
+		public CountersConvention Convention { get; set; }
 
 		internal JsonSerializer JsonSerializer { get; set; }
 

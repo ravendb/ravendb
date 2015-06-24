@@ -25,7 +25,7 @@ namespace Raven.Client.Counters.Replication
 	{
 		private readonly HttpJsonRequestFactory requestFactory;
 		private readonly CounterStore counterStore;
-		private readonly Convention convention;
+		private readonly CountersConvention convention;
 		public const int DefaultIntervalBetweenUpdatesInMinutes = 5;
 
 		private bool currentlyExecuting;
@@ -58,7 +58,7 @@ namespace Raven.Client.Counters.Replication
 			}
 		}
 
-		internal CounterReplicationInformer(HttpJsonRequestFactory requestFactory, CounterStore counterStore, Convention convention, int delayTimeInMiliSec = 1000)
+		internal CounterReplicationInformer(HttpJsonRequestFactory requestFactory, CounterStore counterStore, CountersConvention convention, int delayTimeInMiliSec = 1000)
 		{
 			currentReadStripingBase = 0;
 			ReplicationDestinations = new List<CounterReplicationDestination>();
@@ -204,7 +204,7 @@ namespace Raven.Client.Counters.Replication
 		}
 
 		public double MaxIntervalBetweenUpdatesInMillisec { get; set; }
-		public Convention Conventions
+		public CountersConvention Conventions
 		{
 			get { return convention; }
 		}
