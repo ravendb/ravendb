@@ -118,15 +118,15 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (values.ContainsKey("MS_SubRoutes"))
 			{
 				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("timeSeriesStorageName"));
+				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("timeSeriesName"));
 
 				if (selectedData != null)
-					TimeSeriesName = selectedData.Values["timeSeriesStorageName"] as string;
+					TimeSeriesName = selectedData.Values["timeSeriesName"] as string;
 			}
 			else
 			{
-				if (values.ContainsKey("cou"))
-					TimeSeriesName = values["timeSeriesStorageName"] as string;
+				if (values.ContainsKey("timeSeriesName"))
+					TimeSeriesName = values["timeSeriesName"] as string;
 			}
 		}
 

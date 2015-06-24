@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,6 +16,7 @@ using Voron;
 using Voron.Impl;
 using Voron.Trees;
 using Voron.Trees.Fixed;
+using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Raven.Abstractions.Data.Constants;
 
@@ -122,11 +124,17 @@ namespace Raven.Database.TimeSeries
 #endif
 			public DateTime At { get; set; }
 
-			public double Value { get; set; }
+			public double[] Values { get; set; }
+			
+			public double Value
+			{
+				get { return Values[0]; }
+			}
 		}
 
 		internal const string SeriesTreePrefix = "series-";
 		internal const string PeriodTreePrefix = "periods-";
+		internal const char PeriodsKeySeparator = '\uF8FF';
 
 		public class Reader : IDisposable
 		{
@@ -140,7 +148,7 @@ namespace Raven.Database.TimeSeries
 				this.storage = storage;
 				this.seriesValueLength = seriesValueLength;
 				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
-				tree = tx.State.GetTree(tx, SeriesTreePrefix + seriesValueLength);
+				tree = tx.ReadTree(SeriesTreePrefix + seriesValueLength);
 			}
 
 			public IEnumerable<Point> Query(TimeSeriesQuery query)
@@ -241,14 +249,16 @@ namespace Raven.Database.TimeSeries
 						throw new ArgumentOutOfRangeException();
 				}
 
+				if (tree == null)
+					yield break;
 
 				using (var periodTx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var fixedTree = tree.FixedTreeFor(query.Key, (byte)(seriesValueLength * sizeof(double)));
 					var periodFixedTree = periodTx.State.GetTree(periodTx, PeriodTreePrefix + seriesValueLength)
-						.FixedTreeFor(query.Duration.Type + "-" + query.Duration.Duration + "-" + query.Key, (byte)(seriesValueLength * sizeof(double)));
-					
-					using (var periodWriter = new RollupWriter(periodFixedTree))
+						.FixedTreeFor(query.Key + PeriodsKeySeparator + query.Duration.Type + "-" + query.Duration.Duration, (byte)(seriesValueLength * Range.RangeValue.StorageItemsLength * sizeof(double)));
+
+					using (var periodWriter = new RollupWriter(periodFixedTree, seriesValueLength))
 					{
 						using (var periodTreeIterator = periodFixedTree.Iterate())
 						using (var rawTreeIterator = fixedTree.Iterate())
@@ -260,15 +270,23 @@ namespace Raven.Database.TimeSeries
 								{
 									if (periodTreeIterator.CurrentKey == range.StartAt.Ticks)
 									{
-										var structureReader = periodTreeIterator.ReadStructForCurrent(RollupWriter.RangeSchema);
-										range.Volume = structureReader.ReadInt(PointCandleSchema.Volume);
-										if (range.Volume != 0)
+										var valueReader = periodTreeIterator.CreateReaderForCurrent();
+										int used;
+										var bytes = valueReader.ReadBytes(seriesValueLength * Range.RangeValue.StorageItemsLength * sizeof(double), out used);
+										Debug.Assert(used == seriesValueLength*Range.RangeValue.StorageItemsLength*sizeof (double));
+
+										for (int i = 0; i < seriesValueLength; i++)
 										{
-											range.High = structureReader.ReadDouble(PointCandleSchema.High);
-											range.Low = structureReader.ReadDouble(PointCandleSchema.Low);
-											range.Open = structureReader.ReadDouble(PointCandleSchema.Open);
-											range.Close = structureReader.ReadDouble(PointCandleSchema.Close);
-											range.Sum = structureReader.ReadDouble(PointCandleSchema.Sum);
+											var startPosition = i * Range.RangeValue.StorageItemsLength;
+											range.Values[i].Volume = EndianBitConverter.Big.ToDouble(bytes, (startPosition + 0) * sizeof(double));
+											if (range.Values[i].Volume != 0)
+											{
+												range.Values[i].High = EndianBitConverter.Big.ToDouble(bytes, (startPosition + 1)*sizeof (double));
+												range.Values[i].Low = EndianBitConverter.Big.ToDouble(bytes, (startPosition + 2)*sizeof (double));
+												range.Values[i].Open = EndianBitConverter.Big.ToDouble(bytes, (startPosition + 3)*sizeof (double));
+												range.Values[i].Close = EndianBitConverter.Big.ToDouble(bytes, (startPosition + 4)*sizeof (double));
+												range.Values[i].Sum = EndianBitConverter.Big.ToDouble(bytes, (startPosition + 5)*sizeof (double));
+											}
 										}
 										yield return range;
 										continue;
@@ -302,8 +320,8 @@ namespace Raven.Database.TimeSeries
 			private void GetAllPointsForRange(FixedSizeTree.IFixedSizeIterator rawTreeIterator, Range range)
 			{
 				var endTicks = range.Duration.AddToDateTime(range.StartAt).Ticks;
-				var buffer = new byte[sizeof(double)];
-				Point firstPoint = null;
+				var buffer = new byte[sizeof(double) * seriesValueLength];
+				var firstPoint = true;
 
 				do
 				{
@@ -317,30 +335,34 @@ namespace Raven.Database.TimeSeries
 						DebugKey = range.DebugKey,
 #endif
 						At = new DateTime(ticks),
+						Values = new double[seriesValueLength],
 					};
 
 					var reader = rawTreeIterator.CreateReaderForCurrent();
-					reader.Read(buffer, 0, sizeof(double));
-					point.Value = EndianBitConverter.Big.ToDouble(buffer, 0);
+					reader.Read(buffer, 0, sizeof(double) * seriesValueLength);
 
-					if (firstPoint == null)
+					for (int i = 0; i < seriesValueLength; i++)
 					{
-						firstPoint = point;
-						range.Open = point.Value;
-						range.High = point.Value;
-						range.Low = point.Value;
-						range.Sum = point.Value;
-						range.Volume = 1;
-					}
-					else
-					{
-						range.High = Math.Max(range.High, point.Value);
-						range.Low = Math.Min(range.Low, point.Value);
-						range.Sum += point.Value;
-						range.Volume += 1;
-					}
+						var value = point.Values[i] = EndianBitConverter.Big.ToDouble(buffer, i * sizeof(double));
 
-					range.Close = point.Value;
+						if (firstPoint)
+						{
+							range.Values[i].Open = range.Values[i].High = range.Values[i].Low = range.Values[i].Sum = value;
+							range.Values[i].Volume = 1;
+						}
+						else
+						{
+							range.Values[i].High = Math.Max(range.Values[i].High, value);
+							range.Values[i].Low = Math.Min(range.Values[i].Low, value);
+							range.Values[i].Sum += value;
+							range.Values[i].Volume += 1;
+						}
+
+						range.Values[i].Close = value;
+
+					}
+					firstPoint = false;
+
 				} while (rawTreeIterator.MoveNext());
 			}
 
@@ -356,6 +378,11 @@ namespace Raven.Database.TimeSeries
 					{
 						throw new InvalidOperationException("Debug: Duration is not aligned with the end of the range.");
 					}
+					var rangeValues = new Range.RangeValue[seriesValueLength];
+					for (int i = 0; i < seriesValueLength; i++)
+					{
+						rangeValues[i] = new Range.RangeValue();
+					}
 					yield return new Range
 					{
 #if DEBUG
@@ -363,6 +390,7 @@ namespace Raven.Database.TimeSeries
 #endif
 						StartAt = startAt,
 						Duration = query.Duration,
+						Values = rangeValues,
 					};
 					startAt = nextStartAt;
 				}
@@ -370,7 +398,10 @@ namespace Raven.Database.TimeSeries
 
 			private IEnumerable<Point> GetRawQueryResult(TimeSeriesQuery query)
 			{
-				var buffer = new byte[sizeof(double)];
+				if (tree == null)
+					return Enumerable.Empty<Point>();
+
+				var buffer = new byte[seriesValueLength * sizeof(double)];
 
 				var fixedTree = tree.FixedTreeFor(query.Key, (byte) (seriesValueLength*sizeof (double)));
 				return IterateOnTree(query, fixedTree, it =>
@@ -381,11 +412,15 @@ namespace Raven.Database.TimeSeries
 						DebugKey = fixedTree.Name.ToString(),
 #endif
 						At = new DateTime(it.CurrentKey),
+						Values = new double[seriesValueLength],
 					};
 					
 					var reader = it.CreateReaderForCurrent();
-					reader.Read(buffer, 0, sizeof (double));
-					point.Value = EndianBitConverter.Big.ToDouble(buffer, 0);
+					reader.Read(buffer, 0, seriesValueLength * sizeof (double));
+					for (int i = 0; i < seriesValueLength; i++)
+					{
+						point.Values[i] = EndianBitConverter.Big.ToDouble(buffer, i * sizeof(double));
+					}
 					return point;
 				});
 			}
@@ -481,87 +516,82 @@ namespace Raven.Database.TimeSeries
 
 			private void CleanRollupDataForRange()
 			{
-    // This code is work in progress, commiting it just in order to send a repro for a failing test
 				var periodTree = tx.ReadTree(PeriodTreePrefix + seriesValueLength);
 				if (periodTree == null)
 					return;
-				
-				using (var it = periodTree.Iterate())
-				{
-					it.RequiredPrefix = "period_";
-					if (it.Seek(it.RequiredPrefix) == false)
-						return;
-
-					do
-					{
-						var treeName = it.CurrentKey.ToString();
-						var periodTree1 = tx.ReadTree(treeName);
-						if (periodTree1 == null)
-							continue;
-
-					} while (it.MoveNext());
-				}
-
-				/*var periodFixedTree = periodTree.FixedTreeFor()
-				
-				
-				var duration = PeriodDuration.ParseTreeName(treeName);
-
 
 				foreach (var rollupRange in rollupsToClear)
 				{
-					var keysToDelete = Reader.IterateOnTree(new TimeSeriesQuery
+					using (var it = periodTree.Iterate())
 					{
-						Key = rollupRange.Key,
-						Start = duration.GetStartOfRangeForDateTime(rollupRange.Value.Start),
-						End = duration.GetStartOfRangeForDateTime(rollupRange.Value.End),
-					}, periodTree, (iterator, keyReader, ticks) => iterator.CurrentKey).ToArray();
+						it.RequiredPrefix = rollupRange.Key + PeriodsKeySeparator;
+						if (it.Seek(it.RequiredPrefix) == false)
+							continue;
 
-					foreach (var key in keysToDelete)
-					{
-						periodTree.Delete(key);
+						do
+						{
+							var periodTreeName = it.CurrentKey.ToString();
+							var periodFixedTree = periodTree.FixedTreeFor(periodTreeName, (byte) (seriesValueLength*Range.RangeValue.StorageItemsLength*sizeof (double)));
+							if (periodFixedTree == null)
+								continue;
+
+							var duration = GetDurationFromTreeName(periodTreeName);
+							var keysToDelete = Reader.IterateOnTree(new TimeSeriesQuery
+							{
+								Key = rollupRange.Key,
+								Start = duration.GetStartOfRangeForDateTime(rollupRange.Value.Start),
+								End = duration.GetStartOfRangeForDateTime(rollupRange.Value.End),
+							}, periodFixedTree, fixedIterator => fixedIterator.CurrentKey).ToArray();
+
+							foreach (var key in keysToDelete)
+							{
+								periodFixedTree.Delete(key);
+							}
+						} while (it.MoveNext());
 					}
-				}*/
+				}
+			}
+
+			private PeriodDuration GetDurationFromTreeName(string periodTreeName)
+			{
+				var separatorIndex = periodTreeName.LastIndexOf(PeriodsKeySeparator);
+				var s = periodTreeName.Substring(separatorIndex + 1);
+				var strings = s.Split('-');
+				return new PeriodDuration(GenericUtil.ParseEnum<PeriodType>(strings[0]), int.Parse(strings[1]));
 			}
 		}
 
 		public class RollupWriter : IDisposable
 		{
-			public static readonly StructureSchema<PointCandleSchema> RangeSchema;
-
-			static RollupWriter()
-			{
-				RangeSchema = new StructureSchema<PointCandleSchema>()
-					.Add<int>(PointCandleSchema.Volume)
-					.Add<double>(PointCandleSchema.High)
-					.Add<double>(PointCandleSchema.Low)
-					.Add<double>(PointCandleSchema.Open)
-					.Add<double>(PointCandleSchema.Close)
-					.Add<double>(PointCandleSchema.Sum);
-			}
-
 			private readonly FixedSizeTree tree;
+			private readonly byte seriesValueLength;
+			private readonly byte[] valBuffer;
 
-			public RollupWriter(FixedSizeTree tree)
+			public RollupWriter(FixedSizeTree tree, byte seriesValueLength)
 			{
 				this.tree = tree;
+				this.seriesValueLength = seriesValueLength;
+				valBuffer = new byte[seriesValueLength * Range.RangeValue.StorageItemsLength * sizeof(double)];
 			}
 
 			public void Append(DateTime time, Range range)
 			{
-				var structure = new Structure<PointCandleSchema>(RangeSchema);
-
-				structure.Set(PointCandleSchema.Volume, range.Volume);
-				if (range.Volume != 0)
+				for (int i = 0; i < seriesValueLength; i++)
 				{
-					structure.Set(PointCandleSchema.High, range.High);
-					structure.Set(PointCandleSchema.Low, range.Low);
-					structure.Set(PointCandleSchema.Open, range.Open);
-					structure.Set(PointCandleSchema.Close, range.Close);
-					structure.Set(PointCandleSchema.Sum, range.Sum);
+					var rangeValue = range.Values[i];
+					var startPosition = i * Range.RangeValue.StorageItemsLength;
+					EndianBitConverter.Big.CopyBytes(rangeValue.Volume, valBuffer, (startPosition + 0) * sizeof(double));
+					// if (rangeValue.Volume != 0)
+					{
+						EndianBitConverter.Big.CopyBytes(rangeValue.High, valBuffer, (startPosition + 1) * sizeof(double));
+						EndianBitConverter.Big.CopyBytes(rangeValue.Low, valBuffer, (startPosition + 2) * sizeof(double));
+						EndianBitConverter.Big.CopyBytes(rangeValue.Open, valBuffer, (startPosition + 3) * sizeof(double));
+						EndianBitConverter.Big.CopyBytes(rangeValue.Close, valBuffer, (startPosition + 4) * sizeof(double));
+						EndianBitConverter.Big.CopyBytes(rangeValue.Sum, valBuffer, (startPosition + 5) * sizeof(double));
+					}
 				}
 
-				tree.WriteStructure(time.Ticks, structure);
+				tree.Add(time.Ticks, valBuffer);
 			}
 
 			public void Dispose()

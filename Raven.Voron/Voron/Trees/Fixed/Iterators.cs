@@ -18,7 +18,6 @@ namespace Voron.Trees.Fixed
             Slice Value { get; }
             bool MoveNext();
             ValueReader CreateReaderForCurrent();
-			StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema);
         }
 
         public class NullIterator : IFixedSizeIterator
@@ -43,11 +42,6 @@ namespace Voron.Trees.Fixed
             {
                 throw new InvalidOperationException("No current page");
             }
-
-	        public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
-	        {
-				throw new InvalidOperationException("No current page");
-	        }
         }
 
         public class EmbeddedIterator : IFixedSizeIterator
@@ -68,6 +62,8 @@ namespace Voron.Trees.Fixed
             public bool Seek(long key)
             {
                 _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
+				if (_fst._lastMatch > 0)
+					_pos++; // We didn't find the key.
                 return _pos != _header->NumberOfEntries;
             }
 
@@ -102,12 +98,6 @@ namespace Voron.Trees.Fixed
                 return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
             }
 
-	        public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
-	        {
-				var valueReader = CreateReaderForCurrent();
-				return new StructureReader<T>(valueReader.Base, schema);
-	        }
-
 	        public void Dispose()
             {
             }
@@ -131,7 +121,9 @@ namespace Voron.Trees.Fixed
             public bool Seek(long key)
             {
                 _currentPage = _parent.FindPageFor(key);
-                var seek = _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
+	            if (_currentPage.LastMatch > 0)
+		            _currentPage.LastSearchPosition++;
+	            var seek = _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
                 if (seek == false)
                     _currentPage = null;
                 return seek;
@@ -197,12 +189,6 @@ namespace Voron.Trees.Fixed
 
                 return new ValueReader(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
             }
-
-	        public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
-	        {
-				var valueReader = CreateReaderForCurrent();
-				return new StructureReader<T>(valueReader.Base, schema);    
-	        }
         }
     }
 }
