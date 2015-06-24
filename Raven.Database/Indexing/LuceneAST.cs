@@ -213,6 +213,19 @@ namespace Raven.Database.Indexing
         }
         public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
         {
+            if (RangeMin.Term.StartsWith("Dx") || RangeMax.Term.StartsWith("Dx"))
+            {
+                //Need to handle NULL values...
+                var min = double.Parse(RangeMin.Term.Substring(2));
+                var max = double.Parse(RangeMax.Term.Substring(2));
+                return NumericRangeQuery.NewDoubleRange(fieldName, 4, min, max, InclusiveMin, InclusiveMax);
+            }
+            if (RangeMin.Term.StartsWith("Ix") || RangeMax.Term.StartsWith("Ix"))
+            {
+                var longMin = long.Parse(RangeMin.Term.Substring(2));
+                var longMax = long.Parse(RangeMax.Term.Substring(2));
+                return NumericRangeQuery.NewLongRange(fieldName, 4, longMin, longMax, InclusiveMin, InclusiveMax);
+            }                
             return new TermRangeQuery(fieldName, RangeMin.Term, RangeMax.Term, InclusiveMin, InclusiveMax);
         }
 
