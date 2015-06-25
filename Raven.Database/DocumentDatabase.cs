@@ -533,6 +533,12 @@ namespace Raven.Database
 		})
 						.Where(x => x != null)
 						.ToArray();
+
+					result.CountOfIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
+					result.CountOfStaleIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx =>
+						result.StaleIndexes.Contains(idx.Name)
+						&& !idx.Priority.HasFlag(IndexingPriority.Disabled)
+						&& !idx.Priority.HasFlag(IndexingPriority.Abandoned));
 				});
 
 				if (result.Indexes != null)
