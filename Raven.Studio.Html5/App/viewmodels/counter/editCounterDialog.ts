@@ -24,22 +24,6 @@ class editCounterDialog extends dialogViewModelBase {
         this.updateTask.resolve(this.editedCounter());
         dialog.close(this);
     }
-    
-    attached() {
-        super.attached();
-
-        /*var inputElementGroupName: any = $("#group")[0];
-        this.editedCounter().group.subscribe((newCounterId) => {
-            var errorMessage = this.checkName(newCounterId, "group name");
-            inputElementGroupName.setCustomValidity(errorMessage);
-        });
-
-        var inputElementCounterName: any = $("#counterName")[0];
-        this.editedCounter().counterName.subscribe((newCounterId) => {
-            var errorMessage = this.checkName(newCounterId, "counter name");
-            inputElementCounterName.setCustomValidity(errorMessage);
-        });*/
-    }
 
     deactivate() {
         // If we were closed via X button or other dialog dismissal, reject the deletion task since

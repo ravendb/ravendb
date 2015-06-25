@@ -1,7 +1,7 @@
 ﻿import app = require("durandal/app");
 import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
-
+import changesContext = require("common/changesContext");
 import changeSubscription = require("common/changeSubscription");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
@@ -100,8 +100,8 @@ class counters extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            //TODO: create subscription to all counters
-            //shell.currentResourceChangesApi().watchAllCounters(() => this.fetchGroups())
+            changesContext.currentResourceChangesApi().watchAllCounters(() => this.refreshGroups()),
+            changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.refreshGroups())
         ];
     }
 
@@ -137,20 +137,21 @@ class counters extends viewModelBase {
         var counterChangeVm = new editCounterDialog();
         counterChangeVm.updateTask.done((change: counterChange) => {
             var counterCommand = new updateCounterCommand(this.activeCounterStorage(), change.group(), change.counterName(), change.delta(), change.isNew());
-            counterCommand.execute();
+            var execute = counterCommand.execute();
+			execute.done(() => this.refreshGridAndGroup(change.group()));
         });
         app.showDialog(counterChangeVm);
     }
 
     edit() {
-        var grid = this.getDocumentsGrid();
+        var grid = this.getCountersGrid();
         if (grid) {
             grid.editLastSelectedItem();
         }
     }
 
     change() {
-        var grid = this.getDocumentsGrid();
+        var grid = this.getCountersGrid();
         if (grid) {
             var counterData = grid.getSelectedItems(1).first();
             var dto = {
@@ -163,38 +164,46 @@ class counters extends viewModelBase {
             var counterChangeVm = new editCounterDialog(change);
             counterChangeVm.updateTask.done((change: counterChange, isNew: boolean) => {
                 var counterCommand = new updateCounterCommand(this.activeCounterStorage(), change.group(), change.counterName(), change.delta(), isNew);
-                counterCommand.execute();
-                //TODO: refresh grid
+	            var execute = counterCommand.execute();
+				execute.done(() => this.refreshGridAndGroup(counterData.Group));
             });
             app.showDialog(counterChangeVm);
         }
     }
 
     reset() {
-        var grid = this.getDocumentsGrid();
+        var grid = this.getCountersGrid();
         if (grid) {
             var counterData = grid.getSelectedItems(1).first();
             var confirmation = this.confirmationMessage("Reset Counter", "Are you sure that you want to reset the counter?");
             confirmation.done(() => {
-                var resetCounter = new resetCounterCommand(this.activeCounterStorage(), counterData.Group, counterData.Name);
-                resetCounter.execute();
-                //TODO: refresh grid
+                var resetCommand = new resetCounterCommand(this.activeCounterStorage(), counterData.Group, counterData.Name);
+                var execute = resetCommand.execute();
+				execute.done(() => this.refreshGridAndGroup(counterData.Group));
             });
         }
     }
 
     deleteCounter() {
-        var grid = this.getDocumentsGrid();
+        var grid = this.getCountersGrid();
         if (grid) {
             var counterData = grid.getSelectedItems(1).first();
             var confirmation = this.confirmationMessage("Reset Counter", "Are you sure that you want to reset the counter?");
             confirmation.done(() => {
-                var resetCounter = new resetCounterCommand(this.activeCounterStorage(), counterData.Group, counterData.Name);
-                resetCounter.execute();
-                //TODO: refresh grid
+                var deleteCounter = new resetCounterCommand(this.activeCounterStorage(), counterData.Group, counterData.Name);
+                var execute = deleteCounter.execute();
+				execute.done(() => this.refreshGridAndGroup(counterData.Group));
             });
         }
     }
+
+	private refreshGridAndGroup(changeGroupName: string) {
+		var group = this.selectedGroup();
+		if (group.name === changeGroupName || group.name === counterGroup.allGroupsGroupName) {
+			this.getCountersGrid().refreshCollectionData();
+		}
+		group.invalidateCache();
+	}
 
     private selectedGroupChanged(selected: counterGroup) {
         if (!!selected) {
@@ -205,7 +214,7 @@ class counters extends viewModelBase {
     }
 
     toggleSelectAll() {
-        var docsGrid = this.getDocumentsGrid();
+        var docsGrid = this.getCountersGrid();
 
         if (!!docsGrid) {
             if (this.hasAnyCountersSelected()) {
@@ -218,7 +227,7 @@ class counters extends viewModelBase {
     }
 
     selectAll() {
-        var docsGrid = this.getDocumentsGrid();
+        var docsGrid = this.getCountersGrid();
         var group: counterGroup = this.selectedGroup();
         if (!!docsGrid && !!group) {
             docsGrid.selectAll(group.countersCount());
@@ -226,7 +235,7 @@ class counters extends viewModelBase {
     }
 
     selectNone() {
-        var docsGrid = this.getDocumentsGrid();
+        var docsGrid = this.getCountersGrid();
         if (!!docsGrid) {
             docsGrid.selectNone();
         }
@@ -236,7 +245,7 @@ class counters extends viewModelBase {
         if (!this.selectedGroup().isAllGroupsGroup && this.hasAllCountersSelected()) {
             this.deleteGroup(this.selectedGroup());
         } else {
-            var grid = this.getDocumentsGrid();
+            var grid = this.getCountersGrid();
             if (grid) {
                 grid.deleteSelectedItems();
             }
@@ -296,7 +305,7 @@ class counters extends viewModelBase {
 
         this.groups().forEach((group: counterGroup) => {
             if (group.name === selectedGroup.name) {
-                var docsGrid = this.getDocumentsGrid();
+                var docsGrid = this.getCountersGrid();
                 if (!!docsGrid) {
                     docsGrid.refreshCollectionData();
                 }
@@ -323,9 +332,7 @@ class counters extends viewModelBase {
 
     private reloadCountersData(cs: counterStorage) {
         if (cs.name === this.activeCounterStorage().name) {
-            this.refreshGroups().done(() => {
-                this.refreshGroupsData();
-            });
+            this.refreshGroups().done(() => this.refreshGroupsData());
         }
     }
 
@@ -337,7 +344,7 @@ class counters extends viewModelBase {
         }
     }
 
-    private getDocumentsGrid(): virtualTable {
+    private getCountersGrid(): virtualTable {
         var gridContents = $(counters.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

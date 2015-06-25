@@ -262,7 +262,7 @@ class documents extends viewModelBase {
                     this.collections.remove(collection);
 
                     var selectedCollection: collection = this.selectedCollection();
-                    if (collection.name == selectedCollection.name) {
+                    if (collection.name === selectedCollection.name) {
                         this.selectCollection(this.allDocumentsCollection);
                     }
                 } else {

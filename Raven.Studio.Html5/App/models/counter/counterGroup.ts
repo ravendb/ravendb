@@ -31,6 +31,11 @@ class counterGroup {
         return this.countersList;
     }
 
+	invalidateCache() {
+		var countersList = this.getCounters();
+		countersList.invalidateCache();
+	}
+
     static createAllGroupsCollection(ownerCounterStorage: counterStorage): counterGroup {
         return new counterGroup(counterGroup.allGroupsGroupName, ownerCounterStorage);
     }
