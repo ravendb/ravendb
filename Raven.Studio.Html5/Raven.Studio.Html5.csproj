@@ -98,8 +98,6 @@
     <TypeScriptCompile Include="App\models\counter\counterStorageStatistics.ts" />
     <TypeScriptCompile Include="App\models\counter\counterDto.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
-    <TypeScriptCompile Include="App\common\optional.ts" />
-    <TypeScriptCompile Include="App\common\pagedResultSet.ts" />
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
