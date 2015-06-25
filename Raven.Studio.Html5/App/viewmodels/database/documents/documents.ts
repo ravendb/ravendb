@@ -1,37 +1,32 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
-
-import shell = require("viewmodels/shell");
-import changesContext = require("common/changesContext");
-import viewModelBase = require("viewmodels/viewModelBase");
-import deleteCollection = require("viewmodels/database/documents/deleteCollection");
-
-import collection = require("models/database/documents/collection");
-import database = require("models/resources/database");
-import alert = require("models/database/debug/alert");
-import changeSubscription = require('common/changeSubscription');
-import customFunctions = require("models/database/documents/customFunctions");
-import customColumns = require('models/database/documents/customColumns');
-import customColumnParams = require('models/database/documents/customColumnParams');
-
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
-import getCustomColumnsCommand = require('commands/database/documents/getCustomColumnsCommand');
-import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
-import getOperationStatusCommand = require('commands/operations/getOperationStatusCommand');
-import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
-import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-
-import selectColumns = require("viewmodels/common/selectColumns");
-
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 
-import generateClassCommand = require("commands/database/documents/generateClassCommand");
+import changesContext = require("common/changesContext");
+import viewModelBase = require("viewmodels/viewModelBase");
+import deleteCollection = require("viewmodels/database/documents/deleteCollection");
+import selectColumns = require("viewmodels/common/selectColumns");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 
+import collection = require("models/database/documents/collection");
+import database = require("models/resources/database");
+import alert = require("models/database/debug/alert");
+import changeSubscription = require("common/changeSubscription");
+import customFunctions = require("models/database/documents/customFunctions");
+import customColumns = require("models/database/documents/customColumns");
+import customColumnParams = require("models/database/documents/customColumnParams");
+
+import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
+import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
+import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
+import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import generateClassCommand = require("commands/database/documents/generateClassCommand");
 
 class documents extends viewModelBase {
 
@@ -128,10 +123,10 @@ class documents extends viewModelBase {
     activate(args) {
         super.activate(args);
         if (args.withStop) {
-            shell.hasContinueTestOption(true);
+            viewModelBase.hasContinueTestOption(true);
         }
         this.fetchCustomFunctions();
-        this.updateHelpLink('G8CDCP');
+        this.updateHelpLink("G8CDCP");
 
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;

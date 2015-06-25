@@ -9,7 +9,7 @@ class settings extends viewModelBase {
     appUrls: computedAppUrls;
 
     private bundleMap = {  versioning: "Versioning" };
-    userDatabasePages = ko.observableArray([]);
+    userDatabasePages = ko.observableArray<string>([]);
     activeSubViewTitle: KnockoutComputed<string>;
 
     constructor() {
@@ -71,7 +71,6 @@ class settings extends viewModelBase {
 
     routeIsVisible(route: DurandalRouteConfiguration) {
         var bundleTitle = route.title;
-
         if (this.userDatabasePages.indexOf(bundleTitle) !== -1) {
             return true;
         }

@@ -11,7 +11,7 @@ class searchByQueryCommand  extends commandBase {
 
     execute(): JQueryPromise<pagedResultSet> {
 
-        var filesTask = this.fetchFiles()
+	    var filesTask = this.fetchFiles();
 
         var doneTask = $.Deferred();
 

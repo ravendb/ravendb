@@ -90,7 +90,8 @@ namespace Raven.Client.TimeSeries.Changes
 
 	    public IObservableWithTask<ChangeNotification> ForChange(string groupName, string timeSeriesName)
 	    {
-			if (string.IsNullOrWhiteSpace(groupName))
+			throw new NotImplementedException();
+			/*if (string.IsNullOrWhiteSpace(groupName))
 				throw new ArgumentException("Group name cannot be empty!");
 
 			if (string.IsNullOrWhiteSpace(timeSeriesName))
@@ -123,7 +124,7 @@ namespace Raven.Client.TimeSeries.Changes
 			timeSeries.OnChangeNotification += taskedObservable.Send;
 			timeSeries.OnError += taskedObservable.Error;
 
-			return taskedObservable;
+			return taskedObservable;*/
 	    }
 
 	    private static string FullTimeSeriesName(string groupName, string timeSeriesName)
@@ -133,7 +134,8 @@ namespace Raven.Client.TimeSeries.Changes
 
 		public IObservableWithTask<StartingWithNotification> ForTimeSeriesStartingWith(string groupName, string prefixForName)
 	    {
-			if (string.IsNullOrWhiteSpace(groupName))
+			throw new NotImplementedException();
+			/*if (string.IsNullOrWhiteSpace(groupName))
 				throw new ArgumentException("Group name cannot be empty!");
 
 			if (string.IsNullOrWhiteSpace(prefixForName))
@@ -170,12 +172,13 @@ namespace Raven.Client.TimeSeries.Changes
 			timeSeries.OnTimeSeriesStartingWithNotification += taskedObservable.Send;
 			timeSeries.OnError += taskedObservable.Error;
 
-			return taskedObservable;
+			return taskedObservable;*/
 	    }
 
 		public IObservableWithTask<InGroupNotification> ForTimeSeriesInGroup(string groupName)
 	    {
-			if (string.IsNullOrWhiteSpace(groupName))
+			throw new NotImplementedException();
+			/*if (string.IsNullOrWhiteSpace(groupName))
 				throw new ArgumentException("Group name cannot be empty!");
 
 			var key = string.Concat("time-series-in-group/", groupName);
@@ -203,12 +206,13 @@ namespace Raven.Client.TimeSeries.Changes
 			timeSeries.OnTimeSeriesInGroupNotification += taskedObservable.Send;
 			timeSeries.OnError += taskedObservable.Error;
 
-			return taskedObservable;
+			return taskedObservable;*/
 	    }
 
 	    public IObservableWithTask<BulkOperationNotification> ForBulkOperation(Guid? operationId = null)
 	    {
-			var id = operationId != null ? operationId.ToString() : string.Empty;
+			throw new NotImplementedException();
+			/*var id = operationId != null ? operationId.ToString() : string.Empty;
 
 		    var key = "bulk-operations/" + id;
 		    var timeSeries = Counters.GetOrAdd(key, s =>
@@ -238,7 +242,7 @@ namespace Raven.Client.TimeSeries.Changes
 			timeSeries.OnBulkOperationNotification += taskedObservable.Send;
 			timeSeries.OnError += taskedObservable.Error;
 
-			return taskedObservable;
+			return taskedObservable;*/
 	    }
     }
 }

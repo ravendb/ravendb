@@ -5,40 +5,20 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Changes
 {
-    public class FilesConnectionState : IChangesConnectionState
+    public class FilesConnectionState : ConnectionStateBase
     {
-        private readonly Action onZero;
-        private readonly Task task;
-        private int value;
+        private readonly Func<FilesConnectionState, Task> ensureConnection;
 
-        public Task Task
-        {
-            get { return task; }
-        }
+		public FilesConnectionState(Action onZero, Func<FilesConnectionState, Task> ensureConnection, Task task)
+			: base(onZero, task)
+		{
+			this.ensureConnection = ensureConnection;
+		}
 
-        public FilesConnectionState(Action onZero, Task task)
-        {
-            value = 0;
-            this.onZero = onZero;
-            this.task = task;
-        }
-
-        public void Inc()
-        {
-            lock (this)
-            {
-                value++;
-            }
-        }
-
-        public void Dec()
-        {
-            lock (this)
-            {
-                if (--value == 0)
-                    onZero();
-            }
-        }
+		protected override Task EnsureConnection()
+		{
+			return ensureConnection(this);
+		}
 
         public event Action<ConfigurationChangeNotification> OnConfigurationChangeNotification = (x) => { };
         public void Send(ConfigurationChangeNotification configurationChangeNotification)
@@ -70,15 +50,6 @@ namespace Raven.Client.FileSystem.Changes
             var onFileChangeNotification = OnFileChangeNotification;
             if (onFileChangeNotification != null)
                 onFileChangeNotification(fileChangeNotification);
-        }
-
-        public event Action<Exception> OnError;
-
-        public void Error(Exception e)
-        {
-            var onOnError = OnError;
-            if (onOnError != null)
-                onOnError(e);
         }
     }
 }

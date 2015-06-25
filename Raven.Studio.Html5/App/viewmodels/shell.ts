@@ -967,7 +967,7 @@ class shell extends viewModelBase {
                 this.serverBuildVersion(serverBuildResult);
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
-                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== 13) {
+                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== "13") {
                     new getLatestServerBuildVersionCommand(true, 3000, 3999) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {

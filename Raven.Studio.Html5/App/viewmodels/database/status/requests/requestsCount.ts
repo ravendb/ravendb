@@ -3,8 +3,8 @@
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDebugMetricsCommand = require("commands/database/debug/getDebugMetricsCommand");
-import d3 = require('d3/d3');
-import nv = require('nvd3');
+import d3 = require("d3/d3");
+import nv = require("nvd3");
 
 class requestsCount extends viewModelBase {
 
