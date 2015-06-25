@@ -50,15 +50,15 @@ namespace Raven.Database.TimeSeries.Controllers
 	        get
 	        {
 		        if (string.IsNullOrWhiteSpace(TimeSeriesName))
-			        throw new InvalidOperationException("Could not find time series storage name in path.. maybe it is missing or the request URL is malformed?");
+			        throw new InvalidOperationException("Could not find time series name in path.. maybe it is missing or the request URL is malformed?");
 
-		        var timeSeriesStorage = TimeSeriesLandlord.GetTimeSeriesInternal(TimeSeriesName);
-                if (timeSeriesStorage == null)
+		        var timeSeries = TimeSeriesLandlord.GetTimeSeriesInternal(TimeSeriesName);
+                if (timeSeries == null)
                 {
-                    throw new InvalidOperationException("Could not find a time series storage named: " + TimeSeriesName);
+                    throw new InvalidOperationException("Could not find a time series named: " + TimeSeriesName);
                 }
 
-                return timeSeriesStorage.Result;
+                return timeSeries.Result;
 	        }
 	    }
 
@@ -252,7 +252,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				var timeSeries = TimeSeriesLandlord.GetTimeSeriesInternal(TimeSeriesName);
 				if (timeSeries == null)
 				{
-					throw new InvalidOperationException("Could not find a timeSeries storage named: " + TimeSeriesName);
+					throw new InvalidOperationException("Could not find a time series named: " + TimeSeriesName);
 				}
 
 				return timeSeries.Result;

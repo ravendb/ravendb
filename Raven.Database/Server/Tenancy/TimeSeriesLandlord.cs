@@ -58,11 +58,11 @@ namespace Raven.Database.Server.Tenancy
 			};
 		}
 
-		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledTimeSeriesStorage = false)
+		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledTimeSeries = false)
 		{
 			if (string.IsNullOrWhiteSpace(tenantId))
 				throw new ArgumentException("tenantId");
-			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledTimeSeriesStorage);
+			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledTimeSeries);
 			if (document == null)
 				return null;
 
@@ -86,7 +86,7 @@ namespace Raven.Database.Server.Tenancy
 
 			config.Settings[Constants.TimeSeries.DataDirectory] = parentConfiguration.TimeSeries.DataDirectory;
 			//config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-			//TODO: what time series storage dir path?
+			//TODO: what time series dir path?
 			//config.Settings["Raven/TimeSeries/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
 			foreach (var setting in document.Settings)
@@ -127,7 +127,7 @@ namespace Raven.Database.Server.Tenancy
 				throw new InvalidOperationException("Could not find " + Constants.TimeSeries.DataDirectory);
 
 			if (document.Disabled && !ignoreDisabledTimeSeriesStorage)
-				throw new InvalidOperationException("The timeSeries storage has been disabled.");
+				throw new InvalidOperationException("The time series has been disabled.");
 
 			return document;
 		}

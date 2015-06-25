@@ -5,7 +5,7 @@ import shell = require("viewmodels/shell");
 
 class createTimeSeries extends createResourceBase {
     resourceNameCapitalString = "Time Series";
-    resourceNameString = "time series storage";
+    resourceNameString = "time series";
 
     constructor(parent: dialogViewModelBase) {
         super(shell.timeSeries, parent);

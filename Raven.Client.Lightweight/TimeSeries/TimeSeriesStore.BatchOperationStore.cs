@@ -46,7 +46,7 @@ namespace Raven.Client.TimeSeries
 			public void ScheduleChange(string groupName, string timeSeriesName, long delta)
 			{
 				if (string.IsNullOrWhiteSpace(parent.Name))
-					throw new InvalidOperationException("Default timeSeries storage name cannot be empty!");
+					throw new InvalidOperationException("Default time series name cannot be empty!");
 
 				defaultBatchOperation.Value.ScheduleChange(groupName, timeSeriesName, delta);
 			}
@@ -54,7 +54,7 @@ namespace Raven.Client.TimeSeries
 			public void ScheduleIncrement(string groupName, string timeSeriesName)
 			{
 				if (string.IsNullOrWhiteSpace(parent.Name))
-					throw new InvalidOperationException("Default timeSeries storage name cannot be empty!");
+					throw new InvalidOperationException("Default time series name cannot be empty!");
 
 				defaultBatchOperation.Value.ScheduleIncrement(groupName, timeSeriesName);
 			}
@@ -62,7 +62,7 @@ namespace Raven.Client.TimeSeries
 			public void ScheduleDecrement(string groupName, string timeSeriesName)
 			{
 				if (string.IsNullOrWhiteSpace(parent.Name))
-					throw new InvalidOperationException("Default timeSeries storage name cannot be empty!");
+					throw new InvalidOperationException("Default time series name cannot be empty!");
 
 				defaultBatchOperation.Value.ScheduleDecrement(groupName, timeSeriesName);
 			}

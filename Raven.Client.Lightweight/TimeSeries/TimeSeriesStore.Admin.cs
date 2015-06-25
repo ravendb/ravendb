@@ -28,7 +28,7 @@ namespace Raven.Client.TimeSeries
 			/// Create new time series on the server.
 			/// </summary>
 			/// <param name="timeSeriesDocument">Settings for the time series. If null, default settings will be used, and the name specified in the client ctor will be used</param>
-			/// <param name="timeSeriesName">Override timeSeries storage name specified in client ctor. If null, the name already specified will be used</param>
+			/// <param name="timeSeriesName">Override time series name specified in client ctor. If null, the name already specified will be used</param>
 			public async Task<TimeSeriesStore> CreateTimeSeriesAsync(TimeSeriesDocument timeSeriesDocument, string timeSeriesName, bool shouldUpateIfExists = false, OperationCredentials credentials = null, CancellationToken token = default(CancellationToken))
 			{
 				if (timeSeriesDocument == null)
@@ -52,7 +52,7 @@ namespace Raven.Client.TimeSeries
 					catch (ErrorResponseException e)
 					{
 						if (e.StatusCode == HttpStatusCode.Conflict)
-							throw new InvalidOperationException("Cannot create time series with the name '" + timeSeriesName + "' because it already exists. Use CreateOrUpdateTimeSeriesAsync in case you want to update an existing timeSeries storage", e);
+							throw new InvalidOperationException("Cannot create time series with the name '" + timeSeriesName + "' because it already exists. Use CreateOrUpdateTimeSeriesAsync in case you want to update an existing time series", e);
 
 						throw;
 					}
@@ -81,7 +81,7 @@ namespace Raven.Client.TimeSeries
 					catch (ErrorResponseException e)
 					{
 						if (e.StatusCode == HttpStatusCode.NotFound)
-							throw new InvalidOperationException(string.Format("TimeSeries storage with specified name ({0}) doesn't exist", timeSeriesName));
+							throw new InvalidOperationException(string.Format("Time series with specified name ({0}) doesn't exist", timeSeriesName));
 						throw;
 					}
 				}
