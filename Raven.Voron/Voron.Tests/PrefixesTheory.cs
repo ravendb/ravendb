@@ -10,7 +10,6 @@ using Xunit.Sdk;
 
 namespace Voron.Tests
 {
-	[CLSCompliant(false)]
 	public class PrefixesTheoryAttribute : TheoryAttribute
 	{
 		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)

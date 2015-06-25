@@ -127,7 +127,7 @@ namespace Raven.Database.FileSystem.Controllers
 					{
 						Synchronizations.AssertFileIsNotBeingSynced(fileName);
 					}
-					catch (Exception e)
+					catch (Exception)
 					{
 						//ignore files that are being synced
 						continue;

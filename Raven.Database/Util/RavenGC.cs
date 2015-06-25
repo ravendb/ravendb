@@ -57,13 +57,14 @@ namespace Raven.Database.Util
 		private static long minTimeBetweenMemoryReleases = 5*10*1000*1000;
 		private static void ReleaseMemoryBeforeGC()
 		{
-			if (Environment.TickCount - lastTimeMemoryReleasedBeforeGC < minTimeBetweenMemoryReleases)
-				return;
-			
-			Interlocked.Exchange(ref lastTimeMemoryReleasedBeforeGC, Environment.TickCount);
 
 			if (MemoryStatistics.AvailableMemory < ((double)MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemory)/10)
 			{
+				if (Environment.TickCount - lastTimeMemoryReleasedBeforeGC < minTimeBetweenMemoryReleases)
+					return;
+
+				Interlocked.Exchange(ref lastTimeMemoryReleasedBeforeGC, Environment.TickCount);
+
 				MemoryStatistics.SimulateLowMemoryNotification();
 			}
 			else

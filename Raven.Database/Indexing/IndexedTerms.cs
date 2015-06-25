@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
+using Lucene.Net.Support;
 using Lucene.Net.Util;
 using Raven.Database.Config;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -19,10 +20,72 @@ namespace Raven.Database.Indexing
 {
     internal static class IndexedTerms
     {
-        private readonly static ConditionalWeakTable<IndexReader, CachedIndexedTerms> _termsCachePerReader =
-            new ConditionalWeakTable<IndexReader, CachedIndexedTerms>();
 
-        private class CachedIndexedTerms : ILowMemoryHandler
+        private static readonly WeakCache CacheInstance = new WeakCache();
+
+        public class WeakCache : ILowMemoryHandler
+        {
+            public ConditionalWeakTable<IndexReader, CachedIndexedTerms> TermsCachePerReader =
+                new ConditionalWeakTable<IndexReader, CachedIndexedTerms>();
+
+            public List<WeakReference<IndexReader>> Keys = new List<WeakReference<IndexReader>>();
+            private int _count;
+            public WeakCache()
+            {
+                MemoryStatistics.RegisterLowMemoryHandler(this);
+            }
+
+            public void HandleLowMemory()
+            {
+                lock (this)
+                {
+                    foreach (var reference in Keys)
+                    {
+                        IndexReader target;
+                        if (reference.TryGetTarget(out target))
+                            TermsCachePerReader.Remove(target);
+                    }
+
+                    Keys.Clear();
+                }
+            }
+
+	        public void SoftMemoryRelease()
+	        {
+	        }
+
+	        public LowMemoryHandlerStatistics GetStats()
+	        {
+		        return new LowMemoryHandlerStatistics
+		        {
+					Name = "WeakCache"
+		        };
+	        }
+
+	        public CachedIndexedTerms GetOrCreateValue(IndexReader reader)
+            {
+                CachedIndexedTerms value;
+                // ReSharper disable once InconsistentlySynchronizedField
+                if (TermsCachePerReader.TryGetValue(reader, out value))
+                    return value;
+                lock (this)
+                {
+                    if (TermsCachePerReader.TryGetValue(reader, out value))
+                        return value;
+
+                    var cachedIndexedTerms = TermsCachePerReader.GetOrCreateValue(reader);
+                    Keys.Add(new WeakReference<IndexReader>(reader));
+                    if (_count++ % 10 == 0)
+                    {
+                        IndexReader target;
+                        Keys.RemoveAll(x => x.TryGetTarget(out target) == false);
+                    } 
+                    return cachedIndexedTerms;
+                }
+            }
+        }
+
+        public class CachedIndexedTerms : ILowMemoryHandler
         {
             public ConcurrentDictionary<string, FieldCacheInfo> Results = new ConcurrentDictionary<string, FieldCacheInfo>();
 	        private string databaseName;
@@ -60,15 +123,15 @@ namespace Raven.Database.Indexing
 	        }
         }
 
-        private class FieldCacheInfo
+        public class FieldCacheInfo
         {
-            public Dictionary<string,int[]> Results;
+            public Dictionary<string, int[]> Results;
             public bool Done;
         }
 
 		public static Dictionary<string, int[]> GetTermsAndDocumenstFor(IndexReader reader, int docBase, string field, string databaseName, string indexName)
         {
-			var termsCachePerField = _termsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(databaseName, indexName));
+			var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(databaseName, indexName));
 			
             FieldCacheInfo info;
             if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)

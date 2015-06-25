@@ -37,7 +37,7 @@ namespace Raven.Database.Indexing
         public ManualResetEvent SetIndexSearcher(IndexSearcher searcher, string publicName, bool wait)
         {
             var old = current;
-            current = new IndexSearcherHoldingState(searcher, publicName, string.Copy(context.DatabaseName));
+            current = new IndexSearcherHoldingState(searcher, publicName, context.DatabaseName);
 	        
             if (old == null)
                 return null;

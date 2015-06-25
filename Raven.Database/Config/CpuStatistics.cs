@@ -34,7 +34,6 @@ namespace Raven.Database.Config
 
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-	    private static bool errorGettingCpuStats;
 		private static int nextWriteIndex;
         private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
 	    private static bool dynamicLoadBalancding;

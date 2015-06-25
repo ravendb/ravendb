@@ -758,7 +758,8 @@ namespace Raven.Database.Server.Controllers.Admin
 						DebugInfoProvider.CreateInfoPackageForDatabase(package, database, RequestManager, prefix + "/");
 					});
 
-					if (ContainsQueryStringKey("stacktrace"))
+					bool stacktrace;
+					if (bool.TryParse(GetQueryStringValue("stacktrace"), out stacktrace) && stacktrace)
 						DumpStacktrace(package);
 				}
 
