@@ -329,7 +329,7 @@ class patch extends viewModelBase {
     }
 
     executePatchOnSelected() {
-        this.confirmAndExecutePatch(this.getDocumentsGrid().getSelectedItems().map(doc => doc.__metadata.id));
+        this.confirmAndExecutePatch(this.getCountersGrid().getSelectedItems().map(doc => doc.__metadata.id));
     }
 
     executePatchOnAll() {
@@ -417,7 +417,7 @@ class patch extends viewModelBase {
         }
     }
 
-    private getDocumentsGrid(): virtualTable {
+    private getCountersGrid(): virtualTable {
         var gridContents = $(patch.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

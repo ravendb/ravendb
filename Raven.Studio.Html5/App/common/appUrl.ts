@@ -136,8 +136,8 @@ class appUrl {
         return isThereAny;
     }
 
-    static getEncodedCounterStoragePart(counterStorage: counterStorage): string {
-        return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
+    static getEncodedCounterStoragePart(cs: counterStorage): string {
+        return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
     }
 
     static forCounterStorageCounters(gruopName: string, cs: counterStorage) {
@@ -314,12 +314,12 @@ class appUrl {
     }
 
     static forEditItem(itemId: string, res: resource, itemIndex: number, collectionName?: string): string {
-        var databaseUrlPart = appUrl.getEncodedResourcePart(res);
+        var urlPart = appUrl.getEncodedResourcePart(res);
         var itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
 
         var pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
-        var resourceTag = res instanceof filesystem ? "#filesystems" : "#databases";       
-        return resourceTag+"/edit?" + itemIdUrlPart + databaseUrlPart + pagedListInfo;
+        var resourceTag = res instanceof filesystem ? "#filesystems" : res instanceof counterStorage ? "#counterstorages" : "#databases";       
+        return resourceTag+"/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     } 
 
     static forEditQueryItem(itemNumber: number, res: resource, index: string, query?: string, sort?:string): string {
@@ -330,7 +330,7 @@ class appUrl {
         var sortInfoUrlPart = sort?"&sorts=" + sort:"";
         var resourceTag = res instanceof filesystem ? "#filesystems" : "#databases";
         return resourceTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
-    } 
+    }
 
     static forNewDoc(db: database): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
@@ -997,9 +997,16 @@ class appUrl {
     private static getEncodedResourcePart(res?: resource) {
         if (!res)
             return "";
+
         if (res instanceof filesystem) {
-            return appUrl.getEncodedFsPart(<filesystem>res);
+            return appUrl.getEncodedFsPart(res);
         }
+		if (res instanceof counterStorage) {
+			return appUrl.getEncodedCounterStoragePart(res);
+		}
+		if (res instanceof timeSeries) {
+			return appUrl.getEncodedTimeSeriesPart(res);
+		}
         else {
             return appUrl.getEncodedDbPart(<database>res);
         }

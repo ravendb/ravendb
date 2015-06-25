@@ -59,6 +59,9 @@
     }
 
     private isNumber(num: any): boolean {
+	    if (num < 0)
+		    return true;
+
         var n1 = Math.abs(num);
         var n2 = parseInt(num, 10);
         return !isNaN(n1) && n2 === n1 && n1.toString() === num;
