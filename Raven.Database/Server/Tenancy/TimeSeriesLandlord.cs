@@ -135,7 +135,7 @@ namespace Raven.Database.Server.Tenancy
 		public bool TryGetOrCreateResourceStore(string tenantId, out Task<TimeSeriesStorage> timeSeries)
 		{
 			if (Locks.Contains(DisposingLock))
-				throw new ObjectDisposedException("TimeSeriesLandlord", "Server is shutting down, can't access any timeSeriess");
+				throw new ObjectDisposedException("TimeSeriesLandlord", "Server is shutting down, can't access any time series");
 
 			if (Locks.Contains(tenantId))
 				throw new InvalidOperationException("TimeSeries '" + tenantId + "' is currently locked and cannot be accessed");
@@ -176,7 +176,7 @@ namespace Raven.Database.Server.Tenancy
 			{
 				if (task.Status == TaskStatus.Faulted) // this observes the task exception
 				{
-					Logger.WarnException("Failed to create timeSeriess " + tenantId, task.Exception);
+					Logger.WarnException("Failed to create time series " + tenantId, task.Exception);
 				}
 				return task;
 			}).Unwrap());
@@ -244,7 +244,7 @@ namespace Raven.Database.Server.Tenancy
 							numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
 					if (databases.Count >= numberOfAllowedFileSystems)
 						throw new InvalidOperationException(
-							"You have reached the maximum number of timeSeriess that you can have according to your license: " +
+							"You have reached the maximum number of time series that you can have according to your license: " +
 							numberOfAllowedFileSystems + Environment.NewLine +
 							"You can either upgrade your RavenDB license or delete a timeSeries from the server");
 				}

@@ -95,7 +95,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			var fileSystemInternal = await TimeSeriesLandlord.GetTimeSeriesInternal(TimeSeriesName);
 			if (fileSystemInternal == null)
 			{
-				var msg = "Could not find a timeSeriess named: " + TimeSeriesName;
+				var msg = "Could not find a time series named: " + TimeSeriesName;
 				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
 			}
 

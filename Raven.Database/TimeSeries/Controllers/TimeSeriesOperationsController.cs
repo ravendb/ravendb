@@ -313,7 +313,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/timeSeriess")]
+		[RavenRoute("ts/{timeSeriesName}/timeSeries")]
 		[HttpGet]
 		public HttpResponseMessage GetTimeSeries(int skip = 0, int take = 20, string group = null)
 		{
@@ -323,8 +323,8 @@ namespace Raven.Database.TimeSeries.Controllers
 			{
 				var groupsPrefix = (group == null) ? string.Empty : (group + Constants.TimeSeries.Separator);
 				var timeSeriesByPrefixes = reader.GetTimeSeriesByPrefixes(groupsPrefix, skip, take);
-				var timeSeriess = timeSeriesByPrefixes.Select(groupWithTimeSeriesName => reader.GetTimeSeriesSummary(groupWithTimeSeriesName)).ToList();
-				return GetMessageWithObject(timeSeriess);
+				var timeSeries = timeSeriesByPrefixes.Select(groupWithTimeSeriesName => reader.GetTimeSeriesSummary(groupWithTimeSeriesName)).ToList();
+				return GetMessageWithObject(timeSeries);
 			}
 		}
 
@@ -357,14 +357,14 @@ namespace Raven.Database.TimeSeries.Controllers
 				if (reader.TimeSeriesExists(groupName, timeSeriesName) == false)
 					return Request.CreateResponse(HttpStatusCode.OK, new ServerValue[0]);
 
-				var timeSeriessByPrefix = reader.GetTimeSeriesValuesByPrefix(groupName, timeSeriesName);
-                if (timeSeriessByPrefix == null)
+				var timeSeriesByPrefix = reader.GetTimeSeriesValuesByPrefix(groupName, timeSeriesName);
+                if (timeSeriesByPrefix == null)
 				{
 					return GetMessageWithObject(new { Message = "Specified timeSeries not found within the specified group" }, HttpStatusCode.NotFound);
                 }
 
 	            var serverValuesDictionary = new Dictionary<Guid, ServerValue>();
-				timeSeriessByPrefix.TimeSeriesValues.ForEach(x =>
+				timeSeriesByPrefix.TimeSeriesValues.ForEach(x =>
 				{
 					ServerValue serverValue;
 					var serverId = x.ServerId();

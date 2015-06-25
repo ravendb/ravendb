@@ -24,7 +24,7 @@ namespace Raven.Tests.TimeSeries
 		}
 
 		[Fact]
-		public async Task Should_be_able_to_create_multiple_time_seriess()
+		public async Task Should_be_able_to_create_multiple_time_series()
 		{
 			var expectedClientNames = new[] { TimeSeriesName + "A", TimeSeriesName + "B", TimeSeriesName + "C" };
 			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName,createDefaultTimeSeries: false))
@@ -40,7 +40,7 @@ namespace Raven.Tests.TimeSeries
 		}
 
 		[Fact]
-		public async Task Should_be_able_to_delete_time_seriess()
+		public async Task Should_be_able_to_delete_time_series()
 		{
 			var expectedClientNames = new[] { TimeSeriesName + "A", TimeSeriesName + "C" };
 			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, createDefaultTimeSeries: false))
@@ -57,7 +57,7 @@ namespace Raven.Tests.TimeSeries
 		}
 
 		[Fact]
-		public async Task Should_be_able_to_create_multiple_time_seriess_in_parallel()
+		public async Task Should_be_able_to_create_multiple_time_series_in_parallel()
 		{
 			var expectedClientNames = new[] { TimeSeriesName + "A", TimeSeriesName + "B", TimeSeriesName + "C" };
 			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, createDefaultTimeSeries: false))
