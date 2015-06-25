@@ -19,7 +19,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task NotificationReceivedWhenTimeSeriesAddedAndIncremented()
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
@@ -55,7 +55,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task NotificationReceivedForTimeSeriesStartingWith()
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
 				var changes = store.Changes();
 				var notificationTask1 = changes.Task.Result
@@ -91,7 +91,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task notification_received_when_time_series_in_group_added_and_incremented()
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
 				var changes = store.Changes();
 				var notificationTask = changes.Task.Result
@@ -128,8 +128,8 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task notification_received_when_replication_time_series_added_and_incremented()
 		{
-			using (var storeA = NewRemoteTimeSeriesStore(DefaultTimeSeriesName + "A"))
-			using (var storeB = NewRemoteTimeSeriesStore(DefaultTimeSeriesName + "B"))
+			using (var storeA = NewRemoteTimeSeriesStore())
+			using (var storeB = NewRemoteTimeSeriesStore())
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				await SetupReplicationAsync(storeB, storeA);
@@ -170,8 +170,8 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task notification_received_when_replication_time_series_subscribed_to_group()
 		{
-			using (var storeA = NewRemoteTimeSeriesStore(DefaultTimeSeriesName + "A"))
-			using (var storeB = NewRemoteTimeSeriesStore(DefaultTimeSeriesName + "B"))
+			using (var storeA = NewRemoteTimeSeriesStore())
+			using (var storeB = NewRemoteTimeSeriesStore())
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				await SetupReplicationAsync(storeB, storeA);
@@ -217,7 +217,7 @@ namespace Raven.Tests.TimeSeries
 		public void NotificationReceivedWhenBatchOperation(int batchSizeLimit, int actionsCount)
 		{
 			int startCount = 0, endCount = 0;
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
 				using (var batchOperation = store.Advanced.NewBatch(new TimeSeriesBatchOptions { BatchSizeLimit = batchSizeLimit }))
 				{

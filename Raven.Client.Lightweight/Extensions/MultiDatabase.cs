@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.TimeSeries;
 
 namespace Raven.Client.Extensions
 {
@@ -25,6 +27,34 @@ namespace Raven.Client.Extensions
 				}
             };
         }
+
+		public static TimeSeriesDocument CreateTimeSeriesDocument(string name)
+		{
+			AssertValidName(name);
+
+			return new TimeSeriesDocument
+			{
+				Id = Constants.TimeSeries.Prefix + name,
+				Settings =
+				{
+					{Constants.TimeSeries.DataDirectory, Path.Combine("~", name)},
+				}
+			};
+		}
+
+		public static CounterStorageDocument CreateCounterStorageDocument(string name)
+		{
+			AssertValidName(name);
+
+			return new CounterStorageDocument
+			{
+				Id = Constants.Counter.Prefix + name,
+				Settings =
+				{
+					{Constants.Counter.DataDirectory, Path.Combine("~", name)},
+				}
+			};
+		}
 
         private const string ValidDbNameChars = @"([A-Za-z0-9_\-\.]+)";
 

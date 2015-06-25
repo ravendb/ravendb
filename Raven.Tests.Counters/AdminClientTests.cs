@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
+using Raven.Client.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Counters
@@ -45,9 +46,9 @@ namespace Raven.Tests.Counters
 			var expectedClientNames = new[] { CounterStorageName + "A", CounterStorageName + "C" };
 			using (var store = NewRemoteCountersStore(DefaultCounterStorageName, createDefaultCounter: false))
 			{
-				await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument(expectedClientNames[0]), expectedClientNames[0]);
-				await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument("CounterThatWillBeDeleted"), "CounterThatWillBeDeleted");
-				await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument(expectedClientNames[1]), expectedClientNames[1]);
+				await store.Admin.CreateCounterStorageAsync(MultiDatabase.CreateCounterStorageDocument(expectedClientNames[0]), expectedClientNames[0]);
+				await store.Admin.CreateCounterStorageAsync(MultiDatabase.CreateCounterStorageDocument("CounterThatWillBeDeleted"), "CounterThatWillBeDeleted");
+				await store.Admin.CreateCounterStorageAsync(MultiDatabase.CreateCounterStorageDocument(expectedClientNames[1]), expectedClientNames[1]);
 
 				await store.Admin.DeleteCounterStorageAsync("CounterThatWillBeDeleted", true);
 
