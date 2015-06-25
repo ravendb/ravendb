@@ -30,13 +30,14 @@ namespace Raven.Client.Document
 		{
 		}
 
-		/// <summary>
-		/// Generates the document key.
-		/// </summary>
-		/// <param name="convention">The convention.</param>
-		/// <param name="entity">The entity.</param>
-		/// <returns></returns>
-		public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
+        /// <summary>
+        /// Generates the document key.
+        /// </summary>
+        /// <param name="convention">The convention.</param>
+        /// <param name="entity">The entity.</param>
+        /// <param name="databaseCommands">Low level database commands.</param>
+        /// <returns></returns>
+        public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
 		{
 			return GetDocumentKeyFromId(convention, NextId(databaseCommands));
 		}

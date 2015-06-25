@@ -23,6 +23,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Database.Indexing
 {

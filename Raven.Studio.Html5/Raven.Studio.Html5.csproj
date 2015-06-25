@@ -95,6 +95,7 @@
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\saveIndexPriorityCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
@@ -146,6 +147,7 @@
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
+    <TypeScriptCompile Include="App\common\changesContext.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\environmentColor.ts" />
@@ -1003,6 +1005,9 @@
     <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Content\bootstrap-select.css.map" />
     <Content Include="Scripts\bootstrap-select.js.map" />
+    <Content Include="Content\bootstrap.css.map">
+      <DependentUpon>bootstrap.css</DependentUpon>
+    </Content>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>

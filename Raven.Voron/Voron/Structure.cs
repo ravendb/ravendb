@@ -1,4 +1,5 @@
-﻿// -----------------------------------------------------------------------
+﻿using Sparrow;
+// -----------------------------------------------------------------------
 //  <copyright file="IStructure.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -341,7 +342,7 @@ namespace Voron
                 {
                     fixed (byte* valuePtr = write.Value)
                     {
-                        MemoryUtils.Copy(fieldPointer, valuePtr, valueLength);
+                        Memory.Copy(fieldPointer, valuePtr, valueLength);
                     }
                 }
                 else // We have an string
@@ -357,7 +358,7 @@ namespace Voron
 
 			fixed (uint* p = offsets)
 			{
-				MemoryUtils.Copy(offsetsPointer, (byte*) p, fieldOffsetsSize);
+				Memory.Copy(offsetsPointer, (byte*) p, fieldOffsetsSize);
 			}
 		}
 

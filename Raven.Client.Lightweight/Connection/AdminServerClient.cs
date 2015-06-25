@@ -5,6 +5,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
@@ -24,69 +25,69 @@ namespace Raven.Client.Connection
 
 		public void CreateDatabase(DatabaseDocument databaseDocument)
 		{
-			asyncAdminServerClient.CreateDatabaseAsync(databaseDocument).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncAdminServerClient.CreateDatabaseAsync(databaseDocument));
 		}
 
 		public void DeleteDatabase(string databaseName, bool hardDelete = false)
 		{
-			asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete));
 		}
 
 		public void EnsureDatabaseExists(string name, bool ignoreFailures = false)
 		{
-			asyncAdminServerClient.EnsureDatabaseExistsAsync(name, ignoreFailures).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncAdminServerClient.EnsureDatabaseExistsAsync(name, ignoreFailures));
 		}
 
 		public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
 
 		public Operation CompactDatabase(string databaseName)
 		{
-			return asyncAdminServerClient.CompactDatabaseAsync(databaseName).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncAdminServerClient.CompactDatabaseAsync(databaseName));
 		}
 
 		public void StopIndexing()
 		{
-			asyncAdminServerClient.StopIndexingAsync().WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncAdminServerClient.StopIndexingAsync());
 		}
 
 		public void StartIndexing(int? maxNumberOfParallelIndexTasks)
 		{
-			asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks));
 		}
 
 		public void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
 		{
-			asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName).WaitUnwrap();
+			AsyncHelpers.RunSync(() => asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName));
 		}
 
 		public Operation StartRestore(DatabaseRestoreRequest restoreRequest)
 		{
-			return asyncAdminServerClient.StartRestoreAsync(restoreRequest).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncAdminServerClient.StartRestoreAsync(restoreRequest));
 		}
 
 		public string GetIndexingStatus()
 		{
-			return asyncAdminServerClient.GetIndexingStatusAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetIndexingStatusAsync());
 		}
 
 		public RavenJObject GetDatabaseConfiguration()
 		{
-			return asyncAdminServerClient.GetDatabaseConfigurationAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetDatabaseConfigurationAsync());
 		}
 
 		public BuildNumber GetBuildNumber()
 		{
-			return asyncAdminServerClient.GetBuildNumberAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetBuildNumberAsync());
 		}
 
 		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
-			return asyncAdminServerClient.GetDatabaseNamesAsync(pageSize, start).ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetDatabaseNamesAsync(pageSize, start));
 		}
 
 		public AdminStatistics GetStatistics()
 		{
-			return asyncAdminServerClient.GetStatisticsAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetStatisticsAsync());
 		}
 	}
 }

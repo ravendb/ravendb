@@ -8,6 +8,7 @@ namespace Raven.Database.Server.Connections
         string ResourceName { get; set; }
 		bool Connected { get; set; }
         long CoolDownWithDataLossInMiliseconds { get; set; }
+		TimeSpan Age { get; }
 
 		event Action Disconnected;
 		void SendAsync(object msg);

@@ -3,6 +3,7 @@ import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
 
 import shell = require("viewmodels/shell");
+import changesContext = require("common/changesContext");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteCollection = require("viewmodels/deleteCollection");
 
@@ -182,9 +183,9 @@ class documents extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
-            shell.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
-            shell.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
+            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
         ];
     }
 

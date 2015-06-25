@@ -47,7 +47,7 @@
     <DefineConstants>TRACE;DEBUG;NET_4_0 NET45</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <NoWarn>1607, 1591</NoWarn>
+    <NoWarn>1607, 1591, 618</NoWarn>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <DocumentationFile>
     </DocumentationFile>
@@ -64,7 +64,7 @@
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>
     </DocumentationFile>
-    <NoWarn>1607, 1591</NoWarn>
+    <NoWarn>1607, 1591, 618</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
@@ -77,7 +77,7 @@
     <OutputPath>bin\Profiling\</OutputPath>
     <DefineConstants>TRACE;NET_4_0 NET45 PROFILING</DefineConstants>
     <Optimize>true</Optimize>
-    <NoWarn>1607, 1591</NoWarn>
+    <NoWarn>1607, 1591, 618</NoWarn>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
@@ -730,7 +730,7 @@
     <Compile Include="Queries\MoreLikeThisQueryExtensions.cs" />
     <Compile Include="Queries\MatchNoDocsQuery.cs" />
     <Compile Include="Server\Abstractions\PrincipalWithDatabaseAccess.cs" />
-    <Compile Include="Server\BeforeRequestEventArgs.cs" />
+    <Compile Include="Server\RequestWebApiEventArgs.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
@@ -1217,6 +1217,10 @@
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>

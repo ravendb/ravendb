@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Data
 		public IDictionary<string, string> Headers { get; set; }
 
 		/// <summary>
-		/// Query information e.g. "?pageStart=10&pageSize=20".
+		/// Query information e.g. "?pageStart=10&amp;pageSize=20".
 		/// </summary>
 		public string Query { get; set; }
 		

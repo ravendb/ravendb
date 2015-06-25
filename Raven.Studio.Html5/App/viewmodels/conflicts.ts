@@ -5,6 +5,8 @@ import pagedResultSet = require("common/pagedResultSet");
 import appUrl = require("common/appUrl");
 import pagedList = require("common/pagedList");
 
+import changesContext = require("common/changesContext");
+
 import conflict = require("models/conflict");
 import indexPriority = require("models/indexPriority");
 import database = require("models/database");
@@ -45,7 +47,7 @@ class conflicts extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllReplicationConflicts((e) => this.refreshConflictsObservable(new Date().getTime())) 
+            changesContext.currentResourceChangesApi().watchAllReplicationConflicts((e) => this.refreshConflictsObservable(new Date().getTime())) 
         ];
     }
 
@@ -107,7 +109,7 @@ class conflicts extends viewModelBase {
             .fail( 
             function () {
                 //TODO: we should check exact result of getIndex/Transfomer commands (if it contains 404)
-                var indexTask = new saveIndexDefinitionCommand(conflicts.getConflictsIndexDefinition(), indexPriority.normal, db).execute();
+                var indexTask = new saveIndexDefinitionCommand(conflicts.getConflictsIndexDefinition(), db).execute();
                 var transformerTask = new saveTransformerCommand(conflicts.getConflictsTransformerDefinition(), db).execute();
 
                 $.when(indexTask, transformerTask).done(function () {

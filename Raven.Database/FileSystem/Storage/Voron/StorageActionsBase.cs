@@ -89,7 +89,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         protected BufferPoolMemoryStream CreateStream()
         {
-            return new BufferPoolMemoryStream(bufferPool);
+            return new BufferPoolMemoryStream();
         }
 
         private static string ConvertValueToString(object value)

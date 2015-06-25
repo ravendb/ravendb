@@ -4,7 +4,7 @@ using System.IO;
 
 namespace Raven.Tests.Common.Util
 {
-	class IISExpressDriver : ProcessDriver
+	public class IISExpressDriver : ProcessDriver
 	{
 		public string Url { get; private set;  }
 

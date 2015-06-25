@@ -17,6 +17,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
+using Sparrow.Collections;
 
 namespace Raven.Database.Config
 {
@@ -33,7 +34,6 @@ namespace Raven.Database.Config
 
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-	    private static bool errorGettingCpuStats;
 		private static int nextWriteIndex;
         private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
 	    private static bool dynamicLoadBalancding;

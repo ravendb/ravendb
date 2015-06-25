@@ -33,7 +33,7 @@ namespace Raven.Abstractions.Json
 		/// </summary>
 		/// <remarks>
 		/// this converter will never be needed to deserialize from json -
-		///  built-in converter is enough as Json.Net serializes any collection - including IEnumerable<T> to json arrays.
+		///  built-in converter is enough as Json.Net serializes any collection - including IEnumerable{T} to json arrays.
 		/// </remarks>
 		/// <param name="reader">The <see cref="JsonReader"/> to read from.</param>
 		/// <param name="objectType">Type of the object.</param>

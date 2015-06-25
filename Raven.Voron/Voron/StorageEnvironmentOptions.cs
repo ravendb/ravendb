@@ -14,6 +14,7 @@ using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
 using Mono.Unix.Native;
+using Sparrow;
 
 namespace Voron
 {
@@ -395,7 +396,7 @@ namespace Voron
 					ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
 					_headers[filename] = ptr;
 				}
-                MemoryUtils.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
+                Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
 			}
 
 			public override IVirtualPager CreateScratchPager(string name)

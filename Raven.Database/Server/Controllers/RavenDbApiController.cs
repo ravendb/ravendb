@@ -545,7 +545,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 
-        public override bool SetupRequestToProperDatabase(RequestManager rm)
+        public override bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args)
         {
             var tenantId = this.DatabaseName;
             var landlord = this.DatabasesLandlord;
@@ -554,7 +554,7 @@ namespace Raven.Database.Server.Controllers
             {                
                 landlord.LastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
 
-                var args = new BeforeRequestWebApiEventArgs
+                args = new RequestWebApiEventArgs
                 {
                     Controller = this,
                     IgnoreRequest = false,
@@ -562,7 +562,6 @@ namespace Raven.Database.Server.Controllers
                     Database = landlord.SystemDatabase
                 };
 
-                rm.OnBeforeRequest(args);
                 if (args.IgnoreRequest)
                     return false;
                 return true;
@@ -609,7 +608,7 @@ namespace Raven.Database.Server.Controllers
 						}
 					}
 
-                    var args = new BeforeRequestWebApiEventArgs()
+                    args = new RequestWebApiEventArgs()
                     {
                         Controller = this,
                         IgnoreRequest = false,
@@ -617,7 +616,6 @@ namespace Raven.Database.Server.Controllers
                         Database = resourceStoreTask.Result
                     };
 
-                    rm.OnBeforeRequest(args);
                     if (args.IgnoreRequest)
                         return false;
                 }

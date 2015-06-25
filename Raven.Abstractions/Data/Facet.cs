@@ -8,11 +8,13 @@ using System.Reflection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
 	public class Facet
 	{
+        [JsonIgnore]
 		private string displayName;
 
 		/// <summary>

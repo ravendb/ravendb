@@ -7,6 +7,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Database.Actions;
 using Raven.Database.Config;
@@ -363,7 +364,7 @@ namespace Raven.Database.FileSystem.Controllers
                 try
                 {
                     // as we perform compact async we don't catch exceptions here - they will be propagated to operation
-                    var targetFs = FileSystemsLandlord.GetFileSystemInternal(fs).ResultUnwrap();
+					var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetFileSystemInternal(fs));
                     FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration, msg =>
 			        {
                         bool skipProgressReport = false;

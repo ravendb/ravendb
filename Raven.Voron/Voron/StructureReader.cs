@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using Sparrow;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Voron.Util;
@@ -208,7 +209,7 @@ namespace Voron
 
 				fixed (byte* rPtr = result)
 				{
-					MemoryUtils.Copy(rPtr, _ptr + offset + valueLengthSize, length);
+					Memory.Copy(rPtr, _ptr + offset + valueLengthSize, length);
 				}
 
 				return result;

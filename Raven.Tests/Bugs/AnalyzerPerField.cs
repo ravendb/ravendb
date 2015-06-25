@@ -41,6 +41,8 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
+                WaitForIndexing(store);
+
 				using (var s = store.OpenSession())
 				{
 					var movies = s.Advanced.DocumentQuery<Movie>("Movies")

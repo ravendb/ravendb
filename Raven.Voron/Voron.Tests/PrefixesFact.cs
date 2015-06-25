@@ -12,7 +12,6 @@ using Xunit.Sdk;
 
 namespace Voron.Tests
 {
-	[CLSCompliant(false)]
 	public class PrefixesFactAttribute : FactAttribute
 	{
 		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)

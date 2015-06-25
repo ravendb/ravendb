@@ -9,30 +9,37 @@ using System.Diagnostics;
 using System.IO;
 
 using Raven.Abstractions.Util.Streams;
+using Raven.Abstractions.Util;
+using Sparrow;
 
 namespace Raven.Database.Util.Streams
 {
     public class BufferPoolMemoryStream : Stream
-    {
-        private readonly IBufferPool _bufferPool;
-
-		[CLSCompliant(false)]
+    {       
         protected byte[] _buffer;
+        protected ObjectPool<byte[]> _bufferPool;
+
+        private const int BufferPoolLimit = BufferSharedPools.ByteBufferSize / 2;
 		
 		[CLSCompliant(false)]
         protected long _length;
 
         private int _position;
 
-        public BufferPoolMemoryStream(IBufferPool bufferPool)
+        public BufferPoolMemoryStream()
         {
-            _bufferPool = bufferPool;
-            _buffer = _bufferPool.TakeBuffer(8 * 1024);
+            _buffer = new byte[64];
+            _bufferPool = null;
         }
 
         protected override void Dispose(bool disposing)
         {
-            _bufferPool.ReturnBuffer(_buffer);
+            // We will release the currently allocated buffer.
+            if (_bufferPool != null)
+                _bufferPool.Free(_buffer);
+
+            _buffer = null;
+
             base.Dispose(disposing);
         }
 
@@ -75,6 +82,7 @@ namespace Raven.Database.Util.Streams
             Debug.Assert(count <= _buffer.Length - _position, " EnsureCapacity() should grow the underlying buffer to a proper size");
 
             Buffer.BlockCopy(buffer, offset, _buffer, _position, count);
+
             _position += count;
             _length = Math.Max(_length, _position);
         }
@@ -96,13 +104,43 @@ namespace Raven.Database.Util.Streams
 			//precaution -> to make sure casting long to int is ok (I doubt this will ever be not ok, but still)
 			Debug.Assert(requestedCapacity <= Int32.MaxValue,"should never grow buffer to these sizes");
 
+
 			//if the required capacity is more than the estimated growth, grow the buffer by the requested capacity
 			var newCapacity = (requestedCapacity <= estimatedNewCapacity) ? estimatedNewCapacity : (int)requestedCapacity;
-	        var newBuffer = _bufferPool.TakeBuffer(newCapacity);
+                        
+            // We reset the buffer pool
+            ObjectPool<byte[]> newBufferPool = null;
+            if (newCapacity > BufferPoolLimit)
+            {
+                // We will ensure to cap out to fit the capacity as best as we can.
+                if (newCapacity <= BufferSharedPools.ByteBufferSize)
+                {
+                    newCapacity = BufferSharedPools.ByteBufferSize;
+                    newBufferPool = BufferSharedPools.ByteArray;
+                }                    
+                else if (newCapacity <= BufferSharedPools.BigByteBufferSize)
+                {
+                    newCapacity = BufferSharedPools.BigByteBufferSize;
+                    newBufferPool = BufferSharedPools.BigByteArray;
+
+                }                    
+                else if ( newCapacity <= BufferSharedPools.HugeByteBufferSize)
+                {
+                    newCapacity = BufferSharedPools.HugeByteBufferSize;
+                    newBufferPool = BufferSharedPools.HugeByteArray;
+                }
+            }
+
+            byte[] newBuffer = (newBufferPool == null) ? new byte[newCapacity] : newBufferPool.Allocate();
 
             Buffer.BlockCopy(_buffer, 0, newBuffer, 0, _position);
-            _bufferPool.ReturnBuffer(_buffer);
+
+            // We will release the currently allocated buffer.
+            if ( _bufferPool != null )
+                _bufferPool.Free(_buffer);
+
             _buffer = newBuffer;
+            _bufferPool = newBufferPool;
         }
 
         public override bool CanRead

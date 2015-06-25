@@ -305,7 +305,8 @@ namespace Raven.Database.Embedded
 			if (disposed)
 				return;
 
-			blocks.CompleteAdding();
+			if (blocks.IsAddingCompleted == false)
+				blocks.CompleteAdding();
 
 			base.Dispose(disposing);
 

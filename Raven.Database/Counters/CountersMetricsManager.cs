@@ -31,6 +31,8 @@ namespace Raven.Database.Counters
         public ConcurrentDictionary<string, HistogramMetric> ReplicationBatchSizeHistogram { get; private set; }
         public ConcurrentDictionary<string, HistogramMetric> ReplicationDurationHistogram { get; private set; }
 
+		public long ConcurrentRequestsCount;
+
         public CountersMetricsManager()
         {
             Resets = counterMetrics.Meter("counterMetrics", "reset/min", "resets", TimeUnit.Minutes);
