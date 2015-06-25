@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
+using Raven.Client.Extensions;
 using Xunit;
 using Xunit.Extensions;
 
@@ -143,7 +144,7 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
-				using (var otherStore = await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument(OtherCounterStorageName), OtherCounterStorageName))
+				using (var otherStore = await store.Admin.CreateCounterStorageAsync(MultiDatabase.CreateCounterStorageDocument(OtherCounterStorageName), OtherCounterStorageName))
 				{
 					otherStore.Initialize();
 
@@ -177,7 +178,7 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
-				using (var otherStore = await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument(OtherCounterStorageName), OtherCounterStorageName))
+				using (var otherStore = await store.Admin.CreateCounterStorageAsync(MultiDatabase.CreateCounterStorageDocument(OtherCounterStorageName), OtherCounterStorageName))
 				{
 					otherStore.Initialize();
 

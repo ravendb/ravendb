@@ -11,63 +11,62 @@ using Raven.Abstractions.TimeSeries;
 using Raven.Client;
 using Raven.Client.TimeSeries;
 using Raven.Database.Extensions;
+using Raven.Server;
 using Raven.Tests.Helpers;
 
 namespace Raven.Tests.TimeSeries
 {
 	public class RavenBaseTimeSeriesTest : RavenTestBase
 	{
-		protected readonly IDocumentStore ravenStore;
-		private readonly ConcurrentDictionary<string, int> storeCount;
-		protected readonly string DefaultTimeSeriesName = "ThisIsRelativelyUniqueTimeSeriesName";
+		protected readonly List<TimeSeriesStore> timeSeriesStores = new List<TimeSeriesStore>();
+
+		protected readonly string DefaultTimeSeriesName = "SeriesName#";
 
 		protected RavenBaseTimeSeriesTest()
 		{
 			foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueTimeSeriesName*"))
 				IOExtensions.DeleteDirectory(folder);
 
-			ravenStore = NewRemoteDocumentStore(fiddler:true);
 			DefaultTimeSeriesName += Guid.NewGuid();
-			storeCount = new ConcurrentDictionary<string, int>();
 		}
 
-		protected ITimeSeriesStore NewRemoteTimeSeriesStore(string timeSeriesName, bool createDefaultTimeSeries = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
+		protected ITimeSeriesStore NewRemoteTimeSeriesStore(RavenDbServer ravenDbServer = null, bool createDefaultTimeSeries = true, OperationCredentials credentials = null)
 		{
-			ravenStore = ravenStore ?? this.ravenStore;
-			storeCount.AddOrUpdate(ravenStore.Identifier, id => 1, (id, val) => val++);		
-	
+			ravenDbServer = GetNewServer(requestedStorage: "voron");
+
 			var timeSeriesStore = new TimeSeriesStore
 			{
-				Url = ravenStore.Url,
+				Url = GetServerUrl(true, ravenDbServer.SystemDatabase.ServerUrl),
 				Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
-				Name = timeSeriesName + storeCount[ravenStore.Identifier]
+				Name = DefaultTimeSeriesName + (timeSeriesStores.Count + 1)
 			};
-			timeSeriesStore.Initialize(createDefaultTimeSeries);
-			return timeSeriesStore;
-		}
 
-		protected TimeSeriesDocument CreateTimeSeriesDocument(string timeSeriesName)
-		{
-			return new TimeSeriesDocument
-			{
-				Settings = new Dictionary<string, string>
-				{
-					{ "Raven/TimeSeries/DataDir", @"~\TimeSeries\" + timeSeriesName }
-				},
-			};
+			timeSeriesStore.Initialize(createDefaultTimeSeries);
+			timeSeriesStores.Add(timeSeriesStore);
+			return timeSeriesStore;
 		}
 
 		public override void Dispose()
 		{
-			if (ravenStore != null) ravenStore.Dispose();
+			var errors = new List<Exception>();
 
-			try
+			foreach (var store in timeSeriesStores)
 			{
-				base.Dispose();
+				try
+				{
+					store.Dispose();
+				}
+				catch (Exception e)
+				{
+					errors.Add(e);
+				}
 			}
-			catch (AggregateException) //TODO: do not forget to investigate where time series is not being disposed
-			{
-			}
+			stores.Clear();
+
+			if (errors.Count > 0)
+				throw new AggregateException(errors);
+
+			base.Dispose();
 		}
 
 		protected async Task<bool> WaitForReplicationBetween(ITimeSeriesStore source, ITimeSeriesStore destination, string groupName, string timeSeriesName, int timeoutInSec = 30)
