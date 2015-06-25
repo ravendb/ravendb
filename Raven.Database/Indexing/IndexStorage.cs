@@ -66,10 +66,35 @@ namespace Raven.Database.Indexing
 		private ConcurrentDictionary<int, Index> indexes =
 			new ConcurrentDictionary<int, Index>();
 
+	    public class RegisterLowMemoryHandler : ILowMemoryHandler
+	    {
+	        static RegisterLowMemoryHandler _instance;
+
+	        public static void Setup()
+	        {
+	            if (_instance != null)
+	                return;
+	            lock (typeof (RegisterLowMemoryHandler))
+	            {
+	                if (_instance != null)
+	                    return;
+                    _instance = new RegisterLowMemoryHandler();
+                    MemoryStatistics.RegisterLowMemoryHandler(_instance);
+	            }
+	        }
+
+	        public void HandleLowMemory()
+	        {
+                FieldCache_Fields.DEFAULT.PurgeAllCaches();
+	            
+	        }
+	    }
+
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
 			try
 			{
+                RegisterLowMemoryHandler.Setup();
 				this.indexDefinitionStorage = indexDefinitionStorage;
 				this.configuration = configuration;
 				this.documentDatabase = documentDatabase;
