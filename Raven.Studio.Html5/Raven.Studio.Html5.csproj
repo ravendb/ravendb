@@ -23,6 +23,7 @@
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
@@ -79,7 +80,6 @@
     <TypeScriptCompile Include="App\commands\counter\resetCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
@@ -863,7 +863,6 @@
     <TypeScriptCompile Include="App\commands\database\sqlReplication\resetSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\sqlReplication\saveSqlReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\sqlReplication\testSqlConnectionCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\createSampleDataCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\exportDatabaseCommand.ts" />
