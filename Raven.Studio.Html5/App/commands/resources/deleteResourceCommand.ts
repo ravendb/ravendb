@@ -1,16 +1,15 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
-import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resources/resource");
-import counterStorage = require("models/counter/counterStorage");
 
 class deleteDatabaseCommand extends commandBase {
     private oneDatabasePath = "/admin/databases/";
     private multipleDatabasesPath = "/admin/databases/batch-delete";
     private oneFileSystemPath = "/admin/fs/";
     private multipleFileSystemsPath = "/admin/fs/batch-delete";
-    private oneCounterStoragePath = "/admin/counterstorage/";
-    private multipleCounterStoragesPath = "/admin/counterstorage/batch-delete";
+    private oneCounterStoragePath = "/admin/cs/";
+    private multipleCounterStoragesPath = "/admin/cs/batch-delete";
+    private oneTimeSeriesPath = "/admin/ts/";
+    private multipleTimeSeriesPath = "/admin/ts/batch-delete";
 
     constructor(private resources: Array<resource>, private isHardDelete: boolean) {
         super();
@@ -18,8 +17,8 @@ class deleteDatabaseCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
 
-        var deleteTask;
-        if (this.resources.length == 1) {
+        var deleteTask: JQueryPromise<any>;
+        if (this.resources.length === 1) {
             deleteTask = this.deleteOneResource();
         } else {
             deleteTask = this.deleteMultipleResources();
@@ -35,9 +34,10 @@ class deleteDatabaseCommand extends commandBase {
         var args = {
             "hard-delete": this.isHardDelete
         };
-        
-        var disableOneResourcePath = (resource.type == database.type) ? this.oneDatabasePath :
-            (resource.type == filesystem.type) ? this.oneFileSystemPath : this.oneCounterStoragePath;
+
+        var disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
+            resource.type === TenantType.FileSystem ? this.oneFileSystemPath :
+            resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;
         var url = disableOneResourcePath + encodeURIComponent(resource.name) + this.urlEncodeArgs(args);
         var deleteTask = this.del(url, null, null, { dataType: undefined });
 
@@ -49,9 +49,10 @@ class deleteDatabaseCommand extends commandBase {
     private deleteMultipleResources(): JQueryPromise<any> {
         this.reportInfo("Deleting " + this.resources.length + " resources...");
 
-        var dbToDelete = this.resources.filter(r => r.type == database.type);
-        var fsToDelete = this.resources.filter(r => r.type == filesystem.type);
-        var cntToDelete = this.resources.filter(r => r.type == counterStorage.type);
+        var dbToDelete = this.resources.filter(r => r.type === TenantType.Database);
+        var fsToDelete = this.resources.filter(r => r.type === TenantType.FileSystem);
+        var csToDelete = this.resources.filter(r => r.type === TenantType.CounterStorage);
+        var tsToDelete = this.resources.filter(r => r.type === TenantType.TimeSeries);
 
         var deleteTasks = [];
 
@@ -63,8 +64,12 @@ class deleteDatabaseCommand extends commandBase {
             deleteTasks.push(this.deleteTask(fsToDelete, this.multipleFileSystemsPath));
         }
 
-        if (cntToDelete.length > 0) {
-            deleteTasks.push(this.deleteTask(cntToDelete, this.multipleCounterStoragesPath));
+        if (csToDelete.length > 0) {
+            deleteTasks.push(this.deleteTask(csToDelete, this.multipleCounterStoragesPath));
+        }
+
+        if (tsToDelete.length > 0) {
+            deleteTasks.push(this.deleteTask(tsToDelete, this.multipleTimeSeriesPath));
         }
 
         var mergedPromise = $.Deferred();

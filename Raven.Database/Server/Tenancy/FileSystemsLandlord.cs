@@ -175,7 +175,7 @@ namespace Raven.Database.Server.Tenancy
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
             if (document.Settings.Keys.Contains(Constants.FileSystem.DataDirectory) == false)
-                throw new InvalidOperationException("Could not find Raven/FileSystem/DataDir");
+                throw new InvalidOperationException("Could not find " + Constants.FileSystem.DataDirectory);
 
 			if (document.Disabled && !ignoreDisabledFileSystem)
                 throw new InvalidOperationException("The file system has been disabled.");
@@ -267,16 +267,7 @@ namespace Raven.Database.Server.Tenancy
 				throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
 	        }
 
-			foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))
-			{
-				string value;
-				if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
-				{
-					bool active;
-					if (bool.TryParse(value, out active) && active == false)
-						throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
-				}
-			}
+			Authentication.AssertLicensedBundles(config.ActiveBundles);
         }
 
 	    protected override DateTime LastWork(RavenFileSystem resource)

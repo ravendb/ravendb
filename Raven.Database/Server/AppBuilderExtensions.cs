@@ -120,6 +120,7 @@ namespace Owin
 			cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
 			cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
 			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
+			cfg.Properties[typeof(TimeSeriesLandlord)] = options.TimeSeriesLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
 			cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;

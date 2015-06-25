@@ -7,22 +7,26 @@
 		public string CounterName { get; set; }
 
 		public CounterChangeAction Action { get; set; }
+
+		public long Delta { get; set; }
+
+		public long Total { get; set; }
 	}
 
 	public enum CounterChangeAction
 	{
-		None,
 		Add,
 		Increment,
-		Decrement
+		Decrement,
+		Delete
 	}
 
-	public class LocalChangeNotification : ChangeNotification
+	public class StartingWithNotification : ChangeNotification
 	{
 		
 	}
 
-	public class ReplicationChangeNotification : ChangeNotification
+	public class InGroupNotification : ChangeNotification
 	{
 
 	}

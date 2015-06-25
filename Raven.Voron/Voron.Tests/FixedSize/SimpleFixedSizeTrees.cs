@@ -49,6 +49,7 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
         }
+
         [Fact]
         public void CanAdd()
         {
@@ -72,6 +73,35 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
         }
+
+		[Fact]
+		public void SeekShouldGiveTheNextKey()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test");
+
+				fst.Add(635634432000000000);
+				fst.Add(635634468000000000);
+				fst.Add(635634504000000000);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var it = tx.State.Root.FixedTreeFor("test").Iterate();
+
+				Assert.True(it.Seek(635634432000000000));
+				Assert.Equal(635634432000000000, it.CurrentKey);
+				Assert.True(it.Seek(635634468000000000));
+				Assert.Equal(635634468000000000, it.CurrentKey);
+				Assert.True(it.Seek(635634504000000000));
+				Assert.Equal(635634504000000000, it.CurrentKey);
+				Assert.False(it.Seek(635634504000000001));
+				tx.Commit();
+			}
+		}
 
         [Fact]
         public void CanAdd_Mixed()

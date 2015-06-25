@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
-using Raven.Database.FileSystem.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers

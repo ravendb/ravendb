@@ -3,32 +3,53 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Raven.Abstractions.Counters;
-using Raven.Abstractions.Data;
-using Raven.Database.Extensions;
-using Raven.Database.Server.Controllers.Admin;
-using Raven.Database.Server.WebApi.Attributes;
-using Raven.Json.Linq;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions.Counters;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Controllers.Admin;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi.Attributes;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
     public class AdminCounterStorageController : BaseAdminController
     {
         [HttpPut]
-		[RavenRoute("admin/cs/{*counterStorageName}")]
-        public async Task<HttpResponseMessage> Put(string counterStorageName)
+		[RavenRoute("admin/cs/{*id}")]
+		public async Task<HttpResponseMessage> Put(string id)
         {
-            var docKey = Constants.Counter.Prefix + counterStorageName;
+			var counterNameFormat = CheckNameFormat(id, Database.Configuration.Counter.DataDirectory);
+			if (counterNameFormat.Message != null)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = counterNameFormat.Message
+				}, counterNameFormat.ErrorCode);
+			}
 
-			var isCounterStorageUpdate = CheckQueryStringParameterResult("update");
-			if (IsCounterStorageNameExists(counterStorageName) && !isCounterStorageUpdate)
+			if (Authentication.IsLicensedForCounters == false)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "Your license does not allow the use of Counters!"
+				}, HttpStatusCode.BadRequest);
+			}
+
+			var docKey = Constants.Counter.Prefix + id;
+
+			var isCounterStorageUpdate = ParseBoolQueryString("update");
+			var counterStorage = Database.Documents.Get(docKey, null);
+			if (counterStorage != null && isCounterStorageUpdate == false)
             {
-				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", counterStorageName), HttpStatusCode.Conflict);
+				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
             }
 
             var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>();
@@ -41,33 +62,57 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage(HttpStatusCode.Created);
         }
 
-	    private bool CheckQueryStringParameterResult(string parameterName)
+	    [HttpGet]
+	    [RavenRoute("admin/cs/{*id}")]
+	    public async Task<HttpResponseMessage> Get(string id)
 	    {
-		    bool result;
-		    return bool.TryParse(InnerRequest.RequestUri.ParseQueryString()[parameterName], out result) && result;
+		    var counterNameFormat = CheckNameFormat(id, Database.Configuration.Counter.DataDirectory);
+		    if (counterNameFormat.Message != null)
+		    {
+			    return GetMessageWithObject(new
+			    {
+				    Error = counterNameFormat.Message
+			    }, counterNameFormat.ErrorCode);
+		    }
+
+		    if (Authentication.IsLicensedForCounters == false)
+		    {
+			    return GetMessageWithObject(new
+			    {
+				    Error = "Your license does not allow the use of Counters!"
+			    }, HttpStatusCode.BadRequest);
+		    }
+		    
+		    var counterStorage = await CountersLandlord.GetCounterInternal(id);
+		    if (counterStorage == null)
+		    {
+			    return GetMessageWithObject(new
+			    {
+				    Message = string.Format("Didn't find counter storage (name = {0})", id)
+			    }, HttpStatusCode.NotFound);
+		    }
+
+		    var counterSummaries = new List<CounterSummary>();
+		    using (var reader = counterStorage.CreateReader())
+		    {
+			    /*TODO: use the new api
+				 * counterSummaries.AddRange(
+					reader.GetAllCounterGroupAndNames()
+						  .Select(reader.GetCounterSummary));*/
+		    }
+
+			return GetMessageWithObject(counterSummaries);
 	    }
 
-		[HttpDelete]
-		[RavenRoute("admin/cs/{*counterStorageName}")]
-		public HttpResponseMessage Delete(string counterStorageName)
+	    [HttpDelete]
+		[RavenRoute("admin/cs/{*id}")]
+		public HttpResponseMessage Delete(string id)
 		{
-			var docKey = Constants.Counter.Prefix + counterStorageName;
-            var configuration = CountersLandlord.CreateTenantConfiguration(counterStorageName);
-
-			if (configuration == null)
-				return GetEmptyMessage();
-
-            if (!IsCounterStorageNameExists(counterStorageName))
-            {
-                return GetMessageWithString(string.Format("Counter Storage {0} doesn't exist!", counterStorageName), HttpStatusCode.NotFound);
-            }
-
-			Database.Documents.Delete(docKey, null, null);
-
-			bool isHardDeleteNeeded = CheckQueryStringParameterResult("hard-delete");
-			if (isHardDeleteNeeded)
+			var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
+			var message = DeleteCounterStorage(id, isHardDeleteNeeded);
+			if (message.ErrorCode != HttpStatusCode.OK)
 			{
-				IOExtensions.DeleteDirectory(configuration.CountersDataDirectory);
+				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
 			return GetEmptyMessage();
@@ -77,28 +122,103 @@ namespace Raven.Database.Counters.Controllers
 		[RavenRoute("admin/cs/batch-delete")]
 		public HttpResponseMessage BatchDelete()
 		{
-			throw new NotImplementedException();
+			string[] counterStoragesToDelete = GetQueryStringValues("ids");
+			if (counterStoragesToDelete == null)
+			{
+				return GetMessageWithString("No counter storages to delete!", HttpStatusCode.BadRequest);
+			}
+
+			var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
+			var successfullyDeletedDatabase = new List<string>();
+
+			counterStoragesToDelete.ForEach(id =>
+			{
+				var message = DeleteCounterStorage(id, isHardDeleteNeeded);
+				if (message.ErrorCode == HttpStatusCode.OK)
+				{
+					successfullyDeletedDatabase.Add(id);
+				}
+			});
+
+			return GetMessageWithObject(successfullyDeletedDatabase.ToArray());
 		}
 
 		[HttpPost]
-		[RavenRoute("admin/cs/{*counterStorageName}")]
-		public HttpResponseMessage Disable(string counterStorageName, bool isSettingDisabled)
+		[RavenRoute("admin/cs/{*id}")]
+		public HttpResponseMessage Disable(string id, bool isSettingDisabled)
 		{
-			throw new NotImplementedException();
+			var message = ToggleCounterStorageDisabled(id, isSettingDisabled);
+			if (message.ErrorCode != HttpStatusCode.OK)
+			{
+				return GetMessageWithString(message.Message, message.ErrorCode);
+			}
+
+			return GetEmptyMessage();
 		}
 
 		[HttpPost]
 		[RavenRoute("admin/cs/batch-toggle-disable")]
 		public HttpResponseMessage ToggleDisable(bool isSettingDisabled)
 		{
-			throw new NotImplementedException();
+			string[] counterStoragesToToggle = GetQueryStringValues("ids");
+			if (counterStoragesToToggle == null)
+			{
+				return GetMessageWithString("No counter storages to toggle!", HttpStatusCode.BadRequest);
+			}
+
+			var successfullyToggledCounters = new List<string>();
+
+			counterStoragesToToggle.ForEach(id =>
+			{
+				var message = ToggleCounterStorageDisabled(id, isSettingDisabled);
+				if (message.ErrorCode == HttpStatusCode.OK)
+				{
+					successfullyToggledCounters.Add(id);
+				}
+			});
+
+			return GetMessageWithObject(successfullyToggledCounters.ToArray());
 		}
 
-        private bool IsCounterStorageNameExists(string counterStorageName)
-        {
-			var docKey = Constants.Counter.Prefix + counterStorageName;
-            var database = Database.Documents.Get(docKey, null);
-            return database != null;
-        }
+		private MessageWithStatusCode DeleteCounterStorage(string id, bool isHardDeleteNeeded)
+		{
+			//get configuration even if the counters is disabled
+			var configuration = CountersLandlord.CreateTenantConfiguration(id, true);
+
+			if (configuration == null)
+				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Counter storage wasn't found" };
+
+			var docKey = Constants.Counter.Prefix + id;
+			Database.Documents.Delete(docKey, null, null);
+
+			if (isHardDeleteNeeded && configuration.RunInMemory == false)
+			{
+				IOExtensions.DeleteDirectory(configuration.Counter.DataDirectory);
+			}
+
+			return new MessageWithStatusCode();
+		}
+
+		private MessageWithStatusCode ToggleCounterStorageDisabled(string id, bool isSettingDisabled)
+		{
+			var docKey = Constants.Counter.Prefix + id;
+			var document = Database.Documents.Get(docKey, null);
+			if (document == null)
+				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Counter storage " + id + " wasn't found" };
+
+			var doc = document.DataAsJson.JsonDeserialization<CounterStorageDocument>();
+			if (doc.Disabled == isSettingDisabled)
+			{
+				var state = isSettingDisabled ? "disabled" : "enabled";
+				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.BadRequest, Message = "Counter storage " + id + " is already " + state };
+			}
+
+			doc.Disabled = !doc.Disabled;
+			var json = RavenJObject.FromObject(doc);
+			json.Remove("Id");
+			Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
+
+			return new MessageWithStatusCode();
+		}
     }
 }

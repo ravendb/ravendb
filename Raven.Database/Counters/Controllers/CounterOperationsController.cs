@@ -32,19 +32,27 @@ namespace Raven.Database.Counters.Controllers
 	{
 		[RavenRoute("cs/{counterStorageName}/change/{groupName}/{counterName}")]
 		[HttpPost]
-		public HttpResponseMessage CounterChange(string groupName, string counterName, long delta)
+		public HttpResponseMessage Change(string groupName, string counterName, long delta)
 		{
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var writer = Storage.CreateWriter())
 			{
 				var counterChangeAction = writer.Store(groupName, counterName, delta);
-				writer.Commit(delta != 0);
+				if (delta == 0 && counterChangeAction != CounterChangeAction.Add)
+					return new HttpResponseMessage(HttpStatusCode.OK);
+
+				writer.Commit();
 
 				Storage.MetricsCounters.ClientRequests.Mark();
-				Storage.Publisher.RaiseNotification(new LocalChangeNotification
+				Storage.Publisher.RaiseNotification(new ChangeNotification
 				{
 					GroupName = groupName,
 					CounterName = counterName,
-					Action = counterChangeAction
+					Action = counterChangeAction,
+					Delta = delta,
+					Total = writer.GetCounterTotal(groupName, counterName)
 				});
 
 				return new HttpResponseMessage(HttpStatusCode.OK);
@@ -114,9 +122,11 @@ namespace Raven.Database.Counters.Controllers
 								OperationId = operationId
 							});
 
-							foreach (var counterChange in changeBatch)
+							foreach (var change in changeBatch)
 							{
-								writer.Store(counterChange.Group, counterChange.Name, counterChange.Delta);
+								AssertName(change.Group);
+								AssertName(change.Name);
+								writer.Store(change.Group, change.Name, change.Delta);
 							}
 							writer.Commit();
 
@@ -238,7 +248,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		public class BatchStatus : IOperationState
+		private class BatchStatus : IOperationState
 		{
 			public int Counters { get; set; }
 			public bool Completed { get; set; }
@@ -250,24 +260,28 @@ namespace Raven.Database.Counters.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("cs/{counterStorageName}/reset/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/reset")]
 		[HttpPost]
-		public HttpResponseMessage CounterReset(string groupName, string counterName)
+		public HttpResponseMessage Reset(string groupName, string counterName)
 		{
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var writer = Storage.CreateWriter())
 			{
-				var counterChangeAction = writer.Reset(groupName, counterName);
-
-				if (counterChangeAction != CounterChangeAction.None)
+				var difference = writer.Reset(groupName, counterName);
+				if (difference != 0)
 				{
 					writer.Commit();
 
 					Storage.MetricsCounters.Resets.Mark();
-					Storage.Publisher.RaiseNotification(new LocalChangeNotification
+					Storage.Publisher.RaiseNotification(new ChangeNotification
 					{
 						GroupName = groupName,
 						CounterName = counterName,
-						Action = counterChangeAction,
+						Action = difference >= 0 ? CounterChangeAction.Increment : CounterChangeAction.Decrement,
+						Delta = difference,
+						Total = 0
 					});
 				}
 
@@ -275,43 +289,46 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
+		[RavenRoute("cs/{counterStorageName}/delete")]
+		[HttpDelete]
+		public HttpResponseMessage Delete(string groupName, string counterName)
+		{
+			AssertName(groupName);
+			AssertName(counterName);
+
+			using (var writer = Storage.CreateWriter())
+			{
+				writer.Delete(groupName, counterName);
+				writer.Commit();
+
+				Storage.MetricsCounters.Deletes.Mark();
+				Storage.Publisher.RaiseNotification(new ChangeNotification
+				{
+					GroupName = groupName,
+					CounterName = counterName,
+					Action = CounterChangeAction.Delete,
+					Delta = 0,
+					Total = 0
+				});
+
+				return new HttpResponseMessage(HttpStatusCode.OK);
+			}
+		}
+
 		[RavenRoute("cs/{counterStorageName}/counters")]
 		[HttpGet]
-		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string inputGroupName = null)
+		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
+			if (skip < 0)
+				throw new ArgumentException("Bad argument", "skip");
+			if (take <= 0)
+				throw new ArgumentException("Bad argument", "take");
+
 			using (var reader = Storage.CreateReader())
 			{
-				//TODO: implement
-				/*var prefix = (inputGroupName == null) ? string.Empty : (inputGroupName + Constants.CountersSeperator);
-				//todo: get only the counter prefixes: foo/bar/
-				var results = (
-					from fullCounterName in reader.GetFullCounterNames(prefix)
-					let groupName = fullCounterName.Split(Constants.CountersSeperator)[0]
-					let counterName = fullCounterName.Split(Constants.CountersSeperator)[1]
-					let counter = reader.GetCounterValuesByPrefix(groupName, counterName)
-					/*let overallTotalPositive = counter.CounterValues.Where(x => x.IsPositive).Sum(x => x.Value)
-					let overallTotalNegative = counter.CounterValues.Where(x => !x.IsPositive).Sum(x => x.Value)#1#
-					select new CounterView
-					{
-						Name = counterName,
-						Group = groupName,
-						OverallTotal = CounterStorage.CalculateOverallTotal(counter),
-						Servers = (from counterValue in counter.CounterValues
-								  group counterValue by counterValue.GetServerId into g
-								  select new CounterView.ServerValue{
-									  Name = g.Select(x => x.ServerName).ToString(),
-									  Positive = g.Where(x => x.IsPositive).Select(x => x.Value).FirstOrDefault(),
-									  Negative = g.Where(x => !x.IsPositive).Select(x => x.Value).FirstOrDefault(),
-								  }).ToList()
-						/*Servers = counter.CounterValues.Select(s => new CounterView.ServerValue
-						{
-							Negative = s.Negative, 
-							Positive = s.Positive, 
-							Name = CounterStorage.Reader.ServerNameFor(s.SourceId)
-						}).ToList()#1#
-					}).ToList();
-				return Request.CreateResponse(HttpStatusCode.OK, results);*/
-				return Request.CreateResponse(HttpStatusCode.OK);
+				var gruop = group ?? string.Empty;
+				var counters = reader.GetCountersSummary(gruop, skip, take);
+				return GetMessageWithObject(counters);
 			}
 		}
 
@@ -319,12 +336,12 @@ namespace Raven.Database.Counters.Controllers
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var reader = Storage.CreateReader())
 			{
-				var overallTotal = reader.GetCounterOverallTotal(groupName, counterName);
-				if (overallTotal == null)
-					return Request.CreateResponse(HttpStatusCode.OK, 0);
-
+				var overallTotal = reader.GetCounterTotal(groupName, counterName);
 				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
 			}
         }
@@ -332,10 +349,13 @@ namespace Raven.Database.Counters.Controllers
 		[RavenRoute("cs/{counterStorageName}/getCounterServersValues/{groupName}/{counterName}")]
         [HttpGet]
         public HttpResponseMessage GetCounterServersValues(string groupName, string counterName)
-		{				
+		{
+			AssertName(groupName);
+			AssertName(counterName);
+
 			using (var reader = Storage.CreateReader())
 			{
-				if (reader.CounterExists(groupName, counterName) == false)
+				/*if (reader.CounterExists(groupName, counterName) == false)
 					return Request.CreateResponse(HttpStatusCode.OK, new ServerValue[0]);
 
 				var countersByPrefix = reader.GetCounterValuesByPrefix(groupName, counterName);
@@ -348,13 +368,13 @@ namespace Raven.Database.Counters.Controllers
 				countersByPrefix.CounterValues.ForEach(x =>
 				{
 					ServerValue serverValue;
-					var serverId = x.GetServerId();
+					var serverId = x.ServerId();
 					if (serverValuesDictionary.TryGetValue(serverId, out serverValue) == false)
 					{
 						serverValue = new ServerValue();
 						serverValuesDictionary.Add(serverId, serverValue);
 					}
-					serverValue.UpdateValue(x.IsPositive, x.Value);
+					serverValue.UpdateValue(x.IsPositive(), x.Value);
 				});
 
                 var serverValues =
@@ -364,8 +384,15 @@ namespace Raven.Database.Counters.Controllers
                         Negative = s.Value.Negative,
                         //Name = reader.ServerNameFor(s.Key)
                     }).ToList();
-                return Request.CreateResponse(HttpStatusCode.OK, serverValues);
+                return Request.CreateResponse(HttpStatusCode.OK, serverValues);*/
+				return Request.CreateResponse(HttpStatusCode.OK);
             }
+		}
+
+		private static void AssertName(string name)
+		{
+			if (string.IsNullOrEmpty(name))
+				throw new ArgumentException("A name can't be null");
 		}
 
 		private class ServerValue

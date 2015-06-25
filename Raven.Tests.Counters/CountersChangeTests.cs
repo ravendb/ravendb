@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
 using Xunit;
 using Xunit.Extensions;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Counters
 {
@@ -17,7 +19,7 @@ namespace Raven.Tests.Counters
 		[InlineData(-2)]
 		public async Task CountrsReset_should_work(int delta)
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
@@ -27,23 +29,46 @@ namespace Raven.Tests.Counters
 					},
 				}, CounterStorageName);
 
-				const string CounterGroupName = "FooBarGroup";
-				await store.ChangeAsync(CounterGroupName, CounterName, delta);
+				const string counterGroupName = "FooBarGroup";
+				await store.ChangeAsync(counterGroupName, CounterName, delta);
 
-				var total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
+				var total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
 				total.Should().Be(delta);
-				await store.ResetAsync(CounterGroupName, CounterName);
+				await store.ResetAsync(counterGroupName, CounterName);
 
-				total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
+				total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
 				total.Should().Be(0);
-		
 			}	
+		}
+
+		[Theory]
+		[InlineData(2)]
+		[InlineData(-2)]
+		public async Task CountrsDelete_should_work(int delta)
+		{
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
+			{
+				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
+				{
+					Settings = new Dictionary<string, string>
+					{
+						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
+					},
+				}, CounterStorageName);
+
+				const string counterGroupName = "FooBarGroup";
+				await store.ChangeAsync(counterGroupName, CounterName, delta);
+
+				var total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
+				total.Should().Be(delta);
+				Assert.Throws<InvalidOperationException>(async() => await store.DeleteAsync(counterGroupName, CounterName));
+			}
 		}
 
 		[Fact]
 		public async Task CountersIncrement_should_work()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
@@ -69,7 +94,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Counters_change_should_work()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{

@@ -63,7 +63,7 @@ namespace Raven.Tests.Core.Configuration
 			Assert.Equal(basePath, workingDirectory);
 			Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(basePath));
 			Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(basePath));
-			Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(basePath));
+			Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(basePath));
 			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(basePath));
 			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(basePath));
 		}
@@ -86,7 +86,7 @@ namespace Raven.Tests.Core.Configuration
 			Assert.NotEqual(basePath, workingDirectory);
 			Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(WorkingDirectoryValue));
-			Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
 		}
@@ -111,7 +111,7 @@ namespace Raven.Tests.Core.Configuration
 			Assert.NotEqual(basePath, workingDirectory);
 			Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(WorkingDirectoryValue));
-			Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(WorkingDirectoryValue));
+			Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
 			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
 		}
@@ -134,15 +134,19 @@ namespace Raven.Tests.Core.Configuration
 
 			Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
 			Assert.NotEqual(basePath, workingDirectory);
-            if (EnvironmentUtils.RunningOnPosix == true)
+            if (EnvironmentUtils.RunningOnPosix)
             {
                 Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"/"));
                 Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"/"));
+				Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(@"/"));
+				Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(@"/"));
             }
             else
             {
                 Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
                 Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
+				Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(@"\\"));
+				Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(@"\\"));
             }
 		}
 
@@ -254,7 +258,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.PrewarmFacetsSyncronousWaitTime.Value, actual => actual.PrewarmFacetsSyncronousWaitTime);
 			configurationComparer.Assert(expected => expected.MaxNumberOfParallelProcessingTasks.Value, actual => actual.MaxNumberOfParallelProcessingTasks);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.DataDir.Value.ToFullPath(null)), actual => actual.DataDirectory);
-			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.CountersDataDir.Value.ToFullPath(null)), actual => actual.CountersDataDirectory);
+			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.Counter.DataDir.Value.ToFullPath(null)), actual => actual.Counter.DataDirectory);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.PluginsDirectory.Value.ToFullPath(null)), actual => actual.PluginsDirectory);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.AssembliesDirectory.Value.ToFullPath(null)), actual => actual.AssembliesDirectory);
             configurationComparer.Assert(expected => expected.EmbeddedFilesDirectory.Value.ToFullPath(null), actual => actual.EmbeddedFilesDirectory);

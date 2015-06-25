@@ -14,12 +14,12 @@ namespace Raven.Client.Counters.Changes
 		/// <summary>
 		/// Subscribe to changes for specified group and counter only.
 		/// </summary>
-		IObservableWithTask<LocalChangeNotification> ForLocalCounterChange(string groupName, string counterName);
+		IObservableWithTask<StartingWithNotification> ForCountersStartingWith(string groupName, string prefixForName);
 
 		/// <summary>
 		/// Subscribe to changes for specified group and counter only.
 		/// </summary>
-		IObservableWithTask<ReplicationChangeNotification> ForReplicationChange(string groupName, string counterName);
+		IObservableWithTask<InGroupNotification> ForCountersInGroup(string groupName);
 
 		/// <summary>
 		/// Subscribe to all bulk operation changes that belong to a operation with given Id.

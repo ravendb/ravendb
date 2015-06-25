@@ -27,7 +27,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				return GetMessageWithObject(systemDatabaseDocument);
 			}
 
-			var docKey = "Raven/Databases/" + id;
+			var docKey = Constants.Database.Prefix + id;
 			var document = Database.Documents.Get(docKey, null);
 			if (document == null)
 				return GetMessageWithString("Database " + id + " wasn't found", HttpStatusCode.NotFound);
@@ -107,7 +107,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpDelete]
 		[RavenRoute("admin/databases/{*id}")]
-		public async Task<HttpResponseMessage> DatabasesDelete(string id)
+		public async Task<HttpResponseMessage> Delete(string id)
 		{
 			bool result;
 			var hardDelete = bool.TryParse(GetQueryStringValue("hard-delete"), out result) && result;
@@ -156,7 +156,6 @@ namespace Raven.Database.Server.Controllers.Admin
 				{
 					successfullyDeletedDatabases.Add(databaseId);
 				}
-
 			});
 
 			return GetMessageWithObject(successfullyDeletedDatabases.ToArray());
@@ -237,7 +236,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (configuration == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database wasn't found" };
 
-			var docKey = "Raven/Databases/" + databaseId;
+			var docKey = Constants.Database.Prefix + databaseId;
 			Database.Documents.Delete(docKey, null, null);
 
 			if (isHardDeleteNeeded)
@@ -251,7 +250,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (IsSystemDatabase(databaseId))
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database document cannot be disabled" };
 
-			var docKey = "Raven/Databases/" + databaseId;
+			var docKey = Constants.Database.Prefix + databaseId;
 			var document = Database.Documents.Get(docKey, null);
 			if (document == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
@@ -276,7 +275,7 @@ namespace Raven.Database.Server.Controllers.Admin
             if (IsSystemDatabase(databaseId))
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database document indexing cannot be disabled" };
 
-            var docKey = "Raven/Databases/" + databaseId;
+			var docKey = Constants.Database.Prefix + databaseId;
             var document = Database.Documents.Get(docKey, null);
             if (document == null)
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
@@ -288,7 +287,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 var success = bool.TryParse(dbDoc.Settings[Constants.IndexingDisabled], out indexDisabled);
                 if (success && indexDisabled == isindexingDisabled)
                 {
-                    string state = isindexingDisabled ? "disabled" : "enabled";
+                    var state = isindexingDisabled ? "disabled" : "enabled";
                     return new MessageWithStatusCode {ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "indexing is already " + state};
                 }
             }
@@ -304,7 +303,7 @@ namespace Raven.Database.Server.Controllers.Admin
             if (IsSystemDatabase(databaseId))
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database clients rejection can't change." };
 
-            var docKey = "Raven/Databases/" + databaseId;
+			var docKey = Constants.Database.Prefix + databaseId;
             var document = Database.Documents.Get(docKey, null);
             if (document == null)
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
@@ -316,7 +315,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 var success = bool.TryParse(dbDoc.Settings[Constants.RejectClientsModeEnabled], out rejectClientsEnabled);
                 if (success && rejectClientsEnabled == isRejectClientsEnabled)
                 {
-                    string state = rejectClientsEnabled ? "reject clients mode" : "accept clients mode";
+                    var state = rejectClientsEnabled ? "reject clients mode" : "accept clients mode";
                     return new MessageWithStatusCode {ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "is already in " + state};
                 }
             }
@@ -330,7 +329,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		private string CheckExistingDatabaseName(string id, Etag etag)
 		{
 			string errorMessage = null;
-			var docKey = "Raven/Databases/" + id;
+			var docKey = Constants.Database.Prefix + id;
 			var database = Database.Documents.Get(docKey, null);
 			var isExistingDatabase = (database != null);
 

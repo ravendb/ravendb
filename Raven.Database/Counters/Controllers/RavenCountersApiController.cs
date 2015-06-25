@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="a.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RavenCountersApiController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -125,7 +125,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 			else
 			{
-				if (values.ContainsKey("cou"))
+				if (values.ContainsKey("counterStorageName"))
 					CounterStorageName = values["counterStorageName"] as string;
 			}
 		}
@@ -175,18 +175,15 @@ namespace Raven.Database.Counters.Controllers
 		public override async Task<RequestWebApiEventArgs> TrySetupRequestToProperResource()
 		{
 			var tenantId = CounterStorageName;
-
 			if (string.IsNullOrWhiteSpace(tenantId))
-			{
-				throw new HttpException(503, "Could not find a file system with no name");
-			}
+				throw new HttpException(503, "Could not find a counter storage with no name");
 
 			Task<CounterStorage> resourceStoreTask;
-			bool hasDb;
+			bool hasCounter;
 			string msg;
 			try
 			{
-				hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
+				hasCounter = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
 			}
 			catch (Exception e)
 			{
@@ -194,7 +191,7 @@ namespace Raven.Database.Counters.Controllers
 				Logger.WarnException(msg, e);
 				throw new HttpException(503, msg, e);
 			}
-			if (hasDb)
+			if (hasCounter)
 			{
 				try
 				{
@@ -240,7 +237,7 @@ namespace Raven.Database.Counters.Controllers
         {
             if (Storage == null)
                 return;
-            Storage.MetricsCounters.RequestDuationMetric.Update(duration);
+            Storage.MetricsCounters.RequestDurationMetric.Update(duration);
         }
 
 		public override InMemoryRavenConfiguration SystemConfiguration

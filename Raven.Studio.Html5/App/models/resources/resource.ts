@@ -3,15 +3,18 @@
     isSystem = false;
     isSelected = ko.observable<boolean>(false);
     isChecked = ko.observable<boolean>(false);
-    itemCount: KnockoutComputed<number>;
     itemCountText: KnockoutComputed<string>;
     isVisible = ko.observable(true);
     isLoading = ko.observable(false);
     disabled = ko.observable<boolean>(false);
     isLicensed: KnockoutComputed<boolean>;
+    activeBundles = ko.observableArray<string>();
+    isImporting = ko.observable<boolean>(false);
+    importStatus = ko.observable<string>("");
     statistics: KnockoutObservable<any>;
+    fullTypeName: string;
 
-    constructor(public name: string, public type: string, isAdminCurrentTenant: boolean) {
+    constructor(public name: string, public type: TenantType, isAdminCurrentTenant: boolean) {
         this.isAdminCurrentTenant(isAdminCurrentTenant);
     }
 
@@ -24,11 +27,19 @@
     }
 
     isDatabase() {
-        return this.type == "database";
+        return this.type === TenantType.Database;
     }
 
-    isFilesystem() {
-        return this.type == 'filesystem';
+    isFileSystem() {
+        return this.type === TenantType.FileSystem;
+    }
+
+    isCounterStorage() {
+        return this.type === TenantType.CounterStorage;
+    }
+
+    isTimeSeries() {
+        return this.type === TenantType.TimeSeries;
     }
 }
 

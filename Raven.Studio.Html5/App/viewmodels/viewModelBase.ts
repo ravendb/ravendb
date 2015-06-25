@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
+import timeSeries = require("models/timeSeries/timeSeries");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
@@ -21,10 +22,12 @@ class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
+    public activeTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
     public lastActivatedResource = ko.observable<resource>()
         .subscribeTo("ActivateDatabase", true)
         .subscribeTo("ActivateFilesystem", true)
-        .subscribeTo("ActivateCounterStorage", true);
+        .subscribeTo("ActivateCounterStorage", true)
+        .subscribeTo("ActivateTimeSeries", true);
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
@@ -38,7 +41,7 @@ class viewModelBase {
     //holds full studio version eg. 3.0.3528
     static clientVersion = ko.observable<string>();
 
-    static hasContinueTestOption = ko.observable<boolean>(false);
+    public static hasContinueTestOption = ko.observable<boolean>(false);
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
      * Possible return values: boolean, promise<boolean>, {redirect: 'some/other/route'}, promise<{redirect: 'some/other/route'}>
@@ -61,6 +64,13 @@ class viewModelBase {
 
             if (!!cs && cs.disabled()) {
                 messagePublisher.reportError("Counter Storage '" + cs.name + "' is disabled!", "You can't access any section of the counter storage while it's disabled.");
+                return { redirect: appUrl.forResources() };
+            }
+        } else if (resource instanceof timeSeries) {
+            var ts = this.activeCounterStorage();
+
+            if (!!ts && ts.disabled()) {
+                messagePublisher.reportError("Time Series '" + ts.name + "' is disabled!", "You can't access any section of the time series while it's disabled.");
                 return { redirect: appUrl.forResources() };
             }
         } else { //it's a database
@@ -156,6 +166,7 @@ class viewModelBase {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
+        this.activeTimeSeries.unsubscribeFrom("ActivateTimeSeries");
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);

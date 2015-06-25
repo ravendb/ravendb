@@ -72,7 +72,7 @@ class indexMergeSuggestions extends viewModelBase {
                 if (lastQueryDate.isValid()) {
                     var agoInMs = now.diff(lastQueryDate);
                     if (agoInMs > miliSecondsInWeek) {
-                        indexDto['LastQueryTimestampText'] = optional.val(indexDto.LastQueryTimestamp).bind(v => v.toHumanizedDate());
+                        indexDto["LastQueryTimestampText"] = optional.val(indexDto.LastQueryTimestamp).bind(v => v.toHumanizedDate());
                         this.notUsedForLastWeek.push(indexDto);
                     }
                 }

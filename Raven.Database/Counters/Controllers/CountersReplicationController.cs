@@ -14,7 +14,7 @@ namespace Raven.Database.Counters.Controllers
     {
 		[RavenRoute("cs/{counterStorageName}/lastEtag")]
 		[HttpGet]
-		public HttpResponseMessage GetLastEtag(string serverId)
+		public HttpResponseMessage GetLastEtag(Guid serverId)
 		{
 			using (var reader = Storage.CreateReader())
 			{
@@ -45,43 +45,48 @@ namespace Raven.Database.Counters.Controllers
 			}
 
 	        long lastEtag = 0;
-            bool wroteCounter = false;
+            var wroteCounter = false;
             using (var writer = Storage.CreateWriter())
             {
-				var counterChangeNotifications = new List<ReplicationChangeNotification>();
+				var counterChangeNotifications = new List<ChangeNotification>();
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
-					var currentCounter = writer.GetCounterValue(counter.FullCounterName);
+					var currentCounterValue = writer.GetSingleCounterValue(counter.GroupName, counter.CounterName, counter.ServerId, counter.Sign);
 
 					//if current counter exists and current value is less than received value
-		            if (currentCounter != null && currentCounter.Value <= counter.CounterValue.Value)
+					if (currentCounterValue != -1 && counter.Value <= currentCounterValue)
 						continue;
 
 					wroteCounter = true;
 
-					if (String.IsNullOrWhiteSpace(counter.FullCounterName))
-						return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
-					
-					var counterChangeAction = writer.Store(counter.FullCounterName, counter.CounterValue);
-					counterChangeNotifications.Add(new ReplicationChangeNotification
+					//if (string.IsNullOrWhiteSpace(counter.FullCounterName))
+					//	return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
+
+					var counterChangeAction = writer.Store(counter.GroupName, counter.CounterName, counter.ServerId, counter.Sign, counter.Value);
+					counterChangeNotifications.Add(new ChangeNotification
 					{
 						GroupName = counter.GroupName,
 						CounterName = counter.CounterName,
-						Action = counterChangeAction,
+						Delta = counter.Value - currentCounterValue,
+						Action = counterChangeAction
 					});
 				}
 
 				var serverId = replicationMessage.ServerId;
-	            if (String.IsNullOrWhiteSpace(serverId))
-		            return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty server Id");
-
 				if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
                 {
 					writer.RecordLastEtagFor(serverId, lastEtag);
                     writer.Commit();
 
-					counterChangeNotifications.ForEach(Storage.Publisher.RaiseNotification);
+	                using (var reader = Storage.CreateReader())
+	                {
+		                counterChangeNotifications.ForEach(change =>
+		                {
+			                change.Total = reader.GetCounterTotal(change.GroupName, change.CounterName);
+							Storage.Publisher.RaiseNotification(change);
+		                });
+	                }
                 }
 
 	            return new HttpResponseMessage(HttpStatusCode.OK);

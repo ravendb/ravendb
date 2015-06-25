@@ -1,7 +1,6 @@
 import getStatusDebugChangesCommand = require("commands/database/debug/getStatusDebugChangesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
-
 class statusDebugChanges extends viewModelBase {
     data = ko.observable<Array<statusDebugChangesDto>>();
 
