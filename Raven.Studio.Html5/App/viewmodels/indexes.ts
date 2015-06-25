@@ -7,19 +7,17 @@ import saveIndexAsPersistentCommand = require("commands/saveIndexAsPersistentCom
 import querySort = require("models/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
-import router = require("plugins/router"); 
-import shell = require("viewmodels/shell");
 import changeSubscription = require("models/changeSubscription");
-import indexesShell = require("viewmodels/indexesShell");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
-import replaceIndexDialog = require("viewmodels/replaceIndexDialog");
 import changesContext = require("common/changesContext");
 import indexesAndTransformersClipboardDialog = require("viewmodels/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/getPendingIndexReplacementsCommand");
 import d3 = require('d3/d3');
 import forceIndexReplace = require("commands/forceIndexReplace");
+import saveIndexPriorityCommand = require("commands/saveIndexPriorityCommand");
+import indexPriority = require("models/indexPriority");
 
 class indexes extends viewModelBase {
 
@@ -83,6 +81,30 @@ class indexes extends viewModelBase {
             self.fetchRecentQueries();
         });
     }
+
+	idlePriority(idx: index) {
+		this.setIndexPriority(idx, indexPriority.idleForced);
+	}
+
+    disabledPriority(idx: index) {
+	    this.setIndexPriority(idx, indexPriority.disabledForced);
+    }
+
+    abandonedPriority(idx: index) {
+	    this.setIndexPriority(idx, indexPriority.abandonedForced);
+    }
+
+    normalPriority(idx: index) {
+	    this.setIndexPriority(idx, indexPriority.normal);
+    }
+
+	private setIndexPriority(idx: index, newPriority: indexPriority) {
+		new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
+			.execute()
+			.done(() => {
+				this.fetchIndexes();
+			});
+	}
 
     private fetchIndexes() {
         var deferred = $.Deferred();
@@ -221,7 +243,7 @@ class indexes extends viewModelBase {
         if (e.Type == "IndexRemoved") {
             this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
         } else {
-            if (this.indexMutex == true) {
+            if (this.indexMutex) {
                 this.indexMutex = false;
                 setTimeout(() => {
                     this.fetchIndexes().always(() => this.indexMutex = true);
