@@ -404,7 +404,9 @@ namespace Raven.Tests.Helpers
 			Action<InMemoryRavenConfiguration> configureConfig = null,
 			[CallerMemberName] string databaseName = null)
 		{
-			databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
+	        if (databaseName == ".ctor")
+		        databaseName = "ctor";
+	        databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
 
 			checkPorts = true;
 			if (dataDirectory != null)
