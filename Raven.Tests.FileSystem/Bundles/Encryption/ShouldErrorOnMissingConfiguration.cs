@@ -24,6 +24,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 			// secured setting nor specified
 			var exception = Assert.Throws<AggregateException>(() => client.Admin.CreateFileSystemAsync(new FileSystemDocument()
 			{
+				Id = Constants.FileSystem.Prefix + "NewFS",
 				Settings =
 				{
 					{
@@ -31,13 +32,14 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 					}
 				},
 				// SecuredSettings = new Dictionary<string, string>() - intentionally not saving them - should avoid NRE on server side 
-			}, "NewFS").Wait());
+			}).Wait());
 
 			Assert.Equal("Failed to create 'NewFS' file system, because of invalid encryption configuration.", exception.InnerException.Message);
 
 			// missing Constants.EncryptionKeySetting and Constants.AlgorithmTypeSetting
-			exception = Assert.Throws<AggregateException>(() => client.Admin.CreateFileSystemAsync(new FileSystemDocument()
+			exception = Assert.Throws<AggregateException>(() => client.Admin.CreateFileSystemAsync(new FileSystemDocument
 			{
+				Id = Constants.FileSystem.Prefix + "NewFS",
 				Settings =
 				{
 					{
@@ -45,13 +47,14 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 					}
 				},
 				SecuredSettings = new Dictionary<string, string>()
-			}, "NewFS").Wait());
+			}).Wait());
 
 			Assert.Equal("Failed to create 'NewFS' file system, because of invalid encryption configuration.", exception.InnerException.Message);
 
 			// missing Constants.EncryptionKeySetting
 			exception = Assert.Throws<AggregateException>(() => client.Admin.CreateFileSystemAsync(new FileSystemDocument()
 			{
+				Id = Constants.FileSystem.Prefix + "NewFS",
 				Settings =
 				{
 					{
@@ -62,13 +65,14 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 				{
 					{Constants.EncryptionKeySetting, ""}
 				}
-			}, "NewFS").Wait());
+			}).Wait());
 
 			Assert.Equal("Failed to create 'NewFS' file system, because of invalid encryption configuration.", exception.InnerException.Message);
 
 			// missing
 			exception = Assert.Throws<AggregateException>(() => client.Admin.CreateFileSystemAsync(new FileSystemDocument()
 			{
+				Id = Constants.FileSystem.Prefix + "NewFS",
 				Settings =
 				{
 					{
@@ -79,7 +83,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 				{
 					{Constants.AlgorithmTypeSetting, ""}
 				}
-			}, "NewFS").Wait());
+			}).Wait());
 
 			Assert.Equal("Failed to create 'NewFS' file system, because of invalid encryption configuration.", exception.InnerException.Message);
 		}

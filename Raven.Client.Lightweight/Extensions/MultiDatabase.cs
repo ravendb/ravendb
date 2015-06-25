@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.TimeSeries;
 
 namespace Raven.Client.Extensions
@@ -27,6 +28,19 @@ namespace Raven.Client.Extensions
 				}
             };
         }
+        public static FileSystemDocument CreateFileSystemDocument(string name)
+        {
+            AssertValidName(name);
+
+			return new FileSystemDocument
+            {
+				Id = Constants.FileSystem.Prefix + name,
+                Settings =
+				{
+					{Constants.FileSystem.DataDirectory, Path.Combine("~", "FileSystems", name) },
+				}
+            };
+        }
 
 		public static TimeSeriesDocument CreateTimeSeriesDocument(string name)
 		{
@@ -37,7 +51,7 @@ namespace Raven.Client.Extensions
 				Id = Constants.TimeSeries.Prefix + name,
 				Settings =
 				{
-					{Constants.TimeSeries.DataDirectory, Path.Combine("~", name)},
+					{Constants.TimeSeries.DataDirectory, Path.Combine("~", "TimeSeries", name)},
 				}
 			};
 		}
@@ -51,7 +65,7 @@ namespace Raven.Client.Extensions
 				Id = Constants.Counter.Prefix + name,
 				Settings =
 				{
-					{Constants.Counter.DataDirectory, Path.Combine("~", name)},
+					{Constants.Counter.DataDirectory, Path.Combine("~", "Counters", name)},
 				}
 			};
 		}

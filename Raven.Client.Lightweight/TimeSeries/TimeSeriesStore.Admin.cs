@@ -38,7 +38,7 @@ namespace Raven.Client.TimeSeries
 				parent.AssertInitialized();
 
 				var timeSeriesName = timeSeriesDocument.Id.Replace(Constants.TimeSeries.Prefix, "");
-				var requestUri = parent.Url + "/admin/ts/" + timeSeriesName;
+				var requestUri = parent.Url + "admin/ts/" + timeSeriesName;
 				if (shouldUpdateIfExists)
 					requestUri += "?update=true";
 
@@ -90,15 +90,12 @@ namespace Raven.Client.TimeSeries
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/ts/timeSeriesNames", parent.Url);
-
-				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+				using (var request = parent.CreateHttpJsonRequest(parent.Url + "ts", HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 					return response.ToObject<string[]>(parent.JsonSerializer);
 				}
 			}
-			 
 		}
     }
 }

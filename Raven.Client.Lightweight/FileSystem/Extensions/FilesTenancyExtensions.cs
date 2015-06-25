@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.FileSystem.Extensions
 {
@@ -15,14 +16,7 @@ namespace Raven.Client.FileSystem.Extensions
             if (existingSystems.Any(x => x.Equals(commands.FileSystem, StringComparison.InvariantCultureIgnoreCase)))
                 return;
 
-            await commands.Admin.CreateFileSystemAsync(new FileSystemDocument
-            {
-                Id = "Raven/FileSystem/" + commands.FileSystem,
-                Settings =
-                 {
-                     {Constants.FileSystem.DataDirectory, Path.Combine("FileSystems", commands.FileSystem)}
-                 }
-            }).ConfigureAwait(false);
+            await commands.Admin.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument(commands.FileSystem)).ConfigureAwait(false);
         }
     }
 }
