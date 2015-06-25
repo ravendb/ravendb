@@ -7,7 +7,7 @@ class deleteCollectionCommand extends commandBase {
     constructor(private collectionName: string, private db: database) {
         super();
 
-        this.displayCollectionName = (collectionName == "*") ? "All Documents" : collectionName;
+        this.displayCollectionName = (collectionName === "*") ? "All Documents" : collectionName;
     }
 
     execute(): JQueryPromise<any> {

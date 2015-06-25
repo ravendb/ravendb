@@ -66,6 +66,10 @@
         var n2 = parseInt(num, 10);
         return !isNaN(n1) && n2 === n1 && n1.toString() === num;
     }
+
+	getValue() {
+		return this.value().toLocaleString();
+	}
 } 
 
 export = counterChange; 

@@ -13,6 +13,7 @@ import updateCounterCommand = require("commands/counter/updateCounterCommand");
 import resetCounterCommand = require("commands/counter/resetCounterCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import editCounterDialog = require("viewmodels/counter/editCounterDialog");
+import deleteGroup = require("viewmodels/counter/deleteGroup");
 
 class counters extends viewModelBase {
 
@@ -197,12 +198,13 @@ class counters extends viewModelBase {
         }
     }
 
-	private refreshGridAndGroup(changeGroupName: string) {
+	private refreshGridAndGroup(changedGroupName: string) {
 		var group = this.selectedGroup();
-		if (group.name === changeGroupName || group.name === counterGroup.allGroupsGroupName) {
+		if (group.name === changedGroupName || group.name === counterGroup.allGroupsGroupName) {
 			this.getCountersGrid().refreshCollectionData();
 		}
 		group.invalidateCache();
+		this.selectNone();
 	}
 
     private selectedGroupChanged(selected: counterGroup) {
@@ -242,8 +244,8 @@ class counters extends viewModelBase {
     }
 
     deleteSelectedCounters() {
-        if (!this.selectedGroup().isAllGroupsGroup && this.hasAllCountersSelected()) {
-            this.deleteGroup(this.selectedGroup());
+        if (this.hasAllCountersSelected()) {
+            this.deleteGroupInternal(this.selectedGroup());
         } else {
             var grid = this.getCountersGrid();
             if (grid) {
@@ -252,25 +254,23 @@ class counters extends viewModelBase {
         }
     }
 
-    deleteGroup(group: counterGroup) {
-        /*if (collection) {
-            var viewModel = new deleteCollection(collection);
-            viewModel.deletionTask.done((result: operationIdDto) => {
-                if (!collection.isAllDocuments) {
-                    this.collections.remove(collection);
+    private deleteGroupInternal(group: counterGroup) {
+	    var deleteGroupVm = new deleteGroup(group, this.activeCounterStorage());
+            deleteGroupVm.deletionTask.done(() => {
+				if (!group.isAllGroupsGroup) {
+                    this.groups.remove(group);
 
-                    var selectedCollection: collection = this.selectedCollection();
-                    if (collection.name == selectedCollection.name) {
-                        this.selectCollection(this.allDocumentsCollection);
+                    var selectedCollection: counterGroup = this.selectedGroup();
+                    if (group.name === selectedCollection.name) {
+                        this.selectedGroup(this.allGroupsGroup);
                     }
                 } else {
-                    this.selectNone();
+                    this.refreshGridAndGroup(group.name);
                 }
 
-                this.updateGridAfterOperationComplete(collection, result.OperationId);
+				//this.updateGridAfterOperationComplete(collection, result.OperationId);
             });
-            app.showDialog(viewModel);
-        }*/
+		app.showDialog(deleteGroupVm);
     }
 
     private updateGroups(receivedGroups: Array<counterGroup>) {

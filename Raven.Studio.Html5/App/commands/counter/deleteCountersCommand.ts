@@ -18,7 +18,7 @@ class deleteCountersCommand extends commandBase {
         var failMessage = "Failed to delete " + (this.counterIds.length > 1 ? this.counterIds.length + " counters" : this.counterIds[0]);
 
         var combinedTask = $.when.apply($, deletionTasks)
-            .done(x => this.reportSuccess(successMessage))
+            .done(() => this.reportSuccess(successMessage))
             .fail((response: JQueryXHR) => this.reportError(failMessage, response.responseText, response.statusText));
 
         return combinedTask;
