@@ -323,7 +323,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				var changeNotifications = new List<ChangeNotification>();
 				groupName = groupName ?? string.Empty;
-				var countersDetails = writer.GetCountersDetails(groupName);
+				var countersDetails = writer.GetCountersDetails(groupName).ToList();
 				foreach (var c in countersDetails)
 				{
 					writer.DeleteCounterInternal(c.Group, c.Name);

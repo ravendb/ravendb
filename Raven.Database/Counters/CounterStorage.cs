@@ -368,7 +368,7 @@ namespace Raven.Database.Counters
 
 					do
 					{
-						var countersInGroup = groupToCounters.State.EntriesCount;
+						var countersInGroup = groupToCounters.MultiCount(it.CurrentKey);
 						if (skip - countersInGroup <= 0)
 							break;
 						skip -= (int)countersInGroup; //TODO: is there a better way?
@@ -382,6 +382,7 @@ namespace Raven.Database.Counters
 							if (iterator.Seek(Slice.BeforeAllKeys) == false)
 								yield break;
 
+							skip = 0;
 							do
 							{
 								var valueReader = iterator.CurrentKey.CreateReader();
