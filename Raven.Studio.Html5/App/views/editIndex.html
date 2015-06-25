@@ -63,20 +63,6 @@
         </div>
 
         <div class="btn-group" data-bind="visible: !editedIndex().isSideBySideIndex()">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                <span data-bind="text: priorityLabel"></span>
-                <span class="caret"></span>
-            </button>
-
-            <ul class="dropdown-menu">
-                <li data-bind="click: normalPriority"><a href="#">Normal</a></li>
-                <li data-bind="click: idlePriority"><a href="#">Idle</a></li>
-                <li data-bind="click: disabledPriority"><a href="#">Disabled</a></li>
-                <li data-bind="click: abandonedPriority"><a href="#">Abandoned</a></li>
-            </ul>
-        </div>
-        
-        <div class="btn-group" data-bind="visible: !editedIndex().isSideBySideIndex()">
             <button class="btn btn-default" title="Format maps and reduce" data-bind="click: formatIndex">
                 <i class="fa fa-magic"></i>
             </button>
