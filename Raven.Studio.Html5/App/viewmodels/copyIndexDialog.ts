@@ -72,7 +72,7 @@ class copyIndexDialog extends dialogViewModelBase {
                     .execute()
                     .fail((request, status, error) => {
                         if (request.status === ResponseCodes.NotFound) {
-                            new saveIndexDefinitionCommand(indexDto, indexPriority.normal, this.db)
+                            new saveIndexDefinitionCommand(indexDto, this.db)
                                 .execute()
                                 .done(() => {
                                     router.navigate(appUrl.forEditIndex(indexDto.Name, this.db));

@@ -109,7 +109,7 @@ class conflicts extends viewModelBase {
             .fail( 
             function () {
                 //TODO: we should check exact result of getIndex/Transfomer commands (if it contains 404)
-                var indexTask = new saveIndexDefinitionCommand(conflicts.getConflictsIndexDefinition(), indexPriority.normal, db).execute();
+                var indexTask = new saveIndexDefinitionCommand(conflicts.getConflictsIndexDefinition(), db).execute();
                 var transformerTask = new saveTransformerCommand(conflicts.getConflictsTransformerDefinition(), db).execute();
 
                 $.when(indexTask, transformerTask).done(function () {
