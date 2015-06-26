@@ -240,7 +240,7 @@ namespace Raven.Client.Document
 			set
 			{
 				defaultDatabase = value;
-				if (defaultDatabase.Contains('.'))
+				if (defaultDatabase != null && defaultDatabase.Contains('.'))
 				{
 					throw new InvalidOperationException("The following chars are not valid in the database name: '.'");
 				}
