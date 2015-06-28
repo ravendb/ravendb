@@ -198,6 +198,7 @@ class documents extends viewModelBase {
 
         this.fetchCollections(db).done(results => {
             this.updateCollections(results);
+	        this.refreshCollectionsData();
             //TODO: add a button to refresh the documents and than use this.refreshCollectionsData();
             deferred.resolve();
         });
