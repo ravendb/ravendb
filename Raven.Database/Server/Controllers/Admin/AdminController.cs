@@ -41,7 +41,7 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
-
+using Raven.Database.Commercial;
 using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 
 namespace Raven.Database.Server.Controllers.Admin
@@ -400,6 +400,34 @@ namespace Raven.Database.Server.Controllers.Admin
 				NewId = newId
 			});
 		}
+
+		[HttpGet]
+		[RavenRoute("admin/license/connectivity")]
+		public HttpResponseMessage CheckConnectivityToLicenseServer()
+		{
+			var request = (HttpWebRequest)WebRequest.Create("http://licensing.ravendb.net/Subscriptions.svc");
+			try
+			{
+				request.Timeout = 5000;
+				using (var response = (HttpWebResponse) request.GetResponse())
+				{
+					return GetMessageWithObject(new { Success = response.StatusCode == HttpStatusCode.OK });
+				}
+			}
+			catch (Exception e)
+			{
+				return GetMessageWithObject(new { Success = false, Exception = e.Message });
+			}
+		}
+
+		[HttpGet]
+		[RavenRoute("admin/license/forceUpdate")]
+		public HttpResponseMessage ForceLicenseUpdate()
+		{
+			Database.ForceLicenseUpdate();
+			return GetEmptyMessage();
+		}
+
 
 
 		[HttpPost]

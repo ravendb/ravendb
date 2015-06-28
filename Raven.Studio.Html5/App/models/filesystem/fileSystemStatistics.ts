@@ -4,10 +4,6 @@ class fileSystemStatistics {
     fileCountText = ko.observable<string>();
     requestsCountText = ko.observable<string>();
     meanDurationText = ko.observable<string>();
-
-    countOfIndexesText = ko.observable<string>();
-    staleIndexesCountText = ko.observable<string>();
-    errorsCountText = ko.observable<string>();
     
     constructor(dto: filesystemStatisticsDto) {
         this.fileCount(dto.FileCount);
