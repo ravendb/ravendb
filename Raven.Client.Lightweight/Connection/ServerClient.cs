@@ -429,6 +429,11 @@ namespace Raven.Client.Connection
 			return AsyncHelpers.RunSync(() => asyncServerClient.GetUserInfoAsync());
 		}
 
+		/*public OperationPermission GetUserPermission()
+		{
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetUserPermissionAsync());
+		}
+*/
 		public long NextIdentityFor(string name)
 		{
 			return AsyncHelpers.RunSync(() => asyncServerClient.NextIdentityForAsync(name));

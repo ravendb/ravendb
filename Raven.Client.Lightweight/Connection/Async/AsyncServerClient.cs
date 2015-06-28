@@ -42,6 +42,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace Raven.Client.Connection.Async
 {
 	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands
@@ -1539,6 +1540,14 @@ namespace Raven.Client.Connection.Async
 				return json.Deserialize<UserInfo>(convention);
 			}
 		}
+
+		/*public async Task<OperationPermission> GetUserPermissionAsync(string database, CancellationToken token = default(CancellationToken))
+		{
+
+			//var info = await GetUserInfoAsync(token);
+			var databases = info.
+
+		}*/
 
 		[Obsolete("Use RavenFS instead.")]
 		public Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize, CancellationToken token = default (CancellationToken))

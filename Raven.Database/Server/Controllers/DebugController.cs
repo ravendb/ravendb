@@ -581,7 +581,6 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[HttpPost]
 		[RavenRoute("debug/user-info")]
 		[RavenRoute("databases/{databaseName}/debug/user-info")]
 		public HttpResponseMessage UserInfo()
@@ -589,6 +588,15 @@ namespace Raven.Database.Server.Controllers
 			var userInfo = GetUserInfo();
 			return GetMessageWithObject(userInfo);
 		}
+
+		/*[HttpGet]
+		[HttpPost]
+		[RavenRoute("debug/user-info")]
+		[RavenRoute("databases/{databaseName}/debug/user-info")]
+		public HttpResponseMessage GetUserPermission(string )
+		{
+			
+		}*/
 
 		[HttpGet]
 		[RavenRoute("debug/tasks")]

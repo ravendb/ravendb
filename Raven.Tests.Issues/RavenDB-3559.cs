@@ -13,6 +13,7 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Issues
 {
@@ -35,7 +36,7 @@ namespace Raven.Tests.Issues
 				{
 					Url = serverUrl,
 					DefaultDatabase = "Foo",
-					ApiKey = "Foo/ThisIsMySecret2",
+					ApiKey = "Foo/ThisIsMySecret2"
 
 				})
 				{
@@ -66,6 +67,10 @@ namespace Raven.Tests.Issues
 					Assert.True(info.Databases[0].IsAdmin);
 					Assert.True(info.Databases[1].IsAdmin);
 					Assert.False(info.Databases[2].IsAdmin);
+
+					Assert.Equal(1, info.ReadOnlyDatabases.Count);
+
+
 				}
 			}
 		}
@@ -105,7 +110,7 @@ namespace Raven.Tests.Issues
 
 				{
 					new ResourceAccess {TenantId = "Foo", Admin = true},
-					new ResourceAccess {TenantId = "db2", Admin = true},
+					new ResourceAccess {TenantId = "db2", ReadOnly = true},
 					new ResourceAccess {TenantId = "db3", Admin = false}
 				}
 			}), new RavenJObject(), null);
