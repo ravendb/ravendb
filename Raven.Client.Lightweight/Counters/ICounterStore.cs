@@ -12,13 +12,13 @@ namespace Raven.Client.Counters
 	{
 		CounterStore.BatchOperationsStore Batch { get; }
 
-		OperationCredentials Credentials { get;  }
+		OperationCredentials Credentials { get; }
 
 		string Name { get; }
 
 		string Url { get; }
 
-		Convention Convention { get; set; }
+		CountersConvention CountersConvention { get; set; }
 
 		CounterReplicationInformer ReplicationInformer { get; }
 
@@ -33,6 +33,8 @@ namespace Raven.Client.Counters
 		Task DecrementAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
 
 		Task ResetAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
+
+		Task DeleteAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
 
 		Task<long> GetOverallTotalAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
 

@@ -112,6 +112,8 @@ namespace Raven.Client.Connection.Async
 			primaryUrl = url;
 			if (primaryUrl.EndsWith("/"))
 				primaryUrl = primaryUrl.Substring(0, primaryUrl.Length - 1);
+			if (primaryUrl.Contains('.'))
+				throw new InvalidOperationException("The following chars are not valid in the database name: '.'");
 
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;

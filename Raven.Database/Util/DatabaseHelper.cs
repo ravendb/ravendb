@@ -52,6 +52,7 @@ namespace Raven.Database.Util
 				return;
 
 			IOExtensions.DeleteDirectory(configuration.DataDirectory);
+
 			if (configuration.IndexStoragePath != null)
 				IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
 

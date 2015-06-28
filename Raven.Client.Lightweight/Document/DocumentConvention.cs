@@ -13,12 +13,13 @@ using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
+
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
@@ -32,7 +33,7 @@ namespace Raven.Client.Document
 	/// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
 	/// the way the Raven client API behaves
 	/// </summary>
-	public class DocumentConvention : Convention
+	public class DocumentConvention : QueryConvention
 	{
 		public delegate IEnumerable<object> ApplyReduceFunctionFunc(
 			Type indexType,
@@ -687,6 +688,8 @@ namespace Raven.Client.Document
 
 		public bool AcceptGzipContent { get; set; }
 
+		public ClusterBehavior ClusterBehavior { get; set; }
+
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 
 		private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
@@ -784,6 +787,58 @@ namespace Raven.Client.Document
 				return true;
 
 			return customRangeTypes.Contains(type);
+		}
+
+		protected Dictionary<Type, MemberInfo> idPropertyCache = new Dictionary<Type, MemberInfo>();
+
+		/// <summary>
+		/// Gets or sets the function to find the identity property.
+		/// </summary>
+		/// <value>The find identity property.</value>
+		public Func<MemberInfo, bool> FindIdentityProperty { get; set; }
+
+		/// <summary>
+		/// Gets the identity property.
+		/// </summary>
+		/// <param name="type">The type.</param>
+		/// <returns></returns>
+		public MemberInfo GetIdentityProperty(Type type)
+		{
+			MemberInfo info;
+			var currentIdPropertyCache = idPropertyCache;
+			if (currentIdPropertyCache.TryGetValue(type, out info))
+				return info;
+
+			var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
+
+			if (identityProperty != null && identityProperty.DeclaringType != type)
+			{
+				var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
+				identityProperty = propertyInfo ?? identityProperty;
+			}
+
+			idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
+			{
+				{type, identityProperty}
+			};
+
+			return identityProperty;
+		}
+
+		private static IEnumerable<MemberInfo> GetPropertiesForType(Type type)
+		{
+			foreach (var propertyInfo in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
+			{
+				yield return propertyInfo;
+			}
+
+			foreach (var @interface in type.GetInterfaces())
+			{
+				foreach (var propertyInfo in GetPropertiesForType(@interface))
+				{
+					yield return propertyInfo;
+				}
+			}
 		}
 
 	}

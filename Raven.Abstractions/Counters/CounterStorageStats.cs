@@ -6,7 +6,7 @@ namespace Raven.Abstractions.Counters
 {
     public class CounterStorageStats
     {
-        public string CounterStorageName { get; set; }
+        public string Name { get; set; }
 
         public string Url { get; set; }
 
@@ -16,13 +16,13 @@ namespace Raven.Abstractions.Counters
 
         public long LastCounterEtag { get; set; }
 
-        public int TasksCount { get; set; }
+        public int ReplicationTasksCount { get; set; }
 
         public string CounterStorageSize { get; set; }
-	    public string Name { get; set; }
-	    public int ApproximateTaskCount { get; set; }
-	    public decimal CounterStorageSizeOnDiskInMB { get; set; }
-	    public long ServersCount { get; set; }
+
+		public long ReplicatedServersCount { get; set; }
+
+		public double RequestsPerSecond { get; set; }
     }
 
     public class CountersStorageMetrics
@@ -54,8 +54,6 @@ namespace Raven.Abstractions.Counters
         public Dictionary<string, HistogramData> ReplicationBatchSizeHistogram { get; set; }
 
         public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
-
-	    public MeterData ClientRuqeusts { get; set; }
     }
 
     public class CounterStorageReplicationStats

@@ -15,7 +15,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
@@ -49,6 +48,10 @@ namespace Raven.Database.Config
 
         public FileSystemConfiguration FileSystem { get; private set; }
 
+		public CounterConfiguration Counter { get; private set; }
+		
+		public TimeSeriesConfiguration TimeSeries { get; private set; }
+
 		public EncryptionConfiguration Encryption { get; private set; }
 
 		public IndexingConfiguration Indexing { get; set; }
@@ -65,6 +68,8 @@ namespace Raven.Database.Config
 			Prefetcher = new PrefetcherConfiguration();
 			Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
+			Counter = new CounterConfiguration();
+			TimeSeries = new TimeSeriesConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
 			WebSockets = new WebSocketsConfiguration();
@@ -89,7 +94,9 @@ namespace Raven.Database.Config
 
         public string FileSystemName { get; set; }
 
-        public string CountersDatabaseName { get; set; }
+        public string CounterStorageName { get; set; }
+
+        public string TimeSeriesName { get; set; }
 
 		public void PostInit()
 		{
@@ -110,6 +117,8 @@ namespace Raven.Database.Config
 
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
+			Counter.InitializeFrom(this);
+			TimeSeries.InitializeFrom(this);
 
 			MaxClauseCount = ravenSettings.MaxClauseCount.Value;
 
@@ -232,7 +241,6 @@ namespace Raven.Database.Config
 			SetupTransactionMode();
 
 			DataDirectory = ravenSettings.DataDir.Value;
-			CountersDataDirectory = ravenSettings.CountersDataDir.Value;
 
 			var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
 			if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)
@@ -311,9 +319,14 @@ namespace Raven.Database.Config
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
 			FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
 			FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
-
 			if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
 				FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
+
+			Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
+			Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
+			Counter.DeletedTombstonesInBatch = ravenSettings.Counter.DeletedTombstonesInBatch.Value;
+
+			TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
 
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
@@ -784,16 +797,6 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
-		/// The directory for the RavenDB counters. 
-		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-		/// </summary>
-		public string CountersDataDirectory
-		{
-			get { return countersDataDirectory; }
-			set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
-		}
-
-		/// <summary>
 		/// What storage type to use (see: RavenDB Storage engines)
 		/// Allowed values: esent, voron
 		/// Default: esent
@@ -956,7 +959,6 @@ namespace Raven.Database.Config
 
 		private string indexStoragePath;
 		
-		private string countersDataDirectory;
 		private int? maxNumberOfParallelIndexTasks;
 
 		/// <summary>
@@ -1104,7 +1106,7 @@ namespace Raven.Database.Config
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
 
 
-	    [Browsable(false)]
+		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{
@@ -1279,6 +1281,12 @@ namespace Raven.Database.Config
                 Settings[Constants.FileSystem.DataDirectory] = Path.Combine(Settings[Constants.FileSystem.DataDirectory], "FileSystems", tenantId);
         }
 
+		public void CustomizeValuesForCounterStorageTenant(string tenantId)
+		{
+			if (string.IsNullOrEmpty(Settings[Constants.Counter.DataDirectory]) == false)
+				Settings[Constants.Counter.DataDirectory] = Path.Combine(Settings[Constants.Counter.DataDirectory], "Counters", tenantId);
+		}
+
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
 		{
 			Port = defaultConfiguration.Port;
@@ -1442,6 +1450,58 @@ namespace Raven.Database.Config
 				set { if (!string.IsNullOrEmpty(value)) defaultFileSystemStorageTypeName = value; }
 			}
         }
+
+		public class CounterConfiguration
+		{
+			public void InitializeFrom(InMemoryRavenConfiguration configuration)
+			{
+				workingDirectory = configuration.WorkingDirectory;
+			}
+
+			private string workingDirectory;
+
+			private string countersDataDirectory;
+
+			/// <summary>
+			/// The directory for the RavenDB counters. 
+			/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+			/// </summary>
+			public string DataDirectory
+			{
+				get { return countersDataDirectory; }
+				set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+			}
+
+			/// <summary>
+			/// Determines how long tombstones will be kept by a counter storage. After the specified time they will be automatically
+			/// Purged on next counter storage startup. Default: 14 days.
+			/// </summary>
+			public TimeSpan TombstoneRetentionTime { get; set; }
+
+			public int DeletedTombstonesInBatch { get; set; }
+		}
+
+		public class TimeSeriesConfiguration
+		{
+			public void InitializeFrom(InMemoryRavenConfiguration configuration)
+			{
+				workingDirectory = configuration.WorkingDirectory;
+			}
+
+			private string workingDirectory;
+
+			private string timeSeriesDataDirectory;
+
+			/// <summary>
+			/// The directory for the RavenDB time series. 
+			/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+			/// </summary>
+			public string DataDirectory
+			{
+				get { return timeSeriesDataDirectory; }
+				set { timeSeriesDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+			}
+		}
 
 		public class EncryptionConfiguration
 		{

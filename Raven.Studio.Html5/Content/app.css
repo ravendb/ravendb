@@ -7361,10 +7361,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   background-image: linear-gradient(#00c700, #c7009a);
 }
 .collection-style-17 {
-  background-image: linear-gradient(#c7009a, red);
+  background-image: linear-gradient(#c7009a, #ff0000);
 }
 .collection-style-18 {
-  background-image: linear-gradient(red, #0095ef);
+  background-image: linear-gradient(#ff0000, #0095ef);
 }
 .collection-style-19 {
   background-image: linear-gradient(#0095ef, #a70068);
@@ -8356,9 +8356,31 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 }
 #resources-page .resources-container .resource.fs:hover {
   box-shadow: 0 0 5px 0 #ab26f3;
+  -webkit-box-shadow: 0 0 5px 0 #ab26f3;
+  -moz-box-shadow: 0 0 5px 0 #ab26f3;
 }
 #resources-page .resources-container .resource.fs.selected {
   box-shadow: 0 0 20px 0 #7109AA;
+  -webkit-box-shadow: 0 0 20px 0 #7109AA;
+  -moz-box-shadow: 0 0 20px 0 #7109AA;
+}
+#resources-page .resources-container .resource.cs a {
+  color: #0f6716;
+}
+#resources-page .resources-container .resource.cs:hover {
+  box-shadow: 0 0 5px 0 #1cc029;
+}
+#resources-page .resources-container .resource.cs.selected {
+  box-shadow: 0 0 20px 0 #0f6716;
+}
+#resources-page .resources-container .resource.ts a {
+  color: #4a7cbb;
+}
+#resources-page .resources-container .resource.ts:hover {
+  box-shadow: 0 0 5px 0 #4a71b3;
+}
+#resources-page .resources-container .resource.ts.selected {
+  box-shadow: 0 0 20px 0 #4a7cbb;
 }
 .form-checkbox-control {
   width: 35px;

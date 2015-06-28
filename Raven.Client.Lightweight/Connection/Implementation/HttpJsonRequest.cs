@@ -57,7 +57,7 @@ namespace Raven.Client.Connection.Implementation
 		private readonly HttpJsonRequestFactory factory;
 		private readonly Func<HttpMessageHandler> recreateHandler; 
 		private readonly IHoldProfilingInformation owner;
-		private readonly Convention conventions;
+		private readonly ConventionBase conventions;
 		private readonly bool disabledAuthRetries;
 		private readonly IRequestTimeMetric requestTimeMetric;
 

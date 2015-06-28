@@ -15,6 +15,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
+using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -30,7 +31,7 @@ namespace Raven.Client.Connection
 
 		private Task refreshReplicationInformationTask;
 
-        public ReplicationInformer(Convention conventions, HttpJsonRequestFactory jsonRequestFactory)
+		public ReplicationInformer(DocumentConvention conventions, HttpJsonRequestFactory jsonRequestFactory)
             : base(conventions, jsonRequestFactory)
         {
         }

@@ -44,7 +44,7 @@ interface logNotificationDto {
     RequestUri: string;
     TenantName: string;
     CustomInfo: string;
-    TenantType: logTenantType;
+    TenantType: TenantType;
     InnerRequestsCount?: number;
 
 }
@@ -258,6 +258,8 @@ interface licenseStatusDto {
         maxRamUtilization: string;
         maxParallelism: string;
         ravenfs: string;
+        counterStorage: string;
+        timeSeries: string;
     }
 }
 
@@ -813,6 +815,7 @@ interface statusDebugChangesDto {
     DocumentStore: statusDebugChangesDocumentStoreDto;
     FileSystem: statusDebugChangesFileSystemDto;
     CounterStorage: statusDebugChangesCounterStorageDto;
+    TimeSeries: statusDebugChangesTimeSeriesDto;
     WatchAllDocuments: boolean;
     WatchAllIndexes: boolean;
     WatchConfig: boolean;
@@ -877,7 +880,7 @@ interface statusDebugChangesFileSystemDto {
     WatchedFolders: Array<string>;
 }
 
-interface statusDebugChangesCounterStorageDto {
+interface statusDebugChangesTimeSeriesDto {
     WatchedChanges: Array<string>;
     WatchedLocalChanges: Array<string>;
     WatchedReplicationChanges: Array<string>;
@@ -1027,10 +1030,11 @@ interface collectionStats {
     TopDocs: any[];
 }
 
-enum logTenantType {
+enum TenantType {
     Database = 0,
-    Filesystem = 1,
-    CounterStorage = 2
+    FileSystem = 1,
+    CounterStorage = 2,
+    TimeSeries = 3
 }
 
 interface filterSettingDto {
@@ -1039,41 +1043,14 @@ interface filterSettingDto {
     ShouldMatch: boolean;
 }
 
-interface counterStorageDto {
+interface resourceStyleMap {
+    resourceName: string;
+    styleMap: any;
+}
+
+interface timeSeriesDto {
     Name: string;
     Path?: string;
-}
-
-interface counterDto {
-    Name: string;
-    Group: string;
-    OverallTotal: number;
-    Servers: counterServerValueDto[];
-}
-
-interface counterGroupDto {
-    Name: string;
-    NumOfCounters?: number;
-}
-
-interface counterServerValueDto {
-    Name: string;
-    Positive: number;
-    Negative: number;
-}
-
-interface counterStorageReplicationDto {
-    Destinations: counterStorageReplicationDestinatinosDto[];
-}
-
-interface counterStorageReplicationDestinatinosDto {
-    Disabled: boolean;
-    ServerUrl: string;
-    CounterStorageName: string;
-    Username: string;
-    Password: string;
-    Domain: string;
-    ApiKey: string;
 }
 
 enum ImportItemType {
@@ -1104,6 +1081,12 @@ interface tenantDto {
 }
 
 interface fileSystemDto extends tenantDto {
+}
+
+interface counterStorageDto extends tenantDto {
+}
+
+interface timeSeriesDto extends tenantDto {
 }
 
 interface customFunctionsDto {

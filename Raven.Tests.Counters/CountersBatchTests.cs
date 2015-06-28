@@ -14,7 +14,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task CountersBatch_increment_decrement_should_work()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				using (var otherStore = await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{
@@ -40,7 +40,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task CountersBatch_increment_decrement_with_different_counters_in_the_batch_should_work()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				using (var batchOperation = store.Advanced.NewBatch(new CountersBatchOptions { BatchSizeLimit = 3 }))
 				{
@@ -69,7 +69,7 @@ namespace Raven.Tests.Counters
 		[InlineData(50)]
 		public async Task CountersBatch_with_multiple_batches_should_work(int countOfOperationsInBatch)
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				using (var counterBatch = store.Advanced.NewBatch(new CountersBatchOptions {BatchSizeLimit = countOfOperationsInBatch/2}))
 				{
@@ -88,7 +88,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task CounterBatch_using_batch_store_for_default_store_should_work()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				store.Batch.ScheduleIncrement("FooGroup", "FooCounter"); //schedule increment for default counter storage
 				await store.Batch.FlushAsync();
@@ -105,7 +105,7 @@ namespace Raven.Tests.Counters
 		[InlineData(251, 252)]
 		public async Task Using_multiple_different_batches_for_the_same_store_async_should_work(int totalForT1, int totalForT2)
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				var t1 = Task.Run(() =>
 				{
@@ -141,7 +141,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Using_multiple_different_batches_for_different_stores_async_should_work()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				using (var otherStore = await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument(OtherCounterStorageName), OtherCounterStorageName))
 				{
@@ -175,7 +175,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Using_batch_multithreaded_should_work()
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				using (var otherStore = await store.Admin.CreateCounterStorageAsync(CreateCounterStorageDocument(OtherCounterStorageName), OtherCounterStorageName))
 				{
@@ -207,7 +207,7 @@ namespace Raven.Tests.Counters
 		[InlineData(100)]
 		public async Task CountersBatch_using_batch_store_should_work(int countOfOperationsInBatch)
 		{
-			using (var store = NewRemoteCountersStore(DefaultCounteStorageName))
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				using (var otherStore = await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument
 				{

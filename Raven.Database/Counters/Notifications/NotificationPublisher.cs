@@ -12,12 +12,7 @@ namespace Raven.Database.Counters.Notifications
 			this.transportState = transportState;
 		}
 
-		public void RaiseNotification(LocalChangeNotification notification)
-		{
-			transportState.Send(notification);
-		}
-
-		public void RaiseNotification(ReplicationChangeNotification notification)
+		public void RaiseNotification(ChangeNotification notification)
 		{
 			transportState.Send(notification);
 		}

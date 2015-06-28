@@ -5,9 +5,10 @@ using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Security.Principal;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Web.Http.Controllers;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
 
@@ -24,12 +25,12 @@ namespace Raven.Database.Server.Controllers.Admin
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected bool IsSystemDatabase(string databaseId)
+        protected static bool IsSystemDatabase(string databaseId)
         {
             return databaseId.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase);
         }
 
-        public override async Task<HttpResponseMessage> ExecuteAsync(System.Web.Http.Controllers.HttpControllerContext controllerContext, System.Threading.CancellationToken cancellationToken)
+        public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
         {
             InnerInitialization(controllerContext);
             var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
@@ -104,5 +105,11 @@ namespace Raven.Database.Server.Controllers.Admin
             public string Message;
             public HttpStatusCode ErrorCode = HttpStatusCode.OK;
         }
+
+		protected bool ParseBoolQueryString(string parameterName)
+		{
+			bool result;
+			return bool.TryParse(InnerRequest.RequestUri.ParseQueryString()[parameterName], out result) && result;
+		}
 	}
 }

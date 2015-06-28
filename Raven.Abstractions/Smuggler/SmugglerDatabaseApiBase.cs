@@ -282,6 +282,7 @@ namespace Raven.Abstractions.Smuggler
                 streamWriter.Flush();
             }
         }
+
         public static void WriteLastEtagsToFile(OperationState result, string backupPath, string filename)
 		{
 			// ReSharper disable once AssignNullToNotNullAttribute

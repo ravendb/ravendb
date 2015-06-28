@@ -9,7 +9,6 @@ using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 using Sparrow.Collections;
@@ -17,7 +16,7 @@ using Sparrow.Collections;
 namespace Raven.Client.FileSystem.Changes
 {
 
-    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState>, IFilesChanges
+    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState, FilesConvention>, IFilesChanges
     {
         private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
@@ -42,22 +41,10 @@ namespace Raven.Client.FileSystem.Changes
 
         public IObservableWithTask<ConfigurationChangeNotification> ForConfiguration()
         {
-            var counter = Counters.GetOrAdd("all-fs-config", s =>
-            {
-                var configurationSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllConfigurations = true;
-                    return Send("watch-config", null);
-                });
-                return new FilesConnectionState(
-                    () =>
-                    {
-                        watchAllConfigurations = false;
-                        Send("unwatch-config", null);
-                        Counters.Remove("all-fs-config");
-                    },
-                    configurationSubscriptionTask);
-            });
+			var counter = GetOrAddConnectionState("all-fs-config", "watch-config", "unwatch-config",
+				() => watchAllConfigurations = true,
+				() => watchAllConfigurations = false,
+				null);
 
             var taskedObservable = new TaskedObservable<ConfigurationChangeNotification, FilesConnectionState>(
                 counter,
@@ -71,22 +58,11 @@ namespace Raven.Client.FileSystem.Changes
 
         public IObservableWithTask<ConflictNotification> ForConflicts()
         {
-            var counter = Counters.GetOrAdd("all-fs-conflicts", s =>
-            {
-                var conflictsSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllConflicts = true;
-                    return Send("watch-conflicts", null);
-                });
-                return new FilesConnectionState(
-                    () =>
-                    {
-                        watchAllConflicts = false;
-                        Send("unwatch-conflicts", null);
-                        Counters.Remove("all-fs-conflicts");
-                    },
-                    conflictsSubscriptionTask);
-            });
+			var counter = GetOrAddConnectionState("all-fs-conflicts", "watch-conflicts", "unwatch-conflicts",
+				() => watchAllConflicts = true,
+				() => watchAllConflicts = false,
+				null);
+
             var taskedObservable = new TaskedObservable<ConflictNotification, FilesConnectionState>(
                 counter,
                 notification => true);
@@ -106,26 +82,11 @@ namespace Raven.Client.FileSystem.Changes
                 throw new ArgumentException("folder must start with /");
 
             var canonicalisedFolder = folder.TrimStart('/');
-
-            // watch-folder, unwatch-folder
-
-            var counter = Counters.GetOrAdd("fs-folder/" + canonicalisedFolder, s =>
-            {
-                var fileChangeSubscriptionTask = AfterConnection(() =>
-                {
-                    watchedFolders.TryAdd(folder);
-                    return Send("watch-folder", folder);
-                });
-
-                return new FilesConnectionState(
-                    () =>
-                    {
-                        watchedFolders.TryRemove(folder);
-                        Send("unwatch-folder", folder);
-                        Counters.Remove("fs-folder/" + canonicalisedFolder);
-                    },
-                    fileChangeSubscriptionTask);
-            });
+			var key = "fs-folder/" + canonicalisedFolder;
+			var counter = GetOrAddConnectionState(key, "watch-folder", "unwatch-folder",
+				() => watchedFolders.TryAdd(folder),
+				() => watchedFolders.TryRemove(folder),
+				folder);
 
             var taskedObservable = new TaskedObservable<FileChangeNotification, FilesConnectionState>(
                 counter,
@@ -139,22 +100,11 @@ namespace Raven.Client.FileSystem.Changes
 
         public IObservableWithTask<SynchronizationUpdateNotification> ForSynchronization()
         {
-            var counter = Counters.GetOrAdd("all-fs-sync", s =>
-            {
-                var conflictsSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllSynchronizations = true;
-                    return Send("watch-sync", null);
-                });
-                return new FilesConnectionState(
-                    () =>
-                    {
-                        watchAllSynchronizations = false;
-                        Send("unwatch-sync", null);
-                        Counters.Remove("all-fs-sync");
-                    },
-                    conflictsSubscriptionTask);
-            });
+			var counter = GetOrAddConnectionState("all-fs-sync", "watch-sync", "unwatch-sync",
+				() => watchAllSynchronizations = true,
+				() => watchAllSynchronizations = false,
+				null);
+
             var taskedObservable = new TaskedObservable<SynchronizationUpdateNotification, FilesConnectionState>(
                 counter,
                 notification => true);
@@ -276,7 +226,6 @@ namespace Raven.Client.FileSystem.Changes
                     counter.Value.Send(conflictNotification);
             }
         }
-
 
         private Task AfterConnection(Func<Task> action)
         {

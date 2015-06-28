@@ -22,7 +22,6 @@ namespace Voron.Tests.FixedSize
         public void CanAdd_ALot_ForPageSplits(int count)
         {
 	        var bytes = new byte[48];
-	        var slice = new Slice(bytes);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
@@ -30,7 +29,7 @@ namespace Voron.Tests.FixedSize
                 for (int i = 0; i < count; i++)
                 {
 	                EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-					fst.Add(i, slice);
+					fst.Add(i, bytes);
 					Assert.NotNull(fst.Read(i));
                 }
 

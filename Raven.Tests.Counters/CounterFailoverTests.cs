@@ -28,10 +28,10 @@ namespace Raven.Tests.Counters
 				{
 					using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
 					{
-						using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA))
-						using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
+						using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreA))
+						using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreB))
 						{
-							storeA.Convention.FailoverBehavior = FailoverBehavior.FailImmediately;
+							storeA.CountersConvention.FailoverBehavior = FailoverBehavior.FailImmediately;
 
 							await SetupReplicationAsync(storeA, storeB);
 							await storeA.ChangeAsync("group", "counter", 2);
@@ -61,8 +61,8 @@ namespace Raven.Tests.Counters
 				{
 					using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
 					{
-						using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA))
-						using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
+						using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreA))
+						using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreB))
 						{
 							await SetupReplicationAsync(storeA, storeB);
 							await storeA.ChangeAsync("group", "counter", 2);
@@ -192,7 +192,7 @@ namespace Raven.Tests.Counters
 				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
 				Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
 
-				storeA.ReplicationInformer.MaxIntervalBetweenUpdatesInMillisec = 0; 
+				storeA.ReplicationInformer.MaxIntervalBetweenUpdatesInMilliseconds = 0; 
 
 				SetDisabledStateOnCounter(storeA.Name, ravenStoreA, true);
 

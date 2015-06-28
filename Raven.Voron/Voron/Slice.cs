@@ -93,6 +93,22 @@ namespace Voron
             }
 		}
 
+		public byte this[int index]
+		{
+			get
+			{
+				if (Array != null)
+					return Array[index];
+
+				if(Pointer == null) //precaution
+					throw new InvalidOperationException("Uninitialized slice!");
+
+				if(index < 0 || index > Size)
+					throw new ArgumentOutOfRangeException("index");
+
+				return *(Pointer + (sizeof (byte)*index));
+			}			
+		}
 
 		public override string ToString()
 		{
@@ -116,7 +132,7 @@ namespace Voron
 			}
 
 			if (Array != null)
-				return Encoding.UTF8.GetString(Array,0, Size);
+				return Encoding.UTF8.GetString(Array, 0, Size);
 
 			return new string((sbyte*)Pointer, 0, Size, Encoding.UTF8);
 		}

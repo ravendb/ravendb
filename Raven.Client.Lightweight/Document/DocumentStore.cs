@@ -50,6 +50,8 @@ namespace Raven.Client.Document
 
 		private readonly ConcurrentDictionary<string, bool> _dtcSupport = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
+		private string defaultDatabase;
+
 		/// <summary>
 		/// The current session id - only used during construction
 		/// </summary>
@@ -232,7 +234,18 @@ namespace Raven.Client.Document
 		/// Gets or sets the default database name.
 		/// </summary>
 		/// <value>The default database name.</value>
-		public string DefaultDatabase { get; set; }
+		public string DefaultDatabase
+		{
+			get { return defaultDatabase; }
+			set
+			{
+				defaultDatabase = value;
+				if (defaultDatabase != null && defaultDatabase.Contains('.'))
+				{
+					throw new InvalidOperationException("The following chars are not valid in the database name: '.'");
+				}
+			}
+		}
 
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.

@@ -1,8 +1,10 @@
 ﻿import document = require("models/database/documents/document");
 import file = require("models/filesystem/file");
+import counterSummary = require("models/counter/counterSummary");
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import deleteFilesCommand = require("commands/filesystem/deleteFilesCommand");
+import deleteCountersCommand = require("commands/counter/deleteCountersCommand");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
@@ -30,6 +32,9 @@ class deleteItems extends dialogViewModelBase {
         }
         else if (this.documents()[0] instanceof file) {
             deleteCommand = new deleteFilesCommand(deleteItemsIds, appUrl.getFileSystem());
+        }
+        else if (this.documents()[0] instanceof counterSummary) {
+            deleteCommand = new deleteCountersCommand(deleteItemsIds, appUrl.getCounterStorage());
         }
         var deleteCommandTask = deleteCommand.execute();
 

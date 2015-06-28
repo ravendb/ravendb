@@ -85,6 +85,11 @@ namespace Voron.Trees.Fixed
                 val.CopyTo(pos);
         }
 
+        public void Add(long key, byte[] val)
+        {
+			Add(key, new Slice(val));
+        }
+
         public byte* DirectAdd(long key)
         {
             byte* pos;
@@ -348,19 +353,19 @@ namespace Voron.Trees.Fixed
             int high = len - 1;
 
             int position = 0;
-            while (low <= high)
-            {
-                position = (low + high) >> 1;
-                _lastMatch = val.CompareTo(KeyFor(p, position, size));
-                if (_lastMatch == 0)
-                    break;
+	        while (low <= high)
+	        {
+		        position = (low + high) >> 1;
+		        _lastMatch = val.CompareTo(KeyFor(p, position, size));
+		        if (_lastMatch == 0)
+			        break;
 
-                if (_lastMatch > 0)
-                    low = position + 1;
-                else
-                    high = position - 1;
-            }
-            return position;
+		        if (_lastMatch > 0)
+			        low = position + 1;
+		        else
+			        high = position - 1;
+	        }
+	        return position;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -593,12 +598,6 @@ namespace Voron.Trees.Fixed
             }
 
             return null;
-        }
-
-        public void WriteStructure(long key, IStructure structure)
-        {
-            var ptr = DirectAdd(key);
-            structure.Write(ptr);
         }
     }
 }

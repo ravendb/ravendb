@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Storage
@@ -17,9 +15,11 @@ namespace Raven.Database.Storage
 		bool IsIndexStaleByTask(int view, DateTime? cutOff);
 
 		bool IsReduceStale(int view);
+
 		bool IsMapStale(int view);
 
 		Tuple<DateTime, Etag> IndexLastUpdatedAt(int view);
+
 		Etag GetMostRecentDocumentEtag();
 
         [Obsolete("Use RavenFS instead.")]
