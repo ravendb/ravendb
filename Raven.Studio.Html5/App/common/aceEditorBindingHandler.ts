@@ -102,6 +102,8 @@ class aceEditorBindingHandler {
 
         if (!!completerThreesome) {
             completerThreesome.completer.call(completerThreesome.completerHostObject, editor, session, pos, prefix, callback);
+        } else {
+            callback(null, []);
         }
     }
 

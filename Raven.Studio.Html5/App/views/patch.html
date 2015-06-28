@@ -104,10 +104,10 @@
                         <a target="_blank" class="control-label-additional-link"  title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
                     </label>
                 </div>
-                <div>
+                <div class="col-md-11">
                     <div class="row">
-                        <div class="col-md-12" data-bind="with: patchDocument">
-                            <pre class="form-control" data-bind="aceEditor: { code: query }, event: { keyup: $root.runQueryWithDelay.bind($root) }" style="height:160px;"></pre>
+                        <div class="col-md-11" data-bind="with: patchDocument">
+                            <pre id="queryEditor" class="form-control editor" data-bind="aceEditor: { code: $root.queryText, typeName:'queryText', allowResize: true, minHeight: 160, maxHeight: 200, completer:$root.queryCompleter, lang:'ace/mode/lucene', completerHostObject:$root}, valueUpdate: 'afterkeydown'"></pre>
                         </div>
                     </div>
                 </div>
@@ -126,7 +126,7 @@
                 <div>
                     <div class="row">
                         <div class="col-md-12" data-bind="with: patchDocument">
-                            <pre class="form-control" data-bind="aceEditor: { code: script }" style="height:160px;"></pre>
+                            <pre class="form-control" data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' }" style="height: 160px;"></pre>
                         </div>
                     </div>
                 </div>
