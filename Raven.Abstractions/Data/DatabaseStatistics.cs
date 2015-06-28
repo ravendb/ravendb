@@ -32,6 +32,11 @@ namespace Raven.Abstractions.Data
 		public int CountOfIndexes { get; set; }
 
 		/// <summary>
+		/// Total number of indexes in database excluding disabled and abandoned
+		/// </summary>
+		public int CountOfIndexesExcludingDisabledAndAbandoned { get; set; }
+
+		/// <summary>
 		/// Total number of transformers in database.
 		/// </summary>
 		public int CountOfResultTransformers { get; set; }
@@ -61,6 +66,11 @@ namespace Raven.Abstractions.Data
 		/// List of stale index names in database..
 		/// </summary>
 		public string[] StaleIndexes { get; set; }
+
+		/// <summary>
+		/// Total number of stale indexes excluding disabled and abandoned
+		/// </summary>
+		public int CountOfStaleIndexesExcludingDisabledAndAbandoned { get; set; }
 
 		/// <summary>
 		/// The concurrency level that RavenDB is currently using

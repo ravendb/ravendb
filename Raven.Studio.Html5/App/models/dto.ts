@@ -80,6 +80,8 @@ interface databaseStatisticsDto {
     CountOfDocuments: number;
     CountOfIndexes: number;
     CurrentNumberOfItemsToIndexInSingleBatch: number;
+	CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
+	CountOfIndexesExcludingDisabledAndAbandoned: number;
     CurrentNumberOfItemsToReduceInSingleBatch: number;
     DatabaseId: string;
     DatabaseTransactionVersionSizeInMB: number;
