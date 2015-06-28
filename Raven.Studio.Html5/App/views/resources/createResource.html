@@ -2,7 +2,9 @@
     <form id="createDbForm" data-bind="submit: nextOrCreate">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
-            <h4 class="modal-title" data-bind="text: createResourceName"></h4>
+	        <h4 class="modal-title">Create 
+				<span data-bind="text: resourceType" style="font-weight: bold"></span>
+	        </h4>
         </div>
         <div class="modal-body" style="max-height: 600px; overflow: auto">
             <div class="form-group">
