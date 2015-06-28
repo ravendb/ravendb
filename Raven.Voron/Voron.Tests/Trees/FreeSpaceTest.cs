@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Voron.Impl.FreeSpace;
 using Xunit;
 
@@ -173,6 +174,59 @@ namespace Voron.Tests.Trees
 					tx.Commit();
 				}
 			} while (true);
+		}
+
+		[PrefixesFact]
+		public void CanGetListOfAllFreedPages()
+		{
+			const int maxPageNumber = 10000;
+			const int numberOfFreedPages = 5000;
+			var random = new Random();
+			var freedPages = new HashSet<long>();
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				tx.State.NextPageNumber = maxPageNumber + 1;
+
+				tx.Commit();
+			}
+
+			for (int i = 0; i < numberOfFreedPages; i++)
+			{
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					long pageToFree;
+
+					do
+					{
+						pageToFree = random.Next(0, maxPageNumber);
+
+						if (tx.State.Root.AllPages().Contains(pageToFree))
+							continue;
+
+						if (tx.State.FreeSpaceRoot.AllPages().Contains(pageToFree))
+							continue;
+
+						if (freedPages.Add(pageToFree))
+							break;
+
+					} while (true);
+
+					Env.FreeSpaceHandling.FreePage(tx, pageToFree);
+
+					tx.Commit();
+				}
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var retrievedFreePages = Env.AllPages(tx)["Free Pages"];
+
+				freedPages.ExceptWith(tx.State.FreeSpaceRoot.AllPages()); // need to take into account that some of free pages might be used for free space handling
+				var sorted = freedPages.OrderBy(x => x);
+
+				Assert.Equal(sorted, retrievedFreePages);
+			}
 		}
 	}
 }
