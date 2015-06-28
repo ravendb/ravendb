@@ -11,8 +11,8 @@ class deleteCounterStorageCommand extends commandBase {
 
         var url = "/counterstorage/admin/" + encodeURIComponent(this.counterStorageName) + "?hard-delete=" + this.isHardDelete;
         var deleteTask = this.del(url, null, null, { dataType: undefined });
+		deleteTask.done(() => this.reportSuccess("Deleted " + this.counterStorageName));
         deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to delete counter storage", response.responseText, response.statusText));
-        deleteTask.done(() => this.reportSuccess("Deleted " + this.counterStorageName));
         return deleteTask;
     }
 }

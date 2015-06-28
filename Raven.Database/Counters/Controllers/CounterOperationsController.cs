@@ -315,6 +315,39 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
+		[RavenRoute("cs/{counterStorageName}/delete-by-group")]
+		[HttpDelete]
+		public HttpResponseMessage DeleteByGroup(string groupName)
+		{
+			using (var writer = Storage.CreateWriter())
+			{
+				var changeNotifications = new List<ChangeNotification>();
+				groupName = groupName ?? string.Empty;
+				var countersDetails = writer.GetCountersDetails(groupName).ToList();
+				foreach (var c in countersDetails)
+				{
+					writer.DeleteCounterInternal(c.Group, c.Name);
+					changeNotifications.Add(new ChangeNotification
+					{
+						GroupName = c.Group,
+						CounterName = c.Name,
+						Action = CounterChangeAction.Delete,
+						Delta = 0,
+						Total = 0
+					});
+				}
+				writer.Commit();
+
+				changeNotifications.ForEach(change =>
+				{
+					Storage.Publisher.RaiseNotification(change);
+					Storage.MetricsCounters.Deletes.Mark();
+				});
+
+				return GetMessageWithObject(changeNotifications.Count);
+			}
+		}
+
 		[RavenRoute("cs/{counterStorageName}/counters")]
 		[HttpGet]
 		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
@@ -326,8 +359,8 @@ namespace Raven.Database.Counters.Controllers
 
 			using (var reader = Storage.CreateReader())
 			{
-				var gruop = group ?? string.Empty;
-				var counters = reader.GetCountersSummary(gruop, skip, take);
+				group = group ?? string.Empty;
+				var counters = reader.GetCountersSummary(group, skip, take);
 				return GetMessageWithObject(counters);
 			}
 		}

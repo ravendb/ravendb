@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
@@ -343,13 +344,6 @@ namespace Raven.Database.Counters
 				return groupToCounters.State.EntriesCount;
 			}
 
-			private class CounterDetails
-			{
-				public byte[] IdBuffer { get; set; }
-				public string Name { get; set; }
-				public string Group { get; set; }
-			}
-
 			public bool DoesCounterExist(string groupName, string counterName)
 			{
 				using (var it = groupToCounters.MultiRead(groupName))
@@ -362,7 +356,7 @@ namespace Raven.Database.Counters
 				return true;
 			}
 
-			private IEnumerable<CounterDetails> GetCountersDetails(string groupName, int skip, int take)
+			internal IEnumerable<CounterDetails> GetCountersDetails(string groupName, int skip, long take)
 			{
 				var nameBuffer = new byte[0];
 				var counterIdBytes = new byte[sizeof(long)];
@@ -374,7 +368,7 @@ namespace Raven.Database.Counters
 
 					do
 					{
-						var countersInGroup = groupToCounters.State.EntriesCount;
+						var countersInGroup = groupToCounters.MultiCount(it.CurrentKey);
 						if (skip - countersInGroup <= 0)
 							break;
 						skip -= (int)countersInGroup; //TODO: is there a better way?
@@ -388,6 +382,7 @@ namespace Raven.Database.Counters
 							if (iterator.Seek(Slice.BeforeAllKeys) == false)
 								yield break;
 
+							skip = 0;
 							do
 							{
 								var valueReader = iterator.CurrentKey.CreateReader();
@@ -720,6 +715,11 @@ namespace Raven.Database.Counters
 				return reader.GetCounterTotal(groupName, counterName);
 			}
 
+			internal IEnumerable<CounterDetails> GetCountersDetails(string groupName)
+			{
+				return reader.GetCountersDetails(groupName, 0, long.MaxValue);
+			}
+
 			//Local Counters
 			public CounterChangeAction Store(string groupName, string counterName, long delta)
 			{
@@ -929,6 +929,11 @@ namespace Raven.Database.Counters
 				if (counterExists == false)
 					throw new InvalidOperationException(string.Format("Counter doesn't exist. Group: {0}, Counter Name: {1}", groupName, counterName));
 
+				DeleteCounterInternal(groupName, counterName);
+			}
+
+			internal void DeleteCounterInternal(string groupName, string counterName)
+			{
 				ResetCounterInternal(groupName, counterName);
 				Store(groupName, counterName, parent.tombstoneId, ValueSign.Positive, counterKeySlice =>
 				{
@@ -1085,6 +1090,13 @@ namespace Raven.Database.Counters
 		{
 			if (buffer.Length < requiredBufferSize)
 				buffer = new byte[Utils.NearestPowerOfTwo(requiredBufferSize)];
+		}
+
+		internal class CounterDetails
+		{
+			public byte[] IdBuffer { get; set; }
+			public string Name { get; set; }
+			public string Group { get; set; }
 		}
 
 		public class ServerEtag
