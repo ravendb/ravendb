@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.TimeSeries;
 using Raven.Client.Extensions;
+using Raven.Tests.Common;
 using Xunit;
 
 namespace Raven.Tests.TimeSeries
@@ -82,9 +83,7 @@ namespace Raven.Tests.TimeSeries
 			{
 				await store.Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(TimeSeriesName));
 
-				//invoking create time series with the same name twice should fail
-				store.Invoking(c => c.Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(TimeSeriesName)).Wait())
-					 .ShouldThrow<InvalidOperationException>();
+				var exception = await AssertAsync.Throws<InvalidOperationException>(() => store.Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(TimeSeriesName)));
 			}
 		}
 	}

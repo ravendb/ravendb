@@ -20,7 +20,7 @@ namespace Raven.Tests.TimeSeries
 	{
 		protected readonly List<TimeSeriesStore> timeSeriesStores = new List<TimeSeriesStore>();
 
-		protected readonly string DefaultTimeSeriesName = "SeriesName#";
+		protected readonly string DefaultTimeSeriesName = "SeriesName-";
 
 		protected RavenBaseTimeSeriesTest()
 		{
