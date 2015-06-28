@@ -18,7 +18,7 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_3232 : RavenTest
 	{
-		private class Person
+		public class Person
 		{
 			public string Id { get; set; }
 
@@ -27,7 +27,7 @@ namespace Raven.Tests.Issues
 			public string LastName { get; set; }
 		}
 
-		private class TestIndex : AbstractIndexCreationTask<Person>
+		public class TestIndex : AbstractIndexCreationTask<Person>
 		{
 			public TestIndex()
 			{
