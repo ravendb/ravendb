@@ -9,7 +9,6 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
@@ -425,9 +424,9 @@ namespace Raven.Database.Counters
 				using (var it = counters.Iterate())
 				{
 					it.RequiredPrefix = counterIdSlice;
-					var seekReault = it.Seek(it.RequiredPrefix);
+					var seekResult = it.Seek(it.RequiredPrefix);
 					//should always be true
-					Debug.Assert(seekReault == true);
+					Debug.Assert(seekResult == true);
 
 					long total = 0;
 					do
@@ -499,10 +498,79 @@ namespace Raven.Database.Counters
 				return readResult.Reader.ReadLittleEndianInt64();
 			}
 
-			//namePrefix: foo/bar/
-			public Counter GetCounterValuesByPrefix(string namePrefix)
+			private Counter GetCounter(Slice counterIdSlice)
 			{
+				var counter = new Counter {LocalServerId = parent.ServerId};
 				using (var it = counters.Iterate())
+				{
+					it.RequiredPrefix = counterIdSlice;
+					var seekResult = it.Seek(it.RequiredPrefix);
+					//should always be true
+					Debug.Assert(seekResult == true);
+
+					var serverIdBuffer = new byte[parent.sizeOfGuid];
+					long lastEtag = 0;
+					do
+					{
+						var reader = it.CurrentKey.CreateReader();
+						reader.Skip(sizeof(long));
+						reader.Read(serverIdBuffer, 0, parent.sizeOfGuid);
+						var serverId = new Guid(serverIdBuffer);
+						//this means that this is a tombstone of a counter
+						if (serverId.Equals(parent.tombstoneId))
+							continue;
+
+						var serverValue = new ServerValue {ServerId = serverId};
+						var etagResult = countersToEtag.Read(it.CurrentKey);
+						Debug.Assert(etagResult != null);
+						serverValue.Etag = etagResult.Reader.ReadBigEndianInt64();
+						if (lastEtag < serverValue.Etag)
+						{
+							counter.LastUpdateByServer = serverId;
+							lastEtag = serverValue.Etag;
+						}
+
+						var lastByte = it.CurrentKey[it.CurrentKey.Size - 1];
+						var sign = Convert.ToChar(lastByte);
+						Debug.Assert(sign == ValueSign.Positive || sign == ValueSign.Negative);
+						var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+						if (sign == ValueSign.Negative)
+							value = -value;
+						serverValue.Value += value;
+						counter.ServerValues.Add(serverValue);
+					} while (it.MoveNext());
+				}
+
+				return counter;
+			} 
+
+			public Counter GetCounterValuesByPrefix(string groupName, string counterName)
+			{
+				using (var it = groupToCounters.MultiRead(groupName))
+				{
+					it.RequiredPrefix = counterName;
+					if (it.Seek(it.RequiredPrefix) == false || it.CurrentKey.Size != it.RequiredPrefix.Size + sizeof(long))
+						throw new Exception("Counter doesn't exist!");
+
+					var valueReader = it.CurrentKey.CreateReader();
+					valueReader.Skip(it.RequiredPrefix.Size);
+					int used;
+					var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
+					var counterIdSlice = new Slice(counterIdBuffer, sizeof(long));
+
+					
+					return GetCounter(counterIdSlice);
+					
+					
+					
+					//return CalculateCounterTotal(slice, new byte[parent.sizeOfGuid]);
+				}
+				
+
+
+
+
+				/*using (var it = counters.Iterate())
 				{
 					it.RequiredPrefix = namePrefix;
 					if (it.Seek(namePrefix) == false)
@@ -511,13 +579,36 @@ namespace Raven.Database.Counters
 					var result = new Counter();
 					do
 					{
-						var counterValue = new CounterValue(it.CurrentKey.ToString(), it.CreateReaderForCurrent().ReadLittleEndianInt64());
+						var counterValue = new ServerValue(it.CurrentKey.ToString(), it.CreateReaderForCurrent().ReadLittleEndianInt64());
 						if (counterValue.ServerId().Equals(parent.tombstoneId) && counterValue.Value == DateTime.MaxValue.Ticks)
 							continue;
 
-						result.CounterValues.Add(counterValue);
+						result.ServerValues.Add(counterValue);
 					} while (it.MoveNext());
 					return result;
+				}*/
+			}
+
+			public IEnumerable<ServerEtag> GetServerEtags()
+			{
+				using (var it = serversLastEtag.Iterate())
+				{
+					if (it.Seek(Slice.BeforeAllKeys) == false)
+						yield break;
+
+					do
+					{
+						//should never ever happen :)
+						/*Debug.Assert(buffer.Length >= it.GetCurrentDataSize());
+
+						it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);*/
+						yield return new ServerEtag
+						{
+							ServerId = Guid.Parse(it.CurrentKey.ToString()),
+							Etag = it.CreateReaderForCurrent().ReadBigEndianInt64()
+						};
+
+					} while (it.MoveNext());
 				}
 			}
 
@@ -546,13 +637,15 @@ namespace Raven.Database.Counters
 						valueReader.Read(signBuffer, 0, sizeof(char));
 						var sign = EndianBitConverter.Big.ToChar(signBuffer, 0);
 						Debug.Assert(sign == ValueSign.Positive || sign == ValueSign.Negative);
+						//single counter names: {counter-id}{server-id}{sign}
 						var singleCounterName = valueReader.AsSlice();
 						var value = GetSingleCounterValue(singleCounterName);
 						
 						//read counter name and group
 						var counterNameAndGroup = GetCounterNameAndGroupByServerId(counterIdSlice);
 						var etagResult = countersToEtag.Read(singleCounterName);
-						var counterEtag = etagResult == null ? 0 : etagResult.Reader.ReadBigEndianInt64();
+						Debug.Assert(etagResult != null);
+						var counterEtag = etagResult.Reader.ReadBigEndianInt64();
 
 						yield return new ReplicationCounter
 						{
@@ -594,29 +687,6 @@ namespace Raven.Database.Counters
 					counterNameAndGroup.GroupName = Encoding.UTF8.GetString(groupNameBuffer, 0, valueReader.Length);
 				}
 				return counterNameAndGroup;
-			}
-
-			public IEnumerable<ServerEtag> GetServerEtags()
-			{
-				using (var it = serversLastEtag.Iterate())
-				{
-					if (it.Seek(Slice.BeforeAllKeys) == false)
-						yield break;
-
-					do
-					{
-						//should never ever happen :)
-						/*Debug.Assert(buffer.Length >= it.GetCurrentDataSize());
-
-						it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);*/
-						yield return new ServerEtag
-						{
-							ServerId = Guid.Parse(it.CurrentKey.ToString()),
-							Etag = it.CreateReaderForCurrent().ReadBigEndianInt64()
-						};
-
-					} while (it.MoveNext());
-				}
 			}
 
 			public long GetLastEtagFor(Guid serverId)

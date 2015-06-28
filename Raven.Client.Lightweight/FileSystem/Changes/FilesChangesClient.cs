@@ -226,15 +226,5 @@ namespace Raven.Client.FileSystem.Changes
                     counter.Value.Send(conflictNotification);
             }
         }
-
-        private Task AfterConnection(Func<Task> action)
-        {
-            return Task.ContinueWith(task =>
-            {
-                task.AssertNotFailed();
-                return action();
-            })
-            .Unwrap();
-        }
     }
 }
