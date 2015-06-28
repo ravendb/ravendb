@@ -18,6 +18,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
+using Raven.Database.Queries;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Tenancy;
@@ -594,6 +595,8 @@ namespace Raven.Database.Server.WebApi
 					// since shutting down a database can take a while
 					landlord.Cleanup(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.RunInMemory);
 				}
+
+				FacetedQueryRunner.IntArraysPool.Instance.RunIdleOperations();
 			}
 			catch (Exception e)
 			{

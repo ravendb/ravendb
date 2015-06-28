@@ -1,17 +1,23 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
+using Microsoft.Isam.Esent.Interop;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Abstractions;
+using Raven.Database.Server.Connections;
+using Sparrow;
 using Voron.Util;
 
 namespace Raven.Database.Queries
@@ -304,7 +310,7 @@ namespace Raven.Database.Queries
 
 	                            var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
 								var intersectedDocuments = GetIntersectedDocuments(kvp.Value, readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
-								var intersectCount = intersectedDocuments.Count;
+	                            var intersectCount = intersectedDocuments.Count;
                                 if (intersectCount == 0)
                                     continue;
 
@@ -392,8 +398,16 @@ namespace Raven.Database.Queries
 		        foreach (var readerFacetInfo in gatherAllCollector.Results)
 		        {
 		            var matches = readerFacetInfo.Matches;
-		            matches.Sort();
-		            readerFacetInfo.Results = matches.ToArray();
+					Array.Sort(matches);
+					var allocatedArray = IntArraysPool.Instance.AllocateArray(matches.Count(), ReaderFacetInfo.ClearArray);
+
+			        for (int i = 0; i < allocatedArray.Length; i++)
+			        {
+				        allocatedArray[i] = matches[i];
+			        }
+
+					readerFacetInfo.Results = allocatedArray;
+					IntArraysPool.Instance.FreeArray(readerFacetInfo.Matches);
 		            readerFacetInfo.Matches = null;
 		        }
 
@@ -403,14 +417,27 @@ namespace Raven.Database.Queries
 			private class IntersectDocs
 			{
 				public int Count;
-				public List<int> Documents;
+				public int[] Documents;
 
 				[MethodImpl(MethodImplOptions.AggressiveInlining)]
 				public void AddIntersection(int docId)
 				{
-					Count++;
 					if (Documents != null)
-						Documents.Add(docId);
+					{
+						if (Count == Documents.Length)
+						{
+							var newDocumentsArray = IntArraysPool.Instance.AllocateArray(Count*2, ReaderFacetInfo.ClearArray);
+							for (var i = 0; i < Count; i++)
+							{
+								newDocumentsArray[i] = Documents[i];
+							}
+							IntArraysPool.Instance.FreeArray(Documents);
+							Documents = newDocumentsArray;
+
+						}
+						Documents[Count] = docId;
+					}
+					Count++;
 				}
 			}
 
@@ -439,25 +466,34 @@ namespace Raven.Database.Queries
 
                 var isDistinct = IndexQuery.IsDistinct;
                 var result = new IntersectDocs();
-				if (needToApplyAggregation)
-					result.Documents = new List<int>();
+			    if (needToApplyAggregation)
+			    {
 
-                if (o1 < o2)
+				    result.Documents = IntArraysPool.Instance.AllocateArray(32, ReaderFacetInfo.ClearArray);
+			    }
+
+			    if (o1 < o2)
                 {
                     int mi = 0, ni = 0;
                     while (mi < mSize && ni < nSize)
                     {
-                        if (n[ni] > m[mi])
+	                    var nVal = n[ni];
+	                    var mVal = m[mi];
+
+	                    if (mVal == DocIdSetIterator.NO_MORE_DOCS || nVal == DocIdSetIterator.NO_MORE_DOCS)
+		                    break;
+
+	                    if (nVal > mVal)
                         {
                             mi++;
                         }
-                        else if (n[ni] < m[mi])
+                        else if (nVal < mVal)
                         {
                             ni++;
                         }
                         else
                         {
-	                        int docId = n[ni];
+	                        int docId = nVal;
 	                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
 	                        {
 		                        result.AddIntersection(docId);
@@ -472,9 +508,12 @@ namespace Raven.Database.Queries
                 {
                     for (int i = 0; i < mSize; i++)
                     {
-                        if (Array.BinarySearch(n, m[i]) >= 0)
+						int docId = m[i];
+	                    if (docId == DocIdSetIterator.NO_MORE_DOCS)
+		                    break;
+						if (Array.BinarySearch(n, docId) >= 0)
                         {
-	                        int docId = m[i];
+	                        
 	                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
 	                        {
 		                        result.AddIntersection(docId);
@@ -597,7 +636,7 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			private void ApplyAggregation(Facet facet, FacetValue value, List<int> docsInQuery, IndexReader indexReader, int docBase)
+			private void ApplyAggregation(Facet facet, FacetValue value, int[] docsInQuery, IndexReader indexReader, int docBase)
 			{
 			    var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
 			    switch (sortOptionsForFacet)
@@ -613,6 +652,8 @@ namespace Raven.Database.Queries
                         int[] ints = FieldCache_Fields.DEFAULT.GetInts(indexReader, facet.AggregationField);
 				        foreach (var doc in docsInQuery)
 				        {
+							if (doc == DocIdSetIterator.NO_MORE_DOCS)
+								continue;
                             var currentVal = ints[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
@@ -639,6 +680,8 @@ namespace Raven.Database.Queries
 						var floats = FieldCache_Fields.DEFAULT.GetFloats(indexReader, facet.AggregationField);
 				        foreach (var doc in docsInQuery)
 				        {
+							if (doc == DocIdSetIterator.NO_MORE_DOCS)
+								continue;
                             var currentVal = floats[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
@@ -665,6 +708,8 @@ namespace Raven.Database.Queries
 						var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
 				        foreach (var doc in docsInQuery)
 				        {
+							if (doc == DocIdSetIterator.NO_MORE_DOCS)
+								continue;
                             var currentVal = longs[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
@@ -691,6 +736,8 @@ namespace Raven.Database.Queries
 						var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, facet.AggregationField);
 				        foreach (var doc in docsInQuery)
 				        {
+							if (doc == DocIdSetIterator.NO_MORE_DOCS)
+								continue;
                             var currentVal = doubles[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
@@ -811,21 +858,97 @@ namespace Raven.Database.Queries
 			}
 		}
 
+		public class IntArraysPool
+		{
+			public static IntArraysPool Instance = new IntArraysPool();
+
+			private readonly ConcurrentDictionary<int, ObjectPool<int[]>> arraysPoolBySize = new ConcurrentDictionary<int, ObjectPool<int[]>>();
+			private readonly TimeSensitiveStore<ObjectPool<int[]>> timeSensitiveStore = new TimeSensitiveStore<ObjectPool<int[]>>(TimeSpan.FromDays(1));
+			
+			private IntArraysPool()
+			{
+				
+			}
+			
+			public int[] AllocateArray(int arraySize, Action<int[]> arrayClearAction = null)
+			{
+				var roundedSize = GetRoundedSize(arraySize);
+				var matchingQueue = arraysPoolBySize.GetOrAdd(roundedSize, x => new ObjectPool<int[]>(()=> new int[roundedSize]));
+				int[] allocatedArray;
+
+				allocatedArray = matchingQueue.Allocate();
+				
+				timeSensitiveStore.Seen(matchingQueue);
+
+				if (arrayClearAction == null)
+					Array.Clear(allocatedArray , 0, allocatedArray .Length);
+				else
+					arrayClearAction(allocatedArray);
+
+				return allocatedArray;
+			}
+
+			public void FreeArray(int[] returnedArray)
+			{
+				if (returnedArray.Length != GetRoundedSize(returnedArray.Length))
+				{
+					throw new ArgumentException("Array size does not match current array size constraints");
+				}
+				
+
+				var matchingQueue = arraysPoolBySize.GetOrAdd(returnedArray.Length, x => new ObjectPool<int[]>(() => new int[returnedArray.Length]));
+				matchingQueue.Free(returnedArray);
+			}
+
+			private int GetRoundedSize(int size)
+			{
+				if (size%32 == 0)
+				{
+					return size;
+				}
+				
+				return (size/32 + 1)*32;
+			}
+
+			public void RunIdleOperations()
+			{
+				timeSensitiveStore.ForAllExpired(x =>
+				{
+					var matchingQueue = arraysPoolBySize.FirstOrDefault(y => y.Value == x).Key;
+					if (matchingQueue != 0)
+					{
+						ObjectPool<int[]> removedQueue;
+						arraysPoolBySize.TryRemove(matchingQueue, out removedQueue);
+					}
+				});
+			}
+		}
+
 	    public class ReaderFacetInfo
 	    {
 	        public IndexReader Reader;
 	        public int DocBase;
             // Here we store the _global document id_, if you need the 
             // reader document id, you must decrement with the DocBase
-            public List<int> Matches = new List<int>();
+            public int[] Matches;
 	        public int[] Results;
+
+		    public static void ClearArray(int[] array)
+		    {
+			    for (var i = 0; i < array.Length; i++)
+			    {
+				    array[i] = DocIdSetIterator.NO_MORE_DOCS;
+			    }
+		    }
 	    }
 
         public class GatherAllCollectorByReader : Collector
         {
 
             private ReaderFacetInfo _current;
+	        private int currentMatchesCounter = 0;
             public List<ReaderFacetInfo> Results = new List<ReaderFacetInfo>(); 
+			private object locker = new object();
 
             public override void SetScorer(Scorer scorer)
             {
@@ -833,18 +956,39 @@ namespace Raven.Database.Queries
 
             public override void Collect(int doc)
             {
-                _current.Matches.Add(doc + _current.DocBase);
+	            lock (locker)
+	            {
+		            if (currentMatchesCounter == _current.Matches.Length)
+		            {
+			            var newMatcheArray = IntArraysPool.Instance.AllocateArray(currentMatchesCounter*2, ReaderFacetInfo.ClearArray);
+			            for (var i = 0; i < currentMatchesCounter; i++)
+			            {
+				            newMatcheArray[i] = _current.Matches[i];
+			            }
+						IntArraysPool.Instance.FreeArray(_current.Matches);
+			            _current.Matches = newMatcheArray;
+		            }
+
+			        _current.Matches[currentMatchesCounter] = doc + _current.DocBase;
+		            Interlocked.Increment(ref currentMatchesCounter);
+	            }
             }
 
             public override void SetNextReader(IndexReader reader, int docBase)
             {
-                _current = new ReaderFacetInfo
+	            var newMatchesArray = IntArraysPool.Instance.AllocateArray(32, ReaderFacetInfo.ClearArray);
+
+	            _current = new ReaderFacetInfo
                 {
                     DocBase = docBase,
-                    Reader = reader
+                    Reader = reader,
+					Matches = newMatchesArray
                 };
                 Results.Add(_current);
+	            currentMatchesCounter = 0;
             }
+
+			
 
             public override bool AcceptsDocsOutOfOrder
             {
