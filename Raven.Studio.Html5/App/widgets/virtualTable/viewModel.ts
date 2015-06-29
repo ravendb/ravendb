@@ -77,7 +77,7 @@ class ctor {
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
             isCopyAllowed: true,
-            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete", 'EditItem'],
+            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete", "EditItem"],
             selectionEnabled: true,
             customColumns: ko.observable(customColumns.empty()),
             customFunctions: ko.observable(customFunctions.empty()),
@@ -110,7 +110,7 @@ class ctor {
             });
             this.items = list;
             this.settings.selectedIndices.removeAll();
-            this.columns.remove(c => (c.binding !== 'Id' && c.binding !== '__IsChecked'));
+            this.columns.remove(c => (c.binding !== "Id" && c.binding !== "__IsChecked"));
             this.gridViewport.scrollTop(0);
             this.onGridScrolled();
 
@@ -178,7 +178,7 @@ class ctor {
             r.isInUse(false);
         }
 
-        app.trigger(this.settings.gridSelector + 'RowsCreated', true);
+        app.trigger(this.settings.gridSelector + "RowsCreated", true);
     }
 
     onGridScrolled() {
@@ -218,13 +218,13 @@ class ctor {
     setupContextMenu() {
         var untypedGrid: any = this.grid;
         untypedGrid.contextmenu({
-            target: '#gridContextMenu',
+            target: "#gridContextMenu",
             before: (e: MouseEvent) => {
                 var target: any = e.target;
                 var rowTag = (target.className.indexOf("ko-grid-row") > -1) ? $(target) : $(e.target).parents(".ko-grid-row");
                 var rightClickedElement: row = rowTag.length ? ko.dataFor(rowTag[0]) : null;
 
-                if (this.settings.showCheckboxes == true && !this.isIndexMapReduce()) {
+                if (this.settings.showCheckboxes && !this.isIndexMapReduce()) {
                     // Select any right-clicked row.
 
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
@@ -241,7 +241,7 @@ class ctor {
     }
 
     refreshIdAndCheckboxColumn() {
-        var containsId = this.columns().first(x=> x.binding == "Id");
+        var containsId = this.columns().first(x=> x.binding === "Id");
 
         if (!containsId && !this.isIndexMapReduce()) {
             if (this.settings.showCheckboxes !== false) {
@@ -310,7 +310,14 @@ class ctor {
             rowAtIndex.fillCells(rowData);
             var entityName = this.getEntityName(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromEntityNameMemoized(rowData, entityName));
-            rowAtIndex.editUrl(appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], appUrl.getResource(), rowIndex, entityName));
+
+	        var editUrl: string;
+			if (rowData instanceof counterSummary) {
+				editUrl = appUrl.forEditCounterStorage(appUrl.getResource(), rowData["Name"], rowData["Group"]);
+			} else {
+				editUrl = appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], appUrl.getResource(), rowIndex, entityName);
+			}
+            rowAtIndex.editUrl(editUrl);
         }
     }
 
@@ -319,7 +326,14 @@ class ctor {
         if (selectedItem) {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
-            router.navigate(appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName));
+
+			var editUrl: string;
+			if (selectedItem instanceof counterSummary) {
+				editUrl = appUrl.forEditCounterStorage(appUrl.getResource(), selectedItem["Name"], selectedItem["Group"]);
+			} else {
+				editUrl = appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName);
+			}
+            router.navigate(editUrl);
         }
     }
 
@@ -646,6 +660,18 @@ class ctor {
             ko.postbox.publish("EditItem", this.settings.selectedIndices()[0]);
         }
     }
+
+	changeCounterValue() {
+		if (this.settings.selectedIndices().length > 0) {
+            ko.postbox.publish("ChangeCounterValue", this.settings.selectedIndices()[0]);
+        }
+	}
+
+	resetCounter() {
+		if (this.settings.selectedIndices().length > 0) {
+            ko.postbox.publish("ResetCounter", this.settings.selectedIndices()[0]);
+        }
+	}
 
     copySelectedDocs() {
         this.showCopyDocDialog(false);

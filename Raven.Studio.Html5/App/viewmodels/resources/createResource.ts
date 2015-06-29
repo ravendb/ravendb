@@ -14,7 +14,7 @@ class createResource extends dialogViewModelBase {
     fileSystemType = fileSystem.type;
     counterStorageType = counterStorage.type;
     timeSeriesType = timeSeries.type;
-    createResourceName = ko.observable<string>("Create Database");
+    resourceType = ko.observable<string>("Database");
     createDatabasePart: createDatabase;
     createFileSystemPart: createFileSystem;
     createCounterStoragePart: createCounterStorage;
@@ -35,28 +35,28 @@ class createResource extends dialogViewModelBase {
         this.createCounterStoragePart = new createCounterStorage(this);
         this.createTimeSeriesPart = new createTimeSeries(this);
         this.checkedResource.subscribe((resourceType: string) => {
-            var createText = "Create ";
+            var resourceTypeText = "";
             switch (resourceType) {
                 case this.databaseType:
                     this.enableDbTab();
-                    createText += "Database";
+                    resourceTypeText = "Database";
                     break;
                 case this.fileSystemType:
                     this.enableFsTab();
-                    createText += "File System";
+                    resourceTypeText = "File System";
                     break;
                 case this.counterStorageType:
                     this.enableCsTab();
-                    createText += "Counter Storage";
+                    resourceTypeText = "Counter Storage";
                     break;
                 case this.timeSeriesType:
                     this.enableTsTab();
-                    createText += "Time Seriese";
+                    resourceTypeText = "Time Series";
                     break;
                 default:
                     break;
             }
-            this.createResourceName(createText);
+            this.resourceType(resourceTypeText);
         });
     }
 

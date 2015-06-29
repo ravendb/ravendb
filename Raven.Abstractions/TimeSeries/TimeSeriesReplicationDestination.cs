@@ -31,7 +31,7 @@ namespace Raven.Abstractions.TimeSeries
 				Debug.Assert(String.IsNullOrWhiteSpace(TimeSeriesName) == false);
 				Debug.Assert(String.IsNullOrWhiteSpace(ServerUrl) == false);
 
-		        return string.Format("{0}/ts/{1}", ServerUrl, TimeSeriesName);
+		        return string.Format("{0}ts/{1}", ServerUrl, TimeSeriesName);
 	        }
         }
 

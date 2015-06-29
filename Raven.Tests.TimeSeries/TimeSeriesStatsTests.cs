@@ -1,5 +1,4 @@
-﻿/*
-using FluentAssertions;
+﻿using System;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -10,19 +9,19 @@ namespace Raven.Tests.TimeSeries
 	    [Fact]
 	    public async Task Fetching_time_series_stats_should_work()
 	    {
-		    using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+		    using (var store = NewRemoteTimeSeriesStore())
 		    {
-				await store.IncrementAsync("group1", "f");
-				await store.IncrementAsync("group2", "f");
-				await store.DecrementAsync("group2", "g");
-				await store.IncrementAsync("group3", "f");
+				await store.AppendAsync("Time", DateTime.Now, 3d);
+				await store.AppendAsync("Time", DateTime.Now.AddHours(1), 4d);
+				await store.AppendAsync("Is", DateTime.Now, 5d);
+				await store.AppendAsync("Money", DateTime.Now, 6d);
+				await store.AppendAsync("Money", DateTime.Now, 7d);
+				await store.AppendAsync("Money", DateTime.Now, 8d);
 				
 				var stats = await store.GetTimeSeriesStatsAsync();
-
-				stats.GroupsCount.Should().Be(3);
-				stats.TimeSeriesCount.Should().Be(4);
+			    Assert.Equal(3, stats.KeysCount);
+			    Assert.Equal(7, stats.ValuesCount);
 			}
 	    }
 	}
 }
-*/

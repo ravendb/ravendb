@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
 using Raven.Database.Extensions;
 using Raven.Tests.Common.Util;
@@ -90,9 +91,10 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 			using (var server = CreateServer(Ports[0], requestedStorage: requestedStorage, runInMemory: false, dataDirectory: dataPath))
 			{
 				var store = server.FilesStore;
-				var fs1Doc = new FileSystemDocument()
+
+				var fs1Doc = new FileSystemDocument
 				{
-					Id = "FS1",
+					Id = Constants.FileSystem.Prefix + "FS1",
 					Settings =
 					{
 						{Constants.FileSystem.DataDirectory, Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
@@ -108,7 +110,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 						},
 					},
 				};
-				await store.AsyncFilesCommands.Admin.CreateFileSystemAsync(fs1Doc, "FS1");
+				await store.AsyncFilesCommands.Admin.CreateFileSystemAsync(fs1Doc);
 
 				using (var session = store.OpenAsyncSession("FS1"))
 				{

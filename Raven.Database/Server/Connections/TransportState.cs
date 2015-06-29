@@ -12,6 +12,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Server.Controllers;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.TimeSeries.Notifications;
 
 namespace Raven.Database.Server.Connections
 {
@@ -131,6 +132,7 @@ namespace Raven.Database.Server.Connections
 		}
 
 		public event Action<object, ChangeNotification> OnChangeNotification = delegate { };
+		public event Action<object, TimeSeriesKeyNotification> OnTimeSeriesChangeNotification = delegate { };
 
 		public void Send(ChangeNotification localChangeNotification)
 		{
@@ -141,7 +143,17 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
+		public void Send(TimeSeriesKeyNotification localKeyNotification)
+		{
+			OnTimeSeriesChangeNotification(this, localKeyNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.TimeSeries.Send(localKeyNotification);
+			}
+		}
+
 		public event Action<object, BulkOperationNotification> OnCounterBulkOperationNotification = delegate { };
+		public event Action<object, TimeSeriesBulkOperationNotification> OnTimeSeriesBulkOperationNotification = delegate { };
 
 		public void Send(BulkOperationNotification bulkOperationNotification)
 		{
@@ -149,6 +161,15 @@ namespace Raven.Database.Server.Connections
 			foreach (var connectionState in connections)
 			{
 				connectionState.Value.CounterStorage.Send(bulkOperationNotification);
+			}
+		}
+		
+		public void Send(TimeSeriesBulkOperationNotification bulkOperationNotification)
+		{
+			OnTimeSeriesBulkOperationNotification(this, bulkOperationNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.TimeSeries.Send(bulkOperationNotification);
 			}
 		}
 

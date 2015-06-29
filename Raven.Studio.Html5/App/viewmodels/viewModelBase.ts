@@ -266,7 +266,7 @@ class viewModelBase {
         viewModelBase.modelPollingHandle = null;
     }
 
-    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
+    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
         var viewTask = $.Deferred();
         var confirmTask = app.showDialog(new confirmationDialog(confirmationMessage, title, options));
 

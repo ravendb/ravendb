@@ -43,28 +43,20 @@ namespace Raven.Client.TimeSeries
 					defaultBatchOperation.Value.Dispose();
 			}
 
-			public void ScheduleChange(string groupName, string timeSeriesName, long delta)
+			public void ScheduleAppend(string key, DateTime time, double value)
 			{
 				if (string.IsNullOrWhiteSpace(parent.Name))
 					throw new InvalidOperationException("Default time series name cannot be empty!");
 
-				defaultBatchOperation.Value.ScheduleChange(groupName, timeSeriesName, delta);
+				defaultBatchOperation.Value.ScheduleAppend(key, time, value);
 			}
 
-			public void ScheduleIncrement(string groupName, string timeSeriesName)
+			public void ScheduleAppend(string key, DateTime time, params double[] values)
 			{
 				if (string.IsNullOrWhiteSpace(parent.Name))
 					throw new InvalidOperationException("Default time series name cannot be empty!");
 
-				defaultBatchOperation.Value.ScheduleIncrement(groupName, timeSeriesName);
-			}
-
-			public void ScheduleDecrement(string groupName, string timeSeriesName)
-			{
-				if (string.IsNullOrWhiteSpace(parent.Name))
-					throw new InvalidOperationException("Default time series name cannot be empty!");
-
-				defaultBatchOperation.Value.ScheduleDecrement(groupName, timeSeriesName);
+				defaultBatchOperation.Value.ScheduleAppend(key, time, values);
 			}
 
 			public async Task FlushAsync()

@@ -1,4 +1,4 @@
-﻿/*using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -30,41 +30,28 @@ namespace Raven.Database.TimeSeries.Controllers
 {
 	public class TimeSeriesOperationsController : RavenTimeSeriesApiController
 	{
-		[RavenRoute("ts/{timeSeriesName}/change/{groupName}/{timeSeriesName}")]
+		[RavenRoute("ts/{timeSeriesName}/append/{key}")]
 		[HttpPost]
-		public HttpResponseMessage Change(string groupName, string timeSeriesName, long delta)
+		public HttpResponseMessage Append(string key, long time, double[] values)
 		{
-			AssertName(groupName);
-			AssertName(timeSeriesName);
+			if (string.IsNullOrEmpty(key))
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			using (var writer = Storage.CreateWriter())
 			{
-				var timeSeriesChangeAction = writer.Store(groupName, timeSeriesName, delta);
-				writer.Commit(delta != 0);
+				writer.Append(key, new DateTime(time), values);
+				writer.Commit();
 
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
-				using (var reader = Storage.CreateReader())
+				Storage.Publisher.RaiseNotification(new TimeSeriesKeyNotification
 				{
-					Storage.Publisher.RaiseNotification(new ChangeNotification
-					{
-						GroupName = groupName,
-						TimeSeriesName = timeSeriesName,
-						Action = timeSeriesChangeAction,
-						Total = reader.GetTimeSeriesTotalValue(groupName, timeSeriesName)
-					});
-				}
+					Key = key,
+					Action = TimeSeriesChangeAction.Append,
+					At = time,
+					Values = values,
+				});
 
 				return new HttpResponseMessage(HttpStatusCode.OK);
-			}
-		}
-
-		[RavenRoute("ts/{timeSeriesName}/groups")]
-		[HttpGet]
-		public HttpResponseMessage GetTimeSeriesGroups()
-		{
-			using (var reader = Storage.CreateReader())
-			{
-				return Request.CreateResponse(HttpStatusCode.OK, reader.GetTimeSeriesGroups().ToList());
 			}
 		}
 
@@ -115,7 +102,7 @@ namespace Raven.Database.TimeSeries.Controllers
 		            {
 						using (var writer = Storage.CreateWriter())
 						{
-							Storage.Publisher.RaiseNotification(new BulkOperationNotification
+							Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
 							{
 								Type = BatchType.Started,
 								OperationId = operationId
@@ -123,13 +110,13 @@ namespace Raven.Database.TimeSeries.Controllers
 
 							foreach (var change in changeBatch)
 							{
-								AssertName(change.Group);
-								AssertName(change.Name);
-								writer.Store(change.Group, change.Name, change.Delta);
+								if (string.IsNullOrWhiteSpace(change.Key))
+									throw new InvalidOperationException("Key cannot be empty");
+								writer.Append(change.Key, change.At, change.Values);
 							}
 							writer.Commit();
 
-							Storage.Publisher.RaiseNotification(new BulkOperationNotification
+							Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
 							{
 								Type = BatchType.Ended,
 								OperationId = operationId
@@ -140,11 +127,11 @@ namespace Raven.Database.TimeSeries.Controllers
 	            catch (OperationCanceledException)
 	            {
 					// happens on timeout
-		            Storage.Publisher.RaiseNotification(new BulkOperationNotification
+		            Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
 		            {
 			            Type = BatchType.Error,
 			            OperationId = operationId,
-						Message = "Operation cancelled, likely because of a batch timeout"
+			            Message = "Operation cancelled, likely because of a batch timeout"
 		            });
 		            
 		            status.IsTimedOut = true;
@@ -154,7 +141,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	            catch (Exception e)
 	            {
 		            var errorMessage = e.SimplifyException().Message;
-					Storage.Publisher.RaiseNotification(new BulkOperationNotification
+					Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
 					{
 						Type = BatchType.Error,
 						OperationId = operationId,
@@ -191,7 +178,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			});
 		}
 
-		private IEnumerable<IEnumerable<TimeSeriesChange>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, Action<int> changeTimeSeriesFunc)
+		private IEnumerable<IEnumerable<TimeSeriesAppend>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, Action<int> changeTimeSeriesFunc)
 		{
 			var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 			try
@@ -225,7 +212,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
 		}
 
-		private IEnumerable<TimeSeriesChange> YieldBatchItems(Stream partialStream, JsonSerializer serializer, CancellationTimeout timeout, Action<int> changeTimeSeriesFunc)
+		private IEnumerable<TimeSeriesAppend> YieldBatchItems(Stream partialStream, JsonSerializer serializer, CancellationTimeout timeout, Action<int> changeTimeSeriesFunc)
 		{
 			using (var stream = new GZipStream(partialStream, CompressionMode.Decompress, leaveOpen: true))
 			{
@@ -240,7 +227,7 @@ namespace Raven.Database.TimeSeries.Controllers
 						DateTimeKindHandling = DateTimeKind.Unspecified
 					});
 
-					yield return doc.ToObject<TimeSeriesChange>(serializer);
+					yield return doc.ToObject<TimeSeriesAppend>(serializer);
 				}
 
 				changeTimeSeriesFunc(count);
@@ -259,66 +246,58 @@ namespace Raven.Database.TimeSeries.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/reset")]
-		[HttpPost]
-		public HttpResponseMessage Reset(string groupName, string timeSeriesName)
-		{
-			AssertName(groupName);
-			AssertName(timeSeriesName);
-
-			using (var writer = Storage.CreateWriter())
-			{
-				var timeSeriesChangeAction = writer.Reset(groupName, timeSeriesName);
-
-				if (timeSeriesChangeAction != TimeSeriesChangeAction.None)
-				{
-					writer.Commit();
-
-					Storage.MetricsTimeSeries.Resets.Mark();
-					Storage.Publisher.RaiseNotification(new ChangeNotification
-					{
-						GroupName = groupName,
-						TimeSeriesName = timeSeriesName,
-						Action = timeSeriesChangeAction,
-						Total = 0
-					});
-				}
-
-				return new HttpResponseMessage(HttpStatusCode.OK);
-			}
-		}
-
 		[RavenRoute("ts/{timeSeriesName}/delete")]
 		[HttpDelete]
-		public HttpResponseMessage Delete(string groupName, string timeSeriesName)
+		public HttpResponseMessage Delete(string key)
 		{
-			AssertName(groupName);
-			AssertName(timeSeriesName);
-
+			if (string.IsNullOrEmpty(key))
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+			
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.Delete(groupName, timeSeriesName);
+				writer.Delete(key);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();
-				Storage.Publisher.RaiseNotification(new ChangeNotification
+				Storage.Publisher.RaiseNotification(new TimeSeriesKeyNotification
 				{
-					GroupName = groupName,
-					TimeSeriesName = timeSeriesName,
+					Key = key,
 					Action = TimeSeriesChangeAction.Delete,
-					Total = 0
 				});
 
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/timeSeries")]
-		[HttpGet]
-		public HttpResponseMessage GetTimeSeries(int skip = 0, int take = 20, string group = null)
+		[RavenRoute("ts/{timeSeriesName}/deleteRange")]
+		[HttpDelete]
+		public HttpResponseMessage DeleteRange(string key, DateTime start, DateTime end)
 		{
-			AssertName(group, true);
+			if (string.IsNullOrEmpty(key))
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
+			using (var writer = Storage.CreateWriter())
+			{
+				writer.DeleteRange(key, start, end);
+				writer.Commit();
+
+				Storage.MetricsTimeSeries.Deletes.Mark();
+				Storage.Publisher.RaiseNotification(new TimeSeriesKeyNotification
+				{
+					Key = key,
+					Action = TimeSeriesChangeAction.DeleteInRange,
+					Start = start,
+					End = end,
+				});
+
+				return new HttpResponseMessage(HttpStatusCode.OK);
+			}
+		}
+
+		/*[RavenRoute("ts/{timeSeriesName}/timeSeries")]
+		[HttpGet]
+		public HttpResponseMessage GetTimeSeries(int skip = 0, int take = 20, string key = null)
+		{
 			using (var reader = Storage.CreateReader())
 			{
 				var groupsPrefix = (group == null) ? string.Empty : (group + Constants.TimeSeries.Separator);
@@ -326,94 +305,6 @@ namespace Raven.Database.TimeSeries.Controllers
 				var timeSeries = timeSeriesByPrefixes.Select(groupWithTimeSeriesName => reader.GetTimeSeriesSummary(groupWithTimeSeriesName)).ToList();
 				return GetMessageWithObject(timeSeries);
 			}
-		}
-
-		[RavenRoute("ts/{timeSeriesName}/getTimeSeriesOverallTotal/{groupName}/{timeSeriesName}")]
-        [HttpGet]
-		public HttpResponseMessage GetTimeSeriesOverallTotal(string groupName, string timeSeriesName)
-        {
-			AssertName(groupName);
-			AssertName(timeSeriesName);
-
-			using (var reader = Storage.CreateReader())
-			{
-				var overallTotal = reader.GetTimeSeriesOverallTotal(groupName, timeSeriesName);
-				if (overallTotal == null)
-					return Request.CreateResponse(HttpStatusCode.OK, 0);
-
-				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
-			}
-        }
-
-		[RavenRoute("ts/{timeSeriesName}/getTimeSeriesServersValues/{groupName}/{timeSeriesName}")]
-        [HttpGet]
-        public HttpResponseMessage GetTimeSeriesServersValues(string groupName, string timeSeriesName)
-		{
-			AssertName(groupName);
-			AssertName(timeSeriesName);
-
-			using (var reader = Storage.CreateReader())
-			{
-				if (reader.TimeSeriesExists(groupName, timeSeriesName) == false)
-					return Request.CreateResponse(HttpStatusCode.OK, new ServerValue[0]);
-
-				var timeSeriesByPrefix = reader.GetTimeSeriesValuesByPrefix(groupName, timeSeriesName);
-                if (timeSeriesByPrefix == null)
-				{
-					return GetMessageWithObject(new { Message = "Specified timeSeries not found within the specified group" }, HttpStatusCode.NotFound);
-                }
-
-	            var serverValuesDictionary = new Dictionary<Guid, ServerValue>();
-				timeSeriesByPrefix.TimeSeriesValues.ForEach(x =>
-				{
-					ServerValue serverValue;
-					var serverId = x.ServerId();
-					if (serverValuesDictionary.TryGetValue(serverId, out serverValue) == false)
-					{
-						serverValue = new ServerValue();
-						serverValuesDictionary.Add(serverId, serverValue);
-					}
-					serverValue.UpdateValue(x.IsPositive(), x.Value);
-				});
-
-                var serverValues =
-                    serverValuesDictionary.Select(s => new TimeSeriesView.ServerValue
-                    {
-						Positive = s.Value.Positive,
-                        Negative = s.Value.Negative,
-                        //Name = reader.ServerNameFor(s.Key)
-                    }).ToList();
-                return Request.CreateResponse(HttpStatusCode.OK, serverValues);
-            }
-		}
-
-		private static void AssertName(string name, bool skipNullCheck = false)
-		{
-			var isNull = string.IsNullOrEmpty(name);
-			if (skipNullCheck == false && isNull)
-				throw new ArgumentException("A name can't be null");
-
-			if (isNull == false && name.IndexOf('/') > -1)
-				throw new ArgumentException("A name can't contain the '/' character");
-		}
-
-		private class ServerValue
-		{
-			public long Positive { get; private set; }
-
-			public long Negative { get; private set; }
-
-			public void UpdateValue(bool isPositive, long value)
-			{
-				if (isPositive)
-				{
-					Positive = value;
-				}
-				else
-				{
-					Negative = value;
-				}
-			}
-		}
+		}*/
 	}
-}*/
+}

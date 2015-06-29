@@ -176,14 +176,16 @@ class commandBase {
 
         if (oauthContext.apiKey()) {
             if (!defaultOptions.headers) {
-                defaultOptions.headers = {}
+                var newHeaders: any = {};
+	            defaultOptions.headers = newHeaders;
             }
             defaultOptions.headers["Has-Api-Key"] = "True";
         }
 
         if (oauthContext.authHeader()) {
             if (!defaultOptions.headers) {
-                defaultOptions.headers = {}
+	            var newHeaders: any = {};
+	            defaultOptions.headers = newHeaders;
             }
             defaultOptions.headers["Authorization"] = oauthContext.authHeader();
         }

@@ -13,6 +13,7 @@ import updateCounterCommand = require("commands/counter/updateCounterCommand");
 import resetCounterCommand = require("commands/counter/resetCounterCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import editCounterDialog = require("viewmodels/counter/editCounterDialog");
+import deleteGroup = require("viewmodels/counter/deleteGroup");
 
 class counters extends viewModelBase {
 
@@ -100,14 +101,15 @@ class counters extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            changesContext.currentResourceChangesApi().watchAllCounters(() => this.refreshGroups()),
+            changesContext.currentResourceChangesApi().watchAllCounters((e: counterChangeNotification) => this.refreshGroups()),
             changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.refreshGroups())
         ];
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            //ko.postbox.subscribe("EditItem", () => this.editSelectedDoc()),
+            ko.postbox.subscribe("ChangeCounterValue", () => this.change()),
+			ko.postbox.subscribe("ResetCounter", () => this.reset()),
             ko.postbox.subscribe("ChangesApiReconnected", (cs: counterStorage) => this.reloadCountersData(cs))
         ];
     }
@@ -184,25 +186,13 @@ class counters extends viewModelBase {
         }
     }
 
-    deleteCounter() {
-        var grid = this.getCountersGrid();
-        if (grid) {
-            var counterData = grid.getSelectedItems(1).first();
-            var confirmation = this.confirmationMessage("Reset Counter", "Are you sure that you want to reset the counter?");
-            confirmation.done(() => {
-                var deleteCounter = new resetCounterCommand(this.activeCounterStorage(), counterData.Group, counterData.Name);
-                var execute = deleteCounter.execute();
-				execute.done(() => this.refreshGridAndGroup(counterData.Group));
-            });
-        }
-    }
-
-	private refreshGridAndGroup(changeGroupName: string) {
+	private refreshGridAndGroup(changedGroupName: string) {
 		var group = this.selectedGroup();
-		if (group.name === changeGroupName || group.name === counterGroup.allGroupsGroupName) {
+		if (group.name === changedGroupName || group.name === counterGroup.allGroupsGroupName) {
 			this.getCountersGrid().refreshCollectionData();
 		}
 		group.invalidateCache();
+		this.selectNone();
 	}
 
     private selectedGroupChanged(selected: counterGroup) {
@@ -242,8 +232,8 @@ class counters extends viewModelBase {
     }
 
     deleteSelectedCounters() {
-        if (!this.selectedGroup().isAllGroupsGroup && this.hasAllCountersSelected()) {
-            this.deleteGroup(this.selectedGroup());
+        if (this.hasAllCountersSelected()) {
+            this.deleteGroupInternal(this.selectedGroup());
         } else {
             var grid = this.getCountersGrid();
             if (grid) {
@@ -252,25 +242,23 @@ class counters extends viewModelBase {
         }
     }
 
-    deleteGroup(group: counterGroup) {
-        /*if (collection) {
-            var viewModel = new deleteCollection(collection);
-            viewModel.deletionTask.done((result: operationIdDto) => {
-                if (!collection.isAllDocuments) {
-                    this.collections.remove(collection);
+    private deleteGroupInternal(group: counterGroup) {
+	    var deleteGroupVm = new deleteGroup(group, this.activeCounterStorage());
+            deleteGroupVm.deletionTask.done(() => {
+				if (!group.isAllGroupsGroup) {
+                    this.groups.remove(group);
 
-                    var selectedCollection: collection = this.selectedCollection();
-                    if (collection.name == selectedCollection.name) {
-                        this.selectCollection(this.allDocumentsCollection);
+                    var selectedCollection: counterGroup = this.selectedGroup();
+                    if (group.name === selectedCollection.name) {
+                        this.selectedGroup(this.allGroupsGroup);
                     }
                 } else {
-                    this.selectNone();
+                    this.refreshGridAndGroup(group.name);
                 }
 
-                this.updateGridAfterOperationComplete(collection, result.OperationId);
+				//this.updateGridAfterOperationComplete(collection, result.OperationId);
             });
-            app.showDialog(viewModel);
-        }*/
+		app.showDialog(deleteGroupVm);
     }
 
     private updateGroups(receivedGroups: Array<counterGroup>) {
@@ -298,6 +286,14 @@ class counters extends viewModelBase {
         if (!currentGroup || currentGroup.countersCount() === 0) {
             this.selectedGroup(this.allGroupsGroup);
         }
+
+	    this.groups.sort((c1: counterGroup, c2: counterGroup) => {
+		    if (c1.isAllGroupsGroup)
+			    return -1;
+		    if (c2.isAllGroupsGroup)
+			    return 1;
+		    return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
+	    });
     }
 
     private refreshGroupsData() {
@@ -316,13 +312,13 @@ class counters extends viewModelBase {
         });
     }
 
-
     private refreshGroups(): JQueryPromise<any> {
         var deferred = $.Deferred();
         var cs = this.activeCounterStorage();
 
         this.fetchGroups(cs).done(results => {
             this.updateGroups(results);
+	        this.refreshGroupsData();
             //TODO: add a button to refresh the counters and than use this.refreshCollectionsData();
             deferred.resolve();
         });

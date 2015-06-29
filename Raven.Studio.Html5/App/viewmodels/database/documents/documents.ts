@@ -198,6 +198,7 @@ class documents extends viewModelBase {
 
         this.fetchCollections(db).done(results => {
             this.updateCollections(results);
+	        this.refreshCollectionsData();
             //TODO: add a button to refresh the documents and than use this.refreshCollectionsData();
             deferred.resolve();
         });
@@ -320,6 +321,18 @@ class documents extends viewModelBase {
         if (!currentCollection || currentCollection.documentCount() === 0) {
             this.selectCollection(this.allDocumentsCollection);
         }
+
+		this.collections.sort((c1: collection, c2: collection) => {
+		    if (c1.isAllDocuments)
+			    return -1;
+		    if (c2.isAllDocuments)
+			    return 1;
+			if (c1.isSystemDocuments)
+				return -1;
+			if (c2.isSystemDocuments)
+				return 1;
+		    return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
+	    });
     }
 
     private refreshCollectionsData() {

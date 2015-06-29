@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -29,21 +30,19 @@ namespace Raven.Client.TimeSeries
 			/// </summary>
 			/// <param name="timeSeriesDocument">Settings for the time series. If null, default settings will be used, and the name specified in the client ctor will be used</param>
 			/// <param name="timeSeriesName">Override time series name specified in client ctor. If null, the name already specified will be used</param>
-			public async Task<TimeSeriesStore> CreateTimeSeriesAsync(TimeSeriesDocument timeSeriesDocument, string timeSeriesName, bool shouldUpateIfExists = false, OperationCredentials credentials = null, CancellationToken token = default(CancellationToken))
+			public async Task<TimeSeriesStore> CreateTimeSeriesAsync(TimeSeriesDocument timeSeriesDocument, bool shouldUpdateIfExists = false, OperationCredentials credentials = null, CancellationToken token = default(CancellationToken))
 			{
 				if (timeSeriesDocument == null)
 					throw new ArgumentNullException("timeSeriesDocument");
-				if (timeSeriesName == null) throw new ArgumentNullException("timeSeriesName");
 
 				parent.AssertInitialized();
 
-				var urlTemplate = "{0}/admin/ts/{1}";
-				if (shouldUpateIfExists)
-					urlTemplate += "?update=true";
+				var timeSeriesName = timeSeriesDocument.Id.Replace(Constants.TimeSeries.Prefix, "");
+				var requestUri = parent.Url + "admin/ts/" + timeSeriesName;
+				if (shouldUpdateIfExists)
+					requestUri += "?update=true";
 
-				var requestUriString = String.Format(urlTemplate, parent.Url, timeSeriesName);
-
-				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Put))
+				using (var request = parent.CreateHttpJsonRequest(requestUri, HttpMethods.Put))
 				{
 					try
 					{
@@ -91,15 +90,12 @@ namespace Raven.Client.TimeSeries
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/ts/timeSeriesNames", parent.Url);
-
-				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+				using (var request = parent.CreateHttpJsonRequest(parent.Url + "ts", HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 					return response.ToObject<string[]>(parent.JsonSerializer);
 				}
 			}
-			 
 		}
     }
 }

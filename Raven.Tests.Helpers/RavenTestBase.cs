@@ -369,7 +369,7 @@ namespace Raven.Tests.Helpers
             return servers.First(x => x.SystemDatabase.Configuration.Port == port);
         }
 
-		private static string GetServerUrl(bool fiddler, string serverUrl)
+	    protected static string GetServerUrl(bool fiddler, string serverUrl)
 		{
 			if (fiddler)
 			{
@@ -894,7 +894,6 @@ namespace Raven.Tests.Helpers
 					errors.Add(e);
 				}
 			}
-
 			stores.Clear();
 
 			foreach (var server in servers)

@@ -11,5 +11,9 @@
         public string TimeSeriesSize { get; set; }
 
 		public double RequestsPerSecond { get; set; }
+
+	    public long KeysCount { get; set; }
+
+	    public long ValuesCount { get; set; }
     }
 }

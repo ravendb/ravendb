@@ -12,6 +12,7 @@ using Raven.Abstractions.OAuth;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
+using Raven.Client.Extensions;
 using Raven.Client.TimeSeries.Changes;
 using Raven.Client.TimeSeries.Replication;
 using Raven.Client.Util;
@@ -53,13 +54,7 @@ namespace Raven.Client.TimeSeries
 				if (String.IsNullOrWhiteSpace(Name))
 					throw new InvalidOperationException("Name is null or empty and ensureDefaultTimeSeriesExists = true --> cannot create default time series with empty name");
 
-				Admin.CreateTimeSeriesAsync(new TimeSeriesDocument
-				{
-					Settings = new Dictionary<string, string>
-					{
-						{"Raven/TimeSeries/DataDir", @"~\TimeSeries\" + Name}
-					},
-				}, Name).ConfigureAwait(false).GetAwaiter().GetResult();
+				Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(Name)).ConfigureAwait(false).GetAwaiter().GetResult();
 			}			
 
 			replicationInformer = new TimeSeriesReplicationInformer(JsonRequestFactory, this, TimeSeriesConvention); // make sure it is initialized

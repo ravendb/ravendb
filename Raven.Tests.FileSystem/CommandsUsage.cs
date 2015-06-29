@@ -645,7 +645,7 @@ namespace Raven.Tests.FileSystem
                  }
             };
 
-            await adminClient.CreateFileSystemAsync(fileSystemSpec, newFileSystemName);
+            await adminClient.CreateFileSystemAsync(fileSystemSpec);
 
             var names = await adminClient.GetNamesAsync();
             Assert.Contains(newFileSystemName, names);
@@ -653,7 +653,7 @@ namespace Raven.Tests.FileSystem
             bool throwsException = false;
             try
             {
-                await adminClient.CreateFileSystemAsync(fileSystemSpec, newFileSystemName);
+                await adminClient.CreateFileSystemAsync(fileSystemSpec);
             }
             catch (InvalidOperationException)
             {

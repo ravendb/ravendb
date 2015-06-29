@@ -1,4 +1,4 @@
-﻿using System;
+﻿/*using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.Replication;
@@ -23,28 +23,17 @@ namespace Raven.Tests.TimeSeries
 			using (var serverA = GetNewServer(8077))
 			using (var serverB = GetNewServer(8076))
 			{
-				var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA);
-				try
+				using (var storeA = NewRemoteTimeSeriesStore(ravenDbServer: serverA))
+				using (var storeB = NewRemoteTimeSeriesStore(ravenDbServer: serverB))
 				{
-					using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
-					{
-						using (var storeA = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, ravenStore: ravenStoreA))
-						using (var storeB = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, ravenStore: ravenStoreB))
-						{
-							storeA.TimeSeriesConvention.FailoverBehavior = FailoverBehavior.FailImmediately;
+					storeA.TimeSeriesConvention.FailoverBehavior = FailoverBehavior.FailImmediately;
 
-							await SetupReplicationAsync(storeA, storeB);
-							await storeA.ChangeAsync("group", "time series", 2);
+					await SetupReplicationAsync(storeA, storeB);
+					await storeA.ChangeAsync("group", "time series", 2);
 
-							await WaitForReplicationBetween(storeA, storeB, "group", "time series");
-							serverA.Dispose();
-							Assert.Throws<AggregateException>(() => storeA.GetOverallTotalAsync("group", "time series").Wait());
-						}
-					}
-				}
-				finally
-				{
-					ravenStoreA.Dispose();
+					await WaitForReplicationBetween(storeA, storeB, "group", "time series");
+					serverA.Dispose();
+					Assert.Throws<AggregateException>(() => storeA.GetOverallTotalAsync("group", "time series").Wait());
 				}
 			}
 		}
@@ -56,30 +45,18 @@ namespace Raven.Tests.TimeSeries
 			using (var serverA = GetNewServer(8077))
 			using (var serverB = GetNewServer(8076))
 			{
-				var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA);
-				try
+				using (var storeA = NewRemoteTimeSeriesStore(ravenDbServer: serverA))
+				using (var storeB = NewRemoteTimeSeriesStore(ravenDbServer: serverB))
 				{
-					using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
-					{
-						using (var storeA = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, ravenStore: ravenStoreA))
-						using (var storeB = NewRemoteTimeSeriesStore(DefaultTimeSeriesName, ravenStore: ravenStoreB))
-						{
-							await SetupReplicationAsync(storeA, storeB);
-							await storeA.ChangeAsync("group", "time series", 2);
+					await SetupReplicationAsync(storeA, storeB);
+					await storeA.ChangeAsync("group", "time series", 2);
 
-							await WaitForReplicationBetween(storeA, storeB, "group", "time series");
+					await WaitForReplicationBetween(storeA, storeB, "group", "time series");
 
-							ravenStoreA.Dispose();
-							serverA.Dispose();
+					serverA.Dispose();
 
-							var total = await storeA.GetOverallTotalAsync("group", "time series");
-							Assert.Equal(2, total);
-						}
-					}
-				}
-				finally
-				{
-					ravenStoreA.Dispose();
+					var total = await storeA.GetOverallTotalAsync("group", "time series");
+					Assert.Equal(2, total);
 				}
 			}
 		}
@@ -105,10 +82,8 @@ namespace Raven.Tests.TimeSeries
 		{
 			using (var serverA = GetNewServer(8077, runInMemory: false))
 			using (var serverB = GetNewServer(8078, runInMemory: false))
-			using (var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory:false))
-			using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB, runInMemory:false)) 
-			using (var storeA = NewRemoteTimeSeriesStore("A", ravenStore: ravenStoreA))
-			using (var storeB = NewRemoteTimeSeriesStore("B", ravenStore: ravenStoreB))
+			using (var storeA = NewRemoteTimeSeriesStore(ravenDbServer: serverA))
+			using (var storeB = NewRemoteTimeSeriesStore(ravenDbServer: serverB))
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				await storeA.ChangeAsync("group", "time series", 3);
@@ -209,4 +184,4 @@ namespace Raven.Tests.TimeSeries
 			}
 		}
 	}
-}
+}*/

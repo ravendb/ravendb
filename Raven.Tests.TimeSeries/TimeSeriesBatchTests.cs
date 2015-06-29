@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+﻿/*
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.TimeSeries;
+using Raven.Client.Extensions;
 using Xunit;
 using Xunit.Extensions;
 
@@ -14,33 +15,23 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task TimeSeriesBatch_increment_decrement_should_work()
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
-				using (var otherStore = await store.Admin.CreateTimeSeriesAsync(new TimeSeriesDocument
+				using (var batchOperation = store.Advanced.NewBatch(new TimeSeriesBatchOptions { BatchSizeLimit = 3 }))
 				{
-					Settings = new Dictionary<string, string>
-					{
-						{"Raven/TimeSeries/DataDir", @"~\TimeSeries\Cs1"}
-					},
-				}, OtherTimeSeriesName))
-				{
-					otherStore.Initialize();
-					using (var batchOperation = otherStore.Advanced.NewBatch(new TimeSeriesBatchOptions { BatchSizeLimit = 3 }))
-					{
-						batchOperation.ScheduleIncrement("FooGroup", "FooTimeSeries");
-						batchOperation.ScheduleIncrement("FooGroup", "FooTimeSeries");
-						batchOperation.ScheduleDecrement("FooGroup", "FooTimeSeries");
-					}
-					var total = await otherStore.GetOverallTotalAsync("FooGroup", "FooTimeSeries");
-					total.Should().Be(1);
+					batchOperation.ScheduleIncrement("FooGroup", "FooTimeSeries");
+					batchOperation.ScheduleIncrement("FooGroup", "FooTimeSeries");
+					batchOperation.ScheduleDecrement("FooGroup", "FooTimeSeries");
 				}
+				var total = await store.GetOverallTotalAsync("FooGroup", "FooTimeSeries");
+				total.Should().Be(1);
 			}
 		}
 
 		[Fact]
 		public async Task TimeSeriesBatch_increment_decrement_with_different_time_series_in_the_batch_should_work()
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
 				using (var batchOperation = store.Advanced.NewBatch(new TimeSeriesBatchOptions { BatchSizeLimit = 3 }))
 				{
@@ -69,7 +60,7 @@ namespace Raven.Tests.TimeSeries
 		[InlineData(50)]
 		public async Task TimeSeriesBatch_with_multiple_batches_should_work(int countOfOperationsInBatch)
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
 				using (var timeSeriesBatch = store.Advanced.NewBatch(new TimeSeriesBatchOptions {BatchSizeLimit = countOfOperationsInBatch/2}))
 				{
@@ -88,9 +79,9 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task TimeSeriesBatch_using_batch_store_for_default_store_should_work()
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
-				store.Batch.ScheduleIncrement("FooGroup", "FooTimeSeries"); //schedule increment for default timeSeries
+				store.Batch.ScheduleAppend("FooGroup", "FooTimeSeries"); //schedule increment for default timeSeries
 				await store.Batch.FlushAsync();
 
 				//with time series name null - client is opened for default timeSeries
@@ -105,7 +96,7 @@ namespace Raven.Tests.TimeSeries
 		[InlineData(251, 252)]
 		public async Task Using_multiple_different_batches_for_the_same_store_async_should_work(int totalForT1, int totalForT2)
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
 				var t1 = Task.Run(() =>
 				{
@@ -141,9 +132,9 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task Using_multiple_different_batches_for_different_stores_async_should_work()
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
-				using (var otherStore = await store.Admin.CreateTimeSeriesAsync(CreateTimeSeriesDocument(OtherTimeSeriesName), OtherTimeSeriesName))
+				using (var otherStore = await store.Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(OtherTimeSeriesName)))
 				{
 					otherStore.Initialize();
 
@@ -175,9 +166,9 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task Using_batch_multithreaded_should_work()
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
-				using (var otherStore = await store.Admin.CreateTimeSeriesAsync(CreateTimeSeriesDocument(OtherTimeSeriesName), OtherTimeSeriesName))
+				using (var otherStore = await store.Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(OtherTimeSeriesName)))
 				{
 					otherStore.Initialize();
 
@@ -207,15 +198,9 @@ namespace Raven.Tests.TimeSeries
 		[InlineData(100)]
 		public async Task TimeSeriesBatch_using_batch_store_should_work(int countOfOperationsInBatch)
 		{
-			using (var store = NewRemoteTimeSeriesStore(DefaultTimeSeriesName))
+			using (var store = NewRemoteTimeSeriesStore())
 			{
-				using (var otherStore = await store.Admin.CreateTimeSeriesAsync(new TimeSeriesDocument
-				{
-					Settings = new Dictionary<string, string>
-					{
-						{"Raven/TimeSeries/DataDir", @"~\TimeSeries\" + OtherTimeSeriesName}
-					},
-				}, OtherTimeSeriesName))
+				using (var otherStore = await store.Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(OtherTimeSeriesName)))
 				{
 					otherStore.Initialize();
 
@@ -235,3 +220,4 @@ namespace Raven.Tests.TimeSeries
 		}
 	}
 }
+*/

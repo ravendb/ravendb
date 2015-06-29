@@ -315,6 +315,39 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
+		[RavenRoute("cs/{counterStorageName}/delete-by-group")]
+		[HttpDelete]
+		public HttpResponseMessage DeleteByGroup(string groupName)
+		{
+			using (var writer = Storage.CreateWriter())
+			{
+				var changeNotifications = new List<ChangeNotification>();
+				groupName = groupName ?? string.Empty;
+				var countersDetails = writer.GetCountersDetails(groupName).ToList();
+				foreach (var c in countersDetails)
+				{
+					writer.DeleteCounterInternal(c.Group, c.Name);
+					changeNotifications.Add(new ChangeNotification
+					{
+						GroupName = c.Group,
+						CounterName = c.Name,
+						Action = CounterChangeAction.Delete,
+						Delta = 0,
+						Total = 0
+					});
+				}
+				writer.Commit();
+
+				changeNotifications.ForEach(change =>
+				{
+					Storage.Publisher.RaiseNotification(change);
+					Storage.MetricsCounters.Deletes.Mark();
+				});
+
+				return GetMessageWithObject(changeNotifications.Count);
+			}
+		}
+
 		[RavenRoute("cs/{counterStorageName}/counters")]
 		[HttpGet]
 		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
@@ -326,13 +359,13 @@ namespace Raven.Database.Counters.Controllers
 
 			using (var reader = Storage.CreateReader())
 			{
-				var gruop = group ?? string.Empty;
-				var counters = reader.GetCountersSummary(gruop, skip, take);
+				group = group ?? string.Empty;
+				var counters = reader.GetCountersSummary(group, skip, take);
 				return GetMessageWithObject(counters);
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal")]
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
@@ -346,46 +379,17 @@ namespace Raven.Database.Counters.Controllers
 			}
         }
 
-		[RavenRoute("cs/{counterStorageName}/getCounterServersValues/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/getCounter")]
         [HttpGet]
-        public HttpResponseMessage GetCounterServersValues(string groupName, string counterName)
+        public HttpResponseMessage GetCounter(string groupName, string counterName)
 		{
 			AssertName(groupName);
 			AssertName(counterName);
 
 			using (var reader = Storage.CreateReader())
 			{
-				/*if (reader.CounterExists(groupName, counterName) == false)
-					return Request.CreateResponse(HttpStatusCode.OK, new ServerValue[0]);
-
-				var countersByPrefix = reader.GetCounterValuesByPrefix(groupName, counterName);
-                if (countersByPrefix == null)
-				{
-					return GetMessageWithObject(new { Message = "Specified counter not found within the specified group" }, HttpStatusCode.NotFound);
-                }
-
-	            var serverValuesDictionary = new Dictionary<Guid, ServerValue>();
-				countersByPrefix.CounterValues.ForEach(x =>
-				{
-					ServerValue serverValue;
-					var serverId = x.ServerId();
-					if (serverValuesDictionary.TryGetValue(serverId, out serverValue) == false)
-					{
-						serverValue = new ServerValue();
-						serverValuesDictionary.Add(serverId, serverValue);
-					}
-					serverValue.UpdateValue(x.IsPositive(), x.Value);
-				});
-
-                var serverValues =
-                    serverValuesDictionary.Select(s => new CounterView.ServerValue
-                    {
-						Positive = s.Value.Positive,
-                        Negative = s.Value.Negative,
-                        //Name = reader.ServerNameFor(s.Key)
-                    }).ToList();
-                return Request.CreateResponse(HttpStatusCode.OK, serverValues);*/
-				return Request.CreateResponse(HttpStatusCode.OK);
+				var result = reader.GetCounter(groupName, counterName);
+				return GetMessageWithObject(result);
             }
 		}
 
@@ -393,25 +397,6 @@ namespace Raven.Database.Counters.Controllers
 		{
 			if (string.IsNullOrEmpty(name))
 				throw new ArgumentException("A name can't be null");
-		}
-
-		private class ServerValue
-		{
-			public long Positive { get; private set; }
-
-			public long Negative { get; private set; }
-
-			public void UpdateValue(bool isPositive, long value)
-			{
-				if (isPositive)
-				{
-					Positive = value;
-				}
-				else
-				{
-					Negative = value;
-				}
-			}
 		}
 	}
 }

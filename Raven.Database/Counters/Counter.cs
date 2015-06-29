@@ -8,10 +8,31 @@ namespace Raven.Database.Counters
 	{
 		public Counter()
 		{
-			CounterValues = new List<CounterValue>();
+			ServerValues = new List<ServerValue>();
 		}
 
-		public List<CounterValue> CounterValues { get; private set; }
+		public List<ServerValue> ServerValues { get; private set; }
+
+		public Guid LocalServerId { get; set; }
+
+		public Guid LastUpdateByServer { get; set; }
+
+		public long Total
+		{
+			get { return ServerValues.Sum(x => x.Value); }
+		}
+
+		public long NumOfServers
+		{
+			get { return ServerValues.Select(x => x.ServerId).Distinct().Count(); }
+		}
+	}
+
+	public class ServerValue
+	{
+		public Guid ServerId { get; set; }
+
+		public long Value { get; set; }
 
 		public long Etag { get; set; }
 	}

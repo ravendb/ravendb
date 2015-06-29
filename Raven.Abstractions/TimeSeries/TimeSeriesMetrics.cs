@@ -6,6 +6,10 @@ namespace Raven.Abstractions.TimeSeries
 	public class TimeSeriesMetrics
 	{
 		public double RequestsPerSecond { get; set; }
+		
+		public MeterData Appends { get; set; }
+		
+		public MeterData Deletes { get; set; }
 
 		public MeterData ClientRequests { get; set; }
 

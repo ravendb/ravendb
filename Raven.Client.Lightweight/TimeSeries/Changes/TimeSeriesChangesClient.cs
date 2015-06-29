@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.TimeSeries.Notifications;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -13,209 +12,101 @@ using Sparrow.Collections;
 namespace Raven.Client.TimeSeries.Changes
 {
 	public class TimeSeriesChangesClient : RemoteChangesClientBase<ITimeSeriesChanges, TimeSeriesConnectionState, TimeSeriesConvention>, ITimeSeriesChanges
-    {
-		private readonly ConcurrentSet<string> watchedChanges = new ConcurrentSet<string>();
-		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
-		private readonly ConcurrentSet<string> watchedTimeSeriesInGroup = new ConcurrentSet<string>();
+	{
+		private readonly ConcurrentSet<string> watchedKeys = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedBulkOperations = new ConcurrentSet<string>();
+		private bool watchAllTimeSeries;
 
 		public TimeSeriesChangesClient(string url, string apiKey,
-                                       ICredentials credentials,
-                                       HttpJsonRequestFactory jsonRequestFactory, TimeSeriesConvention timeSeriesConventions,
-                                       Action onDispose)
-            : base(url, apiKey, credentials, jsonRequestFactory, timeSeriesConventions, onDispose)
-        {
+									   ICredentials credentials,
+									   HttpJsonRequestFactory jsonRequestFactory, TimeSeriesConvention conventions,
+									   Action onDispose)
+			: base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
+		{
 
-        }
+		}
 
-        protected override async Task SubscribeOnServer()
-        {
-			foreach (var matchingChange in watchedChanges)
-            {
-				await Send("watch-time-series-change", matchingChange).ConfigureAwait(false);
-            }
+		protected override async Task SubscribeOnServer()
+		{
+			if (watchAllTimeSeries)
+				await Send("watch-time-series", null).ConfigureAwait(false);
 
-			foreach (var matchingLocalChange in watchedPrefixes)
+			foreach (var matchingKey in watchedKeys)
 			{
-				await Send("watch-time-series-prefix", matchingLocalChange).ConfigureAwait(false);
-			}
-
-			foreach (var matchingReplicationChange in watchedTimeSeriesInGroup)
-			{
-				await Send("watch-time-series-in-group", matchingReplicationChange).ConfigureAwait(false);
+				await Send("watch-time-series-key", matchingKey).ConfigureAwait(false);
 			}
 
 			foreach (var matchingBulkOperation in watchedBulkOperations)
 			{
 				await Send("watch-bulk-operation", matchingBulkOperation).ConfigureAwait(false);
 			}
-        }
+		}
 
 		protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TimeSeriesConnectionState>> connections)
-        {
-            switch (type)
-            {
-				case "ChangeNotification":
-					var changeNotification = value.JsonDeserialization<ChangeNotification>();
-                    foreach (var timeSeries in connections)
-                    {
-                        timeSeries.Value.Send(changeNotification);
-                    }
-                    break;
-				case "StartingWithNotification":
-					var timeSeriesStartingWithNotification = value.JsonDeserialization<StartingWithNotification>();
+		{
+			switch (type)
+			{
+				case "KeyNotification":
+					var changeNotification = value.JsonDeserialization<TimeSeriesKeyNotification>();
 					foreach (var timeSeries in connections)
 					{
-						timeSeries.Value.Send(timeSeriesStartingWithNotification);
+						timeSeries.Value.Send(changeNotification);
 					}
 					break;
-				case "InGroupNotification":
-					var timeSeriesInGroupNotification = value.JsonDeserialization<InGroupNotification>();
-                    foreach (var timeSeries in connections)
-                    {
-						timeSeries.Value.Send(timeSeriesInGroupNotification);
-                    }
-                    break;
 				case "BulkOperationNotification":
-					var bulkOperationNotification = value.JsonDeserialization<BulkOperationNotification>();
-                    foreach (var timeSeries in connections)
-                    {
-                        timeSeries.Value.Send(bulkOperationNotification);
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-
-	    public IObservableWithTask<ChangeNotification> ForChange(string groupName, string timeSeriesName)
-	    {
-			throw new NotImplementedException();
-			/*if (string.IsNullOrWhiteSpace(groupName))
-				throw new ArgumentException("Group name cannot be empty!");
-
-			if (string.IsNullOrWhiteSpace(timeSeriesName))
-				throw new ArgumentException("TimeSeries name cannot be empty");
-
-			var fullTimeSeriesName = FullTimeSeriesName(groupName, timeSeriesName);
-			var key = string.Concat("time-series-change/", fullTimeSeriesName);
-			var timeSeries = Counters.GetOrAdd(key, s =>
-			{
-				var changeSubscriptionTask = AfterConnection(() =>
-				{
-					watchedChanges.TryAdd(fullTimeSeriesName);
-					return Send("watch-time-series-change", fullTimeSeriesName);
-				});
-
-				return new TimeSeriesConnectionState(
-					() =>
+					var bulkOperationNotification = value.JsonDeserialization<TimeSeriesBulkOperationNotification>();
+					foreach (var timeSeries in connections)
 					{
-						watchedChanges.TryRemove(fullTimeSeriesName);
-						Send("unwatch-time-series-change", fullTimeSeriesName);
-						Counters.Remove(key);
-					},
-					changeSubscriptionTask);
-			});
+						timeSeries.Value.Send(bulkOperationNotification);
+					}
+					break;
+				default:
+					throw new InvalidOperationException("Type not valid: " + type);
+			}
+		}
 
-			var taskedObservable = new TaskedObservable<ChangeNotification, TimeSeriesConnectionState>(
-								timeSeries,
-								notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
-												string.Equals(notification.TimeSeriesName, timeSeriesName, StringComparison.OrdinalIgnoreCase));
+		public IObservableWithTask<TimeSeriesKeyNotification> ForAllTimeSeries()
+		{
+			var timeSeries = GetOrAddConnectionState("all-time-series", "watch-time-series-key", "unwatch-time-series-key",
+				() => watchAllTimeSeries = true,
+				() => watchAllTimeSeries = false,
+				null);
+
+			var taskedObservable = new TaskedObservable<TimeSeriesKeyNotification, TimeSeriesConnectionState>(
+				timeSeries,
+				notification => true);
+
 			timeSeries.OnChangeNotification += taskedObservable.Send;
 			timeSeries.OnError += taskedObservable.Error;
 
-			return taskedObservable;*/
-	    }
+			return taskedObservable;
+		}
 
-	    private static string FullTimeSeriesName(string groupName, string timeSeriesName)
-	    {
-			return string.Concat(groupName, Constants.TimeSeries.Separator, timeSeriesName);
-	    }
+		public IObservableWithTask<TimeSeriesKeyNotification> ForKey(string key)
+		{
+			if (string.IsNullOrWhiteSpace(key))
+				throw new ArgumentException("Key cannot be empty!");
 
-		public IObservableWithTask<StartingWithNotification> ForTimeSeriesStartingWith(string groupName, string prefixForName)
-	    {
-			throw new NotImplementedException();
-			/*if (string.IsNullOrWhiteSpace(groupName))
-				throw new ArgumentException("Group name cannot be empty!");
+			var timeSeries = GetOrAddConnectionState("time-series-key/" + key, "watch-time-series-key", "unwatch-time-series-key",
+				() => watchedKeys.TryAdd(key),
+				() => watchedKeys.TryRemove(key),
+				key);
 
-			if (string.IsNullOrWhiteSpace(prefixForName))
-				throw new ArgumentException("Prefix for time-series name cannot be empty");
-
-			var timeSeriesPrefix = FullTimeSeriesName(groupName, prefixForName);
-			var key = string.Concat("time-series-starting-with/", timeSeriesPrefix);
-			var timeSeries = Counters.GetOrAdd(key, s =>
-			{
-				var changeSubscriptionTask = AfterConnection(() =>
-				{
-					watchedPrefixes.TryAdd(timeSeriesPrefix);
-					return Send("watch-time-series-prefix", timeSeriesPrefix);
-				});
-
-				return new TimeSeriesConnectionState(
-					() =>
-					{
-						watchedPrefixes.TryRemove(timeSeriesPrefix);
-						Send("unwatch-time-series-prefix", timeSeriesPrefix);
-						Counters.Remove(key);
-					},
-					changeSubscriptionTask);
-			});
-
-			var taskedObservable = new TaskedObservable<StartingWithNotification, TimeSeriesConnectionState>(
+			var taskedObservable = new TaskedObservable<TimeSeriesKeyNotification, TimeSeriesConnectionState>(
 				timeSeries,
-				notification =>
-				{
-					var t = string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
-					        notification.TimeSeriesName.StartsWith(prefixForName, StringComparison.OrdinalIgnoreCase);
-					return t;
-				});
-			timeSeries.OnTimeSeriesStartingWithNotification += taskedObservable.Send;
+				notification => string.Equals(notification.Key, key, StringComparison.InvariantCulture));
+			timeSeries.OnChangeNotification += taskedObservable.Send;
 			timeSeries.OnError += taskedObservable.Error;
 
-			return taskedObservable;*/
-	    }
+			return taskedObservable;
+		}
 
-		public IObservableWithTask<InGroupNotification> ForTimeSeriesInGroup(string groupName)
-	    {
-			throw new NotImplementedException();
-			/*if (string.IsNullOrWhiteSpace(groupName))
-				throw new ArgumentException("Group name cannot be empty!");
+		public IObservableWithTask<TimeSeriesBulkOperationNotification> ForBulkOperation(Guid? operationId = null)
+		{
+			var id = operationId != null ? operationId.ToString() : string.Empty;
 
-			var key = string.Concat("time-series-in-group/", groupName);
+			var key = "bulk-operations/" + id;
 			var timeSeries = Counters.GetOrAdd(key, s =>
-			{
-				var changeSubscriptionTask = AfterConnection(() =>
-				{
-					watchedTimeSeriesInGroup.TryAdd(groupName);
-					return Send("watch-time-series-in-group", groupName);
-				});
-
-				return new TimeSeriesConnectionState(
-					() =>
-					{
-						watchedTimeSeriesInGroup.TryRemove(groupName);
-						Send("unwatch-time-series-in-group", groupName);
-						Counters.Remove(key);
-					},
-					changeSubscriptionTask);
-			});
-
-			var taskedObservable = new TaskedObservable<InGroupNotification, TimeSeriesConnectionState>(
-								timeSeries,
-								notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase));
-			timeSeries.OnTimeSeriesInGroupNotification += taskedObservable.Send;
-			timeSeries.OnError += taskedObservable.Error;
-
-			return taskedObservable;*/
-	    }
-
-	    public IObservableWithTask<BulkOperationNotification> ForBulkOperation(Guid? operationId = null)
-	    {
-			throw new NotImplementedException();
-			/*var id = operationId != null ? operationId.ToString() : string.Empty;
-
-		    var key = "bulk-operations/" + id;
-		    var timeSeries = Counters.GetOrAdd(key, s =>
 			{
 				watchedBulkOperations.TryAdd(id);
 				var bulkOperationSubscriptionTask = AfterConnection(() =>
@@ -232,17 +123,32 @@ namespace Raven.Client.TimeSeries.Changes
 						Send("unwatch-bulk-operation", id);
 						Counters.Remove(key);
 					},
+					existingConnectionState =>
+					{
+						TimeSeriesConnectionState _;
+						if (Counters.TryGetValue("bulk-operations/" + id, out _))
+							return _.Task;
+
+						Counters.GetOrAdd("bulk-operations/" + id, x => existingConnectionState);
+
+						return AfterConnection(() =>
+						{
+							if (watchedBulkOperations.Contains(id)) // might have been removed in the meantime
+								return Send("watch-bulk-operation", id);
+							return Task;
+						});
+					},
 					bulkOperationSubscriptionTask);
 			});
 
-			var taskedObservable = new TaskedObservable<BulkOperationNotification, TimeSeriesConnectionState>(
+			var taskedObservable = new TaskedObservable<TimeSeriesBulkOperationNotification, TimeSeriesConnectionState>(
 				timeSeries,
 				notification => operationId == null || notification.OperationId == operationId);
 
 			timeSeries.OnBulkOperationNotification += taskedObservable.Send;
 			timeSeries.OnError += taskedObservable.Error;
 
-			return taskedObservable;*/
-	    }
-    }
+			return taskedObservable;
+		}
+	}
 }
