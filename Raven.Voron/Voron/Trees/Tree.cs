@@ -235,7 +235,7 @@ namespace Voron.Trees
                 else
                 {
                     // optimization for PageRef - try to overwrite existing overflows
-                    if (TryOverwriteOverflowPages(State, node, key, len, version, out pos))
+                    if (TryOverwriteOverflowPages(node, key, len, version, out pos))
                         return pos;
                 }
 
@@ -253,7 +253,7 @@ namespace Voron.Trees
             var pageNumber = -1L;
             if (shouldGoToOverflowPage ?? _tx.DataPager.ShouldGoToOverflowPage(len))
             {
-                pageNumber = WriteToOverflowPages(State, len, out overFlowPos);
+                pageNumber = WriteToOverflowPages(len, out overFlowPos);
                 len = -1;
                 nodeType = NodeFlags.PageRef;
             }
@@ -294,14 +294,15 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private long WriteToOverflowPages(TreeMutableState txInfo, int overflowSize, out byte* dataPos)
+        private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
         {
             var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowSize);
             var overflowPageStart = _tx.AllocatePage(numberOfPages, PageFlags.Overflow);
             overflowPageStart.OverflowSize = overflowSize;
             dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
-            txInfo.OverflowPages += numberOfPages;
-            txInfo.PageCount += numberOfPages;
+
+			State.RecordNewPage(overflowPageStart, numberOfPages);
+
             return overflowPageStart.PageNumber;
         }
 
@@ -311,16 +312,10 @@ namespace Voron.Trees
             nodeVersion = node->Version;
             if (node->Flags == (NodeFlags.PageRef)) // this is an overflow pointer
             {
-                var overflowPage = _tx.GetReadOnlyPage(node->PageNumber);
-                var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
-                for (int i = 0; i < numberOfPages; i++)
-                {
-                    _tx.FreePage(overflowPage.PageNumber + i);
-                }
-
-                State.OverflowPages -= numberOfPages;
-                State.PageCount -= numberOfPages;
+				var overflowPage = _tx.GetReadOnlyPage(node->PageNumber);
+				FreePage(overflowPage);
             }
+
             page.RemoveNode(page.LastSearchPosition);
         }
 
@@ -562,6 +557,25 @@ namespace Voron.Trees
             return page;
         }
 
+	    internal void FreePage(Page p)
+	    {
+		    if (p.IsOverflow)
+		    {
+			    var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(p.OverflowSize);
+			    for (int i = 0; i < numberOfPages; i++)
+			    {
+				    _tx.FreePage(p.PageNumber + i);
+			    }
+
+			    State.RecordFreedPage(p, numberOfPages);
+		    }
+		    else
+		    {
+			    _tx.FreePage(p.PageNumber);
+			    State.RecordFreedPage(p, 1);
+		    }
+	    }
+
         public void Delete(Slice key, ushort? version = null)
         {
             if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
@@ -733,7 +747,7 @@ namespace Voron.Trees
             return new Tree(tx, _state.Clone()) { Name = Name };
         }
 
-        private bool TryOverwriteOverflowPages(TreeMutableState treeState, NodeHeader* updatedNode,
+        private bool TryOverwriteOverflowPages(NodeHeader* updatedNode,
                                                       MemorySlice key, int len, ushort? version, out byte* pos)
         {
             if (updatedNode->Flags == NodeFlags.PageRef &&
@@ -760,8 +774,7 @@ namespace Voron.Trees
                         _tx.FreePage(overflowPage.PageNumber + requestedOverflows + i);
                     }
 
-                    treeState.OverflowPages -= overflowsToFree;
-                    treeState.PageCount -= overflowsToFree;
+					State.RecordFreedPage(overflowPage, overflowsToFree); // we use overflowPage here just to have an instance of Page to properly update stats
 
                     overflowPage.OverflowSize = len;
 
