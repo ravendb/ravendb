@@ -6,13 +6,13 @@
 using System;
 using System.ComponentModel.Composition;
 
-using Raven.Server;
+using Raven.Database.Server;
 
 namespace Raven.Database.Plugins
 {
 	[InheritedExport]
 	public interface IServerStartupTask : IDisposable
 	{
-		void Execute(RavenDbServer server);
+		void Execute(RavenDBOptions serverOptions);
 	}
 }
