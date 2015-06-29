@@ -1479,7 +1479,7 @@ namespace Raven.Database.Indexing
 			index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
 		}
 
-		internal bool ReplaceIndex(string indexName, string indexToReplaceName)
+		internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
 		{
 			var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
 
@@ -1490,8 +1490,7 @@ namespace Raven.Database.Indexing
 			if (indexToReplace == null)
 				return true;
 
-			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false);
-
+			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false, isSideBySideReplacement:true);
 			return true;
 		}
 	}

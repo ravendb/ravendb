@@ -240,7 +240,8 @@ namespace Raven.Tests.Common
                             destination.Url.Replace("localhost", "ipv4.fiddler"),
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
-					IgnoredClient = ignoredClient
+					IgnoredClient = ignoredClient,
+					SkipIndexReplication = false //precaution
                 };
                 if (db != null)
                     replicationDestination.Database = db;
