@@ -200,7 +200,9 @@ namespace Raven.Database.Actions
 
 			ServerSmuggling,
 
-			CounterBatchOperation
+			CounterBatchOperation,
+
+			TimeSeriesBatchOperation,
 		}
     }
 }

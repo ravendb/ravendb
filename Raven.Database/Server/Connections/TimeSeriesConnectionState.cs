@@ -10,14 +10,12 @@ namespace Raven.Database.Server.Connections
 	{
 		private readonly Action<object> enqueue;
 
-		private readonly ConcurrentSet<string> matchingChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingPrefixes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingGroups = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingKeys = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		// private readonly ConcurrentSet<string> matchingRanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ConcurrentSet<string> matchingBulkOperations = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly string changeNotificationType = typeof(ChangeNotification).Name;
-		private readonly string startingWithNotification = typeof(StartingWithNotification).Name;
-		private readonly string inGroupNotificationType = typeof(InGroupNotification).Name;
-		private readonly string bulkOperationNotification = typeof(BulkOperationNotification).Name;
+		private readonly string changeNotificationType = typeof(TimeSeriesKeyNotification).Name;
+		// private readonly string rangesNotificationType = typeof(TimeSeriesRangeChangeNotification).Name;
+		private readonly string bulkOperationNotificationType = typeof(TimeSeriesBulkOperationNotification).Name;
 
 		public object DebugStatus
 		{
@@ -25,9 +23,8 @@ namespace Raven.Database.Server.Connections
 			{
 				return new
 				{
-					WatchedChanges = matchingChanges.ToArray(),
-					WatchedLocalChanges = matchingPrefixes.ToArray(),
-					WatchedReplicationChanges = matchingGroups.ToArray(),
+					WatchedKeys = matchingKeys.ToArray(),
+					// WatchedRanges = matchingRanges.ToArray(),
 					WatchedBulkOperationsChanges = matchingBulkOperations.ToArray()
 				};
 			}
@@ -38,35 +35,25 @@ namespace Raven.Database.Server.Connections
 			this.enqueue = enqueue;
 		}
 
-		public void WatchChange(string name)
+		public void WatchKey(string key)
 		{
-			matchingChanges.TryAdd(name);
+			matchingKeys.TryAdd(key);
 		}
 
-		public void UnwatchChange(string name)
+		public void UnwatchChange(string key)
 		{
-			matchingChanges.TryRemove(name);
+			matchingKeys.TryRemove(key);
 		}
 
-		public void WatchPrefix(string name)
+		/*public void WatchRange(string key)
 		{
-			matchingPrefixes.TryAdd(name);
+			matchingRanges.TryAdd(key);
 		}
 
-		public void UnwatchPrefix(string name)
+		public void UnwatchRange(string name)
 		{
-			matchingPrefixes.TryRemove(name);
-		}
-
-		public void WatchTimeSeriesInGroup(string name)
-		{
-			matchingGroups.TryAdd(name);
-		}
-
-		public void UnwatchTimeSeriesInGroup(string name)
-		{
-			matchingGroups.TryRemove(name);
-		}
+			matchingRanges.TryRemove(name);
+		}*/
 
 		public void WatchTimeSeriesBulkOperation(string operationId)
 		{
@@ -78,41 +65,28 @@ namespace Raven.Database.Server.Connections
 			matchingBulkOperations.TryRemove(operationId);
 		}
 
-		public void Send(ChangeNotification notification)
+		public void Send(TimeSeriesKeyNotification notification)
 		{
-			var timeSeriesPrefix = GetTimeSeriesPrefix(notification.GroupName, notification.TimeSeriesName);
-
-			if (matchingChanges.Contains(timeSeriesPrefix))
+			if (matchingKeys.Contains(notification.TimeSeriesName))
 			{
 				var value = new { Value = notification, Type = changeNotificationType };
 				enqueue(value);
 			}
 
-			if (matchingPrefixes.Any(prefix => timeSeriesPrefix.StartsWith(prefix)))
+			/*if (matchingRanges.Any(prefix => prefix.InRange(notification.At)))
 			{
-				var value = new { Value = notification, Type = startingWithNotification };
+				var value = new { Value = notification, Type = rangesNotificationType };
 				enqueue(value);
-			}
-
-			if (matchingGroups.Contains(notification.GroupName))
-			{
-				var value = new { Value = notification, Type = inGroupNotificationType };
-				enqueue(value);
-			}
+			}*/
 		}
 
-		private static string GetTimeSeriesPrefix(string groupName, string timeSeriesName)
-		{
-			return string.Concat(groupName, Constants.TimeSeries.Separator, timeSeriesName);
-		}
-
-		public void Send(BulkOperationNotification notification)
+		public void Send(TimeSeriesBulkOperationNotification notification)
 		{
 			if (matchingBulkOperations.Contains(string.Empty) == false &&
 				matchingBulkOperations.Contains(notification.OperationId.ToString()) == false)
 				return;
 
-			var value = new { Value = notification, Type = bulkOperationNotification };
+			var value = new { Value = notification, Type = bulkOperationNotificationType };
 			enqueue(value);
 		}
 	}

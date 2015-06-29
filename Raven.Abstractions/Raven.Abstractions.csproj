@@ -430,8 +430,8 @@
     <Compile Include="TimeSeries\TimeSeriesBatchOptions.cs" />
     <Compile Include="TimeSeries\TimeSeriesReplicationDocument.cs" />
     <Compile Include="TimeSeries\TimeSeriesView.cs" />
-    <Compile Include="TimeSeries\Notifications\BulkOperationNotification.cs" />
-    <Compile Include="TimeSeries\Notifications\ChangeNotification.cs" />
+    <Compile Include="TimeSeries\Notifications\TimeSeriesBulkOperationNotification.cs" />
+    <Compile Include="TimeSeries\Notifications\TimeSeriesKeyNotification.cs" />
     <Compile Include="TimeSeries\Notifications\TimeSeriesNotification.cs" />
     <Compile Include="TimeSeries\TimeSeriesDestinationStats.cs" />
     <Compile Include="TimeSeries\TimeSeriesMetrics.cs" />

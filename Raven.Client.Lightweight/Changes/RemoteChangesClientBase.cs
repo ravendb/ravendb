@@ -35,7 +35,7 @@ namespace Raven.Client.Changes
         private readonly string id;
 
         protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
-
+        
 		protected RemoteChangesClientBase(
 			string url,
 			string apiKey,

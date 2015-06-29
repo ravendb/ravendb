@@ -15,37 +15,21 @@ namespace Raven.Client.TimeSeries.Changes
 			this.ensureConnection = ensureConnection;
 		}
 
-		protected override Task EnsureConnection()
+	    protected override Task EnsureConnection()
 		{
 			return ensureConnection(this);
 		}
 
-		public event Action<ChangeNotification> OnChangeNotification = (x) => { };
-		public void Send(ChangeNotification changeNotification)
+		public event Action<TimeSeriesKeyNotification> OnChangeNotification = (x) => { };
+		public void Send(TimeSeriesKeyNotification keyNotification)
         {
 			var onTimeSeriesChangeNotification = OnChangeNotification;
 			if (onTimeSeriesChangeNotification != null)
-				onTimeSeriesChangeNotification(changeNotification);
+				onTimeSeriesChangeNotification(keyNotification);
         }
 
-		public event Action<StartingWithNotification> OnTimeSeriesStartingWithNotification = (x) => { };
-		public void Send(StartingWithNotification changeNotification)
-		{
-			var onTimeSeriesChangeNotification = OnTimeSeriesStartingWithNotification;
-			if (onTimeSeriesChangeNotification != null)
-				onTimeSeriesChangeNotification(changeNotification);
-		}
-
-		public event Action<InGroupNotification> OnTimeSeriesInGroupNotification = (x) => { };
-		public void Send(InGroupNotification changeNotification)
-		{
-			var onTimeSeriesChangeNotification = OnTimeSeriesInGroupNotification;
-			if (onTimeSeriesChangeNotification != null)
-				onTimeSeriesChangeNotification(changeNotification);
-		}
-
-		public event Action<BulkOperationNotification> OnBulkOperationNotification = (x) => { };
-		public void Send(BulkOperationNotification bulkOperationNotification)
+		public event Action<TimeSeriesBulkOperationNotification> OnBulkOperationNotification = (x) => { };
+		public void Send(TimeSeriesBulkOperationNotification bulkOperationNotification)
         {
 			var onBulkOperationNotification = OnBulkOperationNotification;
 			if (onBulkOperationNotification != null)

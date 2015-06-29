@@ -36,7 +36,7 @@ namespace Raven.Client.TimeSeries
 			}
 		}
 
-		public async Task<List<TimeSeriesReplicationStats>> GetTimeSeriesRelicationStatsAsync(CancellationToken token = default (CancellationToken))
+		public async Task<List<TimeSeriesReplicationStats>> GetTimeSeriesReplicationStatsAsync(CancellationToken token = default (CancellationToken))
 		{
 			AssertInitialized();
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
