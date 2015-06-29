@@ -14,8 +14,8 @@ class deleteCountersCommand extends commandBase {
             deletionTasks.push(deleteCommand);
         }
 
-        var successMessage = "Deleted " + (this.counterIds.length > 1 ?  + this.counterIds.length + " counters" : this.counterIds[0]);
-        var failMessage = "Failed to delete " + (this.counterIds.length > 1 ? this.counterIds.length + " counters" : this.counterIds[0]);
+        var successMessage = "Deleted " + (this.counterIds.length > 1 ?  + this.counterIds.length + " counters" : this.getCounterDeleteText(this.counterIds[0]));
+        var failMessage = "Failed to delete " + (this.counterIds.length > 1 ? this.counterIds.length + " counters" : this.getCounterDeleteText(this.counterIds[0]));
 
         var combinedTask = $.when.apply($, deletionTasks)
             .done(() => this.reportSuccess(successMessage))
@@ -24,16 +24,23 @@ class deleteCountersCommand extends commandBase {
         return combinedTask;
     }
 
-    deleteCounter(fileId : string): JQueryPromise<any> {
-        var fileIdSplitted = fileId.split("/");
+    deleteCounter(counterId : string): JQueryPromise<any> {
+        var counterIdSplitted = counterId.split("/");
         var args = {
-            groupName: fileIdSplitted[0],
-            counterName: fileIdSplitted[1]
+            groupName: counterIdSplitted[0],
+            counterName: counterIdSplitted[1]
         };
         var url = "/delete/" + this.urlEncodeArgs(args);
         return this.del(url, null, this.cs, { dataType: undefined }, 9000 * this.counterIds.length);
     }
 
+	getCounterDeleteText(counterId: string): string {
+		var counterIdSplitted = counterId.split("/");
+		var groupName = counterIdSplitted[0];
+		var counterName = counterIdSplitted[1];
+
+		return "group: " + groupName + ", counter name: " + counterName;
+	}
 }
 
 export = deleteCountersCommand;  

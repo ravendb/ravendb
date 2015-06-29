@@ -9,7 +9,6 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
@@ -356,10 +355,8 @@ namespace Raven.Database.Counters
 				return true;
 			}
 
-			internal IEnumerable<CounterDetails> GetCountersDetails(string groupName, int skip, long take)
+			internal IEnumerable<CounterDetails> GetCountersDetails(string groupName, int skip)
 			{
-				var nameBuffer = new byte[0];
-				var counterIdBytes = new byte[sizeof(long)];
 				using (var it = groupToCounters.Iterate())
 				{
 					it.RequiredPrefix = groupName;
@@ -374,61 +371,62 @@ namespace Raven.Database.Counters
 						skip -= (int)countersInGroup; //TODO: is there a better way?
 					} while (it.MoveNext());
 
+					var isEmptyGroup = groupName.Equals(string.Empty);
 					do
 					{
 						using (var iterator = groupToCounters.MultiRead(it.CurrentKey))
 						{
-							iterator.Skip(skip);
-							if (iterator.Seek(Slice.BeforeAllKeys) == false)
-								yield break;
-
+							if (iterator.Seek(Slice.BeforeAllKeys) == false || (skip > 0 && iterator.Skip(skip) == false))
+							{
+								skip = 0;
+								continue;
+							}
 							skip = 0;
+
 							do
 							{
-								var valueReader = iterator.CurrentKey.CreateReader();
-								var requiredBufferSize = iterator.CurrentKey.Size - sizeof(long);
-								valueReader.Skip(requiredBufferSize);
-								valueReader.Read(counterIdBytes, 0, sizeof(long));
-
 								var counterDetails = new CounterDetails
 								{
-									Group = groupName.Equals(string.Empty) ? it.CurrentKey.ToString() : groupName
+									Group = isEmptyGroup ? it.CurrentKey.ToString() : groupName
 								};
 
-								EnsureBufferSize(ref nameBuffer, requiredBufferSize);
-								valueReader.Reset();
-								valueReader.Read(nameBuffer, 0, requiredBufferSize);
-								counterDetails.Name = Encoding.UTF8.GetString(nameBuffer, 0, requiredBufferSize);
-								counterDetails.IdBuffer = counterIdBytes;
+								var valueReader = iterator.CurrentKey.CreateReader();
+								var requiredNameBufferSize = iterator.CurrentKey.Size - sizeof(long);
+
+								int used;
+								var counterNameBuffer = valueReader.ReadBytes(requiredNameBufferSize, out used);
+								counterDetails.Name = Encoding.UTF8.GetString(counterNameBuffer, 0, requiredNameBufferSize);
+
+								var counterIdBuffer = valueReader.ReadBytes(sizeof (long), out used);
+								counterDetails.IdSlice = new Slice(counterIdBuffer, sizeof(long));
+
 								yield return counterDetails;
-							} while (iterator.MoveNext() && --take > 0);
+							} while (iterator.MoveNext());
 						}
-					} while (it.MoveNext() && --take > 0);
+					} while (isEmptyGroup && it.MoveNext());
 				}
 			}
 
-
 			public List<CounterSummary> GetCountersSummary(string groupName, int skip = 0, int take = int.MaxValue)
 			{
-				var countersDetails = GetCountersDetails(groupName, skip, take);
+				var countersDetails = GetCountersDetails(groupName, skip).Take(take);
 				var serverIdBuffer = new byte[parent.sizeOfGuid];
 				return countersDetails.Select(counterDetails => new CounterSummary
 				{
 					Group = counterDetails.Group,
 					CounterName = counterDetails.Name,
-					Total = CalculateCounterTotal(counterDetails.IdBuffer, serverIdBuffer)
+					Total = CalculateCounterTotal(counterDetails.IdSlice, serverIdBuffer)
 				}).ToList();
 			}
 
-			private long CalculateCounterTotal(byte[] counterIdBuffer, byte[] serverIdBuffer)
+			private long CalculateCounterTotal(Slice counterIdSlice, byte[] serverIdBuffer)
 			{
 				using (var it = counters.Iterate())
 				{
-					var slice = new Slice(counterIdBuffer);
-					it.RequiredPrefix = slice;
-					var seekReault = it.Seek(it.RequiredPrefix);
+					it.RequiredPrefix = counterIdSlice;
+					var seekResult = it.Seek(it.RequiredPrefix);
 					//should always be true
-					Debug.Assert(seekReault == true);
+					Debug.Assert(seekResult == true);
 
 					long total = 0;
 					do
@@ -465,10 +463,10 @@ namespace Raven.Database.Counters
 
 					var valueReader = it.CurrentKey.CreateReader();
 					valueReader.Skip(it.RequiredPrefix.Size);
-					var counterIdBuffer = new byte[sizeof(long)];
-					valueReader.Read(counterIdBuffer, 0, sizeof(long));
-
-					return CalculateCounterTotal(counterIdBuffer, new byte[parent.sizeOfGuid]);
+					int used;
+					var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
+					var slice = new Slice(counterIdBuffer, sizeof(long));
+					return CalculateCounterTotal(slice, new byte[parent.sizeOfGuid]);
 				}
 			}
 
@@ -500,10 +498,79 @@ namespace Raven.Database.Counters
 				return readResult.Reader.ReadLittleEndianInt64();
 			}
 
-			//namePrefix: foo/bar/
-			public Counter GetCounterValuesByPrefix(string namePrefix)
+			private Counter GetCounter(Slice counterIdSlice)
 			{
+				var counter = new Counter {LocalServerId = parent.ServerId};
 				using (var it = counters.Iterate())
+				{
+					it.RequiredPrefix = counterIdSlice;
+					var seekResult = it.Seek(it.RequiredPrefix);
+					//should always be true
+					Debug.Assert(seekResult == true);
+
+					var serverIdBuffer = new byte[parent.sizeOfGuid];
+					long lastEtag = 0;
+					do
+					{
+						var reader = it.CurrentKey.CreateReader();
+						reader.Skip(sizeof(long));
+						reader.Read(serverIdBuffer, 0, parent.sizeOfGuid);
+						var serverId = new Guid(serverIdBuffer);
+						//this means that this is a tombstone of a counter
+						if (serverId.Equals(parent.tombstoneId))
+							continue;
+
+						var serverValue = new ServerValue {ServerId = serverId};
+						var etagResult = countersToEtag.Read(it.CurrentKey);
+						Debug.Assert(etagResult != null);
+						serverValue.Etag = etagResult.Reader.ReadBigEndianInt64();
+						if (lastEtag < serverValue.Etag)
+						{
+							counter.LastUpdateByServer = serverId;
+							lastEtag = serverValue.Etag;
+						}
+
+						var lastByte = it.CurrentKey[it.CurrentKey.Size - 1];
+						var sign = Convert.ToChar(lastByte);
+						Debug.Assert(sign == ValueSign.Positive || sign == ValueSign.Negative);
+						var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+						if (sign == ValueSign.Negative)
+							value = -value;
+						serverValue.Value += value;
+						counter.ServerValues.Add(serverValue);
+					} while (it.MoveNext());
+				}
+
+				return counter;
+			} 
+
+			public Counter GetCounterValuesByPrefix(string groupName, string counterName)
+			{
+				using (var it = groupToCounters.MultiRead(groupName))
+				{
+					it.RequiredPrefix = counterName;
+					if (it.Seek(it.RequiredPrefix) == false || it.CurrentKey.Size != it.RequiredPrefix.Size + sizeof(long))
+						throw new Exception("Counter doesn't exist!");
+
+					var valueReader = it.CurrentKey.CreateReader();
+					valueReader.Skip(it.RequiredPrefix.Size);
+					int used;
+					var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
+					var counterIdSlice = new Slice(counterIdBuffer, sizeof(long));
+
+					
+					return GetCounter(counterIdSlice);
+					
+					
+					
+					//return CalculateCounterTotal(slice, new byte[parent.sizeOfGuid]);
+				}
+				
+
+
+
+
+				/*using (var it = counters.Iterate())
 				{
 					it.RequiredPrefix = namePrefix;
 					if (it.Seek(namePrefix) == false)
@@ -512,94 +579,14 @@ namespace Raven.Database.Counters
 					var result = new Counter();
 					do
 					{
-						var counterValue = new CounterValue(it.CurrentKey.ToString(), it.CreateReaderForCurrent().ReadLittleEndianInt64());
+						var counterValue = new ServerValue(it.CurrentKey.ToString(), it.CreateReaderForCurrent().ReadLittleEndianInt64());
 						if (counterValue.ServerId().Equals(parent.tombstoneId) && counterValue.Value == DateTime.MaxValue.Ticks)
 							continue;
 
-						result.CounterValues.Add(counterValue);
+						result.ServerValues.Add(counterValue);
 					} while (it.MoveNext());
 					return result;
-				}
-			}
-
-			public IEnumerable<ReplicationCounter> GetCountersSinceEtag(long etag)
-			{
-				using (var it = etagsToCounters.Iterate())
-				{
-					var buffer = new byte[sizeof(long)];
-					EndianBitConverter.Big.CopyBytes(etag, buffer, 0);
-					var slice = new Slice(buffer);
-					if (it.Seek(slice) == false)
-						yield break;
-
-					var counterIdBuffer = new byte[sizeof(long)];
-					var serverIdBuffer = new byte[parent.sizeOfGuid];
-					var counterNameBuffer = new byte[0];
-					var groupNameBuffer = new byte[0];
-					var signBuffer = new byte[sizeof (char)];
-					do
-					{
-						//{counterId}{serverId}{sign}
-						var valueReader = it.CreateReaderForCurrent();
-						valueReader.Read(counterIdBuffer, 0, sizeof(long));
-						valueReader.Read(serverIdBuffer, 0, parent.sizeOfGuid);
-						var serverId = new Guid(serverIdBuffer);
-
-						valueReader.Read(signBuffer, 0, sizeof(char));
-						var sign = EndianBitConverter.Big.ToChar(signBuffer, 0);
-						Debug.Assert(sign == ValueSign.Positive || sign == ValueSign.Negative);
-						var singleCounterName = valueReader.AsSlice();
-						var value = GetSingleCounterValue(singleCounterName);
-						
-						//read counter name and group
-						var counterNameAndGroup = GetCounterNameAndGroupByServerId(counterIdBuffer, counterNameBuffer, groupNameBuffer);
-
-						valueReader.Reset();
-						var etagResult = countersToEtag.Read(singleCounterName);
-						var counterEtag = etagResult == null ? 0 : etagResult.Reader.ReadBigEndianInt64();
-
-						yield return new ReplicationCounter
-						{
-							GroupName = counterNameAndGroup.GroupName,
-							CounterName = counterNameAndGroup.CounterName,
-							ServerId = serverId,
-							Sign = sign,
-							Value = value,	
-							Etag = counterEtag
-						};
-					} while (it.MoveNext());
-				}
-			}
-
-			private class CounterNameAndGroup
-			{
-				public string CounterName { get; set; }
-				public string GroupName { get; set; }
-			}
-
-			private CounterNameAndGroup GetCounterNameAndGroupByServerId(byte[] counterIdBuffer, byte[] counterNameBuffer, byte[] groupNameBuffer)
-			{
-				var counterNameAndGroup = new CounterNameAndGroup();
-				using (var it = counterIdWithNameToGroup.Iterate())
-				{
-					var slice = new Slice(counterIdBuffer);
-					it.RequiredPrefix = slice;
-					if (it.Seek(it.RequiredPrefix) == false)
-						throw new InvalidOperationException("Couldn't find counter id!");
-
-					var counterNameSize = it.CurrentKey.Size - sizeof(long);
-					EnsureBufferSize(ref counterNameBuffer, counterNameSize);
-					var reader = it.CurrentKey.CreateReader();
-					reader.Skip(sizeof(long));
-					reader.Read(counterNameBuffer, 0, counterNameSize);
-					counterNameAndGroup.CounterName = Encoding.UTF8.GetString(counterNameBuffer, 0, counterNameSize);
-					
-					var valueReader = it.CreateReaderForCurrent();
-					EnsureBufferSize(ref groupNameBuffer, valueReader.Length);
-					valueReader.Read(groupNameBuffer, 0, valueReader.Length);
-					counterNameAndGroup.GroupName = Encoding.UTF8.GetString(groupNameBuffer, 0, valueReader.Length);
-				}
-				return counterNameAndGroup;
+				}*/
 			}
 
 			public IEnumerable<ServerEtag> GetServerEtags()
@@ -623,6 +610,83 @@ namespace Raven.Database.Counters
 
 					} while (it.MoveNext());
 				}
+			}
+
+			public IEnumerable<ReplicationCounter> GetCountersSinceEtag(long etag)
+			{
+				using (var it = etagsToCounters.Iterate())
+				{
+					var buffer = new byte[sizeof(long)];
+					EndianBitConverter.Big.CopyBytes(etag, buffer, 0);
+					var slice = new Slice(buffer);
+					if (it.Seek(slice) == false)
+						yield break;
+
+					var serverIdBuffer = new byte[parent.sizeOfGuid];
+					var signBuffer = new byte[sizeof (char)];
+					do
+					{
+						//{counterId}{serverId}{sign}
+						var valueReader = it.CreateReaderForCurrent();
+						int used;
+						var counterIdBuffer = valueReader.ReadBytes(sizeof (long), out used);
+						var counterIdSlice = new Slice(counterIdBuffer, sizeof(long));
+						valueReader.Read(serverIdBuffer, 0, parent.sizeOfGuid);
+						var serverId = new Guid(serverIdBuffer);
+
+						valueReader.Read(signBuffer, 0, sizeof(char));
+						var sign = EndianBitConverter.Big.ToChar(signBuffer, 0);
+						Debug.Assert(sign == ValueSign.Positive || sign == ValueSign.Negative);
+						//single counter names: {counter-id}{server-id}{sign}
+						var singleCounterName = valueReader.AsSlice();
+						var value = GetSingleCounterValue(singleCounterName);
+						
+						//read counter name and group
+						var counterNameAndGroup = GetCounterNameAndGroupByServerId(counterIdSlice);
+						var etagResult = countersToEtag.Read(singleCounterName);
+						Debug.Assert(etagResult != null);
+						var counterEtag = etagResult.Reader.ReadBigEndianInt64();
+
+						yield return new ReplicationCounter
+						{
+							GroupName = counterNameAndGroup.GroupName,
+							CounterName = counterNameAndGroup.CounterName,
+							ServerId = serverId,
+							Sign = sign,
+							Value = value,	
+							Etag = counterEtag
+						};
+					} while (it.MoveNext());
+				}
+			}
+
+			private class CounterNameAndGroup
+			{
+				public string CounterName { get; set; }
+				public string GroupName { get; set; }
+			}
+
+			private CounterNameAndGroup GetCounterNameAndGroupByServerId(Slice counterIdSlice)
+			{
+				var counterNameAndGroup = new CounterNameAndGroup();
+				using (var it = counterIdWithNameToGroup.Iterate())
+				{
+					it.RequiredPrefix = counterIdSlice;
+					if (it.Seek(it.RequiredPrefix) == false)
+						throw new InvalidOperationException("Couldn't find counter id!");
+
+					var counterNameSize = it.CurrentKey.Size - sizeof(long);
+					var reader = it.CurrentKey.CreateReader();
+					reader.Skip(sizeof(long));
+					int used;
+					var counterNameBuffer = reader.ReadBytes(counterNameSize, out used);
+					counterNameAndGroup.CounterName = Encoding.UTF8.GetString(counterNameBuffer, 0, counterNameSize);
+					
+					var valueReader = it.CreateReaderForCurrent();
+					var groupNameBuffer = valueReader.ReadBytes(valueReader.Length, out used);
+					counterNameAndGroup.GroupName = Encoding.UTF8.GetString(groupNameBuffer, 0, valueReader.Length);
+				}
+				return counterNameAndGroup;
 			}
 
 			public long GetLastEtagFor(Guid serverId)
@@ -668,16 +732,16 @@ namespace Raven.Database.Counters
 				public Buffer(int sizeOfGuid)
 				{
 					FullCounterName = new byte[sizeof(long) + sizeOfGuid + sizeof(char)];
-					FullTombstoneName = new byte[sizeof(long) + sizeOfGuid + sizeof(char)];
 				}
 
 				public readonly byte[] FullCounterName;
-				public readonly byte[] FullTombstoneName;
-				public readonly byte[] Etag = new byte[sizeof(long)];
 				public readonly byte[] CounterValue = new byte[sizeof(long)];
+				public readonly byte[] Etag = new byte[sizeof(long)];
 				public readonly byte[] CounterId = new byte[sizeof(long)];
-				public readonly byte[] TombstoneTicks = new byte[sizeof(long)];
-				public byte[] CounterNameBuffer = new byte[0];
+				public readonly Lazy<byte[]> TombstoneTicks = new Lazy<byte[]>(() => new byte[sizeof(long)]);
+
+				public byte[] GroupName = new byte[0];
+				public byte[] CounterNameWithId = new byte[0];
 			}
 
 			public Writer(CounterStorage parent, Transaction transaction)
@@ -717,10 +781,10 @@ namespace Raven.Database.Counters
 
 			internal IEnumerable<CounterDetails> GetCountersDetails(string groupName)
 			{
-				return reader.GetCountersDetails(groupName, 0, long.MaxValue);
+				return reader.GetCountersDetails(groupName, 0);
 			}
 
-			//Local Counters
+			//local counters
 			public CounterChangeAction Store(string groupName, string counterName, long delta)
 			{
 				var sign = delta >= 0 ? ValueSign.Positive : ValueSign.Negative;
@@ -737,7 +801,7 @@ namespace Raven.Database.Counters
 				return CounterChangeAction.Add;
 			}
 
-			//Counters from replication
+			//counters from replication
 			public CounterChangeAction Store(string groupName, string counterName, Guid serverId, char sign, long value)
 			{
 				var doesCounterExist = Store(groupName, counterName, serverId, sign, counterKeySlice =>
@@ -769,9 +833,11 @@ namespace Raven.Database.Counters
 			private bool Store(string groupName, string counterName, Guid serverId, char sign, Action<Slice> storeAction)
 			{
 				var groupSize = Encoding.UTF8.GetByteCount(groupName);
-				var sliceWriter = new SliceWriter(groupSize);
+				Debug.Assert(groupSize < ushort.MaxValue);
+				EnsureBufferSize(ref buffer.GroupName, groupSize);
+				var sliceWriter = new SliceWriter(buffer.GroupName);
 				sliceWriter.Write(groupName);
-				var groupNameSlice = sliceWriter.CreateSlice();
+				var groupNameSlice = sliceWriter.CreateSlice(groupSize);
 				var counterIdBuffer = GetCounterIdBufferFromTree(groupToCounters, groupNameSlice, counterName);
 				var doesCounterExist = counterIdBuffer != null;
 				if (doesCounterExist == false)
@@ -790,7 +856,6 @@ namespace Raven.Database.Counters
 				UpdateGroups(counterName, counterIdBuffer, serverId, groupNameSlice);
 
 				var counterKeySlice = GetFullCounterNameSlice(counterIdBuffer, serverId, sign);
-
 				storeAction(counterKeySlice);
 
 				RemoveOldEtagIfNeeded(counterKeySlice);
@@ -801,24 +866,27 @@ namespace Raven.Database.Counters
 
 			private void UpdateGroups(string counterName, byte[] counterId, Guid serverId, Slice groupNameSlice)
 			{
-				var sliceWriter = new SliceWriter(Encoding.UTF8.GetByteCount(counterName) + sizeof(long));
+				var counterNameWithIdSize = Encoding.UTF8.GetByteCount(counterName) + sizeof(long);
+				Debug.Assert(counterNameWithIdSize < ushort.MaxValue);
+				EnsureBufferSize(ref buffer.CounterNameWithId, counterNameWithIdSize);
+				var sliceWriter = new SliceWriter(buffer.CounterNameWithId);
 				sliceWriter.Write(counterName);
 				sliceWriter.WriteBytes(counterId);
-				var counterWithIdSlice = sliceWriter.CreateSlice();
+				var counterNameWithIdSlice = sliceWriter.CreateSlice(counterNameWithIdSize);
 
 				if (serverId.Equals(parent.tombstoneId))
 				{
 					//if it's a tombstone, we can remove the counter from the groupToCounters Tree
 					//and add it to the tombstonesGroupToCounters tree
-					groupToCounters.MultiDelete(groupNameSlice, counterWithIdSlice);
-					tombstonesGroupToCounters.MultiAdd(groupNameSlice, counterWithIdSlice);
+					groupToCounters.MultiDelete(groupNameSlice, counterNameWithIdSlice);
+					tombstonesGroupToCounters.MultiAdd(groupNameSlice, counterNameWithIdSlice);
 				}
 				else
 				{
 					//if it's not a tombstone, we need to add it to the groupToCounters Tree
 					//and remove it from the tombstonesGroupToCounters tree
-					groupToCounters.MultiAdd(groupNameSlice, counterWithIdSlice);
-					tombstonesGroupToCounters.MultiDelete(groupNameSlice, counterWithIdSlice);
+					groupToCounters.MultiAdd(groupNameSlice, counterNameWithIdSlice);
+					tombstonesGroupToCounters.MultiDelete(groupNameSlice, counterNameWithIdSlice);
 
 					DeleteExistingTombstone(counterId);
 				}
@@ -826,7 +894,7 @@ namespace Raven.Database.Counters
 				sliceWriter.ResetSliceWriter();
 				sliceWriter.WriteBytes(counterId);
 				sliceWriter.Write(counterName);
-				var idWithCounterNameSlice = sliceWriter.CreateSlice();
+				var idWithCounterNameSlice = sliceWriter.CreateSlice(counterNameWithIdSize);
 				counterIdWithNameToGroup.Add(idWithCounterNameSlice, groupNameSlice);
 			}
 
@@ -857,30 +925,21 @@ namespace Raven.Database.Counters
 
 			private void DeleteExistingTombstone(byte[] counterIdBuffer)
 			{
-				var tombstoneNameSlice = GetTombstoneSlice(counterIdBuffer);
+				var tombstoneNameSlice = GetFullCounterNameSlice(counterIdBuffer, parent.tombstoneId, ValueSign.Positive);
 				var tombstone = counters.Read(tombstoneNameSlice);
 				if (tombstone == null)
 					return;
 
 				//delete the tombstone from the tombstones tree
-				tombstone.Reader.Read(buffer.TombstoneTicks, 0, sizeof (long));
-				Array.Reverse(buffer.TombstoneTicks);
-				var slice = new Slice(buffer.TombstoneTicks);
+				tombstone.Reader.Read(buffer.TombstoneTicks.Value, 0, sizeof (long));
+				Array.Reverse(buffer.TombstoneTicks.Value);
+				var slice = new Slice(buffer.TombstoneTicks.Value);
 				dateToTombstones.MultiDelete(slice, tombstoneNameSlice);
 
 				//Update the tombstone in the counters tree
 				counters.Delete(tombstoneNameSlice);
 				RemoveOldEtagIfNeeded(tombstoneNameSlice);
 				countersToEtag.Delete(tombstoneNameSlice);
-			}
-
-			private Slice GetTombstoneSlice(byte[] counterIdBuffer)
-			{
-				var sliceWriter = new SliceWriter(buffer.FullTombstoneName);
-				sliceWriter.WriteBytes(counterIdBuffer);
-				sliceWriter.WriteBytes(parent.tombstoneId.ToByteArray());
-				sliceWriter.Write(ValueSign.Positive);
-				return sliceWriter.CreateSlice();
 			}
 
 			private void RemoveOldEtagIfNeeded(Slice counterKey)
@@ -970,9 +1029,10 @@ namespace Raven.Database.Counters
 			private byte[] GetCounterIdBuffer(string groupName, string counterName)
 			{
 				var groupSize = Encoding.UTF8.GetByteCount(groupName);
-				var sliceWriter = new SliceWriter(groupSize);
+				EnsureBufferSize(ref buffer.GroupName, groupSize);
+				var sliceWriter = new SliceWriter(buffer.GroupName);
 				sliceWriter.Write(groupName);
-				var groupNameSlice = sliceWriter.CreateSlice();
+				var groupNameSlice = sliceWriter.CreateSlice(groupSize);
 
 				var counterIdBuffer = GetCounterIdBufferFromTree(groupToCounters, groupNameSlice, counterName);
 				if (counterIdBuffer != null)
@@ -999,8 +1059,8 @@ namespace Raven.Database.Counters
 			public bool PurgeOutdatedTombstones()
 			{
 				var timeAgo = DateTime.Now.AddTicks(-parent.tombstoneRetentionTime.Ticks);
-				EndianBitConverter.Big.CopyBytes(timeAgo.Ticks, buffer.TombstoneTicks, 0);
-				var tombstone = new Slice(buffer.TombstoneTicks);
+				EndianBitConverter.Big.CopyBytes(timeAgo.Ticks, buffer.TombstoneTicks.Value, 0);
+				var tombstone = new Slice(buffer.TombstoneTicks.Value);
 				var deletedTombstonesInBatch = parent.deletedTombstonesInBatch;
 				using (var it = dateToTombstones.Iterate())
 				{
@@ -1032,7 +1092,7 @@ namespace Raven.Database.Counters
 					var seek = it.Seek(it.RequiredPrefix);
 					Debug.Assert(seek == true);
 
-					var counterNameSlice = GetCounterNameSlice(it);
+					var counterNameSlice = GetCounterNameSlice(it.CurrentKey.Size, it.CurrentKey.CreateReader());
 					var valueReader = it.CreateReaderForCurrent();
 					var groupNameSlice = valueReader.AsSlice();
 
@@ -1057,15 +1117,23 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			private Slice GetCounterNameSlice(TreeIterator it)
+			private Slice GetCounterNameSlice(ushort currentKeySize, ValueReader currentReader)
 			{
-				var counterNameSize = it.CurrentKey.Size - sizeof(long);
-				EnsureBufferSize(ref buffer.CounterNameBuffer, counterNameSize);
-				var currentReader = it.CurrentKey.CreateReader();
+				var counterNameSize = currentKeySize - sizeof(long);
+				//EnsureBufferSize(ref buffer.CounterNameBuffer, counterNameSize);
+				//var currentReader = it.CurrentKey.CreateReader();
 				currentReader.Skip(sizeof(long));
-				currentReader.Read(buffer.CounterNameBuffer, 0, counterNameSize);
-				var counterNameSlice = new Slice(buffer.CounterNameBuffer);
+				//currentReader.Read(buffer.CounterNameBuffer, 0, counterNameSize);
+				int used;
+				var counterNameBuffer = currentReader.ReadBytes(counterNameSize, out used);
+				var counterNameSlice = new Slice(counterNameBuffer, (ushort)counterNameSize);
 				return counterNameSlice;
+			}
+
+			private static void EnsureBufferSize(ref byte[] buffer, int requiredBufferSize)
+			{
+				if (buffer.Length < requiredBufferSize)
+					buffer = new byte[Utils.NearestPowerOfTwo(requiredBufferSize)];
 			}
 
 			public void Commit(bool notifyParent = true)
@@ -1086,15 +1154,9 @@ namespace Raven.Database.Counters
 			}
 		}
 
-		private static void EnsureBufferSize(ref byte[] buffer, int requiredBufferSize)
-		{
-			if (buffer.Length < requiredBufferSize)
-				buffer = new byte[Utils.NearestPowerOfTwo(requiredBufferSize)];
-		}
-
 		internal class CounterDetails
 		{
-			public byte[] IdBuffer { get; set; }
+			public Slice IdSlice { get; set; }
 			public string Name { get; set; }
 			public string Group { get; set; }
 		}

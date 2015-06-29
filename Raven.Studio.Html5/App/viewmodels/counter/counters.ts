@@ -101,7 +101,7 @@ class counters extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            changesContext.currentResourceChangesApi().watchAllCounters(() => this.refreshGroups()),
+            changesContext.currentResourceChangesApi().watchAllCounters((e: counterChangeNotification) => this.refreshGroups()),
             changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.refreshGroups())
         ];
     }
@@ -298,6 +298,14 @@ class counters extends viewModelBase {
         if (!currentGroup || currentGroup.countersCount() === 0) {
             this.selectedGroup(this.allGroupsGroup);
         }
+
+	    this.groups.sort((c1: counterGroup, c2: counterGroup) => {
+		    if (c1.isAllGroupsGroup)
+			    return -1;
+		    if (c2.isAllGroupsGroup)
+			    return 1;
+		    return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
+	    });
     }
 
     private refreshGroupsData() {
@@ -316,13 +324,13 @@ class counters extends viewModelBase {
         });
     }
 
-
     private refreshGroups(): JQueryPromise<any> {
         var deferred = $.Deferred();
         var cs = this.activeCounterStorage();
 
         this.fetchGroups(cs).done(results => {
             this.updateGroups(results);
+	        this.refreshGroupsData();
             //TODO: add a button to refresh the counters and than use this.refreshCollectionsData();
             deferred.resolve();
         });
