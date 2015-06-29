@@ -1060,7 +1060,7 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-	    private static string SerializeFacetsToFacetsJsonString(List<Facet> facets)
+		internal static string SerializeFacetsToFacetsJsonString(List<Facet> facets)
 	    {
 	        var ravenJArray = (RavenJArray) RavenJToken.FromObject(facets, new JsonSerializer
 	        {
