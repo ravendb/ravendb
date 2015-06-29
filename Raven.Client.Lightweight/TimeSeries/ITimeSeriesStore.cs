@@ -33,9 +33,9 @@ namespace Raven.Client.TimeSeries
 
 		Task AppendAsync(string key, DateTime time, double[] values, CancellationToken token = default(CancellationToken));
 
-		Task DeleteAsync(string groupName, string timeSeriesName, CancellationToken token = default(CancellationToken));
+		Task DeleteAsync(string key, CancellationToken token = default(CancellationToken));
 		
-		Task DeleteRangeAsync(string groupName, string timeSeriesName, CancellationToken token = default(CancellationToken));
+		Task DeleteRangeAsync(string key, DateTime start, DateTime end, CancellationToken token = default(CancellationToken));
 
 		Task<TimeSeriesStats> GetTimeSeriesStatsAsync(CancellationToken token = default (CancellationToken));
 
