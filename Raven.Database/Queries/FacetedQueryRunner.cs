@@ -16,6 +16,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Abstractions;
+using Raven.Database.Config;
 using Raven.Database.Server.Connections;
 using Sparrow;
 using Voron.Util;
@@ -398,16 +399,20 @@ namespace Raven.Database.Queries
 		        foreach (var readerFacetInfo in gatherAllCollector.Results)
 		        {
 		            var matches = readerFacetInfo.Matches;
-					Array.Sort(matches);
-					var allocatedArray = IntArraysPool.Instance.AllocateArray(matches.Count(), ReaderFacetInfo.ClearArray);
-
-			        for (int i = 0; i < allocatedArray.Length; i++)
+					var mergedAndSortedArray = IntArraysPool.Instance.AllocateArray(matches.Sum(x => x.Length), ReaderFacetInfo.ClearArray);
+			        var curMergedArrayIndex = 0;
+			        foreach (var match in matches)
 			        {
-				        allocatedArray[i] = matches[i];
+				        for (var i = 0; i < match.Length; i++)
+				        {
+					        mergedAndSortedArray[curMergedArrayIndex] = match[i];
+							curMergedArrayIndex++;
+				        }
+						IntArraysPool.Instance.FreeArray(match);
 			        }
+					Array.Sort(mergedAndSortedArray);
 
-					readerFacetInfo.Results = allocatedArray;
-					IntArraysPool.Instance.FreeArray(readerFacetInfo.Matches);
+					readerFacetInfo.Results = mergedAndSortedArray;
 		            readerFacetInfo.Matches = null;
 		        }
 
@@ -858,7 +863,7 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		public class IntArraysPool
+		public class IntArraysPool : ILowMemoryHandler
 		{
 			public static IntArraysPool Instance = new IntArraysPool();
 
@@ -902,12 +907,13 @@ namespace Raven.Database.Queries
 
 			private int GetRoundedSize(int size)
 			{
-				if (size%32 == 0)
+				const int roundSize = 1024;
+				if (size%roundSize == 0)
 				{
 					return size;
 				}
 				
-				return (size/32 + 1)*32;
+				return (size/roundSize + 1)*roundSize;
 			}
 
 			public void RunIdleOperations()
@@ -922,6 +928,24 @@ namespace Raven.Database.Queries
 					}
 				});
 			}
+
+			public void HandleLowMemory()
+			{
+				RunIdleOperations();
+			}
+
+			public void SoftMemoryRelease()
+			{
+			}
+
+			public LowMemoryHandlerStatistics GetStats()
+			{
+				return new LowMemoryHandlerStatistics
+				{
+					Name = "IntArraysPool",
+					//EstimatedUsedMemory = arraysPoolBySize.Select(x=>x.Value.)
+				};
+			}
 		}
 
 	    public class ReaderFacetInfo
@@ -930,7 +954,7 @@ namespace Raven.Database.Queries
 	        public int DocBase;
             // Here we store the _global document id_, if you need the 
             // reader document id, you must decrement with the DocBase
-            public int[] Matches;
+            public LinkedList<int[]> Matches;
 	        public int[] Results;
 
 		    public static void ClearArray(int[] array)
@@ -944,11 +968,11 @@ namespace Raven.Database.Queries
 
         public class GatherAllCollectorByReader : Collector
         {
-
+	        public const int MATCHES_IN_LINKED_LIST_ARRAY = 32;
             private ReaderFacetInfo _current;
 	        private int currentMatchesCounter = 0;
             public List<ReaderFacetInfo> Results = new List<ReaderFacetInfo>(); 
-			private object locker = new object();
+			
 
             public override void SetScorer(Scorer scorer)
             {
@@ -956,39 +980,33 @@ namespace Raven.Database.Queries
 
             public override void Collect(int doc)
             {
-	            lock (locker)
-	            {
-		            if (currentMatchesCounter == _current.Matches.Length)
-		            {
-			            var newMatcheArray = IntArraysPool.Instance.AllocateArray(currentMatchesCounter*2, ReaderFacetInfo.ClearArray);
-			            for (var i = 0; i < currentMatchesCounter; i++)
-			            {
-				            newMatcheArray[i] = _current.Matches[i];
-			            }
-						IntArraysPool.Instance.FreeArray(_current.Matches);
-			            _current.Matches = newMatcheArray;
-		            }
+				if (currentMatchesCounter == MATCHES_IN_LINKED_LIST_ARRAY)
+		        {
+					var newMatcheArray = IntArraysPool.Instance.AllocateArray(MATCHES_IN_LINKED_LIST_ARRAY, ReaderFacetInfo.ClearArray);
+			        
+			        _current.Matches.AddLast(newMatcheArray);
+			        currentMatchesCounter = 0;
+		        }
 
-			        _current.Matches[currentMatchesCounter] = doc + _current.DocBase;
-		            Interlocked.Increment(ref currentMatchesCounter);
-	            }
+			    _current.Matches.Last.Value[currentMatchesCounter] = doc + _current.DocBase;
+	            currentMatchesCounter++;
             }
 
             public override void SetNextReader(IndexReader reader, int docBase)
             {
-	            var newMatchesArray = IntArraysPool.Instance.AllocateArray(32, ReaderFacetInfo.ClearArray);
+				var newMatchesArray = IntArraysPool.Instance.AllocateArray(MATCHES_IN_LINKED_LIST_ARRAY, ReaderFacetInfo.ClearArray);
+	            var newMatchesLinkedList = new LinkedList<int[]>();
+	            newMatchesLinkedList.AddLast(newMatchesArray);
 
 	            _current = new ReaderFacetInfo
                 {
                     DocBase = docBase,
                     Reader = reader,
-					Matches = newMatchesArray
+					Matches = newMatchesLinkedList
                 };
                 Results.Add(_current);
 	            currentMatchesCounter = 0;
             }
-
-			
 
             public override bool AcceptsDocsOutOfOrder
             {
