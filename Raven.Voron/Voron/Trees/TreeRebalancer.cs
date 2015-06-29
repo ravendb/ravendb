@@ -48,7 +48,7 @@ namespace Voron.Trees
                     parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
                 }
 				
-				_tx.FreePage(page.PageNumber);
+				_tree.FreePage(page);
                 _cursor.Pop();
 
                 return parentPage;
@@ -124,7 +124,7 @@ namespace Voron.Trees
 
 			nodeHeader->PageNumber = pageRefNumber;
 
-			_tx.FreePage(page.PageNumber);
+			_tree.FreePage(page);
 		}
 
 		private bool TryMergePages(Page parentPage, Page left, Page right)
@@ -158,7 +158,7 @@ namespace Voron.Trees
 			}
 
 			parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
-			_tx.FreePage(right.PageNumber);
+			_tree.FreePage(right);
 
 			return true;
 		}
@@ -250,7 +250,7 @@ namespace Voron.Trees
 			if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
 			{
 				var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
-					0, _cursor, _tree.State);
+					0, _cursor);
 				pageSplitter.Execute();
 			}
 			else
