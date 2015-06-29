@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
@@ -581,6 +580,16 @@ namespace Raven.Database.TimeSeries
 				var s = periodTreeName.Substring(separatorIndex + 1);
 				var strings = s.Split('-');
 				return new PeriodDuration(GenericUtil.ParseEnum<PeriodType>(strings[0]), int.Parse(strings[1]));
+			}
+
+			public void Delete(string key)
+			{
+				throw new NotImplementedException();
+			}
+
+			public void DeleteRange(string key, DateTime start, DateTime end)
+			{
+				throw new NotImplementedException();
 			}
 		}
 

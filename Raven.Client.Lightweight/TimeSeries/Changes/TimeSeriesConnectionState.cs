@@ -36,24 +36,4 @@ namespace Raven.Client.TimeSeries.Changes
 				onBulkOperationNotification(bulkOperationNotification);
         }
     }
-
-	public abstract class ConnectionState<T> : ConnectionStateBase
-		where T: ConnectionStateBase
-	{
-		private readonly Func<T, Task> ensureConnection;
-
-		private T self;
-
-		public ConnectionState(Action onZero, Func<T, Task> ensureConnection, Task task, T self)
-			: base(onZero, task)
-		{
-			this.ensureConnection = ensureConnection;
-			this.self = self;
-		}
-
-		protected override Task EnsureConnection()
-		{
-			return ensureConnection(self);
-		}
-	}
 }

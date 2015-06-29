@@ -67,7 +67,7 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(TimeSeriesKeyNotification notification)
 		{
-			if (matchingKeys.Contains(notification.TimeSeriesName))
+			if (matchingKeys.Contains(notification.Key))
 			{
 				var value = new { Value = notification, Type = changeNotificationType };
 				enqueue(value);

@@ -307,16 +307,6 @@ namespace Raven.Client.TimeSeries.Operations
 			}
 		}
 
-		public void ScheduleAppend(string key, DateTime time, double value)
-		{
-			appendQueue.Add(new TimeSeriesAppend
-			{
-				Key = key,
-				At = time,
-				Values = new[]{value},
-			});
-		}
-
 		public void ScheduleAppend(string key, DateTime time, params double[] values)
 		{
 			appendQueue.Add(new TimeSeriesAppend

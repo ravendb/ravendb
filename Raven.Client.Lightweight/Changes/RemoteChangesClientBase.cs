@@ -34,6 +34,7 @@ namespace Raven.Client.Changes
         private static int connectionCounter;
         private readonly string id;
 
+		// This is the StateCounters, it is not related to the counters database
         protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
         
 		protected RemoteChangesClientBase(
