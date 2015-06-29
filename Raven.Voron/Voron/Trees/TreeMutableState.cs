@@ -61,19 +61,37 @@ namespace Voron.Trees
 
 		public void RecordNewPage(Page p, int num)
 		{
-			PageCount++;
-			var flags = p.Flags;
-			if ((flags & PageFlags.Branch) == PageFlags.Branch)
+			PageCount += num;
+
+			if (p.IsBranch)
 			{
 				BranchPages++;
 			}
-			else if ((flags & PageFlags.Leaf) == PageFlags.Leaf)
+			else if (p.IsLeaf)
 			{
 				LeafPages++;
 			}
-			else if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
+			else if (p.IsOverflow)
 			{
 				OverflowPages += num;
+			}
+		}
+
+		public void RecordFreedPage(Page p, int num)
+		{
+			PageCount -= num;
+
+			if (p.IsBranch)
+			{
+				BranchPages--;
+			}
+			else if (p.IsLeaf)
+			{
+				LeafPages--;
+			}
+			else if (p.IsOverflow)
+			{
+				OverflowPages -= num;
 			}
 		}
 
@@ -82,7 +100,7 @@ namespace Voron.Trees
             return string.Format(@" Pages: {1:#,#}, Entries: {2:#,#}
     Depth: {0}, Flags: {3}
     Root Page: {4}
-    Leaves: {5:#,#} Overflow: {6:#,#} Branches: {7:#,#}", Depth, PageCount, EntriesCount, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages);
+    Leafs: {5:#,#} Overflow: {6:#,#} Branches: {7:#,#}", Depth, PageCount, EntriesCount, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages);
         }
     }
 }

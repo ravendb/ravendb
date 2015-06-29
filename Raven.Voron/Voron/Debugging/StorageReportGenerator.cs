@@ -9,6 +9,7 @@ using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Trees;
+using Voron.Trees.Fixed;
 
 namespace Voron.Debugging
 {
@@ -62,12 +63,22 @@ namespace Voron.Debugging
 					{
 						var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
 
-						densities.Add(((double)(page.OverflowSize + Constants.PageHeaderSize)) / (numberOfPages * AbstractPager.PageSize));
+						densities.Add(((double) (page.OverflowSize + Constants.PageHeaderSize))/(numberOfPages*AbstractPager.PageSize));
 
 						i += (numberOfPages - 1);
 					}
 					else
-						densities.Add(((double)page.SizeUsed) / AbstractPager.PageSize);
+					{
+						if (page.IsFixedSize)
+						{
+							var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries * (page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
+							densities.Add(((double)sizeUsed) / AbstractPager.PageSize);
+						}
+						else
+						{
+							densities.Add(((double)page.SizeUsed) / AbstractPager.PageSize);
+						}
+					}
 				}
 
 				var state = tree.State;

@@ -78,7 +78,7 @@ namespace Voron.Trees
 	        if (globalKeysPrefixingSetting != null)
 				keysPrefixing = globalKeysPrefixingSetting.Value;
 
-            var newRootPage = NewPage(tx, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf, 1);
+            var newRootPage = tx.AllocatePage(1, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf);
             var tree = new Tree(tx, newRootPage.PageNumber)
             {
                 _state =
@@ -235,7 +235,7 @@ namespace Voron.Trees
                 else
                 {
                     // optimization for PageRef - try to overwrite existing overflows
-                    if (TryOverwriteOverflowPages(State, node, key, len, version, out pos))
+                    if (TryOverwriteOverflowPages(node, key, len, version, out pos))
                         return pos;
                 }
 
@@ -253,7 +253,7 @@ namespace Voron.Trees
             var pageNumber = -1L;
             if (shouldGoToOverflowPage ?? _tx.DataPager.ShouldGoToOverflowPage(len))
             {
-                pageNumber = WriteToOverflowPages(State, len, out overFlowPos);
+                pageNumber = WriteToOverflowPages(len, out overFlowPos);
                 len = -1;
                 nodeType = NodeFlags.PageRef;
             }
@@ -266,7 +266,7 @@ namespace Voron.Trees
                 var cursor = lazy.Value;
                 cursor.Update(cursor.Pages.First, page);
 
-                var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
+                var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
                 dataPos = pageSplitter.Execute();
 
                 DebugValidateTree(State.RootPageNumber);
@@ -294,14 +294,15 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private long WriteToOverflowPages(TreeMutableState txInfo, int overflowSize, out byte* dataPos)
+        private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
         {
             var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowSize);
             var overflowPageStart = _tx.AllocatePage(numberOfPages, PageFlags.Overflow);
             overflowPageStart.OverflowSize = overflowSize;
             dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
-            txInfo.OverflowPages += numberOfPages;
-            txInfo.PageCount += numberOfPages;
+
+			State.RecordNewPage(overflowPageStart, numberOfPages);
+
             return overflowPageStart.PageNumber;
         }
 
@@ -311,16 +312,10 @@ namespace Voron.Trees
             nodeVersion = node->Version;
             if (node->Flags == (NodeFlags.PageRef)) // this is an overflow pointer
             {
-                var overflowPage = _tx.GetReadOnlyPage(node->PageNumber);
-                var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
-                for (int i = 0; i < numberOfPages; i++)
-                {
-                    _tx.FreePage(overflowPage.PageNumber + i);
-                }
-
-                State.OverflowPages -= numberOfPages;
-                State.PageCount -= numberOfPages;
+				var overflowPage = _tx.GetReadOnlyPage(node->PageNumber);
+				FreePage(overflowPage);
             }
+
             page.RemoveNode(page.LastSearchPosition);
         }
 
@@ -555,12 +550,33 @@ namespace Voron.Trees
             return true;
         }
 
-        internal static Page NewPage(Transaction tx, PageFlags flags, int num)
+        internal Page NewPage(PageFlags flags, int num)
         {
-            var page = tx.AllocatePage(num, flags);
+            var page = _tx.AllocatePage(num, flags);
+
+			State.RecordNewPage(page, num);
 
             return page;
         }
+
+	    internal void FreePage(Page p)
+	    {
+		    if (p.IsOverflow)
+		    {
+			    var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(p.OverflowSize);
+			    for (int i = 0; i < numberOfPages; i++)
+			    {
+				    _tx.FreePage(p.PageNumber + i);
+			    }
+
+			    State.RecordFreedPage(p, numberOfPages);
+		    }
+		    else
+		    {
+			    _tx.FreePage(p.PageNumber);
+			    State.RecordFreedPage(p, 1);
+		    }
+	    }
 
         public void Delete(Slice key, ushort? version = null)
         {
@@ -689,14 +705,29 @@ namespace Voron.Trees
                     }
                     else if (node->Flags == NodeFlags.MultiValuePageRef)
                     {
-                        var childTreeHeader = (TreeRootHeader*)((byte*)node + node->KeySize + Constants.NodeHeaderSize);
+	                    var childTreeHeader = (TreeRootHeader*) ((byte*) node + node->KeySize + Constants.NodeHeaderSize);
 
-                        results.Add(childTreeHeader->RootPageNumber);
+	                    results.Add(childTreeHeader->RootPageNumber);
 
-                        // this is a multi value
-                        p.SetNodeKey(node, ref key);
-                        var tree = OpenMultiValueTree(_tx, key, node);
-                        results.AddRange(tree.AllPages());
+	                    // this is a multi value
+	                    p.SetNodeKey(node, ref key);
+	                    var tree = OpenMultiValueTree(_tx, key, node);
+	                    results.AddRange(tree.AllPages());
+                    }
+                    else
+                    {
+	                    if (State.Flags.HasFlag(TreeFlags.FixedSizeTrees))
+	                    {
+							var valueReader = NodeHeader.Reader(_tx, node);
+		                    byte valueSize = *valueReader.Base;
+
+		                    var fixedSizeTreeName = p.GetNodeKey(i);
+
+		                    var fixedSizeTree = new FixedSizeTree(_tx, this, (Slice) fixedSizeTreeName, valueSize);
+
+		                    var pages = fixedSizeTree.AllPages();
+		                    results.AddRange(pages);
+	                    }
                     }
                 }
             }
@@ -733,7 +764,7 @@ namespace Voron.Trees
             return new Tree(tx, _state.Clone()) { Name = Name };
         }
 
-        private bool TryOverwriteOverflowPages(TreeMutableState treeState, NodeHeader* updatedNode,
+        private bool TryOverwriteOverflowPages(NodeHeader* updatedNode,
                                                       MemorySlice key, int len, ushort? version, out byte* pos)
         {
             if (updatedNode->Flags == NodeFlags.PageRef &&
@@ -760,8 +791,7 @@ namespace Voron.Trees
                         _tx.FreePage(overflowPage.PageNumber + requestedOverflows + i);
                     }
 
-                    treeState.OverflowPages -= overflowsToFree;
-                    treeState.PageCount -= overflowsToFree;
+					State.RecordFreedPage(overflowPage, overflowsToFree); // we use overflowPage here just to have an instance of Page to properly update stats
 
                     overflowPage.OverflowSize = len;
 
@@ -805,6 +835,9 @@ namespace Voron.Trees
 				_fixedSizeTrees= new Dictionary<string, FixedSizeTree>();
 			var fixedSizeTree = new FixedSizeTree(_tx, this, key, valSize);
 			_fixedSizeTrees[key] = fixedSizeTree;
+
+			State.Flags |= TreeFlags.FixedSizeTrees;
+
 			return fixedSizeTree;
     }
 }
