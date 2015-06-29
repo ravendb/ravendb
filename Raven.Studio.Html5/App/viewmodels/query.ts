@@ -218,6 +218,11 @@ class query extends viewModelBase {
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
+    detached() {
+        super.detached();
+        aceEditorBindingHandler.detached();
+    }
+
     updateAuthToken() {
         new getSingleAuthTokenCommand(this.activeDatabase())
             .execute()
@@ -247,6 +252,8 @@ class query extends viewModelBase {
 
         this.isLoading.extend({ rateLimit: 100 });
     }
+
+    
 
     private fetchRecentQueries() {
         this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
@@ -656,6 +663,7 @@ class query extends viewModelBase {
     fetchIndexFields(indexName: string) {
         // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
         // Fields don't show for All Documents.
+        var self = this;
         var isAllDocumentsDynamicQuery = indexName === "All Documents";
         if (!isAllDocumentsDynamicQuery) {
             //if index is dynamic, get columns using index definition, else get it using first index result
@@ -675,8 +683,8 @@ class query extends viewModelBase {
                 new getIndexDefinitionCommand(indexName, this.activeDatabase())
                     .execute()
                     .done((result: indexDefinitionContainerDto) => {
-                        this.isTestIndex(result.Index.IsTestIndex);
-                        this.indexFields(result.Index.Fields);
+                    self.isTestIndex(result.Index.IsTestIndex);
+                    self.indexFields(result.Index.Fields);
                     });
             }
         }
