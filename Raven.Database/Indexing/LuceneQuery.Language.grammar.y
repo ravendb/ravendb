@@ -21,8 +21,8 @@
 %start main
 
 %token NOT OR AND INTERSECT PLUS MINUS EOF OPEN_CURLY_BRACKET CLOSE_CURLY_BRACKET OPEN_SQUARE_BRACKET CLOSE_SQUARE_BRACKET 
-%token TILDA BOOST QUOTE TO COLON OPEN_PAREN CLOSE_PAREN COMMA
-%token <s> UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM FLOAT_NUMBER INT_NUMBER DATETIME
+%token TILDA BOOST QUOTE TO COLON OPEN_PAREN CLOSE_PAREN COMMA ALL_DOC
+%token <s> UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM FLOAT_NUMBER INT_NUMBER DOUBLE_NUMBER LONG_NUMBER DATETIME NULL WILDCARD_TERM
 
 %type <s> prefix_operator methodName fieldname  fuzzy_modifier boost_modifier proximity_modifier
 %type <o> operator
@@ -82,6 +82,10 @@ node: NOT node           {
 		//Console.WriteLine("Found rule node -> method_exp");
 		$2.Prefix = $1;
 		$$ = $2;
+	}
+	| ALL_DOC
+	{
+		$$ = new AllDocumentsLuceneASTNode();
 	}
 	;
 field_exp: fieldname range_operator_exp {
@@ -196,14 +200,31 @@ term: QUOTED_TERM        {
 		//Console.WriteLine("Found rule term -> FLOAT_NUMBER");
 		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.Float};
 	}
+	|	LONG_NUMBER {
+		//Console.WriteLine("Found rule term -> INT_NUMBER");
+		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.Long};
+		}
+	|	DOUBLE_NUMBER {
+		//Console.WriteLine("Found rule term -> FLOAT_NUMBER");
+		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.Double};
+	}
 	| UNANALIZED_TERM{
 		//Console.WriteLine("Found rule term -> UNANALIZED_TERM");
-		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.UnAnalized};
+		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.UnAnalyzed};
 	}
 	| DATETIME{
 		//Console.WriteLine("Found rule term -> DATETIME");
 		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.DateTime};
 	}	
+	| NULL {
+		//Console.WriteLine("Found rule term -> NULL");
+		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.Null};
+	}
+	| WILDCARD_TERM
+	{
+		//Console.WriteLine("Found rule term -> WILDCARD_TERM");
+		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.WildCardTerm};
+	}
 	;
 postfix_modifier: proximity_modifier boost_modifier 
 	{

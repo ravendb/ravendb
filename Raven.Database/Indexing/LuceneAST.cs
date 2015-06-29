@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.DirectoryServices.ActiveDirectory;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
@@ -10,14 +13,23 @@ using Raven.Database.Indexing.LuceneIntegration;
 
 namespace Raven.Database.Indexing
 {
+	public class LuceneASTQueryConfiguration
+	{
+		public RavenPerFieldAnalyzerWrapper Analayzer { get; set; }
+		public string FieldName { get; set; }
+		public QueryOperator DefaultOperator { get; set; }
+	}
+
     public abstract class LuceneASTNodeBase
     {
         public abstract IEnumerable<LuceneASTNodeBase> Children { get; }
 
-        public virtual Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
-        {
-            return null;
-        }
+	    public abstract Query ToQuery(LuceneASTQueryConfiguration configuration);
+
+		public virtual void AddQueryToBooleanQuery(BooleanQuery b, LuceneASTQueryConfiguration configuration, Occur o = Occur.MUST)
+	    {
+			b.Add(ToQuery(configuration), o);
+	    }
 
         public PrefixOperator Prefix { get; set; }
 
@@ -47,6 +59,22 @@ namespace Raven.Database.Indexing
         };
     }
 
+	public class AllDocumentsLuceneASTNode : LuceneASTNodeBase
+	{
+		public override IEnumerable<LuceneASTNodeBase> Children
+		{
+			get { yield break; }
+		}
+		public override Query ToQuery(LuceneASTQueryConfiguration configuration)
+		{
+			return new MatchAllDocsQuery();
+		}
+
+		public override string ToString()
+		{
+			return GetPrefixString()+ "*:*";
+		}
+	}
     public class FieldLuceneASTNode : LuceneASTNodeBase
     {
         public string FieldName { get; set; }
@@ -55,12 +83,13 @@ namespace Raven.Database.Indexing
         {
             get { yield return Node; }
         }
-        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
+        public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
-            return Node.ToQuery(analayzer, FieldName, defaultOperator);
+	        configuration.FieldName = FieldName;
+	        var res = Node.ToQuery(configuration);
+			return res;
         }
-
-        public override string ToString()
+	    public override string ToString()
         {
             return string.Format("{0}{1}:{2}",GetPrefixString(), FieldName, Node);
         }
@@ -74,41 +103,6 @@ namespace Raven.Database.Indexing
             MethodName = rawMethodStr.Substring(1, fieldStartPos-1);
             var fieldEndPos = rawMethodStr.IndexOf('>');
             FieldName = rawMethodStr.Substring(fieldStartPos + 1, fieldEndPos - fieldStartPos-1);
-/*            var splitList = matches.Where(x => x.Type == TermLuceneASTNode.TermType.UnQuoted && x.Term.Contains(',')).ToList();
-            foreach (var splitNode in splitList)
-            {
-                matches.Remove(splitNode);
-                var tokens = splitNode.Term.Split(commaSpliter,StringSplitOptions.RemoveEmptyEntries);
-                foreach (var token in tokens)
-                {
-                    var node = new TermLuceneASTNode() { Term = token.Trim(), Type = TermLuceneASTNode.TermType.UnQuoted};
-                    matches.Add(node);
-                    //in case those unqouted split terms are actually not strings we need to detect this.
-                    int i;
-                    if (int.TryParse(node.Term, out i))
-                    {
-                        node.Type = TermLuceneASTNode.TermType.Int;
-                        continue;
-                    }
-                    float f;
-                    if (float.TryParse(node.Term, out f))
-                    {
-                        node.Type = TermLuceneASTNode.TermType.Float;
-                        continue;
-                    }
-                    DateTime dt;
-                    if (DateTime.TryParse(node.Term, out dt))
-                    {
-                        node.Type = TermLuceneASTNode.TermType.DateTime;
-                        continue;
-                    }
-                    if (node.Term.StartsWith("[[") && node.Term.EndsWith("]]"))
-                    {
-                        node.Type = TermLuceneASTNode.TermType.UnAnalized;
-                    }
-                    
-                }
-            }*/
             Matches = matches;
         }
 
@@ -120,7 +114,7 @@ namespace Raven.Database.Indexing
         {
             get { return Matches; }
         }
-        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
+        public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
             return new TermsMatchQuery(FieldName, Matches.Select(x => x.Term).ToList());
         }
@@ -131,7 +125,6 @@ namespace Raven.Database.Indexing
                 .Append(FieldName).Append('>').Append(":(").Append(string.Join(" ,", Matches.Select(x => x.Term))).Append(")");
             return sb.ToString();
         }
-        private static char[] commaSpliter = new char[] { ',' };
     }
     public class TermLuceneASTNode : LuceneASTNodeBase
     {
@@ -139,32 +132,58 @@ namespace Raven.Database.Indexing
         {
             get { yield break; }
         }
-        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
+        public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
-            switch (Type)
-            {
-                case TermType.Quoted:
-                    //removing the quotes from the term
-                    return new TermQuery(new Term(fieldName,Term.Substring(1,Term.Length-2)));
-                    break;
-                case TermType.UnQuoted:
-                    return new TermQuery(new Term(fieldName, Term));
-                    break;
-                case TermType.Float:
-                    return new TermQuery(new Term(fieldName, Term));
-                    break;
-                case TermType.DateTime:
-                    return new TermQuery(new Term(fieldName, Term));
-                    break;
-                case TermType.Int:
-                    return new TermQuery(new Term(fieldName, Term));
-                    break;
-                case TermType.UnAnalized:
-                    return new TermQuery(new Term(fieldName, Term.Substring(2, Term.Length - 4)));
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+	        var boost = string.IsNullOrEmpty(Boost) ? 1 : float.Parse(Boost);
+			if (Type == TermType.UnAnalyzed)
+			{
+				return new TermQuery(new Term(configuration.FieldName, Term.Substring(2, Term.Length - 4))) { Boost = boost };
+			}
+	        switch (Type)
+	        {
+		        case TermType.Float:
+		        case TermType.Double:
+		        case TermType.DateTime:
+		        case TermType.Int:
+		        case TermType.Long:
+					return new TermQuery(new Term(configuration.FieldName, Term)) { Boost = boost };
+	        }
+	        var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
+	        List<string> terms = new List<string>();
+			while (tokenStream.IncrementToken())
+			{
+				var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
+				terms.Add(attribute.Term);
+			}
+	        if (Type == TermType.Quoted)
+	        {
+		        /*if (!string.IsNullOrEmpty(Proximity))
+		        {
+					var pq = new PhraseQuery() { Boost = boost };
+					pq.Add(new Term(configuration.FieldName, Term));
+			        pq.Slop = int.Parse(Proximity);
+			        return pq;
+		        }*/
+				var pq = new PhraseQuery() { Boost = boost };
+				foreach (var term in terms)
+		        {
+					pq.Add(new Term(configuration.FieldName,term));
+		        }
+		        return pq;
+				//return new TermQuery(new Term(configuration.FieldName, Term.Substring(1, Term.Length - 2))){Boost = boost};
+	        }
+
+			if (Type == TermType.WildCardTerm)
+			{
+				return new WildcardQuery(new Term(configuration.FieldName, terms.FirstOrDefault())) { Boost = boost };
+			}
+	        if (Type == TermType.UnQuoted && !string.IsNullOrEmpty(Similarity))
+	        {
+				var similarity = string.IsNullOrEmpty(Similarity) ? (float)0.5 : float.Parse(Similarity);
+
+				return new FuzzyQuery(new Term(configuration.FieldName, terms.FirstOrDefault()), similarity, 0) { Boost = boost };
+	        }
+			return new TermQuery(new Term(configuration.FieldName, terms.FirstOrDefault())) { Boost = boost };
         }
 
         public PrefixOperator Prefix { get; set; }
@@ -180,9 +199,13 @@ namespace Raven.Database.Indexing
             Quoted,
             UnQuoted,
             Float,
+			Double,
             DateTime,
             Int,
-            UnAnalized
+			Long,
+            UnAnalyzed,
+			Null,
+			WildCardTerm
         }
 
 
@@ -211,22 +234,39 @@ namespace Raven.Database.Indexing
         {
             get { yield break; }
         }
-        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
+        public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
 			if (RangeMin.Type == TermLuceneASTNode.TermType.Float || RangeMax.Type == TermLuceneASTNode.TermType.Float)
             {
                 //Need to handle NULL values...
-                var min = double.Parse(RangeMin.Term);
-                var max = double.Parse(RangeMax.Term);
-                return NumericRangeQuery.NewDoubleRange(fieldName, 4, min, max, InclusiveMin, InclusiveMax);
+				var min = (RangeMin.Type == TermLuceneASTNode.TermType.Null) ? float.MinValue : float.Parse(RangeMin.Term);
+				var max = (RangeMax.Type == TermLuceneASTNode.TermType.Null) ? float.MaxValue : float.Parse(RangeMax.Term);
+				return NumericRangeQuery.NewFloatRange(configuration.FieldName, 4, min, max, InclusiveMin, InclusiveMax);
             }
-            if (RangeMin.Term.StartsWith("Ix") || RangeMax.Term.StartsWith("Ix"))
+			if (RangeMin.Type == TermLuceneASTNode.TermType.Double || RangeMax.Type == TermLuceneASTNode.TermType.Double)
+			{
+				//Need to handle NULL values...
+				var min = (RangeMin.Type == TermLuceneASTNode.TermType.Null) ? double.MinValue : double.Parse(RangeMin.Term);
+				var max = (RangeMax.Type == TermLuceneASTNode.TermType.Null) ? double.MaxValue : double.Parse(RangeMax.Term);
+				return NumericRangeQuery.NewDoubleRange(configuration.FieldName, 4, min, max, InclusiveMin, InclusiveMax);
+			}
+			if (RangeMin.Type == TermLuceneASTNode.TermType.Int || RangeMax.Type == TermLuceneASTNode.TermType.Int)
             {
-                var longMin = long.Parse(RangeMin.Term);
-                var longMax = long.Parse(RangeMax.Term);
-                return NumericRangeQuery.NewLongRange(fieldName, 4, longMin, longMax, InclusiveMin, InclusiveMax);
-            }                
-            return new TermRangeQuery(fieldName, RangeMin.Term, RangeMax.Term, InclusiveMin, InclusiveMax);
+				var intMin = (RangeMin.Type == TermLuceneASTNode.TermType.Null) ? int.MinValue : int.Parse(RangeMin.Term);
+				var intMax = (RangeMax.Type == TermLuceneASTNode.TermType.Null) ? int.MaxValue : int.Parse(RangeMax.Term);
+				return NumericRangeQuery.NewLongRange(configuration.FieldName, 4, intMin, intMax, InclusiveMin, InclusiveMax);
+            }
+			if (RangeMin.Type == TermLuceneASTNode.TermType.Long || RangeMax.Type == TermLuceneASTNode.TermType.Long)
+			{
+				var longMin = (RangeMin.Type == TermLuceneASTNode.TermType.Null) ? long.MinValue : long.Parse(RangeMin.Term);
+				var longMax = (RangeMax.Type == TermLuceneASTNode.TermType.Null) ? long.MaxValue : long.Parse(RangeMax.Term);
+				return NumericRangeQuery.NewLongRange(configuration.FieldName, 4, longMin, longMax, InclusiveMin, InclusiveMax);
+			}
+	        if (RangeMin.Type == TermLuceneASTNode.TermType.Null && RangeMax.Type == TermLuceneASTNode.TermType.Null)
+	        {
+				return new WildcardQuery(new Term(configuration.FieldName, "*"));
+	        }
+			return new TermRangeQuery(configuration.FieldName, RangeMin.Term, RangeMax.Term, InclusiveMin, InclusiveMax);
         }
 
         public TermLuceneASTNode RangeMin { get; set; }
@@ -256,40 +296,40 @@ namespace Raven.Database.Indexing
                 if (RightNode != null) yield return RightNode;
             }
         }
-        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
+        public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
             var query = new BooleanQuery();
             switch (Op)
             {
                 case Operator.AND:
-                    query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.MUST);
-                    query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.MUST);
+		            LeftNode.AddQueryToBooleanQuery(query, configuration);
+					RightNode.AddQueryToBooleanQuery(query, configuration, RightNode.Prefix == PrefixOperator.Minus ? Occur.MUST_NOT : Occur.MUST);
                     break;
                 case Operator.OR:
-                    query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.SHOULD);
-                    query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.SHOULD);
+					LeftNode.AddQueryToBooleanQuery(query, configuration, Occur.SHOULD);
+					RightNode.AddQueryToBooleanQuery(query, configuration, Occur.SHOULD);
                     break;
                 case Operator.NOT:
-                    query.Add(LeftNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.MUST_NOT);
+                    query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
                     break;
                 case Operator.Implicit:
-                    switch (defaultOperator)
+					switch (configuration.DefaultOperator)
                     {
                         case QueryOperator.Or:
-                            query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.SHOULD);
-                    query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.SHOULD);
+                            LeftNode.AddQueryToBooleanQuery(query, configuration, Occur.SHOULD);
+							RightNode.AddQueryToBooleanQuery(query, configuration, Occur.SHOULD);
                             break;
                         case QueryOperator.And:
-                            query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.MUST);
-                            query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.MUST);
+							LeftNode.AddQueryToBooleanQuery(query, configuration);
+							RightNode.AddQueryToBooleanQuery(query, configuration, RightNode.Prefix == PrefixOperator.Minus ? Occur.MUST_NOT : Occur.MUST);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("defaultOperator");
                     }
                     break;
                 case Operator.INTERSECT:
-                    query.Add(LeftNode.ToQuery(analayzer,fieldName,defaultOperator),Occur.MUST);
-                    query.Add(RightNode.ToQuery(analayzer, fieldName, defaultOperator), Occur.MUST);
+		            LeftNode.AddQueryToBooleanQuery(query, configuration);
+					RightNode.AddQueryToBooleanQuery(query, configuration, RightNode.Prefix == PrefixOperator.Minus ? Occur.MUST_NOT : Occur.MUST);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -297,7 +337,46 @@ namespace Raven.Database.Indexing
             return query;
         }
 
-        public enum Operator
+		public override void AddQueryToBooleanQuery(BooleanQuery query, LuceneASTQueryConfiguration configuration, Occur o = Occur.MUST)
+	    {
+			switch (Op)
+			{
+				case Operator.AND:
+					LeftNode.AddQueryToBooleanQuery(query, configuration);
+					RightNode.AddQueryToBooleanQuery(query, configuration, RightNode.Prefix == PrefixOperator.Minus ? Occur.MUST_NOT : Occur.MUST);
+					break;
+				case Operator.OR:
+					LeftNode.AddQueryToBooleanQuery(query, configuration, Occur.SHOULD);
+					RightNode.AddQueryToBooleanQuery(query, configuration, Occur.SHOULD);
+					break;
+				case Operator.NOT:
+					query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
+					break;
+				case Operator.Implicit:
+					switch (configuration.DefaultOperator)
+					{
+						case QueryOperator.Or:
+							LeftNode.AddQueryToBooleanQuery(query, configuration, Occur.SHOULD);
+							RightNode.AddQueryToBooleanQuery(query, configuration, Occur.SHOULD);
+							break;
+						case QueryOperator.And:
+							LeftNode.AddQueryToBooleanQuery(query, configuration);
+							RightNode.AddQueryToBooleanQuery(query, configuration, RightNode.Prefix == PrefixOperator.Minus ? Occur.MUST_NOT : Occur.MUST);
+							break;
+						default:
+							throw new ArgumentOutOfRangeException("defaultOperator");
+					}
+					break;
+				case Operator.INTERSECT:
+					LeftNode.AddQueryToBooleanQuery(query, configuration);
+					RightNode.AddQueryToBooleanQuery(query, configuration, RightNode.Prefix == PrefixOperator.Minus ? Occur.MUST_NOT : Occur.MUST);
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+	    }
+
+	    public enum Operator
         {
             AND,
             OR,
@@ -330,10 +409,11 @@ namespace Raven.Database.Indexing
         {
             get { yield return Node; }
         }
-        public override Query ToQuery(RavenPerFieldAnalyzerWrapper analayzer, string fieldName, QueryOperator defaultOperator)
+        public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
             var query = new BooleanQuery();
-            query.Add(new BooleanClause(Node.ToQuery(analayzer,fieldName,defaultOperator),Occur.MUST));
+            query.Add(new BooleanClause(Node.ToQuery(configuration),Occur.MUST));
+	        query.Boost = Boost == null ? 1 : float.Parse(Boost);
             return query;
         }
 

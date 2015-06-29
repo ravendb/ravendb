@@ -35,6 +35,7 @@ namespace Raven.Tryouts
     }
     public class Program
     {
+		static readonly HashSet<String> minimizeQueries = new HashSet<string>();  
         private static void Main()
         {
 /*
@@ -52,7 +53,7 @@ namespace Raven.Tryouts
 
             // var query = @"( -Title:(RavenDB) AND Title:(*))";
             // parser.Parse(query);
-            using (var reader = File.OpenText(@"c:\work\queries.txt"))
+			using (var reader = File.OpenText(@"c:\work\queries.txt"))
             //using (var writer = File.CreateText(@"c:\work\error_queries.txt"))
             //using (var defaultAnalyzer = new StandardAnalyzer(Version.LUCENE_29))
             //using (var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer))
@@ -96,7 +97,7 @@ namespace Raven.Tryouts
                 //Console.WriteLine("It took QueryBuilder {0}ms to parse through {1} queries.", luceneSW.ElapsedMilliseconds, queryCount);
                 //Console.WriteLine("It took GPPG  parser {0}ms to parse through {1} queries.", talSW.ElapsedMilliseconds, queryCount);
                 //Console.WriteLine("Total of syntax error queries: {0}.", count);
-                //Console.Read();
+                //Console.Read();	            
             }
         }
 
