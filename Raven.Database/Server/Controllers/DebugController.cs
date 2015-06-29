@@ -589,14 +589,46 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(userInfo);
 		}
 
-		/*[HttpGet]
-		[HttpPost]
+
+		[HttpGet]
 		[RavenRoute("debug/user-info")]
 		[RavenRoute("databases/{databaseName}/debug/user-info")]
-		public HttpResponseMessage GetUserPermission(string )
+		public UserPermission GetUserPermission(string database, MethodOptions method)
 		{
-			
-		}*/
+			if (string.IsNullOrEmpty(database))
+				return new UserPermission {IsGranted = false, Reason = "database is null"};
+
+			if (!method.Equals(MethodOptions.PUT) && !method.Equals(MethodOptions.GET))
+				return new UserPermission {IsGranted = false, Reason = "You are only allowed to use httpMetods PUT or GET"};
+
+			var info = GetUserInfo();
+			var databases = info.Databases;
+			if (databases == null)
+				return new UserPermission {IsGranted = false, Reason = "There are no databases"};
+
+			var db = databases.Find(d => d.Database.Equals(database));
+			if (db == null)
+				return new UserPermission {IsGranted = false, Reason = "Database has no permissions"};
+
+
+			if (method == MethodOptions.PUT)
+			{
+				if (db.IsAdmin)
+					return new UserPermission {IsGranted = true, Reason = "User has admin permissions, httpMethod: PUT"};
+				if (db.IsReadOnly)
+					return new UserPermission {IsGranted = false, Reason = "User has ReadOnly permissions, not allowed to create a request with httpMethod: PUT"};
+
+				return new UserPermission {IsGranted = true, Reason = "User has ReadWrite permissions,  allowed to create a request with httpMethod: PUT"};
+			}
+			// GET method
+			if (db.IsAdmin)
+			{
+				return new UserPermission {IsGranted = true, Reason = "User has admin permissions, httpMethod: GET"};
+			}
+			if (db.IsReadOnly)
+				return new UserPermission {IsGranted = true, Reason = "User has ReadOnly permissions, allowed to create a request with httpMethod: GET"};
+			return new UserPermission {IsGranted = true, Reason = "User has ReadWrite permissions, allowed to create a request httpMethod: GET"};
+		}
 
 		[HttpGet]
 		[RavenRoute("debug/tasks")]

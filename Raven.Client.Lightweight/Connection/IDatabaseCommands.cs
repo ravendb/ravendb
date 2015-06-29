@@ -290,6 +290,13 @@ namespace Raven.Client.Connection
 		UserInfo GetUserInfo();
 
 		/// <summary>
+		///     Retrieves user permissions for a specified database
+		/// </summary>
+		/// <param name="database">name of the database we want to retrive the permissions</param>
+		/// <param name="method">the type of the httpMethod - only PUT or GET is allowed</param>
+		UserPermission GetUserPermission(string database, MethodOptions method);
+
+		/// <summary>
 		///     Get the all terms stored in the index for the specified field
 		///     You can page through the results by use fromValue parameter as the
 		///     starting point for the next query

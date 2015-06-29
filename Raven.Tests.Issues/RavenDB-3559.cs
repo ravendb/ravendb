@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Client.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
@@ -25,6 +26,38 @@ namespace Raven.Tests.Issues
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 			Authentication.EnableOnce();
 		}
+
+		[Fact]
+		public void ShouldAllowToSetupOAuth_WhenValidCommercialLicensePrivided()
+		{
+			using (var documentStore = NewDocumentStore(enableAuthentication: true))
+			{
+				Assert.DoesNotThrow(() =>
+				{
+					SetupOAuth(documentStore);
+				});
+				var info = documentStore.DatabaseCommands.GetUserInfo();
+				var wr = info.ReadWriteDatabases;
+			}
+		}
+
+		private static void SetupOAuth(EmbeddableDocumentStore documentStore)
+		{
+			documentStore.DatabaseCommands.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			{
+				Name = "test",
+				Secret = "test",
+				Enabled = true,
+				Databases = new List<ResourceAccess>
+				{
+					new ResourceAccess {TenantId = "<system>"},
+					new ResourceAccess {TenantId = "Foo", Admin = true},
+			        new ResourceAccess {TenantId = "db2", ReadOnly = true},
+                    new ResourceAccess {TenantId = "db3", ReadOnly = false}
+				}
+			}), new RavenJObject());
+		}
+
 		[Fact]
 		public void get_user_info()
 		{
@@ -65,11 +98,25 @@ namespace Raven.Tests.Issues
 					Assert.Equal("db3", info.Databases[2].Database);
 
 					Assert.True(info.Databases[0].IsAdmin);
-					Assert.True(info.Databases[1].IsAdmin);
+					Assert.False(info.Databases[1].IsAdmin);
 					Assert.False(info.Databases[2].IsAdmin);
 
 					Assert.Equal(1, info.ReadOnlyDatabases.Count);
 
+					var per = store.DatabaseCommands.GetUserPermission("Foo", MethodOptions.PUT);
+					var isGrant = per.IsGranted;
+					var res = per.Reason;
+					Assert.Equal("User has admin permissions, httpMethod: PUT", res);
+
+					var per2 = store.DatabaseCommands.GetUserPermission("db2", MethodOptions.PUT);
+					var isGrant2 = per2.IsGranted;
+					var res2 = per2.Reason;
+					Assert.Equal("User has ReadOnly permissions, not allowed to create a request with httpMethod: PUT", res2);
+
+					var per3 = store.DatabaseCommands.GetUserPermission("db3", MethodOptions.PUT);
+					var isGrant3 = per3.IsGranted;
+					var res3 = per3.Reason;
+					Assert.Equal("User has ReadWrite permissions,  allowed to create a request with httpMethod: PUT", res3);
 
 				}
 			}

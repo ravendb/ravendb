@@ -114,7 +114,6 @@ namespace Raven.Client.Connection.Async
 				primaryUrl = primaryUrl.Substring(0, primaryUrl.Length - 1);
 			if (primaryUrl.Contains('.'))
 				throw new InvalidOperationException("The following chars are not valid in the database name: '.'");
-
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.convention = convention;
@@ -1543,13 +1542,14 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		/*public async Task<OperationPermission> GetUserPermissionAsync(string database, CancellationToken token = default(CancellationToken))
+		public async Task<UserPermission> GetUserPermissionAsync(string database, MethodOptions method, CancellationToken token = default(CancellationToken))
 		{
-
-			//var info = await GetUserInfoAsync(token);
-			var databases = info.
-
-		}*/
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.UserPermission(database, method) , HttpMethod.Get, PrimaryCredentials, convention)))
+			{
+				var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+				return json.Deserialize<UserPermission>(convention);
+			}
+		}
 
 		[Obsolete("Use RavenFS instead.")]
 		public Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize, CancellationToken token = default (CancellationToken))

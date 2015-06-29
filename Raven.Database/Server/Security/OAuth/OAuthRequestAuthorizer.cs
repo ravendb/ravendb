@@ -181,6 +181,9 @@ public class OAuthPrincipal : IPrincipal, IIdentity
 	{
 		this.tokenBody = tokenBody;
 		this.tenantId = tenantId;
+		AdminDatabases = new HashSet<string>(this.tokenBody.AuthorizedDatabases.Where(db => db.Admin).Select(db => db.TenantId));
+		ReadOnlyDatabases = new HashSet<string>(this.tokenBody.AuthorizedDatabases.Where(db => db.ReadOnly).Select(db => db.TenantId));
+		ReadWriteDatabases = new HashSet<string>(this.tokenBody.AuthorizedDatabases.Where(db => db.ReadOnly == false).Select(db => db.TenantId));
 	}
 
 	public bool IsInRole(string role)
@@ -220,7 +223,6 @@ public class OAuthPrincipal : IPrincipal, IIdentity
 	{
 		return tokenBody.AuthorizedDatabases.Select(access => access.TenantId).ToList();
 	}
-
 	public AccessTokenBody TokenBody
 	{
 		get { return tokenBody; }
@@ -234,4 +236,7 @@ public class OAuthPrincipal : IPrincipal, IIdentity
 		return databaseAccess.Any(access => access.Admin);
 		
 	}
+	public HashSet<string> AdminDatabases { get; private set; }
+	public HashSet<string> ReadOnlyDatabases { get; private set; }
+	public HashSet<string> ReadWriteDatabases { get; private set; }
 }
