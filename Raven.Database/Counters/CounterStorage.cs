@@ -498,7 +498,7 @@ namespace Raven.Database.Counters
 				return readResult.Reader.ReadLittleEndianInt64();
 			}
 
-			private Counter GetCounter(Slice counterIdSlice)
+			private Counter GetCounterByCounterId(Slice counterIdSlice)
 			{
 				var counter = new Counter {LocalServerId = parent.ServerId};
 				using (var it = counters.Iterate())
@@ -544,7 +544,7 @@ namespace Raven.Database.Counters
 				return counter;
 			} 
 
-			public Counter GetCounterValuesByPrefix(string groupName, string counterName)
+			public Counter GetCounter(string groupName, string counterName)
 			{
 				using (var it = groupToCounters.MultiRead(groupName))
 				{
@@ -558,35 +558,8 @@ namespace Raven.Database.Counters
 					var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
 					var counterIdSlice = new Slice(counterIdBuffer, sizeof(long));
 
-					
-					return GetCounter(counterIdSlice);
-					
-					
-					
-					//return CalculateCounterTotal(slice, new byte[parent.sizeOfGuid]);
+					return GetCounterByCounterId(counterIdSlice);
 				}
-				
-
-
-
-
-				/*using (var it = counters.Iterate())
-				{
-					it.RequiredPrefix = namePrefix;
-					if (it.Seek(namePrefix) == false)
-						return null;
-
-					var result = new Counter();
-					do
-					{
-						var counterValue = new ServerValue(it.CurrentKey.ToString(), it.CreateReaderForCurrent().ReadLittleEndianInt64());
-						if (counterValue.ServerId().Equals(parent.tombstoneId) && counterValue.Value == DateTime.MaxValue.Ticks)
-							continue;
-
-						result.ServerValues.Add(counterValue);
-					} while (it.MoveNext());
-					return result;
-				}*/
 			}
 
 			public IEnumerable<ServerEtag> GetServerEtags()

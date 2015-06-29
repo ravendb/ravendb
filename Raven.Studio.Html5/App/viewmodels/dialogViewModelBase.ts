@@ -23,12 +23,15 @@ class dialogViewModelBase {
     }
 
     attached() {
-        jwerty.key("esc", e => this.escapeKeyPressed(e), this, this.dialogSelectorName == "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName);
+        jwerty.key("esc", e => this.escapeKeyPressed(e), this, this.dialogSelectorName === "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName);
         jwerty.key("enter", () => this.enterKeyPressed(), this, dialogViewModelBase.dialogSelector);
+
+		var width = $(".messageBox").width();
+		$(".messageBox").width(width + 5);
     }
 
     deactivate(args) {
-        $(this.dialogSelectorName == "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName).unbind('keydown.jwerty');
+        $(this.dialogSelectorName === "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName).unbind("keydown.jwerty");
     }
 
     detached() {

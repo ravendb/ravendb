@@ -108,7 +108,8 @@ class counters extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            //ko.postbox.subscribe("EditItem", () => this.editSelectedDoc()),
+            ko.postbox.subscribe("ChangeCounterValue", () => this.change()),
+			ko.postbox.subscribe("ResetCounter", () => this.reset()),
             ko.postbox.subscribe("ChangesApiReconnected", (cs: counterStorage) => this.reloadCountersData(cs))
         ];
     }
@@ -180,19 +181,6 @@ class counters extends viewModelBase {
             confirmation.done(() => {
                 var resetCommand = new resetCounterCommand(this.activeCounterStorage(), counterData.Group, counterData.Name);
                 var execute = resetCommand.execute();
-				execute.done(() => this.refreshGridAndGroup(counterData.Group));
-            });
-        }
-    }
-
-    deleteCounter() {
-        var grid = this.getCountersGrid();
-        if (grid) {
-            var counterData = grid.getSelectedItems(1).first();
-            var confirmation = this.confirmationMessage("Reset Counter", "Are you sure that you want to reset the counter?");
-            confirmation.done(() => {
-                var deleteCounter = new resetCounterCommand(this.activeCounterStorage(), counterData.Group, counterData.Name);
-                var execute = deleteCounter.execute();
 				execute.done(() => this.refreshGridAndGroup(counterData.Group));
             });
         }

@@ -9,7 +9,7 @@
     isNew = ko.observable<boolean>(false);
     private maxNameLength = 200;
 
-    constructor(dto: counterDto, isNew: boolean = false) {
+    constructor(dto: counterTotalDto, isNew: boolean = false) {
         this.value(dto.CurrentValue);
         this.group(dto.Group);
         this.counterName(dto.CounterName);
