@@ -78,7 +78,7 @@ namespace Voron.Trees
 	        if (globalKeysPrefixingSetting != null)
 				keysPrefixing = globalKeysPrefixingSetting.Value;
 
-            var newRootPage = NewPage(tx, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf, 1);
+            var newRootPage = tx.AllocatePage(1, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf);
             var tree = new Tree(tx, newRootPage.PageNumber)
             {
                 _state =
@@ -266,7 +266,7 @@ namespace Voron.Trees
                 var cursor = lazy.Value;
                 cursor.Update(cursor.Pages.First, page);
 
-                var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
+                var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
                 dataPos = pageSplitter.Execute();
 
                 DebugValidateTree(State.RootPageNumber);
@@ -550,9 +550,11 @@ namespace Voron.Trees
             return true;
         }
 
-        internal static Page NewPage(Transaction tx, PageFlags flags, int num)
+        internal Page NewPage(PageFlags flags, int num)
         {
-            var page = tx.AllocatePage(num, flags);
+            var page = _tx.AllocatePage(num, flags);
+
+			State.RecordNewPage(page, num);
 
             return page;
         }
@@ -703,14 +705,29 @@ namespace Voron.Trees
                     }
                     else if (node->Flags == NodeFlags.MultiValuePageRef)
                     {
-                        var childTreeHeader = (TreeRootHeader*)((byte*)node + node->KeySize + Constants.NodeHeaderSize);
+	                    var childTreeHeader = (TreeRootHeader*) ((byte*) node + node->KeySize + Constants.NodeHeaderSize);
 
-                        results.Add(childTreeHeader->RootPageNumber);
+	                    results.Add(childTreeHeader->RootPageNumber);
 
-                        // this is a multi value
-                        p.SetNodeKey(node, ref key);
-                        var tree = OpenMultiValueTree(_tx, key, node);
-                        results.AddRange(tree.AllPages());
+	                    // this is a multi value
+	                    p.SetNodeKey(node, ref key);
+	                    var tree = OpenMultiValueTree(_tx, key, node);
+	                    results.AddRange(tree.AllPages());
+                    }
+                    else
+                    {
+	                    if (State.Flags.HasFlag(TreeFlags.FixedSizeTrees))
+	                    {
+							var valueReader = NodeHeader.Reader(_tx, node);
+		                    byte valueSize = *valueReader.Base;
+
+		                    var fixedSizeTreeName = p.GetNodeKey(i);
+
+		                    var fixedSizeTree = new FixedSizeTree(_tx, this, (Slice) fixedSizeTreeName, valueSize);
+
+		                    var pages = fixedSizeTree.AllPages();
+		                    results.AddRange(pages);
+	                    }
                     }
                 }
             }
@@ -818,6 +835,9 @@ namespace Voron.Trees
 				_fixedSizeTrees= new Dictionary<string, FixedSizeTree>();
 			var fixedSizeTree = new FixedSizeTree(_tx, this, key, valSize);
 			_fixedSizeTrees[key] = fixedSizeTree;
+
+			State.Flags |= TreeFlags.FixedSizeTrees;
+
 			return fixedSizeTree;
     }
 }
