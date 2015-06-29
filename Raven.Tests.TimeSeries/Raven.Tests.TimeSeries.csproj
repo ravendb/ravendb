@@ -86,6 +86,7 @@
     <Compile Include="BackupRestoreTests.cs" />
     <Compile Include="TimeSeriesFailoverTests.cs" />
     <Compile Include="TimeSeriesLoadBalancingTests.cs" />
+    <Compile Include="TimeSeriesOperations.cs" />
     <Compile Include="TimeSeriesReplicationTests.cs" />
     <Compile Include="TimeSeriesBatchTests.cs" />
     <Compile Include="TimeSeriesChangesTests.cs" />

@@ -13,7 +13,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
-using Raven.Client.TimeSeries.Actions;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
@@ -26,7 +25,7 @@ namespace Raven.Client.TimeSeries.Operations
 		private readonly AsyncManualResetEvent streamingStarted;
 		private readonly TaskCompletionSource<bool> batchOperationTcs;
 		private readonly CancellationTokenSource cts;
-		private readonly BlockingCollection<TimeSeriesChange> changesQueue;
+		private readonly BlockingCollection<TimeSeriesAppend> appendQueue;
 		private readonly string singleAuthUrl;
 
 		private bool disposed;
@@ -39,8 +38,8 @@ namespace Raven.Client.TimeSeries.Operations
 
 		public TimeSeriesBatchOptions DefaultOptions { get { return _defaultOptions; } }		
 
-		internal TimeSeriesBatchOperation(TimeSeriesStore parent, string timeSeriesName, TimeSeriesBatchOptions batchOptions = null)
-			: base(parent, timeSeriesName)
+		internal TimeSeriesBatchOperation(TimeSeriesStore store, string timeSeriesName, TimeSeriesBatchOptions batchOptions = null)
+			: base(store, timeSeriesName)
 		{
 			if(batchOptions != null && batchOptions.BatchSizeLimit < 1)
 				throw new ArgumentException("batchOptions.BatchSizeLimit cannot be negative", "batchOptions");
@@ -49,8 +48,8 @@ namespace Raven.Client.TimeSeries.Operations
 			streamingStarted = new AsyncManualResetEvent();
 			batchOperationTcs = new TaskCompletionSource<bool>();
 			cts = new CancellationTokenSource();
-			changesQueue = new BlockingCollection<TimeSeriesChange>(_defaultOptions.BatchSizeLimit);			
-			singleAuthUrl = string.Format("{0}/ts/{1}/singleAuthToken", ServerUrl, timeSeriesName);
+			appendQueue = new BlockingCollection<TimeSeriesAppend>(_defaultOptions.BatchSizeLimit);			
+			singleAuthUrl = string.Format("{0}ts/{1}/singleAuthToken", ServerUrl, timeSeriesName);
 
 			OperationId = Guid.NewGuid();
 			disposed = false;
@@ -193,8 +192,8 @@ namespace Raven.Client.TimeSeries.Operations
 		{
 			try
 			{
-				var batch = new List<TimeSeriesChange>();
-				while (changesQueue.IsCompleted == false)
+				var batch = new List<TimeSeriesAppend>();
+				while (appendQueue.IsCompleted == false)
 				{
 					batch.Clear();
 					if (token.IsCancellationRequested)
@@ -207,8 +206,8 @@ namespace Raven.Client.TimeSeries.Operations
 					TaskCompletionSource<object> tcs = null;
 					try
 					{
-						TimeSeriesChange timeSeriesChange;
-						while (changesQueue.TryTake(out timeSeriesChange, DefaultOptions.BatchReadTimeoutInMilliseconds, token))
+						TimeSeriesAppend timeSeriesChange;
+						while (appendQueue.TryTake(out timeSeriesChange, DefaultOptions.BatchReadTimeoutInMilliseconds, token))
 						{
 							if (timeSeriesChange.Done != null)
 							{
@@ -223,7 +222,7 @@ namespace Raven.Client.TimeSeries.Operations
 					}
 					catch (OperationCanceledException)
 					{
-						if(changesQueue.Count > 0)
+						if(appendQueue.Count > 0)
 							FetchAllChangeQueue(batch);
 					}
 
@@ -252,17 +251,17 @@ namespace Raven.Client.TimeSeries.Operations
 			}
 		}
 
-		private void FetchAllChangeQueue(List<TimeSeriesChange> batch)
+		private void FetchAllChangeQueue(List<TimeSeriesAppend> batch)
 		{
-			TimeSeriesChange timeSeriesChange;
-			while (changesQueue.TryTake(out timeSeriesChange))
+			TimeSeriesAppend timeSeriesChange;
+			while (appendQueue.TryTake(out timeSeriesChange))
 				batch.Add(timeSeriesChange);
 		}
 
 		public Task FlushAsync()
 		{
 			var taskCompletionSource = new TaskCompletionSource<object>();
-			changesQueue.Add(new TimeSeriesChange
+			appendQueue.Add(new TimeSeriesAppend
 			{
 				Done = taskCompletionSource
 			});
@@ -270,14 +269,14 @@ namespace Raven.Client.TimeSeries.Operations
 			return taskCompletionSource.Task.ContinueWith(t => CloseAndReopenStreaming(null));
 		}
 
-		private void FlushToServer(Stream requestStream, ICollection<TimeSeriesChange> batchItems)
+		private void FlushToServer(Stream requestStream, ICollection<TimeSeriesAppend> batchItems)
 		{
 			if (batchItems.Count == 0)
 				return;
 
 			tempStream.SetLength(0);
 			long bytesWritten;
-			WriteCollectionToBuffer(tempStream, AggregateItems(batchItems), out bytesWritten);
+			WriteCollectionToBuffer(tempStream, batchItems, out bytesWritten);
 
 			var requestBinaryWriter = new BinaryWriter(requestStream);
 			requestBinaryWriter.Write((int)tempStream.Position);
@@ -286,23 +285,7 @@ namespace Raven.Client.TimeSeries.Operations
 			requestStream.Flush();
 		}
 
-		private static ICollection<TimeSeriesChange> AggregateItems(IEnumerable<TimeSeriesChange> batchItems)
-		{
-			var aggregationResult = from item in batchItems
-									group item by new { item.Name, item.Group }
-										into g
-										select new TimeSeriesChange
-										{
-											Name = g.Key.Name,
-											Group = g.Key.Group,
-											Delta = g.Sum(x => x.Delta)
-										};
-
-			var aggregateItems = aggregationResult.ToList();
-			return aggregateItems;
-		}
-
-		private static void WriteCollectionToBuffer(Stream targetStream, ICollection<TimeSeriesChange> items, out long bytesWritten)
+		private static void WriteCollectionToBuffer(Stream targetStream, ICollection<TimeSeriesAppend> items, out long bytesWritten)
 		{
 			using (var gzip = new GZipStream(targetStream, CompressionMode.Compress, leaveOpen: true))
 			using (var stream = new CountingStream(gzip))
@@ -324,25 +307,35 @@ namespace Raven.Client.TimeSeries.Operations
 			}
 		}
 
-		public void ScheduleChange(string groupName, string timeSeriesName, long delta)
+		public void ScheduleAppend(string key, DateTime time, params double[] values)
 		{
-			changesQueue.Add(new TimeSeriesChange
+			appendQueue.Add(new TimeSeriesAppend
 			{
-				Delta = delta,
-				Group = groupName,
-				Name = timeSeriesName
+				Key = key,
+				At = time,
+				Values = values,
 			});
 		}
 
-		public void ScheduleIncrement(string groupName, string timeSeriesName)
+		/*public void ScheduleDelete(string key)
 		{
-			ScheduleChange(groupName, timeSeriesName, 1);
+			appendQueue.Add(new TimeSeriesDelete
+			{
+				Key = key,
+				At = time,
+				Values = values,
+			});
 		}
 
-		public void ScheduleDecrement(string groupName, string timeSeriesName)
+		public void ScheduleDeleteRange(string key, DateTime start, DateTime end)
 		{
-			ScheduleChange(groupName, timeSeriesName, -1);
-		}
+			appendQueue.Add(new TimeSeriesAppend
+			{
+				Key = key,
+				At = time,
+				Values = values,
+			});
+		}*/
 
 		public void Dispose()
 		{
@@ -350,7 +343,7 @@ namespace Raven.Client.TimeSeries.Operations
 				return;
 
 			closeAndReopenStreamingTimer.Dispose();
-			changesQueue.CompleteAdding();
+			appendQueue.CompleteAdding();
 
 			batchOperationTcs.Task.Wait();
 			if (batchOperationTask.Status != TaskStatus.RanToCompletion ||

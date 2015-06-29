@@ -20,7 +20,7 @@ namespace Raven.Tests.TimeSeries
 	{
 		protected readonly List<TimeSeriesStore> timeSeriesStores = new List<TimeSeriesStore>();
 
-		protected readonly string DefaultTimeSeriesName = "SeriesName#";
+		protected readonly string DefaultTimeSeriesName = "SeriesName-";
 
 		protected RavenBaseTimeSeriesTest()
 		{
@@ -82,13 +82,14 @@ namespace Raven.Tests.TimeSeries
 				if ((DateTime.Now - waitStartingTime).TotalSeconds > timeoutInSec)
 					break;
 
-				var sourceValue = await source.GetOverallTotalAsync(groupName, timeSeriesName);
+				throw new NotImplementedException();
+				/*var sourceValue = await source.GetOverallTotalAsync(groupName, timeSeriesName);
 				var targetValue = await destination.GetOverallTotalAsync(groupName, timeSeriesName);
 				if (sourceValue == targetValue)
 				{
 					hasReplicated = true;
 					break;
-				}
+				}*/
 
 				Thread.Sleep(50);
 			}

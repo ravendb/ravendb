@@ -4,13 +4,17 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
+using Raven.Database.TimeSeries.Notifications;
 using Raven.Database.Util;
 using Voron;
 using Voron.Impl;
@@ -24,8 +28,14 @@ namespace Raven.Database.TimeSeries
 {
 	public class TimeSeriesStorage : IResourceStore, IDisposable
 	{
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
+		private volatile bool disposed;
+
 		private readonly StorageEnvironment storageEnvironment;
 		private readonly TransportState transportState;
+		private readonly NotificationPublisher notificationPublisher;
+		private readonly TimeSeriesMetricsManager metricsTimeSeries;
 
 		public Guid ServerId { get; set; }
 
@@ -38,21 +48,33 @@ namespace Raven.Database.TimeSeries
 		public InMemoryRavenConfiguration Configuration { get; private set; }
 		public DateTime LastWrite { get; set; }
 
+		[CLSCompliant(false)]
+		public TimeSeriesMetricsManager MetricsTimeSeries
+		{
+			get { return metricsTimeSeries; }
+		}
+
 		public TimeSeriesStorage(string serverUrl, string timeSeriesName, InMemoryRavenConfiguration configuration, TransportState receivedTransportState = null)
 		{
 			Name = timeSeriesName;
 			TimeSeriesUrl = string.Format("{0}ts/{1}", serverUrl, timeSeriesName);
 			ResourceName = string.Concat(Constants.TimeSeries.UrlPrefix, "/", timeSeriesName);
 
+			metricsTimeSeries = new TimeSeriesMetricsManager();
+
 			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.TimeSeries.DataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
 			transportState = receivedTransportState ?? new TransportState();
+			notificationPublisher = new NotificationPublisher(transportState);
 			ExtensionsState = new AtomicDictionary<object>();
 
 			Configuration = configuration;
 			Initialize();
+
+			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
+			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
 		}
 
 		private void Initialize()
@@ -559,6 +581,16 @@ namespace Raven.Database.TimeSeries
 				var strings = s.Split('-');
 				return new PeriodDuration(GenericUtil.ParseEnum<PeriodType>(strings[0]), int.Parse(strings[1]));
 			}
+
+			public void Delete(string key)
+			{
+				throw new NotImplementedException();
+			}
+
+			public void DeleteRange(string key, DateTime start, DateTime end)
+			{
+				throw new NotImplementedException();
+			}
 		}
 
 		public class RollupWriter : IDisposable
@@ -601,8 +633,55 @@ namespace Raven.Database.TimeSeries
 
 		public void Dispose()
 		{
+			if (disposed)
+				return;
+
+			// give it 3 seconds to complete requests
+			for (int i = 0; i < 30 && Interlocked.Read(ref metricsTimeSeries.ConcurrentRequestsCount) > 0; i++)
+			{
+				Thread.Sleep(100);
+			}
+
+			AppDomain.CurrentDomain.ProcessExit -= ShouldDispose;
+			AppDomain.CurrentDomain.DomainUnload -= ShouldDispose;
+
+			disposed = true;
+
+			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose TimeSeriesStorage");
+
 			if (storageEnvironment != null)
-				storageEnvironment.Dispose();
+				exceptionAggregator.Execute(storageEnvironment.Dispose);
+
+			if (metricsTimeSeries != null)
+				exceptionAggregator.Execute(metricsTimeSeries.Dispose);
+
+			exceptionAggregator.ThrowIfNeeded();
+		}
+
+		private void ShouldDispose(object sender, EventArgs eventArgs)
+		{
+			Dispose();
+		}
+
+		public TimeSeriesMetrics CreateMetrics()
+		{
+			var metrics = metricsTimeSeries;
+
+			return new TimeSeriesMetrics
+			{
+				RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+				Appends = metrics.Appends.CreateMeterData(),
+				Deletes = metrics.Deletes.CreateMeterData(),
+				ClientRequests = metrics.ClientRequests.CreateMeterData(),
+				IncomingReplications = metrics.IncomingReplications.CreateMeterData(),
+				OutgoingReplications = metrics.OutgoingReplications.CreateMeterData(),
+
+				RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
+
+				ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+				ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+				ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary(),
+			};
 		}
 
 		public TimeSeriesStats CreateStats()
@@ -615,10 +694,15 @@ namespace Raven.Database.TimeSeries
 					Url = TimeSeriesUrl,
 					TimeSeriesCount = reader.GetTimeSeriesCount(),
 					TimeSeriesSize = SizeHelper.Humane(TimeSeriesEnvironment.Stats().UsedDataFileSizeInBytes),
-					// RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondTimeSeries.CurrentValue, 3),
+					RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondCounter.CurrentValue, 3),
 				};
 				return stats;
 			}
+		}
+
+		public NotificationPublisher Publisher
+		{
+			get { return notificationPublisher; }
 		}
 
 		public StorageEnvironment TimeSeriesEnvironment

@@ -491,6 +491,8 @@
     <Compile Include="TimeSeries\Controllers\TimeSeriesStatsController.cs" />
     <Compile Include="TimeSeries\Controllers\RavenTimeSeriesApiController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesController.cs" />
+    <Compile Include="TimeSeries\Notifications\NotificationPublisher.cs" />
+    <Compile Include="TimeSeries\TimeSeriesMetricsManager.cs" />
     <Compile Include="TimeSeries\KeyValueStateMachine.cs" />
     <Compile Include="TimeSeries\PeriodDuration.cs" />
     <Compile Include="TimeSeries\PeriodType.cs" />

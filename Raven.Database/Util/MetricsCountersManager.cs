@@ -39,7 +39,9 @@ namespace Raven.Database.Util
         public PerSecondCounterMetric ReducedPerSecond { get; private set; }
 
         public MeterMetric ConcurrentRequests { get; private set; }
+
         public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
+        public PerSecondCounterMetric RequestsPerSecondTimeSeries { get; private set; }
 
         public ConcurrentDictionary<string, MeterMetric> ReplicationBatchSizeMeter { get; private set; }
         
@@ -66,6 +68,7 @@ namespace Raven.Database.Util
             DocsPerSecond = dbMetrics.TimedCounter("metrics", "docs/sec", "Docs Per Second Counter");
             FilesPerSecond = dbMetrics.TimedCounter("metrics", "files/sec", "Files Per Second Counter");
             RequestsPerSecondCounter = dbMetrics.TimedCounter("metrics", "req/sec counter", "Requests Per Second");
+            RequestsPerSecondTimeSeries = dbMetrics.TimedCounter("metrics", "req/sec counter", "Requests Per Second");
             ReducedPerSecond = dbMetrics.TimedCounter("metrics", "reduces/sec", "Reduced Per Second Counter");
             IndexedPerSecond = dbMetrics.TimedCounter("metrics", "indexed/sec", "Index Per Second Counter");
             ReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();

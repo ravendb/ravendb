@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿/*
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.TimeSeries;
@@ -17,18 +17,14 @@ namespace Raven.Tests.TimeSeries
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				using (var otherStore = await store.Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(OtherTimeSeriesName)))
+				using (var batchOperation = store.Advanced.NewBatch(new TimeSeriesBatchOptions { BatchSizeLimit = 3 }))
 				{
-					otherStore.Initialize();
-					using (var batchOperation = otherStore.Advanced.NewBatch(new TimeSeriesBatchOptions { BatchSizeLimit = 3 }))
-					{
-						batchOperation.ScheduleIncrement("FooGroup", "FooTimeSeries");
-						batchOperation.ScheduleIncrement("FooGroup", "FooTimeSeries");
-						batchOperation.ScheduleDecrement("FooGroup", "FooTimeSeries");
-					}
-					var total = await otherStore.GetOverallTotalAsync("FooGroup", "FooTimeSeries");
-					total.Should().Be(1);
+					batchOperation.ScheduleIncrement("FooGroup", "FooTimeSeries");
+					batchOperation.ScheduleIncrement("FooGroup", "FooTimeSeries");
+					batchOperation.ScheduleDecrement("FooGroup", "FooTimeSeries");
 				}
+				var total = await store.GetOverallTotalAsync("FooGroup", "FooTimeSeries");
+				total.Should().Be(1);
 			}
 		}
 
@@ -85,7 +81,7 @@ namespace Raven.Tests.TimeSeries
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				store.Batch.ScheduleIncrement("FooGroup", "FooTimeSeries"); //schedule increment for default timeSeries
+				store.Batch.ScheduleAppend("FooGroup", "FooTimeSeries"); //schedule increment for default timeSeries
 				await store.Batch.FlushAsync();
 
 				//with time series name null - client is opened for default timeSeries
@@ -224,3 +220,4 @@ namespace Raven.Tests.TimeSeries
 		}
 	}
 }
+*/

@@ -2,7 +2,7 @@
 
 namespace Raven.Abstractions.TimeSeries.Notifications
 {
-	public class BulkOperationNotification : TimeSeriesNotification
+	public class TimeSeriesBulkOperationNotification : TimeSeriesNotification
 	{
 		public Guid OperationId { get; set; }
 

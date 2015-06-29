@@ -7,23 +7,13 @@ namespace Raven.Client.TimeSeries.Changes
 	public interface ITimeSeriesChanges : IConnectableChanges<ITimeSeriesChanges>
     {
 		/// <summary>
-		/// Subscribe to changes for specified group and time series only.
+		/// Subscribe to changes for specified key and time series only.
 		/// </summary>
-		IObservableWithTask<ChangeNotification> ForChange(string groupName, string timeSeriesName);
-
-		/// <summary>
-		/// Subscribe to changes for specified group and time series only.
-		/// </summary>
-		IObservableWithTask<StartingWithNotification> ForTimeSeriesStartingWith(string groupName, string prefixForName);
-
-		/// <summary>
-		/// Subscribe to changes for specified group and time series only.
-		/// </summary>
-		IObservableWithTask<InGroupNotification> ForTimeSeriesInGroup(string groupName);
+		IObservableWithTask<TimeSeriesKeyNotification> ForKey(string key);
 
 		/// <summary>
 		/// Subscribe to all bulk operation changes that belong to a operation with given Id.
 		/// </summary>
-		IObservableWithTask<BulkOperationNotification> ForBulkOperation(Guid? operationId = null);
+		IObservableWithTask<TimeSeriesBulkOperationNotification> ForBulkOperation(Guid? operationId = null);
     }
 }

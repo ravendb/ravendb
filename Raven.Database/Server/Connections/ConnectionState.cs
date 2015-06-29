@@ -34,11 +34,13 @@ namespace Raven.Database.Server.Connections
 			DocumentStore = new DocumentsConnectionState(Enqueue);
 			FileSystem = new FileSystemConnectionState(Enqueue);
 			CounterStorage = new CounterStorageConnectionState(Enqueue);
+			TimeSeries = new TimeSeriesConnectionState(Enqueue);
 		}
 
 		public DocumentsConnectionState DocumentStore { get; private set; }
 		public FileSystemConnectionState FileSystem { get; private set; }
 		public CounterStorageConnectionState CounterStorage { get; private set; }
+		public TimeSeriesConnectionState TimeSeries { get; private set; }
 
 		public object DebugStatus
 		{
