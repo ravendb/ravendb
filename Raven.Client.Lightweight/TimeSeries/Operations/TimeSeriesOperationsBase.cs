@@ -29,7 +29,7 @@ namespace Raven.Client.TimeSeries.Operations
 			ServerUrl = store.Url;
 			Parent = store;
 			TimeSeriesName = timeSeriesName;
-			TimeSeriesUrl = string.Format(CultureInfo.InvariantCulture, "{0}/ts/{1}", ServerUrl, timeSeriesName);
+			TimeSeriesUrl = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}", ServerUrl, timeSeriesName);
 			JsonSerializer = store.JsonSerializer;
 			timeSeriesConvention = store.TimeSeriesConvention;
 		}
