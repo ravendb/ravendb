@@ -1407,7 +1407,7 @@ namespace Raven.Client.Connection.Async
 			}, token);
 		}
 
-		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas, CancellationToken token = default (CancellationToken))
+		public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default (CancellationToken))
 		{
 			return ExecuteWithReplication("POST", async operationMetadata =>
 			{
