@@ -598,9 +598,6 @@ namespace Raven.Database.Server.Controllers
 			if (string.IsNullOrEmpty(database))
 				return new UserPermission {IsGranted = false, Reason = "database is null"};
 
-			if (!method.Equals(MethodOptions.PUT) && !method.Equals(MethodOptions.GET))
-				return new UserPermission {IsGranted = false, Reason = "You are only allowed to use httpMetods PUT or GET"};
-
 			var info = GetUserInfo();
 			var databases = info.Databases;
 			if (databases == null)
@@ -608,26 +605,71 @@ namespace Raven.Database.Server.Controllers
 
 			var db = databases.Find(d => d.Database.Equals(database));
 			if (db == null)
-				return new UserPermission {IsGranted = false, Reason = "Database has no permissions"};
-
+				return new UserPermission
+				{
+					IsGranted = false,
+					Reason = database +"has no permissions"
+				};
 
 			if (method == MethodOptions.PUT)
 			{
 				if (db.IsAdmin)
-					return new UserPermission {IsGranted = true, Reason = "User has admin permissions, httpMethod: PUT"};
+					return new UserPermission
+					{
+						User = info.User,
+						Database = db,
+						Method = method,
+						IsGranted = true, 
+						Reason = "PUT allowed on " + database+ " because user " + info.User +" has admin permissions"
+					};
 				if (db.IsReadOnly)
-					return new UserPermission {IsGranted = false, Reason = "User has ReadOnly permissions, not allowed to create a request with httpMethod: PUT"};
+					return new UserPermission 
+					{
+						User = info.User,
+						Database = db,
+						Method = method,
+						IsGranted = false,
+						Reason = "PUT rejected on" + database + "because user" + info.User+ "has ReadOnly permissions"
+					};
 
-				return new UserPermission {IsGranted = true, Reason = "User has ReadWrite permissions,  allowed to create a request with httpMethod: PUT"};
+				return new UserPermission
+				{
+					User = info.User,
+					Database = db,
+					Method = method,
+					IsGranted = true, 
+					Reason = "PUT allowed on " + database + " because user " + info.User + "has ReadWrite permissions"
+				};
 			}
 			// GET method
 			if (db.IsAdmin)
 			{
-				return new UserPermission {IsGranted = true, Reason = "User has admin permissions, httpMethod: GET"};
+				return new UserPermission
+				{
+					User = info.User,
+					Database = db,
+					Method = method,
+					IsGranted = true,
+					Reason = "GET allowed on " + database + " because user " + info.User + " has admin permissions"
+				};
 			}
 			if (db.IsReadOnly)
-				return new UserPermission {IsGranted = true, Reason = "User has ReadOnly permissions, allowed to create a request with httpMethod: GET"};
-			return new UserPermission {IsGranted = true, Reason = "User has ReadWrite permissions, allowed to create a request httpMethod: GET"};
+				return new UserPermission
+				{
+					User = info.User,
+					Database = db,
+					Method = method,
+					IsGranted = true,
+					Reason = "GET allowed on " + database + " because user " + info.User + "has ReadOnly permissions"
+				};
+				return new UserPermission
+				{
+					User = info.User,
+					Database = db,
+					Method = method,
+					IsGranted = true, 
+					Reason = "GET allowed on " + database + " because user " + info.User + "has ReadWrite permissions"
+				};
 		}
 
 		[HttpGet]
@@ -677,10 +719,10 @@ namespace Raven.Database.Server.Controllers
 								continue;
 
 							string description = null;
-							var descriptionAttibute =
+							var descriptionAttribute =
 								reflectedHttpActionDescriptor.MethodInfo.CustomAttributes.FirstOrDefault(attributeData => attributeData.AttributeType == typeof(DescriptionAttribute));
-							if (descriptionAttibute != null)
-								description = descriptionAttibute.ConstructorArguments[0].Value.ToString();
+							if (descriptionAttribute != null)
+								description = descriptionAttribute.ConstructorArguments[0].Value.ToString();
 
 							data.Methods.Add(new Method
 							{
