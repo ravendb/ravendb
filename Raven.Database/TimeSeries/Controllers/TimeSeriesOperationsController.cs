@@ -30,16 +30,47 @@ namespace Raven.Database.TimeSeries.Controllers
 {
 	public class TimeSeriesOperationsController : RavenTimeSeriesApiController
 	{
-		[RavenRoute("ts/{timeSeriesName}/append/{key}")]
+		[RavenRoute("ts/{timeSeriesName}/prefix-create/{prefix}/{valueLength}")]
 		[HttpPost]
-		public HttpResponseMessage Append(string key, long time, double[] values)
+		public HttpResponseMessage CreatePrefixConfiguration(string prefix, byte valueLength)
 		{
-			if (string.IsNullOrEmpty(key))
+			if (string.IsNullOrEmpty(prefix) || valueLength < 1)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			using (var writer = Storage.CreateWriter())
+			if (prefix.StartsWith("-") == false)
+				return GetMessageWithString("Prefix must start with '-' char", HttpStatusCode.BadRequest);
+
+			Storage.CreatePrefixConfiguration(prefix, valueLength);
+			return new HttpResponseMessage(HttpStatusCode.Created);
+		}
+
+		[RavenRoute("ts/{timeSeriesName}/prefix-delete/{prefix}/{valueLength}")]
+		[HttpDelete]
+		public HttpResponseMessage DeletePrefixConfiguration(string prefix)
+		{
+			if (string.IsNullOrEmpty(prefix))
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			if (prefix.StartsWith("-") == false)
+				return GetMessageWithString("Prefix must start with '-' char", HttpStatusCode.BadRequest);
+
+			Storage.DeletePrefixConfiguration(prefix);
+			return new HttpResponseMessage(HttpStatusCode.Created);
+		}
+
+		[RavenRoute("ts/{timeSeriesName}/append/{prefix}/{key}")]
+		[HttpPost]
+		public HttpResponseMessage Append(string prefix, string key, TimeSeriesAppendRequest input)
+		{
+			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key) || input.Time < DateTime.MinValue.Ticks || input.Values == null || input.Values.Length == 0)
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			if (prefix.StartsWith("-") == false)
+				throw new InvalidOperationException("Prefix must start with '-' char");
+
+			using (var writer = Storage.CreateWriter((byte) input.Values.Length))
 			{
-				writer.Append(key, new DateTime(time), values);
+				writer.Append(key, new DateTime(input.Time), input.Values);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
@@ -47,8 +78,8 @@ namespace Raven.Database.TimeSeries.Controllers
 				{
 					Key = key,
 					Action = TimeSeriesChangeAction.Append,
-					At = time,
-					Values = values,
+					At = input.Time,
+					Values = input.Values,
 				});
 
 				return new HttpResponseMessage(HttpStatusCode.OK);
@@ -100,7 +131,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	            {
 		            foreach (var changeBatch in changeBatches)
 		            {
-						using (var writer = Storage.CreateWriter())
+						using (var writer = Storage.CreateWriter(1))
 						{
 							Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
 							{
@@ -246,14 +277,17 @@ namespace Raven.Database.TimeSeries.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/delete")]
+		[RavenRoute("ts/{timeSeriesName}/delete/{prefix}/{key}")]
 		[HttpDelete]
-		public HttpResponseMessage Delete(string key)
+		public HttpResponseMessage Delete(string prefix, string key)
 		{
-			if (string.IsNullOrEmpty(key))
+			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
-			
-			using (var writer = Storage.CreateWriter())
+
+			if (prefix.StartsWith("-") == false)
+				throw new InvalidOperationException("Prefix must start with '-' char");
+	
+			using (var writer = Storage.CreateWriter(1))
 			{
 				writer.Delete(key);
 				writer.Commit();
@@ -269,14 +303,17 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/deleteRange")]
+		[RavenRoute("ts/{timeSeriesName}/deleteRange/{prefix}/{key}")]
 		[HttpDelete]
-		public HttpResponseMessage DeleteRange(string key, DateTime start, DateTime end)
+		public HttpResponseMessage DeleteRange(string prefix, string key, long start, long end)
 		{
-			if (string.IsNullOrEmpty(key))
+			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key) || start < DateTime.MinValue.Ticks || start > DateTime.MaxValue.Ticks)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			using (var writer = Storage.CreateWriter())
+			if (prefix.StartsWith("-") == false)
+				throw new InvalidOperationException("Prefix must start with '-' char");
+
+			using (var writer = Storage.CreateWriter(1))
 			{
 				writer.DeleteRange(key, start, end);
 				writer.Commit();

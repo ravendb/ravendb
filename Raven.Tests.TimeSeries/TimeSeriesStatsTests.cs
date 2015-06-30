@@ -11,12 +11,12 @@ namespace Raven.Tests.TimeSeries
 	    {
 		    using (var store = NewRemoteTimeSeriesStore())
 		    {
-				await store.AppendAsync("Time", DateTime.Now, 3d);
-				await store.AppendAsync("Time", DateTime.Now.AddHours(1), 4d);
-				await store.AppendAsync("Is", DateTime.Now, 5d);
-				await store.AppendAsync("Money", DateTime.Now, 6d);
-				await store.AppendAsync("Money", DateTime.Now, 7d);
-				await store.AppendAsync("Money", DateTime.Now, 8d);
+				await store.AppendAsync("-Simple", "Time", DateTime.Now, 3d);
+				await store.AppendAsync("-Simple", "Time", DateTime.Now.AddHours(1), 4d);
+				await store.AppendAsync("-Simple", "Is", DateTime.Now, 5d);
+				await store.AppendAsync("-Simple", "Money", DateTime.Now, 6d);
+				await store.AppendAsync("-Simple", "Money", DateTime.Now, 7d);
+				await store.AppendAsync("-Simple", "Money", DateTime.Now, 8d);
 				
 				var stats = await store.GetTimeSeriesStatsAsync();
 			    Assert.Equal(3, stats.KeysCount);

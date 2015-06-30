@@ -15,7 +15,7 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader();
+				var r = tss.CreateReader(1);
 				Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
@@ -37,7 +37,7 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader();
+				var r = tss.CreateReader(1);
 				Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
@@ -59,7 +59,7 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader();
+				var r = tss.CreateReader(1);
 				Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
@@ -80,7 +80,7 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader();
+				var r = tss.CreateReader(1);
 				var exception = Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
@@ -102,7 +102,7 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader();
+				var r = tss.CreateReader(1);
 
 				var exception = Assert.Throws<InvalidOperationException>(() =>
 				{
@@ -125,7 +125,7 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader();
+				var r = tss.CreateReader(1);
 
 				var exception = Assert.Throws<InvalidOperationException>(() =>
 				{

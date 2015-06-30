@@ -36,6 +36,7 @@ namespace Raven.Database.TimeSeries
 		private readonly TransportState transportState;
 		private readonly NotificationPublisher notificationPublisher;
 		private readonly TimeSeriesMetricsManager metricsTimeSeries;
+		private Tree metadata;
 
 		public Guid ServerId { get; set; }
 
@@ -83,7 +84,7 @@ namespace Raven.Database.TimeSeries
 			{
 				storageEnvironment.CreateTree(tx, "data", keysPrefixing: true);
 
-				var metadata = storageEnvironment.CreateTree(tx, "$metadata");
+				metadata = storageEnvironment.CreateTree(tx, "$metadata");
 				var id = metadata.Read("id");
 				if (id == null) // new db
 				{
@@ -122,7 +123,7 @@ namespace Raven.Database.TimeSeries
 			return options;
 		}
 
-		public Reader CreateReader(byte seriesValueLength = 1)
+		public Reader CreateReader(byte seriesValueLength)
 		{
 			if (seriesValueLength < 1)
 				throw new ArgumentOutOfRangeException("seriesValueLength", "Should be equal or greater than 1");
@@ -130,7 +131,7 @@ namespace Raven.Database.TimeSeries
 			return new Reader(this, seriesValueLength);
 		}
 
-		public Writer CreateWriter(byte seriesValueLength = 1)
+		public Writer CreateWriter(byte seriesValueLength)
 		{
 			if (seriesValueLength < 1)
 				throw new ArgumentOutOfRangeException("seriesValueLength", "Should be equal or greater than 1");
@@ -157,6 +158,7 @@ namespace Raven.Database.TimeSeries
 		internal const string SeriesTreePrefix = "series-";
 		internal const string PeriodTreePrefix = "periods-";
 		internal const char PeriodsKeySeparator = '\uF8FF';
+		internal const string PrefixesPrefix = "prefixes-";
 
 		public class Reader : IDisposable
 		{
@@ -483,12 +485,11 @@ namespace Raven.Database.TimeSeries
 
 			private readonly Tree tree;
 			private readonly Dictionary<string, RollupRange> rollupsToClear = new Dictionary<string, RollupRange>();
-			private readonly byte[] valBuffer;
+			private byte[] valBuffer;
 
 			public Writer(TimeSeriesStorage storage, byte seriesValueLength)
 			{
 				this.seriesValueLength = seriesValueLength;
-				valBuffer = new byte[seriesValueLength * sizeof(double)];
 				tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
 				tree = tx.State.GetTree(tx, SeriesTreePrefix + seriesValueLength);
 			}
@@ -515,6 +516,8 @@ namespace Raven.Database.TimeSeries
 					rollupsToClear.Add(key, new RollupRange(time));
 				}
 
+				if (valBuffer == null)
+					valBuffer = new byte[seriesValueLength*sizeof (double)];
 				for (int i = 0; i < values.Length; i++)
 				{
 					EndianBitConverter.Big.CopyBytes(values[i], valBuffer, i * sizeof(double));
@@ -587,7 +590,7 @@ namespace Raven.Database.TimeSeries
 				throw new NotImplementedException();
 			}
 
-			public void DeleteRange(string key, DateTime start, DateTime end)
+			public void DeleteRange(string key, long start, long end)
 			{
 				throw new NotImplementedException();
 			}
@@ -708,6 +711,36 @@ namespace Raven.Database.TimeSeries
 		public StorageEnvironment TimeSeriesEnvironment
 		{
 			get { return storageEnvironment; }
+		}
+
+		public void CreatePrefixConfiguration(string prefix, byte valueLength)
+		{
+			var val = metadata.Read(PrefixesPrefix + prefix);
+			if (val != null)
+			{
+				throw new InvalidOperationException(string.Format("Prefix {0} is already created", prefix));
+			}
+			metadata.Add(PrefixesPrefix + prefix, new[] {valueLength});
+		}
+
+		public void DeletePrefixConfiguration(string prefix)
+		{
+			var val = metadata.Read(PrefixesPrefix + prefix);
+			if (val == null)
+				throw new InvalidOperationException(string.Format("Prefix {0} does not exist", prefix));
+
+			AssertNoExistDataForPrefix(prefix);
+			metadata.Delete(PrefixesPrefix + prefix);
+		}
+
+		private void AssertNoExistDataForPrefix(string prefix)
+		{
+			throw new InvalidOperationException("Cannot delete prefix since there is associated data to it");
+		}
+
+		public void GetPrefixConfiguration(string prefix)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

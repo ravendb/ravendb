@@ -17,7 +17,7 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(1))
 				{
 					var result = r.Query(
 						new TimeSeriesQuery
@@ -63,7 +63,7 @@ namespace Raven.Tests.TimeSeries
 			{
 				WriteTestData(tss);
 
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(1))
 				{
 					var result = r.Query(
 						new TimeSeriesQuery
@@ -90,7 +90,7 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(1))
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
@@ -156,7 +156,7 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(1))
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
@@ -229,7 +229,7 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(1))
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
@@ -292,7 +292,7 @@ namespace Raven.Tests.TimeSeries
 				}
 
 				var start2 = start.AddMonths(-1).AddDays(5);
-				using (var writer = tss.CreateWriter())
+				using (var writer = tss.CreateWriter(1))
 				{
 					int value = 6;
 					for (int i = 0; i < 4; i++)
@@ -304,7 +304,7 @@ namespace Raven.Tests.TimeSeries
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(1))
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
@@ -413,7 +413,7 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(1))
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
@@ -526,7 +526,7 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader())
+				using (var r = tss.CreateReader(1))
 				{
 					var result = r.Query(
 						new TimeSeriesQuery
@@ -578,7 +578,7 @@ namespace Raven.Tests.TimeSeries
 				new {Key = "Time", At = start.AddHours(2), Value = 50},
 			};
 
-			var writer = tss.CreateWriter();
+			var writer = tss.CreateWriter(1);
 			foreach (var item in data)
 			{
 				writer.Append(item.Key, item.At, item.Value);
