@@ -22,7 +22,7 @@
 
 %token NOT OR AND INTERSECT PLUS MINUS EOF OPEN_CURLY_BRACKET CLOSE_CURLY_BRACKET OPEN_SQUARE_BRACKET CLOSE_SQUARE_BRACKET 
 %token TILDA BOOST QUOTE TO COLON OPEN_PAREN CLOSE_PAREN COMMA ALL_DOC
-%token <s> UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM FLOAT_NUMBER INT_NUMBER DOUBLE_NUMBER LONG_NUMBER DATETIME NULL WILDCARD_TERM
+%token <s> UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM FLOAT_NUMBER INT_NUMBER DOUBLE_NUMBER LONG_NUMBER DATETIME NULL PREFIX_TERM WILDCARD_TERM
 
 %type <s> prefix_operator methodName fieldname  fuzzy_modifier boost_modifier proximity_modifier
 %type <o> operator
@@ -77,11 +77,31 @@ node: NOT node           {
 		//Console.WriteLine("Found rule node -> method_exp");
 		$$ = $1;
 	}
-	| prefix_operator node
-	{
-		//Console.WriteLine("Found rule node -> method_exp");
-		$2.Prefix = $1;
+	| prefix_operator field_exp{
+		//Console.WriteLine("Found rule node -> prefix_operator field_exp");
+		$$ =$2;
+		$$.Prefix = $1;
+	}
+	| prefix_operator paren_exp{
+		//Console.WriteLine("Found rule node -> prefix_operator paren_exp");
+		$$ =$2;
+		$$.Prefix = $1;
+	}
+	| prefix_operator term_exp{
+	//Console.WriteLine("Found rule node -> prefix_operator term_exp");
 		$$ = $2;
+		$$.Prefix = $1;
+	}
+	| prefix_operator method_exp{
+		//Console.WriteLine("Found rule node -> prefix_operator method_exp");
+		$$ = $2;
+		$$.Prefix = $1;
+	}
+	| prefix_operator ALL_DOC
+	{
+		//Console.WriteLine("Found rule node -> prefix_operator ALL_DOC");
+		$$ = new AllDocumentsLuceneASTNode();
+		$$.Prefix = $1;
 	}
 	| ALL_DOC
 	{
@@ -224,6 +244,11 @@ term: QUOTED_TERM        {
 	{
 		//Console.WriteLine("Found rule term -> WILDCARD_TERM");
 		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.WildCardTerm};
+	}
+	| PREFIX_TERM
+	{
+		//Console.WriteLine("Found rule term -> PREFIX_TERM");
+		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.PrefixTerm};
 	}
 	;
 postfix_modifier: proximity_modifier boost_modifier 

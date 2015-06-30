@@ -19,6 +19,7 @@ QuotedChar [^\"\\]|{EscapeChar}
 UnanalizedTerm \[\[(([^\]])|([\]][^\]]+))*\]\]
 QuotedTerm \"{QuotedChar}*\"
 UnquotedTerm {TermStartChar}{TermChar}*
+PrefixTerm {UnquotedTerm}"\*"
 WildCardTerm  {WildCardStartChar}{WildCardChar}*
 Method \@[^<]+\<[^>]+\>
 DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{Digit}{7}Z?
@@ -56,11 +57,11 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 {QuotedTerm}					{ yylval.s = yytext; return (int)Token.QUOTED_TERM;}
 {Comment}						{/* skip */}
 {Decimal}						{ yylval.s = yytext; return (int)Token.FLOAT_NUMBER;}
-"Dx"({Decimal}|{Number})	    { yylval.s = yytext.Substring(2); return (int)Token.DOUBLE_NUMBER;}
-"Fx"({Decimal}|{Number})	    { yylval.s = yytext.Substring(2); return (int)Token.FLOAT_NUMBER;}
+"Dx"({Decimal}|{Number})	    { yylval.s = yytext; return (int)Token.DOUBLE_NUMBER;}
+"Fx"({Decimal}|{Number})	    { yylval.s = yytext; return (int)Token.FLOAT_NUMBER;}
 {Number}						{ yylval.s = yytext; return (int)Token.INT_NUMBER;}
-"Ix"{Number}					{ yylval.s = yytext.Substring(2); return (int)Token.INT_NUMBER;}
-"Lx"{Number}					{ yylval.s = yytext.Substring(2); return (int)Token.LONG_NUMBER;}
+"Ix"{Number}					{ yylval.s = yytext; return (int)Token.INT_NUMBER;}
+"Lx"{Number}					{ yylval.s = yytext; return (int)Token.LONG_NUMBER;}
 {UnquotedTerm}					{ 					
 								if(InMethod && bStack.Count == 0) 
 								{
@@ -72,6 +73,7 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 								}
 								return (int)Token.UNQUOTED_TERM;
 								}
+{PrefixTerm}					{ yylval.s = yytext;  return (int)Token.PREFIX_TERM;}
 {WildCardTerm}					{ yylval.s = yytext;  return (int)Token.WILDCARD_TERM;}
 {Whitespace}					{/* skip */}
 <<EOF>>							/*This is needed for yywrap to work, do not delete this comment!!!*/
