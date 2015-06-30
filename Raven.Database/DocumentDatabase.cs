@@ -533,6 +533,12 @@ namespace Raven.Database
 		})
 						.Where(x => x != null)
 						.ToArray();
+
+					result.CountOfIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
+					result.CountOfStaleIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx =>
+						result.StaleIndexes.Contains(idx.Name)
+						&& !idx.Priority.HasFlag(IndexingPriority.Disabled)
+						&& !idx.Priority.HasFlag(IndexingPriority.Abandoned));
 				});
 
 				if (result.Indexes != null)
@@ -991,6 +997,11 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
+		public void ForceLicenseUpdate()
+		{
+			initializer.validateLicense.ForceExecute(Configuration);
+		}
+
 		protected void RaiseIndexingWiringComplete()
 		{
 			Action indexingWiringComplete = OnIndexingWiringComplete;
@@ -1144,7 +1155,7 @@ namespace Raven.Database
 
 			private readonly InMemoryRavenConfiguration configuration;
 
-			private ValidateLicense validateLicense;
+			internal ValidateLicense validateLicense;
 
 			public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
 			{

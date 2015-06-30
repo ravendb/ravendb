@@ -65,7 +65,7 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="commandDatas">Commands to process</param>
         /// <param name="token">The cancellation token.</param>
-        Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas, CancellationToken token = default (CancellationToken));
+        Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Commits the specified tx id

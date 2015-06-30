@@ -86,7 +86,9 @@ namespace Raven.Abstractions.Data
 
 		IndexDemotedToDisabled = 256,
 
-        IndexMarkedAsErrored = 512
+        IndexMarkedAsErrored = 512,
+
+		SideBySideReplace = 1024
 	}
 
     public enum TransformerChangeTypes

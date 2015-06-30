@@ -28,25 +28,28 @@ namespace Raven.Database.Server.WebApi.Handlers
 
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
-			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
-			{
-				try
-				{
-					return await HandleTooBusyError(request);
-				}
-				catch (Exception e)
-				{
-					Logger.WarnException("Could not send a too busy error to the client", e);
-				}
-			}
-
+			bool waiting = false;
 			try
 			{
+				waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+				if (waiting == false)
+				{
+					try
+					{
+						Logger.Info("Too many concurrent requests, throttling!");
+						return await HandleTooBusyError(request);
+					}
+					catch (Exception e)
+					{
+						Logger.WarnException("Could not send a too busy error to the client", e);
+					}
+				}
 				return await base.SendAsync(request, cancellationToken);
 			}
 			finally
 			{
-				concurrentRequestSemaphore.Release();
+				if (waiting)
+					concurrentRequestSemaphore.Release();
 			}
 		}
 
