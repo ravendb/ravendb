@@ -52,16 +52,15 @@ namespace Raven.Database.Counters.Controllers
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
-					var currentCounterValue = writer.GetSingleCounterValue(counter.GroupName, counter.CounterName, counter.ServerId, counter.Sign);
+					var singleCounterValue = writer.GetSingleCounterValue(counter.GroupName, counter.CounterName, counter.ServerId, counter.Sign);
+		            var currentCounterValue = singleCounterValue.Value;
 
 					//if current counter exists and current value is less than received value
-					if (currentCounterValue != -1 && counter.Value <= currentCounterValue)
+					if ((currentCounterValue != -1 && counter.Value < currentCounterValue) ||
+						(counter.Value == currentCounterValue && singleCounterValue.DoesCounterExist))
 						continue;
 
 					wroteCounter = true;
-
-					//if (string.IsNullOrWhiteSpace(counter.FullCounterName))
-					//	return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid or empty counter name.");
 
 					var counterChangeAction = writer.Store(counter.GroupName, counter.CounterName, counter.ServerId, counter.Sign, counter.Value);
 					counterChangeNotifications.Add(new ChangeNotification

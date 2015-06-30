@@ -65,6 +65,7 @@ namespace Raven.Database.Counters.Controllers
 		{
 			using (var reader = Storage.CreateReader())
 			{
+				Storage.MetricsCounters.ClientRequests.Mark();
 				return Request.CreateResponse(HttpStatusCode.OK, reader.GetCounterGroups().ToList());
 			}
 		}
@@ -95,6 +96,7 @@ namespace Raven.Database.Counters.Controllers
 				});
 			}
 
+			Storage.MetricsCounters.ClientRequests.Mark();
 			if (HttpContext.Current != null)
 				HttpContext.Current.Server.ScriptTimeout = 60 * 60 * 6; // six hours should do it, I think.
 
@@ -274,6 +276,7 @@ namespace Raven.Database.Counters.Controllers
 				{
 					writer.Commit();
 
+					Storage.MetricsCounters.ClientRequests.Mark();
 					Storage.MetricsCounters.Resets.Mark();
 					Storage.Publisher.RaiseNotification(new ChangeNotification
 					{
@@ -301,6 +304,7 @@ namespace Raven.Database.Counters.Controllers
 				writer.Delete(groupName, counterName);
 				writer.Commit();
 
+				Storage.MetricsCounters.ClientRequests.Mark();
 				Storage.MetricsCounters.Deletes.Mark();
 				Storage.Publisher.RaiseNotification(new ChangeNotification
 				{
@@ -338,6 +342,7 @@ namespace Raven.Database.Counters.Controllers
 				}
 				writer.Commit();
 
+				Storage.MetricsCounters.ClientRequests.Mark();
 				changeNotifications.ForEach(change =>
 				{
 					Storage.Publisher.RaiseNotification(change);
@@ -357,6 +362,7 @@ namespace Raven.Database.Counters.Controllers
 			if (take <= 0)
 				throw new ArgumentException("Bad argument", "take");
 
+			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
 				group = group ?? string.Empty;
@@ -372,6 +378,7 @@ namespace Raven.Database.Counters.Controllers
 			AssertName(groupName);
 			AssertName(counterName);
 
+			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
 				var overallTotal = reader.GetCounterTotal(groupName, counterName);
@@ -386,6 +393,7 @@ namespace Raven.Database.Counters.Controllers
 			AssertName(groupName);
 			AssertName(counterName);
 
+			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
 				var result = reader.GetCounter(groupName, counterName);
