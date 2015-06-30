@@ -68,14 +68,15 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (prefix.StartsWith("-") == false)
 				throw new InvalidOperationException("Prefix must start with '-' char");
 
-			using (var writer = Storage.CreateWriter((byte) input.Values.Length))
+			using (var writer = Storage.CreateWriter())
 			{
-				writer.Append(key, new DateTime(input.Time), input.Values);
+				writer.Append(prefix, key, new DateTime(input.Time), input.Values);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
 				Storage.Publisher.RaiseNotification(new TimeSeriesKeyNotification
 				{
+					Prefix = prefix,
 					Key = key,
 					Action = TimeSeriesChangeAction.Append,
 					At = input.Time,
@@ -131,7 +132,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	            {
 		            foreach (var changeBatch in changeBatches)
 		            {
-						using (var writer = Storage.CreateWriter(1))
+						using (var writer = Storage.CreateWriter())
 						{
 							Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
 							{
@@ -141,9 +142,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
 							foreach (var change in changeBatch)
 							{
-								if (string.IsNullOrWhiteSpace(change.Key))
-									throw new InvalidOperationException("Key cannot be empty");
-								writer.Append(change.Key, change.At, change.Values);
+								writer.Append(change.Prefix, change.Key, change.At, change.Values);
 							}
 							writer.Commit();
 
@@ -285,9 +284,13 @@ namespace Raven.Database.TimeSeries.Controllers
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			if (prefix.StartsWith("-") == false)
-				throw new InvalidOperationException("Prefix must start with '-' char");
-	
-			using (var writer = Storage.CreateWriter(1))
+				return GetMessageWithString("Prefix must start with '-' char", HttpStatusCode.BadRequest);
+
+			var valueLength = Storage.GetPrefixConfiguration(prefix);
+			if (valueLength == 0)
+				return GetMessageWithString("Cannot delete from not exist prefix: " + prefix, HttpStatusCode.BadRequest);
+			
+			using (var writer = Storage.CreateWriter())
 			{
 				writer.Delete(key);
 				writer.Commit();
@@ -295,6 +298,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				Storage.MetricsTimeSeries.Deletes.Mark();
 				Storage.Publisher.RaiseNotification(new TimeSeriesKeyNotification
 				{
+					Prefix = prefix,
 					Key = key,
 					Action = TimeSeriesChangeAction.Delete,
 				});
@@ -313,7 +317,11 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (prefix.StartsWith("-") == false)
 				throw new InvalidOperationException("Prefix must start with '-' char");
 
-			using (var writer = Storage.CreateWriter(1))
+			var valueLength = Storage.GetPrefixConfiguration(prefix);
+			if (valueLength == 0)
+				return GetMessageWithString("Cannot delete from not exist prefix: " + prefix, HttpStatusCode.BadRequest); 
+			
+			using (var writer = Storage.CreateWriter())
 			{
 				writer.DeleteRange(key, start, end);
 				writer.Commit();
@@ -321,6 +329,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				Storage.MetricsTimeSeries.Deletes.Mark();
 				Storage.Publisher.RaiseNotification(new TimeSeriesKeyNotification
 				{
+					Prefix = prefix,
 					Key = key,
 					Action = TimeSeriesChangeAction.DeleteInRange,
 					Start = start,

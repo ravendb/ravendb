@@ -36,7 +36,6 @@ namespace Raven.Database.TimeSeries
 		private readonly TransportState transportState;
 		private readonly NotificationPublisher notificationPublisher;
 		private readonly TimeSeriesMetricsManager metricsTimeSeries;
-		private Tree metadata;
 
 		public Guid ServerId { get; set; }
 
@@ -84,7 +83,7 @@ namespace Raven.Database.TimeSeries
 			{
 				storageEnvironment.CreateTree(tx, "data", keysPrefixing: true);
 
-				metadata = storageEnvironment.CreateTree(tx, "$metadata");
+				var metadata = storageEnvironment.CreateTree(tx, "$metadata");
 				var id = metadata.Read("id");
 				if (id == null) // new db
 				{
@@ -123,21 +122,15 @@ namespace Raven.Database.TimeSeries
 			return options;
 		}
 
-		public Reader CreateReader(byte seriesValueLength)
+		public Reader CreateReader()
 		{
-			if (seriesValueLength < 1)
-				throw new ArgumentOutOfRangeException("seriesValueLength", "Should be equal or greater than 1");
-		
-			return new Reader(this, seriesValueLength);
+			return new Reader(this);
 		}
 
-		public Writer CreateWriter(byte seriesValueLength)
+		public Writer CreateWriter()
 		{
-			if (seriesValueLength < 1)
-				throw new ArgumentOutOfRangeException("seriesValueLength", "Should be equal or greater than 1");
-			
 			LastWrite = SystemTime.UtcNow;
-			return new Writer(this, seriesValueLength);
+			return new Writer(this);
 		}
 
 		public class Point
@@ -163,16 +156,12 @@ namespace Raven.Database.TimeSeries
 		public class Reader : IDisposable
 		{
 			private readonly TimeSeriesStorage storage;
-			private readonly byte seriesValueLength;
 			private readonly Transaction tx;
-			private readonly Tree tree;
 
-			public Reader(TimeSeriesStorage storage, byte seriesValueLength)
+			public Reader(TimeSeriesStorage storage)
 			{
 				this.storage = storage;
-				this.seriesValueLength = seriesValueLength;
 				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
-				tree = tx.ReadTree(SeriesTreePrefix + seriesValueLength);
 			}
 
 			public IEnumerable<Point> Query(TimeSeriesQuery query)
@@ -273,21 +262,29 @@ namespace Raven.Database.TimeSeries
 						throw new ArgumentOutOfRangeException();
 				}
 
+				if (string.IsNullOrWhiteSpace(query.Prefix))
+					throw new InvalidOperationException("Prefix cannot be empty");
+
+				var tree = tx.ReadTree(SeriesTreePrefix + query.Prefix);
 				if (tree == null)
 					yield break;
 
+				var valueLength = storage.GetPrefixConfiguration(query.Prefix);
+				if (valueLength == 0)
+					throw new InvalidOperationException("Prefix not exist");
+
 				using (var periodTx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var fixedTree = tree.FixedTreeFor(query.Key, (byte)(seriesValueLength * sizeof(double)));
-					var periodFixedTree = periodTx.State.GetTree(periodTx, PeriodTreePrefix + seriesValueLength)
-						.FixedTreeFor(query.Key + PeriodsKeySeparator + query.Duration.Type + "-" + query.Duration.Duration, (byte)(seriesValueLength * Range.RangeValue.StorageItemsLength * sizeof(double)));
+					var fixedTree = tree.FixedTreeFor(query.Key, (byte)(valueLength * sizeof(double)));
+					var periodFixedTree = periodTx.State.GetTree(periodTx, PeriodTreePrefix + query.Prefix)
+						.FixedTreeFor(query.Key + PeriodsKeySeparator + query.Duration.Type + "-" + query.Duration.Duration, (byte)(valueLength * Range.RangeValue.StorageItemsLength * sizeof(double)));
 
-					using (var periodWriter = new RollupWriter(periodFixedTree, seriesValueLength))
+					using (var periodWriter = new RollupWriter(periodFixedTree, valueLength))
 					{
 						using (var periodTreeIterator = periodFixedTree.Iterate())
 						using (var rawTreeIterator = fixedTree.Iterate())
 						{
-							foreach (var range in GetRanges(query))
+							foreach (var range in GetRanges(query, valueLength))
 							{
 								// seek period tree iterator, if found exact match!!, add and move to the next
 								if (periodTreeIterator.Seek(range.StartAt.Ticks))
@@ -296,10 +293,10 @@ namespace Raven.Database.TimeSeries
 									{
 										var valueReader = periodTreeIterator.CreateReaderForCurrent();
 										int used;
-										var bytes = valueReader.ReadBytes(seriesValueLength * Range.RangeValue.StorageItemsLength * sizeof(double), out used);
-										Debug.Assert(used == seriesValueLength*Range.RangeValue.StorageItemsLength*sizeof (double));
+										var bytes = valueReader.ReadBytes(valueLength * Range.RangeValue.StorageItemsLength * sizeof(double), out used);
+										Debug.Assert(used == valueLength*Range.RangeValue.StorageItemsLength*sizeof (double));
 
-										for (int i = 0; i < seriesValueLength; i++)
+										for (int i = 0; i < valueLength; i++)
 										{
 											var startPosition = i * Range.RangeValue.StorageItemsLength;
 											range.Values[i].Volume = EndianBitConverter.Big.ToDouble(bytes, (startPosition + 0) * sizeof(double));
@@ -324,7 +321,7 @@ namespace Raven.Database.TimeSeries
 								}
 								if (rawTreeIterator.Seek(range.StartAt.Ticks))
 								{
-									GetAllPointsForRange(rawTreeIterator, range);
+									GetAllPointsForRange(rawTreeIterator, range, valueLength);
 								}
 
 								// if not found, create empty periods until the end or the next valid period
@@ -341,10 +338,10 @@ namespace Raven.Database.TimeSeries
 				}
 			}
 
-			private void GetAllPointsForRange(FixedSizeTree.IFixedSizeIterator rawTreeIterator, Range range)
+			private void GetAllPointsForRange(FixedSizeTree.IFixedSizeIterator rawTreeIterator, Range range, int valueLength)
 			{
 				var endTicks = range.Duration.AddToDateTime(range.StartAt).Ticks;
-				var buffer = new byte[sizeof(double) * seriesValueLength];
+				var buffer = new byte[sizeof(double) * valueLength];
 				var firstPoint = true;
 
 				do
@@ -359,13 +356,13 @@ namespace Raven.Database.TimeSeries
 						DebugKey = range.DebugKey,
 #endif
 						At = new DateTime(ticks),
-						Values = new double[seriesValueLength],
+						Values = new double[valueLength],
 					};
 
 					var reader = rawTreeIterator.CreateReaderForCurrent();
-					reader.Read(buffer, 0, sizeof(double) * seriesValueLength);
+					reader.Read(buffer, 0, sizeof(double) * valueLength);
 
-					for (int i = 0; i < seriesValueLength; i++)
+					for (int i = 0; i < valueLength; i++)
 					{
 						var value = point.Values[i] = EndianBitConverter.Big.ToDouble(buffer, i * sizeof(double));
 
@@ -390,7 +387,7 @@ namespace Raven.Database.TimeSeries
 				} while (rawTreeIterator.MoveNext());
 			}
 
-			private IEnumerable<Range> GetRanges(TimeSeriesRollupQuery query)
+			private IEnumerable<Range> GetRanges(TimeSeriesRollupQuery query, int valueLength)
 			{
 				var startAt = query.Start;
 				while (true)
@@ -402,8 +399,8 @@ namespace Raven.Database.TimeSeries
 					{
 						throw new InvalidOperationException("Debug: Duration is not aligned with the end of the range.");
 					}
-					var rangeValues = new Range.RangeValue[seriesValueLength];
-					for (int i = 0; i < seriesValueLength; i++)
+					var rangeValues = new Range.RangeValue[valueLength];
+					for (int i = 0; i < valueLength; i++)
 					{
 						rangeValues[i] = new Range.RangeValue();
 					}
@@ -422,12 +419,20 @@ namespace Raven.Database.TimeSeries
 
 			private IEnumerable<Point> GetRawQueryResult(TimeSeriesQuery query)
 			{
+				if (string.IsNullOrWhiteSpace(query.Prefix))
+					throw new InvalidOperationException("Prefix cannot be empty");
+
+				var tree = tx.ReadTree(SeriesTreePrefix + query.Prefix);
 				if (tree == null)
 					return Enumerable.Empty<Point>();
 
-				var buffer = new byte[seriesValueLength * sizeof(double)];
+				var valueLength = storage.GetPrefixConfiguration(query.Prefix);
+				if (valueLength == 0)
+					throw new InvalidOperationException("Prefix not exist");
 
-				var fixedTree = tree.FixedTreeFor(query.Key, (byte) (seriesValueLength*sizeof (double)));
+				var buffer = new byte[valueLength * sizeof(double)];
+
+				var fixedTree = tree.FixedTreeFor(query.Key, (byte) (valueLength*sizeof (double)));
 				return IterateOnTree(query, fixedTree, it =>
 				{
 					var point = new Point
@@ -436,12 +441,12 @@ namespace Raven.Database.TimeSeries
 						DebugKey = fixedTree.Name.ToString(),
 #endif
 						At = new DateTime(it.CurrentKey),
-						Values = new double[seriesValueLength],
+						Values = new double[valueLength],
 					};
 					
 					var reader = it.CreateReaderForCurrent();
-					reader.Read(buffer, 0, seriesValueLength * sizeof (double));
-					for (int i = 0; i < seriesValueLength; i++)
+					reader.Read(buffer, 0, valueLength * sizeof (double));
+					for (int i = 0; i < valueLength; i++)
 					{
 						point.Values[i] = EndianBitConverter.Big.ToDouble(buffer, i * sizeof(double));
 					}
@@ -480,27 +485,46 @@ namespace Raven.Database.TimeSeries
 
 		public class Writer : IDisposable
 		{
-			private readonly byte seriesValueLength;
+			private readonly TimeSeriesStorage storage;
 			private readonly Transaction tx;
 
-			private readonly Tree tree;
+			private Tree tree;
 			private readonly Dictionary<string, RollupRange> rollupsToClear = new Dictionary<string, RollupRange>();
-			private byte[] valBuffer;
+			private readonly TimeSeriesPrefix currentPrefix;
+			private readonly Dictionary<byte, byte[]> valBuffers = new Dictionary<byte, byte[]>(); 
 
-			public Writer(TimeSeriesStorage storage, byte seriesValueLength)
+			public Writer(TimeSeriesStorage storage)
 			{
-				this.seriesValueLength = seriesValueLength;
+				this.storage = storage;
+				currentPrefix = new TimeSeriesPrefix();
 				tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
-				tree = tx.State.GetTree(tx, SeriesTreePrefix + seriesValueLength);
 			}
 
-			public void Append(string key, DateTime time, params double[] values)
+			public void Append(string prefix, string key, DateTime time, params double[] values)
 			{
-				if (values.Length != seriesValueLength)
-					throw new ArgumentOutOfRangeException("values", string.Format("Appended values should be the same length the series values length which is {0} and not {1}", seriesValueLength, values.Length));
+				if (string.IsNullOrWhiteSpace(prefix))
+					throw new InvalidOperationException("Prefix cannot be empty");
+				if (string.IsNullOrWhiteSpace(key))
+					throw new InvalidOperationException("Key cannot be empty");
+
+				if (currentPrefix.Name != prefix)
+				{
+					var valueLength = storage.GetPrefixConfiguration(prefix);
+					if (valueLength == 0)
+						throw new InvalidOperationException("There is no prefix configuration named: " + prefix);
+
+					currentPrefix.Name = prefix;
+					currentPrefix.ValueLength = valueLength;
+
+					tree = tx.State.GetTree(tx, SeriesTreePrefix + currentPrefix.Name);
+				}
+			
+				if (values.Length != currentPrefix.ValueLength)
+					throw new ArgumentOutOfRangeException("values", string.Format("Appended values should be the same length the series values length which is {0} and not {1}", currentPrefix.ValueLength, values.Length));
 
 				RollupRange range;
-				if (rollupsToClear.TryGetValue(key, out range))
+				var clearKey = prefix + PeriodsKeySeparator + key;
+				if (rollupsToClear.TryGetValue(clearKey, out range))
 				{
 					if (time > range.End)
 					{
@@ -513,17 +537,24 @@ namespace Raven.Database.TimeSeries
 				}
 				else
 				{
-					rollupsToClear.Add(key, new RollupRange(time));
+					rollupsToClear.Add(clearKey, new RollupRange(prefix, key, time)
+					{
+						FullPrefixLength = (byte) (currentPrefix.ValueLength*Range.RangeValue.StorageItemsLength*sizeof (double)),
+					});
 				}
 
-				if (valBuffer == null)
-					valBuffer = new byte[seriesValueLength*sizeof (double)];
+				var bufferSize = (byte)(currentPrefix.ValueLength*sizeof (double));
+				byte[] valBuffer;
+				if (valBuffers.TryGetValue(bufferSize, out valBuffer) == false)
+				{
+					valBuffer = new byte[bufferSize];
+				}
 				for (int i = 0; i < values.Length; i++)
 				{
 					EndianBitConverter.Big.CopyBytes(values[i], valBuffer, i * sizeof(double));
 				}
 
-				var fixedTree = tree.FixedTreeFor(key, (byte) (seriesValueLength*sizeof (double)));
+				var fixedTree = tree.FixedTreeFor(key, bufferSize);
 				fixedTree.Add(time.Ticks, valBuffer);
 			}
 
@@ -535,18 +566,18 @@ namespace Raven.Database.TimeSeries
 
 			public void Commit()
 			{
-				CleanRollupDataForRange();
+				DeleteRange();
 				tx.Commit();
 			}
 
-			private void CleanRollupDataForRange()
+			private void DeleteRange()
 			{
-				var periodTree = tx.ReadTree(PeriodTreePrefix + seriesValueLength);
-				if (periodTree == null)
-					return;
-
-				foreach (var rollupRange in rollupsToClear)
+				foreach (var rollupRange in rollupsToClear.Values)
 				{
+					var periodTree = tx.ReadTree(PeriodTreePrefix + rollupRange.Prefix);
+					if (periodTree == null)
+						continue;
+
 					using (var it = periodTree.Iterate())
 					{
 						it.RequiredPrefix = rollupRange.Key + PeriodsKeySeparator;
@@ -556,16 +587,17 @@ namespace Raven.Database.TimeSeries
 						do
 						{
 							var periodTreeName = it.CurrentKey.ToString();
-							var periodFixedTree = periodTree.FixedTreeFor(periodTreeName, (byte) (seriesValueLength*Range.RangeValue.StorageItemsLength*sizeof (double)));
+							var periodFixedTree = periodTree.FixedTreeFor(periodTreeName, rollupRange.FullPrefixLength);
 							if (periodFixedTree == null)
 								continue;
 
 							var duration = GetDurationFromTreeName(periodTreeName);
 							var keysToDelete = Reader.IterateOnTree(new TimeSeriesQuery
 							{
+								Prefix = rollupRange.Prefix,
 								Key = rollupRange.Key,
-								Start = duration.GetStartOfRangeForDateTime(rollupRange.Value.Start),
-								End = duration.GetStartOfRangeForDateTime(rollupRange.Value.End),
+								Start = duration.GetStartOfRangeForDateTime(rollupRange.Start),
+								End = duration.GetStartOfRangeForDateTime(rollupRange.End),
 							}, periodFixedTree, fixedIterator => fixedIterator.CurrentKey).ToArray();
 
 							foreach (var key in keysToDelete)
@@ -715,22 +747,34 @@ namespace Raven.Database.TimeSeries
 
 		public void CreatePrefixConfiguration(string prefix, byte valueLength)
 		{
-			var val = metadata.Read(PrefixesPrefix + prefix);
-			if (val != null)
+			if (valueLength < 1)
+				throw new ArgumentOutOfRangeException("valueLength", "Should be equal or greater than 1");
+
+			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				throw new InvalidOperationException(string.Format("Prefix {0} is already created", prefix));
+				var metadata = tx.ReadTree("$metadata");
+				var val = metadata.Read(PrefixesPrefix + prefix);
+				if (val != null)
+				{
+					throw new InvalidOperationException(string.Format("Prefix {0} is already created", prefix));
+				}
+				metadata.Add(PrefixesPrefix + prefix, new[] { valueLength });
+				tx.Commit();
 			}
-			metadata.Add(PrefixesPrefix + prefix, new[] {valueLength});
 		}
 
 		public void DeletePrefixConfiguration(string prefix)
 		{
-			var val = metadata.Read(PrefixesPrefix + prefix);
-			if (val == null)
-				throw new InvalidOperationException(string.Format("Prefix {0} does not exist", prefix));
-
-			AssertNoExistDataForPrefix(prefix);
-			metadata.Delete(PrefixesPrefix + prefix);
+			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var metadata = tx.ReadTree("$metadata");
+				var val = metadata.Read(PrefixesPrefix + prefix);
+				if (val == null)
+					throw new InvalidOperationException(string.Format("Prefix {0} does not exist", prefix));
+				AssertNoExistDataForPrefix(prefix);
+				metadata.Delete(PrefixesPrefix + prefix);
+				tx.Commit();
+			}
 		}
 
 		private void AssertNoExistDataForPrefix(string prefix)
@@ -738,9 +782,25 @@ namespace Raven.Database.TimeSeries
 			throw new InvalidOperationException("Cannot delete prefix since there is associated data to it");
 		}
 
-		public void GetPrefixConfiguration(string prefix)
+		public byte GetPrefixConfiguration(string prefix)
 		{
-			throw new NotImplementedException();
+			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var metadata = tx.ReadTree("$metadata");
+				var val = metadata.Read(PrefixesPrefix + prefix);
+				if (val == null)
+					return 0;
+				int used;
+				var readBytes = val.Reader.ReadBytes(sizeof(byte), out used);
+				return readBytes[0];
+			}
 		}
+	}
+
+	internal class TimeSeriesPrefix
+	{
+		public string Name { get; set; }
+
+		public byte ValueLength { get; set; }
 	}
 }

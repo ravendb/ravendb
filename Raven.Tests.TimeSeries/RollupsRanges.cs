@@ -15,21 +15,22 @@ namespace Raven.Tests.TimeSeries
 			{
 				var start = new DateTime(2015, 4, 6, 0, 0, 0);
 
-				using (var writer = tss.CreateWriter(1))
+				using (var writer = tss.CreateWriter())
 				{
 					for (int i = 10; i < 2000; i++)
 					{
 						var dateTime = start.AddMinutes(2 * i);
-						writer.Append("Time", dateTime, i);
+						writer.Append("-Simple", "Time", dateTime, i);
 					}
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(2),
@@ -79,21 +80,22 @@ namespace Raven.Tests.TimeSeries
 			{
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
 
-				using (var writer = tss.CreateWriter(1))
+				using (var writer = tss.CreateWriter())
 				{
 					for (int i = 10; i < 5000; i++)
 					{
 						var dateTime = start.AddHours(6 * i);
-						writer.Append("Time", dateTime, i);
+						writer.Append("-Simple", "Time", dateTime, i);
 					}
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(2),
@@ -158,21 +160,22 @@ namespace Raven.Tests.TimeSeries
 			{
 				var start = new DateTime(2014, 1, 1, 0, 0, 0);
 
-				using (var writer = tss.CreateWriter(1))
+				using (var writer = tss.CreateWriter())
 				{
 					for (int i = 10; i < 5000; i++)
 					{
 						var dateTime = start.AddHours(6 * i);
-						writer.Append("Time", dateTime, i);
+						writer.Append("-Simple", "Time", dateTime, i);
 					}
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddYears(-2),
 							End = start.AddYears(6),

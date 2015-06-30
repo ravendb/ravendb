@@ -15,11 +15,12 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader(1);
+				var r = tss.CreateReader();
 				Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(1),
@@ -37,11 +38,12 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader(1);
+				var r = tss.CreateReader();
 				Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(1),
@@ -59,11 +61,12 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader(1);
+				var r = tss.CreateReader();
 				Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(2),
@@ -80,11 +83,12 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader(1);
+				var r = tss.CreateReader();
 				var exception = Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(2),
@@ -102,12 +106,13 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader(1);
+				var r = tss.CreateReader();
 
 				var exception = Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(2),
@@ -125,12 +130,13 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				var r = tss.CreateReader(1);
+				var r = tss.CreateReader();
 
 				var exception = Assert.Throws<InvalidOperationException>(() =>
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-2),
 						End = start.AddYears(7),

@@ -17,13 +17,26 @@ namespace Raven.Tests.TimeSeries
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.AppendAsync("Time", DateTime.Now, 3D);
-				await store.AppendAsync("Time", DateTime.Now, new[] {3D, 4D, 5D, 6D});
+				await store.CreatePrefixConfigurationAsync("-Simple", 1);
+				await store.CreatePrefixConfigurationAsync("-ForValues", 4);
+
+				await store.AppendAsync("-ForValues", "Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D });
+				await store.AppendAsync("-Simple", "Is", DateTime.Now, 3D);
 				
 				var cancellationToken = new CancellationToken();
-				await store.AppendAsync("Time", DateTime.Now, 3456D, cancellationToken);
-				await store.AppendAsync("Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D }, cancellationToken);
-				await store.AppendAsync("Time", DateTime.Now, cancellationToken, 3D, 4D, 5D, 6D);
+				await store.AppendAsync("-Simple", "Is", DateTime.Now, 3456D, cancellationToken);
+				await store.AppendAsync("-ForValues", "Time", DateTime.Now, new[] { 23D, 4D, 5D, 6D }, cancellationToken);
+				await store.AppendAsync("-ForValues", "Time", DateTime.Now, cancellationToken, 33D, 4D, 5D, 6D);
+			}
+		}
+
+		[Fact]
+		public async Task SimpleAppend_ShouldFailIfTwoKeysAsDifferentValuesLength()
+		{
+			using (var store = NewRemoteTimeSeriesStore())
+			{
+				await store.AppendAsync("-Simple", "Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D });
+				await store.AppendAsync("-Simple", "Time", DateTime.Now, 3D);
 			}
 		}
 	}

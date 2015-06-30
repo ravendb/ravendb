@@ -30,6 +30,7 @@ namespace Raven.Tests.TimeSeries
 				await store.AppendAsync("Type1", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
+				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Time", timeSeriesChange.Key);
 				Assert.Equal(at.Ticks, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
@@ -45,6 +46,7 @@ namespace Raven.Tests.TimeSeries
 				await store.DeleteAsync("Type1", "Time");
 
 				timeSeriesChange = await notificationTask;
+				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Time", timeSeriesChange.Key);
 				Assert.Equal(DateTime.MinValue.Ticks, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Delete, timeSeriesChange.Action);
@@ -73,6 +75,7 @@ namespace Raven.Tests.TimeSeries
 				await storeA.AppendAsync("-Simple", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
+				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Time", timeSeriesChange.Key);
 				Assert.Equal(at.Ticks, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
@@ -90,6 +93,7 @@ namespace Raven.Tests.TimeSeries
 				await storeB.AppendAsync("-Simple", "Is", at2, 6d);
 
 				timeSeriesChange = await notificationTask;
+				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Is", timeSeriesChange.Key);
 				Assert.Equal(at2.Ticks, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
@@ -126,7 +130,7 @@ namespace Raven.Tests.TimeSeries
 
 					for (var i = 0; i < actionsCount; i++)
 					{
-						batchOperation.ScheduleAppend("Time", DateTime.Today.AddMinutes(i));
+						batchOperation.ScheduleAppend("-Simple", "Time", DateTime.Today.AddMinutes(i));
 					}
 				}
 

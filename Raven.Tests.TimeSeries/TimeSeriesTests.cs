@@ -17,17 +17,19 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.Query(
 						new TimeSeriesQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(1),
 						},
 						new TimeSeriesQuery
 						{
+							Prefix = "-Simple",
 							Key = "Money",
 							Start = DateTime.MinValue,
 							End = DateTime.MaxValue
@@ -63,11 +65,12 @@ namespace Raven.Tests.TimeSeries
 			{
 				WriteTestData(tss);
 
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.Query(
 						new TimeSeriesQuery
 						{
+							Prefix = "-Simple",
 							Key = "Money",
 							Start = DateTime.MinValue,
 							End = DateTime.MaxValue
@@ -90,11 +93,12 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddDays(-1),
 							End = start.AddDays(2),
@@ -102,6 +106,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Money",
 							Start = start.AddDays(-2),
 							End = start.AddDays(1),
@@ -156,11 +161,12 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -168,6 +174,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Money",
 							Start = start.AddDays(-1),
 							End = start.AddMonths(1),
@@ -229,11 +236,12 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -241,6 +249,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Money",
 							Start = start.AddDays(-1),
 							End = start.AddMonths(1),
@@ -292,23 +301,24 @@ namespace Raven.Tests.TimeSeries
 				}
 
 				var start2 = start.AddMonths(-1).AddDays(5);
-				using (var writer = tss.CreateWriter(1))
+				using (var writer = tss.CreateWriter())
 				{
 					int value = 6;
 					for (int i = 0; i < 4; i++)
 					{
-						writer.Append("Time", start2.AddHours(2 + i), value++);
-						writer.Append("Is", start2.AddHours(3 + i), value++);
-						writer.Append("Money", start2.AddHours(3 + i), value++);
+						writer.Append("-Simple", "Time", start2.AddHours(2 + i), value++);
+						writer.Append("-Simple", "Is", start2.AddHours(3 + i), value++);
+						writer.Append("-Simple", "Money", start2.AddHours(3 + i), value++);
 					}
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -316,6 +326,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Money",
 							Start = start.AddMonths(-2).AddDays(-1),
 							End = start.AddMonths(2),
@@ -413,11 +424,12 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddHours(-1),
 							End = start.AddHours(4),
@@ -425,6 +437,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Money",
 							Start = start.AddHours(-1),
 							End = start.AddHours(4),
@@ -526,23 +539,26 @@ namespace Raven.Tests.TimeSeries
 				WriteTestData(tss);
 
 				var start = new DateTime(2015, 4, 1, 0, 0, 0);
-				using (var r = tss.CreateReader(1))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.Query(
 						new TimeSeriesQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddSeconds(1),
 							End = start.AddMinutes(30),
 						},
 						new TimeSeriesQuery
 						{
+							Prefix = "-Simple",
 							Key = "Money",
 							Start = start.AddSeconds(1),
 							End = start.AddMinutes(30),
 						},
 						new TimeSeriesQuery
 						{
+							Prefix = "-Simple",
 							Key = "Is",
 							Start = start.AddSeconds(1),
 							End = start.AddMinutes(30),
@@ -578,10 +594,10 @@ namespace Raven.Tests.TimeSeries
 				new {Key = "Time", At = start.AddHours(2), Value = 50},
 			};
 
-			var writer = tss.CreateWriter(1);
+			var writer = tss.CreateWriter();
 			foreach (var item in data)
 			{
-				writer.Append(item.Key, item.At, item.Value);
+				writer.Append("-Simple", item.Key, item.At, item.Value);
 			}
 
 			writer.Commit();
