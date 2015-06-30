@@ -169,6 +169,12 @@ class patch extends viewModelBase {
         });
     }
 
+    detached() {
+        super.detached();
+        aceEditorBindingHandler.detached();
+    }
+
+
     loadDocumentToTest(selectedItem: string) {
         if (selectedItem) {
             var loadDocTask = new getDocumentWithMetadataCommand(selectedItem, this.activeDatabase()).execute();
@@ -472,6 +478,7 @@ class patch extends viewModelBase {
     fetchIndexFields(indexName: string) {
         // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
         // Fields don't show for All Documents.
+        var self = this;
         var isAllDocumentsDynamicQuery = indexName === "All Documents";
         if (!isAllDocumentsDynamicQuery) {
             //if index is dynamic, get columns using index definition, else get it using first index result
@@ -491,8 +498,8 @@ class patch extends viewModelBase {
                 new getIndexDefinitionCommand(indexName, this.activeDatabase())
                     .execute()
                     .done((result: indexDefinitionContainerDto) => {
-                    this.isTestIndex(result.Index.IsTestIndex);
-                    this.indexFields(result.Index.Fields);
+                    self.isTestIndex(result.Index.IsTestIndex);
+                    self.indexFields(result.Index.Fields);
                 });
             }
         }

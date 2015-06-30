@@ -65,14 +65,6 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 connectionState.UnwatchFolder(value);
             }
-            else if (Match(cmd, "watch-cancellations"))
-            {
-                connectionState.WatchCancellations();
-            }
-            else if (Match(cmd, "unwatch-cancellations"))
-            {
-                connectionState.UnwatchCancellations();
-            }
             else if (Match(cmd, "watch-config"))
             {
                 connectionState.WatchConfig();
