@@ -1,5 +1,5 @@
 ﻿using System;
-
+using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
@@ -47,6 +47,16 @@ namespace Raven.Client.Connection
 		public static string Stats(this string url)
 		{
 			return url + "/stats";
+		}
+
+		public static string UserInfo(this string url)
+		{
+			return url + "/debug/user-info";
+		}
+
+		public static string UserPermission(this string url, string database, MethodOptions method)
+		{
+			return url + "/debug/user-info" + "?database=" + database + "&method=" + method;
 		}
 
 		public static string AdminStats(this string url)

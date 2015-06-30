@@ -42,6 +42,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace Raven.Client.Connection.Async
 {
 	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands
@@ -111,7 +112,6 @@ namespace Raven.Client.Connection.Async
 			primaryUrl = url;
 			if (primaryUrl.EndsWith("/"))
 				primaryUrl = primaryUrl.Substring(0, primaryUrl.Length - 1);
-		
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.convention = convention;
@@ -1528,6 +1528,29 @@ namespace Raven.Client.Connection.Async
 			{
 				var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				return json.Deserialize<DatabaseStatistics>(convention);
+			}
+		}
+
+		public async Task<UserInfo> GetUserInfoAsync(CancellationToken token = default(CancellationToken))
+		{
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.UserInfo(), HttpMethod.Get, PrimaryCredentials, convention)))
+			{
+				var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+				return json.Deserialize<UserInfo>(convention);
+			}
+		}
+
+		public async Task<UserPermission> GetUserPermissionAsync(string database, MethodOptions method, CancellationToken token = default(CancellationToken))
+		{
+			if (string.IsNullOrEmpty(database))
+			{
+				throw new ArgumentException("database name cannot be null or empty");
+			}
+
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.UserPermission(database, method) , HttpMethod.Get, PrimaryCredentials, convention)))
+			{
+				var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+				return json.Deserialize<UserPermission>(convention);
 			}
 		}
 

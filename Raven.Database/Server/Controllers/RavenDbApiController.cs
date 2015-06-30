@@ -738,8 +738,10 @@ namespace Raven.Database.Server.Controllers
 												   .Select(db => new DatabaseInfo
 												   {
 													   Database = db,
-													   IsAdmin = principal.IsAdministrator(db)
+													   IsAdmin = principal.IsAdministrator(db),
+													   IsReadOnly = principal.IsReadOnly(db),
 												   }).ToList(),
+			
 					AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
 					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
 					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
@@ -753,6 +755,7 @@ namespace Raven.Database.Server.Controllers
 			var oAuthPrincipal = principal as OAuthPrincipal;
 			if (oAuthPrincipal != null)
 			{
+		
 				var oAuth = new UserInfo
 				{
 					Remark = "Using OAuth",
@@ -760,12 +763,19 @@ namespace Raven.Database.Server.Controllers
 					IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
 					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
 					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
-											  .Select(db => new DatabaseInfo
+											  .Select(db => db.TenantId != null ? new DatabaseInfo
 											  {
 												  Database = db.TenantId,
-												  IsAdmin = principal.IsAdministrator(db.TenantId)
-											  }).ToList(),
+												  IsAdmin = principal.IsAdministrator(db.TenantId),
+												  IsReadOnly = db.ReadOnly
+
+											  } : null).ToList(),
+					
 					AccessTokenBody = oAuthPrincipal.TokenBody,
+
+					AdminDatabases = oAuthPrincipal.AdminDatabases,
+					ReadOnlyDatabases = oAuthPrincipal.ReadOnlyDatabases,
+					ReadWriteDatabases = oAuthPrincipal.ReadWriteDatabases
 				};
 
 				return oAuth;
