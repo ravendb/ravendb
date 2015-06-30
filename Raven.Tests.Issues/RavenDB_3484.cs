@@ -68,7 +68,7 @@ namespace Raven.Tests.Issues
 
 					bool batchAcknowledged = false;
 
-					subscriptions[i].AfterBatch += () => batchAcknowledged = true;
+					subscriptions[i].AfterAcknowledgment += x => batchAcknowledged = true;
 
 					using (var s = store.OpenSession())
 					{
@@ -191,7 +191,7 @@ namespace Raven.Tests.Issues
 
 					bool batchAcknowledged = false;
 
-					subscriptions[i].AfterBatch += () => batchAcknowledged = true;
+					subscriptions[i].AfterAcknowledgment += x => batchAcknowledged = true;
 
 					using (var s = store.OpenSession())
 					{
@@ -273,7 +273,7 @@ namespace Raven.Tests.Issues
 					Assert.False(pending.IsConnectionClosed);
 
 					bool batchAcknowledged = false;
-					pending.AfterBatch += () => batchAcknowledged = true;
+					pending.AfterAcknowledgment += x => batchAcknowledged = true;
 
 					var items = new BlockingCollection<User>();
 
@@ -326,7 +326,7 @@ namespace Raven.Tests.Issues
 						Strategy = SubscriptionOpeningStrategy.WaitForFree
 					});
 
-					subscriptions[clientNumber].AfterBatch += () =>
+					subscriptions[clientNumber].AfterBatch += x =>
 					{
 						processed[clientNumber] = true;
 					};
