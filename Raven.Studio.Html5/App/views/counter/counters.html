@@ -1,16 +1,16 @@
 ﻿<div class="documents-page no-outline" tabindex="0">
     <div id="documents-page-container" class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
-        <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: groups">
-            <li data-bind="event: { mousedown: $parent.selectGroup.bind($parent) }, css: { active: $data === $parent.selectedGroup() }, visible: countersCount() > 0 || isAllGroupsGroup">
-                <a href="javascript:void(0)">
-                    <div class="collection-name">
-                        <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
-                        <span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: {title: name}"></span>
-                        <span class="collection-text pull-left text-muted" data-bind="visible: !isAllGroupsGroup, css: { 'text-muted': $data !== $parent.selectedGroup() }, text:  '&nbsp;(' + countersCountWithThousandsSeparator() + ')'"></span>
-                    </div>
-                </a>
-            </li>
-        </ul>
+		<ul class="nav nav-pills nav-stacked document-collections" data-bind="template: { foreach: groups, afterAdd: showGroupElement, beforeRemove: hideGroupElement }">
+			<li data-bind="event: { mousedown: $parent.selectGroup.bind($parent) }, css: { active: $data === $parent.selectedGroup() }, visible: countersCount() > 0 || isAllGroupsGroup">
+				<a href="javascript: void(0)">
+					<div class="collection-name">
+						<div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
+						<span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: { title: name }"></span>
+						<span class="collection-text pull-left text-muted" data-bind="visible: !isAllGroupsGroup, css: { 'text-muted': $data !== $parent.selectedGroup() }, text:  '&nbsp;(' + countersCountWithThousandsSeparator() + ')', updateHighlighting: countersCount()"></span>
+					</div>
+				</a>
+			</li>
+		</ul>
     </div>
     <div class="col-md-10">
         <div class="btn-toolbar" role="toolbar">
@@ -59,7 +59,6 @@
             </span>
         </div>
 
-
-		<div id="countersGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentGroupPagedItems, selectedIndices: selectedCounterIndices, gridSelector: '#countersGrid', rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyCountersAutoSelected, isAllAutoSelected: isAllCountersAutoSelected, contextMenuOptions: ['ChangeValue', 'Reset', 'Delete'] }"></div>
+		<div id="countersGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentGroupPagedItems, selectedIndices: selectedCounterIndices, gridSelector: '#countersGrid', collections: groups, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyCountersAutoSelected, isAllAutoSelected: isAllCountersAutoSelected, contextMenuOptions: ['ChangeValue', 'Reset', 'Delete'], showIds: false, noResultsMessage: 'No counters were found!' }"></div>
     </div>
 </div>

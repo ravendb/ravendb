@@ -1,8 +1,9 @@
 import cell = require("widgets/virtualTable/cell");
 import viewModel = require("widgets/virtualTable/viewModel");
 import customFunctions = require("models/database/documents/customFunctions");
-import execJs = require('common/execJs');
+import execJs = require("common/execJs");
 import collection = require("models/database/documents/collection");
+import counterGroup = require("models/counter/counterGroup");
 
 class row {
     top = ko.observable(0);
@@ -15,18 +16,27 @@ class row {
     compiledCustomFunctions = {};
 
     calculateExternalIdCellColor(cellValue: string) {
-        var cellCollectionName = cellValue.slice(0, cellValue.lastIndexOf('/')).toLocaleLowerCase();
-        var matchingCollection = this.viewModel.settings.collections.first((c: collection) => c.name.toLocaleLowerCase() == cellCollectionName);
+        var cellCollectionName = cellValue.slice(0, cellValue.lastIndexOf("/")).toLocaleLowerCase();
+        var matchingCollection = this.viewModel.settings.collections.first((c: collection) => c.name.toLocaleLowerCase() === cellCollectionName);
 
         if (!!matchingCollection) {
             return matchingCollection.colorClass;
         }
-        return '';
+        return "";
+    }
+
+	calculateExternalGroupCellColor(cellValue: string) {
+        var matchingGroup = this.viewModel.settings.collections.first((c: counterGroup) => c.name === cellValue);
+
+        if (!!matchingGroup) {
+            return matchingGroup.colorClass;
+        }
+        return "";
     }
 
     constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
-            this.addOrUpdateCellMap('Id', null);
+            this.addOrUpdateCellMap("Id", null);
         }
 
         this.viewModel.settings.customFunctions.subscribe(this.extractCustomFunctions);
@@ -44,7 +54,7 @@ class row {
                 cellVal.reset();
             }
         }
-        this.collectionClass('');
+        this.collectionClass("");
         this.isChecked(false);
     }
 
@@ -121,13 +131,13 @@ class row {
             return cellVal.data;
         }
 
-        return '';
+        return "";
     }
 
     getCellTemplate(cellName: string): string {
         var cellVal: cell = this.cellMap[cellName];
         if (cellVal) {
-            if (cellVal.resetFlag === true) {
+            if (cellVal.resetFlag) {
                 cellVal.templateName = this.getCellTemplateName(cellName, this.cellMap[cellName].data());
                 cellVal.resetFlag = false;
                 return cellVal.templateName;
@@ -177,9 +187,19 @@ class row {
 
         // note: we just inform here about custom template - without specific name of this template.
         var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
-        if (colParam && colParam.template() !== cell.defaultTemplate) {
+        if (colParam && colParam.template() !== cell.defaultTemplate && colParam.template() !== cell.counterGroupTemplate && colParam.template() !== cell.counterNameTemplate) {
             return cell.customTemplate;
         } 
+
+		// see if this is a counter or counter group
+	    if (this.viewModel.isCounterView()) {
+		    switch(propertyName) {
+				case "Group":
+					return cell.counterGroupTemplate;
+				case "Name":
+					return cell.counterNameTemplate;
+		    }
+	    }
 
         return cell.defaultTemplate;
     }

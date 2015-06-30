@@ -8,11 +8,11 @@ class extensions {
         extensions.installObservableExtensions();
         extensions.installStringExtension();
         extensions.installStorageExtension();
-        
         extensions.installBindingHandlers();
+	    extensions.installJqueryExtensions();
 
-        // Want Intellisense for your extensions?
-        // Go to extensionInterfaces.ts and add the function signature there.
+	    // Want Intellisense for your extensions?
+	    // Go to extensionInterfaces.ts and add the function signature there.
     }
 
     private static installDateExtensions() {
@@ -404,7 +404,43 @@ class extensions {
                 ko.bindingHandlers.event.init(element, newValueAccessor, allBindingsAccessor, viewModel, bindingContext);
             }
         };
+
+		var key = "_my_init_key_";
+	    ko.bindingHandlers["updateHighlighting"] = {
+			init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+                ko.utils.domData.set(element, key, true);
+            },
+		    update(element, valueAccessor, allBindings, viewModel, bindingContext) {
+				var value = valueAccessor();
+				var isInit = ko.utils.domData.get(element, key);
+			    var data = ko.dataFor(element);
+			    var skip = !!data.isAllDocuments || !!data.isSystemDocuments || !!data.isAllGroupsGroup;
+			    if (skip === false && isInit === false) {
+					$($(element).parents("li")).highlight();
+			    } else {
+			        ko.utils.domData.set(element, key, false);
+			    }
+		    }
+	    };
     }
+
+	static installJqueryExtensions() {
+		jQuery.fn.highlight = function() {
+			$(this).each(function() {
+				var el = $(this);
+				el.before("<div/>");
+				el.prev()
+					.width(el.width())
+					.height(el.height())
+					.css({
+						"position": "absolute",
+						"background-color": "#ffff99",
+						"opacity": ".9"
+					})
+					.fadeOut(1500);
+			});
+		}
+	}
 }
 
 export = extensions;

@@ -1132,6 +1132,7 @@
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
+    <TypeScriptCompile Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.selectpicker\bootstrap.selectpicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.v3.datetimepicker\bootstrap.v3.datetimepicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
@@ -1155,7 +1156,7 @@
     <Content Include="Scripts\d3\models\timelines.js" />
     <Content Include="Scripts\d3\models\timelinesChart.js" />
     <Content Include="Scripts\d3\nv.js" />
-    <TypeScriptCompile Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\highlight\highlight.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\d3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />

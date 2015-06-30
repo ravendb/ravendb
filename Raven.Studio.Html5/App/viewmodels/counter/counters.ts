@@ -34,8 +34,9 @@ class counters extends viewModelBase {
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     static gridSelector = "#countersGrid";
+	static isInitialized = false;
 
-    constructor() {
+	constructor() {
         super();
 
         this.selectedGroup.subscribe(c => this.selectedGroupChanged(c));
@@ -84,7 +85,10 @@ class counters extends viewModelBase {
         this.groupToSelectName = args ? args.group : null;
 
         var cs = this.activeCounterStorage();
-        this.fetchGroups(cs).done(results => this.groupsLoaded(results, cs));
+        this.fetchGroups(cs).done(results => {
+	        this.groupsLoaded(results, cs);
+	        counters.isInitialized = true;
+        });
     }
 
 
@@ -99,6 +103,11 @@ class counters extends viewModelBase {
         this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);*/
     }
 
+	deactivate() {
+		super.deactivate();
+		counters.isInitialized = false;
+	}
+
     createNotifications(): Array<changeSubscription> {
         return [
             changesContext.currentResourceChangesApi().watchAllCounters((e: counterChangeNotification) => this.refreshGroups()),
@@ -110,7 +119,8 @@ class counters extends viewModelBase {
         return [
             ko.postbox.subscribe("ChangeCounterValue", () => this.change()),
 			ko.postbox.subscribe("ResetCounter", () => this.reset()),
-            ko.postbox.subscribe("ChangesApiReconnected", (cs: counterStorage) => this.reloadCountersData(cs))
+            ko.postbox.subscribe("ChangesApiReconnected", (cs: counterStorage) => this.reloadCountersData(cs)),
+            ko.postbox.subscribe("SortGroups", () => this.sortGroups())
         ];
     }
 
@@ -271,7 +281,6 @@ class counters extends viewModelBase {
         });
 
         this.groups.removeAll(deletedGroups);
-
         receivedGroups.forEach((receivedGroup: counterGroup) => {
             var foundGroup = this.groups().first((group: counterGroup) => group.name === receivedGroup.name);
             if (!foundGroup) {
@@ -286,14 +295,6 @@ class counters extends viewModelBase {
         if (!currentGroup || currentGroup.countersCount() === 0) {
             this.selectedGroup(this.allGroupsGroup);
         }
-
-	    this.groups.sort((c1: counterGroup, c2: counterGroup) => {
-		    if (c1.isAllGroupsGroup)
-			    return -1;
-		    if (c2.isAllGroupsGroup)
-			    return 1;
-		    return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
-	    });
     }
 
     private refreshGroupsData() {
@@ -348,6 +349,32 @@ class counters extends viewModelBase {
 
         return null;
     }
+
+	private sortGroups() {
+		this.groups.sort((c1: counterGroup, c2: counterGroup) => {
+			if (c1.isAllGroupsGroup)
+				return -1;
+			if (c2.isAllGroupsGroup)
+				return 1;
+			return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
+		});
+	}
+
+	// Animation callbacks for the groups list
+	showGroupElement(element) {
+		if (element.nodeType === 1 && counters.isInitialized) {
+			$(element).hide().slideDown(500, () => {
+				ko.postbox.publish("SortGroups");
+				$(element).highlight();
+			});
+		}
+	}
+
+	hideGroupElement(element) {
+		if (element.nodeType === 1) {
+			$(element).slideUp(1000, () => { $(element).remove(); });
+		}
+	}
 }
 
 export = counters;

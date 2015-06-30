@@ -765,6 +765,10 @@ interface documentBase {
     getDocumentPropertyNames(): Array<string>;
 }
 
+interface ICollectionBase {
+	colorClass: string;
+}
+
 interface smugglerOptionsDto {
     IncludeDocuments: boolean;
     IncludeIndexes: boolean;

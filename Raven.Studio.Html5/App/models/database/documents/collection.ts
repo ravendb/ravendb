@@ -6,7 +6,7 @@ import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/resources/database");
 import cssGenerator = require("common/cssGenerator");
 
-class collection {
+class collection implements ICollectionBase {
     colorClass = ""; 
     documentCount: any = ko.observable(0);
     documentsCountWithThousandsSeparator = ko.computed(() => this.documentCount().toLocaleString());
@@ -14,7 +14,6 @@ class collection {
     isSystemDocuments = false;
 
     public collectionName : string;
-
     private documentsList: pagedList;
     public static allDocsCollectionName = "All Documents";
     private static systemDocsCollectionName = "System Documents";

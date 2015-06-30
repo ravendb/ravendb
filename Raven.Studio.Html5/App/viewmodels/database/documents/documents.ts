@@ -58,6 +58,7 @@ class documents extends viewModelBase {
     alerts = ko.observable<alert[]>([]);
     token = ko.observable<singleAuthToken>();
     static gridSelector = "#documentsGrid";
+	static isInitialized = false;
 
     constructor() {
         super();
@@ -133,9 +134,11 @@ class documents extends viewModelBase {
 
         var db = this.activeDatabase();
         this.fetchAlerts();
-        this.fetchCollections(db).done(results => this.collectionsLoaded(results, db));
+        this.fetchCollections(db).done(results => {
+	        this.collectionsLoaded(results, db);
+			documents.isInitialized = true;
+        });
     }
-
 
     attached() {
         super.createKeyboardShortcut("F2", () => this.editSelectedDoc(), "#documentsGrid");
@@ -146,6 +149,27 @@ class documents extends viewModelBase {
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);
+    }
+
+	deactivate() {
+		super.deactivate();
+		documents.isInitialized = false;
+	}
+
+	createPostboxSubscriptions(): Array<KnockoutSubscription> {
+        return [
+            ko.postbox.subscribe("EditItem", () => this.editSelectedDoc()),
+            ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db)),
+			ko.postbox.subscribe("SortCollections", () => this.sortCollections())
+        ];
+    }
+
+	createNotifications(): Array<changeSubscription> {
+        return [
+            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
+        ];
     }
 
     private updateAuthToken() {
@@ -175,21 +199,6 @@ class documents extends viewModelBase {
 
     private fetchCollections(db: database): JQueryPromise<Array<collection>> {
         return new getCollectionsCommand(db, this.collections(), this.lastCollectionCountUpdate).execute();
-    }
-
-    createNotifications(): Array<changeSubscription> {
-        return [
-            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
-            changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
-            changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
-        ];
-    }
-
-    createPostboxSubscriptions(): Array<KnockoutSubscription> {
-        return [
-            ko.postbox.subscribe("EditItem", () => this.editSelectedDoc()),
-            ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db))
-        ];
     }
 
     private refreshCollections(): JQueryPromise<any> {
@@ -321,18 +330,6 @@ class documents extends viewModelBase {
         if (!currentCollection || currentCollection.documentCount() === 0) {
             this.selectCollection(this.allDocumentsCollection);
         }
-
-		this.collections.sort((c1: collection, c2: collection) => {
-		    if (c1.isAllDocuments)
-			    return -1;
-		    if (c2.isAllDocuments)
-			    return 1;
-			if (c1.isSystemDocuments)
-				return -1;
-			if (c2.isSystemDocuments)
-				return 1;
-		    return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
-	    });
     }
 
     private refreshCollectionsData() {
@@ -381,7 +378,7 @@ class documents extends viewModelBase {
             }
         });
 
-            var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
+		var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
@@ -485,6 +482,36 @@ class documents extends viewModelBase {
         var index = this.alerts().indexOf(alert);
         return appUrl.forAlerts(this.activeDatabase()) + "&item=" + index;
     }
+
+	private sortCollections() {
+		this.collections.sort((c1: collection, c2: collection) => {
+		    if (c1.isAllDocuments)
+			    return -1;
+		    if (c2.isAllDocuments)
+			    return 1;
+			if (c1.isSystemDocuments)
+				return -1;
+			if (c2.isSystemDocuments)
+				return 1;
+		    return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
+	    });
+	}
+
+	// Animation callbacks for the groups list
+	showCollectionElement(element) {
+		if (element.nodeType === 1 && documents.isInitialized) {
+			$(element).hide().slideDown(500, () => {
+				ko.postbox.publish("SortCollections");
+				$(element).highlight();
+			});
+		}
+	}
+
+	hideCollectionElement(element) {
+		if (element.nodeType === 1) {
+			$(element).slideUp(1000, () => { $(element).remove(); });
+		}
+	}
 }
 
 export = documents;

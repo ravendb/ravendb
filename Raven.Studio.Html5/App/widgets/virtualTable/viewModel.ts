@@ -58,7 +58,7 @@ class ctor {
         selectionEnabled: boolean;
         customColumns: KnockoutObservable<customColumns>;
         customFunctions: KnockoutObservable<customFunctions>;
-        collections: KnockoutObservableArray<collection>;
+        collections: KnockoutObservableArray<ICollectionBase>;
         rowsAreLoading: KnockoutObservable<boolean>;
         noResultsMessage: string;
         isAnyAutoSelected: KnockoutObservable<boolean>;
@@ -119,7 +119,7 @@ class ctor {
 
         this.noResults = ko.computed<boolean>(() => {
             var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
-            return numOfRowsInUse == 0 && !this.settings.rowsAreLoading();
+            return numOfRowsInUse === 0 && !this.settings.rowsAreLoading();
         });
 
         this.registerColumnResizing();
@@ -218,7 +218,7 @@ class ctor {
     setupContextMenu() {
         var untypedGrid: any = this.grid;
         untypedGrid.contextmenu({
-            target: "#gridContextMenu",
+            target: '#gridContextMenu',
             before: (e: MouseEvent) => {
                 var target: any = e.target;
                 var rowTag = (target.className.indexOf("ko-grid-row") > -1) ? $(target) : $(e.target).parents(".ko-grid-row");
@@ -244,7 +244,8 @@ class ctor {
         var containsId = this.columns().first(x=> x.binding === "Id");
 
         if (!containsId && !this.isIndexMapReduce()) {
-            if (this.settings.showCheckboxes !== false) {
+	        var containsCheckbox = this.columns().first(x => x.binding === "__IsChecked");
+            if (!containsCheckbox && this.settings.showCheckboxes) {
                 this.columns.push(new column("__IsChecked", 38));
             }
             if (this.settings.showIds !== false) {
@@ -252,7 +253,7 @@ class ctor {
             }
             this.columns.valueHasMutated();
         } else if (containsId && this.isIndexMapReduce()) {
-            this.columns.remove(c => c.binding === 'Id' || c.binding === "__IsChecked");
+            this.columns.remove(c => c.binding === "Id" || c.binding === "__IsChecked");
             this.columns.valueHasMutated();
         }
     }
@@ -313,7 +314,7 @@ class ctor {
 
 	        var editUrl: string;
 			if (rowData instanceof counterSummary) {
-				editUrl = appUrl.forEditCounterStorage(appUrl.getResource(), rowData["Name"], rowData["Group"]);
+				editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["Group"], rowData["Name"]);
 			} else {
 				editUrl = appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], appUrl.getResource(), rowIndex, entityName);
 			}
@@ -329,7 +330,7 @@ class ctor {
 
 			var editUrl: string;
 			if (selectedItem instanceof counterSummary) {
-				editUrl = appUrl.forEditCounterStorage(appUrl.getResource(), selectedItem["Name"], selectedItem["Group"]);
+				editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["Name"], selectedItem["Group"]);
 			} else {
 				editUrl = appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName);
 			}
@@ -361,6 +362,11 @@ class ctor {
         }
         return null;
     }
+
+	isCounterView(): boolean {
+		var item = this.items.getItem(0);
+		return item instanceof counterSummary;
+	}
 
     getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {
         var customColumns = this.settings.customColumns();
@@ -731,9 +737,17 @@ class ctor {
         app.showDialog(deleteDocsVm);
     }
 
-    getDocumentHref(documentId): string {
+    getDocumentHref(documentId: string): string {
         if (typeof documentId == "string") {
             return appUrl.forEditItem(documentId, appUrl.getDatabase(), null, null);
+        } else {
+            return "#";
+        }
+    }
+
+	getGroupHref(group: string): string {
+        if (typeof group == "string") {
+            return appUrl.forCounterStorageCounters(group, appUrl.getCounterStorage());
         } else {
             return "#";
         }
