@@ -738,9 +738,10 @@ namespace Raven.Database.Server.Controllers
 												   .Select(db => new DatabaseInfo
 												   {
 													   Database = db,
-													   IsAdmin = principal.IsAdministrator(db)
+													   IsAdmin = principal.IsAdministrator(db),
+													   IsReadOnly = principal.IsReadOnly(db),
 												   }).ToList(),
-
+			
 					AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
 					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
 					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
