@@ -18,11 +18,11 @@ import executePatchCommand = require("commands/database/patch/executePatchComman
 import virtualTable = require("widgets/virtualTable/viewModel");
 import evalByQueryCommand = require("commands/database/patch/evalByQueryCommand");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import getIndexTermsCommand = require("commands/getIndexTermsCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
-import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
+import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import getDocumentsByEntityNameCommand = require("commands/database/documents/getDocumentsByEntityNameCommand");
 import pagedResultSet = require("common/pagedResultSet");
-import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
+import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
 
 class patch extends viewModelBase {

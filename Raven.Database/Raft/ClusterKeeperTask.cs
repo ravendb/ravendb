@@ -18,6 +18,7 @@ using Raven.Database.Commercial;
 using Raven.Database.Plugins;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
+using Raven.Database.Server;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -30,13 +31,13 @@ namespace Raven.Database.Raft
 
 		private ClusterManager clusterManager;
 
-		public void Execute(RavenDbServer server)
+		public void Execute(RavenDBOptions serverOptions)
 		{
 			if (IsValidLicense() == false)
 				return;
 
-			systemDatabase = server.SystemDatabase;
-			clusterManager = server.Options.ClusterManager.Value = ClusterManagerFactory.Create(systemDatabase, server.Options.DatabaseLandlord);
+			systemDatabase = serverOptions.SystemDatabase;
+			clusterManager = serverOptions.ClusterManager.Value = ClusterManagerFactory.Create(systemDatabase, serverOptions.DatabaseLandlord);
 
 			systemDatabase.Notifications.OnDocumentChange += (db, notification, metadata) =>
 			{

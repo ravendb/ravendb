@@ -21,7 +21,7 @@ import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSide
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 import saveIndexPriorityCommand = require("commands/saveIndexPriorityCommand");
-import indexPriority = require("models/indexPriority");
+import indexPriority = require("models/database/index/indexPriority");
 
 class indexes extends viewModelBase {
 

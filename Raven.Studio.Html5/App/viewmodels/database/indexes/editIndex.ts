@@ -137,7 +137,7 @@ class editIndex extends viewModelBase {
 
     private initializeDirtyFlag() {
         var indexDef: indexDefinition = this.editedIndex();
-        var checkedFieldsArray: KnockoutObservable<any>[] = [this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
+        var checkedFieldsArray: KnockoutObservable<any>[] = [indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
 
         indexDef.luceneFields().forEach((lf: luceneField) => {
             checkedFieldsArray.push(lf.name);

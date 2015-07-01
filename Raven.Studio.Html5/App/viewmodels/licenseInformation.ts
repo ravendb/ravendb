@@ -1,10 +1,10 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import licenseCheckConnectivityCommand = require("commands/licenseCheckConnectivityCommand");
 import forceLicenseUpdate = require("commands/forceLicenseUpdate");
-import licensingStatus = require("viewmodels/licensingStatus");
+import licensingStatus = require("viewmodels/common/licensingStatus");
 import app = require("durandal/app");
-import license = require("models/license");
-import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
+import license = require("models/auth/license");
+import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
 
 class licenseInformation extends viewModelBase {
 
