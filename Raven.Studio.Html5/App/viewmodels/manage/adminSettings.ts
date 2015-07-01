@@ -21,7 +21,7 @@ class adminSettings extends viewModelBase {
 
 
 
-	    var licenseInformation = { route: 'admin/settings/licenseInformation', moduleId: 'viewmodels/licenseInformation', title: 'License Information', nav: true, hash: appUrl.forLicenseInformation() };
+	    var licenseInformation = { route: 'admin/settings/licenseInformation', moduleId: 'viewmodels/manage/licenseInformation', title: 'License Information', nav: true, hash: appUrl.forLicenseInformation() };
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/manage/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
         var windowsAuthRoute = { route: 'admin/settings/windowsAuth', moduleId: 'viewmodels/manage/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
         var clusterRoute = { route: 'admin/settings/cluster', moduleId: "viewmodels/manage/cluster", title: "Cluster", nav: true, hash: appUrl.forCluster() };
