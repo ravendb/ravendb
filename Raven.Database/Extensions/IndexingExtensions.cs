@@ -4,13 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
+using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -18,6 +21,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
 using Raven.Database.Indexing.Sorting.Custom;
 using Raven.Database.Linq;
+using Raven.Database.Queries;
 using Spatial4n.Core.Shapes;
 using Spatial4n.Core.Shapes.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -282,6 +286,79 @@ namespace Raven.Database.Extensions
                 return SortOptions.None;
 
             return value;
+		}
+
+		public static ConditionalWeakTable<Tuple<IndexReader, string, Predicate<string>>, Predicate<int>> _documentIdsSetBuildersCache = new ConditionalWeakTable<Tuple<IndexReader, string, Predicate<string>>, Predicate<int>>();
+		private static ConditionalWeakTable<Tuple<IndexReader, string>, Dictionary<int, string>> _fieldsStringValuesInReadersCache = new ConditionalWeakTable<Tuple<IndexReader, string>, Dictionary<int, string>>();
+		
+		public static Predicate<int> GetDocsExistenceVerificationMethodInSet(this IndexReader reader, string field, Predicate<string> termAcceptanceFunction)
+		{
+			var termDocs = reader.TermDocs();
+			var termEnum = reader.Terms(new Term(field));
+			int t = 0; // current term number
+			var maxDoc = reader.MaxDoc;
+			var documentsIDsSet = new DocumentsIDsSetBuilder(32);
+			var readerFieldTuple = Tuple.Create(reader, field,termAcceptanceFunction);
+			Predicate<int> containsPredicate;
+
+			if (_documentIdsSetBuildersCache.TryGetValue(readerFieldTuple, out containsPredicate))
+				return containsPredicate;
+
+			do
+			{
+				Term term = termEnum.Term;
+				if (term == null || term.Field != field || t >= maxDoc) break;
+					
+				bool termMatches = termAcceptanceFunction(term.Text);
+
+				if (termMatches)
+				{
+					termDocs.Seek(termEnum);
+					while (termDocs.Next())
+					{
+						documentsIDsSet.Set(termDocs.Doc);
+					}
+				}
+
+				t++;
+			}
+			while (termEnum.Next());
+
+			containsPredicate = documentsIDsSet.Build();
+			_documentIdsSetBuildersCache.Add(readerFieldTuple, containsPredicate);
+			return containsPredicate;
+		}
+
+		public static Dictionary<int,string> GetDocsAndValuesDictionary(this IndexReader reader, string field)
+		{
+			var termDocs = reader.TermDocs();
+			var termEnum = reader.Terms(new Term(field));
+			var t = 0; // current term number
+			var maxDoc = reader.MaxDoc;
+			var readerFieldTuple = Tuple.Create(reader, field);
+			Dictionary<int,string> docsValuesDictionary;
+
+			if (_fieldsStringValuesInReadersCache.TryGetValue(readerFieldTuple, out docsValuesDictionary))
+				return docsValuesDictionary;
+
+			do
+			{
+				Term term = termEnum.Term;
+				if (term == null || term.Field != field || t >= maxDoc) break;
+				
+				termDocs.Seek(termEnum);
+				while (termDocs.Next())
+				{
+					docsValuesDictionary.Add(termDocs.Doc,term.Text);
+				}
+				
+
+				t++;
+			}
+			while (termEnum.Next());
+
+			_fieldsStringValuesInReadersCache.Add(readerFieldTuple, docsValuesDictionary);
+			return docsValuesDictionary;
 		}
 	}
 }
