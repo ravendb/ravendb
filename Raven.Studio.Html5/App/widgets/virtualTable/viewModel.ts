@@ -278,31 +278,31 @@ class ctor {
                     // asynchronously load the column information in the next animation frame.
                     this.ensureColumnsAnimationFrameHandle = this.requestAnimationFrame(() => this.ensureColumnsForRows(resultSet.items), this.ensureColumnsAnimationFrameHandle);
                 }
-                this.settings.rowsAreLoading(false);
             });
         }
     }
 
     requestAnimationFrame(action: () => void, existingHandleToCancel: number): number {
+	    var result: number;
         if (window.requestAnimationFrame) {
             if (existingHandleToCancel) {
                 window.cancelAnimationFrame(existingHandleToCancel);
             }
-
-            return window.requestAnimationFrame(action);
+            result = window.requestAnimationFrame(action);
         } else if (window.msRequestAnimationFrame) {
             if (window.msCancelRequestAnimationFrame) {
                 window.msCancelRequestAnimationFrame(existingHandleToCancel);
             }
-
-            return window.msRequestAnimationFrame(action);
+            result = window.msRequestAnimationFrame(action);
         } else {
             if (existingHandleToCancel) {
                 window.clearTimeout(existingHandleToCancel);
             }
-
-            return setTimeout(action, 1);
+            result = setTimeout(action, 1);
         }
+
+		this.settings.rowsAreLoading(false);
+	    return result;
     }
 
     fillRow(rowData: documentBase, rowIndex: number) {

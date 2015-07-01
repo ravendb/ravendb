@@ -58,7 +58,8 @@ class documents extends viewModelBase {
     alerts = ko.observable<alert[]>([]);
     token = ko.observable<singleAuthToken>();
     static gridSelector = "#documentsGrid";
-	static isInitialized = false;
+	static isInitialized = ko.observable<boolean>(false);
+	isInitialized = documents.isInitialized;
 
     constructor() {
         super();
@@ -136,7 +137,7 @@ class documents extends viewModelBase {
         this.fetchAlerts();
         this.fetchCollections(db).done(results => {
 	        this.collectionsLoaded(results, db);
-			documents.isInitialized = true;
+			documents.isInitialized(true);
         });
     }
 
@@ -153,7 +154,7 @@ class documents extends viewModelBase {
 
 	deactivate() {
 		super.deactivate();
-		documents.isInitialized = false;
+		documents.isInitialized(false);
 	}
 
 	createPostboxSubscriptions(): Array<KnockoutSubscription> {
@@ -391,6 +392,13 @@ class documents extends viewModelBase {
         router.navigate(appUrl.forNewDoc(this.activeDatabase()));
     }
 
+	refresh() {
+		this.getDocumentsGrid().refreshCollectionData();
+		var selectedCollection = this.selectedCollection();
+		selectedCollection.invalidateCache();
+		this.selectNone();
+	}
+
     toggleSelectAll() {
         var docsGrid = this.getDocumentsGrid();
 
@@ -499,7 +507,7 @@ class documents extends viewModelBase {
 
 	// Animation callbacks for the groups list
 	showCollectionElement(element) {
-		if (element.nodeType === 1 && documents.isInitialized) {
+		if (element.nodeType === 1 && documents.isInitialized()) {
 			$(element).hide().slideDown(500, () => {
 				ko.postbox.publish("SortCollections");
 				$(element).highlight();

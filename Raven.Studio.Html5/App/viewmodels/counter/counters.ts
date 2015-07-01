@@ -34,7 +34,8 @@ class counters extends viewModelBase {
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     static gridSelector = "#countersGrid";
-	static isInitialized = false;
+	static isInitialized = ko.observable<boolean>(false);
+	isInitialized = counters.isInitialized;
 
 	constructor() {
         super();
@@ -87,7 +88,7 @@ class counters extends viewModelBase {
         var cs = this.activeCounterStorage();
         this.fetchGroups(cs).done(results => {
 	        this.groupsLoaded(results, cs);
-	        counters.isInitialized = true;
+	        counters.isInitialized(true);
         });
     }
 
@@ -105,7 +106,7 @@ class counters extends viewModelBase {
 
 	deactivate() {
 		super.deactivate();
-		counters.isInitialized = false;
+		counters.isInitialized(false);
 	}
 
     createNotifications(): Array<changeSubscription> {
@@ -219,30 +220,29 @@ class counters extends viewModelBase {
     }
 
     toggleSelectAll() {
-        var docsGrid = this.getCountersGrid();
-
-        if (!!docsGrid) {
+        var countersGrid = this.getCountersGrid();
+        if (!!countersGrid) {
             if (this.hasAnyCountersSelected()) {
-                docsGrid.selectNone();
+                countersGrid.selectNone();
             } else {
-                docsGrid.selectSome();
+                countersGrid.selectSome();
                 this.isAnyCountersAutoSelected(this.hasAllCountersSelected() === false);
             }
         }
     }
 
     selectAll() {
-        var docsGrid = this.getCountersGrid();
+        var countersGrid = this.getCountersGrid();
         var group: counterGroup = this.selectedGroup();
-        if (!!docsGrid && !!group) {
-            docsGrid.selectAll(group.countersCount());
+        if (!!countersGrid && !!group) {
+            countersGrid.selectAll(group.countersCount());
         }
     }
 
     selectNone() {
-        var docsGrid = this.getCountersGrid();
-        if (!!docsGrid) {
-            docsGrid.selectNone();
+        var countersGrid = this.getCountersGrid();
+        if (!!countersGrid) {
+            countersGrid.selectNone();
         }
     }
 
@@ -270,8 +270,6 @@ class counters extends viewModelBase {
                 } else {
                     this.refreshGridAndGroup(group.name);
                 }
-
-				//this.updateGridAfterOperationComplete(collection, result.OperationId);
             });
 		app.showDialog(deleteGroupVm);
     }
@@ -367,7 +365,7 @@ class counters extends viewModelBase {
 
 	// Animation callbacks for the groups list
 	showGroupElement(element) {
-		if (element.nodeType === 1 && counters.isInitialized) {
+		if (element.nodeType === 1 && counters.isInitialized()) {
 			$(element).hide().slideDown(500, () => {
 				ko.postbox.publish("SortGroups");
 				$(element).highlight();

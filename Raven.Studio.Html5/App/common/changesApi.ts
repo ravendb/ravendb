@@ -247,7 +247,7 @@ class changesApi {
 
     private saveSentMessages(needToSaveSentMessages: boolean, command: string, args) {
         if (needToSaveSentMessages) {
-            if (command.slice(0, 2) == "un") {
+            if (command.slice(0, 2) === "un") {
                 var commandName = command.slice(2, command.length);
                 this.sentMessages = this.sentMessages.filter(msg => msg.command != commandName);
             } else {
@@ -308,6 +308,7 @@ class changesApi {
             this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
         } else if (eventType === "ChangeNotification") {
             this.fireEvents(this.allCountersHandlers(), value, (event) => true);
+			//TODO: send events to other subscriptions
         }
         else {
             console.log("Unhandled Changes API notification type: " + eventType);
@@ -502,7 +503,6 @@ class changesApi {
             }
         });
     }
-
 
     watchCountersInGroup(group: string, onChange: (e: countersInGroupNotification) => void): changeSubscription {
         var callback = new changesCallback<countersInGroupNotification>(onChange);

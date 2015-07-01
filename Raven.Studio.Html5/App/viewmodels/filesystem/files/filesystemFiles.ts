@@ -1,14 +1,11 @@
 ﻿import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import app = require("durandal/app");
-import shell = require("viewmodels/shell");
-
 import changesContext = require("common/changesContext");
-
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
-import getFilesystemRevisionsCommand = require('commands/filesystem/getFilesystemRevisionsCommand');
+import getFilesystemRevisionsCommand = require("commands/filesystem/getFilesystemRevisionsCommand");
 import createFolderInFilesystem = require("viewmodels/filesystem/files/createFolderInFilesystem");
 import treeBindingHandler = require("common/bindingHelpers/treeBindingHandler");
 import pagedResultSet = require("common/pagedResultSet");
@@ -33,22 +30,26 @@ class filesystemFiles extends viewModelBase {
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
     selectedFilesText: KnockoutComputed<string>;
-    hasFiles: KnockoutComputed<boolean>;
-    isSelectAll = ko.observable(false);
-    hasAnyFileSelected: KnockoutComputed<boolean>;
+    filesCount: KnockoutComputed<number>;
+
     selectedFolder = ko.observable<string>();
+	selectedFolderName: KnockoutComputed<string>;
     addedFolder = ko.observable<folderNodeDto>();
     currentLevelSubdirectories = ko.observableArray<string>();
     uploadFiles = ko.observable<FileList>();
     uploadQueue = ko.observableArray<uploadItem>();
     folderNotificationSubscriptions = {};
-    hasAnyFilesSelected: KnockoutComputed<boolean>;
+	hasFiles: KnockoutComputed<boolean>;
+	hasAnyFilesSelected: KnockoutComputed<boolean>;
     hasAllFilesSelected: KnockoutComputed<boolean>;
-     //id = ko.observable<string)>(); 
+	isAnyFilesAutoSelected = ko.observable<boolean>(false);
+    isAllFilesAutoSelected = ko.observable<boolean>(false);
     inRevisionsFolder = ko.observable<boolean>(false);
 
-    private activeFilesystemSubscription: any;
+	showLoadingIndicator = ko.observable<boolean>(false);
+    showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
 
+    private activeFilesystemSubscription: any;
     static treeSelector = "#filesTree";
     static gridSelector = "#filesGrid";
     static uploadQueuePanelToggleSelector = "#uploadQueuePanelToggle";
@@ -61,18 +62,33 @@ class filesystemFiles extends viewModelBase {
         this.uploadQueue.subscribe(x => this.newUpload(x));
         fileUploadBindingHandler.install();
         treeBindingHandler.install();
-        treeBindingHandler.includeRevisionsFunc = () => this.activeFilesystem().activeBundles.contains('Versioning');
+        treeBindingHandler.includeRevisionsFunc = () => this.activeFilesystem().activeBundles.contains("Versioning");
 
         this.selectedFilesText = ko.computed(() => {
             if (!!this.selectedFilesIndices()) {
                 var documentsText = "file";
-                if (this.selectedFilesIndices().length != 1) {
+                if (this.selectedFilesIndices().length !== 1) {
                     documentsText += "s";
                 }
                 return documentsText;
             }
             return "";
         });
+
+		this.filesCount = ko.computed(() => {
+            if (!!this.allFilesPagedItems()) {
+				var p: pagedList = this.allFilesPagedItems();
+			    return p.totalResultCount();
+		    }
+		    return 0;
+        });
+
+	    this.selectedFolderName = ko.computed(() => {
+		    if (!this.selectedFolder())
+			    return "Root Folder";
+		    var splittedName = this.selectedFolder().split("/");
+		    return splittedName.last();
+	    });
 
         this.hasFiles = ko.computed(() => {
             if (!!this.allFilesPagedItems()) {
@@ -81,13 +97,18 @@ class filesystemFiles extends viewModelBase {
             }
             return false;
         });
+
+	    this.hasAllFilesSelected = ko.computed(() => {
+		    var filesCount = this.filesCount();
+		    return filesCount > 0 && filesCount === this.selectedFilesIndices().length;
+	    });
     }
 
     activate(args) {
         super.activate(args);
 
         this.appUrls = appUrl.forCurrentFilesystem();
-        this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
+        this.hasAnyFilesSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 
         this.loadFiles();
         this.selectedFolder.subscribe((newValue: string) => this.folderChanged(newValue));
@@ -233,12 +254,28 @@ class filesystemFiles extends viewModelBase {
     }
 
     toggleSelectAll() {
-        this.isSelectAll.toggle();
+		var filesGrid = this.getFilesGrid();
+        if (!!filesGrid) {
+            if (this.hasAnyFilesSelected()) {
+                filesGrid.selectNone();
+            } else {
+                filesGrid.selectSome();
+				this.isAnyFilesAutoSelected(this.hasAllFilesSelected() === false);
+            }
+        }
+    }
 
+	selectAll() {
         var filesGrid = this.getFilesGrid();
-        if (filesGrid && this.isSelectAll()) {
-            filesGrid.selectSome();
-        } else if (filesGrid && !this.isSelectAll()) {
+		if (!!filesGrid && !!this.allFilesPagedItems()) {
+			var p: pagedList = this.allFilesPagedItems();
+			filesGrid.selectAll(p.totalResultCount());
+		}
+    }
+
+	selectNone() {
+        var filesGrid = this.getFilesGrid();
+        if (!!filesGrid) {
             filesGrid.selectNone();
         }
     }
@@ -269,13 +306,23 @@ class filesystemFiles extends viewModelBase {
         app.showDialog(createFolderVm);
     }
 
-    deleteSelectedFiles() {
-        var grid = this.getFilesGrid();
+	refresh() {
+		var grid = this.getFilesGrid();
         if (grid) {
-            grid.deleteSelectedItems();
+            grid.refreshCollectionData();
         }
+		this.selectNone();
+	}
 
-        this.isSelectAll(false);
+    deleteSelectedFiles() {
+		if (this.hasAllFilesSelected()) {
+			this.deleteFolder(false);
+		} else {
+			var grid = this.getFilesGrid();
+			if (grid) {
+				grid.deleteSelectedItems();
+			}
+		}
     }
 
     downloadSelectedFiles() {
@@ -293,7 +340,6 @@ class filesystemFiles extends viewModelBase {
     }
 
     renameSelectedFile() {
-
         var grid = this.getFilesGrid();
         if (grid) {
             var selectedItem = <file>grid.getSelectedItems(1).first();
@@ -373,8 +419,8 @@ class filesystemFiles extends viewModelBase {
         $(".upload-queue").addClass("upload-queue-min");
     }
 
-	deleteFolder() {
-		if (!this.selectedFolder()) {
+	deleteFolder(recursive = true) {
+		if (!this.selectedFolder() && recursive) {
 			// delete all files from filesystem
 			new getFileSystemStatsCommand(this.activeFilesystem())
 				.execute()
@@ -384,6 +430,11 @@ class filesystemFiles extends viewModelBase {
 		} else {
 			// Run the query so that we have an idea of what we'll be deleting.
 			var query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
+			if (recursive === false) {
+				var folder = !this.selectedFolder() ? "/" : this.selectedFolder();
+				query = "__directory:" + this.escapeQueryString(folder);
+			}
+
 			new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
 				.execute()
 				.done((results: pagedResultSet) => {
