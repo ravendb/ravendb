@@ -186,6 +186,10 @@ class appUrl {
         return "#admin/settings/trafficWatch";
     }
 
+	static forLicenseInformation(): string {
+		return "#admin/settings/licenseInformation";
+	}
+
     static forDebugInfo(): string {
         return "#admin/settings/debugInfo";
     }

@@ -46,9 +46,9 @@ namespace Raven.Database.Storage
 
             if (Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
             {
-                output("Error: Database already exists, cannot restore to an existing database.");
+                output("Error: Database location directory is not empty. Point to non-existing or empty directory.");
                 output("Error: Restore Canceled");
-                throw new IOException("Database already exists, cannot restore to an existing database.");
+				throw new IOException("Database location directory is not empty. Point to non-existing or empty directory.");
             }
 
             if (Directory.Exists(databaseLocation) == false)

@@ -8,14 +8,15 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+
 using Lucene.Net.Search;
+
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Embedded;
-using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.WebApi;
@@ -24,16 +25,15 @@ namespace Raven.Server
 {
 	public class RavenDbServer : IDisposable
 	{
+		private readonly DocumentStore documentStore;
+		private readonly FilesStore filesStore;
+
 	    private InMemoryRavenConfiguration configuration;
 	    private IServerThingsForTests serverThingsForTests;
 		private RavenDBOptions options;
 	    private OwinHttpServer owinHttpServer;
-        private DocumentStore documentStore;
-		private FilesStore filesStore;
+      
 	    private string url;
-
-		private IList<IDisposable> toDispose = new List<IDisposable>();
-		private IEnumerable<IServerStartupTask> serverStartupTasks;
 
 		public RavenDbServer()
 			: this(new RavenConfiguration())
@@ -117,21 +117,8 @@ namespace Raven.Server
 			filesStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
 			filesStore.Initialize();
 
-			serverStartupTasks = configuration.Container.GetExportedValues<IServerStartupTask>();
-
-			foreach (var task in serverStartupTasks)
-			{
-				toDispose.Add(task);
-				task.Execute(this);
-			}
-
 	        return this;
 	    }
-
-		public IEnumerable<IServerStartupTask> ServerStartupTasks
-		{
-			get { return serverStartupTasks; }
-		}
 
 		public void EnableHttpServer()
 		{
@@ -176,9 +163,6 @@ namespace Raven.Server
 
 		    if (owinHttpServer != null)
 			    owinHttpServer.Dispose();
-
-		    foreach (var disposable in toDispose)
-				disposable.Dispose();
 
 			if (configuration != null)
 				configuration.Dispose();

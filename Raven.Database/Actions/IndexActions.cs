@@ -271,6 +271,11 @@ namespace Raven.Database.Actions
             {
                 case IndexCreationOptions.Noop:
                     return name;
+				case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
+					// ensure that the code can compile
+					new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
+					IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+					return name;
                 case IndexCreationOptions.Update:
                     // ensure that the code can compile
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
@@ -670,7 +675,7 @@ namespace Raven.Database.Actions
 	        return true;
         }
 
-		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true, bool removeIndexReplaceDocument = true)
+		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true, bool removeIndexReplaceDocument = true,bool isSideBySideReplacement = false)
 		{
 			using (IndexDefinitionStorage.TryRemoveIndexContext())
 			{
@@ -700,12 +705,17 @@ namespace Raven.Database.Actions
 				// And delete the data in the background
 				StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
 
+
+				var indexChangeType = isSideBySideReplacement ? IndexChangeTypes.SideBySideReplace : IndexChangeTypes.IndexRemoved;
+
 				// We raise the notification now because as far as we're concerned it is done *now*
-				TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new IndexChangeNotification
-				{
-					Name = instance.Name,
-					Type = IndexChangeTypes.IndexRemoved,
-				}));
+				TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => 
+					Database.Notifications.RaiseNotifications(new IndexChangeNotification
+					{
+						Name = instance.Name,
+						Type = indexChangeType,
+					})
+				);
 			}
 		}
 
