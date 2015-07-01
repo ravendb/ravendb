@@ -429,9 +429,9 @@ namespace Raven.Client.Connection
 			return AsyncHelpers.RunSync(() => asyncServerClient.GetUserInfoAsync());
 		}
 
-		public UserPermission GetUserPermission(string database, MethodOptions method)
+		public UserPermission GetUserPermission(string database, bool readOnly)
 		{
-			return AsyncHelpers.RunSync(() => asyncServerClient.GetUserPermissionAsync(database, method));
+			return AsyncHelpers.RunSync(() => asyncServerClient.GetUserPermissionAsync(database, readOnly));
 		}
 
 		public long NextIdentityFor(string name)

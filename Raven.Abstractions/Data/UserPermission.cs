@@ -11,7 +11,7 @@ namespace Raven.Abstractions.Data
 	{
 		public string User { get; set; }
 		public DatabaseInfo Database{ get; set; }
-		public MethodOptions Method { get; set; }
+		public string Method { get; set; }
 		public bool IsGranted { get; set; }
 		public string Reason { get; set; }
 	}

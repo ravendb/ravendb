@@ -54,9 +54,9 @@ namespace Raven.Client.Connection
 			return url + "/debug/user-info";
 		}
 
-		public static string UserPermission(this string url, string database, MethodOptions method)
+		public static string UserPermission(this string url, string database, bool readOnly)
 		{
-			return url + "/debug/user-info" + "?database=" + database + "&method=" + method;
+			return url + "/debug/user-info" + "?database=" + database + "&method=" + (readOnly ? "GET" : "PUT");
 		}
 
 		public static string AdminStats(this string url)

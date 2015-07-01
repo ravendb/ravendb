@@ -187,7 +187,6 @@
     <Compile Include="Data\IndexingPerformanceStatistics.cs" />
     <Compile Include="Data\IndexingPerformanceStats.cs" />
     <Compile Include="Data\IOperationState.cs" />
-    <Compile Include="Data\MethodOptions.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\PrefetchingUser.cs" />

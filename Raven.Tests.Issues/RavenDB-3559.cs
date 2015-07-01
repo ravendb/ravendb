@@ -61,19 +61,19 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(1, info.ReadOnlyDatabases.Count);
 
-					var per = store.DatabaseCommands.GetUserPermission("Foo", MethodOptions.PUT);
+					var per = store.DatabaseCommands.GetUserPermission("Foo", readOnly: false);
 					var isGrant = per.IsGranted;
 					var res = per.Reason;
 					Assert.True(isGrant);
 					Assert.Equal("PUT allowed on " + "Foo" + " because user " + info.User + " has admin permissions", res);
 
-					var per2 = store.DatabaseCommands.GetUserPermission("db2", MethodOptions.PUT);
+					var per2 = store.DatabaseCommands.GetUserPermission("db2", readOnly: false);
 					var isGrant2 = per2.IsGranted;
 					var res2 = per2.Reason;
 					Assert.False(isGrant2);
 					Assert.Equal("PUT rejected on" + "db2" + "because user" + info.User + "has ReadOnly permissions", res2);
 
-					var per3 = store.DatabaseCommands.GetUserPermission("db3", MethodOptions.PUT);
+					var per3 = store.DatabaseCommands.GetUserPermission("db3", readOnly: false);
 					var isGrant3 = per3.IsGranted;
 					var res3 = per3.Reason;
 					Assert.True(isGrant3);

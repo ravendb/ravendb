@@ -593,83 +593,71 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[RavenRoute("debug/user-info")]
 		[RavenRoute("databases/{databaseName}/debug/user-info")]
-		public UserPermission GetUserPermission(string database, MethodOptions method)
+		public HttpResponseMessage GetUserPermission(string database, string method)
 		{
 			if (string.IsNullOrEmpty(database))
-				return new UserPermission {IsGranted = false, Reason = "database is null"};
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "The database paramater is mandatory"
+				}, HttpStatusCode.BadGateway);
+			}
 
 			var info = GetUserInfo();
 			var databases = info.Databases;
-			if (databases == null)
-				return new UserPermission {IsGranted = false, Reason = "There are no databases"};
+			
 
 			var db = databases.Find(d => d.Database.Equals(database));
 			if (db == null)
-				return new UserPermission
-				{
-					IsGranted = false,
-					Reason = database +"has no permissions"
-				};
-
-			if (method == MethodOptions.PUT)
 			{
-				if (db.IsAdmin)
-					return new UserPermission
-					{
-						User = info.User,
-						Database = db,
-						Method = method,
-						IsGranted = true, 
-						Reason = "PUT allowed on " + database+ " because user " + info.User +" has admin permissions"
-					};
-				if (db.IsReadOnly)
-					return new UserPermission 
-					{
-						User = info.User,
-						Database = db,
-						Method = method,
-						IsGranted = false,
-						Reason = "PUT rejected on" + database + "because user" + info.User+ "has ReadOnly permissions"
-					};
-
-				return new UserPermission
+				return GetMessageWithObject(new
 				{
-					User = info.User,
-					Database = db,
-					Method = method,
-					IsGranted = true, 
-					Reason = "PUT allowed on " + database + " because user " + info.User + "has ReadWrite permissions"
-				};
+					Error = "The database "+  database+ " was not found on the server"
+				}, HttpStatusCode.NotFound);
 			}
-			// GET method
+
 			if (db.IsAdmin)
 			{
-				return new UserPermission
+				return GetMessageWithObject(new UserPermission
 				{
 					User = info.User,
 					Database = db,
 					Method = method,
 					IsGranted = true,
-					Reason = "GET allowed on " + database + " because user " + info.User + " has admin permissions"
-				};
+					Reason = method + " allowed on " + database + " because user " + info.User + " has admin permissions"
+				});
 			}
-			if (db.IsReadOnly)
-				return new UserPermission
+			if (!db.IsReadOnly)
+			{
+				return GetMessageWithObject(new UserPermission
 				{
 					User = info.User,
 					Database = db,
 					Method = method,
 					IsGranted = true,
-					Reason = "GET allowed on " + database + " because user " + info.User + "has ReadOnly permissions"
-				};
-				return new UserPermission
+					Reason = method + " allowed on " + database + " because user " + info.User + "has ReadWrite permissions"
+				});
+			}
+
+			if (method != "HEAD" && method != "GET")
+			{
+				return GetMessageWithObject(new UserPermission
 				{
 					User = info.User,
 					Database = db,
 					Method = method,
-					IsGranted = true, 
-					Reason = "GET allowed on " + database + " because user " + info.User + "has ReadWrite permissions"
-				};
+					IsGranted = false,
+					Reason = method + " rejected on" + database + "because user" + info.User + "has ReadOnly permissions"
+				});
+			}
+			return GetMessageWithObject(new UserPermission
+			{
+				User = info.User,
+				Database = db,
+				Method = method,
+				IsGranted = false,
+				Reason = method + " allowed on" + database + "because user" + info.User + "has ReadOnly permissions"
+			});
 		}
 
 		[HttpGet]
