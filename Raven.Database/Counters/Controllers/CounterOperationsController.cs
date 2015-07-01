@@ -323,34 +323,43 @@ namespace Raven.Database.Counters.Controllers
 		[HttpDelete]
 		public HttpResponseMessage DeleteByGroup(string groupName)
 		{
-			using (var writer = Storage.CreateWriter())
-			{
-				var changeNotifications = new List<ChangeNotification>();
-				groupName = groupName ?? string.Empty;
-				var countersDetails = writer.GetCountersDetails(groupName).ToList();
-				foreach (var c in countersDetails)
+			groupName = groupName ?? string.Empty;
+			var deletedCount = 0;
+
+			while (true) {
+				using (var writer = Storage.CreateWriter())
 				{
-					writer.DeleteCounterInternal(c.Group, c.Name);
-					changeNotifications.Add(new ChangeNotification
+					var changeNotifications = new List<ChangeNotification>();
+					var countersDetails = writer.GetCountersDetails(groupName).Take(1024).ToList();
+					if (countersDetails.Count == 0)
+						break;
+
+					foreach (var c in countersDetails)
 					{
-						GroupName = c.Group,
-						CounterName = c.Name,
-						Action = CounterChangeAction.Delete,
-						Delta = 0,
-						Total = 0
+						writer.DeleteCounterInternal(c.Group, c.Name);
+						changeNotifications.Add(new ChangeNotification
+						{
+							GroupName = c.Group,
+							CounterName = c.Name,
+							Action = CounterChangeAction.Delete,
+							Delta = 0,
+							Total = 0
+						});
+					}
+					writer.Commit();
+
+					Storage.MetricsCounters.ClientRequests.Mark();
+					changeNotifications.ForEach(change =>
+					{
+						Storage.Publisher.RaiseNotification(change);
+						Storage.MetricsCounters.Deletes.Mark();
 					});
+
+					deletedCount += changeNotifications.Count;
 				}
-				writer.Commit();
-
-				Storage.MetricsCounters.ClientRequests.Mark();
-				changeNotifications.ForEach(change =>
-				{
-					Storage.Publisher.RaiseNotification(change);
-					Storage.MetricsCounters.Deletes.Mark();
-				});
-
-				return GetMessageWithObject(changeNotifications.Count);
 			}
+
+			return GetMessageWithObject(deletedCount);
 		}
 
 		[RavenRoute("cs/{counterStorageName}/counters")]

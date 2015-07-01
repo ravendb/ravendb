@@ -996,9 +996,13 @@ namespace Raven.Database.Counters
 				var counterIdBuffer = GetCounterIdBufferFromTree(groupToCounters, groupNameSlice, counterName);
 				var singleCounterValue = new SingleCounterValue {DoesCounterExist = counterIdBuffer != null};
 
-				counterIdBuffer = GetCounterIdBufferFromTree(tombstonesGroupToCounters, groupNameSlice, counterName);
 				if (counterIdBuffer == null)
-					return singleCounterValue;
+				{
+					//looking for the single counter in the tombstones tree
+					counterIdBuffer = GetCounterIdBufferFromTree(tombstonesGroupToCounters, groupNameSlice, counterName);
+					if (counterIdBuffer == null)
+						return singleCounterValue;
+				}
 
 				var fullCounterNameSlice = GetFullCounterNameSlice(counterIdBuffer, serverId, sign);
 				singleCounterValue.Value = reader.GetSingleCounterValue(fullCounterNameSlice);
@@ -1015,21 +1019,6 @@ namespace Raven.Database.Counters
 				var groupNameSlice = sliceWriter.CreateSlice(groupSize);
 				return groupNameSlice;
 			}
-
-			/*private byte[] GetCounterIdBuffer(string groupName, string counterName)
-			{
-				var groupSize = Encoding.UTF8.GetByteCount(groupName);
-				EnsureBufferSize(ref buffer.GroupName, groupSize);
-				var sliceWriter = new SliceWriter(buffer.GroupName);
-				sliceWriter.Write(groupName);
-				var groupNameSlice = sliceWriter.CreateSlice(groupSize);
-
-				var counterIdBuffer = GetCounterIdBufferFromTree(groupToCounters, groupNameSlice, counterName);
-				if (counterIdBuffer != null)
-					return counterIdBuffer;
-
-				return GetCounterIdBufferFromTree(tombstonesGroupToCounters, groupNameSlice, counterName);
-			}*/
 
 			public void UpdateReplications(CountersReplicationDocument newReplicationDocument)
 			{
