@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Counters.Notifications;
+using Raven.Abstractions.Counters;
 using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
@@ -91,7 +92,7 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(ChangeNotification notification)
 		{
-			var counterPrefix = string.Concat(notification.GroupName, "/", notification.CounterName);
+			var counterPrefix = CounterUtils.GetFullCounterName(notification.GroupName, notification.CounterName);
 			if (watchAllCounters > 0 || matchingChanges.Contains(counterPrefix))
 			{
 				var value = new { Value = notification, Type = changeNotificationType };

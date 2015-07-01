@@ -1127,7 +1127,6 @@ namespace Raven.Database.Counters
 
 			public void Dispose()
 			{
-				//parent.LastWrite = SystemTime.UtcNow;
 				if (transaction != null)
 					transaction.Dispose();
 			}
