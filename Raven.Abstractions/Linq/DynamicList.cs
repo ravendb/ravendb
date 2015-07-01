@@ -164,29 +164,136 @@ namespace Raven.Abstractions.Linq
 			get { return inner.Count(); }
 		}
 
-		public int Sum(Func<dynamic, int> aggregator)
+		public int Sum(Func<dynamic, int> selector)
 		{
-			return Enumerate().Sum(aggregator);
+			return Enumerate().Sum(selector);
 		}
 
-		public decimal Sum(Func<dynamic, decimal> aggregator)
+		public int? Sum(Func<dynamic, int?> selector)
 		{
-			return Enumerate().Sum(aggregator);
+			return inner.Sum(selector) ?? new DynamicNullObject();
 		}
 
-		public float Sum(Func<dynamic, float> aggregator)
+		public long Sum(Func<dynamic, long> selector)
 		{
-			return Enumerate().Sum(aggregator);
+			return inner.Sum(selector);
 		}
 
-		public double Sum(Func<dynamic, double> aggregator)
+		public long? Sum(Func<dynamic, long?> selector)
 		{
-			return Enumerate().Sum(aggregator);
+			return inner.Sum(selector) ?? new DynamicNullObject();
 		}
 
-		public long Sum(Func<dynamic, long> aggregator)
+		public float Sum(Func<dynamic, float> selector)
 		{
-			return Enumerate().Sum(aggregator);
+			return inner.Sum(selector);
+		}
+
+		public float? Sum(Func<dynamic, float?> selector)
+		{
+			return inner.Sum(selector) ?? new DynamicNullObject();
+		}
+
+		public double Sum(Func<dynamic, double> selector)
+		{
+			return inner.Sum(selector);
+		}
+
+		public double? Sum(Func<dynamic, double?> selector)
+		{
+			return inner.Sum(selector) ?? new DynamicNullObject();
+		}
+
+		public decimal Sum(Func<dynamic, decimal> selector)
+		{
+			return inner.Sum(selector);
+		}
+
+		public decimal? Sum(Func<dynamic, decimal?> selector)
+		{
+			return inner.Sum(selector) ?? new DynamicNullObject();
+		}
+
+		public dynamic Min()
+		{
+			return Enumerate().Min() ?? new DynamicNullObject();
+		}
+
+		public dynamic Min<TResult>(Func<dynamic, TResult> selector)
+		{
+			var result = Enumerate().Min(selector);
+
+// ReSharper disable once CompareNonConstrainedGenericWithNull
+			if(result == null)
+				return new DynamicNullObject();
+
+			return result;
+		}
+
+		public dynamic Max()
+		{
+			return Enumerate().Max() ?? new DynamicNullObject();
+		}
+
+		public dynamic Max<TResult>(Func<dynamic, TResult> selector)
+		{
+			var result = Enumerate().Max(selector);
+
+			// ReSharper disable once CompareNonConstrainedGenericWithNull
+			if (result == null)
+				return new DynamicNullObject();
+
+			return result;
+		}
+
+		public double Average(Func<dynamic, int> selector)
+		{
+			return inner.Average(selector);
+		}
+
+		public double? Average(Func<dynamic, int?> selector)
+		{
+			return inner.Average(selector) ?? new DynamicNullObject();
+		}
+
+		public double Average(Func<dynamic, long> selector)
+		{
+			return inner.Average(selector);
+		}
+
+		public double? Average(Func<dynamic, long?> selector)
+		{
+			return inner.Average(selector) ?? new DynamicNullObject();
+		}
+
+		public float Average(Func<dynamic, float> selector)
+		{
+			return inner.Average(selector);
+		}
+
+		public float? Average(Func<dynamic, float?> selector)
+		{
+			return inner.Average(selector) ?? new DynamicNullObject();
+		}
+
+		public double Average(Func<dynamic, double> selector)
+		{
+			return inner.Average(selector);
+		}
+
+		public double? Average(Func<dynamic, double?> selector)
+		{
+			return inner.Average(selector) ?? new DynamicNullObject();
+		}
+
+		public decimal Average(Func<dynamic, decimal> selector)
+		{
+			return inner.Average(selector);
+		}
+
+		public decimal? Average(Func<dynamic, decimal?> selector)
+		{
+			return inner.Average(selector) ?? new DynamicNullObject();
 		}
 
 		public IEnumerable<dynamic> OrderBy(Func<dynamic, dynamic> comparable)
@@ -327,6 +434,63 @@ namespace Raven.Abstractions.Linq
 		public dynamic DefaultIfEmpty(object defaultValue = null)
 		{
 			return inner.DefaultIfEmpty(defaultValue ?? new DynamicNullObject());
+		}
+
+		public IEnumerable<dynamic> Except(IEnumerable<dynamic> except)
+		{
+			return new DynamicList(inner.Except(except));
+		}
+
+		public IEnumerable<dynamic> Reverse()
+		{
+			return new DynamicList(inner.Reverse());
+		}
+
+		public bool SequenceEqual(IEnumerable<dynamic> second)
+		{
+			return Enumerate().SequenceEqual(second);
+		}
+
+		public IEnumerable<dynamic> AsEnumerable()
+		{
+			return this;
+		}
+
+		public dynamic[] ToArray()
+		{
+			return Enumerate().ToArray();
+		}
+
+		public List<dynamic> ToList()
+		{
+			return Enumerate().ToList();
+		}
+
+		public Dictionary<TKey, dynamic> ToDictionary<TKey>(Func<dynamic, TKey> keySelector)
+		{
+			return Enumerate().ToDictionary(keySelector);
+		}
+
+		public Dictionary<TKey, dynamic> ToDictionary<TKey>(Func<dynamic, TKey> keySelector, Func<dynamic, dynamic> elementSelector)
+		{
+			return Enumerate().ToDictionary(keySelector, elementSelector);
+		}
+
+		public ILookup<TKey, dynamic> ToLookup<TKey>(Func<dynamic, TKey> keySelector)
+		{
+			return Enumerate().ToLookup(keySelector);
+		}
+
+		public ILookup<TKey, dynamic> ToLookup<TKey>(Func<dynamic, TKey> keySelector, Func<dynamic, dynamic> elementSelector)
+		{
+			return Enumerate().ToLookup(keySelector, elementSelector);
+		}
+
+		public IEnumerable<dynamic> OfType<T>()
+		{
+			var ofType = inner.OfType<T>();
+			var dynamicList = new DynamicList(ofType);
+			return dynamicList;
 		}
 	}
 
