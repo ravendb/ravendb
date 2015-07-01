@@ -155,6 +155,11 @@ class counters extends viewModelBase {
         app.showDialog(counterChangeVm);
     }
 
+	refresh() {
+		var selectedGroupName = this.selectedGroup().name;
+		this.refreshGridAndGroup(selectedGroupName);
+	}
+
     edit() {
         var grid = this.getCountersGrid();
         if (grid) {
@@ -196,7 +201,7 @@ class counters extends viewModelBase {
         }
     }
 
-	private refreshGridAndGroup(changedGroupName: string) {
+	refreshGridAndGroup(changedGroupName: string) {
 		var group = this.selectedGroup();
 		if (group.name === changedGroupName || group.name === counterGroup.allGroupsGroupName) {
 			this.getCountersGrid().refreshCollectionData();

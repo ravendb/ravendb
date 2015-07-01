@@ -19,7 +19,7 @@ class extensions {
         var datePrototype: any = Date.prototype;
 
         var formatNumber = (num) => {
-            return num < 10 ? '0' + num : num;
+            return num < 10 ? "0" + num : num;
         }
 
         datePrototype.getUTCDateFormatted = function () {
