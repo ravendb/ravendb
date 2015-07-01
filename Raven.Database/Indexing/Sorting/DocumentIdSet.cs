@@ -6,8 +6,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls;
 using Lucene.Net.Index;
 using Raven.Database.Config;
+using Raven.Database.Linq.PrivateExtensions;
 using Sparrow.Collections;
 
 namespace Raven.Database.Indexing.Sorting
@@ -30,12 +32,58 @@ namespace Raven.Database.Indexing.Sorting
 
 			public LowMemoryHandlerStatistics GetStats()
 			{
-				IndexReader target;
-				var count = _keys.Count(x=>x.TryGetTarget(out target));
+				var documentIdsSetBuildersCacheSize = _keys.Select(x =>
+				{
+					IndexReader reader = null;
+					x.TryGetTarget(out reader);
+					return reader;
+				}).Distinct().Select(x =>
+				{
+					int curSize = 0;
+					ConcurrentDictionary<Tuple<string, Predicate<string>>, Predicate<int>> documentIdsSets;
+					if (documentIdsSetBuildersCache.TryGetValue(x, out documentIdsSets))
+					{
+						//SparseDocumentIdSet,List
+						HashSet<DocumentsIDsSetBuilder> invocationTargetsSets = new HashSet<DocumentsIDsSetBuilder>();
+						foreach (var predicate in documentIdsSets)
+						{
+							curSize += predicate.Key.Item1.Length *sizeof(char);
+							invocationTargetsSets.Add(predicate.Value.Target as DocumentsIDsSetBuilder);
+						}
+
+						foreach (var invocationTarget in invocationTargetsSets)
+						{
+							curSize += invocationTarget.GetSize();
+						}
+					}
+
+					ConcurrentDictionary<string, Dictionary<int, string>> fieldStringValues;
+
+					if (fieldsStringValuesInReadersCache.TryGetValue(x, out fieldStringValues))
+					{
+						
+						
+						foreach (var fieldValuesPair in fieldStringValues)
+						{
+							curSize += fieldValuesPair.Key.Length *sizeof(char);
+							foreach (var docsToValuesKeyPair in fieldValuesPair.Value)
+							{
+								curSize += docsToValuesKeyPair.Key*sizeof (int);
+								curSize += docsToValuesKeyPair.Value.Length*sizeof(char);
+							}
+						}
+						
+					}
+					return curSize;
+
+				}).Sum();
+
+				
+				
 				return new LowMemoryHandlerStatistics
 				{
 					DatabaseName = null,
-					EstimatedUsedMemory = count,
+					EstimatedUsedMemory = documentIdsSetBuildersCacheSize,
 					Name = "DocumentIdSet"
 				};
 			}
@@ -182,6 +230,16 @@ namespace Raven.Database.Indexing.Sorting
 				return _bitArrays[idx].Get(idx);
 
 			}
+
+			public int GetSize()
+			{
+				return _bitArrays.Sum(x =>
+				{
+					if (x != null)
+						return x.Count/8;
+					return 0;
+				});
+			}
 		}
 
 		public class DocumentsIDsSetBuilder
@@ -218,6 +276,13 @@ namespace Raven.Database.Indexing.Sorting
 					return _large.Contains;
 				_small.Sort();
 				return i => _small.BinarySearch(i) >= 0;
+			}
+
+			public int GetSize()
+			{
+				if (_large != null)
+					return _large.GetSize();
+				return 32 * sizeof(int);
 			}
 		}
 	}
