@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,12 +19,19 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using Sparrow.Collections;
 
 namespace Raven.Client.Document
 {
+	public delegate void BeforeBatch();
+
+	public delegate void AfterBatch(int documentsProcessed);
+
+	public delegate bool BeforeAcknowledgment();
+
+	public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
+
 	public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class 
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
@@ -51,8 +57,10 @@ namespace Raven.Client.Document
 		private bool disposed;
 		private bool firstConnection = true;
 
-		public event Action BeforeBatch = delegate { };
-		public event Action AfterBatch = delegate { };
+		public event BeforeBatch BeforeBatch = delegate { };
+		public event AfterBatch AfterBatch = delegate { };
+		public event BeforeAcknowledgment BeforeAcknowledgment = () => true;
+		public event AfterAcknowledgment AfterAcknowledgment = delegate { };
 
 		internal Subscription(long id, string database, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, bool open, Func<Task> ensureOpenSubscription)
 		{
@@ -101,6 +109,7 @@ namespace Raven.Client.Document
 
 						var pulledDocs = false;
 						Etag lastProcessedEtagOnServer = null;
+						int processedDocs = 0;
 
 						using (var subscriptionRequest = CreatePullingRequest())
 						using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
@@ -117,6 +126,7 @@ namespace Raven.Client.Document
 										return false;
 
 									lastProcessedEtagOnServer = Etag.Parse(AsyncHelpers.RunSync(reader.ReadAsString));
+
 									return true;
 								}))
 								{
@@ -178,6 +188,8 @@ namespace Raven.Client.Document
 											}
 										}
 
+										processedDocs++;
+
 										if (IsErroredBecauseOfSubscriber)
 											break;
 									}
@@ -190,20 +202,25 @@ namespace Raven.Client.Document
 
 						if (pulledDocs)
 						{
-							using (var acknowledgmentRequest = CreateAcknowledgmentRequest(lastProcessedEtagOnServer))
+							if (BeforeAcknowledgment())
 							{
-								try
+								using (var acknowledgmentRequest = CreateAcknowledgmentRequest(lastProcessedEtagOnServer))
 								{
-									acknowledgmentRequest.ExecuteRequest();
+									try
+									{
+										acknowledgmentRequest.ExecuteRequest();
+									}
+									catch (Exception)
+									{
+										if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
+											throw;
+									}
 								}
-								catch (Exception)
-								{
-									if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
-										throw;
-								}
+
+								AfterAcknowledgment(lastProcessedEtagOnServer);
 							}
 
-							AfterBatch();
+							AfterBatch(processedDocs);
 
 							continue; // try to pull more documents from subscription
 						}
