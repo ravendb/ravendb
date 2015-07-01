@@ -545,7 +545,7 @@ var nameArr = this.StepName.split('.');");
         }
 
         [Fact]
-        public async Task RavenDB_3106()
+        public void RavenDB_3106()
         {
             CreateRdbmsSchema();
             using (var store = NewDocumentStore())

@@ -170,8 +170,8 @@ namespace Raven.Database.Indexing
 			{
 				if (prefetchDisposable != null)
 				{
-					IDisposable prefetcherDisposableValue;
-					/*if (prefetchDisposable.TryGetTarget(out prefetcherDisposableValue))
+					/*IDisposable prefetcherDisposableValue;
+					if (prefetchDisposable.TryGetTarget(out prefetcherDisposableValue))
 					{
 						prefetcherDisposableValue.Dispose();
 					}*/

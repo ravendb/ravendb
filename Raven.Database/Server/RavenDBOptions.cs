@@ -22,7 +22,6 @@ namespace Raven.Database.Server
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
 		private readonly TimeSeriesLandlord timeSeriesLandlord;
-		private readonly WebSocketBufferPool webSocketBufferPool;
 
 		private readonly IList<IDisposable> toDispose = new List<IDisposable>();
 		private readonly IEnumerable<IServerStartupTask> serverStartupTasks;

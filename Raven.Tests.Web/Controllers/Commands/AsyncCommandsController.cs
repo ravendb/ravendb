@@ -16,6 +16,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Tests.Web.Models.Indexes;
@@ -112,14 +113,14 @@ namespace Raven.Tests.Web.Controllers.Commands
 		}
 
 		[Route("api/async/commands/getBulkInsertOperation")]
-		public async Task<HttpResponseMessage> GetBulkInsertOperation()
+		public Task<HttpResponseMessage> GetBulkInsertOperation()
 		{
 			using (var operation = DocumentStore.AsyncDatabaseCommands.GetBulkInsertOperation(new BulkInsertOptions(), DocumentStore.Changes()))
 			{
 				operation.Write(Guid.NewGuid().ToString(), new RavenJObject(), new RavenJObject());
 			}
 
-			return new HttpResponseMessage();
+			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 
 		[Route("api/async/commands/getDocuments1")]
