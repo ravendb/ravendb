@@ -20,6 +20,8 @@ import d3 = require('d3/d3');
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import forceIndexReplace = require("commands/database/index/forceIndexReplace");
+import saveIndexPriorityCommand = require("commands/saveIndexPriorityCommand");
+import indexPriority = require("models/database/index/indexPriority");
 
 class indexes extends viewModelBase {
 
@@ -83,6 +85,30 @@ class indexes extends viewModelBase {
             self.fetchRecentQueries();
         });
     }
+
+	idlePriority(idx: index) {
+		this.setIndexPriority(idx, indexPriority.idleForced);
+	}
+
+    disabledPriority(idx: index) {
+	    this.setIndexPriority(idx, indexPriority.disabledForced);
+    }
+
+    abandonedPriority(idx: index) {
+	    this.setIndexPriority(idx, indexPriority.abandonedForced);
+    }
+
+    normalPriority(idx: index) {
+	    this.setIndexPriority(idx, indexPriority.normal);
+    }
+
+	private setIndexPriority(idx: index, newPriority: indexPriority) {
+		new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
+			.execute()
+			.done(() => {
+				this.fetchIndexes();
+			});
+	}
 
     private fetchIndexes() {
         var deferred = $.Deferred();
@@ -221,7 +247,7 @@ class indexes extends viewModelBase {
         if (e.Type == "IndexRemoved") {
             this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
         } else {
-            if (this.indexMutex == true) {
+            if (this.indexMutex) {
                 this.indexMutex = false;
                 setTimeout(() => {
                     this.fetchIndexes().always(() => this.indexMutex = true);

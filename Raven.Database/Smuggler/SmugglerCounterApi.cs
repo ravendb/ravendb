@@ -1,14 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.IO.Compression;
-using System;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using Raven.Abstractions;
+﻿using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Smuggler;
@@ -16,6 +6,14 @@ using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.Counters;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+
+using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Raven.Database.Smuggler
 {

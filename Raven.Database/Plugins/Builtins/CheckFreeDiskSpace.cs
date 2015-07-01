@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
-using Raven.Server;
+using Raven.Database.Server;
 
 namespace Raven.Database.Plugins.Builtins
 {
@@ -25,19 +25,19 @@ namespace Raven.Database.Plugins.Builtins
 		   out ulong lpTotalNumberOfBytes,
 		   out ulong lpTotalNumberOfFreeBytes);
 
-		private RavenDbServer server;
+		private RavenDBOptions options;
 
 		const double FreeThreshold = 0.15;
 
-		public void Execute(RavenDbServer ravenDbServer)
+		public void Execute(RavenDBOptions serverOptions)
 		{
-			server = ravenDbServer;
-			server.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(30));
+			options = serverOptions;
+			options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(30));
 		}
 
 		private void ExecuteCheck(object state)
 		{
-			if (server.Disposed)
+			if (options.Disposed)
 			{
 				Dispose();
 				return;
@@ -45,7 +45,7 @@ namespace Raven.Database.Plugins.Builtins
 
 			var pathsToCheck = new HashSet<string>();
 
-			server.Options.DatabaseLandlord.ForAllDatabases(database =>
+			options.DatabaseLandlord.ForAllDatabases(database =>
 			{
 				pathsToCheck.Add(database.Configuration.IndexStoragePath);
 				pathsToCheck.Add(database.Configuration.Storage.Esent.JournalsStoragePath);
@@ -53,7 +53,7 @@ namespace Raven.Database.Plugins.Builtins
 				pathsToCheck.Add(database.Configuration.DataDirectory);
 			});
 
-			server.Options.FileSystemLandlord.ForAllFileSystems(filesystem =>
+			options.FileSystemLandlord.ForAllFileSystems(filesystem =>
 			{
 				pathsToCheck.Add(filesystem.Configuration.FileSystem.DataDirectory);
 				pathsToCheck.Add(filesystem.Configuration.FileSystem.IndexStoragePath);
@@ -92,7 +92,7 @@ namespace Raven.Database.Plugins.Builtins
 
 			if (lacksFreeSpace.Any())
 			{
-				server.SystemDatabase.AddAlert(new Alert
+				options.SystemDatabase.AddAlert(new Alert
 				{
 					AlertLevel = AlertLevel.Warning,
 					CreatedAt = SystemTime.UtcNow,

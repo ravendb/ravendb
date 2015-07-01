@@ -2,14 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http;
+using Microsoft.Owin.Hosting;
+using Owin;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Server;
 using Raven.Server;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -18,7 +24,7 @@ namespace Raven.Tests.Issues
 	{
 
 		private readonly HashSet<HttpRequestMessage> requestLog = new HashSet<HttpRequestMessage>();
-		private bool shouldRecordRequests;
+		private bool shouldRecordRequests = false;
 
 		protected override void ModifyServer(RavenDbServer ravenDbServer)
 		{
@@ -34,7 +40,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task Index_replication_with_index_delete_should_propagate_as_usual()
 		{
-			using (var source = CreateStore())
+			using(var source = CreateStore())
 			using (var destination = CreateStore())
 			{
 				var testIndex = new RavenDB_3232.TestIndex();
@@ -69,10 +75,10 @@ namespace Raven.Tests.Issues
 
 		[Fact]
 		public async Task Index_replication_with_side_by_side_indexes_should_not_propagate_replaced_index_tombstones()
-		{
-			using (var source = CreateStore())
-			using (var destination = CreateStore())
-			{
+		{				
+			using(var source = CreateStore())
+			using(var destination = CreateStore())			
+			{				
 				var oldIndexDef = new IndexDefinition
 				{
 					Map = "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}"
@@ -97,7 +103,7 @@ namespace Raven.Tests.Issues
 				SetupReplication(source.DatabaseCommands, destination);
 
 				var mre = new ManualResetEventSlim();
-
+				
 				sourceDatabase.Notifications.OnIndexChange += (database, notification) =>
 				{
 					if (notification.Type == IndexChangeTypes.SideBySideReplace)
@@ -109,11 +115,11 @@ namespace Raven.Tests.Issues
 
 				sourceDatabase.SpinBackgroundWorkers();
 				WaitForIndexing(source); //now old index should be a tombstone and side-by-side replaced it.
-				mre.Wait(2000);
+				mre.Wait();
 				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
 
-				Assert.Equal(0, requestLog.Count(x => x.Method.Method == "DELETE"));
+				Assert.Equal(0,requestLog.Count(x => x.Method.Method == "DELETE"));
 			}
-		}
+		}		
 	}
 }

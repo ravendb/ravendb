@@ -87,7 +87,9 @@ namespace Raven.Tests.Bundles.LiveTest
 				Assert.NotNull(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind2"));
 
 				store.ServerIfEmbedded
-					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
+					.Options
+					.ServerStartupTasks
+					.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
 				Assert.Null(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind"));
@@ -96,7 +98,9 @@ namespace Raven.Tests.Bundles.LiveTest
 				store.ServerIfEmbedded.Server.Options.DatabaseLandlord.LastRecentlyUsed["Northwind2"] = DateTime.MinValue;
 
 				store.ServerIfEmbedded
-					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
+					.Options
+					.ServerStartupTasks
+					.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
 				Assert.Null(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind2"));
@@ -129,7 +133,9 @@ namespace Raven.Tests.Bundles.LiveTest
                 Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
 
 				server
-					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
+					.Options
+					.ServerStartupTasks
+					.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
                 Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind"));
@@ -138,7 +144,9 @@ namespace Raven.Tests.Bundles.LiveTest
 				server.Server.Options.FileSystemLandlord.LastRecentlyUsed["Northwind2"] = DateTime.MinValue;
 
 				server
-					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
+					.Options
+					.ServerStartupTasks
+					.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
                 Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
