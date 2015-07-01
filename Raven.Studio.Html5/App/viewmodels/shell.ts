@@ -54,7 +54,7 @@ import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
-import environmentColor = require("models/environmentColor");
+import environmentColor = require("models/resources/environmentColor");
 
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import topology = require("models/database/replication/topology");

@@ -7,10 +7,8 @@ import saveIndexAsPersistentCommand = require("commands/database/index/saveIndex
 import querySort = require("models/database/query/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
-import shell = require("viewmodels/shell");
 import changeSubscription = require("common/changeSubscription");
 import recentQueriesStorage = require("common/recentQueriesStorage");
-import replaceIndexDialog = require("viewmodels/database/indexes/replaceIndexDialog");
 import changesContext = require("common/changesContext");
 import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
@@ -20,7 +18,7 @@ import d3 = require('d3/d3');
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import forceIndexReplace = require("commands/database/index/forceIndexReplace");
-import saveIndexPriorityCommand = require("commands/saveIndexPriorityCommand");
+import saveIndexPriorityCommand = require("commands/database/index/saveIndexPriorityCommand");
 import indexPriority = require("models/database/index/indexPriority");
 
 class indexes extends viewModelBase {
