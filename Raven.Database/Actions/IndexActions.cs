@@ -271,6 +271,11 @@ namespace Raven.Database.Actions
             {
                 case IndexCreationOptions.Noop:
                     return name;
+				case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
+					// ensure that the code can compile
+					new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
+					IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+					return name;
                 case IndexCreationOptions.Update:
                     // ensure that the code can compile
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
