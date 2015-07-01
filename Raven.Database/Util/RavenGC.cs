@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime;
@@ -54,16 +55,16 @@ namespace Raven.Database.Util
 		}
 
 		private static long lastTimeMemoryReleasedBeforeGC = 0;
-		private static long minTimeBetweenMemoryReleases = 5*10*1000*1000;
+		private static readonly long fiveSecondsInTicks = Stopwatch.Frequency * 5;
 		private static void ReleaseMemoryBeforeGC()
 		{
 
 			if (MemoryStatistics.AvailableMemory < ((double)MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemory)/10)
 			{
-				if (Environment.TickCount - lastTimeMemoryReleasedBeforeGC < minTimeBetweenMemoryReleases)
+				if (Environment.TickCount - lastTimeMemoryReleasedBeforeGC < fiveSecondsInTicks)
 					return;
 
-				Interlocked.Exchange(ref lastTimeMemoryReleasedBeforeGC, Environment.TickCount);
+				lastTimeMemoryReleasedBeforeGC = Environment.TickCount;
 
 				MemoryStatistics.SimulateLowMemoryNotification();
 			}

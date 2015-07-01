@@ -115,6 +115,8 @@ namespace Raven.Database.Indexing
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
 			_indexCreationTime = SystemTime.UtcNow;
 			RecreateSearcher();
+
+			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
 		[ImportMany]
@@ -1917,9 +1919,13 @@ namespace Raven.Database.Indexing
 
 		public void HandleLowMemory()
 		{
+			bool tryEnter = false;
 			try
 			{
-				Monitor.Enter(writeLock);
+				tryEnter = Monitor.TryEnter(writeLock);
+
+				if (tryEnter == false)
+					return;
 
 				try
 				{
@@ -1935,6 +1941,7 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
+				if(tryEnter)
 				Monitor.Exit(writeLock);
 			}
 		}
@@ -1946,25 +1953,17 @@ namespace Raven.Database.Indexing
 
 		public LowMemoryHandlerStatistics GetStats()
 		{
-			Monitor.Enter(indexWriter);
-			try
+			var writerEstimator = new RamUsageEstimator(false);
+			return new LowMemoryHandlerStatistics()
 			{
-				var writerEstimator = new RamUsageEstimator(false);
-				return new LowMemoryHandlerStatistics()
+				Name = "Index",
+				DatabaseName = this.context.DatabaseName,
+				Metadata = new
 				{
-					Name = "Index",
-					DatabaseName = this.context.DatabaseName,
-					Metadata = new
-					{
-						IndexName = this.PublicName
-					},
-					EstimatedUsedMemory = writerEstimator.EstimateRamUsage(indexWriter)
-				};
-			}
-			finally
-			{
-				Monitor.Exit(indexWriter);
-			}
+					IndexName = this.PublicName
+				},
+				EstimatedUsedMemory = writerEstimator.EstimateRamUsage(indexWriter)
+			};
 		}
 	}
 }
