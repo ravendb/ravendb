@@ -35,6 +35,7 @@ import transformerQueryType = require("models/database/index/transformerQuery");
 import getIndexSuggestionsCommand = require("commands/database/index/getIndexSuggestionsCommand");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import virtualTable = require("widgets/virtualTable/viewModel");
+import queryUtil = require("common/queryUtil");
 
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
@@ -220,6 +221,11 @@ class query extends viewModelBase {
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
+    detached() {
+        super.detached();
+        aceEditorBindingHandler.detached();
+    }
+
     updateAuthToken() {
         new getSingleAuthTokenCommand(this.activeDatabase())
             .execute()
@@ -249,6 +255,8 @@ class query extends viewModelBase {
 
         this.isLoading.extend({ rateLimit: 100 });
     }
+
+    
 
     private fetchRecentQueries() {
         this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
@@ -479,69 +487,12 @@ class query extends viewModelBase {
 
         return null;
     }
-
-
     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
 
-        if (!currentToken || typeof currentToken.type === "string") {
-            // if in beginning of text or in free text token
-            if (!currentToken || currentToken.type === "text") {
-                callback(null, this.indexFields().map(curColumn => {
-                    return { name: curColumn, value: curColumn, score: 10, meta: "field" };
-                }));
-            } else if (currentToken.type === "keyword" || currentToken.type === "value") {
-                // if right after, or a whitespace after keyword token ([column name]:)
+        queryUtil.queryCompleter(this.indexFields, this.selectedIndex, this.dynamicPrefix, this.activeDatabase, editor, session, pos, prefix, callback);
 
-                // first, calculate and validate the column name
-                var currentColumnName: string = null;
-                var currentValue: string = "";
-
-                if (currentToken.type == "keyword") {
-                    currentColumnName = currentToken.value.substring(0, currentToken.value.length - 1);
-                } else {
-                    currentValue = currentToken.value.trim();
-                    var rowTokens: any[] = session.getTokens(pos.row);
-                    if (!!rowTokens && rowTokens.length > 1) {
-                        currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
-                        currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
-                    }
-                }
-
-                // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-
-                if (!!currentColumnName && !!this.indexFields.first(x=> x === currentColumnName)) {
-
-                    if (this.selectedIndex().indexOf(this.dynamicPrefix) !== 0) {
-                        new getIndexTermsCommand(this.selectedIndex(), currentColumnName, this.activeDatabase())
-                            .execute()
-                            .done(terms => {
-                                if (!!terms && terms.length > 0) {
-                                    callback(null, terms.map(curVal => {
-                                        return { name: curVal, value: curVal, score: 10, meta: "value" };
-                                    }));
-                                }
-                            });
-                    } else {
-
-                        if (currentValue.length > 0) {
-                            new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, this.activeDatabase())
-                                .execute()
-                                .done((results: string[]) => {
-                                    if (!!results && results.length > 0) {
-                                        callback(null, results.map(curVal => {
-                                            return { name: curVal["@metadata"]["@id"], value: curVal["@metadata"]["@id"], score: 10, meta: "value" };
-                                        }));
-                                    }
-                                });
-                        } else {
-                            callback([{ error: "notext" }], null);
-                        }
-                    }
-                }
-            }
-        }
     }
+
 
     recordQueryRun(indexName: string, queryText: string, sorts: string[], transformerQuery: transformerQueryType, showFields: boolean, indexEntries: boolean, useAndOperator: boolean) {
         var newQuery: storedQueryDto = {
@@ -717,6 +668,7 @@ class query extends viewModelBase {
     fetchIndexFields(indexName: string) {
         // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
         // Fields don't show for All Documents.
+        var self = this;
         var isAllDocumentsDynamicQuery = indexName === "All Documents";
         if (!isAllDocumentsDynamicQuery) {
             //if index is dynamic, get columns using index definition, else get it using first index result
@@ -736,8 +688,8 @@ class query extends viewModelBase {
                 new getIndexDefinitionCommand(indexName, this.activeDatabase())
                     .execute()
                     .done((result: indexDefinitionContainerDto) => {
-                        this.isTestIndex(result.Index.IsTestIndex);
-                        this.indexFields(result.Index.Fields);
+                    self.isTestIndex(result.Index.IsTestIndex);
+                    self.indexFields(result.Index.Fields);
                     });
             }
         }

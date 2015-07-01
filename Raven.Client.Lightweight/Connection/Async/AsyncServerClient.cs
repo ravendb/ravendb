@@ -1015,7 +1015,7 @@ namespace Raven.Client.Connection.Async
 					};
 				}
 
-				var serializedFacets = JsonConvert.SerializeObject(x.Facets, Default.Converters);
+				var serializedFacets = SerializeFacetsToFacetsJsonString(x.Facets);
 				if (serializedFacets.Length < (32 * 1024) - 1)
 				{
 					addition = "facets=" + Uri.EscapeDataString(serializedFacets);
@@ -1070,21 +1070,7 @@ namespace Raven.Client.Connection.Async
 												 int? pageSize = null,
 												 CancellationToken token = default(CancellationToken))
 		{
-			var ravenJArray = (RavenJArray)RavenJToken.FromObject(facets, new JsonSerializer
-			{
-				NullValueHandling = NullValueHandling.Ignore,
-				DefaultValueHandling = DefaultValueHandling.Ignore,
-			});
-			foreach (var facet in ravenJArray)
-			{
-				var obj = (RavenJObject)facet;
-				if (obj.Value<string>("Name") == obj.Value<string>("DisplayName"))
-					obj.Remove("DisplayName");
-				var jArray = obj.Value<RavenJArray>("Ranges");
-				if (jArray != null && jArray.Length == 0)
-					obj.Remove("Ranges");
-			}
-			string facetsJson = ravenJArray.ToString(Formatting.None);
+			var facetsJson = SerializeFacetsToFacetsJsonString(facets);
 			var method = facetsJson.Length > 1024 ? HttpMethod.Post : HttpMethod.Get;
 			if (method == HttpMethod.Post)
 			{
@@ -1123,6 +1109,26 @@ namespace Raven.Client.Connection.Async
 				}
 			});
 		}
+
+		internal static string SerializeFacetsToFacetsJsonString(List<Facet> facets)
+	    {
+	        var ravenJArray = (RavenJArray) RavenJToken.FromObject(facets, new JsonSerializer
+	        {
+	            NullValueHandling = NullValueHandling.Ignore,
+	            DefaultValueHandling = DefaultValueHandling.Ignore,
+	        });
+	        foreach (var facet in ravenJArray)
+	        {
+	            var obj = (RavenJObject) facet;
+	            if (obj.Value<string>("Name") == obj.Value<string>("DisplayName"))
+	                obj.Remove("DisplayName");
+	            var jArray = obj.Value<RavenJArray>("Ranges");
+	            if (jArray != null && jArray.Length == 0)
+	                obj.Remove("Ranges");
+	        }
+	        string facetsJson = ravenJArray.ToString(Formatting.None);
+	        return facetsJson;
+	    }
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly, CancellationToken token = default(CancellationToken))
 		{
@@ -1451,7 +1457,7 @@ namespace Raven.Client.Connection.Async
 			}, token);
 		}
 
-		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas, CancellationToken token = default (CancellationToken))
+		public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default (CancellationToken))
 		{
 			return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
 			{
