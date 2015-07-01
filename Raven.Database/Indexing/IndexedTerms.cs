@@ -129,7 +129,7 @@ namespace Raven.Database.Indexing
             public bool Done;
         }
 
-		public static Dictionary<string, int[]> GetTermsAndDocumenstFor(IndexReader reader, int docBase, string field, string databaseName, string indexName)
+		public static Dictionary<string, int[]> GetTermsAndDocumentsFor(IndexReader reader, int docBase, string field, string databaseName, string indexName)
         {
 			var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(databaseName, indexName));
 			
