@@ -23,6 +23,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
+using Lucene.Net.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -32,6 +33,7 @@ using Raven.Abstractions.Json.Linq;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
@@ -40,6 +42,7 @@ using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Constants = Raven.Abstractions.Data.Constants;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
 using Field = Lucene.Net.Documents.Field;
@@ -50,7 +53,7 @@ namespace Raven.Database.Indexing
 	/// <summary>
 	/// 	This is a thread safe, single instance for a particular index.
 	/// </summary>
-	public abstract class Index : IDisposable
+	public abstract class Index : IDisposable,ILowMemoryHandler
 	{
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
@@ -1909,6 +1912,58 @@ namespace Raven.Database.Indexing
 			public int GetHashCode(Index obj)
 			{
 				return obj.IndexId.GetHashCode();
+			}
+		}
+
+		public void HandleLowMemory()
+		{
+			try
+			{
+				Monitor.Enter(writeLock);
+
+				try
+				{
+					EnsureIndexWriter();
+					ForceWriteToDisk();
+					WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+				}
+				catch (Exception e)
+				{
+					logIndexing.ErrorException("Error while writing in memory index to disk.", e);
+				}
+				RecreateSearcher();
+			}
+			finally
+			{
+				Monitor.Exit(writeLock);
+			}
+		}
+
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		public LowMemoryHandlerStatistics GetStats()
+		{
+			Monitor.Enter(indexWriter);
+			try
+			{
+				var writerEstimator = new RamUsageEstimator(false);
+				return new LowMemoryHandlerStatistics()
+				{
+					Name = "Index",
+					DatabaseName = this.context.DatabaseName,
+					Metadata = new
+					{
+						IndexName = this.PublicName
+					},
+					EstimatedUsedMemory = writerEstimator.EstimateRamUsage(indexWriter)
+				};
+			}
+			finally
+			{
+				Monitor.Exit(indexWriter);
 			}
 		}
 	}
