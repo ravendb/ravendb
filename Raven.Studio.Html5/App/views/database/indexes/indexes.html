@@ -208,6 +208,31 @@
 														Locked (Error)
 													</a>
 												</li>
+												<li role="presentation" class="divider"></li>
+												<li role="presentation">
+													<a class="btn" data-bind="click: $root.normalPriority.bind($root, $data), css: { active: priority === 'Normal' }" title="Normal">
+														<i class="fa fa-check fa-fw"></i>
+														Normal
+													</a>
+												</li>
+												<li role="presentation">
+													<a class="btn" data-bind="click: $root.idlePriority.bind($root, $data), css: { active: isIdle() }" title="Idle">
+														<i class="fa fa-arrow-down fa-fw"></i>
+														Idle
+													</a>
+												</li>
+												<li role="presentation">
+													<a class="btn" data-bind="click: $root.disabledPriority.bind($root, $data), css: { active: isDisabled() }" title="Disabled">
+														<i class="fa fa-ban fa-fw"></i>
+														Disabled
+													</a>
+												</li>
+												<li role="presentation">
+													<a class="btn" data-bind="click: $root.abandonedPriority.bind($root, $data), css: { active: isAbandoned() }" title="Abandoned">
+														<i class="fa fa-arrow-left fa-fw"></i>
+														Abandoned
+													</a>
+												</li>
 											</ul>
 										</div>
 										<!--

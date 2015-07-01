@@ -13,6 +13,7 @@ using System.Web.Http;
 
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
@@ -109,37 +110,37 @@ namespace Raven.Tests.Web.Controllers.Session
 		}
 
 		[Route("api/async/session/delete1")]
-		public async Task<HttpResponseMessage> Delete1()
+		public Task<HttpResponseMessage> Delete1()
 		{
 			Session
 				.Delete("people/1");
-			return new HttpResponseMessage();
+			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 
 		[Route("api/async/session/delete2")]
-		public async Task<HttpResponseMessage> Delete2()
+		public Task<HttpResponseMessage> Delete2()
 		{
 			Session
 				.Delete<Person>(1);
-			return new HttpResponseMessage();
+			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 
 		[Route("api/async/session/advanced/clear")]
-		public async Task<HttpResponseMessage> Clear()
+		public Task<HttpResponseMessage> Clear()
 		{
 			Session
 				.Advanced
 				.Clear();
-			return new HttpResponseMessage();
+			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 
 		[Route("api/async/session/advanced/defer")]
-		public async Task<HttpResponseMessage> Defer()
+		public Task<HttpResponseMessage> Defer()
 		{
 			Session
 				.Advanced
 				.Defer(new DeleteCommandData { Key = "keys/1" });
-			return new HttpResponseMessage();
+			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 
 		[Route("api/async/session/advanced/documentQuery")]
@@ -494,10 +495,10 @@ namespace Raven.Tests.Web.Controllers.Session
 		}
 
 		[Route("api/async/session/advanced/whatChanged")]
-		public async Task<HttpResponseMessage> WhatChanged()
+		public Task<HttpResponseMessage> WhatChanged()
 		{
 			Session.Advanced.WhatChanged();
-			return new HttpResponseMessage();
+			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 	}
 }

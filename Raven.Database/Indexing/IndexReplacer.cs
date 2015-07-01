@@ -53,7 +53,7 @@ namespace Raven.Database.Indexing
 				var replaceIndexId = HandleIndexReplaceDocument(document);
 
 				if (replaceIndexId != null)
-					ReplaceIndexes(new []{ replaceIndexId.Value });
+					ReplaceIndexes(new[] { replaceIndexId.Value });
 			};
 
 			Initialize();
@@ -92,12 +92,12 @@ namespace Raven.Database.Indexing
 
 			var replaceIndexId = replaceIndex.IndexId;
 
-		    var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(replaceIndexId);
-            if (!indexDefinition.IsSideBySideIndex)
-            {
-                indexDefinition.IsSideBySideIndex = true;
-                Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
-            }
+			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(replaceIndexId);
+			if (!indexDefinition.IsSideBySideIndex)
+			{
+				indexDefinition.IsSideBySideIndex = true;
+				Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
+			}
 
 			var indexReplaceInformation = document.DataAsJson.JsonDeserialization<IndexReplaceInformation>();
 			indexReplaceInformation.ReplaceIndex = replaceIndexName;
@@ -111,7 +111,7 @@ namespace Raven.Database.Indexing
 			if (indexReplaceInformation.ReplaceTimeUtc.HasValue)
 			{
 				var dueTime = indexReplaceInformation.ReplaceTimeUtc.Value - SystemTime.UtcNow;
-				if (dueTime.TotalSeconds < 0) 
+				if (dueTime.TotalSeconds < 0)
 					dueTime = TimeSpan.Zero;
 
 				indexReplaceInformation.ReplaceTimer = Database.TimerManager.NewTimer(state => InternalReplaceIndexes(new Dictionary<int, IndexReplaceInformation> { { replaceIndexId, indexReplaceInformation } }), dueTime, TimeSpan.FromDays(7));
@@ -140,7 +140,7 @@ namespace Raven.Database.Indexing
 			if (indexesToReplace.TryRemove(pair.Key, out indexReplaceInformation) && indexReplaceInformation.ReplaceTimer != null)
 				Database.TimerManager.ReleaseTimer(indexReplaceInformation.ReplaceTimer);
 
-            Database.Indexes.DeleteIndex(replaceIndexName);
+			Database.Indexes.DeleteIndex(replaceIndexName);
 		}
 
 		public void ReplaceIndexes(ICollection<int> indexIds)
@@ -165,11 +165,11 @@ namespace Raven.Database.Indexing
 
 		private bool ShouldReplace(IndexReplaceInformation indexReplaceInformation, int indexId)
 		{
-			var shouldReplace = false;
+			bool shouldReplace = false;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				if (indexReplaceInformation.Forced
-				    || Database.IndexStorage.IsIndexStale(indexId, Database.LastCollectionEtags) == false)
+					|| Database.IndexStorage.IsIndexStale(indexId, Database.LastCollectionEtags) == false)
 					shouldReplace = true; // always replace non-stale or forced indexes
 				else
 				{
@@ -230,24 +230,11 @@ namespace Raven.Database.Indexing
 
 		private void ReplaceSingleIndex(IndexReplaceInformation indexReplaceInformation)
 		{
-			try
-			{
-				var wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
-				if (wasReplaced)
-					Database.Documents.Delete(Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex, null, null);
-				else
-				{
-					HandleIndexReplaceError(indexReplaceInformation);
-				}
-			}
-			catch (Exception e)
-			{
-				var message = string.Format("Index replace failed. Could not replace index '{0}' with '{1}'", indexReplaceInformation.IndexToReplace, indexReplaceInformation.ReplaceIndex);
-
-				log.ErrorException(message, e);
-
-				indexReplaceInformation.ErrorCount++;
-			}
+			var wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
+			if (wasReplaced)
+				Database.Documents.Delete(Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex, null, null);
+			else
+				HandleIndexReplaceError(indexReplaceInformation);
 		}
 
 		private void HandleIndexReplaceError(IndexReplaceInformation indexReplaceInformation)

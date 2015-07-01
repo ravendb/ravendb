@@ -3,39 +3,38 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
 using Raven.Database.Server.Tenancy;
 using Raven.Json.Linq;
-using Raven.Server;
+
 namespace Raven.Database.Plugins.Builtins
 {
     public class CheckIncrementalBackupStatus : IServerStartupTask
     {
-		private RavenDbServer server;
-        private TimeSpan frequency = TimeSpan.FromMinutes(30);
+        private readonly TimeSpan frequency = TimeSpan.FromMinutes(30);
 
-		public void Execute(RavenDbServer server)
+	    private RavenDBOptions options;
+
+	    public void Execute(RavenDBOptions serverOptions)
 		{
-			this.server = server;
-			server.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.Zero, frequency);
+			options = serverOptions;
+			options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.Zero, frequency);
 		}
 
 		private void ExecuteCheck(object state)
 		{
-		    var databaseLandLord = server.Options.DatabaseLandlord;
+			var databaseLandLord = options.DatabaseLandlord;
 		    var systemDatabase = databaseLandLord.SystemDatabase;
-			if (server.Disposed)
+			if (options.Disposed)
 			{
 				Dispose();
 				return;
@@ -154,5 +153,5 @@ namespace Raven.Database.Plugins.Builtins
 		public void Dispose()
 		{
 		}
-	}
+    }
 } 

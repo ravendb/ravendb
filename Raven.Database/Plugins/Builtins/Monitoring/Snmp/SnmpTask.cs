@@ -21,10 +21,10 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server;
+using Raven.Database.Server;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
 using Raven.Json.Linq;
-using Raven.Server;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 {
@@ -50,20 +50,20 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 				snmpEngine.Dispose();
 		}
 
-		public void Execute(RavenDbServer server)
+		public void Execute(RavenDBOptions serverOptions)
 		{
-			if (server.Configuration.Monitoring.Snmp.Enabled == false)
+			if (serverOptions.SystemDatabase.Configuration.Monitoring.Snmp.Enabled == false)
 				return;
 
 			if (IsLicenseValid() == false)
 				throw new InvalidOperationException("Your license does not allow you to use SNMP monitoring.");
 
-			systemDatabase = server.SystemDatabase;
-			databaseLandlord = server.Options.DatabaseLandlord;
+			systemDatabase = serverOptions.SystemDatabase;
+			databaseLandlord = serverOptions.DatabaseLandlord;
 
-			objectStore = CreateStore(server);
+			objectStore = CreateStore(serverOptions);
 
-			snmpEngine = CreateSnmpEngine(server, objectStore);
+			snmpEngine = CreateSnmpEngine(serverOptions, objectStore);
 			snmpEngine.Start();
 
 			databaseLandlord.OnDatabaseLoaded += AddDatabaseIfNecessary;
@@ -103,9 +103,9 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			});
 		}
 
-		private SnmpEngine CreateSnmpEngine(RavenDbServer server, ObjectStore store)
+		private SnmpEngine CreateSnmpEngine(RavenDBOptions serverOptions, ObjectStore store)
 		{
-			var configuration = server.Configuration;
+			var configuration = serverOptions.SystemDatabase.Configuration;
 
 			var v2MembershipProvider = new Version2MembershipProvider(new OctetString(configuration.Monitoring.Snmp.Community), new OctetString(configuration.Monitoring.Snmp.Community));
 			var v3MembershipProvider = new Version3MembershipProvider();
@@ -132,25 +132,25 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			return engine;
 		}
 
-		private ObjectStore CreateStore(RavenDbServer server)
+		private ObjectStore CreateStore(RavenDBOptions serverOptions)
 		{
 			var store = new ObjectStore();
-			store.Add(new ServerUpTime(server.Options.RequestManager));
-			store.Add(new ServerUpTimeGlobal(server.Options.RequestManager));
-			store.Add(new ServerName(server.SystemDatabase.Configuration));
+			store.Add(new ServerUpTime(serverOptions.RequestManager));
+			store.Add(new ServerUpTimeGlobal(serverOptions.RequestManager));
+			store.Add(new ServerName(serverOptions.SystemDatabase.Configuration));
 			store.Add(new ServerBuildVersion());
 			store.Add(new ServerProductVersion());
 			store.Add(new ServerPid());
-			store.Add(new ServerTotalRequests(server.Options.RequestManager));
-			store.Add(new ServerConcurrentRequests(server.Options.RequestManager));
+			store.Add(new ServerTotalRequests(serverOptions.RequestManager));
+			store.Add(new ServerConcurrentRequests(serverOptions.RequestManager));
 			store.Add(new ServerCpu());
 			store.Add(new ServerTotalMemory());
-			store.Add(new ServerUrl(server.SystemDatabase.Configuration));
-			store.Add(new ServerIndexingErrors(server.Options.DatabaseLandlord));
-			store.Add(new ServerLastRequestTime(server.Options.RequestManager));
+			store.Add(new ServerUrl(serverOptions.SystemDatabase.Configuration));
+			store.Add(new ServerIndexingErrors(serverOptions.DatabaseLandlord));
+			store.Add(new ServerLastRequestTime(serverOptions.RequestManager));
 
-			store.Add(new DatabaseLoadedCount(server.Options.DatabaseLandlord));
-			store.Add(new DatabaseTotalCount(server.SystemDatabase));
+			store.Add(new DatabaseLoadedCount(serverOptions.DatabaseLandlord));
+			store.Add(new DatabaseTotalCount(serverOptions.SystemDatabase));
 
 			return store;
 		}
