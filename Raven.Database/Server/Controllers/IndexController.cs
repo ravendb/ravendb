@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using ICSharpCode.NRefactory.CSharp;
 using JetBrains.Annotations;
 using Lucene.Net.Search;
 using Mono.CSharp;
@@ -244,7 +245,7 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			return GetEmptyMessage(HttpStatusCode.NoContent);
-		}
+		}		
 
 		[HttpPost]
 		[RavenRoute("indexes/set-priority/{*id}")]
