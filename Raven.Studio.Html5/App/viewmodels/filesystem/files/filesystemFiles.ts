@@ -456,9 +456,8 @@ class filesystemFiles extends viewModelBase {
 
 	promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
         var viewModel = new deleteFilesMatchingQueryConfirm(query, resultCount, this.activeFilesystem());
-        app
-            .showDialog(viewModel)
-            .done(() => this.loadFiles());
+		app.showDialog(viewModel);
+        viewModel.deletionTask.done(() => this.loadFiles());
     }
 }
 

@@ -57,7 +57,8 @@ namespace Raven.Database.Server.Controllers
 		            });
 
 		        lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
-		        if (MatchEtag(lastDocEtag)) return GetEmptyMessage(HttpStatusCode.NotModified);
+		        if (MatchEtag(lastDocEtag))
+					return GetEmptyMessage(HttpStatusCode.NotModified);
 
 		        var startsWith = GetQueryStringValue("startsWith");
 		        HttpResponseMessage msg;

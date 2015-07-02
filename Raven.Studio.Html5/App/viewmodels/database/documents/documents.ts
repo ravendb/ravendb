@@ -46,6 +46,7 @@ class documents extends viewModelBase {
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     currentExportUrl: KnockoutComputed<string>;
+	isSystemDocumentsCollection: KnockoutComputed<boolean>;
     isRegularCollection: KnockoutComputed<boolean>;
 
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
@@ -95,6 +96,11 @@ class documents extends viewModelBase {
             }
 
             return false;
+        });
+
+		this.isSystemDocumentsCollection = ko.computed(() => {
+            var collection: collection = this.selectedCollection();
+            return !!collection && collection.isSystemDocuments;
         });
         this.isRegularCollection = ko.computed(() => {
             var collection: collection = this.selectedCollection();
@@ -154,6 +160,8 @@ class documents extends viewModelBase {
     }
 
 	deactivate() {
+		super.deactivate();
+		documents.isInitialized(false);
         this.unregisterCollectionsResizing();
     }
 
@@ -201,11 +209,6 @@ class documents extends viewModelBase {
         $(document).off("mouseup.collectionsResize");
         $(document).off("mousemove.collectionsResize");
     }
-
-	deactivate() {
-		super.deactivate();
-		documents.isInitialized(false);
-	}
 
 	createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
@@ -273,11 +276,20 @@ class documents extends viewModelBase {
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
+		systemDocumentsCollection.documentCount = ko.computed(() => {
+		    var regularCollections = this.collections().filter((c: collection) => c.isAllDocuments === false && c.isSystemDocuments === false);
+			if (regularCollections.length === 0)
+				return 0;
+			var sum = regularCollections.map((c: collection) => c.documentCount()).reduce((a, b) => a + b);
+		    return this.allDocumentsCollection.documentCount() - sum;
+	    });
 
         // All systems a-go. Load them into the UI and select the first one.
         var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);
         var allCollections = [this.allDocumentsCollection].concat(collectionsWithSysCollection);
         this.collections(allCollections);
+
+	    
 
         var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
         collectionToSelect.activate();
@@ -488,7 +500,7 @@ class documents extends viewModelBase {
     }
 
     deleteSelectedDocs() {
-        if (!this.selectedCollection().isSystemDocuments && this.hasAllDocumentsSelected()) {
+        if (this.selectedCollection().isSystemDocuments === false && this.hasAllDocumentsSelected()) {
             this.deleteCollection(this.selectedCollection());
         } else {
             var grid = this.getDocumentsGrid();
