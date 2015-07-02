@@ -25,7 +25,6 @@ using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
@@ -681,6 +680,21 @@ namespace Raven.Database.Server.Controllers
 				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
 
 			return resourcesDocuments;
+		}
+
+		protected Etag GetLastDocEtag()
+		{
+			var lastDocEtag = Etag.Empty;
+			long documentsCount = 0;
+			Database.TransactionalStorage.Batch(
+				accessor =>
+				{
+					lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+					documentsCount = accessor.Documents.GetDocumentsCount();
+				});
+
+			lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
+			return lastDocEtag;
 		}
 
 		protected class TenantData

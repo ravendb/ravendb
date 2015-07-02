@@ -72,6 +72,10 @@ namespace Raven.Database.TimeSeries.Controllers
 				});
 			}
 
+			var lastDocEtag = GetLastDocEtag();
+			if (MatchEtag(lastDocEtag))
+				return GetEmptyMessage(HttpStatusCode.NotModified);
+
 			if (approvedTimeSeries != null)
 			{
 				timeSeriesData = timeSeriesData.Where(data => approvedTimeSeries.Contains(data.Name)).ToList();
@@ -79,6 +83,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 
 			var responseMessage = getAdditionalData ? GetMessageWithObject(timeSeriesData) : GetMessageWithObject(timeSeriesNames);
+			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage.WithNoCache();
 		}
 

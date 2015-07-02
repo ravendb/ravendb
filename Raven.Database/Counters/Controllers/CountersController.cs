@@ -75,6 +75,10 @@ namespace Raven.Database.Counters.Controllers
 				});
 			}
 
+			var lastDocEtag = GetLastDocEtag();
+			if (MatchEtag(lastDocEtag))
+				return GetEmptyMessage(HttpStatusCode.NotModified);
+
 			if (approvedCounterStorages != null)
 			{
 				counterStoragesData = counterStoragesData.Where(data => approvedCounterStorages.Contains(data.Name)).ToList();
@@ -82,6 +86,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 
 			var responseMessage = getAdditionalData ? GetMessageWithObject(counterStoragesData) : GetMessageWithObject(counterStoragesNames);
+			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage.WithNoCache();
 		}
 

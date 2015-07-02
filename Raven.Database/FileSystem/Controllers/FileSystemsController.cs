@@ -80,6 +80,10 @@ namespace Raven.Database.FileSystem.Controllers
 				});
 			}
 
+			var lastDocEtag = GetLastDocEtag();
+			if (MatchEtag(lastDocEtag))
+				return GetEmptyMessage(HttpStatusCode.NotModified);
+
 			if (approvedFileSystems != null)
 			{
 				fileSystemsData = fileSystemsData.Where(data => approvedFileSystems.Contains(data.Name)).ToList();
@@ -87,6 +91,7 @@ namespace Raven.Database.FileSystem.Controllers
 			}
 
 			var responseMessage = getAdditionalData ? GetMessageWithObject(fileSystemsData) : GetMessageWithObject(fileSystemsNames);
+			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage.WithNoCache();
 		}
 
