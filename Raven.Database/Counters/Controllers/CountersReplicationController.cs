@@ -57,7 +57,7 @@ namespace Raven.Database.Counters.Controllers
 
 					//if current counter exists and current value is less than received value
 					if ((currentCounterValue != -1 && counter.Value < currentCounterValue) ||
-						(counter.Value == currentCounterValue && singleCounterValue.DoesCounterExist))
+						(counter.Value == currentCounterValue && (singleCounterValue.DoesCounterExist || writer.IsTombstone(counter.ServerId))))
 						continue;
 
 					wroteCounter = true;

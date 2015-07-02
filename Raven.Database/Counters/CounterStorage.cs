@@ -971,6 +971,11 @@ namespace Raven.Database.Counters
 				});
 			}
 
+			public bool IsTombstone(Guid serverId)
+			{
+				return serverId.Equals(parent.tombstoneId);
+			}
+
 			public void RecordLastEtagFor(Guid serverId, long lastEtag)
 			{
 				var serverIdSlice = new Slice(serverId.ToByteArray());
@@ -1096,7 +1101,7 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			private Slice GetCounterNameSlice(ushort currentKeySize, ValueReader currentReader)
+			private static Slice GetCounterNameSlice(ushort currentKeySize, ValueReader currentReader)
 			{
 				var counterNameSize = currentKeySize - sizeof(long);
 				//EnsureBufferSize(ref buffer.CounterNameBuffer, counterNameSize);
