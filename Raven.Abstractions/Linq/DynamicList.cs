@@ -75,10 +75,16 @@ namespace Raven.Abstractions.Linq
 			{
 				var ravenJObject = item as RavenJObject;
 				if (ravenJObject != null)
+				{
 					yield return new DynamicJsonObject(parent, ravenJObject);
+					continue;
+				}
 				var ravenJArray = item as RavenJArray;
 				if (ravenJArray != null)
+				{
 					yield return new DynamicList(parent, ravenJArray.ToArray());
+					continue;
+				}
 				yield return item;
 			}
 		}

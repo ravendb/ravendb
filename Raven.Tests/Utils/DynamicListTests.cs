@@ -380,6 +380,48 @@ namespace Raven.Tests.Utils
 			Assert.Equal(fixtures.OfType<RavenJObject>().ToList().Count, sut.OfType<RavenJObject>().ToList().Count);
 		}
 
+		[Fact]
+		public void iterate_over_ravenjobjects()
+		{
+			var dList = new DynamicList(new[]
+			{
+				new RavenJObject(), new RavenJObject()
+			});
+
+			Assert.Equal(2, dList.Count);
+
+			var count = 0;
+
+			foreach (var item in dList)
+			{
+				count++;
+				Assert.IsType<DynamicJsonObject>(item);
+			}
+
+			Assert.Equal(2, count);
+		}
+
+		[Fact]
+		public void iterate_over_ravenjarrayss()
+		{
+			var dList = new DynamicList(new []
+			{
+				new RavenJArray(), new RavenJArray(), 
+			});
+
+			Assert.Equal(2, dList.Count);
+
+			var count = 0;
+
+			foreach (var item in dList)
+			{
+				count++;
+				Assert.IsType<DynamicList>(item);
+			}
+
+			Assert.Equal(2, count);
+		}
+
 		private static DynamicList CreateDynamicList(IEnumerable items)
 		{
 			return new DynamicList(items);
