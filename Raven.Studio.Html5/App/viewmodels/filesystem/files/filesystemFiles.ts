@@ -429,8 +429,10 @@ class filesystemFiles extends viewModelBase {
 				});
 		} else {
 			// Run the query so that we have an idea of what we'll be deleting.
-			var query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
-			if (recursive === false) {
+			var query: string;
+			if (recursive) {
+				query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
+			}else{
 				var folder = !this.selectedFolder() ? "/" : this.selectedFolder();
 				query = "__directory:" + this.escapeQueryString(folder);
 			}
