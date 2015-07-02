@@ -47,16 +47,7 @@ namespace Raven.Database.Server.Controllers
 		    using (var cts = new CancellationTokenSource())
 		    using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 		    {
-		        long documentsCount = 0;
-		        var lastDocEtag = Etag.Empty;
-		        Database.TransactionalStorage.Batch(
-		            accessor =>
-		            {
-		                lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-		                documentsCount = accessor.Documents.GetDocumentsCount();
-		            });
-
-		        lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
+				var lastDocEtag = GetLastDocEtag();
 		        if (MatchEtag(lastDocEtag))
 					return GetEmptyMessage(HttpStatusCode.NotModified);
 
