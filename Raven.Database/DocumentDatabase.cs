@@ -973,8 +973,13 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
-		public void StopIndexingWorkers()
+		public void StartIndexingWorkers()
 		{
+			workContext.StartIndexing();
+		}
+
+		public void StopIndexingWorkers()
+		{			
 			workContext.StopIndexing();
 			try
 			{
