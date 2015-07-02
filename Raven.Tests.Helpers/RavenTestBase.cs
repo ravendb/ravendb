@@ -247,7 +247,7 @@ namespace Raven.Tests.Helpers
 
                 return documentStore;
             }
-			catch (Exception e)
+			catch (Exception)
             {
                 // We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
 				try

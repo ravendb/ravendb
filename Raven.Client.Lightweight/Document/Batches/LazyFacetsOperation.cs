@@ -4,6 +4,8 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Shard;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -13,7 +15,7 @@ namespace Raven.Client.Document.Batches
 	public class LazyFacetsOperation : ILazyOperation
 	{
 		private readonly string index;
-		private readonly IEnumerable<Facet> facets;
+		private readonly List<Facet> facets;
 		private readonly string facetSetupDoc;
 		private readonly IndexQuery query;
 		private readonly int start;
@@ -27,7 +29,7 @@ namespace Raven.Client.Document.Batches
 			this.pageSize = pageSize;
 		}
 
-		public LazyFacetsOperation(string index, IEnumerable<Facet> facets, IndexQuery query, int start = 0, int? pageSize = null)
+		public LazyFacetsOperation(string index, List<Facet> facets, IndexQuery query, int start = 0, int? pageSize = null)
 		{
 			this.index = index;
 			this.facets = facets;
@@ -52,7 +54,7 @@ namespace Raven.Client.Document.Batches
 											addition)
 				};
 			}
-			var unescapedFacetsJson = JsonConvert.SerializeObject(facets, Default.Converters);
+			var unescapedFacetsJson = AsyncServerClient.SerializeFacetsToFacetsJsonString(facets);
 			if (unescapedFacetsJson.Length < (32*1024)-1)
 			{
 				addition = "facets=" + Uri.EscapeDataString(unescapedFacetsJson);

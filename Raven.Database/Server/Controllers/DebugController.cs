@@ -581,13 +581,83 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[HttpPost]
 		[RavenRoute("debug/user-info")]
 		[RavenRoute("databases/{databaseName}/debug/user-info")]
 		public HttpResponseMessage UserInfo()
 		{
 			var userInfo = GetUserInfo();
 			return GetMessageWithObject(userInfo);
+		}
+
+
+		[HttpGet]
+		[RavenRoute("debug/user-info")]
+		[RavenRoute("databases/{databaseName}/debug/user-info")]
+		public HttpResponseMessage GetUserPermission(string database, string method)
+		{
+			if (string.IsNullOrEmpty(database))
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "The database paramater is mandatory"
+				}, HttpStatusCode.BadGateway);
+			}
+
+			var info = GetUserInfo();
+			var databases = info.Databases;
+			
+
+			var db = databases.Find(d => d.Database.Equals(database));
+			if (db == null)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "The database "+  database+ " was not found on the server"
+				}, HttpStatusCode.NotFound);
+			}
+
+			if (db.IsAdmin)
+			{
+				return GetMessageWithObject(new UserPermission
+				{
+					User = info.User,
+					Database = db,
+					Method = method,
+					IsGranted = true,
+					Reason = method + " allowed on " + database + " because user " + info.User + " has admin permissions"
+				});
+			}
+			if (!db.IsReadOnly)
+			{
+				return GetMessageWithObject(new UserPermission
+				{
+					User = info.User,
+					Database = db,
+					Method = method,
+					IsGranted = true,
+					Reason = method + " allowed on " + database + " because user " + info.User + "has ReadWrite permissions"
+				});
+			}
+
+			if (method != "HEAD" && method != "GET")
+			{
+				return GetMessageWithObject(new UserPermission
+				{
+					User = info.User,
+					Database = db,
+					Method = method,
+					IsGranted = false,
+					Reason = method + " rejected on" + database + "because user" + info.User + "has ReadOnly permissions"
+				});
+			}
+			return GetMessageWithObject(new UserPermission
+			{
+				User = info.User,
+				Database = db,
+				Method = method,
+				IsGranted = false,
+				Reason = method + " allowed on" + database + "because user" + info.User + "has ReadOnly permissions"
+			});
 		}
 
 		[HttpGet]
@@ -637,10 +707,10 @@ namespace Raven.Database.Server.Controllers
 								continue;
 
 							string description = null;
-							var descriptionAttibute =
+							var descriptionAttribute =
 								reflectedHttpActionDescriptor.MethodInfo.CustomAttributes.FirstOrDefault(attributeData => attributeData.AttributeType == typeof(DescriptionAttribute));
-							if (descriptionAttibute != null)
-								description = descriptionAttibute.ConstructorArguments[0].Value.ToString();
+							if (descriptionAttribute != null)
+								description = descriptionAttribute.ConstructorArguments[0].Value.ToString();
 
 							data.Methods.Add(new Method
 							{

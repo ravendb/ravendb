@@ -284,6 +284,19 @@ namespace Raven.Client.Connection
 		DatabaseStatistics GetStatistics();
 
 		/// <summary>
+		///     Retrieve the user info
+		/// </summary>
+
+		UserInfo GetUserInfo();
+
+		/// <summary>
+		///     Retrieves user permissions for a specified database
+		/// </summary>
+		/// <param name="database">name of the database we want to retrive the permissions</param>
+		/// <param name="readOnly">the type of the operations allowed, read only , or read-write</param>
+		UserPermission GetUserPermission(string database, bool readOnly);
+
+		/// <summary>
 		///     Get the all terms stored in the index for the specified field
 		///     You can page through the results by use fromValue parameter as the
 		///     starting point for the next query

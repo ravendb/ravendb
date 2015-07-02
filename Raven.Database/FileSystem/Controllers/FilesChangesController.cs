@@ -10,7 +10,7 @@ namespace Raven.Database.FileSystem.Controllers
 {
     public class FilesChangesController : RavenFsApiController
     {
-	    [HttpGet]
+        [HttpGet]
         [RavenRoute("fs/{fileSystemName}/changes/config")]
         public HttpResponseMessage GetChangeConfig()
         {
@@ -35,19 +35,19 @@ namespace Raven.Database.FileSystem.Controllers
             }
             else if (Match(cmd, "watch-conflicts"))
             {
-				connectionState.WatchConflicts();
+                connectionState.WatchConflicts();
             }
             else if (Match(cmd, "unwatch-conflicts"))
             {
-				connectionState.UnwatchConflicts();
+                connectionState.UnwatchConflicts();
             }
             else if (Match(cmd, "watch-sync"))
             {
-				connectionState.WatchSync();
+                connectionState.WatchSync();
             }
             else if (Match(cmd, "unwatch-sync"))
             {
-				connectionState.UnwatchSync();
+                connectionState.UnwatchSync();
             }
             else if (Match(cmd, "watch-folder"))
             {
@@ -57,21 +57,13 @@ namespace Raven.Database.FileSystem.Controllers
             {
 				connectionState.UnwatchFolder(name);
             }
-            else if (Match(cmd, "watch-cancellations"))
-            {
-				connectionState.WatchCancellations();
-            }
-            else if (Match(cmd, "unwatch-cancellations"))
-            {
-				connectionState.UnwatchCancellations();
-            }
             else if (Match(cmd, "watch-config"))
             {
-				connectionState.WatchConfig();
+                connectionState.WatchConfig();
             }
             else if (Match(cmd, "unwatch-config"))
             {
-				connectionState.UnwatchConfig();
+                connectionState.UnwatchConfig();
             }
             else
             {
@@ -93,5 +85,5 @@ namespace Raven.Database.FileSystem.Controllers
             FileSystem.TransportState.Register(eventsTransport);
             return new HttpResponseMessage { Content = eventsTransport };
         }
+        }
     }
-}

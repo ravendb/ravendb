@@ -250,6 +250,7 @@
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Data\UserInfo.cs" />
+    <Compile Include="Data\UserPermission.cs" />
     <Compile Include="Data\UuidType.cs" />
     <Compile Include="Data\VoronActiveTransaction.cs" />
     <Compile Include="Data\VoronStorageStats.cs" />

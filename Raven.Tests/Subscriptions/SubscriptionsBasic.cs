@@ -675,7 +675,7 @@ namespace Raven.Tests.Subscriptions
 				});
 				store.Changes().WaitForAllPendingSubscriptions();
 
-				subscription.AfterBatch += () => Thread.Sleep(TimeSpan.FromSeconds(20)); // to prevent the client from sending client-alive notification
+				subscription.AfterAcknowledgment += etag => Thread.Sleep(TimeSpan.FromSeconds(20)); // to prevent the client from sending client-alive notification
 
 				var docs = new BlockingCollection<RavenJObject>();
 

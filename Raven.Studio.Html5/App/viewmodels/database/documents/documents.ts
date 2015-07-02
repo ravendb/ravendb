@@ -149,7 +149,57 @@ class documents extends viewModelBase {
         var docsPageSelector = ".documents-page";
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C, I",() => this.copySelectedDocIds(), docsPageSelector);
+	    this.registerCollectionsResize();
+    }
+
+	deactivate() {
+        this.unregisterCollectionsResizing();
+    }
+
+	private registerCollectionsResize() {
+		var resizingColumn = false;
+		var startX = 0;
+		var startingLeftWidth = 0;
+		var startingRightWidth = 0;
+		var totalStartingWidth = 0;
+
+		$(document).on("mousedown.collectionsResize", ".collection-resize",(e: any) => {
+			startX = e.pageX;
+			resizingColumn = true;
+			startingLeftWidth = $("#documents-page-container").innerWidth();
+			startingRightWidth = $("#documents-page-right-container").innerWidth();
+			totalStartingWidth = startingLeftWidth + startingRightWidth;
+		});
+
+        $(document).on("mouseup.collectionsResize", "", (e: any) => {
+            resizingColumn = false;
+        });
+
+        $(document).on("mousemove.collectionsResize", "", (e: any) => {
+            if (resizingColumn) {
+
+				// compute new percentage values
+				var diff = e.pageX - startX;
+				
+				$("#documents-page-container").innerWidth(((startingLeftWidth + diff) * 100.0 / totalStartingWidth) + "%");
+				$("#documents-page-right-container").innerWidth(((startingRightWidth - diff) * 100.0 / totalStartingWidth) + "%");
+
+                // Stop propagation of the event so the text selection doesn't fire up
+                if (e.stopPropagation) e.stopPropagation();
+                if (e.preventDefault) e.preventDefault();
+                e.cancelBubble = true;
+                e.returnValue = false;
+
+                return false;
+            }
+        });
+	}
+
+	unregisterCollectionsResizing() {
+        $(document).off("mousedown.collectionsResize");
+        $(document).off("mouseup.collectionsResize");
+        $(document).off("mousemove.collectionsResize");
     }
 
 	deactivate() {

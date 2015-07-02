@@ -46,7 +46,7 @@ class importDatabase extends viewModelBase {
         super.canDeactivate(isClose);
 
         if (this.isUploading) {
-            this.confirmationMessage("Upload is in progress", "Please wait until uplodaing is complete.", ["OK"]);
+            this.confirmationMessage("Upload is in progress", "Please wait until uploading is complete.", ["OK"]);
             return false;
         }
         return true;
@@ -100,11 +100,12 @@ class importDatabase extends viewModelBase {
         var db: database = this.activeDatabase();
         db.isImporting(true);
         this.isUploading = true;
-        db.importStatus("Uploading 0%");
+        
 
         var formData = new FormData();
         var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);
         formData.append("file", fileInput.files[0]);
+		db.importStatus("Uploading 0%");
         var importItemTypes: ImportItemType[] = [];
         if (this.includeDocuments()) {
             importItemTypes.push(ImportItemType.Documents);
