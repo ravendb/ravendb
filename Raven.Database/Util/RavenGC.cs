@@ -1,22 +1,19 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenGC.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Runtime;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Logging;
-using Raven.Database.Util;
+using Raven.Database.Config;
 
-namespace Raven.Abstractions.Util
+namespace Raven.Database.Util
 {
-	/*using System;
-	using System.Linq.Expressions;
-	using System.Runtime;
-    using Sparrow.Collections;
-
 	public static class RavenGC
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
@@ -56,10 +53,25 @@ namespace Raven.Abstractions.Util
 		{
 			get { return lastForcedGCTime; }
 		}
-        
+
+		private static long lastTimeMemoryReleasedBeforeGC = 0;
+		private static readonly long fiveSecondsInTicks = Stopwatch.Frequency * 5;
 		private static void ReleaseMemoryBeforeGC()
 		{
-			MemoryStatistics.SimulateLowMemoryNotification();
+
+			if (MemoryStatistics.AvailableMemory < ((double)MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemory)/10)
+			{
+				if (Environment.TickCount - lastTimeMemoryReleasedBeforeGC < fiveSecondsInTicks)
+					return;
+
+				lastTimeMemoryReleasedBeforeGC = Environment.TickCount;
+
+				MemoryStatistics.SimulateLowMemoryNotification();
+			}
+			else
+			{
+				MemoryStatistics.InitiateSoftMemoryRelease();
+			}
 		}
 
 		public static bool CollectGarbage(int generation, GCCollectionMode collectionMode = GCCollectionMode.Default, bool forceByUser = false)
@@ -116,7 +128,7 @@ namespace Raven.Abstractions.Util
 				if (old != delayBetweenGCInMinutes)
 				{
 					log.Debug("Increasing delay for forced GC (not enough memory released, so we need to back off). " +
-					          "New interval between GCs will be {0} minutes", delayBetweenGCInMinutes);
+							  "New interval between GCs will be {0} minutes", delayBetweenGCInMinutes);
 				}
 			}
 			else
@@ -126,7 +138,7 @@ namespace Raven.Abstractions.Util
 					log.Debug("Resetting delay for forced GC (enough memory was released to make it useful, so we don't need to back off). " +
 							  "New interval between GCs will be {0} minutes", delayBetweenGCInMinutes);
 				}
-				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;				
+				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
 			}
 
 			return true;
@@ -144,12 +156,12 @@ namespace Raven.Abstractions.Util
 			//if last time was freed enough memory (more than 10%) allow the GC and store last GC time
 			if (memoryDifferenceLastGc >= 0.1)
 			{
-				log.Debug("Allowing GC because difference of memory before and after GC equals or more than 10% - last time was released {0}kbs.", Math.Abs(MemoryAfterLastForcedGC - MemoryBeforeLastForcedGC)/1024);
+				log.Debug("Allowing GC because difference of memory before and after GC equals or more than 10% - last time was released {0}kbs.", Math.Abs(MemoryAfterLastForcedGC - MemoryBeforeLastForcedGC) / 1024);
 				delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
-				
+
 				return true;
 			}
-			
+
 			//if last time not enough memory was freed, but enough time passed since last allowed GC,
 			//reset delay and allow GC
 			if ((nowTime - LastForcedGCTime).TotalMinutes >= delayBetweenGCInMinutes)
@@ -166,11 +178,11 @@ namespace Raven.Abstractions.Util
 		{
 			double x1 = v1;
 			double x2 = v2;
-			
-			if (x1 > 0.0 && x2 > 0.0)
-				return Math.Abs(x1 - x2)/x2;
 
-			return 0.0;			
+			if (x1 > 0.0 && x2 > 0.0)
+				return Math.Abs(x1 - x2) / x2;
+
+			return 0.0;
 		}
 
 		// this is just the code below, but we have to run on 4.5, not just 4.5.1
@@ -186,5 +198,5 @@ namespace Raven.Abstractions.Util
 			return lambda.Compile();
 		});
 		private static double memoryDifferenceLastGc;
-	}*/
+	}
 }

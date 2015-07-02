@@ -106,6 +106,7 @@
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Web.Http, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.2\lib\net45\System.Web.Http.dll</HintPath>
@@ -152,6 +153,7 @@
     <Compile Include="RavenDB-3530.cs" />
     <Compile Include="RavenDB_3230.cs" />
     <Compile Include="RavenDB_3573.cs" />
+    <Compile Include="RavenDB_3365.cs" />
     <Compile Include="RavenDB_3580.cs" />
     <Compile Include="RavenDB_3271.cs" />
     <Compile Include="RavenDB_3276.cs" />
@@ -422,7 +424,9 @@
     <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_3501.cs" />
     <Compile Include="RavenDB_3525.cs" />
+    <Compile Include="RavenDB_3574.cs" />
     <Compile Include="Prefetcher\RavenDB_3581.cs" />
+    <Compile Include="RavenDB_3612.cs" />
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_381.cs" />
     <Compile Include="RavenDB_384.cs" />

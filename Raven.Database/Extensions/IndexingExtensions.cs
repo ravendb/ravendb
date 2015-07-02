@@ -4,13 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
+using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -18,6 +21,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
 using Raven.Database.Indexing.Sorting.Custom;
 using Raven.Database.Linq;
+using Raven.Database.Queries;
 using Spatial4n.Core.Shapes;
 using Spatial4n.Core.Shapes.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -283,5 +287,7 @@ namespace Raven.Database.Extensions
 
             return value;
 		}
+
+		
 	}
 }

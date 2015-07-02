@@ -12,7 +12,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Connections
@@ -59,29 +61,55 @@ namespace Raven.Database.Server.Connections
             get { return ravenGcCancellation; }
         }
 
-        private class DisconnectWebSockets : IRavenGarbageCollectionListener
+        private class DisconnectWebSockets : ILowMemoryHandler
         {
             public static readonly DisconnectWebSockets Instance = new DisconnectWebSockets();
-            public void GarbageCollectionAboutToHappen()
-            {
-                var cancellationTokenSource = ravenGcCancellation;
-                ravenGcCancellation = new CancellationTokenSource();
-                cancellationTokenSource.Cancel();
-            }
+            
+
+	        public void HandleLowMemory()
+	        {
+				SoftMemoryRelease();
+	        }
+
+	        public void SoftMemoryRelease()
+	        {
+				var cancellationTokenSource = ravenGcCancellation;
+				ravenGcCancellation = new CancellationTokenSource();
+				cancellationTokenSource.Cancel();
+	        }
+
+	        public LowMemoryHandlerStatistics GetStats()
+	        {
+		        return new LowMemoryHandlerStatistics
+		        {
+			        EstimatedUsedMemory = 0,
+					Name = "DisconnectWebSockets",
+					Metadata = new 
+					{
+						WebsocketTransportsCount = webSocektTransportsCount
+					}
+		        };
+	        }
         };
 
         static WebSocketTransportFactory()
         {
-            RavenGC.Register(DisconnectWebSockets.Instance);
-            AppDomain.CurrentDomain.DomainUnload += (s, e) => RavenGC.Unregister(DisconnectWebSockets.Instance);
+			MemoryStatistics.RegisterLowMemoryHandler(DisconnectWebSockets.Instance);
         }
 
+		private static int webSocektTransportsCount = 0;
+
+	    public static void DecrementWebSocketTransportsCount()
+	    {
+		    Interlocked.Decrement(ref webSocektTransportsCount);
+	    }
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)
         {
             try
             {
                 if (RavenGC.GcCollectLock.TryEnterReadLock(5000) == false)
                     throw new TimeoutException("Could not create a new web socket connection. Probably because GC is currently in progress, try again later.");
+				Interlocked.Increment(ref webSocektTransportsCount);
                 var localPath = context.Request.Path.Value;
                 if (localPath.EndsWith(ChangesApiWebsocketSuffix))
                 {
@@ -99,6 +127,7 @@ namespace Raven.Database.Server.Connections
                 {
                     return new WebSocketsValidateTransport(options, context, ravenGcCancellation.Token);
                 }
+				Interlocked.Decrement(ref webSocektTransportsCount);
                 return null;
             }
             finally

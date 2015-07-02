@@ -43,15 +43,16 @@ namespace Raven.Database.Prefetching
 
 		private DocAddedAfterCommit lowestInMemoryDocumentAddedAfterCommit;
 		private int currentIndexingAge;
+		private string userDescription;
 
 		public Action<int> FutureBatchCompleted = delegate { };
 
-		public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner)
+		public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription)
 		{
 			this.context = context;
 			this.autoTuner = autoTuner;
 			PrefetchingUser = prefetchingUser;
-
+			this.userDescription = prefetchingUserDescription;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
@@ -768,6 +769,31 @@ namespace Raven.Database.Prefetching
 		public void HandleLowMemory()
 		{
 			ClearQueueAndFutureBatches();
+		}
+
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		public LowMemoryHandlerStatistics GetStats()
+		{
+			var futureIndexBatchesSize = futureIndexBatches.Sum(x => x.Value.Task.IsCompleted ? x.Value.Task.Result.Sum(y => y.SerializedSizeOnDisk) : 0);
+			var futureIndexBatchesDocCount = futureIndexBatches.Sum(x => x.Value.Task.IsCompleted ? x.Value.Task.Result.Count : 0);
+			return new LowMemoryHandlerStatistics
+			{
+				Name = "PrefetchingBehavior",
+				DatabaseName = context.DatabaseName,
+				EstimatedUsedMemory = prefetchingQueue.LoadedSize + futureIndexBatchesSize,
+				Metadata = new
+				{
+					PrefetchingUserType = this.PrefetchingUser,
+					PrefetchingUserDescription = userDescription,
+					PrefetchingQueueDocCount =prefetchingQueue.Count,
+					FutureIndexBatchSizeDocCount = futureIndexBatchesDocCount
+
+				}
+			};
 		}
 
 		public void ClearQueueAndFutureBatches()

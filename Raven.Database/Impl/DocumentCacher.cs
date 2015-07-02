@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Runtime.Caching;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -50,6 +51,34 @@ namespace Raven.Database.Impl
 			cachedSerializedDocuments = CreateCache();
 
 			oldCache.Dispose();
+		}
+
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		public LowMemoryHandlerStatistics GetStats()
+		{
+			return new LowMemoryHandlerStatistics
+			{
+				Name = "DocumentCacher",
+				EstimatedUsedMemory = cachedSerializedDocuments.Sum(x =>
+				{
+					CachedDocument curDocument;
+					if (x.Value is CachedDocument)
+					{
+						curDocument = x.Value as CachedDocument;
+						return curDocument.Size;
+					}
+					return 0;
+				}),
+				DatabaseName = configuration.DatabaseName,
+				Metadata = new
+				{
+					CachedDocuments = cachedSerializedDocuments.GetCount()
+				}
+			};
 		}
 
 		public static IDisposable SkipSettingDocumentsInDocumentCache()

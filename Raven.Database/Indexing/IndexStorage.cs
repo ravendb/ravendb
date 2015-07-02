@@ -41,6 +41,8 @@ using Raven.Json.Linq;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
 using System.Security.Cryptography;
+using Lucene.Net.Util;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Indexing
 {
@@ -88,6 +90,29 @@ namespace Raven.Database.Indexing
                 FieldCache_Fields.DEFAULT.PurgeAllCaches();
 	            
 	        }
+
+		    public void SoftMemoryRelease()
+		    {
+		    }
+
+		    public LowMemoryHandlerStatistics GetStats()
+		    {
+			    var cacheEntries = FieldCache_Fields.DEFAULT.GetCacheEntries();
+			    var memorySum = cacheEntries.Sum(x =>
+			    {
+				    var curEstimator = new RamUsageEstimator(false);
+				    return curEstimator.EstimateRamUsage(x);
+			    });
+			    return new LowMemoryHandlerStatistics
+			    {
+					Name = "LuceneLowMemoryHandler",
+					EstimatedUsedMemory = memorySum,
+					Metadata = new
+					{
+						CachedEntriesAmount = cacheEntries.Length
+					}
+			    };
+		    }
 	    }
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
@@ -1479,7 +1504,7 @@ namespace Raven.Database.Indexing
 			index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
 		}
 
-		internal bool ReplaceIndex(string indexName, string indexToReplaceName)
+		internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
 		{
 			var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
 
@@ -1490,8 +1515,7 @@ namespace Raven.Database.Indexing
 			if (indexToReplace == null)
 				return true;
 
-			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false);
-
+			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false, isSideBySideReplacement:true);
 			return true;
 		}
 	}

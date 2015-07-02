@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Support;
@@ -48,7 +50,19 @@ namespace Raven.Database.Indexing
                 }
             }
 
-            public CachedIndexedTerms GetOrCreateValue(IndexReader reader)
+	        public void SoftMemoryRelease()
+	        {
+	        }
+
+	        public LowMemoryHandlerStatistics GetStats()
+	        {
+		        return new LowMemoryHandlerStatistics
+		        {
+					Name = "WeakCache"
+		        };
+	        }
+
+	        public CachedIndexedTerms GetOrCreateValue(IndexReader reader)
             {
                 CachedIndexedTerms value;
                 // ReSharper disable once InconsistentlySynchronizedField
@@ -74,15 +88,39 @@ namespace Raven.Database.Indexing
         public class CachedIndexedTerms : ILowMemoryHandler
         {
             public ConcurrentDictionary<string, FieldCacheInfo> Results = new ConcurrentDictionary<string, FieldCacheInfo>();
-            public CachedIndexedTerms()
-            {
+	        private string databaseName;
+	        private object indexName;
+
+	        public CachedIndexedTerms(string databaseName, string indexName)
+			{
+				this.databaseName = databaseName;
+		        this.indexName = indexName;
                 MemoryStatistics.RegisterLowMemoryHandler(this);
             }
 
-            public void HandleLowMemory()
+	        public void HandleLowMemory()
             {
                 Results.Clear();
             }
+
+	        public void SoftMemoryRelease()
+	        {
+		        
+	        }
+
+	        public LowMemoryHandlerStatistics GetStats()
+	        {
+		        return new LowMemoryHandlerStatistics
+		        {
+					Name = "CachedIndexedTerms",
+					Metadata = new
+					{
+						IndexName=indexName
+					},
+					DatabaseName = databaseName,
+					EstimatedUsedMemory = Results.Sum(x=>x.Key.Length*sizeof(char) + x.Value.Results.Sum(y=>y.Key.Length*sizeof(char) + y.Value.Length * sizeof(int)))
+		        };
+	        }
         }
 
         public class FieldCacheInfo
@@ -91,9 +129,10 @@ namespace Raven.Database.Indexing
             public bool Done;
         }
 
-        public static Dictionary<string, int[]> GetTermsAndDocumenstFor(IndexReader reader, int docBase, string field)
+		public static Dictionary<string, int[]> GetTermsAndDocumentsFor(IndexReader reader, int docBase, string field, string databaseName, string indexName)
         {
-            var termsCachePerField = CacheInstance.GetOrCreateValue(reader);
+			var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(databaseName, indexName));
+			
             FieldCacheInfo info;
             if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
             {
@@ -218,6 +257,5 @@ namespace Raven.Database.Indexing
             }
             return results;
         }
-
     }
 }

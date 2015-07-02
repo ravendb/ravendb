@@ -34,11 +34,11 @@ namespace Raven.Database.Indexing
             this.context = context;
         }
 
-        public ManualResetEvent SetIndexSearcher(IndexSearcher searcher, bool wait)
+        public ManualResetEvent SetIndexSearcher(IndexSearcher searcher, string publicName, bool wait)
         {
             var old = current;
-            current = new IndexSearcherHoldingState(searcher);
-
+            current = new IndexSearcherHoldingState(searcher, publicName, context.DatabaseName);
+	        
             if (old == null)
                 return null;
 
@@ -113,6 +113,8 @@ namespace Raven.Database.Indexing
             private readonly ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue> docsCache = new ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue>();
 
             private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
+	        private string databaseName;
+	        private string indexName;
 
 	        public ReaderWriterLockSlim Lock
             {
@@ -131,10 +133,11 @@ namespace Raven.Database.Indexing
             }
 
 		
-            public IndexSearcherHoldingState(IndexSearcher indexSearcher)
+            public IndexSearcherHoldingState(IndexSearcher indexSearcher, string publicName, string databaseName)
             {
                 IndexSearcher = indexSearcher;
-
+	            this.databaseName = databaseName;
+	            indexName = publicName;
 				MemoryStatistics.RegisterLowMemoryHandler(this);
             }
 
@@ -149,6 +152,25 @@ namespace Raven.Database.Indexing
 		        {
 					rwls.ExitWriteLock();
 		        }
+	        }
+
+	        public void SoftMemoryRelease()
+	        {
+		        
+	        }
+
+	        public LowMemoryHandlerStatistics GetStats()
+	        {
+		        return new LowMemoryHandlerStatistics
+		        {
+					Name = "IndexSearcherHoldingState" ,
+					Metadata = new 
+					{
+						IndexName=indexName
+					},
+					DatabaseName = databaseName,
+					EstimatedUsedMemory = docsCache.Count*(sizeof(int) +sizeof(uint))*2
+		        };
 	        }
 
 	        public void MarkForDisposal()

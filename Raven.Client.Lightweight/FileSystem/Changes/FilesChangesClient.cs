@@ -28,7 +28,6 @@ namespace Raven.Client.FileSystem.Changes
         private bool watchAllConfigurations;
         private bool watchAllConflicts;
         private bool watchAllSynchronizations;
-        private bool watchAllCancellations;
 
         private readonly Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
@@ -180,9 +179,6 @@ namespace Raven.Client.FileSystem.Changes
 
             if (watchAllSynchronizations)
                 await Send("watch-sync", null).ConfigureAwait(false);
-
-            if (watchAllCancellations)
-                await Send("watch-cancellations", null).ConfigureAwait(false);
 
             foreach (var watchedFolder in watchedFolders)
             {

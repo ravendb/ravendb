@@ -92,6 +92,10 @@ class aceEditorBindingHandler {
         }
     }
 
+    static detached() {
+        aceEditorBindingHandler.customCompleters = [];
+    }
+
     static currentEditor;
 
     static customCompleters: { editorType: string; completerHostObject: any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
