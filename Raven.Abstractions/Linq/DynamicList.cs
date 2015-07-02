@@ -472,31 +472,112 @@ namespace Raven.Abstractions.Linq
 			return Enumerate().ToList();
 		}
 
-		public Dictionary<TKey, dynamic> ToDictionary<TKey>(Func<dynamic, TKey> keySelector)
+		public Dictionary<TKey, dynamic> ToDictionary<TKey>(Func<dynamic, TKey> keySelector, Func<dynamic, dynamic> elementSelector = null)
 		{
-			return Enumerate().ToDictionary(keySelector);
-		}
+			if(elementSelector == null)
+				return Enumerate().ToDictionary(keySelector);
 
-		public Dictionary<TKey, dynamic> ToDictionary<TKey>(Func<dynamic, TKey> keySelector, Func<dynamic, dynamic> elementSelector)
-		{
 			return Enumerate().ToDictionary(keySelector, elementSelector);
 		}
 
-		public ILookup<TKey, dynamic> ToLookup<TKey>(Func<dynamic, TKey> keySelector)
+		public ILookup<TKey, dynamic> ToLookup<TKey>(Func<dynamic, TKey> keySelector, Func<dynamic, dynamic> elementSelector = null)
 		{
-			return Enumerate().ToLookup(keySelector);
-		}
+			if (elementSelector == null)
+				return Enumerate().ToLookup(keySelector);
 
-		public ILookup<TKey, dynamic> ToLookup<TKey>(Func<dynamic, TKey> keySelector, Func<dynamic, dynamic> elementSelector)
-		{
 			return Enumerate().ToLookup(keySelector, elementSelector);
 		}
 
 		public IEnumerable<dynamic> OfType<T>()
 		{
-			var ofType = inner.OfType<T>();
-			var dynamicList = new DynamicList(ofType);
-			return dynamicList;
+			return new DynamicList(inner.OfType<T>());
+		}
+
+		public IEnumerable<dynamic> Cast<T>()
+		{
+			return new DynamicList(inner.Cast<T>());
+		}
+
+		public dynamic ElementAt(int index)
+		{
+			return Enumerate().ElementAt(index);
+		}
+
+		public dynamic ElementAtOrDefault(int index)
+		{
+			return Enumerate().ElementAtOrDefault(index) ?? new DynamicNullObject();
+		}
+
+		public long LongCount()
+		{
+			return inner.LongCount();
+		}
+
+		public dynamic Aggregate(Func<dynamic, dynamic, dynamic> func)
+		{
+			return Enumerate().Aggregate(func);
+		}
+
+		public dynamic Aggregate(dynamic seed, Func<dynamic, dynamic, dynamic> func)
+		{
+			return Enumerate().Aggregate((object) seed, func);
+		}
+
+		public dynamic Aggregate(dynamic seed, Func<dynamic, dynamic, dynamic> func, Func<dynamic, dynamic> resultSelector)
+		{
+			return Enumerate().Aggregate((object)seed, func, resultSelector);
+		}
+
+		public IEnumerable<dynamic> TakeWhile(Func<dynamic, bool> predicate)
+		{
+			return new DynamicList(Enumerate().TakeWhile(predicate));
+		}
+
+		public IEnumerable<dynamic> TakeWhile(Func<dynamic, int, bool> predicate)
+		{
+			return new DynamicList(Enumerate().TakeWhile(predicate));
+		}
+
+		public IEnumerable<dynamic> SkipWhile(Func<dynamic, bool> predicate)
+		{
+			return new DynamicList(Enumerate().SkipWhile(predicate));
+		}
+
+		public IEnumerable<dynamic> SkipWhile(Func<dynamic, int, bool> predicate)
+		{
+			return new DynamicList(Enumerate().SkipWhile(predicate));
+		}
+
+		public IEnumerable<dynamic> Join(IEnumerable<dynamic> items, Func<dynamic, dynamic> outerKeySelector, Func<dynamic, dynamic> innerKeySelector, 
+											Func<dynamic, dynamic, dynamic> resultSelector)
+		{
+			return new DynamicList(Enumerate().Join(items, outerKeySelector, innerKeySelector, resultSelector));
+		}
+
+		public IEnumerable<dynamic> GroupJoin(IEnumerable<dynamic> items, Func<dynamic, dynamic> outerKeySelector, Func<dynamic, dynamic> innerKeySelector,
+											Func<dynamic, dynamic, dynamic> resultSelector)
+		{
+			return new DynamicList(Enumerate().GroupJoin(items, outerKeySelector, innerKeySelector, resultSelector));
+		}
+
+		public IEnumerable<dynamic> Concat(IEnumerable second)
+		{
+			return new DynamicList(inner.Concat(second.Cast<object>()));
+		}
+
+		public IEnumerable<dynamic> Zip(IEnumerable second, Func<dynamic, dynamic, dynamic> resultSelector)
+		{
+			return new DynamicList(Enumerate().Zip(second.Cast<object>(), resultSelector));
+		}
+
+		public IEnumerable<dynamic> Union(IEnumerable second)
+		{
+			return new DynamicList(inner.Union(second.Cast<object>()));
+		}
+
+		public IEnumerable<dynamic> Intersect(IEnumerable second)
+		{
+			return new DynamicList(inner.Intersect(second.Cast<object>()));
 		}
 	}
 

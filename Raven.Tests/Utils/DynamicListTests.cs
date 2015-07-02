@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -18,12 +19,19 @@ namespace Raven.Tests.Utils
 	public class DynamicListTests : RavenTest
 	{
 		[Fact]
-		public void needs_to_have_all_public_generic_methods_that_enumerable_has()
+		public void needs_to_have_all_public_generic_extension_methods_of_enumerable_class()
 		{
-			var enumerableMethods = typeof(Enumerable).GetMethods(BindingFlags.Public | BindingFlags.Static).Where(x => x.IsGenericMethod);
+			var enumerableMethods = typeof(Enumerable).GetMethods(BindingFlags.Public | BindingFlags.Static).Where(x => x.IsGenericMethod && x.IsDefined(typeof(ExtensionAttribute), false));
 			var dynamicListMethods = typeof(DynamicList).GetMethods(BindingFlags.Public | BindingFlags.Instance);
 
-			var enumerableMethodsNames = enumerableMethods.Select(x => x.Name).Distinct().ToList();
+			var exceptFor = new[]
+			{
+				"Count", // DynamicList has Count property, so it cannot have a method with the same name
+				"ThenBy", // applies to IOrderedEnumerable
+				"ThenByDescending", // applies to IOrderedEnumerable
+			};
+
+			var enumerableMethodsNames = enumerableMethods.Select(x => x.Name).Except(exceptFor).Distinct().ToList();
 			var dynamicListMethodsNames = dynamicListMethods.Select(x => x.Name).Distinct().ToList();
 
 			foreach (var enumerableMethod in enumerableMethodsNames)
@@ -194,7 +202,7 @@ namespace Raven.Tests.Utils
 		[Fact]
 		public void except_on_value_types()
 		{
-			var items = new List<int>()
+			var items = new List<int>
 			{
 				1, 2, 3, 4, 5
 			};
@@ -406,7 +414,7 @@ namespace Raven.Tests.Utils
 		{
 			var dList = new DynamicList(new []
 			{
-				new RavenJArray(), new RavenJArray(), 
+				new RavenJArray(), new RavenJArray()
 			});
 
 			Assert.Equal(2, dList.Count);
@@ -420,6 +428,311 @@ namespace Raven.Tests.Utils
 			}
 
 			Assert.Equal(2, count);
+		}
+
+		[Fact]
+		public void cast_on_objects()
+		{
+			var fixtures = new List<object>(CreateSequentialFixtures(3));
+			var sut = CreateDynamicList(fixtures);
+
+			Assert.Equal(fixtures.Cast<Fixture>(), sut.Cast<Fixture>());
+		}
+
+		[Fact]
+		public void element_at()
+		{
+			var fixtures = CreateSequentialFixtures(3);
+			var sut = CreateDynamicList(fixtures);
+
+			Assert.Same(fixtures.ElementAt(0), sut.ElementAt(0));
+			Assert.Same(fixtures.ElementAt(1), sut.ElementAt(1));
+			Assert.Same(fixtures.ElementAt(2), sut.ElementAt(2));
+		}
+
+		[Fact]
+		public void element_at_or_default_returns_dynamic_null_when_index_is_out_of_range()
+		{
+			var sut = CreateDynamicList(new List<object>());
+
+			Assert.IsType<DynamicNullObject>(sut.ElementAtOrDefault(100));
+		}
+
+		[Fact]
+		public void long_count()
+		{
+			var fixtures = CreateSequentialFixtures(3);
+			var sut = CreateDynamicList(fixtures);
+
+			Assert.Equal(fixtures.LongCount(), sut.LongCount());
+		}
+
+		[Fact]
+		public void aggregate_items()
+		{
+			var fixtures = CreateSequentialFixtures(3);
+
+			var sut = CreateDynamicList(fixtures);
+
+			var result = sut.Aggregate((current, next) => new Fixture
+			{
+				Id = current.Id + ";" + next.Id,
+				Value = current.Value + next.Value
+			});
+
+			var expected = fixtures.Aggregate((current, next) => new Fixture
+			{
+				Id = current.Id + ";" + next.Id,
+				Value = current.Value + next.Value
+			});
+
+			Assert.Equal(expected.Value, result.Value);
+			Assert.Equal(expected.Id, result.Id);
+		}
+
+		[Fact]
+		public void aggregate_with_seed()
+		{
+			var fixtures = CreateSequentialFixtures(3);
+
+			var sut = CreateDynamicList(fixtures);
+
+			var result = sut.Aggregate(new Fixture
+			{
+				Id = "aggregate_of:",
+				Value = 0
+			}, (current, next) => new Fixture
+			{
+				Id = current.Id + next.Id + ";",
+				Value = current.Value + next.Value
+			});
+
+			var expected = fixtures.Aggregate(new Fixture
+			{
+				Id = "aggregate_of:",
+				Value = 0
+			}, (current, next) => new Fixture
+			{
+				Id = current.Id + next.Id + ";",
+				Value = current.Value + next.Value
+			});
+
+			Assert.Equal(expected.Value, result.Value);
+			Assert.Equal(expected.Id, result.Id);
+		}
+
+		[Fact]
+		public void aggregate_with_seed_and_result_selector()
+		{
+			var fixtures = CreateSequentialFixtures(3);
+
+			var sut = CreateDynamicList(fixtures);
+
+			var result = sut.Aggregate(new Fixture
+			{
+				Id = "aggregate_of:",
+				Value = 0
+			}, (current, next) => new Fixture
+			{
+				Id = current.Id + next.Id + ";",
+				Value = current.Value + next.Value
+			},
+			x => x.Id);
+
+			var expected = fixtures.Aggregate(new Fixture
+			{
+				Id = "aggregate_of:",
+				Value = 0
+			}, (current, next) => new Fixture
+			{
+				Id = current.Id + next.Id + ";",
+				Value = current.Value + next.Value
+			}, 
+			x => x.Id);
+
+			Assert.Equal(expected, result);
+		}
+
+		[Fact]
+		public void take_while()
+		{
+			var fixtures = CreateSequentialFixtures(3);
+
+			var sut = CreateDynamicList(fixtures);
+
+			Assert.Equal(fixtures.TakeWhile(x => x.Value < 2), sut.TakeWhile(x => x.Value < 2));
+			Assert.Equal(fixtures.TakeWhile((x, i) => i == 3), sut.TakeWhile((x, i) => i == 3));
+		}
+
+		[Fact]
+		public void skip_while()
+		{
+			var fixtures = CreateSequentialFixtures(3);
+
+			var sut = CreateDynamicList(fixtures);
+
+			Assert.Equal(fixtures.SkipWhile(x => x.Value < 2), sut.SkipWhile(x => x.Value < 2));
+			Assert.Equal(fixtures.SkipWhile((x, i) => i < 2), sut.SkipWhile((x, i) => i < 2));
+		}
+
+		[Fact]
+		public void join_lists()
+		{
+			var values = new[] { 0, 2 };
+			var fixtures = CreateSequentialFixtures(3);
+			
+			var sut = CreateDynamicList(values);
+
+			var expected = values.Join(fixtures, x => x, x => x.Value, (x, i) => new
+			{
+				JoinValue = x,
+				Identifier = i.Id
+			}).ToList();
+
+			var result = sut.Join(fixtures, x => x, x => x.Value, (x, i) => new
+			{
+				JoinValue = x,
+				Identifier = i.Id
+			}).ToList();
+
+			Assert.Equal(expected.Count(), result.Count());
+
+			for (int i = 0; i < expected.Count; i++)
+			{
+				Assert.Equal(expected[i].Identifier, result[i].Identifier);
+				Assert.Equal(expected[i].JoinValue, result[i].JoinValue);
+			}
+		}
+
+		[Fact]
+		public void group_join()
+		{
+			var values = new[] { 0, 2 };
+			var fixtures = CreateSequentialFixtures(3);
+
+			var sut = CreateDynamicList(values);
+
+			var expected = values.GroupJoin(fixtures, x => x, x => x.Value, (x, i) => new
+			{
+				JoinValue = x,
+				Fixtures = i.Select(f => f.Id)
+			}).ToList();
+
+			var result = sut.GroupJoin(fixtures, x => x, x => x.Value, (x, i) => new
+			{
+				JoinValue = x,
+				Fixtures = i.Select(f => f.Id)
+			}).ToList();
+
+			Assert.Equal(expected.Count(), result.Count());
+
+			for (int i = 0; i < expected.Count; i++)
+			{
+				Assert.Equal(expected[i].Fixtures, result[i].Fixtures);
+				Assert.Equal(expected[i].JoinValue, result[i].JoinValue);
+			}
+		}
+
+		[Fact]
+		public void concat_can_get_items_of_different_type()
+		{
+			var fixtures = CreateSequentialFixtures(1);
+
+			var sut = CreateDynamicList(fixtures);
+
+			var result = sut.Concat(new []
+			{
+				1
+			}).ToList();
+
+			Assert.Equal(2, result.Count);
+			Assert.IsType<int>(result[1]);
+
+			result = sut.Concat(new dynamic[]
+			{
+				"2", new object()
+			}).ToList();
+
+			Assert.Equal(3, result.Count);
+			Assert.IsType<string>(result[1]);
+			Assert.IsType<object>(result[2]);
+		}
+
+		[Fact]
+		public void zip_items()
+		{
+			var fixtures = CreateSequentialFixtures(3);
+			var values = new[] { 99, 100 };
+			var sut = CreateDynamicList(fixtures);
+
+			var expected = fixtures.Zip(values, (f, v) => f.Id + " " + v);
+			var result = sut.Zip(values, (f, v) => f.Id + " " + v);
+
+			Assert.Equal(expected, result);
+		}
+
+		[Fact]
+		public void union_items()
+		{
+			var fixtures1 = CreateSequentialFixtures(3);
+			var fixtures2 = CreateSequentialFixtures(3);
+			var sut = CreateDynamicList(fixtures1);
+
+			Assert.Equal(fixtures1.Union(fixtures2), sut.Union(fixtures2));
+
+			Assert.Equal(5, sut.Union(new []{1, 3.0}).Count());
+		}
+
+		[Fact]
+		public void intersect_lists()
+		{
+			var fixtures1 = CreateSequentialFixtures(3);
+			var fixtures2 = new[]
+			{
+				fixtures1[1]
+			};
+
+			var sut = CreateDynamicList(fixtures1);
+
+			Assert.Equal(fixtures1.Intersect(fixtures2), sut.Intersect(fixtures2));
+		}
+
+		[Fact]
+		public void predicates_and_selectors_works_with_raven_j_objects_inside()
+		{
+			var sut = CreateDynamicList(new[]
+			{
+				new RavenJObject
+				{
+					{ "Id", 1},
+					{ "Age", 21 }
+				},
+				new RavenJObject
+				{
+					{ "Id", 2},
+					{ "Age", 32 }
+				},
+				new RavenJObject
+				{
+					{ "Id", 3},
+					{ "Age", 24 }
+				}
+			});
+
+			Assert.Equal(3, sut.ToDictionary(x => x.Id, x => x.Age).Count);
+			Assert.Equal(3, sut.ToLookup(x => x.Id, x => x.Age).Count);
+
+			Assert.Equal("1;2;3;", sut.Aggregate(new {Id = 0, Value = 0}, (current, next) => new
+			{
+				Id = current.Id + next.Id + ";"
+			}, x => x.Id));
+
+			Assert.Equal(1, sut.TakeWhile(x => x.Age < 25).Count());
+			Assert.Equal(2, sut.SkipWhile(x => x.Age < 25).Count());
+
+			Assert.Equal(1, sut.Join(new []{new {Id = 1}}, x => x.Id, x => x.Id, (x, y) => x.Id + y.Id).Count());
+			Assert.Equal(3, sut.GroupJoin(new[] { new { Id = 1 } }, x => x.Id, x => x.Id, (x, y) => "item" + x + " " + y).Count());
+			Assert.Equal(1, sut.Zip(new[] { new { Id = 1 } }, (f, v) => f.Id + " " + v).Count());
 		}
 
 		private static DynamicList CreateDynamicList(IEnumerable items)
