@@ -34,26 +34,32 @@ namespace Raven.Database.Indexing.Sorting
 			{
 				var documentIdsSetBuildersCacheSize = _keys.Select(x =>
 				{
-					IndexReader reader = null;
+					IndexReader reader;
 					x.TryGetTarget(out reader);
 					return reader;
-				}).Distinct().Select(x =>
+				})
+                .Where(x=> x != null)
+                .Distinct().Select(x =>
 				{
-					int curSize = 0;
+					long curSize = 0;
 					ConcurrentDictionary<Tuple<string, Predicate<string>>, Predicate<int>> documentIdsSets;
 					if (documentIdsSetBuildersCache.TryGetValue(x, out documentIdsSets))
 					{
 						//SparseDocumentIdSet,List
-						HashSet<DocumentsIDsSetBuilder> invocationTargetsSets = new HashSet<DocumentsIDsSetBuilder>();
 						foreach (var predicate in documentIdsSets)
 						{
 							curSize += predicate.Key.Item1.Length *sizeof(char);
-							invocationTargetsSets.Add(predicate.Value.Target as DocumentsIDsSetBuilder);
-						}
-
-						foreach (var invocationTarget in invocationTargetsSets)
-						{
-							curSize += invocationTarget.GetSize();
+						    var documentsIDsSetBuilder = predicate.Value.Target as DocumentsIDsSetBuilder;
+						    if (documentsIDsSetBuilder != null)
+						    {
+						        curSize += documentsIDsSetBuilder.GetSize();
+						    }
+						    else
+						    {
+						        var sparseDocumentIdSet = predicate.Value.Target as SparseDocumentIdSet;
+						        if (sparseDocumentIdSet != null)
+						            curSize = sparseDocumentIdSet.GetSize();
+						    }
 						}
 					}
 
@@ -61,8 +67,6 @@ namespace Raven.Database.Indexing.Sorting
 
 					if (fieldsStringValuesInReadersCache.TryGetValue(x, out fieldStringValues))
 					{
-						
-						
 						foreach (var fieldValuesPair in fieldStringValues)
 						{
 							curSize += fieldValuesPair.Key.Length *sizeof(char);
@@ -78,8 +82,6 @@ namespace Raven.Database.Indexing.Sorting
 
 				}).Sum();
 
-				
-				
 				return new LowMemoryHandlerStatistics
 				{
 					DatabaseName = null,
