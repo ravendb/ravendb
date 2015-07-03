@@ -77,6 +77,8 @@ namespace Raven.Database
 
 		private volatile bool backgroundWorkersSpun;
 
+		private volatile bool backgroundWorkersExternalControl;
+
 		private volatile bool disposed;
 
 		private Task indexingBackgroundTask;
@@ -108,6 +110,7 @@ namespace Raven.Database
 				initializer.ValidateLicense();
 
 				initializer.SubscribeToDomainUnloadOrProcessExit();
+				initializer.SubscribeToDiskSpaceChanges();
 				initializer.ExecuteAlterConfiguration();
 				initializer.SatisfyImportsOnce();
 
@@ -159,9 +162,9 @@ namespace Raven.Database
 				try
 				{
 					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-                    initializer.InitializeIndexDefinitionStorage();
+					initializer.InitializeIndexDefinitionStorage();
 					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
-                    Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
+					Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
 					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
 					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
 					Subscriptions = new SubscriptionActions(this, Log);
@@ -169,7 +172,7 @@ namespace Raven.Database
 					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
 					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
 					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
-                    Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
+					Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
 					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
 
@@ -181,12 +184,12 @@ namespace Raven.Database
 					InitializeIndexCodecTriggers();
 					initializer.InitializeIndexStorage();
 
-				
+
 
 					CompleteWorkContextSetup();
 
 					prefetcher = new Prefetcher(workContext);
-					
+
 					IndexReplacer = new IndexReplacer(this);
 					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 					InitializeTriggersExceptIndexCodecs();
@@ -223,6 +226,8 @@ namespace Raven.Database
 		public event Action OnIndexingWiringComplete;
 
 		public event Action<DocumentDatabase> OnBackupComplete;
+
+		public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
 
 		public static string BuildVersion
 		{
@@ -459,7 +464,7 @@ namespace Raven.Database
 								CustomBundles = customBundles
 							};
 			}
-		}	
+		}
 
 		private List<string> FindPluginBundles(Type[] types)
 		{
@@ -503,7 +508,7 @@ namespace Raven.Database
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
 					SupportsDtc = TransactionalStorage.SupportsDtc,
-                    Is64Bit = Environment.Is64BitProcess
+					Is64Bit = Environment.Is64BitProcess
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -940,8 +945,11 @@ namespace Raven.Database
 			}
 		}
 
-		public void SpinBackgroundWorkers()
+		public void SpinBackgroundWorkers(bool forced = false)
 		{
+			if (forced == false && backgroundWorkersExternalControl)
+				return;
+
 			if (backgroundWorkersSpun)
 				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
 			var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
@@ -952,6 +960,7 @@ namespace Raven.Database
 				if (res && disableIndexingStatus) return; //indexing were set to disable 
 			}
 			backgroundWorkersSpun = true;
+			backgroundWorkersExternalControl = forced;
 
 			workContext.StartWork();
 			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
@@ -973,8 +982,11 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
-		public void StopIndexingWorkers()
+		public void StopIndexingWorkers(bool forced)
 		{
+			if (forced == false && backgroundWorkersExternalControl)
+				return;
+
 			workContext.StopIndexing();
 			try
 			{
@@ -995,6 +1007,7 @@ namespace Raven.Database
 			}
 
 			backgroundWorkersSpun = false;
+			backgroundWorkersExternalControl = forced;
 		}
 
 		public void ForceLicenseUpdate()
@@ -1167,8 +1180,8 @@ namespace Raven.Database
 			{
 				var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
 				if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
-					&& configuration.Storage.Voron.AllowOn32Bits == false && 
-                    Environment.Is64BitProcess == false)
+					&& configuration.Storage.Voron.AllowOn32Bits == false &&
+					Environment.Is64BitProcess == false)
 				{
 					throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
 				}
@@ -1249,17 +1262,60 @@ namespace Raven.Database
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
-		    public void InitializeIndexDefinitionStorage()
+			public void InitializeIndexDefinitionStorage()
 			{
 				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
-		    }
+			}
 
 			public void InitializeIndexStorage()
 			{
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 
+			public void SubscribeToDiskSpaceChanges()
+			{
+				database.OnDiskSpaceChanged = notification =>
+				{
+					if (notification.PathType != PathType.Index)
+						return;
 
+					if (configuration.Indexing.DisableIndexingFreeSpaceThreshold < 0)
+						return;
+
+					var threshold = configuration.Indexing.DisableIndexingFreeSpaceThreshold / 100.0;
+					var warningThreshold = Math.Max(threshold * 2, 0.05);
+
+					if (notification.FreeSpaceInPercentage <= threshold)
+					{
+						if (database.backgroundWorkersSpun)
+							database.StopIndexingWorkers(false);
+
+						database.AddAlert(new Alert
+						{
+							AlertLevel = AlertLevel.Error,
+							CreatedAt = SystemTime.UtcNow,
+							Title = string.Format("Index disk '{0}' has {1}% free space and it has reached the {2}% threshold. Indexing was disabled.", notification.Path, (int)(notification.FreeSpaceInPercentage * 100), (int)(threshold * 100)),
+							UniqueKey = "Free space (index)"
+						});
+					}
+					else
+					{
+						if (notification.FreeSpaceInPercentage <= warningThreshold)
+						{
+							database.AddAlert(new Alert
+							{
+								AlertLevel = AlertLevel.Warning,
+								CreatedAt = SystemTime.UtcNow,
+								Title = string.Format("Index disk '{0}' has {1}% free space. Indexing will be disabled when it reaches {2}%.", notification.Path, (int)(notification.FreeSpaceInPercentage * 100), (int)(threshold * 100)),
+								UniqueKey = "Free space warning (index)"
+							});
+						}
+
+						if (database.backgroundWorkersSpun == false)
+							database.SpinBackgroundWorkers(false);
+					}
+				};
+			}
 		}
 
 		public void RaiseBackupComplete()

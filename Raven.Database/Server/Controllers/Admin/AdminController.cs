@@ -556,7 +556,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (string.IsNullOrEmpty(concurrency) == false)
 				Database.Configuration.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
 
-			Database.SpinBackgroundWorkers();
+			Database.SpinBackgroundWorkers(true);
 		}
 
 		[HttpPost]
@@ -564,7 +564,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("databases/{databaseName}/admin/stopIndexing")]
 		public void StopIndexing()
 		{
-			Database.StopIndexingWorkers();
+			Database.StopIndexingWorkers(true);
 		}
 
 		[HttpGet]
