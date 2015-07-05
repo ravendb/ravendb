@@ -275,7 +275,7 @@ class changesApi {
             this.fireEvents(this.allDocsHandlers(), value, (event) => true);
             for (var key in this.watchedPrefixes) {
                 var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
-                this.fireEvents(docCallbacks(), value, (event) => e.Id != null && e.Id.match("^" + key));
+                this.fireEvents(docCallbacks(), value, (event) => event.Id != null && event.Id.match("^" + key));
             }
         } else if (eventType === "IndexChangeNotification") {
             this.fireEvents(this.allIndexesHandlers(), value, (event) => true);

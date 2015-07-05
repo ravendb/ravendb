@@ -141,7 +141,6 @@ class shell extends viewModelBase {
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
     localLicenseStatus = license.licenseStatus;
     windowHeightObservable: KnockoutObservable<number>;
-    appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
@@ -166,7 +165,10 @@ class shell extends viewModelBase {
             return lsApiKey || contextApiKey;
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
-        oauthContext.enterApiKeyTask.done(() => this.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
+        oauthContext.enterApiKeyTask.done(() => {
+	        this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+			this.notifications = this.createNotifications();
+        });
 
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
@@ -180,7 +182,6 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
         this.currentConnectedResource = appUrl.getSystemDatabase();
-        this.appUrls = appUrl.forCurrentDatabase();
 
         this.goToDocumentSearch = ko.observable<string>();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -216,7 +217,7 @@ class shell extends viewModelBase {
     }
 
     activate(args: any) {
-        super.activate(args);
+        super.activate(args, true);
 
         oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 

@@ -32,6 +32,7 @@ class viewModelBase {
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     notifications: Array<changeSubscription> = [];
+	appUrls: computedAppUrls;
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
     public static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);
@@ -42,6 +43,11 @@ class viewModelBase {
     static clientVersion = ko.observable<string>();
 
     public static hasContinueTestOption = ko.observable<boolean>(false);
+
+	constructor() {
+		this.appUrls = appUrl.forCurrentDatabase();
+	}
+
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
      * Possible return values: boolean, promise<boolean>, {redirect: 'some/other/route'}, promise<{redirect: 'some/other/route'}>
@@ -94,7 +100,7 @@ class viewModelBase {
     /*
      * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
      */
-    activate(args) {
+    activate(args, isShell = false) {
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && (!currentDb || currentDb.name !== db.name)) {
@@ -103,20 +109,17 @@ class viewModelBase {
 
         oauthContext.enterApiKeyTask.done(() => {
 			// we have to wait for changes api to connect as well
-			if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
-				this.notifications = this.createNotifications();
-			} else {
-				// as obtaining changes api connection might take a while, we have to spin until connection is ready
-				var createNotifySpinFunction = () => {
-					if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
-						this.notifications = this.createNotifications();
-					} else {
-						setTimeout(createNotifySpinFunction, 50);
-					}
+			// as obtaining changes api connection might take a while, we have to spin until connection is read
+			var createNotifySpinFunction = () => {
+				if (isShell || this.appUrls.isAreaActive("admin")())
+					return;
+				if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
+					this.notifications = this.createNotifications();
+				} else {
+					setTimeout(createNotifySpinFunction, 50);
 				}
-				setTimeout(createNotifySpinFunction, 50);
 			}
-	        
+			createNotifySpinFunction();
         });
 
         this.postboxSubscriptions = this.createPostboxSubscriptions();

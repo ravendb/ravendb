@@ -670,16 +670,6 @@ namespace Raven.Database.Server.Controllers
 	        }
 	    }
 
-		protected RavenJArray GetResourcesDocuments(string resourcePrefix)
-		{
-			var start = GetStart();
-			var nextPageStart = start; // will trigger rapid pagination
-			var resourcesDocuments = Database.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
-				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
-
-			return resourcesDocuments;
-		}
-
 		protected Etag GetLastDocEtag()
 		{
 			var lastDocEtag = Etag.Empty;
@@ -703,7 +693,8 @@ namespace Raven.Database.Server.Controllers
 			public bool IsAdminCurrentTenant { get; set; }
 		}
 
-		protected HttpResponseMessage Resources<T>(string prefix, Func<RavenJArray, List<T>> getResourcesData, bool getAdditionalData = false) where T : TenantData
+		protected HttpResponseMessage Resources<T>(string prefix, Func<RavenJArray, List<T>> getResourcesData, bool getAdditionalData = false)
+			where T : TenantData
 		{
 			if (EnsureSystemDatabase() == false)
 				return
@@ -772,6 +763,16 @@ namespace Raven.Database.Server.Controllers
 			var responseMessage = getAdditionalData ? GetMessageWithObject(resourcesData) : GetMessageWithObject(resourcesNames);
 			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage.WithNoCache();
+		}
+
+		protected RavenJArray GetResourcesDocuments(string resourcePrefix)
+		{
+			var start = GetStart();
+			var nextPageStart = start; // will trigger rapid pagination
+			var resourcesDocuments = Database.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
+				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+
+			return resourcesDocuments;
 		}
 
 		protected UserInfo GetUserInfo()
