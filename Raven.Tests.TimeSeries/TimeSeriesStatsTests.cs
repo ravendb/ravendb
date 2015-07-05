@@ -11,6 +11,7 @@ namespace Raven.Tests.TimeSeries
 	    {
 		    using (var store = NewRemoteTimeSeriesStore())
 		    {
+			    await store.CreatePrefixConfigurationAsync("-Simple", 1);
 				await store.AppendAsync("-Simple", "Time", DateTime.Now, 3d);
 				await store.AppendAsync("-Simple", "Time", DateTime.Now.AddHours(1), 4d);
 				await store.AppendAsync("-Simple", "Is", DateTime.Now, 5d);
