@@ -169,7 +169,7 @@ namespace Raven.Database.Json
 			return ToRavenJObject(jsObject);
 		}
 
-		public RavenJObject ToRavenJObject(JsObject jsObject)
+		public RavenJObject ToRavenJObject(JsObject jsObject, bool recursiveCall = false)
 		{
 			var rjo = new RavenJObject();
 			foreach (var key in jsObject.GetKeys())
@@ -186,18 +186,24 @@ namespace Raven.Database.Json
 					case JsInstance.CLASS_FUNCTION:
 						continue;
 				}
-				rjo[key] = ToRavenJToken(jsInstance);
+
+				var recursive = jsObject == jsInstance;
+				if (recursiveCall && recursive) 
+					rjo[key] = null;
+				else
+					rjo[key] = ToRavenJToken(jsInstance, recursive);
 			}
+
 			return rjo;
 		}
 
-		private RavenJToken ToRavenJToken(JsInstance v)
+		private RavenJToken ToRavenJToken(JsInstance v, bool recursiveCall)
 		{
 			switch (v.Class)
 			{
 			    case JsInstance.TYPE_OBJECT:
 			    case JsInstance.CLASS_OBJECT:
-			        return ToRavenJObject((JsObject) v);
+			        return ToRavenJObject((JsObject) v, recursiveCall);
 			    case JsInstance.CLASS_DATE:
 			        var dt = (DateTime) v.Value;
 			        return new RavenJValue(dt);
@@ -257,7 +263,7 @@ namespace Raven.Database.Json
 			        for (int i = 0; i < jsArray.Length; i++)
 			        {
 			            var jsInstance = jsArray.get(i);
-			            var ravenJToken = ToRavenJToken(jsInstance);
+			            var ravenJToken = ToRavenJToken(jsInstance, recursiveCall);
 			            if (ravenJToken == null)
 			                continue;
 			            rja.Add(ravenJToken);
