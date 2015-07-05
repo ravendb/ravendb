@@ -30,7 +30,7 @@ namespace Raven.Database.TimeSeries.Controllers
 {
 	public class TimeSeriesOperationsController : RavenTimeSeriesApiController
 	{
-		[RavenRoute("ts/{timeSeriesName}/prefix-create/{prefix}/{valueLength}")]
+		[RavenRoute("ts/{timeSeriesName}/prefix-create/{prefix}")]
 		[HttpPost]
 		public HttpResponseMessage CreatePrefixConfiguration(string prefix, byte valueLength)
 		{
@@ -44,7 +44,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			return new HttpResponseMessage(HttpStatusCode.Created);
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/prefix-delete/{prefix}/{valueLength}")]
+		[RavenRoute("ts/{timeSeriesName}/prefix-delete/{prefix}")]
 		[HttpDelete]
 		public HttpResponseMessage DeletePrefixConfiguration(string prefix)
 		{
