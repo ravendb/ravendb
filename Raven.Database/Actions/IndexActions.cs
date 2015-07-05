@@ -118,7 +118,7 @@ namespace Raven.Database.Actions
             return indexEtag;
         }
 
-        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
+        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, string[] participatingIds = null)
         {
             TouchedDocumentInfo touch;
             RecentTouches.TryRemove(key, out touch);
@@ -130,7 +130,11 @@ namespace Raven.Database.Actions
 				// in external transaction number of references will be >= from current transaction references
 		        Database.TransactionalStorage.Batch(externalActions =>
 		        {
-					foreach (var referencing in externalActions.Indexing.GetDocumentsReferencing(key))
+			        var referencingKeys = externalActions.Indexing.GetDocumentsReferencing(key);
+			        if (participatingIds != null)
+				        referencingKeys = referencingKeys.Except(participatingIds);
+
+			        foreach (var referencing in referencingKeys)
 					{
 						Etag preTouchEtag = null;
 						Etag afterTouchEtag = null;

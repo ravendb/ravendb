@@ -3,10 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Linq;
+using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
-
+using Raven.Imports.Newtonsoft.Json.Linq;
 namespace Raven.Database.Extensions
 {
 	public static class CommandExtensions
@@ -33,10 +35,13 @@ namespace Raven.Database.Extensions
 
 		private static void Execute(ICommandData self, DocumentDatabase database, BatchResult batchResult)
 		{
+			var participatingIdsJson = self.AdditionalData[Constants.ParticipatingIDsPropertyName];
+
+			var participatingIds = (participatingIdsJson != null) ? participatingIdsJson.Values<string>().ToArray() : null;
 			var deleteCommandData = self as DeleteCommandData;
 			if (deleteCommandData != null)
 			{
-				var result = database.Documents.Delete(deleteCommandData.Key, deleteCommandData.Etag, deleteCommandData.TransactionInformation);
+				var result = database.Documents.Delete(deleteCommandData.Key, deleteCommandData.Etag, deleteCommandData.TransactionInformation,participatingIds);
 
 				if (batchResult != null)
 					batchResult.Deleted = result;
@@ -47,7 +52,7 @@ namespace Raven.Database.Extensions
 			var putCommandData = self as PutCommandData;
 			if (putCommandData != null)
 			{
-				var putResult = database.Documents.Put(putCommandData.Key, putCommandData.Etag, putCommandData.Document, putCommandData.Metadata, putCommandData.TransactionInformation);
+				var putResult = database.Documents.Put(putCommandData.Key, putCommandData.Etag, putCommandData.Document, putCommandData.Metadata, putCommandData.TransactionInformation, participatingIds);
 				putCommandData.Etag = putResult.ETag;
 				putCommandData.Key = putResult.Key;
 
@@ -60,7 +65,7 @@ namespace Raven.Database.Extensions
 				var result = database.Patches.ApplyPatch(patchCommandData.Key, patchCommandData.Etag,
 												 patchCommandData.Patches, patchCommandData.PatchesIfMissing, patchCommandData.Metadata,
 												 patchCommandData.TransactionInformation,
-												 skipPatchIfEtagMismatch : patchCommandData.SkipPatchIfEtagMismatch);
+												 skipPatchIfEtagMismatch: patchCommandData.SkipPatchIfEtagMismatch, participatingIds: participatingIds);
 
 				if (batchResult != null)
 					batchResult.PatchResult = result.PatchResult;
@@ -82,7 +87,7 @@ namespace Raven.Database.Extensions
 			{
 				var result = database.Patches.ApplyPatch(advPatchCommandData.Key, advPatchCommandData.Etag,
 												 advPatchCommandData.Patch, advPatchCommandData.PatchIfMissing, advPatchCommandData.Metadata,
-												 advPatchCommandData.TransactionInformation, advPatchCommandData.DebugMode);
+												 advPatchCommandData.TransactionInformation, advPatchCommandData.DebugMode, participatingIds);
 
 				if (batchResult != null)
 					batchResult.PatchResult = result.Item1.PatchResult;
@@ -104,7 +109,6 @@ namespace Raven.Database.Extensions
 						advPatchCommandData.Etag = doc.Etag;
 					});
 				}
-				return;
 			}
 		}
 	}
