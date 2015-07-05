@@ -19,7 +19,7 @@ namespace Raven.Client.TimeSeries
 				throw new InvalidOperationException("Prefix must start with '-' char");
 
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, async (url, timeSeriesName) =>
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/prefix-create/{2}?valueLength={3}",
 					url, timeSeriesName, prefix, valueLength);
@@ -39,7 +39,7 @@ namespace Raven.Client.TimeSeries
 				throw new InvalidOperationException("Prefix must start with '-' char");
 
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Delete, async (url, timeSeriesName) =>
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Delete, (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/prefix-delete/{2}",
 					url, timeSeriesName, prefix);
@@ -73,7 +73,7 @@ namespace Raven.Client.TimeSeries
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 				{
 					await request.WriteWithObjectAsync(new TimeSeriesAppendRequest {Values = values, Time = time.Ticks});
-					return request.ReadResponseJsonAsync().WithCancellation(token);
+					return await request.ReadResponseJsonAsync().WithCancellation(token);
 				}
 			}, token);
 		}
