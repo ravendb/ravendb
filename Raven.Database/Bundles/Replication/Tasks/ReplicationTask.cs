@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
@@ -65,6 +66,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private bool wrongReplicationSourceAlertSent;
 		private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
+		private readonly TaskCompletionSource<object> tcsReplicationOnce = new TaskCompletionSource<object>();
 		private TimeSpan _replicationFrequency;
 		private TimeSpan _lastQueriedFrequency;
 		private Timer _indexReplicationTaskTimer;
@@ -207,92 +209,7 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						try
 						{
-							using (docDb.DisableAllTriggersForCurrentThread())
-							{
-								var destinations = GetReplicationDestinations();
-
-								if (destinations.Length == 0)
-								{
-									WarnIfNoReplicationTargetsWereFound();
-								}
-								else
-								{
-									var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
-
-									var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
-									var destinationForReplication = destinations.Where(
-										dest =>
-										{
-											if (copyOfrunningBecauseOfDataModifications == false) return true;
-											return IsNotFailing(dest, currentReplicationAttempts);
-										}).ToList();
-
-									CleanupPrefetchingBehaviors(destinations.Select(x => x.ConnectionStringOptions.Url),
-										destinations.Except(destinationForReplication).Select(x => x.ConnectionStringOptions.Url));
-
-									var startedTasks = new List<Task>();
-
-									foreach (var dest in destinationForReplication)
-									{
-										var destination = dest;
-										var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
-										if (holder.Wait(0) == false)
-										{
-											log.Debug("Replication to distination {0} skipped due to existing replication operation", dest.ConnectionStringOptions.Url);
-											continue;
-										}
-
-										var replicationTask = Task.Factory.StartNew(
-											() =>
-											{
-												using (LogContext.WithDatabase(docDb.Name))
-												using (CultureHelper.EnsureInvariantCulture())
-												{
-													try
-													{
-														if (ReplicateTo(destination))
-															docDb.WorkContext.NotifyAboutWork();
-													}
-													catch (Exception e)
-													{
-														log.ErrorException("Could not replicate to " + destination, e);
-													}
-												}
-											});
-
-										startedTasks.Add(replicationTask);
-
-										activeTasks.Enqueue(replicationTask);
-										replicationTask.ContinueWith(
-											_ =>
-											{
-												// here we purge all the completed tasks at the head of the queue
-												Task task;
-												while (activeTasks.TryPeek(out task))
-												{
-													if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
-													activeTasks.TryDequeue(out task); // remove it from end
-												}
-											});
-									}
-
-									Task.WhenAll(startedTasks.ToArray()).ContinueWith(
-										t =>
-										{
-											if (destinationStats.Count == 0)
-												return;
-
-											foreach (var stats in destinationStats.Where(stats => stats.Value.LastReplicatedEtag != null))
-											{
-												PrefetchingBehavior prefetchingBehavior;
-												if (prefetchingBehaviors.TryGetValue(stats.Key, out prefetchingBehavior))
-												{
-													prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
-												}
-											}
-										}).ContinueWith(t => OnReplicationExecuted()).AssertNotFailed();
-								}
-							}
+							ExecuteReplicationOnce(runningBecauseOfDataModifications);
 						}
 						catch (Exception e)
 						{
@@ -308,6 +225,96 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 
 				IsRunning = false;
+			}
+		}
+
+		public Task ExecuteReplicationOnce(bool runningBecauseOfDataModifications)
+		{
+			using (docDb.DisableAllTriggersForCurrentThread())
+			{
+				var destinations = GetReplicationDestinations();
+
+				if (destinations.Length == 0)
+				{
+					WarnIfNoReplicationTargetsWereFound();
+					tcsReplicationOnce.SetResult(null);
+					return tcsReplicationOnce.Task;
+				}
+				
+				var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
+
+				var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
+				var destinationForReplication = destinations.Where(
+					dest =>
+					{
+						if (copyOfrunningBecauseOfDataModifications == false) return true;
+						return IsNotFailing(dest, currentReplicationAttempts);
+					}).ToList();
+
+				CleanupPrefetchingBehaviors(destinations.Select(x => x.ConnectionStringOptions.Url),
+					destinations.Except(destinationForReplication).Select(x => x.ConnectionStringOptions.Url));
+
+				var startedTasks = new List<Task>();
+
+				foreach (var dest in destinationForReplication)
+				{
+					var destination = dest;
+					var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
+					if (holder.Wait(0) == false)
+					{
+						log.Debug("Replication to distination {0} skipped due to existing replication operation", dest.ConnectionStringOptions.Url);
+						continue;
+					}
+
+					var replicationTask = Task.Factory.StartNew(
+						() =>
+						{
+							using (LogContext.WithDatabase(docDb.Name))
+							using (CultureHelper.EnsureInvariantCulture())
+							{
+								try
+								{
+									if (ReplicateTo(destination))
+										docDb.WorkContext.NotifyAboutWork();
+								}
+								catch (Exception e)
+								{
+									log.ErrorException("Could not replicate to " + destination, e);
+								}
+							}
+						});
+
+					startedTasks.Add(replicationTask);
+
+					activeTasks.Enqueue(replicationTask);
+					replicationTask.ContinueWith(
+						_ =>
+						{
+							// here we purge all the completed tasks at the head of the queue
+							Task task;
+							while (activeTasks.TryPeek(out task))
+							{
+								if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
+								activeTasks.TryDequeue(out task); // remove it from end
+							}
+						});
+				}
+
+				return Task.WhenAll(startedTasks.ToArray()).ContinueWith(
+					t =>
+					{
+						if (destinationStats.Count == 0)
+							return;
+
+						foreach (var stats in destinationStats.Where(stats => stats.Value.LastReplicatedEtag != null))
+						{
+							PrefetchingBehavior prefetchingBehavior;
+							if (prefetchingBehaviors.TryGetValue(stats.Key, out prefetchingBehavior))
+							{
+								prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
+							}
+						}
+					}).ContinueWith(t => OnReplicationExecuted()).AssertNotFailed();
 			}
 		}
 
@@ -1049,21 +1056,16 @@ namespace Raven.Bundles.Replication.Tasks
 
 							if (docDb.Indexes.Definitions.Length > 0)
 							{
-								foreach (var definition in docDb.Indexes.Definitions)
+								var sideBySideIndexes = docDb.Indexes.Definitions.Where(x => x.IsSideBySideIndex)
+																				 .ToDictionary(x => x.Name, x=> x);
+								foreach (var indexDefinition in docDb.Indexes.Definitions.Where(x => !x.IsSideBySideIndex))
 								{
-									try
-									{
-										var url = destination.ConnectionStringOptions.Url + "/indexes/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
-										var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
-										replicationRequest.Write(RavenJObject.FromObject(definition));
-										replicationRequest.ExecuteRequest();
-									}
-									catch (Exception e)
-									{
-										HandleRequestBufferingErrors(e, destination);
-
-										log.WarnException("Could not replicate index " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
-									}
+									IndexDefinition sideBySideIndexDefinition;
+									if (sideBySideIndexes.TryGetValue("ReplacementOf/" + indexDefinition.Name, out sideBySideIndexDefinition))
+										ReplicateSingleSideBySideIndex(destination, indexDefinition, sideBySideIndexDefinition);
+									else
+										ReplicateSingleIndex(destination, indexDefinition);
+ 						
 								}
 							}
 
@@ -1126,6 +1128,71 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
+		private void ReplicateSingleSideBySideIndex(ReplicationStrategy destination, IndexDefinition indexDefinition, IndexDefinition sideBySideIndexDefinition)
+		{
+			var url = string.Format("{0}/replication/side-by-side?{1}", destination.ConnectionStringOptions.Url, GetDebugInfomration());
+			IndexReplaceDocument indexReplaceDocument;
+
+			try
+			{
+				indexReplaceDocument = docDb.Documents.Get(Constants.IndexReplacePrefix + sideBySideIndexDefinition.Name, null).DataAsJson.JsonDeserialization<IndexReplaceDocument>();
+			}
+			catch (Exception e)
+			{
+				log.Warn("Cannot get side-by-side index replacement document. Aborting operation. (this exception should not happen and the cause should be investigated)", e);
+				return;
+			}
+
+			var sideBySideReplicationInfo = new SideBySideReplicationInfo
+			{
+				Index = indexDefinition,
+				SideBySideIndex = sideBySideIndexDefinition,
+				OriginDatabaseId = destination.CurrentDatabaseId,
+				IndexReplaceDocument = indexReplaceDocument
+			};
+
+			var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+			replicationRequest.Write(RavenJObject.FromObject(sideBySideReplicationInfo));
+			replicationRequest.ExecuteRequest();
+		}
+
+		private void ReplicateSingleTransformer(ReplicationStrategy destination, TransformerDefinition definition)
+		{
+			try
+			{
+				var clonedTransformer = definition.Clone();
+				clonedTransformer.TransfomerId = 0;
+
+				string url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
+				var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+				replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
+				replicationRequest.ExecuteRequest();
+			}
+			catch (Exception e)
+			{
+				HandleRequestBufferingErrors(e, destination);
+
+				log.WarnException("Could not replicate transformer " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
+			}
+		}
+
+		private void ReplicateSingleIndex(ReplicationStrategy destination, IndexDefinition definition)
+		{
+			try
+			{
+				var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(definition.Name), GetDebugInfomration());
+
+				var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+				replicationRequest.Write(RavenJObject.FromObject(definition));
+				replicationRequest.ExecuteRequest();
+			}
+			catch (Exception e)
+			{
+				HandleRequestBufferingErrors(e, destination);
+
+				log.WarnException("Could not replicate index " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
+			}
+		}
 		private void HandleRequestBufferingErrors(Exception e, ReplicationStrategy destination)
 		{
 			if (destination.ConnectionStringOptions.Credentials != null && string.Equals(e.Message, "This request requires buffering data to succeed.", StringComparison.OrdinalIgnoreCase))
