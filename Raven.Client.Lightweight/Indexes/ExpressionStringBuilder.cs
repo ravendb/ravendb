@@ -1691,7 +1691,10 @@ namespace Raven.Client.Indexes
 
 		private static bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
 		{
-			if (node.Method.DeclaringType.Name == "Enumerable")
+			var declaringType = node.Method.DeclaringType;
+			if (declaringType == null)
+				return false;
+			if (declaringType.Name == "Enumerable")
 			{
 				switch (node.Method.Name)
 				{
