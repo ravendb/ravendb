@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
@@ -87,7 +87,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 				dataDir = dataDir.ToFullPath(SystemConfiguration.DataDirectory);
 
-				if (System.IO.Directory.Exists(dataDir))
+				if (Directory.Exists(dataDir))
 					return GetMessageWithString(string.Format("Failed to create '{0}' database, because data directory '{1}' exists and it is forbidden to create non-empty cluster-wide databases.", id, dataDir), HttpStatusCode.BadRequest);
 
 				await ClusterManager.Client.SendDatabaseUpdateAsync(id, dbDoc).ConfigureAwait(false);
@@ -152,9 +152,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			var message = ToggeleDatabaseDisabled(id, isSettingDisabled);
 			if (message.ErrorCode != HttpStatusCode.OK)
-			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
-			}
 
 			return GetEmptyMessage();
 		}
@@ -178,9 +176,7 @@ namespace Raven.Database.Server.Controllers.Admin
         {
             var message = ToggleRejectClientsEnabled(id, isRejectClientsEnabled);
             if (message.ErrorCode != HttpStatusCode.OK)
-            {
                 return GetMessageWithString(message.Message, message.ErrorCode);
-            }
 
             return GetEmptyMessage();
         }
@@ -191,9 +187,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");
 			if (databasesToToggle == null)
-			{
 				return GetMessageWithString("No databases to toggle!", HttpStatusCode.BadRequest);
-			}
 
 			var successfullyToggledDatabases = new List<string>();
 
