@@ -1852,7 +1852,7 @@ namespace Raven.Client.FileSystem
                 if (filesystems.Contains(fileSystem))
                     return;
 
-                await CreateOrUpdateFileSystemAsync(MultiDatabase.CreateFileSystemDocument(fileSystem)).ConfigureAwait(false);
+                await CreateOrUpdateFileSystemAsync(MultiDatabase.CreateFileSystemDocument(fileSystem), fileSystem).ConfigureAwait(false);
             }
 
             public async Task<long> StartRestore(FilesystemRestoreRequest restoreRequest)
