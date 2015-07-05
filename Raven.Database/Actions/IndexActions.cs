@@ -226,7 +226,7 @@ namespace Raven.Database.Actions
         // the method already handle attempts to create the same index, so we don't have to 
         // worry about this.
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public string PutIndex(string name, IndexDefinition definition)
+		public string PutIndex(string name, IndexDefinition definition, bool disableIndex = false)
         {
             if (name == null)
                 throw new ArgumentNullException("name");
@@ -283,7 +283,7 @@ namespace Raven.Database.Actions
                     break;
             }
 
-            PutNewIndexIntoStorage(name, definition);
+			PutNewIndexIntoStorage(name, definition, disableIndex);
 
             WorkContext.ClearErrorsFor(name);
 
@@ -305,7 +305,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        internal void PutNewIndexIntoStorage(string name, IndexDefinition definition)
+        internal void PutNewIndexIntoStorage(string name, IndexDefinition definition, bool disableIndex = false)
         {
             Debug.Assert(Database.IndexStorage != null);
             Debug.Assert(TransactionalStorage != null);
@@ -335,9 +335,10 @@ namespace Raven.Database.Actions
 	            IndexDefinitionStorage.CreateAndPersistIndex(definition);
 	            Database.IndexStorage.CreateIndexImplementation(definition);
 				index = Database.IndexStorage.GetIndexInstance(definition.IndexId);
+				// If we execute multiple indexes at once and want to activate them all at once we will disable the index from the endpoint
+				if (disableIndex) index.Priority = IndexingPriority.Disabled;
 				//ensure that we don't start indexing it right away, let the precomputation run first, if applicable
 	            index.IsMapIndexingInProgress = true;
-
 	            if (definition.IsTestIndex)
 					index.MarkQueried(); // test indexes should be mark queried, so the cleanup task would not delete them immediately
 
