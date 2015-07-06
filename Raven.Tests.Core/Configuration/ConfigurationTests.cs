@@ -183,6 +183,8 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value, actual => actual.TimeToWaitBeforeMarkingIdleIndexAsAbandoned);
 
             configurationComparer.Assert(expected => expected.WebSockets.InitialBufferPoolSize.Value, actual => actual.WebSockets.InitialBufferPoolSize);
+
+            configurationComparer.Assert(expected => expected.Indexing.DisableIndexingFreeSpaceThreshold.Value, actual => actual.Indexing.DisableIndexingFreeSpaceThreshold);
 			
 
             configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value, actual => actual.TimeToWaitBeforeMarkingAutoIndexAsIdle);
