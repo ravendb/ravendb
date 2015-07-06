@@ -1320,7 +1320,7 @@ namespace Raven.Client.FileSystem
 
             public async Task<SynchronizationReport> GetSynchronizationStatusForAsync(string fileName)
             {
-                var requestUriString = String.Format("{0}/synchronization/status/{1}", client.BaseUrl, Uri.EscapeDataString(fileName));
+				var requestUriString = String.Format("{0}/synchronization/status?fileName={1}", client.BaseUrl, Uri.EscapeDataString(fileName));
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	            {
