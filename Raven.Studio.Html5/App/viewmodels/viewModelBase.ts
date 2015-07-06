@@ -41,8 +41,7 @@ class viewModelBase {
 
     //holds full studio version eg. 3.0.3528
     static clientVersion = ko.observable<string>();
-
-    public static hasContinueTestOption = ko.observable<boolean>(false);
+    static hasContinueTestOption = ko.observable<boolean>(false);
 
 	constructor() {
 		this.appUrls = appUrl.forCurrentDatabase();

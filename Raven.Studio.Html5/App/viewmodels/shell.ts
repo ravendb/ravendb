@@ -4,8 +4,8 @@
 import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
-import viewModelBase = require("viewmodels/viewModelBase");
 import viewLocator = require("durandal/viewLocator");
+
 import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
@@ -16,6 +16,8 @@ import collection = require("models/database/documents/collection");
 import uploadItem = require("models/filesystem/uploadItem");
 import changeSubscription = require("common/changeSubscription");
 import license = require("models/auth/license");
+import topology = require("models/database/replication/topology");
+import environmentColor = require("models/resources/environmentColor");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -30,6 +32,9 @@ import changesContext = require("common/changesContext");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
+import extensions = require("common/extensions");
+import serverBuildReminder = require("common/serverBuildReminder");
+import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
@@ -47,18 +52,13 @@ import getTimeSeriesCommand = require("commands/timeSeries/getTimeSeriesCommand"
 import getTimeSeriesStatsCommand = require("commands/timeSeries/getTimeSeriesStatsCommand");
 import getSystemDocumentCommand = require("commands/database/documents/getSystemDocumentCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
+import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 
+import viewModelBase = require("viewmodels/viewModelBase");
+import licensingStatus = require("viewmodels/common/licensingStatus");
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
 import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
-import extensions = require("common/extensions");
-import serverBuildReminder = require("common/serverBuildReminder");
-import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
-import environmentColor = require("models/resources/environmentColor");
-
-import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
-import topology = require("models/database/replication/topology");
-import licensingStatus = require("viewmodels/common/licensingStatus");
 
 class shell extends viewModelBase {
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
@@ -124,12 +124,18 @@ class shell extends viewModelBase {
     });
 
     static resources = ko.computed(() => {
-        var databases: resource[] = shell.databases();
+	    var databases: resource[] = shell.databases();
         var fileSystems: resource[] = shell.fileSystems();
         var counterStorages: resource[] = shell.counterStorages();
         var timeSeries: resource[] = shell.timeSeries();
-        var result = databases.concat(fileSystems, counterStorages, timeSeries);
-        return result.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
+        var result = databases.concat(counterStorages, timeSeries, fileSystems);
+        return result.sort((a, b) => {
+	        if (a.name === "<system>")
+		        return 1;
+	        if (b.name === "<system>")
+		        return -1;
+	        return a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1;
+        });
     });
 
     currentConnectedResource: resource;
@@ -150,7 +156,6 @@ class shell extends viewModelBase {
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
 
     private globalChangesApi: changesApi;
-    
     private static changeSubscriptionArray: changeSubscription[];
 
     constructor() {

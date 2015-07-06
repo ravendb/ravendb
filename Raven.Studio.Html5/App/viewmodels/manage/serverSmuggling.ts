@@ -9,14 +9,13 @@ import jsonUtil = require("common/jsonUtil");
 
 class serverSmuggling extends viewModelBase {
 
-	resources = ko.observableArray<serverSmugglingItem>();
+	resources = ko.observableArray<serverSmugglingItem>([]);
 	selectedResources = ko.observableArray<serverSmugglingItem>();
 
 	targetServer = ko.observable<serverConnectionInfo>(new serverConnectionInfo());
 
-	hasAnyResourceSelected: KnockoutComputed<boolean>;
-	hasAllResourcesSelected: KnockoutComputed<boolean>;
 	hasResources: KnockoutComputed<boolean>;
+	hasAllResourcesSelected: KnockoutComputed<boolean>;
 	
 	hasAllIncremental: KnockoutComputed<boolean>;
 	hasAllStripReplication: KnockoutComputed<boolean>;
@@ -30,13 +29,12 @@ class serverSmuggling extends viewModelBase {
 	resultsVisible = ko.observable<boolean>(false);
 	messages = ko.observableArray<string>([]);
 
+	resourcesSelection: KnockoutComputed<checkbox>;
+	incrementalSelection: KnockoutComputed<checkbox>;
+
     constructor() {
 		super();
-		this.hasAllResourcesSelected = ko.computed(() =>  this.selectedResources().length === this.resources().length);
-		this.hasAnyResourceSelected = ko.computed(() => this.selectedResources().length > 0); 
-		this.hasResources = ko.computed(() => {
-			return this.resources().count() > 0;
-		});
+		this.hasResources = ko.computed(() => this.resources().count() > 0);
 	    this.hasAllIncremental = ko.computed(() => {
 		    var resources = this.resources();
 		    if (resources.length === 0)
@@ -72,13 +70,30 @@ class serverSmuggling extends viewModelBase {
 	    });
 		this.submitEnabled = ko.computed(() => {
 			var progress = this.inProgress();
-			var selection = this.hasAnyResourceSelected();
+			var selection = this.selectedResources().length > 0;
 			var url = this.targetServer().url();
 			return !progress && selection && !!url;
 		});
 	    this.jsonRequest = ko.computed(() => {
 			var request = this.getJson();
 		    return jsonUtil.syntaxHighlight(request);
+	    });
+
+	    this.resourcesSelection = ko.computed(() => {
+		    var numOfSelectedResources = this.selectedResources().length;
+		    if (numOfSelectedResources === this.resources().length)
+			    return checkbox.Checked;
+		    if (numOfSelectedResources > 0)
+			    return checkbox.SomeChecked;
+		    return checkbox.UnChecked;
+	    });
+		this.incrementalSelection = ko.computed(() => {
+			var numOfIncremental = this.selectedResources().filter(x => x.incremental()).length;
+		    if (numOfIncremental === this.selectedResources().length)
+			    return checkbox.Checked;
+		    if (numOfIncremental > 0)
+			    return checkbox.SomeChecked;
+		    return checkbox.UnChecked;
 	    });
     }
 
@@ -106,7 +121,7 @@ class serverSmuggling extends viewModelBase {
 	}
 
 	toggleSelectAll() {
-		if (this.hasAnyResourceSelected()) {
+		if (this.selectedResources().length > 0) {
 			this.selectedResources([]);
 		} else {
 			this.selectedResources(this.resources().slice(0));

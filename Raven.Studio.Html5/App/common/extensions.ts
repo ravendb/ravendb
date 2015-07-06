@@ -422,6 +422,31 @@ class extensions {
 			    }
 		    }
 	    };
+
+		ko.bindingHandlers["checkboxChecked"] = {
+			init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+				var x = 3;
+				//ko.utils.domData.set(element, key, true);
+				$(element).append("<img/>");
+			},
+		    update(element, valueAccessor, allBindings, viewModel, bindingContext) {
+			    var checkboxValue: checkbox = ko.unwrap(valueAccessor());
+			    var src;
+			    switch (checkboxValue) {
+					case checkbox.Checked:
+						src = "content/images/checked.png";
+						break;
+					case checkbox.SomeChecked:
+						src = "content/images/some-checked.png";
+						break;
+					case checkbox.UnChecked:
+					default:
+						src = "content/images/unchecked.png";
+			    }
+
+			    $(element).children().attr("src", src);
+		    }
+	    };
     }
 
 	static installJqueryExtensions() {

@@ -85,7 +85,7 @@
 				</span>
 			</div>
 
-			<div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, dynamicHeightTargetSelector: '#uploadQueueContainer', gridSelector: '#filesGrid', contextMenuOptions: ['Delete'], isAnyAutoSelected: isAnyFilesAutoSelected, isAllAutoSelected: isAllFilesAutoSelected, rowsAreLoading: showLoadingIndicator }"></div>
+			<div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, dynamicHeightTargetSelector: '#uploadQueueContainer', gridSelector: '#filesGrid', contextMenuOptions: ['Delete'], isAnyAutoSelected: isAnyFilesAutoSelected, isAllAutoSelected: isAllFilesAutoSelected, rowsAreLoading: showLoadingIndicator, noResultsMessage: 'No files were found!' }"></div>
         </div>
     </div>
     <div class="row">

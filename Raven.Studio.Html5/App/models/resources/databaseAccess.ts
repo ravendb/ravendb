@@ -51,9 +51,8 @@ class databaseAccess {
         this.tenantId(dto.TenantId != null ? dto.TenantId : '');
 
         this.resourceNames = ko.computed(() => {
-            var allResourceNames = shell.databases().map((db: database) => db.name)
-                .concat(shell.fileSystems().map(fs => fs.name)).concat("*");
-            return allResourceNames.filter((x, i, c) => c.indexOf(x) == i);
+            var allResourceNames = shell.resourcesNamesComputed()().concat("*");
+            return allResourceNames.filter((x, i, c) => c.indexOf(x) === i);
         });
 
         this.searchResults = ko.computed(() => {
@@ -62,9 +61,9 @@ class databaseAccess {
         });
 
         this.tenantCustomValidityError = ko.computed(() => {
-            var errorMessage: string = '';
+            var errorMessage: string = "";
             var newTenantId = this.tenantId();
-            var foundResource = this.resourceNames().first(name => newTenantId == name);
+            var foundResource = this.resourceNames().first(name => newTenantId === name);
 
             if (!foundResource && newTenantId.length > 0) {
                 errorMessage = "There is no database nor file system with such a name!";

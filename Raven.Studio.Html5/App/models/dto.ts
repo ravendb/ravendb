@@ -1403,3 +1403,9 @@ interface consoleJsSampleDto {
 	Name: string;
 	Code: string;
 }
+
+enum checkbox {
+    UnChecked = 0,
+    SomeChecked = 1,
+	Checked = 2
+}
