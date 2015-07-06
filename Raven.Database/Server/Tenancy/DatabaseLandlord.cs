@@ -167,7 +167,7 @@ namespace Raven.Database.Server.Tenancy
                 AssertLicenseParameters(config);
                 var documentDatabase = new DocumentDatabase(config, transportState);
 
-				documentDatabase.SpinBackgroundWorkers();
+				documentDatabase.SpinBackgroundWorkers(false);
 				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
 				documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
 	            documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
