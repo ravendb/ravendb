@@ -110,9 +110,8 @@ namespace Raven.Client.TimeSeries.Replication
 
 				//otherwise we didn't do load balancing; therefore go the usual route -> try to read from primary and if fails -> try to read from secondary
 
-				operationResult = await TryExecuteOperationWithFailover(timeSeriesStoreUrl, operation, token, operationCredentials, shouldFailImmediately, localReplicationDestinations);
-
-				if (operationResult.Success)
+				operationResult = await TryExecuteOperationAsync(timeSeriesStoreUrl, timeSeriesStore.Name, operation, false, operationCredentials, token);
+				if (operationResult.Success )
 					return operationResult.Result;
 
 				//maybe it's transient failure? if so, try again
