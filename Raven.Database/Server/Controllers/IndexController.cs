@@ -244,6 +244,8 @@ namespace Raven.Database.Server.Controllers
 			{
 				var compilationException = ex as IndexCompilationException;
 
+                Log.ErrorException("Cannot create index.", ex);
+
 				return GetMessageWithObject(new
 				{
 					ex.Message,
