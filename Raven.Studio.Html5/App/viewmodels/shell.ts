@@ -4,10 +4,8 @@
 import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
-
-import forge = require("forge/forge_custom.min");
-import viewModelBase = require("viewmodels/viewModelBase");
 import viewLocator = require("durandal/viewLocator");
+
 import resource = require("models/resource");
 import database = require("models/database");
 import fileSystem = require("models/filesystem/filesystem");
@@ -20,8 +18,6 @@ import license = require("models/license");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
-import deleteDocuments = require("viewmodels/deleteDocuments");
-import dialogResult = require("common/dialogResult");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
@@ -48,6 +44,7 @@ import getCounterStoragesCommand = require("commands/counter/getCounterStoragesC
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 import getServerConfigsCommand = require("commands/getServerConfigsCommand");
 
+import viewModelBase = require("viewmodels/viewModelBase");
 import recentErrors = require("viewmodels/recentErrors");
 import enterApiKey = require("viewmodels/enterApiKey");
 import latestBuildReminder = require("viewmodels/latestBuildReminder");
@@ -139,7 +136,6 @@ class shell extends viewModelBase {
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
 
     private globalChangesApi: changesApi;
-    
     private static changeSubscriptionArray: changeSubscription[];
 
     constructor() {
@@ -154,7 +150,10 @@ class shell extends viewModelBase {
             return lsApiKey || contextApiKey;
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
-        oauthContext.enterApiKeyTask.done(() => this.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
+        oauthContext.enterApiKeyTask.done(() => {
+	        this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+			this.notifications = this.createNotifications();
+        });
 
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
@@ -212,7 +211,7 @@ class shell extends viewModelBase {
     }
 
     activate(args: any) {
-        super.activate(args);
+        super.activate(args, true);
 
         oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 
