@@ -77,7 +77,7 @@ namespace Raven.Database
 
 		private volatile bool backgroundWorkersSpun;
 
-		private volatile bool backgroundWorkersExternalControl;
+		private volatile bool indexingWorkersStoppedManually;
 
 		private volatile bool disposed;
 
@@ -945,9 +945,9 @@ namespace Raven.Database
 			}
 		}
 
-		public void SpinBackgroundWorkers(bool forced = false)
+		public void SpinBackgroundWorkers(bool manualStart = false)
 		{
-			if (forced == false && backgroundWorkersExternalControl)
+			if (manualStart == false && indexingWorkersStoppedManually)
 				return;
 
 			if (backgroundWorkersSpun)
@@ -960,7 +960,7 @@ namespace Raven.Database
 				if (res && disableIndexingStatus) return; //indexing were set to disable 
 			}
 			backgroundWorkersSpun = true;
-			backgroundWorkersExternalControl = forced;
+			indexingWorkersStoppedManually = false;
 
 			workContext.StartWork();
 			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
@@ -982,9 +982,9 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
-		public void StopIndexingWorkers(bool forced)
+		public void StopIndexingWorkers(bool manualStop)
 		{
-			if (forced == false && backgroundWorkersExternalControl)
+			if (manualStop == false && indexingWorkersStoppedManually)
 				return;
 
 			workContext.StopIndexing();
@@ -1007,7 +1007,7 @@ namespace Raven.Database
 			}
 
 			backgroundWorkersSpun = false;
-			backgroundWorkersExternalControl = forced;
+			indexingWorkersStoppedManually = manualStop;
 		}
 
 		public void ForceLicenseUpdate()
@@ -1282,10 +1282,11 @@ namespace Raven.Database
 					if (configuration.Indexing.DisableIndexingFreeSpaceThreshold < 0)
 						return;
 
-					var threshold = configuration.Indexing.DisableIndexingFreeSpaceThreshold / 100.0;
-					var warningThreshold = Math.Max(threshold * 2, 0.05);
+					var thresholdInMb = configuration.Indexing.DisableIndexingFreeSpaceThreshold;
+					var warningThresholdInMb = Math.Max(thresholdInMb * 2, 1024);
+					var freeSpaceInMb = (int)(notification.FreeSpaceInBytes / 1024 / 1024);
 
-					if (notification.FreeSpaceInPercentage <= threshold)
+					if (freeSpaceInMb <= thresholdInMb)
 					{
 						if (database.backgroundWorkersSpun)
 							database.StopIndexingWorkers(false);
@@ -1294,19 +1295,19 @@ namespace Raven.Database
 						{
 							AlertLevel = AlertLevel.Error,
 							CreatedAt = SystemTime.UtcNow,
-							Title = string.Format("Index disk '{0}' has {1}% free space and it has reached the {2}% threshold. Indexing was disabled.", notification.Path, (int)(notification.FreeSpaceInPercentage * 100), (int)(threshold * 100)),
+							Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
 							UniqueKey = "Free space (index)"
 						});
 					}
 					else
 					{
-						if (notification.FreeSpaceInPercentage <= warningThreshold)
+						if (freeSpaceInMb <= warningThresholdInMb)
 						{
 							database.AddAlert(new Alert
 							{
 								AlertLevel = AlertLevel.Warning,
 								CreatedAt = SystemTime.UtcNow,
-								Title = string.Format("Index disk '{0}' has {1}% free space. Indexing will be disabled when it reaches {2}%.", notification.Path, (int)(notification.FreeSpaceInPercentage * 100), (int)(threshold * 100)),
+								Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space. Indexing will be disabled when it reaches {3}MB.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
 								UniqueKey = "Free space warning (index)"
 							});
 						}

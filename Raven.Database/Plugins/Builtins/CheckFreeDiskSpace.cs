@@ -34,7 +34,7 @@ namespace Raven.Database.Plugins.Builtins
 		public void Execute(RavenDBOptions serverOptions)
 		{
 			options = serverOptions;
-			options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
+			options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
 		}
 
 		private void ExecuteCheck(object state)
@@ -101,7 +101,11 @@ namespace Raven.Database.Plugins.Builtins
 				if (freeSpaceInPercentage < FreeThreshold)
 					lacksFreeSpace.Add(drive.Name);
 
-				group.ForEach(x => x.FreeSpaceInPercentage = freeSpaceInPercentage);
+				group.ForEach(x =>
+				{
+					x.FreeSpaceInPercentage = freeSpaceInPercentage;
+					x.FreeSpaceInBytes = drive.TotalFreeSpace;
+				});
 			}
 
 			foreach (var group in groupedUncRoots)
@@ -119,7 +123,11 @@ namespace Raven.Database.Plugins.Builtins
 				if (freeSpaceInPercentage < FreeThreshold)
 					lacksFreeSpace.Add(group.Key);
 
-				group.ForEach(x => x.FreeSpaceInPercentage = freeSpaceInPercentage);
+				group.ForEach(x =>
+				{
+					x.FreeSpaceInPercentage = freeSpaceInPercentage;
+					x.FreeSpaceInBytes = freeBytesAvailable;
+				});
 			}
 
 			if (lacksFreeSpace.Any())
@@ -135,9 +143,9 @@ namespace Raven.Database.Plugins.Builtins
 
 			options.DatabaseLandlord.ForAllDatabases(database =>
 			{
-				foreach (var path in pathsToCheck.Where(x => x.FreeSpaceInPercentage.HasValue && x.ResourceType == ResourceType.Database && x.ResourceName == database.Name))
+				foreach (var path in pathsToCheck.Where(x => x.FreeSpaceInPercentage.HasValue && x.FreeSpaceInBytes.HasValue && x.ResourceType == ResourceType.Database && x.ResourceName == database.Name))
 				{
-					database.OnDiskSpaceChanged(new DiskSpaceNotification(path.Path, path.PathType, path.FreeSpaceInPercentage.Value));
+					database.OnDiskSpaceChanged(new DiskSpaceNotification(path.Path, path.PathType, path.FreeSpaceInBytes.Value, path.FreeSpaceInPercentage.Value));
 				}
 			});
 		}
@@ -155,6 +163,8 @@ namespace Raven.Database.Plugins.Builtins
 			public string ResourceName { get; set; }
 
 			public ResourceType ResourceType { get; set; }
+
+			public double? FreeSpaceInBytes { get; set; }
 
 			public double? FreeSpaceInPercentage { get; set; }
 		}

@@ -13,10 +13,13 @@ namespace Raven.Database.Data
 
 		public double FreeSpaceInPercentage { get; private set; }
 
-		public DiskSpaceNotification(string path, PathType pathType, double freeSpaceInPercentage)
+		public double FreeSpaceInBytes { get; private set; }
+
+		public DiskSpaceNotification(string path, PathType pathType, double freeSpaceInBytes, double freeSpaceInPercentage)
 		{
 			Path = path;
 			PathType = pathType;
+			FreeSpaceInBytes = freeSpaceInBytes;
 			FreeSpaceInPercentage = freeSpaceInPercentage;
 		}
 	}
