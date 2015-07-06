@@ -39,6 +39,7 @@ namespace Raven.Tests
 						var list = await session.Include<List<string,string>, ListItem<string>>(l => l.Items).LoadAsync<List<string,string>>(listId);
 						var enumer = list.Items.Select(it => it.ToString());
 						var list2 = await session.LoadAsync<ListItem<string>>(enumer);
+						Assert.Equal(1, session.Advanced.NumberOfRequests);
 					}
 				}
 			}
@@ -65,8 +66,10 @@ namespace Raven.Tests
  
                 using (var session = documentStore.OpenAsyncSession())
                 {
-                    var list = await session.Include<List<Guid, string>, ListItem<Guid>>(l => l.Items).LoadAsync<List<Guid, string>>(listId);
-                    var l2 = await session.LoadAsync<ListItem<Guid>>(list.Items);
+					var list = await session.Include<List<Guid, Guid>, ListItem<Guid>>(l => l.Items).LoadAsync<List<Guid, Guid>>(listId);
+					var enumer = list.Items.Select(it => it.ToString());
+					var l2 = await session.LoadAsync<ListItem<Guid>>(enumer);
+					Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
         }
