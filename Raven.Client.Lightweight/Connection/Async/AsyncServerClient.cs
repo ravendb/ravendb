@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -238,12 +239,30 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata, token), token);
 		}
+		public Task<List<string>> PutIndexesAsync(List<string> names, IndexDefinition[] indexDefs, CancellationToken token = default(CancellationToken))
+		{
+			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexesAsync(names, indexDefs, operationMetadata, token), token);
+		}
 
 		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutTransformerAsync(name, transformerDefinition, operationMetadata, token), token);
 		}
 
+		public Task<IndexDefinition[]> GetspecifiedIndexesAsync(string[] names, CancellationToken token = default(CancellationToken))
+		{
+			return ExecuteWithReplication("GET", operationMetadata => DirectGetspecifiedIndexesAsync(names, operationMetadata, token), token);
+		}
+		public async Task<IndexDefinition[]> DirectGetspecifiedIndexesAsync(string[] names, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
+		{
+			var requestUri = operationMetadata.Url + "/indexes?multi-definitions=" + Uri.EscapeUriString(string.Join(",",names));
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "GET", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
+			{
+				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+				return response.JsonDeserialization<IndexDefinition[]>();
+			}
+		}
 		public async Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
 		{
 			var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
@@ -272,6 +291,32 @@ namespace Raven.Client.Connection.Async
 					await request.WriteAsync(serializeObject).ConfigureAwait(false);
 					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return result.Value<string>("Index");
+				}
+				catch (ErrorResponseException e)
+				{
+					if (e.StatusCode != HttpStatusCode.BadRequest) throw;
+					responseException = e;
+				}
+				var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" }).ConfigureAwait(false);
+				if (error == null) throw responseException;
+
+				throw new IndexCompilationException(error.Message) { IndexDefinitionProperty = error.IndexDefinitionProperty, ProblematicText = error.ProblematicText };
+			}
+		}
+
+		public async Task<List<string>> DirectPutIndexesAsync(List<string> names, IndexDefinition[] indexDefs, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
+		{
+			var requestUri = operationMetadata.Url + "/indexes?multi-definition=" + Uri.EscapeUriString(string.Join(",",names));
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
+			{
+				var serializeObject = JsonConvert.SerializeObject(indexDefs, Default.Converters);
+
+				ErrorResponseException responseException;
+				try
+				{
+					await request.WriteAsync(serializeObject).ConfigureAwait(false);
+					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+					return result.Value<List<string>>("Indexes");
 				}
 				catch (ErrorResponseException e)
 				{

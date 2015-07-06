@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -39,19 +40,44 @@ namespace Raven.Client.Indexes
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDatabaseCommands databaseCommands, DocumentConvention conventions)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			try
 			{
-				try
+				var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
+				var indexesNames = tasks.Select(x => x.IndexName).ToList();
+				// need to make sure we dont replace legacy indexes
+				var serverDefinitions = databaseCommands.GetspecifiedIndexes(indexesNames.ToArray());
+				List<IndexDefinition> definitions = new List<IndexDefinition>();
+				List<string> names = new List<string>();
+				int i = 0;
+				foreach (var task in tasks)
 				{
-					task.Execute(databaseCommands, conventions);
+					var clientDefinitions = task.CreateIndexDefinition();
+					if (serverDefinitions[i] == null || !task.CurrentOrLegacyIndexDefinitionEquals(conventions, serverDefinitions[i], clientDefinitions))
+					{
+						names.Add(task.IndexName);
+						definitions.Add(clientDefinitions);
+					}
+					i++;
 				}
-				catch (IndexCompilationException e)
-				{
-					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
-				}
-
+				//Only executing missing/updated indexes
+				databaseCommands.PutIndexes(names, definitions.ToArray());
 			}
+			// For old servers that don't have the new entrypoint for executing multiple indexes
+			catch (Exception)
+			{
+				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+				{
+					try
+					{
+						task.Execute(databaseCommands, conventions);
+					}
+					catch (IndexCompilationException e)
+					{
+						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+					}
 
+				}
+			}
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
 			{
 				task.Execute(databaseCommands, conventions);
@@ -72,20 +98,51 @@ namespace Raven.Client.Indexes
         public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
-            {
-                try
-                {
-                    await task.ExecuteAsync(databaseCommands, conventions);
-                }
-                catch (IndexCompilationException e)
-                {
-                    indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
-                }
+			bool failed = false;
+	        try
+	        {
+		        var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
+		        var indexesNames = tasks.Select(x => x.IndexName).ToList();
+		        // need to make sure we dont replace legacy indexes
+				var serverDefinitions = await databaseCommands.GetspecifiedIndexesAsync(indexesNames.ToArray()).ConfigureAwait(false);
+		        List<IndexDefinition> definitions = new List<IndexDefinition>();
+		        List<string> names = new List<string>();
+		        int i = 0;
+		        foreach (var task in tasks)
+		        {
+			        var clientDefinitions = task.CreateIndexDefinition();
+			        if (serverDefinitions[i] == null || !task.CurrentOrLegacyIndexDefinitionEquals(conventions, serverDefinitions[i], clientDefinitions))
+			        {
+				        names.Add(task.IndexName);
+				        definitions.Add(clientDefinitions);
+			        }
+			        i++;
+		        }
+		        //Only executing missing/updated indexes
+		        await databaseCommands.PutIndexesAsync(names, definitions.ToArray()).ConfigureAwait(false);
+	        }
+			
+		        // For old servers that don't have the new entrypoint for executing multiple indexes
+	        catch (Exception)
+	        {
+		        failed = true;		        
+	        }
+	        if (failed)
+	        {
+				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+				{
+					try
+					{
+						await task.ExecuteAsync(databaseCommands, conventions);
+					}
+					catch (IndexCompilationException e)
+					{
+						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+					}
 
-            }
-
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+				}
+	        }
+	        foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
             {
                 await task.ExecuteAsync(databaseCommands, conventions);
             }
@@ -107,18 +164,28 @@ namespace Raven.Client.Indexes
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			try
 			{
-				try
+				var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
+				var indexesNames = tasks.Select(x => x.IndexName).ToList();
+
+				documentStore.DatabaseCommands.PutIndexes(indexesNames, tasks.Select(x=>x.CreateIndexDefinition()).ToArray());
+			}
+				// For old servers that don't have the new entrypoint for executing multiple indexes
+			catch (Exception)
+			{
+				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 				{
-					task.Execute(documentStore);
-				}
-				catch (IndexCompilationException e)
-				{
-					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+					try
+					{
+						task.Execute(documentStore);
+					}
+					catch (IndexCompilationException e)
+					{
+						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+					}
 				}
 			}
-
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
 			{
 				task.Execute(documentStore);
@@ -152,15 +219,32 @@ namespace Raven.Client.Indexes
 		public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			bool failed = false;
+			try
 			{
-				try
+				var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
+				var indexesNames = tasks.Select(x => x.IndexName).ToList();
+				await documentStore.AsyncDatabaseCommands.PutIndexesAsync(indexesNames, tasks.Select(x=>x.CreateIndexDefinition()).ToArray()).ConfigureAwait(false);
+			}
+
+				// For old servers that don't have the new entrypoint for executing multiple indexes
+			catch (Exception)
+			{
+				failed = true;
+			}
+			if (failed)
+			{
+				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 				{
-					await task.ExecuteAsync(documentStore);
-				}
-				catch (IndexCompilationException e)
-				{
-					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+					try
+					{
+						await task.ExecuteAsync(documentStore).ConfigureAwait(false);
+					}
+					catch (IndexCompilationException e)
+					{
+						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+					}
+
 				}
 			}
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
