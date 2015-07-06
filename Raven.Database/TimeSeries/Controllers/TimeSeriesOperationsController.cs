@@ -292,7 +292,8 @@ namespace Raven.Database.TimeSeries.Controllers
 			
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.Delete(key);
+				writer.Delete(prefix, key);
+				writer.DeleteKeyInRollups(prefix, key);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();
@@ -314,6 +315,9 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key) || start < DateTime.MinValue.Ticks || start > DateTime.MaxValue.Ticks)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
+			if (start > end)
+				throw new InvalidOperationException("start cannot be greater than end");
+
 			if (prefix.StartsWith("-") == false)
 				throw new InvalidOperationException("Prefix must start with '-' char");
 
@@ -323,7 +327,8 @@ namespace Raven.Database.TimeSeries.Controllers
 			
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.DeleteRange(key, start, end);
+				writer.DeleteRange(prefix, key, start, end);
+				writer.DeleteRangeInRollups(prefix, key, start, end);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();

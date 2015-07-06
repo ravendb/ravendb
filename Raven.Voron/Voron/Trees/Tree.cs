@@ -126,6 +126,9 @@ namespace Voron.Trees
             structure.Write(pos);
         }
 
+		/// <summary>
+		/// This is using little endian
+		/// </summary>
         public long Increment(Slice key, long delta, ushort? version = null)
         {
             State.IsModified = true;
@@ -806,6 +809,6 @@ namespace Voron.Trees
 			var fixedSizeTree = new FixedSizeTree(_tx, this, key, valSize);
 			_fixedSizeTrees[key] = fixedSizeTree;
 			return fixedSizeTree;
-    }
-}
+		}
+	}
 }

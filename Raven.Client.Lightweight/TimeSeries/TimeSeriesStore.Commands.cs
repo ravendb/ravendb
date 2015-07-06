@@ -12,6 +12,8 @@ namespace Raven.Client.TimeSeries
     {
 		public async Task CreatePrefixConfigurationAsync(string prefix, byte valueLength, CancellationToken token = new CancellationToken())
 		{
+			AssertInitialized();
+
 			if (string.IsNullOrEmpty(prefix))
 				throw new InvalidOperationException("Prefix cannot be empty");
 
@@ -32,6 +34,8 @@ namespace Raven.Client.TimeSeries
 
 		public async Task DeletePrefixConfigurationAsync(string prefix, CancellationToken token = default(CancellationToken))
 		{
+			AssertInitialized();
+			
 			if (string.IsNullOrEmpty(prefix))
 				throw new InvalidOperationException("Prefix cannot be empty");
 
@@ -83,14 +87,45 @@ namespace Raven.Client.TimeSeries
 			return AppendAsync(prefix, key, time, token, values);
 		}
 
-		public Task DeleteAsync(string prefix, string key, CancellationToken token = new CancellationToken())
+		public async Task DeleteAsync(string prefix, string key, CancellationToken token = new CancellationToken())
 		{
-			throw new NotImplementedException();
+			AssertInitialized();
+
+			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key))
+				throw new InvalidOperationException("Data is invalid");
+
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
+			{
+				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete/{2}/{3}",
+					url, timeSeriesName, prefix, key);
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
+				{
+					return request.ReadResponseJsonAsync().WithCancellation(token);
+				}
+			}, token);
 		}
 
-		public Task DeleteRangeAsync(string prefix, string key, DateTime start, DateTime end, CancellationToken token = new CancellationToken())
+		public async Task DeleteRangeAsync(string prefix, string key, DateTime start, DateTime end, CancellationToken token = new CancellationToken())
 		{
-			throw new NotImplementedException();
+			AssertInitialized();
+
+			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key))
+				throw new InvalidOperationException("Data is invalid");
+
+			if (start > end)
+				throw new InvalidOperationException("start cannot be greater than end");
+
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
+			{
+				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/deleteRange/{2}/{3}?start={4}&end={5}",
+					url, timeSeriesName, prefix, key, start.Ticks, end.Ticks);
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
+				{
+					return request.ReadResponseJsonAsync().WithCancellation(token);
+				}
+			}, token);
 		}
     }
 }

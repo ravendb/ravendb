@@ -81,8 +81,6 @@ namespace Raven.Database.TimeSeries
 		{
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				storageEnvironment.CreateTree(tx, "data", keysPrefixing: true);
-
 				var metadata = storageEnvironment.CreateTree(tx, "$metadata");
 				var id = metadata.Read("id");
 				if (id == null) // new db
@@ -152,6 +150,7 @@ namespace Raven.Database.TimeSeries
 		internal const string PeriodTreePrefix = "periods-";
 		internal const char PeriodsKeySeparator = '\uF8FF';
 		internal const string PrefixesPrefix = "prefixes-";
+		internal const string StatsPrefix = "stats-";
 
 		public class Reader : IDisposable
 		{
@@ -476,11 +475,6 @@ namespace Raven.Database.TimeSeries
 				if (tx != null)
 					tx.Dispose();
 			}
-
-			public long GetTimeSeriesCount()
-			{
-				throw new InvalidOperationException();
-			}
 		}
 
 		public class Writer : IDisposable
@@ -555,6 +549,14 @@ namespace Raven.Database.TimeSeries
 				}
 
 				var fixedTree = tree.FixedTreeFor(key, bufferSize);
+				using (var it = fixedTree.Iterate())
+				{
+					if (it.Seek(DateTime.MinValue.Ticks) == false)
+					{
+						storage.UpdateKeysCount(tx, 1);
+					}
+				}
+				storage.UpdateValuesCount(tx, 1);
 				fixedTree.Add(time.Ticks, valBuffer);
 			}
 
@@ -566,46 +568,51 @@ namespace Raven.Database.TimeSeries
 
 			public void Commit()
 			{
-				DeleteRange();
+				foreach (var rollupRange in rollupsToClear.Values)
+				{
+					DeleteRangeInRollups(rollupRange.Prefix, rollupRange.Key, rollupRange.Start.Ticks, rollupRange.End.Ticks);
+				}
 				tx.Commit();
 			}
 
-			private void DeleteRange()
+			public void DeleteRangeInRollups(string prefix, string key, long start, long end)
 			{
-				foreach (var rollupRange in rollupsToClear.Values)
-				{
-					var periodTree = tx.ReadTree(PeriodTreePrefix + rollupRange.Prefix);
-					if (periodTree == null)
-						continue;
+				var periodTree = tx.ReadTree(PeriodTreePrefix + prefix);
+				if (periodTree == null)
+					return;
 
-					using (var it = periodTree.Iterate())
+				using (var it = periodTree.Iterate())
+				{
+					it.RequiredPrefix = key + PeriodsKeySeparator;
+					if (it.Seek(it.RequiredPrefix) == false)
+						return;
+
+					var valueLength = storage.GetPrefixConfiguration(prefix);
+					if (valueLength == 0)
+						throw new InvalidOperationException("There is no prefix configuration named: " + prefix);
+
+					do
 					{
-						it.RequiredPrefix = rollupRange.Key + PeriodsKeySeparator;
-						if (it.Seek(it.RequiredPrefix) == false)
+						
+						var periodTreeName = it.CurrentKey.ToString();
+						var periodFixedTree = periodTree.FixedTreeFor(periodTreeName, (byte) (valueLength*Range.RangeValue.StorageItemsLength*sizeof (double)));
+						if (periodFixedTree == null)
 							continue;
 
-						do
+						var duration = GetDurationFromTreeName(periodTreeName);
+						var keysToDelete = Reader.IterateOnTree(new TimeSeriesQuery
 						{
-							var periodTreeName = it.CurrentKey.ToString();
-							var periodFixedTree = periodTree.FixedTreeFor(periodTreeName, rollupRange.FullPrefixLength);
-							if (periodFixedTree == null)
-								continue;
+							Prefix = prefix,
+							Key = key,
+							Start = duration.GetStartOfRangeForDateTime(new DateTime(start)),
+							End = duration.GetStartOfRangeForDateTime(new DateTime(end)),
+						}, periodFixedTree, fixedIterator => fixedIterator.CurrentKey).ToArray();
 
-							var duration = GetDurationFromTreeName(periodTreeName);
-							var keysToDelete = Reader.IterateOnTree(new TimeSeriesQuery
-							{
-								Prefix = rollupRange.Prefix,
-								Key = rollupRange.Key,
-								Start = duration.GetStartOfRangeForDateTime(rollupRange.Start),
-								End = duration.GetStartOfRangeForDateTime(rollupRange.End),
-							}, periodFixedTree, fixedIterator => fixedIterator.CurrentKey).ToArray();
-
-							foreach (var key in keysToDelete)
-							{
-								periodFixedTree.Delete(key);
-							}
-						} while (it.MoveNext());
-					}
+						foreach (var keyToDelete in keysToDelete)
+						{
+							periodFixedTree.Delete(keyToDelete);
+						}
+					} while (it.MoveNext());
 				}
 			}
 
@@ -617,14 +624,86 @@ namespace Raven.Database.TimeSeries
 				return new PeriodDuration(GenericUtil.ParseEnum<PeriodType>(strings[0]), int.Parse(strings[1]));
 			}
 
-			public void Delete(string key)
+			public bool Delete(string prefix, string key)
 			{
-				throw new NotImplementedException();
+				tree = tx.ReadTree(SeriesTreePrefix + prefix);
+				if (tree == null)
+					return false;
+
+				var valueLength = storage.GetPrefixConfiguration(prefix);
+				if (valueLength == 0)
+					throw new InvalidOperationException("There is no prefix configuration named: " + prefix);
+
+				var fixedTree = tree.FixedTreeFor(key, (byte)(valueLength * sizeof(double)));
+				using (var it = fixedTree.Iterate())
+				{
+					if (it.Seek(DateTime.MinValue.Ticks) == false)
+						return false;
+
+					do
+					{
+						fixedTree.Delete(it.CurrentKey);
+						storage.UpdateValuesCount(tx, -1);
+					} while (it.MoveNext());
+				}
+
+				using (var it = fixedTree.Iterate())
+				{
+					if (it.Seek(DateTime.MinValue.Ticks) == false)
+					{
+						storage.UpdateKeysCount(tx, -1);
+					}
+				}
+
+				return true;
 			}
 
-			public void DeleteRange(string key, long start, long end)
+			public void DeleteKeyInRollups(string prefix, string key)
 			{
-				throw new NotImplementedException();
+				var seriesTree = tx.ReadTree(PeriodTreePrefix + prefix);
+				if (seriesTree == null)
+					return;
+				
+				using (var it = seriesTree.Iterate())
+				{
+					it.RequiredPrefix = key + PeriodsKeySeparator;
+					if (it.Seek(it.RequiredPrefix))
+					{
+						seriesTree.Delete(it.CurrentKey);
+					}
+				}
+			}
+
+			public void DeleteRange(string prefix, string key, long start, long end)
+			{
+				tree = tx.ReadTree(SeriesTreePrefix + prefix);
+				if (tree == null)
+					return;
+
+				var valueLength = storage.GetPrefixConfiguration(prefix);
+				if (valueLength == 0)
+					throw new InvalidOperationException("There is no prefix configuration named: " + prefix);
+
+				var fixedTree = tree.FixedTreeFor(key, (byte)(valueLength * sizeof(double)));
+				using (var it = fixedTree.Iterate())
+				{
+					if (it.Seek(start) == false)
+						return;
+
+					do
+					{
+						if (it.CurrentKey > end)
+							break;
+
+						fixedTree.Delete(it.CurrentKey);
+						storage.UpdateValuesCount(tx, -1);
+					} while (it.MoveNext());
+
+					if (it.Seek(DateTime.MinValue.Ticks) == false)
+					{
+						storage.UpdateKeysCount(tx, -1);
+					}
+				}
 			}
 		}
 
@@ -721,18 +800,17 @@ namespace Raven.Database.TimeSeries
 
 		public TimeSeriesStats CreateStats()
 		{
-			using (var reader = CreateReader())
+			var stats = new TimeSeriesStats
 			{
-				var stats = new TimeSeriesStats
-				{
-					Name = Name,
-					Url = TimeSeriesUrl,
-					TimeSeriesCount = reader.GetTimeSeriesCount(),
-					TimeSeriesSize = SizeHelper.Humane(TimeSeriesEnvironment.Stats().UsedDataFileSizeInBytes),
-					RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondCounter.CurrentValue, 3),
-				};
-				return stats;
-			}
+				Name = Name,
+				Url = TimeSeriesUrl,
+				PrefixesCount = GetPrefixesCount(),
+				KeysCount = GetKeysCount(),
+				ValuesCount = GetValuesCount(),
+				TimeSeriesSize = SizeHelper.Humane(TimeSeriesEnvironment.Stats().UsedDataFileSizeInBytes),
+				RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondCounter.CurrentValue, 3),
+			};
+			return stats;
 		}
 
 		public NotificationPublisher Publisher
@@ -759,6 +837,7 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException(string.Format("Prefix {0} is already created", prefix));
 				}
 				metadata.Add(PrefixesPrefix + prefix, new[] { valueLength });
+				UpdatePrefixesCount(tx, 1);
 				tx.Commit();
 			}
 		}
@@ -771,14 +850,27 @@ namespace Raven.Database.TimeSeries
 				var val = metadata.Read(PrefixesPrefix + prefix);
 				if (val == null)
 					throw new InvalidOperationException(string.Format("Prefix {0} does not exist", prefix));
-				AssertNoExistDataForPrefix(prefix);
+				
+				AssertNoExistDataForPrefix(prefix, tx);
+				
 				metadata.Delete(PrefixesPrefix + prefix);
+				UpdatePrefixesCount(tx, -1);
 				tx.Commit();
 			}
 		}
 
-		private void AssertNoExistDataForPrefix(string prefix)
+		private void AssertNoExistDataForPrefix(string prefix, Transaction tx)
 		{
+			var tree = tx.ReadTree(SeriesTreePrefix + prefix);
+			if (tree == null)
+				return;
+
+			using (var it = tree.Iterate())
+			{
+				if (it.Seek(Slice.BeforeAllKeys) == false)
+					return;
+			}
+
 			throw new InvalidOperationException("Cannot delete prefix since there is associated data to it");
 		}
 
@@ -794,6 +886,128 @@ namespace Raven.Database.TimeSeries
 				var readBytes = val.Reader.ReadBytes(sizeof(byte), out used);
 				return readBytes[0];
 			}
+		}
+
+		private long GetPrefixesCount()
+		{
+			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.Read))
+			{
+				var metadata = tx.ReadTree("$metadata");
+				var val = metadata.Read(StatsPrefix + "prefixes-count");
+				if (val == null)
+					return CalculatePrefixesCount();
+				var count = val.Reader.ReadLittleEndianInt64();
+				return count;
+			}
+		}
+
+		public long GetKeysCount()
+		{
+			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.Read))
+			{
+				var metadata = tx.ReadTree("$metadata");
+				var val = metadata.Read(StatsPrefix + "keys-count");
+				if (val == null)
+					return CalculateKeysCount();
+				var count = val.Reader.ReadLittleEndianInt64();
+				return count;
+			}
+		}
+
+		public long GetValuesCount()
+		{
+			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.Read))
+			{
+				var metadata = tx.ReadTree("$metadata");
+				var val = metadata.Read(StatsPrefix + "values-count");
+				if (val == null)
+					return 0;
+				var count = val.Reader.ReadLittleEndianInt64();
+				return count;
+			}
+		}
+
+		public long CalculateKeysCount()
+		{
+			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				long keys = 0;
+				using (var rootIt = tx.State.Root.Iterate())
+				{
+					rootIt.RequiredPrefix = SeriesTreePrefix;
+					if (rootIt.Seek(rootIt.RequiredPrefix))
+					{
+						do
+						{
+							var tree = tx.ReadTree(rootIt.CurrentKey.ToString());
+							using (var it = tree.Iterate())
+							{
+								if (it.Seek(Slice.BeforeAllKeys))
+								{
+									do
+									{
+										keys++;
+									} while (it.MoveNext());
+								}
+							}
+						} while (rootIt.MoveNext());
+					}
+				}
+
+				var val = new byte[sizeof(long)];
+				EndianBitConverter.Little.CopyBytes(keys, val, 0);
+				var metadata = tx.ReadTree("$metadata");
+				metadata.Add(new Slice(StatsPrefix + "keys-count"), new Slice(val));
+				return keys;
+			}
+		}
+
+		private void UpdateKeysCount(Transaction tx, int delta)
+		{
+			var metadata = tx.ReadTree("$metadata");
+			metadata.Increment(StatsPrefix + "keys-count", delta);
+		}
+
+		private void UpdateValuesCount(Transaction tx, int delta)
+		{
+			var metadata = tx.ReadTree("$metadata");
+			metadata.Increment(StatsPrefix + "values-count", delta);
+		}
+
+		private void UpdatePrefixesCount(Transaction tx, int delta)
+		{
+			var metadata = tx.ReadTree("$metadata");
+			metadata.Increment(StatsPrefix + "prefixes-count", delta);
+		}
+
+		/// <summary>
+		/// This intened to be here for testing and debugging. This code is not reachable in production, since we always cache the stats.
+		/// </summary>
+		private long CalculatePrefixesCount()
+		{
+			long count = 0;
+
+			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var metadata = tx.ReadTree("$metadata");
+				using (var it = metadata.Iterate())
+				{
+					it.RequiredPrefix = PrefixesPrefix;
+					if (it.Seek(it.RequiredPrefix))
+					{
+						do
+						{
+							count++;
+						} while (it.MoveNext());
+					}
+				}
+
+				var val = new byte[sizeof (long)];
+				EndianBitConverter.Little.CopyBytes(count, val, 0);
+				metadata.Add(new Slice(StatsPrefix + "prefixes-count"), new Slice(val));
+			}
+
+			return count;
 		}
 	}
 
