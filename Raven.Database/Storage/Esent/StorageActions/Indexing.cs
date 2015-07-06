@@ -259,6 +259,28 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
+		public void SetIndexesPriority(int[] ids, IndexingPriority[] priorities)
+		{
+			for (int i = 0; i < ids.Length; i++)
+			{
+				var id = ids[i];
+				var priority = priorities[i];
+				Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+				Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
+				if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+				{
+					throw new IndexDoesNotExistsException(message: "There is no index with id: " + id.ToString());
+				}
+
+				using (var update = new Update(session, IndexesStats, JET_prep.Replace))
+				{
+					Api.SetColumn(session, IndexesStats,
+						tableColumnsCache.IndexesStatsColumns["priority"],
+						(int)priority);
+					update.Save();
+				}
+			}
+		}
 		public void UpdateIndexingStats(int id, IndexingWorkStats stats)
 		{
 			SetCurrentIndexStatsToImpl(id);

@@ -273,7 +273,7 @@ namespace Raven.Client.Indexes
                 ReplicateIndexesIfNeeded(databaseCommands);
         }
 
-        public bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
+        private bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
         {
            
 			var oldIndexId = serverDef.IndexId;
@@ -337,7 +337,7 @@ namespace Raven.Client.Indexes
         }
 
 
-        private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
+        public IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
         {
             IndexDefinition legacyIndexDefinition;
 			var oldPrettifyGeneratedLinqExpressions = documentConvention.PrettifyGeneratedLinqExpressions;

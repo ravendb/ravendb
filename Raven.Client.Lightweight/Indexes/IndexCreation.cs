@@ -43,24 +43,10 @@ namespace Raven.Client.Indexes
 			try
 			{
 				var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-				var indexesNames = tasks.Select(x => x.IndexName).ToList();
-				// need to make sure we dont replace legacy indexes
-				var serverDefinitions = databaseCommands.GetspecifiedIndexes(indexesNames.ToArray());
-				List<IndexDefinition> definitions = new List<IndexDefinition>();
-				List<string> names = new List<string>();
-				int i = 0;
-				foreach (var task in tasks)
-				{
-					var clientDefinitions = task.CreateIndexDefinition();
-					if (serverDefinitions[i] == null || !task.CurrentOrLegacyIndexDefinitionEquals(conventions, serverDefinitions[i], clientDefinitions))
-					{
-						names.Add(task.IndexName);
-						definitions.Add(clientDefinitions);
-					}
-					i++;
-				}
-				//Only executing missing/updated indexes
-				databaseCommands.PutIndexes(names, definitions.ToArray());
+				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
+				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
+				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
+				databaseCommands.PutIndexes(indexesNames, definitions, priorities);
 			}
 			// For old servers that don't have the new entrypoint for executing multiple indexes
 			catch (Exception)
@@ -102,24 +88,10 @@ namespace Raven.Client.Indexes
 	        try
 	        {
 		        var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-		        var indexesNames = tasks.Select(x => x.IndexName).ToList();
-		        // need to make sure we dont replace legacy indexes
-				var serverDefinitions = await databaseCommands.GetspecifiedIndexesAsync(indexesNames.ToArray()).ConfigureAwait(false);
-		        List<IndexDefinition> definitions = new List<IndexDefinition>();
-		        List<string> names = new List<string>();
-		        int i = 0;
-		        foreach (var task in tasks)
-		        {
-			        var clientDefinitions = task.CreateIndexDefinition();
-			        if (serverDefinitions[i] == null || !task.CurrentOrLegacyIndexDefinitionEquals(conventions, serverDefinitions[i], clientDefinitions))
-			        {
-				        names.Add(task.IndexName);
-				        definitions.Add(clientDefinitions);
-			        }
-			        i++;
-		        }
-		        //Only executing missing/updated indexes
-		        await databaseCommands.PutIndexesAsync(names, definitions.ToArray()).ConfigureAwait(false);
+				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
+				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
+				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
+				await databaseCommands.PutIndexesAsync(indexesNames, definitions, priorities).ConfigureAwait(false);
 	        }
 			
 		        // For old servers that don't have the new entrypoint for executing multiple indexes
@@ -167,9 +139,10 @@ namespace Raven.Client.Indexes
 			try
 			{
 				var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-				var indexesNames = tasks.Select(x => x.IndexName).ToList();
-
-				documentStore.DatabaseCommands.PutIndexes(indexesNames, tasks.Select(x=>x.CreateIndexDefinition()).ToArray());
+				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
+				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
+				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
+				documentStore.DatabaseCommands.PutIndexes(indexesNames, definitions, priorities);
 			}
 				// For old servers that don't have the new entrypoint for executing multiple indexes
 			catch (Exception)
@@ -223,8 +196,10 @@ namespace Raven.Client.Indexes
 			try
 			{
 				var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-				var indexesNames = tasks.Select(x => x.IndexName).ToList();
-				await documentStore.AsyncDatabaseCommands.PutIndexesAsync(indexesNames, tasks.Select(x=>x.CreateIndexDefinition()).ToArray()).ConfigureAwait(false);
+				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
+				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
+				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
+				await documentStore.AsyncDatabaseCommands.PutIndexesAsync(indexesNames, definitions, priorities).ConfigureAwait(false);
 			}
 
 				// For old servers that don't have the new entrypoint for executing multiple indexes

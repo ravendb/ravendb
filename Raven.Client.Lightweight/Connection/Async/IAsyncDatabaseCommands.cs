@@ -280,14 +280,6 @@ namespace Raven.Client.Connection.Async
         Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
-		///		Retrieves multiple index definitions from a database
-		/// </summary>
-		/// <param name="names"> The names of the indexes to retrive</param>
-		/// <param name="token">The cancellation token.</param>
-		/// <returns></returns>
-		Task<IndexDefinition[]> GetspecifiedIndexesAsync(string[] names, CancellationToken token = default(CancellationToken));
-
-		/// <summary>
 		///     Gets the license status
 		/// </summary>
 		Task<LicensingStatus> GetLicenseStatusAsync(CancellationToken token = default(CancellationToken));
@@ -515,8 +507,9 @@ namespace Raven.Client.Connection.Async
 		/// <param name="names">Names of the indexes</param>
 		/// <param name="definitions">Indexes definition by order of names</param>
 		/// <param name="token">The cancellation token</param>
+		/// <param name="priorities">The priorities of the indexes</param>
 		/// <returns></returns>
-		Task<List<string>> PutIndexesAsync(List<string> names, IndexDefinition[] definitions, CancellationToken token = default(CancellationToken));
+		Task<List<string>> PutIndexesAsync(string[] names, IndexDefinition[] definitions, IndexingPriority[] priorities, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition

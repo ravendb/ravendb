@@ -44,9 +44,6 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/indexes")]
 		public HttpResponseMessage IndexesGet()
 		{
-			var multiDef = GetQueryStringValue("multi-definitions");
-			if (!string.IsNullOrEmpty(multiDef))
-				return GetMultiIndexDefinition(multiDef.Split(commaSeperator, StringSplitOptions.RemoveEmptyEntries));
 			var namesOnlyString = GetQueryStringValue("namesOnly");
 			bool namesOnly;
 			RavenJArray indexes;
@@ -58,92 +55,65 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(indexes);
 		}
 
-		private static readonly char[] commaSeperator = {','};
-		private HttpResponseMessage GetMultiIndexDefinition(IEnumerable<string> indexes)
-		{
-			var definitions = new List<IndexDefinition>();
-			foreach (var index in indexes)
-			{
-				var indexDefinition = Database.Indexes.GetIndexDefinition(index);
-				if (indexDefinition != null)
-					indexDefinition.Fields = Database.Indexes.GetIndexFields(index);
-				definitions.Add(indexDefinition);
-			}
-			return GetMessageWithObject( definitions.ToArray());
-		}
-
 		[HttpPut]
 		[RavenRoute("indexes")]
 		[RavenRoute("databases/{databaseName}/indexes")]
 		public async Task<HttpResponseMessage> IndexMultiPut()
 		{
-			if (string.IsNullOrEmpty(GetQueryStringValue("multi-definition")))
-			{
-				return GetMessageWithObject(new
-				{
-					Error = "Missing indexes names" 
-				}, HttpStatusCode.BadRequest);
-			}
-			RavenJArray jsonIndexes;
+			MultiplePutIndexParam multiplePutIndexParam;
 			try
 			{
-				jsonIndexes = await ReadJsonArrayAsync().ConfigureAwait(false);
+				multiplePutIndexParam = await ReadJsonObjectAsync<MultiplePutIndexParam>().ConfigureAwait(false);
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize index request. Error: " + e);
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
-					Message = "Could not understand json, please check its validity."
-				}, (HttpStatusCode) 422); //http code 422 - Unprocessable entity
+					Message = "Could not understand json, please check its validity.",
+					Error = e.Message
+				}, (HttpStatusCode) 500); 
 
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize index request. Error: " + e);
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				
 				return GetMessageWithObject(new
 				{
-					e.Message
+					Error = e
 				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
 			}
-			var definitions = jsonIndexes.JsonDeserialization<IndexDefinition>();
-			var indexes = GetQueryStringValue("multi-definition").Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries);
-			var createdIndexes = new List<string>();
+			var definitions = multiplePutIndexParam.Definitions;
+			var priorities = multiplePutIndexParam.Priorities;
+			var indexes = multiplePutIndexParam.IndexesNames;
+			string[] createdIndexes;
 			for (int i =0; i< indexes.Length; i++)
 			{
-				var index = indexes[i];
 				var data = definitions[i];											
 				if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
 					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
-
 				// older clients (pre 3.0) might try to create the index without MaxIndexOutputsPerDocument set
 				// in order to ensure that they don't reset the default value for old clients, we force the default
 				// value to maintain the existing behavior
 				if (!data.MaxIndexOutputsPerDocument.HasValue || data.MaxIndexOutputsPerDocument.Value == default (int))
 					data.MaxIndexOutputsPerDocument = 16*1024;
-				try
-				{
-					Database.Indexes.PutIndex(index, data, true);
-					createdIndexes.Add(index);					
-				}
-				catch (Exception ex)
-				{
-					var compilationException = ex as IndexCompilationException;
-
-					return GetMessageWithObject(new
-					{
-						ex.Message,
-						IndexDefinitionProperty = compilationException != null ? compilationException.IndexDefinitionProperty : "",
-						ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
-						Error = ex.ToString()
-					}, HttpStatusCode.BadRequest);
-				}
 			}
-			foreach (var index in createdIndexes)
+			try
 			{
-				var instance = Database.IndexStorage.GetIndexInstance(index);
-				Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.IndexId, IndexingPriority.Normal));
+				createdIndexes = Database.Indexes.PutIndexes(indexes, definitions, priorities);
+			}
+			catch (Exception ex)
+			{
+				var compilationException = ex as IndexCompilationException;
 
+				return GetMessageWithObject(new
+				{
+					ex.Message,
+					IndexDefinitionProperty = compilationException != null ? compilationException.IndexDefinitionProperty : "",
+					ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
+					Error = ex.ToString()
+				}, HttpStatusCode.BadRequest);
 			}
 			return GetMessageWithObject(new { Indexes = createdIndexes }, HttpStatusCode.Created);
 		}
@@ -208,16 +178,17 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize index request. Error: " + e);
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
-					Message = "Could not understand json, please check its validity."
-				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+					Message = "Could not understand json, please check its validity.",
+					Error = e.Message
+				}, (HttpStatusCode)500); 
 
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize index request. Error: " + e);
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
 					e.Message
