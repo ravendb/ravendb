@@ -133,5 +133,31 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(7, stats.ValuesCount);
 			}
 		}
+
+		[Fact]
+		public async Task AdvancedAppend()
+		{
+			using (var store = NewRemoteTimeSeriesStore())
+			{
+				await store.CreatePrefixConfigurationAsync("-Simple", 1);
+				await store.CreatePrefixConfigurationAsync("-ForValues", 4);
+
+				using (var batch = store.Advanced.NewBatch(new TimeSeriesBatchOptions { }))
+				{
+					for (int i = 0; i < 1888; i++)
+					{
+						batch.ScheduleAppend("-Simple", "Is", DateTime.Now, 3D);
+						batch.ScheduleAppend("-Simple", "Money", DateTime.Now, 13D);
+						batch.ScheduleAppend("-ForValues", "Time", DateTime.Now, 3D, 4D, 5D, 6D);
+					}
+					await batch.FlushAsync();
+				}
+
+				var stats = await store.GetTimeSeriesStatsAsync();
+				Assert.Equal(2, stats.PrefixesCount);
+				Assert.Equal(3, stats.KeysCount);
+				Assert.Equal(1888 * 3, stats.ValuesCount);
+			}
+		}
 	}
 }
