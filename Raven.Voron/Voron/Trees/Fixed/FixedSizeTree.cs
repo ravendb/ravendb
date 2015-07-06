@@ -533,6 +533,7 @@ namespace Voron.Trees.Fixed
                 // only single entry, just remove it
                 _flags = null;
                 _parent.Delete(_treeName);
+				header->NumberOfEntries--;
                 return;
             }
 

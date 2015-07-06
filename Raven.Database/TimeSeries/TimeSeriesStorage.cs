@@ -642,13 +642,9 @@ namespace Raven.Database.TimeSeries
 
 					do
 					{
-						fixedTree.Delete(it.CurrentKey);
 						storage.UpdateValuesCount(tx, -1);
-					} while (it.MoveNext());
-				}
-
-				using (var it = fixedTree.Iterate())
-				{
+					} while (it.DeleteCurrentAndMoveNext());
+				
 					if (it.Seek(DateTime.MinValue.Ticks) == false)
 					{
 						storage.UpdateKeysCount(tx, -1);
@@ -695,9 +691,8 @@ namespace Raven.Database.TimeSeries
 						if (it.CurrentKey > end)
 							break;
 
-						fixedTree.Delete(it.CurrentKey);
 						storage.UpdateValuesCount(tx, -1);
-					} while (it.MoveNext());
+					} while (it.DeleteCurrentAndMoveNext());
 
 					if (it.Seek(DateTime.MinValue.Ticks) == false)
 					{
