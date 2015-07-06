@@ -162,9 +162,9 @@ namespace Raven.Database
 				try
 				{
 					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-					initializer.InitializeIndexDefinitionStorage();
+                    initializer.InitializeIndexDefinitionStorage();
 					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
-					Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
+                    Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
 					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
 					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
 					Subscriptions = new SubscriptionActions(this, Log);
@@ -172,7 +172,7 @@ namespace Raven.Database
 					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
 					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
 					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
-					Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
+                    Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
 					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
 
@@ -184,12 +184,12 @@ namespace Raven.Database
 					InitializeIndexCodecTriggers();
 					initializer.InitializeIndexStorage();
 
-
+				
 
 					CompleteWorkContextSetup();
 
 					prefetcher = new Prefetcher(workContext);
-
+					
 					IndexReplacer = new IndexReplacer(this);
 					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 					InitializeTriggersExceptIndexCodecs();
@@ -464,7 +464,7 @@ namespace Raven.Database
 								CustomBundles = customBundles
 							};
 			}
-		}
+		}	
 
 		private List<string> FindPluginBundles(Type[] types)
 		{
@@ -508,7 +508,7 @@ namespace Raven.Database
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
 					SupportsDtc = TransactionalStorage.SupportsDtc,
-					Is64Bit = Environment.Is64BitProcess
+                    Is64Bit = Environment.Is64BitProcess
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -982,6 +982,11 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
+		public void StartIndexingWorkers()
+		{
+			workContext.StartIndexing();
+		}
+
 		public void StopIndexingWorkers(bool manualStop)
 		{
 			if (manualStop == false && indexingWorkersStoppedManually)
@@ -1180,8 +1185,8 @@ namespace Raven.Database
 			{
 				var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
 				if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
-					&& configuration.Storage.Voron.AllowOn32Bits == false &&
-					Environment.Is64BitProcess == false)
+					&& configuration.Storage.Voron.AllowOn32Bits == false && 
+                    Environment.Is64BitProcess == false)
 				{
 					throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
 				}
@@ -1262,10 +1267,10 @@ namespace Raven.Database
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
-			public void InitializeIndexDefinitionStorage()
+		    public void InitializeIndexDefinitionStorage()
 			{
 				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
-			}
+		    }
 
 			public void InitializeIndexStorage()
 			{
@@ -1298,7 +1303,7 @@ namespace Raven.Database
 							Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
 							UniqueKey = "Free space (index)"
 						});
-					}
+		}
 					else
 					{
 						if (freeSpaceInMb <= warningThresholdInMb)

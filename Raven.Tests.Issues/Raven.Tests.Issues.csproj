@@ -55,6 +55,12 @@
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
     </Reference>
+    <Reference Include="FluentAssertions">
+      <HintPath>..\packages\FluentAssertions.3.4.0\lib\net45\FluentAssertions.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentAssertions.Core">
+      <HintPath>..\packages\FluentAssertions.3.4.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+    </Reference>
     <Reference Include="Jint, Version=2.4.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Jint.dll</HintPath>
@@ -146,6 +152,7 @@
     <Compile Include="RavenDB-3509.cs" />
     <Compile Include="RavenDB-3530.cs" />
     <Compile Include="RavenDB_3230.cs" />
+    <Compile Include="RavenDB_3573.cs" />
     <Compile Include="RavenDB_3365.cs" />
     <Compile Include="RavenDB_3580.cs" />
     <Compile Include="RavenDB_3271.cs" />
@@ -420,6 +427,7 @@
     <Compile Include="RavenDB_3574.cs" />
     <Compile Include="Prefetcher\RavenDB_3581.cs" />
     <Compile Include="RavenDB_3612.cs" />
+    <Compile Include="RavenDB_3625.cs" />
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_381.cs" />
     <Compile Include="RavenDB_384.cs" />
@@ -544,6 +552,10 @@
     <ProjectReference Include="..\Raven.Tests.MailingList\Raven.Tests.MailingList.csproj">
       <Project>{EA32FD05-8537-4A31-879E-20A0F2C87479}</Project>
       <Name>Raven.Tests.MailingList</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Misc\Raven.Tests.Misc.csproj">
+      <Project>{58f22727-ee7a-4373-8f1f-c5f8e0c080c6}</Project>
+      <Name>Raven.Tests.Misc</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>

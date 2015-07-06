@@ -12,7 +12,9 @@ using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
@@ -584,6 +586,120 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
+		[HttpPost]
+		[RavenRoute("replication/side-by-side/")]
+		[RavenRoute("databases/{databaseName}/replication/side-by-side/")]
+		public HttpResponseMessage ReplicateSideBySideIndex([FromBody] SideBySideReplicationInfo sideBySideReplicationInfo)
+		{
+			var index = Database.Indexes.GetIndexDefinition(sideBySideReplicationInfo.Index.Name);
+			var sideBySideIndex = Database.Indexes.GetIndexDefinition(sideBySideReplicationInfo.SideBySideIndex.Name);
+
+			//handle special cases first
+			if (index == null)
+			{
+				//if there is no main index we would recreate it with side-by-side index definition,
+				//but if something happened and the old index was deleted and the side-by-side index was not deleted,
+				//then it is not needed anymore and should be deleted
+				if (sideBySideIndex != null)
+				{
+					using (Database.DisableAllTriggersForCurrentThread())//prevent this from being replicated as this change is internal and should not be replicated
+					using (Database.DocumentLock.Lock()) //prevent race condition -> simultaneously with replication to this node, 
+														 //a client creates side-by-side index
+					{
+						Database.Indexes.DeleteIndex(sideBySideIndex.Name);
+						var id = Constants.IndexReplacePrefix + sideBySideReplicationInfo.SideBySideIndex.Name;
+						Database.Documents.Delete(id, null, null);
+					}
+				}
+
+				return InternalPutIndex(sideBySideReplicationInfo.Index.Name,
+					sideBySideReplicationInfo.SideBySideIndex,
+					string.Format("Index with the name {0} wasn't found, so we created it with side-by-side index definition. (Perhaps it was deleted?)", sideBySideReplicationInfo.Index.Name));
+			}
+
+			if (index.Equals(sideBySideReplicationInfo.SideBySideIndex, false))
+				return GetMessageWithObject(new
+				{
+					Message = "It appears that side-by-side index already replaced the old index. Nothing to do..."
+				}, HttpStatusCode.NotModified);
+
+			//if both side-by-side index and the original index are identical, nothing to do here
+			var areIndexesEqual = index.Equals(sideBySideReplicationInfo.Index, false);
+			var areSideBySideIndexesEqual = (sideBySideIndex != null) && sideBySideIndex.Equals(sideBySideReplicationInfo.SideBySideIndex, false);
+
+			if (areIndexesEqual && areSideBySideIndexesEqual)
+				return GetMessageWithObject(new
+				{
+					Message = "It appears that side-by-side index and the old index are the same. Nothing to do..."
+				}, HttpStatusCode.NotModified);
+
+			if (areIndexesEqual == false && areSideBySideIndexesEqual)
+				return InternalPutIndex(sideBySideReplicationInfo.Index, "Side-by-side indexes were equal, updated the old index.");
+
+			// ReSharper disable once ConditionIsAlwaysTrueOrFalse -> for better readability
+			if (areIndexesEqual && areSideBySideIndexesEqual == false)
+			{
+				PutSideBySideIndexDocument(sideBySideReplicationInfo);
+				return InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
+			}
+
+			PutSideBySideIndexDocument(sideBySideReplicationInfo);
+			var updateIndexResult = InternalPutIndex(sideBySideReplicationInfo.Index, "Side-by-side indexes were equal, updated the old index.");
+			var updateSideBySideIndexResult = InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
+
+			if (updateIndexResult.IsSuccessStatusCode && updateSideBySideIndexResult.IsSuccessStatusCode)
+				return GetMessageWithObject(new
+				{
+					Indexes = new[] { sideBySideReplicationInfo.Index.Name, sideBySideReplicationInfo.SideBySideIndex.Name },
+					Message = "Both index and side-by-side index were different, so we updated them both"
+				}, HttpStatusCode.Created);
+
+			return updateIndexResult.IsSuccessStatusCode == false ?
+				updateIndexResult : updateSideBySideIndexResult;
+		}
+
+		private void PutSideBySideIndexDocument(SideBySideReplicationInfo sideBySideReplicationInfo)
+		{
+			using (Database.DocumentLock.Lock())
+			{
+				var id = Constants.IndexReplacePrefix + sideBySideReplicationInfo.SideBySideIndex.Name;
+				var indexReplaceDocument = sideBySideReplicationInfo.IndexReplaceDocument;
+
+				if (indexReplaceDocument.MinimumEtagBeforeReplace != null) //TODO : verify that this is OK -> not sure
+					indexReplaceDocument.MinimumEtagBeforeReplace = EtagUtil.Increment(Database.Statistics.LastDocEtag, 1);
+				Database.TransactionalStorage.Batch(accessor => accessor.Documents.AddDocument(id, null, RavenJObject.FromObject(indexReplaceDocument), new RavenJObject()));
+			}
+		}
+
+		private HttpResponseMessage InternalPutIndex(IndexDefinition indexToUpdate, string message)
+		{
+			return InternalPutIndex(indexToUpdate.Name, indexToUpdate, message);
+		}
+
+		private HttpResponseMessage InternalPutIndex(string indexName, IndexDefinition indexToUpdate, string message)
+		{
+			try
+			{
+				Database.Indexes.PutIndex(indexName, indexToUpdate);
+				return GetMessageWithObject(new
+				{
+					Index = indexToUpdate.Name,
+					Message = message
+				}, HttpStatusCode.Created);
+			}
+			catch (Exception ex)
+			{
+				var compilationException = ex as IndexCompilationException;
+
+				return GetMessageWithObject(new
+				{
+					ex.Message,
+					IndexDefinitionProperty = compilationException != null ? compilationException.IndexDefinitionProperty : "",
+					ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
+					Error = ex.ToString()
+				}, HttpStatusCode.BadRequest);
+			}
+		}
 		
 		[HttpPost]
 		[RavenRoute("replication/replicate-indexes")]
