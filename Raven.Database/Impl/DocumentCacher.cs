@@ -5,6 +5,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
@@ -125,6 +126,27 @@ namespace Raven.Database.Impl
 				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
                 // in this case, we just treat it as uncacheable
 			}
+		}
+
+		public object GetStatistics()
+		{
+			long v = 0;
+			foreach (var kvp in cachedSerializedDocuments)
+			{
+				var cachedDocument = kvp.Value as CachedDocument;
+				if (cachedDocument != null)
+					v += cachedDocument.Size;
+			}
+			return new
+			{
+				cachedSerializedDocuments.CacheMemoryLimit,
+				cachedSerializedDocuments.DefaultCacheCapabilities,
+				cachedSerializedDocuments.PhysicalMemoryLimit,
+				cachedSerializedDocuments.PollingInterval,
+				CachedItems = cachedSerializedDocuments.GetCount(),
+				Size = v,
+				HumaneSize = SizeHelper.Humane(v)
+			};
 		}
 
 		public void Dispose()

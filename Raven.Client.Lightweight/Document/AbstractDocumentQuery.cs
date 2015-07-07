@@ -420,7 +420,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng)
 		{
-			OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat, lng));
+			OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
 			return this;
 		}
 
@@ -429,7 +429,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng, string sortedFieldName)
 		{
-			OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat, lng, sortedFieldName));
+			OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
 			return this;
 		}
 
@@ -596,7 +596,6 @@ namespace Raven.Client.Document
 		protected internal QueryOperation InitializeQueryOperation()
 		{
 			var indexQuery = GetIndexQuery(isAsync: false);
-			this.afterStreamExecutedCallback = afterStreamExecutedCallback;
 
 			if (beforeQueryExecutionAction != null)
 				beforeQueryExecutionAction(indexQuery);

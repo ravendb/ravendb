@@ -1,44 +1,65 @@
 ﻿import document = require("models/database/documents/document");
 import file = require("models/filesystem/file");
+import counterSummary = require("models/counter/counterSummary");
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import deleteFilesCommand = require("commands/filesystem/deleteFilesCommand");
+import deleteCountersCommand = require("commands/counter/deleteCountersCommand");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class deleteItems extends dialogViewModelBase {
 
-    private documents = ko.observableArray<documentBase>();
+    private items = ko.observableArray<documentBase>();
     private deletionStarted = false;
     public deletionTask = $.Deferred(); // Gives consumers a way to know when the async delete operation completes.
 
-    constructor(documents: Array<documentBase>, elementToFocusOnDismissal?: string) {
+    constructor(items: Array<documentBase>, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
 
-        if (documents.length === 0) {
+        if (items.length === 0) {
             throw new Error("Must have at least one document to delete.");
         }
 
-        this.documents(documents);
+        this.items(items);
     }
 
     deleteItems() {
-        var deleteItemsIds = this.documents().map(i => i.getUrl());
+        var deleteItemsIds = this.items().map(i => i.getUrl());
         var deleteCommand;
-        if (this.documents()[0] instanceof document) {
+        if (this.items()[0] instanceof document) {
             deleteCommand = new deleteDocumentsCommand(deleteItemsIds, appUrl.getDatabase());
         }
-        else if (this.documents()[0] instanceof file) {
+        else if (this.items()[0] instanceof file) {
             deleteCommand = new deleteFilesCommand(deleteItemsIds, appUrl.getFileSystem());
+        }
+        else if (this.items()[0] instanceof counterSummary) {
+	        var counters: any = this.items();
+			var groupAndNames: {groupName: string; counterName: string}[] = counters.map((x: counterSummary) => {
+				return {
+					groupName: x.Group,
+					counterName: x.Name
+				}
+			});
+            deleteCommand = new deleteCountersCommand(groupAndNames, appUrl.getCounterStorage());
         }
         var deleteCommandTask = deleteCommand.execute();
 
-        deleteCommandTask.done(() => this.deletionTask.resolve(this.documents()));
+        deleteCommandTask.done(() => this.deletionTask.resolve(this.items()));
         deleteCommandTask.fail(response => this.deletionTask.reject(response));
 
         this.deletionStarted = true;
         dialog.close(this);
     }
+
+	getDeletedItemName(): string {
+		var item = this.items()[0];
+		if (item instanceof counterSummary) {
+			return " counter name: " + item.Name + ", group: " + item.Group;
+		}
+
+		return item.getId();
+	}
 
     cancel() {
         dialog.close(this);

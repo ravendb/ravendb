@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace Raven.Client.Connection.Async
 {
     public abstract class AsyncServerClientBase<TConvention, TReplicationInformer> : IDisposalNotification 
-        where TConvention : Convention
+        where TConvention : ConventionBase
         where TReplicationInformer : IReplicationInformerBase
     {
         protected AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory, 

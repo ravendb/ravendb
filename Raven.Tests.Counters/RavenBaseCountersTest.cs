@@ -10,6 +10,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Client;
 using Raven.Client.Counters;
+using Raven.Client.Extensions;
 using Raven.Database.Extensions;
 using Raven.Tests.Helpers;
 
@@ -19,7 +20,7 @@ namespace Raven.Tests.Counters
 	{
 		protected readonly IDocumentStore ravenStore;
 		private readonly ConcurrentDictionary<string, int> storeCount;
-		protected readonly string DefaultCounteStorageName = "ThisIsRelativelyUniqueCounterName";
+		protected readonly string DefaultCounterStorageName = "ThisIsRelativelyUniqueCounterName";
 
 		protected RavenBaseCountersTest()
 		{
@@ -27,7 +28,7 @@ namespace Raven.Tests.Counters
 				IOExtensions.DeleteDirectory(folder);
 
 			ravenStore = NewRemoteDocumentStore(fiddler:true);
-			DefaultCounteStorageName += Guid.NewGuid();
+			DefaultCounterStorageName += Guid.NewGuid();
 			storeCount = new ConcurrentDictionary<string, int>();
 		}
 
@@ -44,17 +45,6 @@ namespace Raven.Tests.Counters
 			};
 			counterStore.Initialize(createDefaultCounter);
 			return counterStore;
-		}
-
-		protected CounterStorageDocument CreateCounterStorageDocument(string counterName)
-		{
-			return new CounterStorageDocument
-			{
-				Settings = new Dictionary<string, string>
-				{
-					{ "Raven/Counters/DataDir", @"~\Counters\" + counterName }
-				},
-			};
 		}
 
 		public override void Dispose()

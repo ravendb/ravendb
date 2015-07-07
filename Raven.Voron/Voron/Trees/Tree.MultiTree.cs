@@ -1,4 +1,5 @@
-﻿// -----------------------------------------------------------------------
+﻿using Sparrow;
+// -----------------------------------------------------------------------
 //  <copyright file="Tree.MultiTree.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -139,7 +140,7 @@ namespace Voron.Trees
 			using (tx.Environment.GetTemporaryPage(tx, out tmp))
 			{
 				var tempPagePointer = tmp.TempPagePointer;
-                MemoryUtils.Copy(tempPagePointer, nestedPagePtr, currentSize);
+                Memory.Copy(tempPagePointer, nestedPagePtr, currentSize);
 				Delete(key); // release our current page
 				Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort)currentSize);
 
@@ -239,14 +240,14 @@ namespace Voron.Trees
 				if (tree.State.EntriesCount != 0) 
 					return;
 				_tx.TryRemoveMultiValueTree(this, key);
-				_tx.FreePage(tree.State.RootPageNumber);
+				FreePage(_tx.GetReadOnlyPage(tree.State.RootPageNumber));
 				Delete(key);
 			}
 			else // we use a nested page here
 			{
 				var nestedPage = new Page(NodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
 				var nestedItem = nestedPage.Search(value);
-				if (nestedItem == null) // value not found
+				if (nestedPage.LastMatch != 0) // value not found
 					return;
 
 				byte* nestedPagePtr;
@@ -270,6 +271,35 @@ namespace Voron.Trees
 				if (nestedPage.NumberOfEntries == 0)
 					Delete(key);
 			}
+		}
+
+		//TODO: write a test for this
+		public long MultiCount(Slice key)
+		{
+			Lazy<Cursor> lazy;
+			NodeHeader* node;
+			var page = FindPageFor(key, out node, out lazy);
+			if (page == null || page.LastMatch != 0)
+				return 0;
+
+			Debug.Assert(node != null);
+
+			var fetchedNodeKey = page.GetNodeKey(node);
+			if (fetchedNodeKey.Compare(key) != 0)
+			{
+				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+			}
+
+			if (node->Flags == NodeFlags.MultiValuePageRef)
+			{
+				var tree = OpenMultiValueTree(_tx, key, node);
+
+				return tree.State.EntriesCount;
+			}
+
+			var nestedPage = new Page(NodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, node));
+
+			return nestedPage.NumberOfEntries;
 		}
 
 		public IIterator MultiRead(Slice key)

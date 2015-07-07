@@ -11,7 +11,7 @@ namespace Raven.Client.Metrics
 	{
 		void Update(long requestTimeInMilliseconds);
 
-		bool RateSurpassed(Convention conventions);
+		bool RateSurpassed(ConventionBase conventions);
 
 		double Rate();
 	}
@@ -46,7 +46,7 @@ namespace Raven.Client.Metrics
 			requestTimeMetric.Update((long)decreasingRate);
 		}
 
-		public bool RateSurpassed(Convention conventions)
+		public bool RateSurpassed(ConventionBase conventions)
 		{
 			throw new NotSupportedException();
 		}
@@ -79,7 +79,7 @@ namespace Raven.Client.Metrics
 			ewma.Tick();
 		}
 
-		public bool RateSurpassed(Convention conventions)
+		public bool RateSurpassed(ConventionBase conventions)
 		{
 			var requestTimeThresholdInMilliseconds = conventions.RequestTimeThresholdInMilliseconds;
 			var rate = Rate();

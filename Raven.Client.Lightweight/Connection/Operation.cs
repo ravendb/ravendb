@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
@@ -17,7 +18,7 @@ namespace Raven.Client.Connection
 		{
 			this.id = id;
 			this.state = state;
-			this.done = true;
+			done = true;
 		}
 
         public Operation(Func<long, Task<RavenJToken>> statusFetcher, long id)
@@ -65,7 +66,7 @@ namespace Raven.Client.Connection
 
 		public RavenJToken WaitForCompletion()
 		{
-			return WaitForCompletionAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(WaitForCompletionAsync);
 		}
 	}
 }

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -136,7 +137,7 @@ namespace Voron.Impl.Journal
 		/// </summary>
 		public long Write(Transaction tx, IntPtr[] pages)
 		{
-			var ptt = new Dictionary<long, PagePosition>(LongEqualityComparer.Instance);
+            var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
 			var unused = new HashSet<PagePosition>();
 			var pageWritePos = _writePage;
 

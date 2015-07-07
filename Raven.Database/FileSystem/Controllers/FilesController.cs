@@ -21,6 +21,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Database.Extensions;
 using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Database.FileSystem.Controllers

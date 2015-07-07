@@ -3,8 +3,8 @@ using System.Collections.Generic;
 
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
+using Raven.Database.Plugins;
 using Raven.Database.Raft;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
@@ -21,7 +21,10 @@ namespace Raven.Database.Server
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
-		private readonly WebSocketBufferPool webSocketBufferPool;
+		private readonly TimeSeriesLandlord timeSeriesLandlord;
+
+		private readonly IList<IDisposable> toDispose = new List<IDisposable>();
+		private readonly IEnumerable<IServerStartupTask> serverStartupTasks;
 
 		private bool preventDisposing;
 
@@ -44,14 +47,24 @@ namespace Raven.Database.Server
 				{
 					systemDatabase = db;
 				}
+
+				WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
 			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
+				timeSeriesLandlord = new TimeSeriesLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
 				ClusterManager = new Reference<ClusterManager>();
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-				webSocketBufferPool = new WebSocketBufferPool(configuration.WebSockets.InitialBufferPoolSize);
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
+
+				serverStartupTasks = configuration.Container.GetExportedValues<IServerStartupTask>();
+
+				foreach (var task in serverStartupTasks)
+				{
+					toDispose.Add(task);
+					task.Execute(this);
+			}
 			}
 			catch
 			{
@@ -59,6 +72,11 @@ namespace Raven.Database.Server
 					systemDatabase.Dispose();
 				throw;
 			}
+		}
+
+		public IEnumerable<IServerStartupTask> ServerStartupTasks
+		{
+			get { return serverStartupTasks; }
 		}
 
 		public DocumentDatabase SystemDatabase
@@ -85,6 +103,11 @@ namespace Raven.Database.Server
 			get { return countersLandlord; }
 		}
 
+		public TimeSeriesLandlord TimeSeriesLandlord
+		{
+			get { return timeSeriesLandlord; }
+		}
+
 	    public RequestManager RequestManager
 		{
 			get { return requestManager; }
@@ -92,27 +115,24 @@ namespace Raven.Database.Server
 
 		public Reference<ClusterManager> ClusterManager { get; private set; }
 
-		public WebSocketBufferPool WebSocketBufferPool
-		{
-			get { return webSocketBufferPool; }
-		}
+		public bool Disposed { get; private set; }
 
 		public void Dispose()
 		{
-			if(preventDisposing)
+			if (preventDisposing || Disposed)
 				return;
 
-		    var toDispose = new List<IDisposable>
-		                    {
-		                        mixedModeRequestAuthorizer, 
-                                databasesLandlord, 
-                                fileSystemLandlord,
-                                systemDatabase, 
-                                LogManager.GetTarget<AdminLogsTarget>(),
-                                requestManager,
-                                countersLandlord,
-								ClusterManager.Value
-		                    };
+			Disposed = true;
+
+			toDispose.Add(mixedModeRequestAuthorizer);
+			toDispose.Add(databasesLandlord);
+			toDispose.Add(fileSystemLandlord);
+			toDispose.Add(systemDatabase);
+			toDispose.Add(LogManager.GetTarget<AdminLogsTarget>());
+			toDispose.Add(requestManager);
+                        toDispose.Add(countersLandlord);
+
+        toDispose.Add(ClusterManager.Value);
 
             var errors = new List<Exception>();
 

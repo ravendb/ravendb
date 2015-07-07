@@ -78,7 +78,7 @@ namespace Raven.Client.FileSystem
 
         protected override IFilesReplicationInformer GetReplicationInformer()
         {
-            return new FilesReplicationInformer(this.Conventions, this.RequestFactory);
+            return new FilesReplicationInformer(Conventions, RequestFactory);
         }
 
         protected override string BaseUrl
@@ -1785,9 +1785,10 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task CreateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null)
+            public async Task CreateFileSystemAsync(FileSystemDocument filesystemDocument)
             {
-				var requestUriString = string.Format("{0}/admin/fs/{1}", client.ServerUrl,
+	            string newFileSystemName = filesystemDocument.Id.Replace(Constants.FileSystem.Prefix, "");
+	            var requestUriString = string.Format("{0}/admin/fs/{1}", client.ServerUrl,
                                                      newFileSystemName ?? client.FileSystem);
 
 				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Put, client.PrimaryCredentials, convention)))
@@ -1851,15 +1852,7 @@ namespace Raven.Client.FileSystem
                 if (filesystems.Contains(fileSystem))
                     return;
 
-                await CreateOrUpdateFileSystemAsync(
-                    new FileSystemDocument
-                    {
-                        Id = "Raven/FileSystem/" + fileSystem,
-                        Settings =
-                        {
-                            { Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", fileSystem))}
-                        }
-					}, fileSystem).ConfigureAwait(false);
+                await CreateOrUpdateFileSystemAsync(MultiDatabase.CreateFileSystemDocument(fileSystem), fileSystem).ConfigureAwait(false);
             }
 
             public async Task<long> StartRestore(FilesystemRestoreRequest restoreRequest)

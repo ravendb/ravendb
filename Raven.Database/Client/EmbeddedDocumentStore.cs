@@ -2,6 +2,7 @@
 using System.Collections.Specialized;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -57,9 +58,8 @@ namespace Raven.Database.Client
 		{
 			get
 			{
-				return server.Server
-					.GetDatabaseInternal(DefaultDatabase ?? Constants.SystemDatabase)
-					.ResultUnwrap();
+				return AsyncHelpers.RunSync(() => 
+					server.Server.GetDatabaseInternal(DefaultDatabase ?? Constants.SystemDatabase));
 			}
 		}
 

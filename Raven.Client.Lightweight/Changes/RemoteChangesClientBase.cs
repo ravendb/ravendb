@@ -14,9 +14,10 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
 {
-    public abstract class RemoteChangesClientBase<TChangesApi, TConnectionState> : IDisposable, IObserver<string>, IConnectableChanges<TChangesApi>
+    public abstract class RemoteChangesClientBase<TChangesApi, TConnectionState, TConventions> : IDisposable, IObserver<string>, IConnectableChanges<TChangesApi>
                                 where TConnectionState : class, IChangesConnectionState
                                 where TChangesApi : class, IConnectableChanges
+								where TConventions : ConventionBase
     {
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
@@ -25,7 +26,6 @@ namespace Raven.Client.Changes
         private readonly string url;
         private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
-	    private readonly Func<string, bool> shouldCacheRequest;
         private readonly Action onDispose;                
 
         private IDisposable connection;
@@ -34,27 +34,16 @@ namespace Raven.Client.Changes
         private static int connectionCounter;
         private readonly string id;
 
+		// This is the StateCounters, it is not related to the counters database
         protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
-
-	    protected RemoteChangesClientBase(
-            string url,
-            string apiKey,
-            ICredentials credentials,
-            HttpJsonRequestFactory jsonRequestFactory,
-            Convention conventions,
-            Action onDispose )
-			:this(url,apiKey,credentials,jsonRequestFactory,conventions.ShouldCacheRequest,onDispose)
-        {
-           
-        }
-
+        
 		protected RemoteChangesClientBase(
-		   string url,
-		   string apiKey,
-		   ICredentials credentials,
-		   HttpJsonRequestFactory jsonRequestFactory,
-		   Func<string,bool> shouldCacheRequest,
-		   Action onDispose)
+			string url,
+			string apiKey,
+			ICredentials credentials,
+			HttpJsonRequestFactory jsonRequestFactory,
+			TConventions conventions,
+			Action onDispose)
 		{
 			// Precondition
 			var api = this as TChangesApi;
@@ -69,7 +58,7 @@ namespace Raven.Client.Changes
 			this.credentials = new OperationCredentials(apiKey, credentials);
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.onDispose = onDispose;
-			this.shouldCacheRequest = shouldCacheRequest;
+			Conventions = conventions;
 			Task = EstablishConnection()
 						.ObserveException()
 						.ContinueWith(task =>
@@ -79,7 +68,9 @@ namespace Raven.Client.Changes
 						});
 		}
 
-        public bool Connected { get; private set; }
+		protected TConventions Conventions { get; private set; }
+
+	    public bool Connected { get; private set; }
         public event EventHandler ConnectionStatusChanged;
 
         private void LogOnConnectionStatusChanged(object sender, EventArgs eventArgs)
@@ -109,7 +100,7 @@ namespace Raven.Client.Changes
                 clientSideHeartbeatTimer = null;
             }
 
-			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethods.Get, credentials, shouldCacheRequest)
+			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethods.Get, credentials, Conventions)
             {
                 AvoidCachingRequest = true,
                 DisableRequestCompression = true
@@ -198,7 +189,7 @@ namespace Raven.Client.Changes
                     if (string.IsNullOrEmpty(value) == false)
                         sendUrl += "&value=" + Uri.EscapeUriString(value);
 
-					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.Get, credentials, shouldCacheRequest)
+					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.Get, credentials, Conventions)
                     {
                         AvoidCachingRequest = true
                     };
@@ -325,5 +316,48 @@ namespace Raven.Client.Changes
 
         public virtual void OnCompleted()
         { }
+
+		protected TConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, Action afterConnection, Action beforeDisconnect, string value)
+		{
+			var counter = Counters.GetOrAdd(name, s =>
+			{
+				Action onZero = () =>
+				{
+					beforeDisconnect();
+					Send(unwatchCommand, value);
+					Counters.Remove(name);
+				};
+
+				Func<TConnectionState, Task> ensureConnection = existingConnectionState =>
+				{
+					TConnectionState _;
+					if (Counters.TryGetValue(name, out _))
+						return _.Task;
+
+					Counters.GetOrAdd(name, x => existingConnectionState);
+
+					return AfterConnection(() =>
+					{
+						afterConnection();
+						return Send(watchCommand, value);
+					});
+				};
+
+				var counterSubscriptionTask = AfterConnection(() =>
+				{
+					afterConnection();
+					return Send(watchCommand, value);
+				});
+
+				return CreateTConnectionState(onZero, ensureConnection, counterSubscriptionTask);
+			});
+
+			return counter;
+		}
+
+	    private static TConnectionState CreateTConnectionState(params object[] args)
+		{
+			return (TConnectionState)Activator.CreateInstance(typeof(TConnectionState), args);
+		}
     }
 }

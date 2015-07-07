@@ -20,7 +20,7 @@ class apiKeys extends viewModelBase {
         this.searchText.throttle(200).subscribe(value => this.filterKeys(value));
 
         var resourceNames = shell.databases()
-            .filter(db => db.name != "<system>").map(db => db.name)
+            .filter(db => db.name !== "<system>").map(db => db.name)
             .concat(shell.fileSystems().map(fs => fs.name));
         this.allDatabases(resourceNames);
     }

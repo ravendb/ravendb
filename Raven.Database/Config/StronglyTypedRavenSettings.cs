@@ -28,6 +28,10 @@ namespace Raven.Database.Config
 
 		public FileSystemConfiguration FileSystem { get; private set; }
 
+		public CounterConfiguration Counter { get; private set; }
+
+		public TimeSeriesConfiguration TimeSeries { get; private set; }
+
 		public EncryptionConfiguration Encryption { get; private set; }
 
 		public IndexingConfiguration Indexing { get; set; }
@@ -45,6 +49,8 @@ namespace Raven.Database.Config
 			Esent = new EsentConfiguration();
 			Prefetcher = new PrefetcherConfiguration();
 			FileSystem = new FileSystemConfiguration();
+			Counter = new CounterConfiguration();
+			TimeSeries = new TimeSeriesConfiguration();
 			Encryption = new EncryptionConfiguration();
 			Indexing = new IndexingConfiguration();
 			WebSockets = new WebSocketsConfiguration();
@@ -147,8 +153,6 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/DataDir"], @"~\Data");
 			IndexStoragePath =
 				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
-			CountersDataDir =
-				new StringSetting(settings["Raven/Counters/DataDir"], @"~\Data\Counters");
 
 			HostName =
 				new StringSetting(settings["Raven/HostName"], (string)null);
@@ -247,6 +251,13 @@ namespace Raven.Database.Config
             FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
             FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
             FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate],false);
+
+			Counter.DataDir = new StringSetting(settings[Constants.Counter.DataDirectory], @"~\Counters");
+			Counter.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.Counter.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
+			Counter.DeletedTombstonesInBatch = new IntegerSetting(settings[Constants.Counter.DeletedTombstonesInBatch], 1000);
+
+			TimeSeries.DataDir = new StringSetting(settings[Constants.TimeSeries.DataDirectory], @"~\TimeSeries");
+
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
 			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
@@ -367,8 +378,6 @@ namespace Raven.Database.Config
 		public StringSetting DataDir { get; private set; }
 
 		public StringSetting IndexStoragePath { get; private set; }
-
-		public StringSetting CountersDataDir { get; private set; }
 
 		public StringSetting HostName { get; private set; }
 
@@ -516,6 +525,20 @@ namespace Raven.Database.Config
 			public StringSetting DefaultStorageTypeName { get; set; }
 
             public BooleanSetting PreventSchemaUpdate { get; set; }
+		}
+
+		public class CounterConfiguration
+		{
+			public StringSetting DataDir { get; set; }
+
+			public TimeSpanSetting TombstoneRetentionTime { get; set; }
+
+			public IntegerSetting DeletedTombstonesInBatch { get; set; }
+		}
+
+		public class TimeSeriesConfiguration
+		{
+			public StringSetting DataDir { get; set; }
 		}
 
 		public class EncryptionConfiguration

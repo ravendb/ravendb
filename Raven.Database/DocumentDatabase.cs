@@ -15,6 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
 using Raven.Abstractions;
@@ -45,6 +46,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Abstractions.Threading;
+using Raven.Json.Linq;
 
 namespace Raven.Database
 {
@@ -96,7 +98,7 @@ namespace Raven.Database
 			Configuration = configuration;
 			transportState = recievedTransportState ?? new TransportState();
 			ExtensionsState = new AtomicDictionary<object>();
-			
+
 			using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
 			{
 				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
@@ -173,7 +175,9 @@ namespace Raven.Database
 
                     ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
 
-					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
+					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, 
+						(key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation), 
+						(key, etag, transactionInformation) => Documents.Delete(key, etag, transactionInformation));
 
 					InitializeTriggersExceptIndexCodecs();
 					// Second stage initializing before index storage for determining the hash algotihm for encrypted databases that were upgraded from 2.5
@@ -191,7 +195,7 @@ namespace Raven.Database
 					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 					InitializeTriggersExceptIndexCodecs();
 
-					
+
 
 					ExecuteStartupTasks();
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
@@ -553,6 +557,12 @@ namespace Raven.Database
 		})
 						.Where(x => x != null)
 						.ToArray();
+
+					result.CountOfIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
+					result.CountOfStaleIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx =>
+						result.StaleIndexes.Contains(idx.Name)
+						&& !idx.Priority.HasFlag(IndexingPriority.Disabled)
+						&& !idx.Priority.HasFlag(IndexingPriority.Abandoned));
 				});
 
 				if (result.Indexes != null)
@@ -679,21 +689,21 @@ namespace Raven.Database
 		{
 			MetricsCountersManager metrics = WorkContext.MetricsCounters;
 			return new DatabaseMetrics
-			{
-				RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
-				DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
-				IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
-				ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
+		{
+			RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+			DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
+			IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
+			ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
 				RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
 				RequestDurationLastMinute = metrics.RequestDurationLastMinute.GetData(),
-				Requests = metrics.ConcurrentRequests.CreateMeterData(),
-				Gauges = metrics.Gauges,
-				StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
-				StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
-				ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
-				ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
-				ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
-			};
+			Requests = metrics.ConcurrentRequests.CreateMeterData(),
+			Gauges = metrics.Gauges,
+			StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
+			StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
+			ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+			ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+			ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
+		};
 		}
 
 
@@ -732,6 +742,14 @@ namespace Raven.Database
 				return;
 
 			Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+
+			var metrics = WorkContext.MetricsCounters;
+
+			// give it 3 seconds to complete requests
+			for (int i = 0; i < 30 && Interlocked.Read(ref metrics.ConcurrentRequestsCount) > 0; i++)
+			{
+				Thread.Sleep(100);
+			}
 
 			if ( EnvironmentUtils.RunningOnPosix )				
 				MemoryStatistics.StopPosixLowMemThread ();
@@ -1036,6 +1054,11 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
+		public void ForceLicenseUpdate()
+		{
+			initializer.validateLicense.ForceExecute(Configuration);
+		}
+
 		protected void RaiseIndexingWiringComplete()
 		{
 			Action indexingWiringComplete = OnIndexingWiringComplete;
@@ -1161,8 +1184,8 @@ namespace Raven.Database
 			{
 				token.ThrowIfCancellationRequested();
 
-				ICommandData command = commands[index];
-				results[index] = command.ExecuteBatch(this);
+				var participatingIds = commands.Select(x => x.Key).ToArray();
+				results[index] = commands[index].ExecuteBatch(this, participatingIds);
 			}
 
 			return results;
@@ -1189,7 +1212,7 @@ namespace Raven.Database
 
 			private readonly InMemoryRavenConfiguration configuration;
 
-			private ValidateLicense validateLicense;
+			internal ValidateLicense validateLicense;
 
 			public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
 			{

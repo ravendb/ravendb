@@ -1,14 +1,15 @@
 ﻿import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require('viewmodels/shell');
-import license = require("models/auth/license");
+import shell = require("viewmodels/shell");
+
 import alert = require("models/database/debug/alert");
 import resource = require("models/resources/resource");
+import database = require("models/resources/database");
+
 import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
-import filesystem = require("models/filesystem/filesystem");
+
 import deleteResourceConfirm = require("viewmodels/resources/deleteResourceConfirm");
 import disableResourceToggleConfirm = require("viewmodels/resources/disableResourceToggleConfirm");
 import disableIndexingCommand = require("commands/database/index/disableIndexingCommand");
@@ -19,17 +20,25 @@ import createDatabaseCommand = require("commands/resources/createDatabaseCommand
 import createEncryptionConfirmation = require("viewmodels/resources/createEncryptionConfirmation");
 import databaseSettingsDialog = require("viewmodels/resources/databaseSettingsDialog");
 import createDefaultDbSettingsCommand = require("commands/resources/createDefaultSettingsCommand");
+
+import filesystemSettingsDialog = require("viewmodels/resources/filesystemSettingsDialog");
+
+import fileSystem = require("models/filesystem/filesystem");
 import createDefaultFsSettingsCommand = require("commands/filesystem/createDefaultSettingsCommand");
 import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
-import filesystemSettingsDialog = require("viewmodels/resources/filesystemSettingsDialog");
+import counterStorage = require("models/counter/counterStorage");
+import createCounterStorageCommand = require("commands/resources/createCounterStorageCommand");
+import timeSeries = require("models/timeSeries/timeSeries");
+import createTimeSeriesCommand = require("commands/resources/createTimeSeriesCommand");
 
 class resources extends viewModelBase {
     resources: KnockoutComputed<resource[]>;
 
     databases = ko.observableArray<database>();
-    fileSystems = ko.observableArray<filesystem>();
+    fileSystems = ko.observableArray<fileSystem>();
+    counterStorages = ko.observableArray<counterStorage>();
+    timeSeries = ko.observableArray<timeSeries>();
     searchText = ko.observable("");
-    visibleResources = ko.observable('');
     selectedResource = ko.observable<resource>();
     fileSystemsStatus = ko.observable<string>("loading");
 	isAnyResourceSelected: KnockoutComputed<boolean>;
@@ -43,25 +52,50 @@ class resources extends viewModelBase {
     isGlobalAdmin = shell.isGlobalAdmin;
 	clusterMode = ko.computed(() => shell.clusterMode());
 
+    databaseType = database.type;
+    fileSystemType = fileSystem.type;
+    counterStorageType = counterStorage.type;
+    timeSeriesType = timeSeries.type;
+    visibleResource = ko.observable("");
+    visibleOptions = [
+        { value: "", name: "Show all" }, 
+        { value: database.type, name: "Show databases" }, 
+        { value: fileSystem.type, name: "Show file systems" }, 
+        { value: counterStorage.type, name: "Show counter storages" },
+        { value: timeSeries.type, name: "Show time sereis" }
+    ];
+
     constructor() {
         super();
 
         this.databases = shell.databases;
         this.fileSystems = shell.fileSystems;
+        this.counterStorages = shell.counterStorages;
+        this.timeSeries = shell.timeSeries;
         this.resources = shell.resources;
         
         this.systemDb = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase(); 
         this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterResources());
 
-        var currentDatabse = this.activeDatabase();
-        if (!!currentDatabse) {
-            this.selectResource(currentDatabse, false);
+        var currentDatabase = this.activeDatabase();
+        if (!!currentDatabase) {
+            this.selectResource(currentDatabase, false);
         }
 
         var currentFileSystem = this.activeFilesystem();
         if (!!currentFileSystem) {
             this.selectResource(currentFileSystem, false);
+        }
+
+        var currentCounterStorage = this.activeCounterStorage();
+        if (!!currentCounterStorage) {
+            this.selectResource(currentCounterStorage, false);
+        }
+
+        var currentTimeSeries = this.activeTimeSeries();
+        if (!!currentTimeSeries) {
+            this.selectResource(currentTimeSeries, false);
         }
 
         var updatedUrl = appUrl.forResources();
@@ -127,7 +161,7 @@ class resources extends viewModelBase {
         });
 
         this.fetchAlerts();
-        this.visibleResources.subscribe(() => this.filterResources());
+        this.visibleResource.subscribe(() => this.filterResources());
         this.filterResources();
     }
 
@@ -143,7 +177,7 @@ class resources extends viewModelBase {
     }
 
     attached() {
-        this.updateHelpLink('Z8DC3Q');
+        this.updateHelpLink("Z8DC3Q");
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
         this.resourcesLoaded();
     }
@@ -162,31 +196,52 @@ class resources extends viewModelBase {
         var filter = this.searchText();
         var filterLower = filter.toLowerCase();
         this.databases().forEach((db: database) => {
-            var typeMatch = !this.visibleResources() || this.visibleResources() == "db";
-            var isMatch = (!filter || (db.name.toLowerCase().indexOf(filterLower) >= 0)) && db.name != '<system>' && typeMatch;
+            var typeMatch = !this.visibleResource() || this.visibleResource() === database.type;
+            var isMatch = (!filter || (db.name.toLowerCase().indexOf(filterLower) >= 0)) && db.name !== "<system>" && typeMatch;
             db.isVisible(isMatch);
         });
         this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
 
-        this.fileSystems().forEach(d=> {
-            var typeMatch = !this.visibleResources() || this.visibleResources() == "fs";
-            var isMatch = (!filter || (d.name.toLowerCase().indexOf(filterLower) >= 0)) && typeMatch;
-            d.isVisible(isMatch);
+        this.fileSystems().forEach(fs => {
+            var typeMatch = !this.visibleResource() || this.visibleResource() === fileSystem.type;
+            var isMatch = (!filter || (fs.name.toLowerCase().indexOf(filterLower) >= 0)) && typeMatch;
+            fs.isVisible(isMatch);
         });
+        this.fileSystems().map((fs: fileSystem) => fs.isChecked(!fs.isVisible() ? false : fs.isChecked()));
 
-        this.fileSystems().map((fs: filesystem) => fs.isChecked(!fs.isVisible() ? false : fs.isChecked()));
+        this.counterStorages().forEach(cs => {
+            var typeMatch = !this.visibleResource() || this.visibleResource() === counterStorage.type;
+            var isMatch = (!filter || (cs.name.toLowerCase().indexOf(filterLower) >= 0)) && typeMatch;
+            cs.isVisible(isMatch);
+        });
+        this.counterStorages().map((cs: counterStorage) => cs.isChecked(!cs.isVisible() ? false : cs.isChecked()));
+
+        this.timeSeries().forEach(cs => {
+            var typeMatch = !this.visibleResource() || this.visibleResource() === timeSeries.type;
+            var isMatch = (!filter || (cs.name.toLowerCase().indexOf(filterLower) >= 0)) && typeMatch;
+            cs.isVisible(isMatch);
+        });
+        this.timeSeries().map((ts: timeSeries) => ts.isChecked(!ts.isVisible() ? false : ts.isChecked()));
     }
 
     getDocumentsUrl(db: database) {
         return appUrl.forDocuments(null, db);
     }
 
-    getFilesystemFilesUrl(fs: filesystem) {
+    getFileSystemFilesUrl(fs: fileSystem) {
         return appUrl.forFilesystemFiles(fs);
     }
 
+    getCounterStorageCountersUrl(cs: counterStorage) {
+        return appUrl.forCounterStorageCounters(null, cs);
+    }
+
+    getTimeSeriesUrl(ts: timeSeries) {
+        return appUrl.forTimeSeriesSeries(null, ts);
+    }
+
     selectResource(rs: resource, activateResource: boolean = true) {
-        if (this.optionsClicked() == false) {
+        if (this.optionsClicked() === false) {
             if (activateResource) {
                 rs.activate();
             }
@@ -201,7 +256,7 @@ class resources extends viewModelBase {
             var confirmDeleteViewModel = new deleteResourceConfirm(resources);
 
             confirmDeleteViewModel.deleteTask.done((deletedResources: Array<resource>) => {
-                if (resources.length == 1) {
+                if (resources.length === 1) {
                     this.onResourceDeleted(resources[0]);
                 } else {
                     deletedResources.forEach(rs => this.onResourceDeleted(rs));
@@ -212,25 +267,31 @@ class resources extends viewModelBase {
         }
     }
 
-    private onResourceDeleted(rs: resource) {
-        if (rs.type === database.type) {
-            var databaseInArray = this.databases.first((db: database) => db.name == rs.name);
+    private onResourceDeleted(resourceToDelete: resource) {
+        var resourcesArray = this.getResources(resourceToDelete.type);
 
-            if (!!databaseInArray) {
-                this.databases.remove(databaseInArray);
-            }
-        } else if (rs.type === filesystem.type) {
-            var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == rs.name);
-
-            if (!!fileSystemInArray) {
-                this.fileSystems.remove(fileSystemInArray);
-            }
-        } else {
-            //TODO: counters
+        var resuorceInArray = resourcesArray.first((db: resource) => db.name === resourceToDelete.name);
+        if (!!resuorceInArray) {
+            resourcesArray.remove(resuorceInArray);
         }
 
         if ((this.resources().length > 0) && (this.resources().contains(this.selectedResource()) === false)) {
             this.selectResource(this.resources().first());
+        }
+    }
+
+    private getResources(resourceType: TenantType): KnockoutObservableArray<resource> {
+        switch (resourceType) {
+            case TenantType.Database:
+                return this.databases;
+            case TenantType.FileSystem:
+                return this.fileSystems;
+            case TenantType.CounterStorage:
+                return this.counterStorages;
+            case TenantType.TimeSeries:
+                return this.timeSeries;
+            default:
+                throw "Unknown type";
         }
     }
 
@@ -271,7 +332,7 @@ class resources extends viewModelBase {
 
             disableDatabaseToggleViewModel.disableToggleTask
                 .done((toggledResources: resource[]) => {
-                        if (resources.length === 1) {
+                    if (resources.length === 1) {
                         this.onResourceDisabledToggle(resources[0], action);
                     } else {
                         toggledResources.forEach(rs => {
@@ -291,8 +352,8 @@ class resources extends viewModelBase {
 
             if (rs.isSelected() && rs.disabled() === false) {
                 rs.activate();  
+            }
         }
-    }
     }
 
     disableDatabaseIndexing(db: database) {
@@ -336,10 +397,10 @@ class resources extends viewModelBase {
 	}
 
     newResource() {
-        var createResourceViewModel = new createResource(this.databases, this.fileSystems, license.licenseStatus);
+        var createResourceViewModel = new createResource();
         createResourceViewModel.createDatabasePart
             .creationTask
-            .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, databaseTemp: string, storageEngine: string, incrementalBackup: boolean
+            .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, tempPath: string, storageEngine: string, incrementalBackup: boolean
                 , alertTimeout: string, alertRecurringTimeout: string, clusterWide: boolean) => {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
@@ -357,8 +418,8 @@ class resources extends viewModelBase {
                         settings["Raven/Voron/AllowIncrementalBackups"] = "true";
                     }
                 }
-                if (!this.isEmptyStringOrWhitespace(databaseTemp)) {
-                    settings['Raven/Voron/TempPath'] = databaseTemp;
+                if (!this.isEmptyStringOrWhitespace(tempPath)) {
+                    settings["Raven/Voron/TempPath"] = tempPath;
                 }
                 if (alertTimeout !== "") {
                     settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
@@ -377,27 +438,58 @@ class resources extends viewModelBase {
                 this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings, clusterWide);
             });
 
-        createResourceViewModel.createFilesystemPart
-                .creationTask
-            .done((filesystemName: string, bundles: string[], filesystemPath: string, filesystemLogs: string, storageEngine: string) => {
+        createResourceViewModel.createFileSystemPart
+            .creationTask
+            .done((fileSystemName: string, bundles: string[], fileSystemPath: string, filesystemLogs: string, tempPath: string, storageEngine: string) => {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
 
-                settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(filesystemPath)) ? filesystemPath : "~\\FileSystems\\" + filesystemName;
+                settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(fileSystemPath)) ? fileSystemPath : "~\\FileSystems\\" + fileSystemName;
                 if (storageEngine) {
                     settings["Raven/FileSystem/Storage"] = storageEngine;
                 }
                 if (!this.isEmptyStringOrWhitespace(filesystemLogs)) {
                     settings["Raven/TransactionJournalsPath"] = filesystemLogs;
                 }
-                this.showFsCreationAdvancedStepsIfNecessary(filesystemName, bundles, settings);
+                if (!this.isEmptyStringOrWhitespace(tempPath)) {
+                    settings["Raven/Voron/TempPath"] = tempPath;
+                }
+                this.showFsCreationAdvancedStepsIfNecessary(fileSystemName, bundles, settings);
+            });
+
+        createResourceViewModel.createCounterStoragePart
+            .creationTask
+            .done((counterStorageName: string, bundles: string[], counterStoragePath: string, tempPath: string) => {
+                var settings = {
+                    "Raven/ActiveBundles": bundles.join(";")
+                }
+                settings["Raven/Counters/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
+                if (!this.isEmptyStringOrWhitespace(tempPath)) {
+                    settings["Raven/Voron/TempPath"] = tempPath;
+                }
+
+                this.showCsCreationAdvancedStepsIfNecessary(counterStorageName, bundles, settings);
+            });
+
+        createResourceViewModel.createTimeSeriesPart
+            .creationTask
+            .done((timeSeriesName: string, bundles: string[], timeSeriesPath: string, tempPath: string) => {
+                var settings = {
+                    "Raven/ActiveBundles": bundles.join(";")
+                }
+                settings["Raven/TimeSeries/DataDir"] = (!this.isEmptyStringOrWhitespace(timeSeriesPath)) ? timeSeriesPath : "~\\TimeSeries\\" + timeSeriesName;
+                if (!this.isEmptyStringOrWhitespace(tempPath)) {
+                    settings["Raven/Voron/TempPath"] = tempPath;
+                }
+
+                this.showTsCreationAdvancedStepsIfNecessary(timeSeriesName, bundles, settings);
             });
 
         app.showDialog(createResourceViewModel);
     }
 
-    showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}, clusterWide: boolean) {
+    private showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}, clusterWide: boolean) {
         var securedSettings = {};
         var savedKey;
 
@@ -470,7 +562,7 @@ class resources extends viewModelBase {
         return deferred;
     }
 
-    private createDefaultFilesystemSettings(fs: filesystem, bundles: Array<string>): JQueryPromise<any> {
+    private createDefaultFilesystemSettings(fs: fileSystem, bundles: Array<string>): JQueryPromise<any> {
         var deferred = $.Deferred();
         new createDefaultFsSettingsCommand(fs, bundles).execute()
             .always(() => deferred.resolve());
@@ -499,7 +591,7 @@ class resources extends viewModelBase {
         return fullEncryptionName;
     }
 
-    showFsCreationAdvancedStepsIfNecessary(filesystemName: string, bundles: string[], settings: {}) {
+    private showFsCreationAdvancedStepsIfNecessary(filesystemName: string, bundles: string[], settings: {}) {
         var securedSettings = {};
         var savedKey;
 
@@ -551,19 +643,58 @@ class resources extends viewModelBase {
                     });
                 });
         });
-
     }
 
-    private addNewFileSystem(fileSystemName: string, bundles: string[]): filesystem {
-        var foundFileSystem = this.fileSystems.first((fs: filesystem) => fs.name == fileSystemName);
+    private addNewFileSystem(fileSystemName: string, bundles: string[]): fileSystem {
+        var foundFileSystem = this.fileSystems.first((fs: fileSystem) => fs.name === fileSystemName);
 
         if (!foundFileSystem) {
-            var newFileSystem = new filesystem(fileSystemName, true, false, bundles);
+            var newFileSystem = new fileSystem(fileSystemName, true, false, bundles);
             this.fileSystems.unshift(newFileSystem);
             this.filterResources();
             return newFileSystem;
         }
         return foundFileSystem;
+    }
+
+    private showCsCreationAdvancedStepsIfNecessary(counterStorageName: string, bundles: string[], settings: {}) {
+        new createCounterStorageCommand(counterStorageName, settings)
+            .execute()
+            .done(() => {
+                var newCounterStorage = this.addNewCounterStorage(counterStorageName, bundles);
+                this.selectResource(newCounterStorage);
+            });
+    }
+
+    private addNewCounterStorage(counterStorageName: string, bundles: string[]): counterStorage {
+        var foundCounterStorage = this.counterStorages.first((cs: counterStorage) => cs.name === counterStorageName);
+        if (!!foundCounterStorage)
+            return foundCounterStorage;
+
+        var newCounterStorage = new counterStorage(counterStorageName, true, false, bundles);
+        this.counterStorages.unshift(newCounterStorage);
+        this.filterResources();
+        return newCounterStorage;
+    }
+
+    private showTsCreationAdvancedStepsIfNecessary(timeSeriesName: string, bundles: string[], settings: {}) {
+        new createTimeSeriesCommand(timeSeriesName, settings)
+            .execute()
+            .done(() => {
+            var newTimeSeries = this.addNewTimeSeries(timeSeriesName, bundles);
+            this.selectResource(newTimeSeries);
+        });
+    }
+
+    private addNewTimeSeries(timeSeriesName: string, bundles: string[]): timeSeries {
+        var foundTimeSeries = this.timeSeries.first((ts: timeSeries) => ts.name === timeSeriesName);
+        if (!!foundTimeSeries)
+            return foundTimeSeries;
+
+        var newTimeSeries = new timeSeries(timeSeriesName, true, false, bundles);
+        this.timeSeries.unshift(newTimeSeries);
+        this.filterResources();
+        return newTimeSeries;
     }
 }
 

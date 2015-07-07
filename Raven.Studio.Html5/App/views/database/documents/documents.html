@@ -8,20 +8,21 @@
         <!-- /ko -->
     <!-- /ko -->
 
-    <div id="documents-page-container" class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
-        <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collections">
-            <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
-                <a href="javascript:void(0)">
-                    <div class="collection-name">
-                        <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
-                        <span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: {title: name}"></span>
-                        <span class="collection-text pull-left text-muted" data-bind="visible: !isSystemDocuments && !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')'"></span>
-                    </div>
-                </a>
-            </li>
-        </ul>
+    <div id="documents-page-container" class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0; position: relative">
+	    <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collections">
+		    <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
+			    <a href="javascript:void(0)">
+				    <div class="collection-name">
+					    <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
+					    <span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: {title: name}"></span>
+					    <span class="collection-text pull-left text-muted" data-bind="visible: !isSystemDocuments && !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')'"></span>
+				    </div>
+			    </a>
+		    </li>
+	    </ul>
+		<div class="collection-resize"></div>
     </div>
-    <div class="col-md-10">
+    <div class="col-md-10" id="documents-page-right-container">
         <div class="btn-toolbar" role="toolbar">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <div class="btn-group">
@@ -48,7 +49,7 @@
                 <button type="button" class="btn btn-default" data-bind="click: editSelectedDoc, enable: selectedDocumentIndices().length == 1" title="Edit selected document (F2)">
                     <i class="fa fa-pencil"></i>
                 </button>
-                <button type="button" class="btn btn-default" data-bind="click: generateDocCode, enable: selectedDocumentIndices().length==1 " title=" generate class">
+                <button type="button" class="btn btn-default" data-bind="click: generateDocCode, enable: selectedDocumentIndices().length == 1 " title="Generate Class">
                     <i class="fa">C#</i>
                 </button>
             </div>
@@ -82,6 +83,6 @@
                 Clear selection
             </span>
         </div>
-        <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator, isAnyDocumentsAutoSelected: isAnyDocumentsAutoSelected, isAllDocumentsAutoSelected: isAllDocumentsAutoSelected }"></div>
+        <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyDocumentsAutoSelected, isAllAutoSelected: isAllDocumentsAutoSelected }"></div>
     </div>
 </div>

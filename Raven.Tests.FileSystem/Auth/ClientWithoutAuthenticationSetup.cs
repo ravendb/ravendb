@@ -11,6 +11,7 @@ using Raven.Tests.Helpers;
 using Xunit;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.FileSystem.Auth
 {
@@ -23,14 +24,7 @@ namespace Raven.Tests.FileSystem.Auth
 
             using (var client = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "WillUseDefaultCredentials"))
             {
-                await client.Admin.CreateFileSystemAsync(new FileSystemDocument()
-                {
-                    Id = "Raven/FileSystem/" + client.FileSystem,
-                    Settings =
-                    {
-                        {Constants.FileSystem.DataDirectory, Path.Combine("FileSystems", client.FileSystem)}
-                    }
-                });
+				await client.Admin.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument(client.FileSystem));
 
                 await client.UploadAsync("a", new MemoryStream(new byte[] { 1, 2 }));
 

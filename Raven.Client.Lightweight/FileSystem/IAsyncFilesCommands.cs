@@ -96,7 +96,7 @@ namespace Raven.Client.FileSystem
         Task<string[]> GetNamesAsync();
         Task<FileSystemStats[]> GetStatisticsAsync();
 
-        Task CreateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null);
+        Task CreateFileSystemAsync(FileSystemDocument filesystemDocument);
         Task CreateOrUpdateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null);
         Task DeleteFileSystemAsync(string fileSystemName = null, bool hardDelete = false);
 

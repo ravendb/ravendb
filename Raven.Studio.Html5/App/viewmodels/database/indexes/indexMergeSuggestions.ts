@@ -9,6 +9,7 @@ import changeSubscription = require('common/changeSubscription');
 import shell = require("viewmodels/shell");
 import moment = require("moment");
 import dialog = require("plugins/dialog");
+import changesContext = require("common/changesContext");
 import optional = require("common/optional");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 
@@ -41,7 +42,7 @@ class indexMergeSuggestions extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [ shell.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexMergeSuggestions()) ];
+        return [changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexMergeSuggestions()) ];
     }
 
     private fetchStats(): JQueryPromise<databaseStatisticsDto> {
@@ -71,7 +72,7 @@ class indexMergeSuggestions extends viewModelBase {
                 if (lastQueryDate.isValid()) {
                     var agoInMs = now.diff(lastQueryDate);
                     if (agoInMs > miliSecondsInWeek) {
-                        indexDto['LastQueryTimestampText'] = optional.val(indexDto.LastQueryTimestamp).bind(v => v.toHumanizedDate());
+                        indexDto["LastQueryTimestampText"] = optional.val(indexDto.LastQueryTimestamp).bind(v => v.toHumanizedDate());
                         this.notUsedForLastWeek.push(indexDto);
                     }
                 }

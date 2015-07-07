@@ -11,6 +11,9 @@ namespace Raven.Abstractions.Data
 			InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
+		public const string ParticipatingIDsPropertyName = "Participating-IDs-Property-Name";
+
+	    public const string IsIndexReplicatedUrlParamName = "is-replicated";
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
@@ -250,18 +253,8 @@ namespace Raven.Abstractions.Data
         /// if no encoding information in headers of incoming request, this encoding is assumed
         /// </summary>
         public const string DefaultRequestEncoding = "UTF-8";
-        
+
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
-		
-		//Counters
-		public static class Counter
-		{
-			public const string Prefix = "Raven/Counters/";
-
-			public const string DataDirectory = "Raven/Counters/DataDir";
-
-			public const string UrlPrefix = "counters";
-		}
 
         public const string MetadataEtagField = "ETag";
 
@@ -296,6 +289,7 @@ namespace Raven.Abstractions.Data
 			public const string UrlPrefix = "databases";
 		}
 		
+		//File System
 		public static class FileSystem
         {
 			public const string Prefix = "Raven/FileSystems/";
@@ -318,6 +312,32 @@ namespace Raven.Abstractions.Data
 				public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
 	        }
         }
+
+		//Counters
+		public static class Counter
+		{
+			public const string Prefix = "Raven/Counters/";
+
+			public const string DataDirectory = "Raven/Counters/DataDir";
+
+			public const string TombstoneRetentionTime = "Raven/Counter/TombstoneRetentionTime";
+
+			public const string DeletedTombstonesInBatch = "Raven/Counter/DeletedTombstonesInBatch";
+
+			public const string UrlPrefix = "cs";
+		}
+
+		//Time Series
+		public static class TimeSeries
+		{
+			public const string Prefix = "Raven/TimeSeries/";
+
+			public const string DataDirectory = "Raven/TimeSeries/DataDir";
+
+			public const string UrlPrefix = "ts";
+
+			public const string Separator = "/";
+		}
 
 		// Subscriptions
 		public const string RavenSubscriptionsPrefix = "Raven/Subscriptions/";

@@ -1,37 +1,32 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
-
-import shell = require("viewmodels/shell");
-import viewModelBase = require("viewmodels/viewModelBase");
-import deleteCollection = require("viewmodels/database/documents/deleteCollection");
-
-import collection = require("models/database/documents/collection");
-import database = require("models/resources/database");
-import alert = require("models/database/debug/alert");
-import changeSubscription = require('common/changeSubscription');
-import customFunctions = require("models/database/documents/customFunctions");
-import customColumns = require('models/database/documents/customColumns');
-import customColumnParams = require('models/database/documents/customColumnParams');
-
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
-import getCustomColumnsCommand = require('commands/database/documents/getCustomColumnsCommand');
-import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
-import getOperationStatusCommand = require('commands/operations/getOperationStatusCommand');
-import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
-import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-
-import selectColumns = require("viewmodels/common/selectColumns");
-
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 
-import generateClassCommand = require("commands/database/documents/generateClassCommand");
+import changesContext = require("common/changesContext");
+import viewModelBase = require("viewmodels/viewModelBase");
+import deleteCollection = require("viewmodels/database/documents/deleteCollection");
+import selectColumns = require("viewmodels/common/selectColumns");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 
+import collection = require("models/database/documents/collection");
+import database = require("models/resources/database");
+import alert = require("models/database/debug/alert");
+import changeSubscription = require("common/changeSubscription");
+import customFunctions = require("models/database/documents/customFunctions");
+import customColumns = require("models/database/documents/customColumns");
+import customColumnParams = require("models/database/documents/customColumnParams");
 
+import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
+import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
+import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
+import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
+import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import generateClassCommand = require("commands/database/documents/generateClassCommand");
 
 class documents extends viewModelBase {
 
@@ -71,9 +66,9 @@ class documents extends viewModelBase {
         this.hasDocuments = ko.computed(() => {
             var selectedCollection: collection = this.selectedCollection();
             if (!!selectedCollection) {
-                if (selectedCollection.name == collection.allDocsCollectionName) {
+                if (selectedCollection.name === collection.allDocsCollectionName) {
                     var db: database = this.activeDatabase();
-                    return db.itemCount() > 0;
+                    return !!db.statistics() ? db.statistics().countOfDocuments() > 0 : false;
                 }
                 return this.selectedCollection().documentCount() > 0;
             }
@@ -82,8 +77,8 @@ class documents extends viewModelBase {
         this.hasAnyDocumentsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
         this.hasAllDocumentsSelected = ko.computed(() => {
             var numOfSelectedDocuments = this.selectedDocumentIndices().length;
-            if (!!this.selectedCollection() && numOfSelectedDocuments != 0) {
-                return numOfSelectedDocuments == this.selectedCollection().documentCount();
+            if (!!this.selectedCollection() && numOfSelectedDocuments !== 0) {
+                return numOfSelectedDocuments === this.selectedCollection().documentCount();
             }
             return false;
         });
@@ -116,7 +111,7 @@ class documents extends viewModelBase {
         this.selectedDocumentsText = ko.computed(() => {
             if (!!this.selectedDocumentIndices()) {
                 var documentsText = "document";
-                if (this.selectedDocumentIndices().length != 1) {
+                if (this.selectedDocumentIndices().length !== 1) {
                     documentsText += "s";
                 }
                 return documentsText;
@@ -128,10 +123,10 @@ class documents extends viewModelBase {
     activate(args) {
         super.activate(args);
         if (args.withStop) {
-            shell.hasContinueTestOption(true);
+            viewModelBase.hasContinueTestOption(true);
         }
         this.fetchCustomFunctions();
-        this.updateHelpLink('G8CDCP');
+        this.updateHelpLink("G8CDCP");
 
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;
@@ -150,7 +145,57 @@ class documents extends viewModelBase {
         var docsPageSelector = ".documents-page";
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C, I",() => this.copySelectedDocIds(), docsPageSelector);
+	    this.registerCollectionsResize();
+    }
+
+	deactivate() {
+        this.unregisterCollectionsResizing();
+    }
+
+	private registerCollectionsResize() {
+		var resizingColumn = false;
+		var startX = 0;
+		var startingLeftWidth = 0;
+		var startingRightWidth = 0;
+		var totalStartingWidth = 0;
+
+		$(document).on("mousedown.collectionsResize", ".collection-resize",(e: any) => {
+			startX = e.pageX;
+			resizingColumn = true;
+			startingLeftWidth = $("#documents-page-container").innerWidth();
+			startingRightWidth = $("#documents-page-right-container").innerWidth();
+			totalStartingWidth = startingLeftWidth + startingRightWidth;
+		});
+
+        $(document).on("mouseup.collectionsResize", "", (e: any) => {
+            resizingColumn = false;
+        });
+
+        $(document).on("mousemove.collectionsResize", "", (e: any) => {
+            if (resizingColumn) {
+
+				// compute new percentage values
+				var diff = e.pageX - startX;
+				
+				$("#documents-page-container").innerWidth(((startingLeftWidth + diff) * 100.0 / totalStartingWidth) + "%");
+				$("#documents-page-right-container").innerWidth(((startingRightWidth - diff) * 100.0 / totalStartingWidth) + "%");
+
+                // Stop propagation of the event so the text selection doesn't fire up
+                if (e.stopPropagation) e.stopPropagation();
+                if (e.preventDefault) e.preventDefault();
+                e.cancelBubble = true;
+                e.returnValue = false;
+
+                return false;
+            }
+        });
+	}
+
+	unregisterCollectionsResizing() {
+        $(document).off("mousedown.collectionsResize");
+        $(document).off("mouseup.collectionsResize");
+        $(document).off("mousemove.collectionsResize");
     }
 
     private updateAuthToken() {
@@ -184,9 +229,9 @@ class documents extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
-            shell.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
-            shell.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
+            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
         ];
     }
 
@@ -202,9 +247,9 @@ class documents extends viewModelBase {
         var db = this.activeDatabase();
 
         this.fetchCollections(db).done(results => {
-            this.updateCollections(results, db);
+            this.updateCollections(results);
+	        this.refreshCollectionsData();
             //TODO: add a button to refresh the documents and than use this.refreshCollectionsData();
-
             deferred.resolve();
         });
 
@@ -214,7 +259,7 @@ class documents extends viewModelBase {
     collectionsLoaded(collections: Array<collection>, db: database) {
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection = collection.createAllDocsCollection(db);
-        this.allDocumentsCollection.documentCount = ko.computed(() => db.itemCount());
+        this.allDocumentsCollection.documentCount = ko.computed(() => !!db.statistics() ? db.statistics().countOfDocuments() : 0);
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
@@ -237,7 +282,7 @@ class documents extends viewModelBase {
 
     //TODO: this binding has notification leak!
     selectedCollectionChanged(selected: collection) {
-        if (selected) {
+        if (!!selected) {
             var customColumnsCommand = selected.isAllDocuments ?
                 getCustomColumnsCommand.forAllDocuments(this.activeDatabase()) : getCustomColumnsCommand.forCollection(selected.name, this.activeDatabase());
 
@@ -268,7 +313,7 @@ class documents extends viewModelBase {
                     this.collections.remove(collection);
 
                     var selectedCollection: collection = this.selectedCollection();
-                    if (collection.name == selectedCollection.name) {
+                    if (collection.name === selectedCollection.name) {
                         this.selectCollection(this.allDocumentsCollection);
                     }
                 } else {
@@ -301,11 +346,11 @@ class documents extends viewModelBase {
             });
     }
 
-    private updateCollections(receivedCollections: Array<collection>, db: database) {
+    private updateCollections(receivedCollections: Array<collection>) {
         var deletedCollections = [];
 
         this.collections().forEach((col: collection) => {
-            if (!receivedCollections.first((receivedCol: collection) => col.name == receivedCol.name) && col.name != 'System Documents' && col.name != 'All Documents') {
+            if (!receivedCollections.first((receivedCol: collection) => col.name === receivedCol.name) && col.name !== "System Documents" && col.name !== "All Documents") {
                 deletedCollections.push(col);
             }
         });
@@ -313,7 +358,7 @@ class documents extends viewModelBase {
         this.collections.removeAll(deletedCollections);
 
         receivedCollections.forEach((receivedCol: collection) => {
-            var foundCollection = this.collections().first((col: collection) => col.name == receivedCol.name);
+            var foundCollection = this.collections().first((col: collection) => col.name === receivedCol.name);
             if (!foundCollection) {
                 this.collections.push(receivedCol);
             } else {
@@ -323,16 +368,28 @@ class documents extends viewModelBase {
 
         //if the collection is deleted, go to the all documents collection
         var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
-        if (!currentCollection || currentCollection.documentCount() == 0) {
+        if (!currentCollection || currentCollection.documentCount() === 0) {
             this.selectCollection(this.allDocumentsCollection);
         }
+
+		this.collections.sort((c1: collection, c2: collection) => {
+		    if (c1.isAllDocuments)
+			    return -1;
+		    if (c2.isAllDocuments)
+			    return 1;
+			if (c1.isSystemDocuments)
+				return -1;
+			if (c2.isSystemDocuments)
+				return 1;
+		    return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
+	    });
     }
 
     private refreshCollectionsData() {
         var selectedCollection: collection = this.selectedCollection();
 
         this.collections().forEach((collection: collection) => {
-            if (collection.name == selectedCollection.name) {
+            if (collection.name === selectedCollection.name) {
                 var docsGrid = this.getDocumentsGrid();
                 if (!!docsGrid) {
                     docsGrid.refreshCollectionData();
@@ -345,7 +402,7 @@ class documents extends viewModelBase {
     }
 
     private reloadDocumentsData(db: database) {
-        if (db.name == this.activeDatabase().name) {
+        if (db.name === this.activeDatabase().name) {
             this.refreshCollections().done(() => {
                 this.refreshCollectionsData();
             });
@@ -363,6 +420,7 @@ class documents extends viewModelBase {
     selectColumns() {
         // Fetch column widths from virtual table
         var virtualTable = this.getDocumentsGrid();
+            var columnsNames = virtualTable.getColumnsNames();
         var vtColumns = virtualTable.columns();
         this.currentColumnsParams().columns().forEach((column: customColumnParams) => {
             for (var i = 0; i < vtColumns.length; i++) {
@@ -373,11 +431,10 @@ class documents extends viewModelBase {
             }
         });
 
-        var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
+            var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
-
             var pagedList = this.currentCollection().getDocuments();
             this.currentCollectionPagedItems(pagedList);
         });

@@ -154,7 +154,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[RavenRoute("streams/exploration")]
 		[RavenRoute("databases/{databaseName}/streams/exploration")]
-		public async Task<HttpResponseMessage> Exploration()
+		public Task<HttpResponseMessage> Exploration()
 		{
 			var linq = GetQueryStringValue("linq");
 			var collection = GetQueryStringValue("collection");
@@ -234,7 +234,7 @@ namespace Raven.Database.Server.Controllers
 					throw;
 				}
 
-				return msg;
+				return new CompletedTask<HttpResponseMessage>(msg);
 			}
 		}
 

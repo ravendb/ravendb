@@ -12,6 +12,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Server.Controllers;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.TimeSeries.Notifications;
 
 namespace Raven.Database.Server.Connections
 {
@@ -49,7 +50,10 @@ namespace Raven.Database.Server.Connections
 		public ConnectionState Register(IEventsTransport transport)
 		{
 			timeSensitiveStore.Seen(transport.Id);
-			transport.Disconnected += () => TimeSensitiveStore.Missing(transport.Id);
+			transport.Disconnected += () =>
+			{
+			    Disconnect(transport.Id);
+			};
 			return connections.AddOrUpdate(transport.Id, new ConnectionState(transport), (s, state) =>
 			                                                                             	{
 			                                                                             		state.Reconnect(transport);
@@ -127,29 +131,29 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-		public event Action<object, LocalChangeNotification> OnLocalChangeNotification = delegate { };
+		public event Action<object, ChangeNotification> OnChangeNotification = delegate { };
+		public event Action<object, TimeSeriesKeyNotification> OnTimeSeriesChangeNotification = delegate { };
 
-		public void Send(LocalChangeNotification localChangeNotification)
+		public void Send(ChangeNotification localChangeNotification)
 		{
-			OnLocalChangeNotification(this, localChangeNotification);
+			OnChangeNotification(this, localChangeNotification);
 			foreach (var connectionState in connections)
 			{
 				connectionState.Value.CounterStorage.Send(localChangeNotification);
 			}
 		}
 
-		public event Action<object, CounterStorageNotification> OnReplicationChangeNotification = delegate { };
-
-		public void Send(ReplicationChangeNotification replicationChangeNotification)
+		public void Send(TimeSeriesKeyNotification localKeyNotification)
 		{
-			OnReplicationChangeNotification(this, replicationChangeNotification);
+			OnTimeSeriesChangeNotification(this, localKeyNotification);
 			foreach (var connectionState in connections)
 			{
-				connectionState.Value.CounterStorage.Send(replicationChangeNotification);
+				connectionState.Value.TimeSeries.Send(localKeyNotification);
 			}
 		}
 
 		public event Action<object, BulkOperationNotification> OnCounterBulkOperationNotification = delegate { };
+		public event Action<object, TimeSeriesBulkOperationNotification> OnTimeSeriesBulkOperationNotification = delegate { };
 
 		public void Send(BulkOperationNotification bulkOperationNotification)
 		{
@@ -157,6 +161,26 @@ namespace Raven.Database.Server.Connections
 			foreach (var connectionState in connections)
 			{
 				connectionState.Value.CounterStorage.Send(bulkOperationNotification);
+			}
+		}
+		
+		public void Send(TimeSeriesBulkOperationNotification bulkOperationNotification)
+		{
+			OnTimeSeriesBulkOperationNotification(this, bulkOperationNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.TimeSeries.Send(bulkOperationNotification);
+			}
+		}
+
+		public event Action<object, DataSubscriptionChangeNotification> OnDataSubscriptionChangeNotification = delegate { };
+
+		public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
+		{
+			OnDataSubscriptionChangeNotification(this, dataSubscriptionChangeNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.DocumentStore.Send(dataSubscriptionChangeNotification);
 			}
 		}
 

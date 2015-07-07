@@ -5,14 +5,16 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import document = require("models/database/documents/document");
 import collection = require("models/database/documents/collection");
+import counterSummary = require("models/counter/counterSummary");
+import counterGroup = require("models/counter/counterGroup");
 import pagedResultSet = require("common/pagedResultSet");
 import deleteItems = require("viewmodels/common/deleteItems");
 import copyDocuments = require("viewmodels/database/documents/copyDocuments");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
-import customColumnParams = require('models/database/documents/customColumnParams');
-import customColumns = require('models/database/documents/customColumns');
-import customFunctions = require('models/database/documents/customFunctions');
+import customColumnParams = require("models/database/documents/customColumnParams");
+import customColumns = require("models/database/documents/customColumns");
+import customFunctions = require("models/database/documents/customFunctions");
 
 class ctor {
 
@@ -36,7 +38,7 @@ class ctor {
     isIndexMapReduce: KnockoutObservable<boolean>;
     collections: KnockoutObservableArray<string>;
     noResults: KnockoutComputed<boolean>;
-    getCollectionClassFromEntityNameMemoized: (collectionName: string) => string;
+    getCollectionClassFromEntityNameMemoized: (base: documentBase, collectionName: string) => string;
     ensureColumnsAnimationFrameHandle = 0;
 
     settings: {
@@ -59,8 +61,8 @@ class ctor {
         collections: KnockoutObservableArray<collection>;
         rowsAreLoading: KnockoutObservable<boolean>;
         noResultsMessage: string;
-        isAnyDocumentsAutoSelected: KnockoutObservable<boolean>;
-        isAllDocumentsAutoSelected: KnockoutObservable<boolean>;
+        isAnyAutoSelected: KnockoutObservable<boolean>;
+        isAllAutoSelected: KnockoutObservable<boolean>;
     }
 
     activate(settings: any) {
@@ -75,15 +77,15 @@ class ctor {
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
             isCopyAllowed: true,
-            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete", 'EditItem'],
+            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete", "EditItem"],
             selectionEnabled: true,
             customColumns: ko.observable(customColumns.empty()),
             customFunctions: ko.observable(customFunctions.empty()),
             collections: ko.observableArray<collection>([]),
             rowsAreLoading: ko.observable<boolean>(false),
             noResultsMessage: "No records found.",
-            isAnyDocumentsAutoSelected: ko.observable<boolean>(false),
-            isAllDocumentsAutoSelected: ko.observable<boolean>(false)
+            isAnyAutoSelected: ko.observable<boolean>(false),
+            isAllAutoSelected: ko.observable<boolean>(false)
         };
         this.settings = $.extend(defaults, settings);
 
@@ -108,7 +110,7 @@ class ctor {
             });
             this.items = list;
             this.settings.selectedIndices.removeAll();
-            this.columns.remove(c => (c.binding !== 'Id' && c.binding !== '__IsChecked'));
+            this.columns.remove(c => (c.binding !== "Id" && c.binding !== "__IsChecked"));
             this.gridViewport.scrollTop(0);
             this.onGridScrolled();
 
@@ -176,7 +178,7 @@ class ctor {
             r.isInUse(false);
         }
 
-        app.trigger(this.settings.gridSelector + 'RowsCreated', true);
+        app.trigger(this.settings.gridSelector + "RowsCreated", true);
     }
 
     onGridScrolled() {
@@ -216,13 +218,13 @@ class ctor {
     setupContextMenu() {
         var untypedGrid: any = this.grid;
         untypedGrid.contextmenu({
-            target: '#gridContextMenu',
+            target: "#gridContextMenu",
             before: (e: MouseEvent) => {
                 var target: any = e.target;
                 var rowTag = (target.className.indexOf("ko-grid-row") > -1) ? $(target) : $(e.target).parents(".ko-grid-row");
                 var rightClickedElement: row = rowTag.length ? ko.dataFor(rowTag[0]) : null;
 
-                if (this.settings.showCheckboxes == true && !this.isIndexMapReduce()) {
+                if (this.settings.showCheckboxes && !this.isIndexMapReduce()) {
                     // Select any right-clicked row.
 
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
@@ -239,7 +241,7 @@ class ctor {
     }
 
     refreshIdAndCheckboxColumn() {
-        var containsId = this.columns().first(x=> x.binding == "Id");
+        var containsId = this.columns().first(x=> x.binding === "Id");
 
         if (!containsId && !this.isIndexMapReduce()) {
             if (this.settings.showCheckboxes !== false) {
@@ -306,8 +308,16 @@ class ctor {
         var rowAtIndex: row = ko.utils.arrayFirst(this.recycleRows(), (r: row) => r.rowIndex() === rowIndex);
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
-            rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditItem(!!rowData.getUrl()? rowData.getUrl():rowData["Id"], appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
+            var entityName = this.getEntityName(rowData);
+            rowAtIndex.collectionClass(this.getCollectionClassFromEntityNameMemoized(rowData, entityName));
+
+	        var editUrl: string;
+			if (rowData instanceof counterSummary) {
+				editUrl = appUrl.forEditCounterStorage(appUrl.getResource(), rowData["Name"], rowData["Group"]);
+			} else {
+				editUrl = appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], appUrl.getResource(), rowIndex, entityName);
+			}
+            rowAtIndex.editUrl(editUrl);
         }
     }
 
@@ -316,24 +326,38 @@ class ctor {
         if (selectedItem) {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
-            router.navigate(appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName));
+
+			var editUrl: string;
+			if (selectedItem instanceof counterSummary) {
+				editUrl = appUrl.forEditCounterStorage(appUrl.getResource(), selectedItem["Name"], selectedItem["Group"]);
+			} else {
+				editUrl = appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName);
+			}
+            router.navigate(editUrl);
         }
     }
 
-    getCollectionClassFromDocument(doc: documentBase): string {
-        var entityName = this.getEntityName(doc);
-        return this.getCollectionClassFromEntityNameMemoized(entityName);
+    getCollectionClassFromEntityName(rowData: documentBase, entityName: string): string {
+        if (rowData instanceof document) {
+            return collection.getCollectionCssClass(entityName, appUrl.getDatabase());
+        }
+        if (rowData instanceof counterSummary) {
+            return counterGroup.getGroupCssClass(entityName, appUrl.getCounterStorage());
+        }
+        return "";
     }
 
-    getCollectionClassFromEntityName(entityName: string) {
-        return collection.getCollectionCssClass(entityName, appUrl.getDatabase());
-    }
-
-    getEntityName(item: documentBase) {
-        var obj: any = item;
-        if (obj && obj instanceof document && obj.getEntityName) {
-            var documentObj = <document> obj;
-            return documentObj.getEntityName();
+    getEntityName(rowData: documentBase): string {
+        var obj: any = rowData;
+        if (obj && obj.getEntityName) {
+            if (obj instanceof document) {
+                var documentObj = <document> obj;
+                return documentObj.getEntityName();
+            }
+            if (obj instanceof counterSummary) {
+                var counterSummaryObj = <counterSummary> obj;
+                return counterSummaryObj.getEntityName();
+            }
         }
         return null;
     }
@@ -394,7 +418,7 @@ class ctor {
 
         var existingColumns = this.columns();
         var desiredColumns = existingColumns.concat([]);
-
+       
         for (var i = 0; i < existingColumns.length; i++) {
             var colName = existingColumns[i].binding;
             delete columnsNeeded[colName];
@@ -551,12 +575,12 @@ class ctor {
     }
 
     toggleRowChecked(row: row, isShiftSelect = false) {
-        if (this.settings.isAllDocumentsAutoSelected()) {
+        if (this.settings.isAllAutoSelected()) {
             var cachedIndeices = this.items.getCachedIndices(this.settings.selectedIndices());
             this.settings.selectedIndices(cachedIndeices);
             this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
-            this.settings.isAllDocumentsAutoSelected(false);
-            this.settings.isAnyDocumentsAutoSelected(true);
+            this.settings.isAllAutoSelected(false);
+            this.settings.isAnyAutoSelected(true);
         }
 
         var rowIndex = row.rowIndex();
@@ -582,8 +606,8 @@ class ctor {
     selectNone() {
         this.settings.selectedIndices([]);
         this.recycleRows().forEach(r => r.isChecked(false));
-        this.settings.isAnyDocumentsAutoSelected(false);
-        this.settings.isAllDocumentsAutoSelected(false);
+        this.settings.isAnyAutoSelected(false);
+        this.settings.isAllAutoSelected(false);
     }
 
     selectAll(documentCount: number) {
@@ -597,8 +621,8 @@ class ctor {
 
         this.settings.selectedIndices(allIndices);
 
-        this.settings.isAnyDocumentsAutoSelected(false);
-        this.settings.isAllDocumentsAutoSelected(true);
+        this.settings.isAnyAutoSelected(false);
+        this.settings.isAllAutoSelected(true);
     }
 
     selectSome() {
@@ -616,7 +640,7 @@ class ctor {
 
         this.settings.selectedIndices(allIndices);
 
-        this.settings.isAllDocumentsAutoSelected(false);
+        this.settings.isAllAutoSelected(false);
     }
 
     getRowIndicesRange(firstRowIndex: number, secondRowIndex: number): Array<number> {
@@ -636,6 +660,18 @@ class ctor {
             ko.postbox.publish("EditItem", this.settings.selectedIndices()[0]);
         }
     }
+
+	changeCounterValue() {
+		if (this.settings.selectedIndices().length > 0) {
+            ko.postbox.publish("ChangeCounterValue", this.settings.selectedIndices()[0]);
+        }
+	}
+
+	resetCounter() {
+		if (this.settings.selectedIndices().length > 0) {
+            ko.postbox.publish("ResetCounter", this.settings.selectedIndices()[0]);
+        }
+	}
 
     copySelectedDocs() {
         this.showCopyDocDialog(false);
@@ -676,11 +712,11 @@ class ctor {
     }
 
     deleteSelectedItems() {
-        var documents = this.getSelectedItems();
-        var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
+        var items = this.getSelectedItems();
+        var deleteDocsVm = new deleteItems(items, this.focusableGridSelector);
 
         deleteDocsVm.deletionTask.done(() => {
-            var deletedDocIndices = documents.map(d => this.items.indexOf(d));
+            var deletedDocIndices = items.map(d => this.items.indexOf(d));
             deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
             this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
             this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
@@ -701,6 +737,11 @@ class ctor {
         } else {
             return "#";
         }
+    }
+
+    getColumnsNames() {
+        var row = this.items.getAllCachedItems().first();
+        return row.getDocumentPropertyNames();
     }
 
     collectionExists(collectionName: string): boolean {

@@ -21,6 +21,10 @@ namespace Raven.Database.Actions
 		private readonly ConcurrentDictionary<long, SubscriptionConnectionOptions> openSubscriptions = 
 			new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
 
+		private readonly ConcurrentDictionary<long, ConcurrentQueue<SubscriptionConnectionOptions>> pendingClients =
+			new ConcurrentDictionary<long, ConcurrentQueue<SubscriptionConnectionOptions>>();
+
+
 		public SubscriptionActions(DocumentDatabase database, ILog log)
 			: base(database, null, null, log)
 		{
@@ -74,7 +78,6 @@ namespace Raven.Database.Actions
 			if (existingOptions.ConnectionId.Equals(options.ConnectionId, StringComparison.OrdinalIgnoreCase))
 			{
 				// reopen subscription on already existing connection - might happen after network connection problems the client tries to reopen
-
 				UpdateClientActivityDate(id);
 				return; 
 			}
@@ -84,13 +87,32 @@ namespace Raven.Database.Actions
 			if (SystemTime.UtcNow - config.TimeOfLastClientActivity > TimeSpan.FromTicks(existingOptions.ClientAliveNotificationInterval.Ticks * 3))
 			{
 				// last connected client didn't send at least two 'client-alive' notifications - let the requesting client to open it
-
-				ReleaseSubscription(id);
-				openSubscriptions.TryAdd(id, options);
+				ForceReleaseAndOpenForNewClient(id, options);
 				return;
 			}
 
+			switch (options.Strategy)
+			{
+				case SubscriptionOpeningStrategy.TakeOver:
+					if (existingOptions.Strategy != SubscriptionOpeningStrategy.ForceAndKeep)
+					{
+						ForceReleaseAndOpenForNewClient(id, options);
+						return;
+					}
+					break;
+				case SubscriptionOpeningStrategy.ForceAndKeep:
+					ForceReleaseAndOpenForNewClient(id, options);
+					return;
+			}
+
 			throw new SubscriptionInUseException("Subscription is already in use. There can be only a single open subscription connection per subscription.");
+		}
+
+		private void ForceReleaseAndOpenForNewClient(long id, SubscriptionConnectionOptions options)
+		{
+			ReleaseSubscription(id);
+			openSubscriptions.TryAdd(id, options);
+			UpdateClientActivityDate(id);
 		}
 
 		public void ReleaseSubscription(long id)

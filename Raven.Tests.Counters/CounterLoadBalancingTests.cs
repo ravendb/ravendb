@@ -21,11 +21,11 @@ namespace Raven.Tests.Counters
 				using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
 				using (var ravenStoreC = NewRemoteDocumentStore(ravenDbServer: serverC))
 				{
-					using (var storeA = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreA))
-					using (var storeB = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreB))
-					using (var storeC = NewRemoteCountersStore(DefaultCounteStorageName, ravenStore: ravenStoreC))
+					using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreA))
+					using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreB))
+					using (var storeC = NewRemoteCountersStore(DefaultCounterStorageName, ravenStore: ravenStoreC))
 					{
-						storeA.Convention.FailoverBehavior = FailoverBehavior.ReadFromAllServers;
+						storeA.CountersConvention.FailoverBehavior = FailoverBehavior.ReadFromAllServers;
 						await SetupReplicationAsync(storeA, storeB, storeC);
 
 						//make sure we get replication nodes info

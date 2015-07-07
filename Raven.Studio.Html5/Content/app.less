@@ -1088,6 +1088,15 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 }
 
+.collection-resize {
+	position: absolute; 
+	right: 0; 
+	height: 100%; 
+	width: 10px; 
+	top: 0; 
+	cursor: col-resize;
+}
+
 .documents-page {
     margin-top: 10px;
 
@@ -1449,6 +1458,14 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 #shellHeader {
+    #enviroment-header{
+        position: fixed;
+        z-index: -1;
+        margin-left: 45%;
+        font-size: 40px;
+        opacity: 0.8;
+    }
+
     .container-fluid {
         padding-right: 0;
         padding-left: 0;
@@ -2154,9 +2171,26 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
     &:hover {
         box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
+        -webkit-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
+        -moz-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
     }
     &.selected {
-         box-shadow: 0 0 20px 0 #7109AA;
+        box-shadow: 0 0 20px 0 #7109AA;
+        -webkit-box-shadow: 0 0 20px 0 #7109AA;
+        -moz-box-shadow: 0 0 20px 0 #7109AA;
+    }
+}
+
+#resources-page .resources-container .resource.cs {
+    a {
+        color: #0f6716;
+    }
+
+    &:hover {
+        box-shadow: 0 0 5px 0 lighten(#0f6716, 20%);
+    }
+    &.selected {
+        box-shadow: 0 0 20px 0 #0f6716;
     }
 }
 

@@ -1,11 +1,11 @@
 /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
 
-import resource = require('models/resources/resource');
-import appUrl = require('common/appUrl');
-import changeSubscription = require('common/changeSubscription');
-import changesCallback = require('common/changesCallback');
-import commandBase = require('commands/commandBase');
+import resource = require("models/resources/resource");
+import appUrl = require("common/appUrl");
+import changeSubscription = require("common/changeSubscription");
+import changesCallback = require("common/changesCallback");
+import commandBase = require("commands/commandBase");
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import idGenerator = require("common/idGenerator");
@@ -24,6 +24,7 @@ class changesApi {
     static isServerSupportingWebSockets: boolean = true;
     private eventSource: EventSource;
     private readyStateOpen = 1;
+    private isDisposing = false;
 
     private isCleanClose: boolean = false;
     private normalClosureCode = 1000;
@@ -31,6 +32,7 @@ class changesApi {
     static messageWasShownOnce: boolean = false;
     private successfullyConnectedOnce: boolean = false;
     private sentMessages = [];
+    private commandBase = new commandBase();
 
     private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
@@ -38,12 +40,17 @@ class changesApi {
     private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
     private watchedPrefixes = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
+
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
     private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
     private allFsConfigHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private allFsDestinationsHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
     private watchedFolders = {};
-    private commandBase = new commandBase();
+
+    private allCountersHandlers = ko.observableArray<changesCallback<counterChangeNotification>>();
+    private watchedCounter = {};
+    private watchedCountersInGroup = {};
+    private allCounterBulkOperationsHandlers = ko.observableArray<changesCallback<counterBulkOperationNotificationDto>>();
     
     constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
         this.eventsId = idGenerator.generateId();
@@ -80,24 +87,29 @@ class changesApi {
             .done((tokenObject: singleAuthToken) => {
                 this.rs.isLoading(false);
                 var token = tokenObject.Token;
-                var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss +  '&isMultyTenantTransport=' +this.isMultyTenantTransport;
+                var connectionString = "singleUseAuthToken=" + token + "&id=" + this.eventsId + "&coolDownWithDataLoss=" + this.coolDownWithDataLoss + "&isMultyTenantTransport=" + this.isMultyTenantTransport;
                 action.call(this, connectionString);
             })
             .fail((e) => {
+                if (this.isDisposing) {
+                    this.connectToChangesApiTask.reject();
+                    return;
+                }
+                    
                 var error = !!e.responseJSON ? e.responseJSON.Error : e.responseText;
-                if (e.status == 0) {
+                if (e.status === 0) {
                     // Connection has closed so try to reconnect every 3 seconds.
                     setTimeout(() => this.connect(action), 3 * 1000);
                 }
-                else if (e.status == ResponseCodes.ServiceUnavailable) {
+                else if (e.status === ResponseCodes.ServiceUnavailable) {
                     // We're still loading the database, try to reconnect every 2 seconds.
-                    if (this.rs.isLoading() == false) {
+                    if (this.rs.isLoading() === false) {
                         this.commandBase.reportError(error);
                     }
                     this.rs.isLoading(true);
                     setTimeout(() => this.connect(action, true), 2 * 1000);
                 }
-                else if (e.status != ResponseCodes.Forbidden) { // authorized connection
+                else if (e.status !== ResponseCodes.Forbidden) { // authorized connection
                     this.commandBase.reportError(error);
                     this.connectToChangesApiTask.reject();
                 }
@@ -107,26 +119,26 @@ class changesApi {
     private connectWebSocket(connectionString: string) {
         var connectionOpened: boolean = false;
 
-        var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-	    var url = wsProtocol + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString;
+        var wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+	    var url = wsProtocol + window.location.host + this.resourcePath + "/changes/websocket?" + connectionString;
 	    this.webSocket = new WebSocket(url);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
-            if (connectionOpened == false) {
+            if (connectionOpened === false) {
                 this.serverNotSupportingWebsocketsErrorHandler();
             } else {
                 this.onError(e);
             }
         };
         this.webSocket.onclose = (e: CloseEvent) => {
-            if (this.isCleanClose == false && changesApi.isServerSupportingWebSockets) {
+            if (this.isCleanClose === false && changesApi.isServerSupportingWebSockets) {
                 // Connection has closed uncleanly, so try to reconnect.
                 this.connect(this.connectWebSocket);
             }
         }
         this.webSocket.onopen = () => {
-            console.log("Connected to WebSocket changes API (rs = " + this.rs.name + ")");
+            console.log("Connected to WebSocket changes API (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
             this.reconnect();
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
@@ -137,11 +149,11 @@ class changesApi {
     private connectEventSource(connectionString: string) {
         var connectionOpened: boolean = false;
 
-        this.eventSource = new EventSource(this.resourcePath + '/changes/events?' + connectionString);
+        this.eventSource = new EventSource(this.resourcePath + "/changes/events?" + connectionString);
 
         this.eventSource.onmessage = (e) => this.onMessage(e);
         this.eventSource.onerror = (e) => {
-            if (connectionOpened == false) {
+            if (connectionOpened === false) {
                 this.connectToChangesApiTask.reject();
             } else {
                 this.onError(e);
@@ -150,7 +162,7 @@ class changesApi {
             }
         };
         this.eventSource.onopen = () => {
-            console.log("Connected to EventSource changes API (rs = " + this.rs.name + ")");
+            console.log("Connected to EventSource changes API (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
             this.reconnect();
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
@@ -173,14 +185,14 @@ class changesApi {
     }
 
     private onError(e: Event) {
-        if (changesApi.messageWasShownOnce == false) {
+        if (changesApi.messageWasShownOnce === false) {
             this.commandBase.reportError("Changes stream was disconnected!", "Retrying connection shortly.");
             changesApi.messageWasShownOnce = true;
         }
     }
 
     private serverNotSupportingWebsocketsErrorHandler() {
-        var warningMessage;
+        var warningMessage: string;
         var details;
 
         if ("EventSource" in window) {
@@ -228,7 +240,7 @@ class changesApi {
             }
 
             //TODO: exception handling?
-            this.commandBase.query('/changes/config', args, this.rs)
+            this.commandBase.query("/changes/config", args, this.rs)
                 .done(() => this.saveSentMessages(needToSaveSentMessages, command, args));
         });
     }
@@ -254,104 +266,106 @@ class changesApi {
 
     private onMessage(e: any) {
         var eventDto: changesApiEventDto = JSON.parse(e.data);
-        var type = eventDto.Type;
-        var value = eventDto.Value;
+        var eventType = eventDto.Type;
+        if (eventType === "Heartbeat") // ignore heartbeat
+            return;
 
-        if (type !== "Heartbeat") { // ignore heartbeat
-            if (type === "DocumentChangeNotification") {
-                this.fireEvents(this.allDocsHandlers(), value, (e) => true);
-                for (var key in this.watchedPrefixes) {
-                    var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
-                    this.fireEvents(docCallbacks(), value, (e) => e.Id != null && e.Id.match("^" + key));
-                }
-            } else if (type === "IndexChangeNotification") {
-                this.fireEvents(this.allIndexesHandlers(), value, (e) => true);
-            } else if (type === "TransformerChangeNotification") {
-                this.fireEvents(this.allTransformersHandlers(), value, (e) => true);
-            } else if (type === "BulkInsertChangeNotification") {
-                this.fireEvents(this.allBulkInsertsHandlers(), value, (e) => true);
-            } else if (type === "SynchronizationUpdateNotification") {
-                this.fireEvents(this.allFsSyncHandlers(), value, (e) => true);
-            } else if (type === "ReplicationConflictNotification") {
-                this.fireEvents(this.allReplicationConflicts(), value, (e) => true);
-            } else if (type === "ConflictNotification") {
-                this.fireEvents(this.allFsConflictsHandlers(), value, (e) => true);
-            } else if (type === "FileChangeNotification") {
-                for (var key in this.watchedFolders) {
-                    var folderCallbacks = <KnockoutObservableArray<fileChangeNotification>> this.watchedFolders[key];
-                    this.fireEvents(folderCallbacks(), value, (e) => {
-                        var notifiedFolder = folder.getFolderFromFilePath(e.File);
-                        var match: string[] = null;
-                        if (notifiedFolder && notifiedFolder.path) {
-                            match = notifiedFolder.path.match(key);
-                        }
-                        return match && match.length > 0;
-                    });
-                }
-            } else if (type === "ConfigurationChangeNotification") {
-                if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
-                    this.fireEvents(this.allFsDestinationsHandlers(), value, (e) => true);
-                }
-                this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
+        var value = eventDto.Value;
+        if (eventType === "DocumentChangeNotification") {
+            this.fireEvents(this.allDocsHandlers(), value, (event) => true);
+            for (var key in this.watchedPrefixes) {
+                var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
+                this.fireEvents(docCallbacks(), value, (event) => e.Id != null && e.Id.match("^" + key));
             }
-            else {
-                console.log("Unhandled Changes API notification type: " + type);
+        } else if (eventType === "IndexChangeNotification") {
+            this.fireEvents(this.allIndexesHandlers(), value, (event) => true);
+        } else if (eventType === "TransformerChangeNotification") {
+            this.fireEvents(this.allTransformersHandlers(), value, (event) => true);
+        } else if (eventType === "BulkInsertChangeNotification") {
+            this.fireEvents(this.allBulkInsertsHandlers(), value, (event) => true);
+        } else if (eventType === "SynchronizationUpdateNotification") {
+            this.fireEvents(this.allFsSyncHandlers(), value, (event) => true);
+        } else if (eventType === "ReplicationConflictNotification") {
+            this.fireEvents(this.allReplicationConflicts(), value, (event) => true);
+        } else if (eventType === "ConflictNotification") {
+            this.fireEvents(this.allFsConflictsHandlers(), value, (event) => true);
+        } else if (eventType === "FileChangeNotification") {
+            for (var key in this.watchedFolders) {
+                var folderCallbacks = <KnockoutObservableArray<fileChangeNotification>> this.watchedFolders[key];
+                this.fireEvents(folderCallbacks(), value, (event) => {
+                    var notifiedFolder = folder.getFolderFromFilePath(event.File);
+                    var match: string[] = null;
+                    if (notifiedFolder && notifiedFolder.path) {
+                        match = notifiedFolder.path.match(key);
+                    }
+                    return match && match.length > 0;
+                });
             }
+        } else if (eventType === "ConfigurationChangeNotification") {
+            if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
+                this.fireEvents(this.allFsDestinationsHandlers(), value, (e) => true);
+            }
+            this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
+        } else if (eventType === "ChangeNotification") {
+            this.fireEvents(this.allCountersHandlers(), value, (event) => true);
+        }
+        else {
+            console.log("Unhandled Changes API notification type: " + eventType);
         }
     }
 
     watchAllIndexes(onChange: (e: indexChangeNotificationDto) => void) {
         var callback = new changesCallback<indexChangeNotificationDto>(onChange);
-        if (this.allIndexesHandlers().length == 0) {
-            this.send('watch-indexes');
+        if (this.allIndexesHandlers().length === 0) {
+            this.send("watch-indexes");
         }
         this.allIndexesHandlers.push(callback);
         return new changeSubscription(() => {
             this.allIndexesHandlers.remove(callback);
-            if (this.allIndexesHandlers().length == 0) {
-                this.send('unwatch-indexes');
+            if (this.allIndexesHandlers().length === 0) {
+                this.send("unwatch-indexes");
             }
         });
     }
 
     watchAllTransformers(onChange: (e: transformerChangeNotificationDto) => void) {
         var callback = new changesCallback<transformerChangeNotificationDto>(onChange);
-        if (this.allTransformersHandlers().length == 0) {
-            this.send('watch-transformers');
+        if (this.allTransformersHandlers().length === 0) {
+            this.send("watch-transformers");
         }
         this.allTransformersHandlers.push(callback);
         return new changeSubscription(() => {
             this.allTransformersHandlers.remove(callback);
-            if (this.allTransformersHandlers().length == 0) {
-                this.send('unwatch-transformers');
+            if (this.allTransformersHandlers().length === 0) {
+                this.send("unwatch-transformers");
             }
         });
     }
 
     watchAllReplicationConflicts(onChange: (e: replicationConflictNotificationDto) => void) {
         var callback = new changesCallback<replicationConflictNotificationDto>(onChange);
-        if (this.allReplicationConflicts().length == 0) {
-            this.send('watch-replication-conflicts');
+        if (this.allReplicationConflicts().length === 0) {
+            this.send("watch-replication-conflicts");
         }
         this.allReplicationConflicts.push(callback);
         return new changeSubscription(() => {
             this.allReplicationConflicts.remove(callback);
-            if (this.allReplicationConflicts().length == 0) {
-                this.send('unwatch-replication-conflicts');
+            if (this.allReplicationConflicts().length === 0) {
+                this.send("unwatch-replication-conflicts");
             }
         });
     }
 
     watchAllDocs(onChange: (e: documentChangeNotificationDto) => void) {
         var callback = new changesCallback<documentChangeNotificationDto>(onChange);
-        if (this.allDocsHandlers().length == 0) {
-            this.send('watch-docs');
+        if (this.allDocsHandlers().length === 0) {
+            this.send("watch-docs");
         }
         this.allDocsHandlers.push(callback);
         return new changeSubscription(() => {
             this.allDocsHandlers.remove(callback);
-            if (this.allDocsHandlers().length == 0) {
-                this.send('unwatch-docs');
+            if (this.allDocsHandlers().length === 0) {
+                this.send("unwatch-docs");
             }
         });
     }
@@ -359,29 +373,28 @@ class changesApi {
     watchDocsStartingWith(docIdPrefix: string, onChange: (e: documentChangeNotificationDto) => void): changeSubscription {
         var callback = new changesCallback<documentChangeNotificationDto>(onChange);
         if (typeof (this.watchedPrefixes[docIdPrefix]) === "undefined") {
-            this.send('watch-prefix', docIdPrefix);
+            this.send("watch-prefix", docIdPrefix);
             this.watchedPrefixes[docIdPrefix] = ko.observableArray();
         }
         this.watchedPrefixes[docIdPrefix].push(callback);
-
         return new changeSubscription(() => {
             this.watchedPrefixes[docIdPrefix].remove(callback);
-            if (this.watchedPrefixes[docIdPrefix]().length == 0) {
+            if (this.watchedPrefixes[docIdPrefix]().length === 0) {
                 delete this.watchedPrefixes[docIdPrefix];
-                this.send('unwatch-prefix', docIdPrefix);
+                this.send("unwatch-prefix", docIdPrefix);
             }
         });
     }
 
     watchBulks(onChange: (e: bulkInsertChangeNotificationDto) => void) {
         var callback = new changesCallback<bulkInsertChangeNotificationDto>(onChange);
-        if (this.allBulkInsertsHandlers().length == 0) {
-            this.send('watch-bulk-operation');
+        if (this.allBulkInsertsHandlers().length === 0) {
+            this.send("watch-bulk-operation");
         }
         this.allBulkInsertsHandlers.push(callback);
         return new changeSubscription(() => {
             this.allBulkInsertsHandlers.remove(callback);
-            if (this.allDocsHandlers().length == 0) {
+            if (this.allDocsHandlers().length === 0) {
                 this.send('unwatch-bulk-operation');
             }
         });
@@ -389,28 +402,28 @@ class changesApi {
 
     watchFsSync(onChange: (e: synchronizationUpdateNotification) => void): changeSubscription {
         var callback = new changesCallback<synchronizationUpdateNotification>(onChange);
-        if (this.allFsSyncHandlers().length == 0) {
-            this.send('watch-sync');
+        if (this.allFsSyncHandlers().length === 0) {
+            this.send("watch-sync");
         }
         this.allFsSyncHandlers.push(callback);
         return new changeSubscription(() => {
             this.allFsSyncHandlers.remove(callback);
-            if (this.allFsSyncHandlers().length == 0) {
-                this.send('unwatch-sync');
+            if (this.allFsSyncHandlers().length === 0) {
+                this.send("unwatch-sync");
             }
         });
     }
 
     watchFsConflicts(onChange: (e: synchronizationConflictNotification) => void) : changeSubscription {
         var callback = new changesCallback<synchronizationConflictNotification>(onChange);
-        if (this.allFsConflictsHandlers().length == 0) {
-            this.send('watch-conflicts');
+        if (this.allFsConflictsHandlers().length === 0) {
+            this.send("watch-conflicts");
         }
         this.allFsConflictsHandlers.push(callback);
         return new changeSubscription(() => {
             this.allFsConflictsHandlers.remove(callback);
-            if (this.allFsConflictsHandlers().length == 0) {
-                this.send('unwatch-conflicts');
+            if (this.allFsConflictsHandlers().length === 0) {
+                this.send("unwatch-conflicts");
             }
         });
     }
@@ -418,68 +431,134 @@ class changesApi {
     watchFsFolders(folder: string, onChange: (e: fileChangeNotification) => void): changeSubscription {
         var callback = new changesCallback<fileChangeNotification>(onChange);
         if (typeof (this.watchedFolders[folder]) === "undefined") {
-            this.send('watch-folder', folder);
+            this.send("watch-folder", folder);
             this.watchedFolders[folder] = ko.observableArray();
         }
         this.watchedFolders[folder].push(callback);
         return new changeSubscription(() => {
             this.watchedFolders[folder].remove(callback);
-            if (this.watchedFolders[folder].length == 0) {
+            if (this.watchedFolders[folder].length === 0) {
                 delete this.watchedFolders[folder];
-                this.send('unwatch-folder', folder);
+                this.send("unwatch-folder", folder);
             }
         });
     }
 
     watchFsConfig(onChange: (e: filesystemConfigNotification) => void): changeSubscription {
         var callback = new changesCallback<filesystemConfigNotification>(onChange);
-        if (this.allFsConfigHandlers().length == 0) {
-            this.send('watch-config');
+        if (this.allFsConfigHandlers().length === 0) {
+            this.send("watch-config");
         }
         this.allFsConfigHandlers.push(callback);
         return new changeSubscription(() => {
             this.allFsConfigHandlers.remove(callback);
-            if (this.allFsConfigHandlers().length == 0) {
-                this.send('unwatch-config');
+            if (this.allFsConfigHandlers().length === 0) {
+                this.send("unwatch-config");
             }
         });
     }
 
     watchFsDestinations(onChange: (e: filesystemConfigNotification) => void): changeSubscription {
         var callback = new changesCallback<filesystemConfigNotification>(onChange);
-        if (this.allFsDestinationsHandlers().length == 0) {
-            this.send('watch-config');
+        if (this.allFsDestinationsHandlers().length === 0) {
+            this.send("watch-config");
         }
         this.allFsDestinationsHandlers.push(callback);
         return new changeSubscription(() => {
             this.allFsDestinationsHandlers.remove(callback);
-            if (this.allFsDestinationsHandlers().length == 0) {
-                this.send('unwatch-config');
+            if (this.allFsDestinationsHandlers().length === 0) {
+                this.send("unwatch-config");
+            }
+        });
+    }
+
+    watchAllCounters(onChange: (e: counterChangeNotification) => void) {
+        var callback = new changesCallback<counterChangeNotification>(onChange);
+        if (this.allDocsHandlers().length === 0) {
+            this.send("watch-counters");
+        }
+        this.allCountersHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allCountersHandlers.remove(callback);
+            if (this.allDocsHandlers().length === 0) {
+                this.send("unwatch-counters");
+            }
+        });
+    }
+
+    watchCounterChange(groupName: string, counterName: string, onChange: (e: counterChangeNotification) => void): changeSubscription {
+        var counterId = groupName + "/" + counterName;
+        var callback = new changesCallback<counterChangeNotification>(onChange);
+        if (typeof (this.watchedCounter[counterId]) === "undefined") {
+            this.send("watch-counter-change", counterId);
+            this.watchedCounter[counterId] = ko.observableArray();
+        }
+        this.watchedCounter[counterId].push(callback);
+        return new changeSubscription(() => {
+            this.watchedCounter[counterId].remove(callback);
+            if (this.watchedCounter[counterId]().length === 0) {
+                delete this.watchedCounter[counterId];
+                this.send("unwatch-counter-change", counterId);
+            }
+        });
+    }
+
+
+    watchCountersInGroup(group: string, onChange: (e: countersInGroupNotification) => void): changeSubscription {
+        var callback = new changesCallback<countersInGroupNotification>(onChange);
+        if (typeof (this.watchedCountersInGroup[group]) === "undefined") {
+            this.send("watch-counters-in-group", group);
+            this.watchedCountersInGroup[group] = ko.observableArray();
+        }
+        this.watchedCountersInGroup[group].push(callback);
+        return new changeSubscription(() => {
+            this.watchedCountersInGroup[group].remove(callback);
+            if (this.watchedCountersInGroup[group]().length === 0) {
+                delete this.watchedCountersInGroup[group];
+                this.send("unwatch-counters-in-group", group);
+            }
+        });
+    }
+
+    watchCounterBulkOperation(onChange: (e: counterBulkOperationNotificationDto) => void) {
+        var callback = new changesCallback<counterBulkOperationNotificationDto>(onChange);
+        if (this.allCounterBulkOperationsHandlers().length === 0) {
+            this.send("watch-bulk-operation");
+        }
+        this.allCounterBulkOperationsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allCounterBulkOperationsHandlers.remove(callback);
+            if (this.allDocsHandlers().length === 0) {
+                this.send("unwatch-bulk-operation");
             }
         });
     }
     
     dispose() {
-        this.connectToChangesApiTask.done(() => {
+        this.isDisposing = true;
+
+        this.connectToChangesApiTask.always(() => {
             var isCloseNeeded: boolean;
 
-            if (isCloseNeeded = this.webSocket && this.webSocket.readyState == this.readyStateOpen){
-                console.log("Disconnecting from WebSocket changes API for (rs = " + this.rs.name + ")");
+            if (this.webSocket && this.webSocket.readyState === this.readyStateOpen){
+                console.log("Disconnecting from WebSocket changes API for (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
+                isCloseNeeded = true;
             }
-            else if (isCloseNeeded = this.eventSource && this.eventSource.readyState == this.readyStateOpen) {
-                console.log("Disconnecting from EventSource changes API for (rs = " + this.rs.name + ")");
+            else if (this.eventSource && this.eventSource.readyState === this.readyStateOpen) {
+                console.log("Disconnecting from EventSource changes API for (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
                 this.eventSource.close();
+                isCloseNeeded = true;
             }
 
             if (isCloseNeeded) {
-                this.send('disconnect', undefined, false);
+                this.send("disconnect", undefined, false);
                 this.isCleanClose = true;
             }
         });
     }
 
-    public getResourceName() {
+    getResourceName() {
         return this.rs.name;
     }
 }

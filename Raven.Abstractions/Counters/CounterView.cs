@@ -8,6 +8,7 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.Counters
 {
+	//TODO: remove this!
 	public class CounterView
 	{
 		public string Name { get; set; }

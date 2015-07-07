@@ -118,7 +118,7 @@ namespace Raven.Database.Actions
             return indexEtag;
         }
 
-        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
+        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, string[] participatingIds = null)
         {
             TouchedDocumentInfo touch;
             RecentTouches.TryRemove(key, out touch);
@@ -130,7 +130,11 @@ namespace Raven.Database.Actions
 				// in external transaction number of references will be >= from current transaction references
 		        Database.TransactionalStorage.Batch(externalActions =>
 		        {
-					foreach (var referencing in externalActions.Indexing.GetDocumentsReferencing(key))
+			        var referencingKeys = externalActions.Indexing.GetDocumentsReferencing(key);
+			        if (participatingIds != null)
+				        referencingKeys = referencingKeys.Except(participatingIds);
+
+			        foreach (var referencing in referencingKeys)
 					{
 						Etag preTouchEtag = null;
 						Etag afterTouchEtag = null;
@@ -362,14 +366,14 @@ namespace Raven.Database.Actions
 			// we have to do it in this way so first we prepare all the elements of the 
 			// index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
-			
+
 			// we start the precomuteTask _after_ we finished adding the index
 	        if (precomputeTask != null)
 	        {
 		        precomputeTask();
 	        }
 
-			WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+	        WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             WorkContext.NotifyAboutWork();
         }
 
@@ -387,17 +391,17 @@ namespace Raven.Database.Actions
             try
             {
 				var cts = new CancellationTokenSource();
-
+			
 				var task = new Task(() =>
-					{
+				{
 					try
 					{
 						ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts);
 					}
 					catch (Exception e)
-						{
+					{
 						Log.Warn("Could not apply precomputed batch for index " + index, e);
-						}
+					}
 					finally
 					{
 						index.IsMapIndexingInProgress = false;
@@ -412,28 +416,28 @@ namespace Raven.Database.Actions
 		            {
 			            task.Start();
 
-	            long id;
-				Database
-					.Tasks
-					.AddTask(
-						task, 
-						new TaskBasedOperationState(task), 
-						new TaskActions.PendingTaskDescription
-				        {
-					        StartTime = DateTime.UtcNow, 
-							Payload = index.PublicName, 
-							TaskType = TaskActions.PendingTaskType.NewIndexPrecomputedBatch
-				        }, 
-						out id,
-						cts);
-            }
-            catch (Exception)
-            {
-                index.IsMapIndexingInProgress = false;
-                throw;
-            }
+			            long id;
+			            Database
+				            .Tasks
+				            .AddTask(
+					            task,
+					            new TaskBasedOperationState(task),
+					            new TaskActions.PendingTaskDescription
+					            {
+						            StartTime = DateTime.UtcNow,
+						            Payload = index.PublicName,
+						            TaskType = TaskActions.PendingTaskType.NewIndexPrecomputedBatch
+					            },
+					            out id,
+					            cts);
+		            }
+		            catch (Exception)
+		            {
+						index.IsMapIndexingInProgress = false;
+			            throw;
+		            }
 	            };
-        }
+            }
             catch (Exception)
             {
                 index.IsMapIndexingInProgress = false;
@@ -661,7 +665,7 @@ namespace Raven.Database.Actions
 	        return true;
         }
 
-		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true, bool removeIndexReplaceDocument = true)
+		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true, bool removeIndexReplaceDocument = true, bool isSideBySideReplacement = false)
 		{
 			using (IndexDefinitionStorage.TryRemoveIndexContext())
 			{
@@ -691,12 +695,17 @@ namespace Raven.Database.Actions
 				// And delete the data in the background
 				StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
 
+
+				var indexChangeType = isSideBySideReplacement ? IndexChangeTypes.SideBySideReplace : IndexChangeTypes.IndexRemoved;
+
 				// We raise the notification now because as far as we're concerned it is done *now*
-				TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new IndexChangeNotification
+				TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => 
+					Database.Notifications.RaiseNotifications(new IndexChangeNotification
 				{
 					Name = instance.Name,
-					Type = IndexChangeTypes.IndexRemoved,
-				}));
+						Type = indexChangeType,
+					})
+				);
 			}
 		}
 

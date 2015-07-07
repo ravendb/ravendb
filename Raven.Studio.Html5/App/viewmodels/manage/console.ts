@@ -51,7 +51,7 @@ class consoleJs extends viewModelBase {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newResourceName = this.resourceName();
-            var foundRs = shell.databases().first((rs: resource) => newResourceName === rs.name && rs.type === "database");
+            var foundRs = shell.databases().first((rs: resource) => newResourceName === rs.name && rs.type === TenantType.Database);
 
             if (!foundRs && newResourceName.length > 0) {
                 errorMessage = "Database name doesn't exist!";

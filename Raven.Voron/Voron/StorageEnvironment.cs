@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow.Collections;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -128,7 +129,8 @@ namespace Voron
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
             State = new StorageEnvironmentState(null, null, nextPageNumber)
             {
-                NextPageNumber = nextPageNumber
+                NextPageNumber = nextPageNumber,
+                Options = Options
             };
 
             _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
@@ -147,7 +149,10 @@ namespace Voron
         private void CreateNewDatabase()
         {
             const int initialNextPageNumber = 0;
-            State = new StorageEnvironmentState(null, null, initialNextPageNumber);
+            State = new StorageEnvironmentState(null, null, initialNextPageNumber)
+            {
+                Options = Options
+            };
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
                 var root = Tree.Create(tx, false);
@@ -538,6 +543,36 @@ namespace Voron
 
             return results;
         }
+
+	    public StorageReport GenerateReport(Transaction tx)
+	    {
+			var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+		    var numberOfFreePages = _freeSpaceHandling.AllPages(tx).Count;
+
+		    var trees = new List<Tree>();
+		    var rootIterator = tx.State.Root.Iterate();
+
+		    if (rootIterator.Seek(Slice.BeforeAllKeys))
+		    {
+			    do
+			    {
+				    var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
+				    trees.Add(tree);
+
+			    } while (rootIterator.MoveNext());
+		    }
+
+		    var generator = new StorageReportGenerator(tx);
+
+		    return generator.Generate(new ReportInput
+		    {
+				NumberOfAllocatedPages = numberOfAllocatedPages,
+				NumberOfFreePages = numberOfFreePages,
+				NextPageNumber = NextPageNumber,
+				Journals = Journal.Files.ToList(),
+				Trees = trees
+		    });
+	    }
 
 		public EnvironmentStats Stats()
 		{

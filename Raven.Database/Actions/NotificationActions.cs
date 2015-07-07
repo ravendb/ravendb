@@ -57,5 +57,10 @@ namespace Raven.Database.Actions
         {
             Database.TransportState.Send(obj);
         }
+
+		public void RaiseNotifications(DataSubscriptionChangeNotification obj)
+		{
+			Database.TransportState.Send(obj);
+		}
     }
 }

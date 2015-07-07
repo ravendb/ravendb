@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -40,7 +41,11 @@ namespace Raven.Client.Connection.Implementation
 	    public const int MinimumServerVersion = 3000;
 	    public const int CustomBuildVersion = 13;
 
-		internal readonly string Url;
+		internal  string Url
+		{
+			get { return url; }
+			set { url = value; }
+		}
 		internal readonly HttpMethod Method;
 
 		internal volatile HttpClient httpClient;
@@ -57,7 +62,7 @@ namespace Raven.Client.Connection.Implementation
 		private readonly HttpJsonRequestFactory factory;
 		private readonly Func<HttpMessageHandler> recreateHandler; 
 		private readonly IHoldProfilingInformation owner;
-		private readonly Convention conventions;
+		private readonly ConventionBase conventions;
 		private readonly bool disabledAuthRetries;
 		private readonly IRequestTimeMetric requestTimeMetric;
 
@@ -74,7 +79,8 @@ namespace Raven.Client.Connection.Implementation
 		private string operationUrl;
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
-        
+		private string url;
+
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -139,6 +145,12 @@ namespace Raven.Client.Connection.Implementation
 			requestParams.UpdateHeaders(headers);
 		}
 
+		[ContractInvariantMethod]
+		private void ObjectInvariant()
+		{
+			Contract.Invariant(Url != null);
+		}
+
 		public void RemoveAuthorizationHeader()
 		{
 			httpClient.DefaultRequestHeaders.Remove("Authorization");
@@ -191,9 +203,9 @@ namespace Raven.Client.Connection.Implementation
 				{
 					var requestMessage = getRequestMessage();
 					CopyHeadersToHttpRequestMessage(requestMessage);
-					Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+                    Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
 					SetResponseHeaders(Response);
-					AssertServerVersionSupported();
+				    AssertServerVersionSupported();
 					ResponseStatusCode = Response.StatusCode;
 				}
 				catch (HttpRequestException e)
@@ -300,7 +312,7 @@ namespace Raven.Client.Connection.Implementation
 
 		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync(bool readErrorString)
 		{
-			if (Response.IsSuccessStatusCode) 
+		    if (Response.IsSuccessStatusCode) 
                 return null;
 		    if (Response.StatusCode == HttpStatusCode.Unauthorized ||
 		        Response.StatusCode == HttpStatusCode.NotFound ||
@@ -423,7 +435,7 @@ namespace Raven.Client.Connection.Implementation
 
 		public RavenJToken ReadResponseJson()
 		{
-			return ReadResponseJsonAsync().ResultUnwrap();
+			return AsyncHelpers.RunSync(ReadResponseJsonAsync);
 		}
 
 		public async Task<bool> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
@@ -472,6 +484,8 @@ namespace Raven.Client.Connection.Implementation
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()
 		{
+			await Response.AssertNotFailingResponse();
+
 			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
@@ -757,7 +771,7 @@ namespace Raven.Client.Connection.Implementation
 					throw new ErrorResponseException(Response, "Failed request");
                 }
 
-            return Response;
+				return Response;
 		    }).ConfigureAwait(false);
 		}
 
@@ -784,7 +798,7 @@ namespace Raven.Client.Connection.Implementation
 					throw new ErrorResponseException(Response, "Failed request");
                 }
 
-            return Response;		
+				return Response;
             }).ConfigureAwait(false);		
 		}
 

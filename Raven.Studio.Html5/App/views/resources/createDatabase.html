@@ -1,7 +1,7 @@
 ﻿<div class="col-md-7">
     <div class="form-group">
         <label for="databaseName">Name</label>
-        <input autofocus data-bind="value: databaseName, customValidity: nameCustomValidityError, valueUpdate: 'afterkeydown'" type="text" class=" autofocus form-control" id="databaseName" autocomplete="off" placeholder="Database Name">
+        <input autofocus data-bind="value: resourceName, customValidity: nameCustomValidityError, valueUpdate: 'afterkeydown'" type="text" class=" autofocus form-control" id="databaseName" autocomplete="off" placeholder="Database Name">
     </div>
     <div class="panel-group" id="accordion">
         <div class="panel panel-default">
@@ -27,19 +27,19 @@
 					</div>
                     <div class="form-group">
                         <label for="databasePath">Path</label>
-                        <input data-bind="value: databasePath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + databaseName() }" type="text" class="form-control" id="databasePath" autocomplete="off">
+                        <input data-bind="value: resourcePath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + resourceName() }" type="text" class="form-control" id="databasePath" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="databaseLogs">Logs</label>
-                        <input data-bind="value: databaseLogsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + databaseName() }" type="text" class="form-control" id="databaseLogs" autocomplete="off">
+                        <input data-bind="value: logsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + resourceName() }" type="text" class="form-control" id="databaseLogs" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="databaseIndexes">Indexes</label>
-                        <input data-bind="value: databaseIndexesPath, customValidity: indexesCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + databaseName() + '/Indexes/' }" type="text" class="form-control" id="databaseIndexes" autocomplete="off">
+                        <input data-bind="value: databaseIndexesPath, customValidity: indexesCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + (!!resourceName() ? resourceName() : '{Database Name}') + '/Indexes/' }" type="text" class="form-control" id="databaseIndexes" autocomplete="off">
                     </div>
                     <div class="form-group" data-bind="visible: tempPathVisible">
-                        <label for="databaseIndexes">Temp</label>
-                        <input data-bind="value: databaseTempPath, customValidity: tempCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + databaseName() }" type="text" class="form-control" id="databaseTemp" autocomplete="off">
+                        <label for="databaseTempPath">Temp</label>
+                        <input data-bind="value: resourceTempPath, customValidity: tempCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + resourceName() }" type="text" class="form-control" id="databaseTempPath" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="incrementalBackup">Incremental Backup</label>

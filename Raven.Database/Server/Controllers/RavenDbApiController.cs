@@ -1,7 +1,16 @@
-﻿using System.Security.Principal;
-
-using metrics;
-
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Security.Principal;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -16,20 +25,7 @@ using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Http.Controllers;
-using System.Web.Http.Routing;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -182,7 +178,7 @@ namespace Raven.Database.Server.Controllers
 
 		public override HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
-			var result =base.GetMessageWithString(msg, code, etag);
+			var result = base.GetMessageWithString(msg, code, etag);
 			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
@@ -253,6 +249,8 @@ namespace Raven.Database.Server.Controllers
 				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
 			};
 		}
+
+	
 
 		protected virtual IndexQuery GetIndexQuery(int maxPageSize)
 		{
@@ -567,38 +565,34 @@ namespace Raven.Database.Server.Controllers
 		}
 
 
-        public override async Task<bool> SetupRequestToProperDatabase(RequestManager rm)
+		public override async Task<RequestWebApiEventArgs> TrySetupRequestToProperResource()
         {
-            var tenantId = this.DatabaseName;
-            var landlord = this.DatabasesLandlord;
+            var tenantId = DatabaseName;
+            var landlord = DatabasesLandlord;
 
             if (string.IsNullOrWhiteSpace(tenantId) || tenantId == "<system>")
             {                
                 landlord.LastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
 
-                var args = new BeforeRequestWebApiEventArgs
+                return new RequestWebApiEventArgs
                 {
                     Controller = this,
                     IgnoreRequest = false,
                     TenantId = "System",
                     Database = landlord.SystemDatabase
                 };
-
-                rm.OnBeforeRequest(args);
-                if (args.IgnoreRequest)
-                    return false;
-                return true;
             }
 
             Task<DocumentDatabase> resourceStoreTask;
             bool hasDb;
+			string msg;
             try
             {
                 hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
             }
             catch (Exception e)
             {
-                var msg = "Could not open database named: " + tenantId + " "  + e.Message;
+                msg = "Could not open database named: " + tenantId + " "  + e.Message;
                 Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
@@ -606,21 +600,21 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-					int TimeToWaitForDatabaseToLoad = MaxSecondsForTaskToWaitForDatabaseToLoad;
+					int timeToWaitForDatabaseToLoad = MaxSecondsForTaskToWaitForDatabaseToLoad;
 					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
 						if (MaxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
 						{
-							var msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
+							msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
 							Logger.Warn(msg);
 							throw new TimeoutException(msg);
 						}
 
 						try
 						{
-                            if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(TimeToWaitForDatabaseToLoad))) != resourceStoreTask)
+                            if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(timeToWaitForDatabaseToLoad))) != resourceStoreTask)
 							{
-								var msg = string.Format("The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.", tenantId, TimeToWaitForDatabaseToLoad);
+								msg = string.Format("The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.", tenantId, timeToWaitForDatabaseToLoad);
 								Logger.Warn(msg);
 								throw new TimeoutException(msg);
 							}
@@ -631,35 +625,28 @@ namespace Raven.Database.Server.Controllers
 						}
 					}
 
-                    var args = new BeforeRequestWebApiEventArgs()
+					landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+
+                    return new RequestWebApiEventArgs
                     {
                         Controller = this,
                         IgnoreRequest = false,
                         TenantId = tenantId,
                         Database = resourceStoreTask.Result
                     };
-
-                    rm.OnBeforeRequest(args);
-                    if (args.IgnoreRequest)
-                        return false;
                 }
                 catch (Exception e)
                 {
-	                var msg = "Could not open database named: " + tenantId + Environment.NewLine + e;
+	                msg = "Could not open database named: " + tenantId + Environment.NewLine + e;
 
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg,e);
                 }
+            }
 
-                landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-            }
-            else
-            {
-                var msg = "Could not find a database named: " + tenantId;
-                Logger.Warn(msg);
-                throw new HttpException(503, msg);
-            }
-            return true;
+			msg = "Could not find a database named: " + tenantId;
+			Logger.Warn(msg);
+			throw new HttpException(503, msg);
         }
 
 	    public override string TenantName
@@ -675,7 +662,7 @@ namespace Raven.Database.Server.Controllers
 			Database.WorkContext.MetricsCounters.RequestDurationLastMinute.AddRecord(duration);
 	    }
 
-	    public bool ClientIsV3OrHigher
+		protected bool ClientIsV3OrHigher
 	    {
 	        get
 	        {
@@ -686,6 +673,16 @@ namespace Raven.Database.Server.Controllers
 	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
 	        }
 	    }
+
+		protected RavenJArray GetResourcesDocuments(string resourcePrefix)
+		{
+			var start = GetStart();
+			var nextPageStart = start; // will trigger rapid pagination
+			var resourcesDocuments = Database.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
+				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+
+			return resourcesDocuments;
+		}
 
 		protected class TenantData
 		{
@@ -742,8 +739,10 @@ namespace Raven.Database.Server.Controllers
 												   .Select(db => new DatabaseInfo
 												   {
 													   Database = db,
-													   IsAdmin = principal.IsAdministrator(db)
+													   IsAdmin = principal.IsAdministrator(db),
+													   IsReadOnly = principal.IsReadOnly(db),
 												   }).ToList(),
+			
 					AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
 					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
 					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
@@ -757,6 +756,7 @@ namespace Raven.Database.Server.Controllers
 			var oAuthPrincipal = principal as OAuthPrincipal;
 			if (oAuthPrincipal != null)
 			{
+		
 				var oAuth = new UserInfo
 				{
 					Remark = "Using OAuth",
@@ -764,12 +764,19 @@ namespace Raven.Database.Server.Controllers
 					IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
 					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
 					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
-											  .Select(db => new DatabaseInfo
+											  .Select(db => db.TenantId != null ? new DatabaseInfo
 											  {
 												  Database = db.TenantId,
-												  IsAdmin = principal.IsAdministrator(db.TenantId)
-											  }).ToList(),
+												  IsAdmin = principal.IsAdministrator(db.TenantId),
+												  IsReadOnly = db.ReadOnly
+
+											  } : null).ToList(),
+					
 					AccessTokenBody = oAuthPrincipal.TokenBody,
+
+					AdminDatabases = oAuthPrincipal.AdminDatabases,
+					ReadOnlyDatabases = oAuthPrincipal.ReadOnlyDatabases,
+					ReadWriteDatabases = oAuthPrincipal.ReadWriteDatabases
 				};
 
 				return oAuth;

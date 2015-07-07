@@ -33,29 +33,37 @@ namespace Raven.Database.Counters.Controllers
             {
 				CounterStorage.TransportState.Disconnect(id);
             }
-			else if (Match(cmd, "watch-change"))
+			else if (Match(cmd, "watch-counters"))
+			{
+				connectionState.WatchAllCounters();
+			}
+			else if (Match(cmd, "unwatch-counters"))
+			{
+				connectionState.UnwatchAllCounters();
+			}
+			else if (Match(cmd, "watch-counter-change"))
 			{
 				connectionState.WatchChange(name);
 			}
-			else if (Match(cmd, "unwatch-change"))
+			else if (Match(cmd, "unwatch-counter-change"))
 			{
 				connectionState.UnwatchChange(name);
 			}
-			else if (Match(cmd, "watch-local-change"))
+			else if (Match(cmd, "watch-counters-prefix"))
 			{
-				connectionState.WatchLocalChange(name);
+				connectionState.WatchPrefix(name);
 			}
-			else if (Match(cmd, "unwatch-local-change"))
+			else if (Match(cmd, "unwatch-counters-prefix"))
 			{
-				connectionState.UnwatchLocalChange(name);
+				connectionState.UnwatchPrefix(name);
 			}
-            else if (Match(cmd, "watch-replication-change"))
+			else if (Match(cmd, "watch-counters-in-group"))
             {
-				connectionState.WatchReplicationChange(name);
+				connectionState.WatchCountersInGroup(name);
             }
-			else if (Match(cmd, "unwatch-replication-change"))
+			else if (Match(cmd, "unwatch-counters-in-group"))
             {
-				connectionState.UnwatchReplicationChange(name);
+				connectionState.UnwatchCountersInGroup(name);
             }
 			else if (Match(cmd, "watch-bulk-operation"))
 			{

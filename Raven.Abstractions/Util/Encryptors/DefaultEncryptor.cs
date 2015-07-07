@@ -1,4 +1,5 @@
-﻿// -----------------------------------------------------------------------
+﻿using Sparrow;
+// -----------------------------------------------------------------------
 //  <copyright file="DefaultEncryptor.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -20,9 +21,9 @@ namespace Raven.Abstractions.Util.Encryptors
 
 		public class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
 		{
-            private ObjectPool<MD5> md5Pool = new ObjectPool<MD5>(() => MD5.Create());
-            private ObjectPool<SHA1> sha1Pool = new ObjectPool<SHA1>(() => SHA1.Create());
-            private ObjectPool<SHA256> sha256Pool = new ObjectPool<SHA256>(() => SHA256.Create());
+            private readonly ObjectPool<MD5> md5Pool = new ObjectPool<MD5>(() => MD5.Create(), 16);
+            private readonly ObjectPool<SHA1> sha1Pool = new ObjectPool<SHA1>(() => SHA1.Create(), 16);
+            private readonly ObjectPool<SHA256> sha256Pool = new ObjectPool<SHA256>(() => SHA256.Create(), 16);
 
 			public DefaultHashEncryptor()
 				: this(true)
@@ -73,13 +74,13 @@ namespace Raven.Abstractions.Util.Encryptors
                 SHA256 algorithm = null;
                 try
                 {
-                    algorithm = this.sha256Pool.Get();
+                    algorithm = this.sha256Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha256Pool.Put(algorithm);
+                        this.sha256Pool.Free(algorithm);
                 }                
 			}
 
@@ -88,13 +89,13 @@ namespace Raven.Abstractions.Util.Encryptors
                 SHA256 algorithm = null;
                 try
                 {
-                    algorithm = this.sha256Pool.Get();
+                    algorithm = this.sha256Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes, offset, length);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha256Pool.Put(algorithm);
+                        this.sha256Pool.Free(algorithm);
                 }
 			}
 
@@ -103,13 +104,13 @@ namespace Raven.Abstractions.Util.Encryptors
                 SHA1 algorithm = null;
                 try
                 {
-                    algorithm = this.sha1Pool.Get();
+                    algorithm = this.sha1Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha1Pool.Put(algorithm);
+                        this.sha1Pool.Free(algorithm);
                 }
 			}
 
@@ -121,13 +122,13 @@ namespace Raven.Abstractions.Util.Encryptors
                 MD5 algorithm = null;
                 try
                 {
-                    algorithm = this.md5Pool.Get();
+                    algorithm = this.md5Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.md5Pool.Put(algorithm);
+                        this.md5Pool.Free(algorithm);
                 }
 			}
 
@@ -136,13 +137,13 @@ namespace Raven.Abstractions.Util.Encryptors
                 MD5 algorithm = null;
                 try
                 {
-                    algorithm = this.md5Pool.Get();
+                    algorithm = this.md5Pool.Allocate();
                     return algorithm.ComputeHash(stream);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.md5Pool.Put(algorithm);
+                        this.md5Pool.Free(algorithm);
                 }
 			}
 
@@ -154,13 +155,13 @@ namespace Raven.Abstractions.Util.Encryptors
                 MD5 algorithm = null;
                 try
                 {
-                    algorithm = this.md5Pool.Get();
+                    algorithm = this.md5Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes, offset, length);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.md5Pool.Put(algorithm);
+                        this.md5Pool.Free(algorithm);
                 }
 			}
 
@@ -169,13 +170,13 @@ namespace Raven.Abstractions.Util.Encryptors
                 SHA1 algorithm = null;
                 try
                 {
-                    algorithm = this.sha1Pool.Get();
+                    algorithm = this.sha1Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha1Pool.Put(algorithm);
+                        this.sha1Pool.Free(algorithm);
                 }
 			}
 
@@ -184,13 +185,13 @@ namespace Raven.Abstractions.Util.Encryptors
                 SHA1 algorithm = null;
                 try
                 {
-                    algorithm = this.sha1Pool.Get();
+                    algorithm = this.sha1Pool.Allocate();
                     return ComputeHashInternal(algorithm, bytes, offset, length);
                 }
                 finally
                 {
                     if (algorithm != null)
-                        this.sha1Pool.Put(algorithm);
+                        this.sha1Pool.Free(algorithm);
                 }
 			}
 		}

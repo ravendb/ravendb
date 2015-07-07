@@ -83,3 +83,23 @@ namespace Raven.Database.Counters.Controllers
         }
     }
 }
+
+namespace Raven.Database.TimeSeries.Controllers
+{
+	public class TimeSeriesSingleAuthTokenController : RavenTimeSeriesApiController
+    {
+        [HttpGet]
+        [RavenRoute("ts/{timeSeriesName}/singleAuthToken")]
+        public HttpResponseMessage SingleAuthGet()
+        {
+            var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
+
+            var token = authorizer.GenerateSingleUseAuthToken("ts/" + TimeSeriesName, User);
+
+            return GetMessageWithObject(new
+            {
+                Token = token
+            });
+        }
+    }
+}

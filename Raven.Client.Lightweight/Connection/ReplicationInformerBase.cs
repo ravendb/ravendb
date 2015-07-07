@@ -16,6 +16,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -32,7 +33,7 @@ namespace Raven.Client.Connection
 	{
 		protected readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-		protected readonly Convention Conventions;
+		protected readonly QueryConvention Conventions;
 
 	    private readonly HttpJsonRequestFactory requestFactory;
 
@@ -76,7 +77,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		protected ReplicationInformerBase(Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000)
+		protected ReplicationInformerBase(QueryConvention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000)
 		{
 			Conventions = conventions;
 			this.requestFactory = requestFactory;
@@ -201,6 +202,8 @@ namespace Raven.Client.Connection
 			Func<OperationMetadata, Task<T>> operation,
 			CancellationToken token = default (CancellationToken))
 		{
+			Debug.Assert(typeof(T).FullName.Contains("Task") == false);
+
 			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
 			var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials, null);
 

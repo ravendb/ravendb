@@ -1,5 +1,8 @@
 ﻿<div>
-    <div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation">
+    <div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation" data-bind="style: {backgroundColor:  selectedColor().backgroundColor}">
+
+        <div data-bind="text: selectedEnviromentText(), visible: canShowEnviromentText()" id="enviroment-header">Enviroment</div>
+
         <div class="container-fluid">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#topNavBarCollapse">
@@ -125,6 +128,8 @@
                     </form>
                 </div>
 
+            
+
                 <div data-bind="visible: canShowFileSystemNavbar, css: { 'menu-item-disabled': isActiveFileSystemDisabled }">
                     <ul class="nav navbar-nav">
                         <li data-bind="css: { active: appUrls.isActive('Files') }">
@@ -157,7 +162,7 @@
                     </ul>
                 </div>
 
-                <div data-bind="visible: canShowCountersNavbar">
+                <div data-bind="visible: canShowCountersNavbar, css: { 'menu-item-disabled': isActiveCounterStorageDisabled }">
                     <ul class=" nav navbar-nav">
                         <li data-bind="css: { active: appUrls.isActive('Counters') }">
                             <a data-bind="attr: { href: appUrls.counterStorageCounters }">Counters</a>
@@ -170,6 +175,20 @@
                         </li>
                         <li data-bind="css: { active: appUrls.isActive('Configuration') }">
                             <a data-bind="attr: { href: appUrls.counterStorageConfiguration }">Configuration</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div data-bind="visible: canShowTimeSeriesNavbar, css: { 'menu-item-disabled': isActiveTimeSeriesDisabled }">
+                    <ul class=" nav navbar-nav">
+                        <li data-bind="css: { active: appUrls.isActive('TimeSeries') }">
+                            <a data-bind="attr: { href: appUrls.timeSeriesSeries }">Time Series</a>
+                        </li>
+                        <li data-bind="css: { active: appUrls.isActive('Stats') }">
+                            <a data-bind="attr: { href: appUrls.timeSeriesStats }">Stats</a>
+                        </li>
+                        <li data-bind="css: { active: appUrls.isActive('Configuration') }">
+                            <a data-bind="attr: { href: appUrls.timeSeriesConfiguration }">Configuration</a>
                         </li>
                     </ul>
                 </div>
@@ -204,7 +223,7 @@
                             <ul class="dropdown-menu scrollable-resource-menu" role="menu" data-bind="foreach: listedResources, visible: $root.listedResources().length > 0">
                                 <li>
                                     <a href="#" data-bind="click: $root.selectResource.bind($root, $data)">
-                                        <span data-bind="attr: { class: $root.iconName($data) }"></span>
+                                        <span data-bind="attr: { class: iconName }"></span>
                                         <span data-bind="text: name"></span>
                                     </a>
                                 </li>
@@ -216,7 +235,7 @@
                                     <li class="vertical-navbar-menu-item">
                                         <a style="padding-right: 0; padding-left: 0; padding-bottom: 0; display: inline-block;" data-bind="attr: { href: getCurrentActiveFeatureHref() }">
                                             <span data-bind="text: getCurrentActiveFeatureName()"></span>&nbsp;
-                                            <i class="fa fa-caret-right" data-bind="visible: canShowDatabaseNavbar() || canShowFileSystemNavbar() || canShowCountersNavbar()"></i>&nbsp;
+                                            <i class="fa fa-caret-right" data-bind="visible: canShowResourcesNavbar"></i>&nbsp;
                                         </a>
                                     </li>
                                     <li class="dropdown vertical-navbar-menu-item" data-bind="visible: appUrls.isAreaActive('admin')()">
@@ -269,9 +288,9 @@
                 
                 <!-- ko with: statistics -->
                 <li><a class="navbar-link" data-bind="text: countOfDocumentsText, attr: { href: $parents[1].appUrls.documents }"></a></li>
-                <li><a class="navbar-link" data-bind="text: countOfIndexesText, attr: { href: $parents[1].appUrls.indexes }"></a></li>
-                <li><a class="navbar-link" data-bind="text: staleIndexesCountText, attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li><a class="navbar-link" data-bind="text: errorsCountText, attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
+                <li><a class="navbar-link" data-bind="text: countOfFilteredIndexesText, attr: { href: $parents[1].appUrls.indexes, title: 'Total indexes including disabled and abandoned: ' + countOfIndexesText() }"></a></li>
+                <li><a class="navbar-link" data-bind="text: staleFilteredIndexesCountText, attr: { href: $parents[1].appUrls.status, title: 'Total stale indexes including disabled and abandoned: ' + staleIndexesCountText() }"></a></li>
+	            <li><a class="navbar-link" data-bind="text: errorsCountText, attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
                 <!--<li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>-->
                 <li class="raw-url hidden-sm" data-bind="visible: $root.rawUrlIsVisible">
                     <a class="navbar-link" href="#" target='_blank' data-bind="text: $root.currentRawUrl, attr: { href: $root.currentRawUrl, title: $root.currentRawUrl }" style="max-width: 180px; -ms-text-overflow: ellipsis; -o-text-overflow: ellipsis; text-overflow: ellipsis; overflow-x: hidden; white-space: nowrap;"></a>
@@ -289,6 +308,31 @@
                 <li><a data-bind="text: fileCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
                 <li><a data-bind="text: requestsCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
                 <li><a data-bind="text: meanDurationText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <!-- /ko -->
+            </ul>
+
+            <ul class="nav navbar-nav" data-bind="with: activeCounterStorage, visible: !isActiveCounterStorageDisabled() && canShowCountersNavbar()">
+                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.filesystemStatus }" class="navbar-link" href="#">Status</a></li>
+                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
+                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+                </li>
+
+                <!-- ko with: statistics -->
+                <li><a data-bind="text: counterCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: groupCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: requestsPerSecondText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <!-- /ko -->
+            </ul>
+
+            <ul class="nav navbar-nav" data-bind="with: activeTimeSeries, visible: !isActiveTimeSeriesDisabled() && canShowTimeSeriesNavbar()">
+                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.filesystemStatus }" class="navbar-link" href="#">Status</a></li>
+                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
+                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+                </li>
+
+                <!-- ko with: statistics -->
+                <li><a data-bind="text: timeSeriesCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: requestsPerSecondText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
                 <!-- /ko -->
             </ul>
 

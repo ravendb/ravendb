@@ -534,7 +534,7 @@ class visualizer extends viewModelBase {
 
                 if (reduce2.length == 0 && reduce1.length == 0) {
                     var subTree: visualizerDataObjectNodeDto[] = map.map((m: mappedResultInfo) => {
-                    return {
+                        return {
                             name: m.ReduceKey,
                             payload: m,
                             level: 1,
@@ -546,7 +546,7 @@ class visualizer extends viewModelBase {
                                 }
                             ]
                         }
-                });
+                    });
 
                     allDataFetched.resolve({
                         level: 4,
@@ -558,17 +558,17 @@ class visualizer extends viewModelBase {
 
                 if (reduce2.length > 0 && reduce1.length > 0) {
                     var subTree: visualizerDataObjectNodeDto[] = reduce2.map(r2 => {
-                return {
+                        return {
                             name: r2.ReduceKey,
                             payload: r2,
                             level: 3,
                             children: reduce1GropedByBucket.get(r2.Source).map((r1: mappedResultInfo) => {
-                        return {
+                                return {
                                     name: r1.ReduceKey,
                                     payload: r1,
                                     level: 2,
                                     children: mapGroupedByBucket.get(r1.Source).map((m: mappedResultInfo) => {
-                                return {
+                                        return {
                                             name: m.ReduceKey,
                                             payload: m,
                                             level: 1,
@@ -580,11 +580,11 @@ class visualizer extends viewModelBase {
                                                 }
                                             ]
                                         }
-                            })
+                                    })
                                 }
-                    })
+                            })
                         }
-                });
+                    });
                     allDataFetched.resolve({
                         level: 4,
                         name: key,

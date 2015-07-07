@@ -3,25 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
-using Raven.Database.Server.Connections;
-using Raven.Database.FileSystem;
-using Raven.Abstractions.FileSystem;
 using System.Collections.Specialized;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem;
+using Raven.Database.Server.Connections;
+using Raven.Database.Server.Security;
+using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
-using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -173,7 +175,7 @@ namespace Raven.Database.Server.Tenancy
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
             if (document.Settings.Keys.Contains(Constants.FileSystem.DataDirectory) == false)
-                throw new InvalidOperationException("Could not find Raven/FileSystem/DataDir");
+                throw new InvalidOperationException("Could not find " + Constants.FileSystem.DataDirectory);
 
 			if (document.Disabled && !ignoreDisabledFileSystem)
                 throw new InvalidOperationException("The file system has been disabled.");
@@ -265,16 +267,7 @@ namespace Raven.Database.Server.Tenancy
 				throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
 	        }
 
-			foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))
-			{
-				string value;
-				if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
-				{
-					bool active;
-					if (bool.TryParse(value, out active) && active == false)
-						throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
-				}
-			}
+			Authentication.AssertLicensedBundles(config.ActiveBundles);
         }
 
 	    protected override DateTime LastWork(RavenFileSystem resource)

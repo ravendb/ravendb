@@ -38,8 +38,6 @@ namespace Raven.Tests.Counters
 
 			config = new RavenConfiguration
 			{
-				CountersDataDirectory = BackupSourceDirectory,
-				CountersDatabaseName = "TestCounterDB",				
 				Port = 8090,
 				DataDirectory = DocumentDatabaseDirectory,
 				RunInMemory = false,
@@ -48,6 +46,7 @@ namespace Raven.Tests.Counters
 				Encryption = { UseFips = SettingsHelper.UseFipsEncryptionAlgorithms },
 			};
 
+			config.Counter.DataDirectory = BackupSourceDirectory;
 			config.Settings["Raven/StorageTypeName"] = config.DefaultStorageTypeName;
 			config.PostInit();
 
@@ -94,23 +93,22 @@ namespace Raven.Tests.Counters
 
 			var restoreConfig = new RavenConfiguration
 			{
-				CountersDataDirectory = RestoreToDirectory,
-				CountersDatabaseName = "TestCounterDB",
 				RunInMemory = false
 			};
+			restoreConfig.Counter.DataDirectory = RestoreToDirectory;
 
 			using (var restoredStorage = new CounterStorage("http://localhost:8081", "RestoredCounter", restoreConfig))
 			{
 				using (var reader = restoredStorage.CreateReader())
 				{
-					Assert.Equal(6,reader.GetCounterOverallTotal("Bar", "Foo"));
-					var counter = reader.GetCounterValuesByPrefix("Bar", "Foo");
+					Assert.Equal(6, reader.GetCounterTotal("Bar", "Foo"));
+					/*var counter = reader.GetCounterValuesByPrefix("Bar", "Foo");
 					var counterValues = counter.CounterValues.ToArray();
 
 					Assert.Equal(8, counterValues[0].Value);
-					Assert.True(counterValues[0].IsPositive);
+					Assert.True(counterValues[0].IsPositive());
 					Assert.Equal(2, counterValues[1].Value);
-					Assert.False(counterValues[1].IsPositive);
+					Assert.False(counterValues[1].IsPositive());*/
 				}
 			}
 		}
@@ -134,24 +132,23 @@ namespace Raven.Tests.Counters
 
 			var restoreConfig = new RavenConfiguration
 			{
-				CountersDataDirectory = RestoreToDirectory,
-				CountersDatabaseName = "TestCounterDB",
 				RunInMemory = false
 			};
+			restoreConfig.Counter.DataDirectory = RestoreToDirectory;
 
 			using (var restoredStorage = new CounterStorage("http://localhost:8081", "RestoredCounter", restoreConfig))
 			{
 				using (var reader = restoredStorage.CreateReader())
 				{
-					Assert.Equal(6, reader.GetCounterOverallTotal("Bar", "Foo"));
+					Assert.Equal(6, reader.GetCounterTotal("Bar", "Foo"));
 
-					var counter = reader.GetCounterValuesByPrefix("Bar", "Foo");
+					/*var counter = reader.GetCounterValuesByPrefix("Bar", "Foo");
 					var counterValues = counter.CounterValues.ToArray();
 
 					Assert.Equal(8, counterValues[0].Value);
-					Assert.True(counterValues[0].IsPositive);
+					Assert.True(counterValues[0].IsPositive());
 					Assert.Equal(2, counterValues[1].Value);
-					Assert.False(counterValues[1].IsPositive);
+					Assert.False(counterValues[1].IsPositive());*/
 				}
 			}
 		}
@@ -168,7 +165,7 @@ namespace Raven.Tests.Counters
 		protected BackupOperation NewBackupOperation(bool isIncremental)
 		{
 			return new BackupOperation(documentDatabase,
-				config.CountersDataDirectory,
+				config.Counter.DataDirectory,
 				BackupDestinationDirectory,
 				storage.CounterStorageEnvironment,
 				isIncremental,

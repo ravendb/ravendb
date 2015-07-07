@@ -82,6 +82,8 @@ Raven.Studio.Html5/App/commands/filesystem/*.js
 Raven.Studio.Html5/App/commands/filesystem/*.js.map
 Raven.Studio.Html5/App/commands/counter/*.js
 Raven.Studio.Html5/App/commands/counter/*.js.map
+Raven.Studio.Html5/App/commands/timeSeries/*.js
+Raven.Studio.Html5/App/commands/timeSeries/*.js.map
 Raven.Studio.Html5/App/common/bindingHelpers/*.js
 Raven.Studio.Html5/App/common/bindingHelpers/*.js.map
 Raven.Studio.Html5/App/common/*.js
@@ -92,6 +94,8 @@ Raven.Studio.Html5/App/models/filesystem/*.js
 Raven.Studio.Html5/App/models/filesystem/*.js.map
 Raven.Studio.Html5/App/models/counter/*.js
 Raven.Studio.Html5/App/models/counter/*.js.map
+Raven.Studio.Html5/App/models/timeSeries/*.js
+Raven.Studio.Html5/App/models/timeSeries/*.js.map
 Raven.Studio.Html5/App/models/auth/*.js
 Raven.Studio.Html5/App/models/auth/*.js.map
 Raven.Studio.Html5/App/models/resources/*.js
@@ -174,6 +178,8 @@ Raven.Studio.Html5/App/viewmodels/filesystem/tasks/*.js
 Raven.Studio.Html5/App/viewmodels/filesystem/tasks/*.js.map
 Raven.Studio.Html5/App/viewmodels/counter/*.js
 Raven.Studio.Html5/App/viewmodels/counter/*.js.map
+Raven.Studio.Html5/App/viewmodels/timeSeries/*.js
+Raven.Studio.Html5/App/viewmodels/timeSeries/*.js.map
 Raven.Studio.Html5/App/widgets/virtualTable/*.js
 Raven.Studio.Html5/App/widgets/virtualTable/*.js.map
 Raven.Studio.Html5/Scripts/typings/ace/aceExt.js
@@ -195,5 +201,6 @@ Tools/Raven.Filesystem.CreateSample/packages/
 RavenDB.sln.ide/
 /Raven.Web/Raven/CompiledIndexCache
 _NCrunch_RavenDB/
+/Raven.Tests.Web/CompiledIndexCache
 /Raven.Database/LuceneQueryParser.Language.analyzer.lst
 /Raven.Database/LuceneQueryParser.Language.grammar.lst

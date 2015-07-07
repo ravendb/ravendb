@@ -121,8 +121,9 @@ class extensions {
     }
 
     private static installArrayExtensions() {
-        // Array.remove
         var arrayPrototype: any = Array.prototype;
+
+        // Array.remove
         arrayPrototype.remove = function (item) {
             var self: any[] = this;
             var index = self.indexOf(item);
@@ -205,7 +206,7 @@ class extensions {
             return self.length;
         };
 
-        // Array.count
+        // Array.distinct
         arrayPrototype.distinct = function () {
             var distinctElements = [];
             for (var i = 0; i < this.length; i++) {
@@ -216,6 +217,13 @@ class extensions {
             }
 
             return distinctElements;
+        };
+
+        // Array.distinct
+        arrayPrototype.concatUnique = function (values) {
+            for (var i = 0; i < values.length; i++)
+                if (this.indexOf(values[i]) === -1)
+                    this.push(values[i]);
         };
     }
 
@@ -345,18 +353,18 @@ class extensions {
         functionPrototype.memoize = function (thisVal) {
             var self = this;
             var cache = {};
-            return (arg) => {
-                if (arg in cache) {
-                    return cache[arg];
+            return (arg1, arg2) => {
+                if (arg2 in cache) {
+                    return cache[arg2];
                 } else {
-                    return cache[arg] = self.call(thisVal, arg);
+                    return cache[arg2] = self.call(thisVal, arg1, arg2);
                 }
             };
         };
     }
 
     private static installBindingHandlers() {
-        ko.bindingHandlers['numericValue'] = {
+        ko.bindingHandlers["numericValue"] = {
             init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
                 var underlyingObservable = valueAccessor();
                 var interceptor = ko.computed({
@@ -373,10 +381,27 @@ class extensions {
             update: ko.bindingHandlers.value.update
         };
 
-        ko.bindingHandlers['customValidity'] = {
+        ko.bindingHandlers["customValidity"] = {
             update: (element, valueAccessor) => {
                 var errorMessage = ko.unwrap(valueAccessor()); //unwrap to get subscription
                 element.setCustomValidity(errorMessage);
+            }
+        };
+
+        ko.bindingHandlers["bsChecked"] = {
+            init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+                var value = valueAccessor();
+                var newValueAccessor = () => {
+                    return {
+                        change() {
+                            value(element.value);
+                        }
+                    }
+                };
+                if ($(element).val() === ko.unwrap(valueAccessor())) {
+                    $(element).closest(".btn").button("toggle");
+                }
+                ko.bindingHandlers.event.init(element, newValueAccessor, allBindingsAccessor, viewModel, bindingContext);
             }
         };
     }

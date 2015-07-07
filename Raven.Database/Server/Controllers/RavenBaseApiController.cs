@@ -66,7 +66,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			get
 			{
-			    HttpRequestMessage message = InnerRequest;
+			    var message = InnerRequest;
 			    return CloneRequestHttpHeaders(message.Headers, message.Content == null ? null : message.Content.Headers);
 			}
 		}
@@ -120,6 +120,7 @@ namespace Raven.Database.Server.Controllers
             landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
+			timeSeriesLandlord = (TimeSeriesLandlord)controllerContext.Configuration.Properties[typeof(TimeSeriesLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 			clusterManager = ((Reference<ClusterManager>)controllerContext.Configuration.Properties[typeof(ClusterManager)]).Value;
 			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
@@ -255,10 +256,9 @@ namespace Raven.Database.Server.Controllers
 			if (value != null)
 				value = Uri.UnescapeDataString(value);
 			return value;
-		}*/
+		}*/	 
 
-
-        public static string GetQueryStringValue(HttpRequestMessage req, string key)
+	    public static string GetQueryStringValue(HttpRequestMessage req, string key)
         {
             NameValueCollection nvc;
             object value;
@@ -266,32 +266,36 @@ namespace Raven.Database.Server.Controllers
             {
                 nvc = (NameValueCollection) value;
                 return nvc[key];
-		}
+            }
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
-            req.Properties["Raven.QueryString"] = nvc;
+	        
+			foreach (var queryKey in nvc.AllKeys)
+				nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
+
+	        req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
         }
 
-		public string[] GetQueryStringValues(string key)
+	    protected string[] GetQueryStringValues(string key)
 		{
 			var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
 			return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
 		}
 
-		public Etag GetEtagFromQueryString()
+	    protected Etag GetEtagFromQueryString()
 		{
 			var etagAsString = GetQueryStringValue("etag");
 			return etagAsString != null ? Etag.Parse(etagAsString) : null;
 		}
 
-		public void WriteETag(Etag etag, HttpResponseMessage msg)
+	    protected void WriteETag(Etag etag, HttpResponseMessage msg)
 		{
 			if (etag == null)
 				return;
 			WriteETag(etag.ToString(), msg);
 		}
 
-		public void WriteETag(string etag, HttpResponseMessage msg)
+	    protected static void WriteETag(string etag, HttpResponseMessage msg)
 		{
 			if (string.IsNullOrWhiteSpace(etag))
 				return;
@@ -299,7 +303,7 @@ namespace Raven.Database.Server.Controllers
 			msg.Headers.ETag = new EntityTagHeaderValue("\"" + etag + "\"");
 		}
 
-		public void WriteHeaders(RavenJObject headers, Etag etag, HttpResponseMessage msg)
+	    protected void WriteHeaders(RavenJObject headers, Etag etag, HttpResponseMessage msg)
 		{
 			foreach (var header in headers)
 			{
@@ -402,7 +406,16 @@ namespace Raven.Database.Server.Controllers
 				// contains non ASCII chars, needs encoding
 				return Uri.EscapeDataString(str);
 			}
-			return str;
+
+			//because the string can be encoded multiple times, try to decode with loop
+			var tmp = String.Empty;
+			while (tmp.Equals(str) == false)
+			{
+				tmp = str;
+				str = HttpUtility.UrlDecode(str);
+			}
+			
+			return HttpUtility.UrlDecode(str);
 		}
 
 		public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
@@ -729,7 +742,7 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-	    public abstract Task<bool> SetupRequestToProperDatabase(RequestManager requestManager);
+		public abstract Task<RequestWebApiEventArgs> TrySetupRequestToProperResource();
 
         public abstract string TenantName { get; }
 
@@ -786,6 +799,17 @@ namespace Raven.Database.Server.Controllers
                 if (Configuration == null)
                     return countersLandlord;
                 return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
+            }
+        }
+
+        private TimeSeriesLandlord timeSeriesLandlord;
+        public TimeSeriesLandlord TimeSeriesLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+					return timeSeriesLandlord;
+                return (TimeSeriesLandlord)Configuration.Properties[typeof(TimeSeriesLandlord)];
             }
         }
 

@@ -16,6 +16,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -95,14 +96,14 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, "Raven/DataDir", systemConfiguration);
+			return CreateConfiguration(tenantId, document, Constants.RavenDataDir, systemConfiguration);
         }
 
 		private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
-                jsonDocument = systemDatabase.Documents.Get("Raven/Databases/" + tenantId, null);
+                jsonDocument = systemDatabase.Documents.Get(Constants.Database.Prefix + tenantId, null);
             if (jsonDocument == null ||
                 jsonDocument.Metadata == null ||
                 jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
@@ -110,8 +111,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-            if (document.Settings["Raven/DataDir"] == null)
-                throw new InvalidOperationException("Could not find Raven/DataDir");
+			if (document.Settings[Constants.RavenDataDir] == null)
+				throw new InvalidOperationException("Could not find " + Constants.RavenDataDir);
 
 			if (document.Disabled && !ignoreDisabledDatabase)
                 throw new InvalidOperationException("The database has been disabled.");
@@ -217,6 +218,12 @@ namespace Raven.Database.Server.Tenancy
                 Settings = new NameValueCollection(parentConfiguration.Settings),
             };
 
+	        if (config.Settings["Raven/CompiledIndexCacheDirectory"] == null)
+	        {
+				var compiledIndexCacheDirectory = parentConfiguration.CompiledIndexCacheDirectory;
+				config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
+	        }
+
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForDatabaseTenant(tenantId);
@@ -247,33 +254,6 @@ namespace Raven.Database.Server.Tenancy
             config.Initialize();
             config.CopyParentSettings(parentConfiguration);
             return config;
-        }
-
-        public void Unprotect(DatabaseDocument databaseDocument)
-        {
-            if (databaseDocument.SecuredSettings == null)
-            {
-                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
-
-            foreach (var prop in databaseDocument.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Convert.FromBase64String(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                try
-                {
-                    var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                    databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
-                }
-                catch (Exception e)
-                {
-                    Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-                    databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
-                }
-            }
         }
 
         public void Protect(DatabaseDocument databaseDocument)
@@ -332,16 +312,7 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
-            foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))
-            {
-                string value;
-                if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
-                {
-                    bool active;
-                    if (bool.TryParse(value, out active) && active == false)
-                        throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
-                }
-            }
+			Authentication.AssertLicensedBundles(config.ActiveBundles);
         }
 
         public void ForAllDatabases(Action<DocumentDatabase> action, bool excludeSystemDatabase = false)

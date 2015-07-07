@@ -20,9 +20,9 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.WebApi
 {
@@ -63,24 +63,30 @@ namespace Raven.Database.Server.WebApi
 			get { return Thread.VolatileRead(ref concurrentRequests); }
 		}
 
+		public event EventHandler<RequestWebApiEventArgs> BeforeRequest;
+		public event EventHandler<RequestWebApiEventArgs> AfterRequest;
+
 		public DateTime? LastRequestTime { get; private set; }
 
-		public event EventHandler<BeforeRequestWebApiEventArgs> BeforeRequest;
-
-		public virtual void OnBeforeRequest(BeforeRequestWebApiEventArgs e)
+		public virtual void OnBeforeRequest(RequestWebApiEventArgs e)
 		{
 			var handler = BeforeRequest;
 			if (handler != null) handler(this, e);
 		}
 
+		public virtual void OnAfterRequest(RequestWebApiEventArgs e)
+		{
+			var handler = AfterRequest;
+			if (handler != null) handler(this, e);
+		}
 
 		public RequestManager(DatabasesLandlord landlord)
 		{
-
 			BeforeRequest += OnBeforeRequest;
+			AfterRequest += OnAfterRequest;
 			cancellationTokenSource = new CancellationTokenSource();
 			this.landlord = landlord;
-			
+
 			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(landlord.MaxIdleTimeForTenantDatabaseInSec);
 			frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(landlord.FrequencyToCheckForIdleDatabasesInSec);
 
@@ -89,22 +95,54 @@ namespace Raven.Database.Server.WebApi
 		}
 
 
-		private void OnBeforeRequest(object sender, BeforeRequestWebApiEventArgs args)
+		private void OnBeforeRequest(object sender, RequestWebApiEventArgs args)
 		{
-
 			var documentDatabase = args.Database;
 			if (documentDatabase != null)
 			{
 				documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
 				documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
+				Interlocked.Increment(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
+				return;
 			}
-
 
 			var fileSystem = args.FileSystem;
 			if (fileSystem != null)
 			{
 				fileSystem.MetricsCounters.ConcurrentRequests.Mark();
 				fileSystem.MetricsCounters.RequestsPerSecondCounter.Mark();
+				Interlocked.Increment(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
+				return;
+			}
+
+			var counters = args.Counters;
+			if (counters != null)
+			{
+				counters.MetricsCounters.RequestsPerSecondCounter.Mark();
+				Interlocked.Increment(ref counters.MetricsCounters.ConcurrentRequestsCount);
+			}
+		}
+
+		private void OnAfterRequest(object sender, RequestWebApiEventArgs args)
+		{
+			var documentDatabase = args.Database;
+			if (documentDatabase != null)
+			{
+				Interlocked.Decrement(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
+				return;
+			}
+
+			var fileSystem = args.FileSystem;
+			if (fileSystem != null)
+			{
+				Interlocked.Decrement(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
+				return;
+			}
+
+			var counters = args.Counters;
+			if (counters != null)
+			{
+				Interlocked.Decrement(ref counters.MetricsCounters.ConcurrentRequestsCount);
 			}
 		}
 
@@ -151,23 +189,34 @@ namespace Raven.Database.Server.WebApi
 			cancellationToken.ThrowIfCancellationRequested();
 
 			Stopwatch sw = Stopwatch.StartNew();
+
 			try
 			{
 				LastRequestTime = SystemTime.UtcNow;
 				Interlocked.Increment(ref concurrentRequests);
-			    var requestSuccess = await controller.SetupRequestToProperDatabase(this);
-                if (requestSuccess)
+
+				RequestWebApiEventArgs args = await controller.TrySetupRequestToProperResource();
+				if (args != null)
 				{
-					if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
+					OnBeforeRequest(args);
+
+					try
 					{
-						response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+						if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
 						{
-                            Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
-						};
+							response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+							{
+								Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
+							};
+						}
+						else
+						{
+							response = await action();
+						}
 					}
-					else
+					finally
 					{
-						response = await action();
+						OnAfterRequest(args);
 					}
 				}
 			}
@@ -175,7 +224,6 @@ namespace Raven.Database.Server.WebApi
 			{
 				response = onHttpException(httpException);
 			}
-
 			finally
 			{
 
@@ -184,7 +232,6 @@ namespace Raven.Database.Server.WebApi
 				{
 					FinalizeRequestProcessing(controller, response, sw);
 				}
-
 				catch (Exception e)
 				{
 
@@ -242,19 +289,19 @@ namespace Raven.Database.Server.WebApi
 
 
 
-        public void SetThreadLocalState(IEnumerable<KeyValuePair<string, IEnumerable<string>>> innerHeaders, string databaseName)
+		public void SetThreadLocalState(IEnumerable<KeyValuePair<string, IEnumerable<string>>> innerHeaders, string databaseName)
 		{
-            CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() =>
-            {
-                var nameValueCollection = new NameValueCollection();
-                foreach (var innerHeader in innerHeaders)
-                {
-                    nameValueCollection[innerHeader.Key] = innerHeader.Value.FirstOrDefault();                   
-                }
-                
-                return nameValueCollection;
-            });
-          
+			CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() =>
+			{
+				var nameValueCollection = new NameValueCollection();
+				foreach (var innerHeader in innerHeaders)
+				{
+					nameValueCollection[innerHeader.Key] = innerHeader.Value.FirstOrDefault();
+				}
+
+				return nameValueCollection;
+			});
+
 			CurrentOperationContext.User.Value = null;
 
 			LogContext.DatabaseName.Value = databaseName;
@@ -320,21 +367,19 @@ namespace Raven.Database.Server.WebApi
 						sb.Length--;
 					}
 				}
-			    var innerRequest = controller.InnerRequest;
-                var httpRequestHeaders = innerRequest.Headers;
-                var httpContentHeaders = innerRequest.Content == null ? null : innerRequest.Content.Headers;
+				var innerRequest = controller.InnerRequest;
+				var httpRequestHeaders = innerRequest.Headers;
+				var httpContentHeaders = innerRequest.Content == null ? null : innerRequest.Content.Headers;
 				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
 					sw,
-                    new Lazy<HttpHeaders>(() => RavenBaseApiController.CloneRequestHttpHeaders(httpRequestHeaders, httpContentHeaders)),
+					new Lazy<HttpHeaders>(() => RavenBaseApiController.CloneRequestHttpHeaders(httpRequestHeaders, httpContentHeaders)),
 					controller.InnerRequest.Method.Method,
 					response != null ? (int)response.StatusCode : 500,
 					controller.InnerRequest.RequestUri.ToString(),
 					sb != null ? sb.ToString() : null,
-                    controller.InnerRequestsCount
+					controller.InnerRequestsCount
 					);
 			}
-
-
 			catch (Exception e)
 			{
 
@@ -355,16 +400,16 @@ namespace Raven.Database.Server.WebApi
 
 			LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.TenantName, curReq);
 
-            if (controller.IsInternalRequest == false)
-            {
-                TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName);    
-            }
+			if (controller.IsInternalRequest == false)
+			{
+				TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName);
+			}
 
 			RememberRecentRequests(logHttpRequestStatsParam, controller.TenantName);
 		}
 
 
-	    private void RememberRecentRequests(LogHttpRequestStatsParams requestLog, string databaseName)
+		private void RememberRecentRequests(LogHttpRequestStatsParams requestLog, string databaseName)
 		{
 			if (string.IsNullOrWhiteSpace(databaseName))
 				databaseName = Constants.SystemDatabase;
@@ -407,7 +452,7 @@ namespace Raven.Database.Server.WebApi
 				ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
 				TenantName = NormalizeTennantName(databaseName),
 				TimeStamp = SystemTime.UtcNow,
-                InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount
+				InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount
 			}
 			);
 		}

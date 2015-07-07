@@ -17,6 +17,13 @@ namespace Voron.Trees.Fixed
             long CurrentKey { get; }
             Slice Value { get; }
             bool MoveNext();
+
+			/// <summary>
+			/// Deletes the current key/value pair and returns true if there is 
+			/// another key after it
+			/// </summary>
+			bool DeleteCurrentAndMoveNext();
+
             ValueReader CreateReaderForCurrent();
         }
 
@@ -34,7 +41,12 @@ namespace Voron.Trees.Fixed
                 return false;
             }
 
-            public void Dispose()
+	        public bool DeleteCurrentAndMoveNext()
+	        {
+		        throw new InvalidOperationException("Invalid position, cannot read past end of tree");
+	        }
+
+	        public void Dispose()
             {
             }
 
@@ -62,6 +74,8 @@ namespace Voron.Trees.Fixed
             public bool Seek(long key)
             {
                 _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
+				if (_fst._lastMatch > 0)
+					_pos++; // We didn't find the key.
                 return _pos != _header->NumberOfEntries;
             }
 
@@ -91,12 +105,19 @@ namespace Voron.Trees.Fixed
                 return ++_pos < _header->NumberOfEntries;
             }
 
-            public ValueReader CreateReaderForCurrent()
+	        public bool DeleteCurrentAndMoveNext()
+	        {
+				var currentKey = CurrentKey;
+				_fst.RemoveEmbeddedEntry(currentKey);
+				return Seek(currentKey);    
+	        }
+
+	        public ValueReader CreateReaderForCurrent()
             {
                 return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
             }
 
-            public void Dispose()
+	        public void Dispose()
             {
             }
         }
@@ -119,7 +140,9 @@ namespace Voron.Trees.Fixed
             public bool Seek(long key)
             {
                 _currentPage = _parent.FindPageFor(key);
-                var seek = _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
+	            if (_currentPage.LastMatch > 0)
+		            _currentPage.LastSearchPosition++;
+	            var seek = _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
                 if (seek == false)
                     _currentPage = null;
                 return seek;
@@ -178,13 +201,22 @@ namespace Voron.Trees.Fixed
                 return false;
             }
 
-            public ValueReader CreateReaderForCurrent()
+			/// <summary>
+			/// Deletes the current key/value pair and returns true if there is 
+			/// another key after it
+			/// </summary>
+	        public bool DeleteCurrentAndMoveNext()
+	        {
+				var currentKey = CurrentKey;
+				_parent.RemoveLargeEntry(currentKey);
+				return Seek(currentKey);
+			}
+	        public ValueReader CreateReaderForCurrent()
             {
                 if (_currentPage == null)
                     throw new InvalidOperationException("No current page was set");
 
-                return  new ValueReader(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
-            
+                return new ValueReader(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
             }
         }
     }

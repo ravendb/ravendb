@@ -194,13 +194,8 @@ namespace Raven.Database.Queries
 				results = documents.Select(x => x.ToJson());
 			else
 			{
-				var robustEnumerator = new RobustEnumerator(token, 100)
-				{
-					OnError =
-						(exception, o) =>
-						transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
-															exception.Message))
-				};
+				var robustEnumerator = new RobustEnumerator(token, 100,
+					onError: (exception, o) => transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o), exception.Message)));
 
 				results = robustEnumerator
 					.RobustEnumeration(documents.Select(x => new DynamicJsonObject(x.ToJson())).GetEnumerator(), transformFunc)

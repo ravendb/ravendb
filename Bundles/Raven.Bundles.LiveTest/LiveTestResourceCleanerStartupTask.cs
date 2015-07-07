@@ -13,9 +13,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
+using Raven.Database.Server;
 using Raven.Database.Server.Tenancy;
 using Raven.Json.Linq;
-using Raven.Server;
 
 namespace Raven.Bundles.LiveTest
 {
@@ -23,13 +23,13 @@ namespace Raven.Bundles.LiveTest
 	{
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		private RavenDbServer server;
-
 		private TimeSpan maxTimeResourceCanBeIdle;
 
-		public void Execute(RavenDbServer ravenDbServer)
+		private RavenDBOptions options;
+
+		public void Execute(RavenDBOptions serverOptions)
 		{
-			server = ravenDbServer;
+			options = serverOptions;
 
 			int val;
 			if (int.TryParse(ConfigurationManager.AppSettings["Raven/Bundles/LiveTest/Tenants/MaxIdleTimeForTenantResource"], out val) == false)
@@ -39,7 +39,7 @@ namespace Raven.Bundles.LiveTest
 
 			log.Info("LiveTestResourceCleanerStartupTask started. MaxTimeResourceCanBeIdle: " + maxTimeResourceCanBeIdle.TotalSeconds + " seconds.");
 
-			server.Options.SystemDatabase.TimerManager.NewTimer(ExecuteCleanup, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
+			options.SystemDatabase.TimerManager.NewTimer(ExecuteCleanup, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
 		}
 
 		public void Dispose()
@@ -50,10 +50,10 @@ namespace Raven.Bundles.LiveTest
 		{
 			log.Info("LiveTestResourceCleanerStartupTask. Executing cleanup.");
 
-			var databaseLandlord = server.Options.DatabaseLandlord;
-			var fileSystemLandlord = server.Options.FileSystemLandlord;
+			var databaseLandlord = options.DatabaseLandlord;
+			var fileSystemLandlord = options.FileSystemLandlord;
 
-			if (server.Disposed)
+			if (options.Disposed)
 			{
 				Dispose();
 				return;

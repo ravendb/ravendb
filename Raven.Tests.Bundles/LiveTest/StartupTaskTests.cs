@@ -13,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Bundles.LiveTest;
 using Raven.Client.Embedded;
+using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
 using Raven.Database.Config;
 using Raven.Tests.Common;
@@ -86,7 +87,9 @@ namespace Raven.Tests.Bundles.LiveTest
 				Assert.NotNull(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind2"));
 
 				store.ServerIfEmbedded
-					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
+					.Options
+					.ServerStartupTasks
+					.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
 				Assert.Null(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind"));
@@ -95,7 +98,9 @@ namespace Raven.Tests.Bundles.LiveTest
 				store.ServerIfEmbedded.Server.Options.DatabaseLandlord.LastRecentlyUsed["Northwind2"] = DateTime.MinValue;
 
 				store.ServerIfEmbedded
-					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
+					.Options
+					.ServerStartupTasks
+					.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
 				Assert.Null(store.DatabaseCommands.Get(Constants.Database.Prefix + "Northwind2"));
@@ -110,32 +115,9 @@ namespace Raven.Tests.Bundles.LiveTest
 			using (var store = NewRemoteDocumentStore(ravenDbServer: server))
 			using (var fStore = new FilesStore { Url = store.Url, DefaultFileSystem = store.DefaultDatabase }.Initialize())
 			{
-				await fStore.AsyncFilesCommands.Admin.CreateFileSystemAsync(new FileSystemDocument
-				{
-					Id = "Northwind",
-					Settings =
-					{
-						{ Constants.FileSystem.DataDirectory, NewDataPath() }
-					}
-				}, "Northwind");
-
-				await fStore.AsyncFilesCommands.Admin.CreateFileSystemAsync(new FileSystemDocument
-				{
-					Id = "Northwind2",
-					Settings =
-					{
-						{ Constants.FileSystem.DataDirectory, NewDataPath() }
-					}
-				}, "Northwind2");
-
-				await fStore.AsyncFilesCommands.Admin.CreateFileSystemAsync(new FileSystemDocument
-				{
-					Id = "Northwind3",
-					Settings =
-					{
-						{ Constants.FileSystem.DataDirectory, NewDataPath() }
-					}
-				}, "Northwind3");
+				await fStore.AsyncFilesCommands.Admin.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("Northwind"));
+				await fStore.AsyncFilesCommands.Admin.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("Northwind2"));
+				await fStore.AsyncFilesCommands.Admin.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("Northwind3"));
 
 				await fStore
 					.AsyncFilesCommands
@@ -151,7 +133,9 @@ namespace Raven.Tests.Bundles.LiveTest
                 Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
 
 				server
-					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
+					.Options
+					.ServerStartupTasks
+					.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
                 Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind"));
@@ -160,7 +144,9 @@ namespace Raven.Tests.Bundles.LiveTest
 				server.Server.Options.FileSystemLandlord.LastRecentlyUsed["Northwind2"] = DateTime.MinValue;
 
 				server
-					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
+					.Options
+					.ServerStartupTasks
+					.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
                 Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
