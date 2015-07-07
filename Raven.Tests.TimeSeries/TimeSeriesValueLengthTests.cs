@@ -16,6 +16,7 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
+				tss.CreatePrefixConfiguration("-3Value", 3);
 				var data = new[]
 				{
 					new {Key = "Time", At = start, Value = 10},
@@ -31,26 +32,28 @@ namespace Raven.Tests.TimeSeries
 					new {Key = "Time", At = start.AddHours(2), Value = 50},
 				};
 
-				using (var writer = tss.CreateWriter(3))
+				using (var writer = tss.CreateWriter())
 				{
 					foreach (var item in data)
 					{
-						writer.Append(item.Key, item.At, item.Value, StringToIndex(item.Key), item.At.Ticks);
+						writer.Append("-3Value", item.Key, item.At, item.Value, StringToIndex(item.Key), item.At.Ticks);
 					}
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader(3))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.Query(
 						new TimeSeriesQuery
 						{
+							Prefix = "-3Value",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(1),
 						},
 						new TimeSeriesQuery
 						{
+							Prefix = "-3Value",
 							Key = "Money",
 							Start = DateTime.MinValue,
 							End = DateTime.MaxValue
@@ -65,12 +68,15 @@ namespace Raven.Tests.TimeSeries
 
 					for (int i = 0; i < 3; i++)
 					{
+#if DEBUG
 						Assert.Equal("Time", time[i].DebugKey);
+						Assert.Equal("Money", money[i].DebugKey);
+#endif
+
 						Assert.Equal(new DateTime(2015, 4, 1, i, 0, 0), time[i].At);
 						Assert.Equal(time[i].At.Ticks, time[i].Values[2]);
 						Assert.Equal(1, time[i].Values[1]);
 
-						Assert.Equal("Money", money[i].DebugKey);
 						Assert.Equal(new DateTime(2015, 4, 1, i, 0, 0), money[i].At);
 						Assert.Equal(money[i].At.Ticks, money[i].Values[2]);
 						Assert.Equal(3, money[i].Values[1]);
@@ -92,22 +98,24 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				using (var writer = tss.CreateWriter(3))
+				tss.CreatePrefixConfiguration("-3Val", 3);
+				using (var writer = tss.CreateWriter())
 				{
 					for (int i = 0; i < 7; i++)
 					{
-						writer.Append("Money", start.AddHours(i), 1000 + i, StringToIndex("Money"), start.AddHours(i).Ticks);
-						writer.Append("Is", start.AddHours(i), 7000 + i, StringToIndex("Is"), start.AddHours(i).Ticks);
-						writer.Append("Time", start.AddHours(i), 19000 + i, StringToIndex("Time"), start.AddHours(i).Ticks);
+						writer.Append("-3Val", "Money", start.AddHours(i), 1000 + i, StringToIndex("Money"), start.AddHours(i).Ticks);
+						writer.Append("-3Val", "Is", start.AddHours(i), 7000 + i, StringToIndex("Is"), start.AddHours(i).Ticks);
+						writer.Append("-3Val", "Time", start.AddHours(i), 19000 + i, StringToIndex("Time"), start.AddHours(i).Ticks);
 					}
 					writer.Commit();
 				}
 
-				using (var r = tss.CreateReader(3))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-3Val",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -115,6 +123,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-3Val",
 							Key = "Money",
 							Start = start.AddDays(-1),
 							End = start.AddMonths(1),
@@ -128,7 +137,9 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(256, time.Length);
 					for (int i = 0; i < 256; i++)
 					{
+#if DEBUG
 						Assert.Equal("Time", time[i].DebugKey);
+#endif
 						Assert.Equal(start.AddMonths(-1).AddHours(i * 3), time[i].StartAt);
 
 						if (i == 248 || i == 249 || i == 250)
@@ -184,7 +195,9 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(372, money.Length);
 					for (int i = 0; i < 372; i++)
 					{
+#if DEBUG
 						Assert.Equal("Money", money[i].DebugKey);
+#endif
 						Assert.Equal(start.AddDays(-1).AddHours(i * 2), money[i].StartAt);
 
 						if (i >= 12 && i <= 16)
@@ -204,24 +217,25 @@ namespace Raven.Tests.TimeSeries
 
 
 				var start2 = start.AddMonths(-1).AddDays(5);
-				using (var writer = tss.CreateWriter(3))
+				using (var writer = tss.CreateWriter())
 				{
 					int value = 6;
 					for (int i = 0; i < 4; i++)
 					{
-						writer.Append("Time", start2.AddHours(2 + i), value++, StringToIndex("Time"), start2.AddHours(2 + i).Ticks);
-						writer.Append("Is", start2.AddHours(2 + i), value++, StringToIndex("Is"), start2.AddHours(2 + i).Ticks);
-						writer.Append("Money", start2.AddHours(2 + i), value++, StringToIndex("Money"), start2.AddHours(2 + i).Ticks);
+						writer.Append("-3Val", "Time", start2.AddHours(2 + i), value++, StringToIndex("Time"), start2.AddHours(2 + i).Ticks);
+						writer.Append("-3Val", "Is", start2.AddHours(2 + i), value++, StringToIndex("Is"), start2.AddHours(2 + i).Ticks);
+						writer.Append("-3Val", "Money", start2.AddHours(2 + i), value++, StringToIndex("Money"), start2.AddHours(2 + i).Ticks);
 					}
 					writer.Commit();
 				}
 
 
-				using (var r = tss.CreateReader(3))
+				using (var r = tss.CreateReader())
 				{
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-3Val",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -229,6 +243,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-3Val",
 							Key = "Money",
 							Start = start.AddMonths(-2).AddDays(-1),
 							End = start.AddMonths(2),
@@ -242,7 +257,9 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(256, time.Length);
 					for (int i = 0; i < 256; i++)
 					{
+#if DEBUG
 						Assert.Equal("Time", time[i].DebugKey);
+#endif
 						Assert.Equal(start.AddMonths(-1).AddHours(i * 3), time[i].StartAt);
 
 						if (i == 40 || i == 41)
@@ -322,7 +339,9 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(1452, money.Length);
 					for (int i = 0; i < 1452; i++)
 					{
+#if DEBUG
 						Assert.Equal("Money", money[i].DebugKey);
+#endif
 						Assert.Equal(PeriodDuration.Hours(2), money[i].Duration);
 						Assert.Equal(start.AddMonths(-2).AddDays(-1).AddHours(2 * i), money[i].StartAt);
 

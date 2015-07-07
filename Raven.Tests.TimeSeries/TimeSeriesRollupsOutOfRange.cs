@@ -20,6 +20,7 @@ namespace Raven.Tests.TimeSeries
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(1),
@@ -42,6 +43,7 @@ namespace Raven.Tests.TimeSeries
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(1),
@@ -64,6 +66,7 @@ namespace Raven.Tests.TimeSeries
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(2),
@@ -85,6 +88,7 @@ namespace Raven.Tests.TimeSeries
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(2),
@@ -108,6 +112,7 @@ namespace Raven.Tests.TimeSeries
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-1),
 						End = start.AddYears(2),
@@ -131,6 +136,7 @@ namespace Raven.Tests.TimeSeries
 				{
 					r.QueryRollup(new TimeSeriesRollupQuery
 					{
+						Prefix = "-Simple",
 						Key = "Time",
 						Start = start.AddYears(-2),
 						End = start.AddYears(7),

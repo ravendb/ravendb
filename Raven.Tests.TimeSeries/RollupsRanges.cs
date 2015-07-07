@@ -20,7 +20,7 @@ namespace Raven.Tests.TimeSeries
 					for (int i = 10; i < 2000; i++)
 					{
 						var dateTime = start.AddMinutes(2 * i);
-						writer.Append("Time", dateTime, i);
+						writer.Append("-Simple", "Time", dateTime, i);
 					}
 					writer.Commit();
 				}
@@ -30,6 +30,7 @@ namespace Raven.Tests.TimeSeries
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(2),
@@ -39,7 +40,9 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(548, time.Length);
 					for (int i = 0; i < 548; i++)
 					{
+#if DEBUG
 						Assert.Equal("Time", time[i].DebugKey);
+#endif
 						Assert.Equal(PeriodDuration.Days(2), time[i].Duration);
 
 						var daysInMonth = DateTime.DaysInMonth(time[i].StartAt.Year, time[i].StartAt.Month) +
@@ -84,7 +87,7 @@ namespace Raven.Tests.TimeSeries
 					for (int i = 10; i < 5000; i++)
 					{
 						var dateTime = start.AddHours(6 * i);
-						writer.Append("Time", dateTime, i);
+						writer.Append("-Simple", "Time", dateTime, i);
 					}
 					writer.Commit();
 				}
@@ -94,6 +97,7 @@ namespace Raven.Tests.TimeSeries
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(2),
@@ -122,7 +126,9 @@ namespace Raven.Tests.TimeSeries
 
 					for (int i = 0; i < 18; i++)
 					{
+#if DEBUG
 						Assert.Equal("Time", time[i].DebugKey);
+#endif
 						Assert.Equal(PeriodDuration.Months(2), time[i].Duration);
 
 						var daysInMonth = DateTime.DaysInMonth(time[i].StartAt.Year, time[i].StartAt.Month) +
@@ -163,7 +169,7 @@ namespace Raven.Tests.TimeSeries
 					for (int i = 10; i < 5000; i++)
 					{
 						var dateTime = start.AddHours(6 * i);
-						writer.Append("Time", dateTime, i);
+						writer.Append("-Simple", "Time", dateTime, i);
 					}
 					writer.Commit();
 				}
@@ -173,6 +179,7 @@ namespace Raven.Tests.TimeSeries
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
+							Prefix = "-Simple",
 							Key = "Time",
 							Start = start.AddYears(-2),
 							End = start.AddYears(6),
