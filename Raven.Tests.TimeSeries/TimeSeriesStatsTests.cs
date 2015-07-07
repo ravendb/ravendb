@@ -21,7 +21,7 @@ namespace Raven.Tests.TimeSeries
 				
 				var stats = await store.GetTimeSeriesStatsAsync();
 			    Assert.Equal(3, stats.KeysCount);
-			    Assert.Equal(7, stats.ValuesCount);
+			    Assert.Equal(6, stats.ValuesCount);
 			}
 	    }
 	}
