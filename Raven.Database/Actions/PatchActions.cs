@@ -27,18 +27,18 @@ namespace Raven.Database.Actions
         }
 
         public PatchResultData ApplyPatch(string docId, Etag etag, PatchRequest[] patchDoc,
-                                  TransactionInformation transactionInformation, bool debugMode = false)
+								  TransactionInformation transactionInformation, bool debugMode = false, string[] participatingIds = null)
         {
             if (docId == null)
                 throw new ArgumentNullException("docId");
             return ApplyPatchInternal(docId, etag, transactionInformation,
                                       jsonDoc => new JsonPatcher(jsonDoc.ToJson()).Apply(patchDoc),
-									  () => null, () => null, () => null, debugMode);
+									  () => null, () => null, () => null, debugMode, participatingIds: participatingIds);
         }
 
         public PatchResultData ApplyPatch(string docId, Etag etag,
                                           PatchRequest[] patchExistingDoc, PatchRequest[] patchDefaultDoc, RavenJObject defaultMetadata,
-										  TransactionInformation transactionInformation, bool debugMode = false, bool skipPatchIfEtagMismatch = false)
+										  TransactionInformation transactionInformation, bool debugMode = false, bool skipPatchIfEtagMismatch = false, string[] participatingIds = null)
         {
             if (docId == null)
                 throw new ArgumentNullException("docId");
@@ -56,7 +56,8 @@ namespace Raven.Database.Actions
                                       () => null,
 									  () => null,
 									  debugMode,
-									  skipPatchIfEtagMismatch);
+									  skipPatchIfEtagMismatch,
+									  participatingIds);
         }
 
         private PatchResultData ApplyPatchInternal(string docId, Etag etag,
@@ -66,7 +67,8 @@ namespace Raven.Database.Actions
                                        Func<IList<JsonDocument>> getDocsCreatedInPatch,
 									   Func<RavenJObject> getDebugActions,
                                        bool debugMode,
-									   bool skipPatchIfEtagMismatch = false)
+									   bool skipPatchIfEtagMismatch = false,
+									   string[] participatingIds = null)
         {
             if (docId == null) throw new ArgumentNullException("docId");
             docId = docId.Trim();
@@ -124,13 +126,13 @@ namespace Raven.Database.Actions
 	                        var notModified = false;
 
 	                        if (doc == null)
-		                        Database.Documents.Put(docId, null, jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+		                        Database.Documents.Put(docId, null, jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation, participatingIds);
 	                        else
 	                        {
 		                        if (IsNotModified(jsonDoc.CloneToken(), documentBeforePatching))
 			                        notModified = true;
 		                        else
-			                        Database.Documents.Put(doc.Key, (doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+			                        Database.Documents.Put(doc.Key, (doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation, participatingIds);
 	                        }
 
 	                        var docsCreatedInPatch = getDocsCreatedInPatch();
@@ -139,7 +141,7 @@ namespace Raven.Database.Actions
                                 foreach (var docFromPatch in docsCreatedInPatch)
                                 {
                                     Database.Documents.Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
-                                        docFromPatch.Metadata, transactionInformation);
+                                        docFromPatch.Metadata, transactionInformation, participatingIds);
                                 }
                             }
                             shouldRetry = false;
@@ -222,7 +224,7 @@ namespace Raven.Database.Actions
 
 		public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag,
 															   ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata,
-															   TransactionInformation transactionInformation, bool debugMode = false)
+															   TransactionInformation transactionInformation, bool debugMode = false, string[] participatingIds = null)
 		{
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
 			DefaultScriptedJsonPatcherOperationScope scope = null;
@@ -263,7 +265,7 @@ namespace Raven.Database.Actions
 
 						return scope.DebugActions;
 					},
-					debugMode);
+					debugMode, participatingIds: participatingIds);
 				return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
 			}
 			finally

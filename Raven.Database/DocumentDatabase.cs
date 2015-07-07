@@ -15,6 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
 using Raven.Abstractions;
@@ -42,6 +43,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
+using Raven.Json.Linq;
 
 namespace Raven.Database
 {
@@ -174,7 +176,9 @@ namespace Raven.Database
 					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
                     Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
-					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
+					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, 
+						(key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation), 
+						(key, etag, transactionInformation) => Documents.Delete(key, etag, transactionInformation));
 
 					InitializeTriggersExceptIndexCodecs();
 					// Second stage initializing before index storage for determining the hash algotihm for encrypted databases that were upgraded from 2.5
@@ -1145,8 +1149,8 @@ namespace Raven.Database
 			{
 				token.ThrowIfCancellationRequested();
 
-				ICommandData command = commands[index];
-				results[index] = command.ExecuteBatch(this);
+				var participatingIds = commands.Select(x => x.Key).ToArray();
+				results[index] = commands[index].ExecuteBatch(this, participatingIds);
 			}
 
 			return results;
