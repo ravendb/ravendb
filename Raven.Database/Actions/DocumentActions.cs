@@ -617,7 +617,7 @@ namespace Raven.Database.Actions
             key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
             RemoveReservedProperties(document);
             RemoveMetadataReservedProperties(metadata);
-            Etag newEtag = Etag.Empty;
+            var newEtag = Etag.Empty;
 
             using (Database.DocumentLock.Lock())
             {
