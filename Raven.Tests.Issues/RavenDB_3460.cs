@@ -13,7 +13,20 @@ namespace Raven.Tests.Issues
 {
 
 		public class RavenDB_3460 : RavenTestBase
-		{						
+		{
+			[Fact]
+			public void TripleEncodingInHttpQueryShouldWork()
+			{
+				using (var store = NewRemoteDocumentStore())
+				{
+					var customers = SetupAndGetCustomers(store);
+					customers.Should().NotBeEmpty();
+
+					var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%25253A1", store.Url, store.DefaultDatabase);
+
+					GetResults(url).Values().Should().NotBeEmpty();
+				}
+			}
 			[Fact]
 			public void DoubleEncodingInHttpQueryShouldWork()
 			{
@@ -22,7 +35,7 @@ namespace Raven.Tests.Issues
 					var customers = SetupAndGetCustomers(store);
 					customers.Should().NotBeEmpty();
 
-					var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%253A1", store.Url,store.DefaultDatabase);
+					var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%253A1", store.Url, store.DefaultDatabase);
 
 					GetResults(url).Values().Should().NotBeEmpty();
 				}
