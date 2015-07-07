@@ -23,6 +23,7 @@ namespace Raven.Database.Storage
 
 	    void SetIndexPriority(int id, IndexingPriority priority);
 
+		void SetIndexesPriority(int[] ids, IndexingPriority[] priorities);
 
 		IndexFailureInformation GetFailureRate(int id);
 

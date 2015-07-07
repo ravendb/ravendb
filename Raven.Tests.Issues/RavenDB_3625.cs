@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
-using Raven.Tests.Misc;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -21,45 +20,44 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore(databaseName:"MultiIndexes"))
 			{
-				IndexCreation.CreateIndexes(Assembly.GetAssembly(typeof(TestStrIndex)), store);
+				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(TestStrIndex),typeof(TestIntIndex))), store);
 				var names = store.DatabaseCommands.GetIndexNames(0,3);
 				Assert.Contains("TestIntIndex", names);
 				Assert.Contains("TestStrIndex", names);
 			}
 		}
-		[Fact]
-		public void CanExecuteMultipleIndexesWithConventions()
-		{
-			using (var store = NewDocumentStore(databaseName: "MultiIndexes"))
-			{
-				IndexCreation.CreateIndexes(new CompositionContainer(new AssemblyCatalog(Assembly.GetAssembly(typeof(TestStrIndex)))), store.DatabaseCommands, new DocumentConvention());
-				var names = store.DatabaseCommands.GetIndexNames(0, 3);
-				Assert.Contains("TestIntIndex", names);
-				Assert.Contains("TestStrIndex", names);
-			}
-		}
+
 		[Fact]
 		public async Task CanExecuteMultipleIndexesAsync()
 		{
 			using (var store = NewDocumentStore(databaseName: "MultiIndexes"))
 			{
-				await IndexCreation.CreateIndexesAsync(Assembly.GetAssembly(typeof(TestStrIndex)), store).ConfigureAwait(false);
-				var names = store.DatabaseCommands.GetIndexNames(0, 3);
-				Assert.Contains("TestIntIndex", names);
-				Assert.Contains("TestStrIndex", names);
-			}
-		}
-		[Fact]
-		public async Task CanExecuteMultipleIndexesWithConventionsAsync()
-		{
-			using (var store = NewDocumentStore(databaseName: "MultiIndexes"))
-			{
-				await IndexCreation.CreateIndexesAsync(new CompositionContainer(new AssemblyCatalog(Assembly.GetAssembly(typeof(TestStrIndex)))), store.AsyncDatabaseCommands, new DocumentConvention()).ConfigureAwait(false);
+				await IndexCreation.CreateIndexesAsync(new CompositionContainer(new TypeCatalog(typeof(TestStrIndex),typeof(TestIntIndex))), store).ConfigureAwait(false);
 				var names = store.DatabaseCommands.GetIndexNames(0, 3);
 				Assert.Contains("TestIntIndex", names);
 				Assert.Contains("TestStrIndex", names);
 			}
 		}
 
+		public class TestIntIndex : AbstractIndexCreationTask<Data>
+		{
+			public TestIntIndex()
+			{
+				Map = docs => from doc in docs select new { doc.Int };
+			}
+		}
+		public class TestStrIndex : AbstractIndexCreationTask<Data>
+		{
+			public TestStrIndex()
+			{
+				Map = docs => from doc in docs select new { doc.Str };
+			}
+		}
+
+		public class Data
+		{
+			public int Int { get; set; }
+			public string Str { get; set; }
+		}
 	}
 }

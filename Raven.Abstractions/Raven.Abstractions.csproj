@@ -283,6 +283,7 @@
     <Compile Include="Indexing\IndexMergeResults.cs" />
     <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
+    <Compile Include="Indexing\MultiplePutIndexParam.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
     <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
