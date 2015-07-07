@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.DirectoryServices.ActiveDirectory;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -162,6 +163,7 @@ namespace Raven.Database.Indexing
 				case TermType.PrefixTerm:
 			    case TermType.Float:
 			    case TermType.Double:
+				case TermType.Hex:
 			    case TermType.DateTime:
 			    case TermType.Int:
 			    case TermType.Long:
@@ -223,6 +225,7 @@ namespace Raven.Database.Indexing
 	        switch (Type)
 	        {
 		        case TermType.Float:
+				case TermType.Hex:
 		        case TermType.Double:
 		        case TermType.DateTime:
 		        case TermType.Int:
@@ -309,7 +312,8 @@ namespace Raven.Database.Indexing
             UnAnalyzed,
 			Null,
 			WildCardTerm,
-			PrefixTerm
+			PrefixTerm,
+			Hex
         }
 
 
@@ -377,6 +381,28 @@ namespace Raven.Database.Indexing
 				var longMax = (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*") ? long.MaxValue : long.Parse(RangeMax.Term.Substring(2));
 				return NumericRangeQuery.NewLongRange(configuration.FieldName, 4, longMin, longMax, InclusiveMin, InclusiveMax);
 			}
+	        if (RangeMin.Type == TermLuceneASTNode.TermType.Hex || RangeMax.Type == TermLuceneASTNode.TermType.Hex)
+	        {
+				var longMin = (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*") ? long.MinValue : long.Parse(RangeMin.Term.Substring(2), NumberStyles.HexNumber);
+				var longMax = (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*") ? long.MaxValue : long.Parse(RangeMax.Term.Substring(2), NumberStyles.HexNumber);
+		        if (RangeMin.Type == TermLuceneASTNode.TermType.Hex && RangeMax.Type == TermLuceneASTNode.TermType.Hex)
+		        {
+			        if (longMax <= int.MaxValue)
+			        {
+						return NumericRangeQuery.NewIntRange(configuration.FieldName, 4, (int)longMin, (int)longMax, InclusiveMin, InclusiveMax);
+			        }
+					return NumericRangeQuery.NewLongRange(configuration.FieldName, 4, longMin, longMax, InclusiveMin, InclusiveMax);
+		        }
+				if (RangeMin.Type == TermLuceneASTNode.TermType.Hex && longMin <= int.MaxValue)
+		        {
+					return NumericRangeQuery.NewIntRange(configuration.FieldName, 4, (int)longMin, int.MaxValue, InclusiveMin, InclusiveMax);
+		        }
+				if (RangeMax.Type == TermLuceneASTNode.TermType.Hex && longMax <= int.MaxValue)
+				{
+					return NumericRangeQuery.NewIntRange(configuration.FieldName, 4, int.MinValue, (int)longMax, InclusiveMin, InclusiveMax);
+				}
+				return NumericRangeQuery.NewLongRange(configuration.FieldName, 4, longMin, longMax, InclusiveMin, InclusiveMax);
+	        }
 	        if (RangeMin.Type == TermLuceneASTNode.TermType.Null && RangeMax.Type == TermLuceneASTNode.TermType.Null)
 	        {
 				return new WildcardQuery(new Term(configuration.FieldName, "*"));

@@ -8,8 +8,8 @@
 Comment    [ \t\r\n\f]"//"([^\n\r]*)
 Whitespace [ \t\r\n\f]
 Digit      [0-9]
-Number     {Digit}+
-Decimal    {Number}\.{Number}
+Number     [+-]?{Digit}+
+Decimal    [+-]?{Number}\.{Number}
 EscapeChar \\[^]
 TermStartChar [^ :\t\r\n\f\+\-!\{\}()"^\*\?\\~\[\],]|{EscapeChar}
 TermChar {TermStartChar}|[,\-\+]
@@ -62,6 +62,7 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 {Number}						{ yylval.s = yytext; return (int)Token.INT_NUMBER;}
 "Ix"{Number}					{ yylval.s = yytext; return (int)Token.INT_NUMBER;}
 "Lx"{Number}					{ yylval.s = yytext; return (int)Token.LONG_NUMBER;}
+"0x"{Number}					{ yylval.s = yytext; return (int)Token.HEX_NUMBER;}
 {UnquotedTerm}					{ 					
 								if(InMethod && bStack.Count == 0) 
 								{
@@ -69,12 +70,12 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 								}
 								else 
 								{
-									yylval.s = yytext;
+									yylval.s = DiscardEscapeChar(yytext);
 								}
 								return (int)Token.UNQUOTED_TERM;
 								}
-{PrefixTerm}					{ yylval.s = yytext;  return (int)Token.PREFIX_TERM;}
-{WildCardTerm}					{ yylval.s = yytext;  return (int)Token.WILDCARD_TERM;}
+{PrefixTerm}					{ yylval.s = DiscardEscapeChar(yytext);  return (int)Token.PREFIX_TERM;}
+{WildCardTerm}					{ yylval.s = DiscardEscapeChar(yytext);  return (int)Token.WILDCARD_TERM;}
 {Whitespace}					{/* skip */}
 <<EOF>>							/*This is needed for yywrap to work, do not delete this comment!!!*/
 
