@@ -6,7 +6,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Principal;
-using JetBrains.Annotations;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -21,7 +25,6 @@ using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
