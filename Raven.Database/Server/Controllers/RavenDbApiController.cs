@@ -662,6 +662,21 @@ namespace Raven.Database.Server.Controllers
 	        }
 	    }
 
+		protected Etag GetLastDocEtag()
+		{
+			var lastDocEtag = Etag.Empty;
+			long documentsCount = 0;
+			Database.TransactionalStorage.Batch(
+				accessor =>
+				{
+					lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+					documentsCount = accessor.Documents.GetDocumentsCount();
+				});
+
+			lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
+			return lastDocEtag;
+		}
+
 		protected class TenantData
 		{
 			public string Name { get; set; }

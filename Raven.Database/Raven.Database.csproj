@@ -244,6 +244,7 @@
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\EnumSetting.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
+    <Compile Include="Data\DiskSpaceNotification.cs" />
     <Compile Include="FileSystem\Actions\ActionsBase.cs" />
     <Compile Include="FileSystem\Actions\FileActions.cs" />
     <Compile Include="FileSystem\Actions\ReadFileToDatabase.cs" />
