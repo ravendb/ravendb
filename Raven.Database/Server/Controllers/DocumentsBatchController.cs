@@ -40,7 +40,7 @@ namespace Raven.Database.Server.Controllers
 	            }
 	            catch (InvalidOperationException e)
 	            {
-					Log.Debug("Failed to deserialize document batch request. Error: " + e);
+					Log.DebugException("Failed to deserialize document batch request." , e);
 					return GetMessageWithObject(new
 					{
 						Message = "Could not understand json, please check its validity."
@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Controllers
 	            }
 	            catch (InvalidDataException e)
 	            {
-					Log.Debug("Failed to deserialize document batch request. Error: " + e);
+					Log.DebugException("Failed to deserialize document batch request." , e);
 		            return GetMessageWithObject(new
 		            {
 			            e.Message
@@ -117,7 +117,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize document batch request. Error: " + e);
+				Log.DebugException("Failed to deserialize document batch request." , e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity."
@@ -126,7 +126,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize document batch request. Error: " + e);
+				Log.DebugException("Failed to deserialize document batch request." , e);
 				return GetMessageWithObject(new
 				{
 					e.Message
@@ -156,7 +156,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize document batch request. Error: " + e);
+				Log.DebugException("Failed to deserialize document batch request." , e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity."
@@ -165,7 +165,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize document batch request. Error: " + e);
+				Log.DebugException("Failed to deserialize document batch request." , e);
 				return GetMessageWithObject(new
 				{
 					e.Message

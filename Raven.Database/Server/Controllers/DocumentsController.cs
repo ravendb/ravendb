@@ -105,7 +105,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize document request. Error: " + e);
+				Log.DebugException("Failed to deserialize document request." , e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity."
@@ -114,7 +114,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize document request. Error: " + e);
+				Log.DebugException("Failed to deserialize document request." , e);
 				return GetMessageWithObject(new
 				{
 					e.Message
@@ -216,7 +216,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize document request. Error: " + e);
+				Log.Debug("Failed to deserialize document request." + e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity."
@@ -225,7 +225,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize document request. Error: " + e);
+				Log.Debug("Failed to deserialize document request." + e);
 				return GetMessageWithObject(new
 				{
 					e.Message
