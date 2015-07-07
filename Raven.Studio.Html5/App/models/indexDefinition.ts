@@ -18,6 +18,7 @@ class indexDefinition {
     numOfSpatialFields = ko.computed(() => this.spatialFields().length).extend({ required: true });
 
     maxIndexOutputsPerDocument = ko.observable<number>(0).extend({ required: true });
+    storeAllFields = ko.observable<boolean>(false);
 
     analyzers: any;
     fields = ko.observableArray<string>();
@@ -57,7 +58,17 @@ class indexDefinition {
         this.luceneFields(this.parseFields());
         this.spatialFields(this.parseSpatialFields());
 
-        this.maxIndexOutputsPerDocument(dto.MaxIndexOutputsPerDocument? dto.MaxIndexOutputsPerDocument:0);
+        this.maxIndexOutputsPerDocument(dto.MaxIndexOutputsPerDocument ? dto.MaxIndexOutputsPerDocument : 0);
+        this.storeAllFields(this.isStoreAllFields());
+    }
+
+    isStoreAllFields(): boolean {
+        for (var key in this.stores) {
+            if (key === "__all_fields")
+                return true;
+        }
+
+        return false;
     }
 
     toDto(): indexDefinitionDto {
