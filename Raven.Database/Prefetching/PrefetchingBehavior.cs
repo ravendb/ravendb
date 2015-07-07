@@ -19,8 +19,6 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
 {
-	using Util;
-
 	public class PrefetchingBehavior : IDisposable, ILowMemoryHandler
 	{
 		private class DocAddedAfterCommit
@@ -33,25 +31,22 @@ namespace Raven.Database.Prefetching
 		private readonly BaseBatchSizeAutoTuner autoTuner;
 		private readonly WorkContext context;
 		private readonly ConcurrentDictionary<string, HashSet<Etag>> documentsToRemove = new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ReaderWriterLockSlim updatedDocumentsLock = new ReaderWriterLockSlim();
-		private readonly SortedKeyList<Etag> updatedDocuments = new SortedKeyList<Etag>();
-
 		private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches = new ConcurrentDictionary<Etag, FutureIndexBatch>();
 
 		private readonly ConcurrentJsonDocumentSortedList prefetchingQueue = new ConcurrentJsonDocumentSortedList();
 
 		private DocAddedAfterCommit lowestInMemoryDocumentAddedAfterCommit;
 		private int currentIndexingAge;
+		private string userDescription;
 
 		public Action<int> FutureBatchCompleted = delegate { };
 
-		public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner)
+		public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription)
 		{
 			this.context = context;
 			this.autoTuner = autoTuner;
 			PrefetchingUser = prefetchingUser;
-
+			this.userDescription = prefetchingUserDescription;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
@@ -223,7 +218,6 @@ namespace Raven.Database.Prefetching
 		{
 			JsonDocument result;
 
-			nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
 			bool hasDocs = false;
 
 			while (items.Count < autoTuner.NumberOfItemsToProcessInSingleBatch &&
@@ -251,7 +245,6 @@ namespace Raven.Database.Prefetching
 					break;
 
 				nextDocEtag = Abstractions.Util.EtagUtil.Increment(nextDocEtag, 1);
-				nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
 			}
 
 			return hasDocs;
@@ -610,16 +603,6 @@ namespace Raven.Database.Prefetching
 				documentsToRemove.TryRemove(docToRemove.Key, out _);
 			}
 
-			updatedDocumentsLock.EnterWriteLock();
-			try
-			{
-				updatedDocuments.RemoveSmallerOrEqual(lastIndexedEtag);
-			}
-			finally
-			{
-				updatedDocumentsLock.ExitWriteLock();
-			}
-
 			JsonDocument result;
 			while (prefetchingQueue.TryPeek(out result) && lastIndexedEtag.CompareTo(result.Etag) >= 0)
 			{
@@ -641,71 +624,11 @@ namespace Raven.Database.Prefetching
 										  (s, set) => new HashSet<Etag>(set) { deletedEtag });
 		}
 
-		public void AfterUpdate(string key, Etag etagBeforeUpdate)
-		{
-			updatedDocumentsLock.EnterWriteLock();
-			try
-			{
-				updatedDocuments.Add(etagBeforeUpdate);
-			}
-			finally
-			{
-				updatedDocumentsLock.ExitWriteLock();
-			}
-		}
-
 		public bool ShouldSkipDeleteFromIndex(JsonDocument item)
 		{
 			if (item.SkipDeleteFromIndex == false)
 				return false;
 			return documentsToRemove.ContainsKey(item.Key) == false;
-		}
-
-		private Etag HandleEtagGapsIfNeeded(Etag nextEtag)
-		{
-			if (nextEtag != prefetchingQueue.NextDocumentETag())
-			{
-				var etag = SkipDeletedEtags(nextEtag);
-				etag = SkipUpdatedEtags(etag);
-
-				if (etag == nextEtag)
-					etag = GetNextDocumentEtagFromDisk(nextEtag.IncrementBy(-1));
-
-				nextEtag = etag;
-			}
-
-			return nextEtag;
-		}
-
-		private Etag SkipDeletedEtags(Etag nextEtag)
-		{
-			while (documentsToRemove.Any(x => x.Value.Contains(nextEtag)))
-			{
-				nextEtag = Abstractions.Util.EtagUtil.Increment(nextEtag, 1);
-			}
-
-			return nextEtag;
-		}
-
-		private Etag SkipUpdatedEtags(Etag nextEtag)
-		{
-			updatedDocumentsLock.EnterReadLock();
-			try
-			{
-				var enumerator = updatedDocuments.GetEnumerator();
-
-				// here we relay on the fact that the updated docs collection is sorted
-				while (enumerator.MoveNext() && enumerator.Current.CompareTo(nextEtag) == 0)
-				{
-					nextEtag = Abstractions.Util.EtagUtil.Increment(nextEtag, 1);
-				}
-			}
-			finally
-			{
-				updatedDocumentsLock.ExitReadLock();
-			}
-
-			return nextEtag;
 		}
 
 		#region Nested type: FutureIndexBatch
@@ -768,6 +691,31 @@ namespace Raven.Database.Prefetching
 		public void HandleLowMemory()
 		{
 			ClearQueueAndFutureBatches();
+		}
+
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		public LowMemoryHandlerStatistics GetStats()
+		{
+			var futureIndexBatchesSize = futureIndexBatches.Sum(x => x.Value.Task.IsCompleted ? x.Value.Task.Result.Sum(y => y.SerializedSizeOnDisk) : 0);
+			var futureIndexBatchesDocCount = futureIndexBatches.Sum(x => x.Value.Task.IsCompleted ? x.Value.Task.Result.Count : 0);
+			return new LowMemoryHandlerStatistics
+			{
+				Name = "PrefetchingBehavior",
+				DatabaseName = context.DatabaseName,
+				EstimatedUsedMemory = prefetchingQueue.LoadedSize + futureIndexBatchesSize,
+				Metadata = new
+				{
+					PrefetchingUserType = this.PrefetchingUser,
+					PrefetchingUserDescription = userDescription,
+					PrefetchingQueueDocCount =prefetchingQueue.Count,
+					FutureIndexBatchSizeDocCount = futureIndexBatchesDocCount
+
+				}
+			};
 		}
 
 		public void ClearQueueAndFutureBatches()

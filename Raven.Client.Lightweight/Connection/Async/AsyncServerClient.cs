@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -238,7 +239,10 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata, token), token);
 		}
-
+		public Task<List<string>> PutIndexesAsync(string[] names, IndexDefinition[] indexDefs, IndexingPriority[] priorities, CancellationToken token = default(CancellationToken))
+		{
+			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexesAsync(names, indexDefs, priorities, operationMetadata, token), token);
+		}
 		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutTransformerAsync(name, transformerDefinition, operationMetadata, token), token);
@@ -272,6 +276,33 @@ namespace Raven.Client.Connection.Async
 					await request.WriteAsync(serializeObject).ConfigureAwait(false);
 					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return result.Value<string>("Index");
+				}
+				catch (ErrorResponseException e)
+				{
+					if (e.StatusCode != HttpStatusCode.BadRequest) throw;
+					responseException = e;
+				}
+				var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" }).ConfigureAwait(false);
+				if (error == null) throw responseException;
+
+				throw new IndexCompilationException(error.Message) { IndexDefinitionProperty = error.IndexDefinitionProperty, ProblematicText = error.ProblematicText };
+			}
+		}
+
+		public async Task<List<string>> DirectPutIndexesAsync(string[] names, IndexDefinition[] indexDefs, IndexingPriority[] priorities
+			,OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
+		{
+			var requestUri = operationMetadata.Url + "/indexes";
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
+			{
+				var serializeObject = JsonConvert.SerializeObject(new MultiplePutIndexParam { Definitions = indexDefs, IndexesNames = names, Priorities = priorities}, Default.Converters);
+
+				ErrorResponseException responseException;
+				try
+				{
+					await request.WriteAsync(serializeObject).ConfigureAwait(false);
+					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+					return result.Value<List<string>>("Indexes");
 				}
 				catch (ErrorResponseException e)
 				{
@@ -1407,7 +1438,7 @@ namespace Raven.Client.Connection.Async
 			}, token);
 		}
 
-		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas, CancellationToken token = default (CancellationToken))
+		public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default (CancellationToken))
 		{
 			return ExecuteWithReplication("POST", async operationMetadata =>
 			{

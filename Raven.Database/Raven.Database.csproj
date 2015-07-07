@@ -244,6 +244,7 @@
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\EnumSetting.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
+    <Compile Include="Data\DiskSpaceNotification.cs" />
     <Compile Include="FileSystem\Actions\ActionsBase.cs" />
     <Compile Include="FileSystem\Actions\FileActions.cs" />
     <Compile Include="FileSystem\Actions\ReadFileToDatabase.cs" />
@@ -277,6 +278,7 @@
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
+    <Compile Include="Indexing\Sorting\DocumentIdSet.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
     <Compile Include="Server\WebApi\MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
@@ -356,6 +358,7 @@
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\CultureHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\StopwatchScope.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />

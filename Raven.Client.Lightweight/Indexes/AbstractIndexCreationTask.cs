@@ -337,7 +337,7 @@ namespace Raven.Client.Indexes
         }
 
 
-        private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
+        public IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
         {
             IndexDefinition legacyIndexDefinition;
 			var oldPrettifyGeneratedLinqExpressions = documentConvention.PrettifyGeneratedLinqExpressions;

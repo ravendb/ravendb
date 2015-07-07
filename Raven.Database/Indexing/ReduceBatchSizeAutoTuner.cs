@@ -59,5 +59,10 @@ namespace Raven.Database.Indexing
 		{
 			return lastAmountOfItemsToReduce;
 		}
+
+		protected override string GetName
+		{
+			get { return "ReduceBatchSizeAutoTuner"; }
+		}
 	}
 }

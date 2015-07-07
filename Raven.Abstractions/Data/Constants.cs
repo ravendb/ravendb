@@ -14,6 +14,8 @@ namespace Raven.Abstractions.Data
 			InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
+		public const string ParticipatingIDsPropertyName = "Participating-IDs-Property-Name";
+
 	    public const string IsIndexReplicatedUrlParamName = "is-replicated";
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
@@ -271,5 +273,10 @@ namespace Raven.Abstractions.Data
 		}
 
 		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";
+
+	    public class Indexing
+	    {
+			public const string DisableIndexingFreeSpaceThreshold = "Raven/Indexing/DisableIndexingFreeSpaceThreshold";
+	    }
 	}
 }

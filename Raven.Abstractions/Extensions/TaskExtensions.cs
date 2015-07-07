@@ -10,10 +10,12 @@ namespace Raven.Abstractions.Extensions
 {
 	public static class TaskExtensions
 	{
-		public static void AssertNotFailed(this Task task)
+		public static Task AssertNotFailed(this Task task)
 		{
 			if (task.IsFaulted)
 				task.Wait(); // would throw
+
+			return task;
 		}
 
         public static Task<T> ConvertSecurityExceptionToServerNotFound<T>(this Task<T> parent)

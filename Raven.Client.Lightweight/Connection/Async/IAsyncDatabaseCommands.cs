@@ -65,7 +65,7 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="commandDatas">Commands to process</param>
         /// <param name="token">The cancellation token.</param>
-        Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas, CancellationToken token = default (CancellationToken));
+        Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Commits the specified tx id
@@ -500,6 +500,16 @@ namespace Raven.Client.Connection.Async
         /// <param name="indexDef">definition of an index</param>
         /// <param name="token">The cancellation token.</param>
         Task<string> PutIndexAsync(string name, IndexDefinition indexDef, CancellationToken token = default(CancellationToken));
+
+		/// <summary>
+		/// Creates multiple indexes 
+		/// </summary>
+		/// <param name="names">Names of the indexes</param>
+		/// <param name="definitions">Indexes definition by order of names</param>
+		/// <param name="token">The cancellation token</param>
+		/// <param name="priorities">The priorities of the indexes</param>
+		/// <returns></returns>
+		Task<List<string>> PutIndexesAsync(string[] names, IndexDefinition[] definitions, IndexingPriority[] priorities, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition

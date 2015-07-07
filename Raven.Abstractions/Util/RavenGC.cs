@@ -12,14 +12,13 @@ using Raven.Database.Util;
 
 namespace Raven.Abstractions.Util
 {
-	using System;
+	/*using System;
 	using System.Linq.Expressions;
 	using System.Runtime;
     using Sparrow.Collections;
 
 	public static class RavenGC
 	{
-        private static readonly ConcurrentSet<WeakReference<IRavenGarbageCollectionListener>> _releaseMemoryBeforeGC = new ConcurrentSet<WeakReference<IRavenGarbageCollectionListener>>();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private static long memoryBeforeLastForcedGC;
@@ -57,44 +56,10 @@ namespace Raven.Abstractions.Util
 		{
 			get { return lastForcedGCTime; }
 		}
-
-        public static void Register(IRavenGarbageCollectionListener action)
-		{
-            _releaseMemoryBeforeGC.Add(new WeakReference<IRavenGarbageCollectionListener>(action));
-		}
-
-        public static void Unregister(IRavenGarbageCollectionListener action)
-		{
-			_releaseMemoryBeforeGC.RemoveWhere(reference =>
-			{
-                IRavenGarbageCollectionListener target;
-				return reference.TryGetTarget(out target) == false || target == action;
-			});
-		}
-
+        
 		private static void ReleaseMemoryBeforeGC()
 		{
-            var inactiveHandlers = new List<WeakReference<IRavenGarbageCollectionListener>>();
-
-			foreach (var lowMemoryHandler in _releaseMemoryBeforeGC)
-			{
-                IRavenGarbageCollectionListener handler;
-				if (lowMemoryHandler.TryGetTarget(out handler))
-				{
-					try
-					{
-						handler.GarbageCollectionAboutToHappen();
-					}
-					catch (Exception e)
-					{
-						log.Error("Failure to process release memory before gc, skipping", e);
-					}
-				}
-				else
-					inactiveHandlers.Add(lowMemoryHandler);
-			}
-
-			inactiveHandlers.ForEach(x => _releaseMemoryBeforeGC.TryRemove(x));
+			MemoryStatistics.SimulateLowMemoryNotification();
 		}
 
 		public static bool CollectGarbage(int generation, GCCollectionMode collectionMode = GCCollectionMode.Default, bool forceByUser = false)
@@ -221,10 +186,5 @@ namespace Raven.Abstractions.Util
 			return lambda.Compile();
 		});
 		private static double memoryDifferenceLastGc;
-	}
-
-    public interface IRavenGarbageCollectionListener
-    {
-        void GarbageCollectionAboutToHappen();
-    }
+	}*/
 }

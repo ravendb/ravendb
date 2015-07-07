@@ -12,6 +12,7 @@ using Raven.Database.Storage;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Tasks;
+using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {

@@ -82,12 +82,7 @@ namespace Raven.Database.FileSystem.Controllers
 				});
 			}
 
-			var lastDocEtag = Etag.Empty;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-			});
-
+			var lastDocEtag = GetLastDocEtag();
 			if (MatchEtag(lastDocEtag))
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 

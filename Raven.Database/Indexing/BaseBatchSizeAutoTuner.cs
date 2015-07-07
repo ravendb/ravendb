@@ -5,6 +5,7 @@ using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
 using System.Collections.Generic;
+using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
@@ -37,6 +38,25 @@ namespace Raven.Database.Indexing
 	    public void HandleLowMemory()
 		{
 			ReduceBatchSizeIfCloseToMemoryCeiling(true);
+		}
+
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		public virtual LowMemoryHandlerStatistics GetStats()
+		{
+			return new LowMemoryHandlerStatistics
+			{
+				EstimatedUsedMemory = 0,
+				Name = GetName,
+				DatabaseName = context.DatabaseName,
+				Metadata = new
+				{
+					BatchSize = NumberOfItemsToProcessInSingleBatch
+				}
+			};
 		}
 
 		public int NumberOfItemsToProcessInSingleBatch
@@ -260,5 +280,6 @@ namespace Raven.Database.Indexing
 		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizesInBytes { get { return _currentlyUsedBatchSizesInBytes; } }		
 		protected abstract void RecordAmountOfItems(int numberOfItems);
 		protected abstract IEnumerable<int> GetLastAmountOfItems();
+		protected abstract string GetName { get; }
 	}
 }

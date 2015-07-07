@@ -283,6 +283,7 @@
     <Compile Include="Indexing\IndexMergeResults.cs" />
     <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
+    <Compile Include="Indexing\MultiplePutIndexParam.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
     <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
@@ -383,6 +384,7 @@
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
+    <Compile Include="Replication\SideBySideReplicationInfo.cs" />
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
     <Compile Include="Smuggler\Data\OperationState.cs" />
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
@@ -425,6 +427,7 @@
     <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />
+    <Compile Include="Util\IndexPrettyPrinterEqualityComparer.cs" />
     <Compile Include="Util\MD5.cs" />
     <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenGC.cs" />

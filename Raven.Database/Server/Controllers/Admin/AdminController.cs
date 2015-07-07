@@ -556,7 +556,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (string.IsNullOrEmpty(concurrency) == false)
 				Database.Configuration.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
 
-			Database.SpinBackgroundWorkers();
+			Database.SpinBackgroundWorkers(true);
 		}
 
 		[HttpPost]
@@ -564,7 +564,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("databases/{databaseName}/admin/stopIndexing")]
 		public void StopIndexing()
 		{
-			Database.StopIndexingWorkers();
+			Database.StopIndexingWorkers(true);
 		}
 
 		[HttpGet]
@@ -837,14 +837,35 @@ namespace Raven.Database.Server.Controllers.Admin
 					if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
 					else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
 
-					var process = new Process { StartInfo = new ProcessStartInfo { Arguments = string.Format("-pid={0} /stacktrace -output={1}", Process.GetCurrentProcess().Id, ravenDebugOutput), FileName = ravenDebugExe, WindowStyle = ProcessWindowStyle.Hidden, } };
+					var process = new Process
+					{
+						StartInfo = new ProcessStartInfo
+						{
+							Arguments = string.Format("--pid={0} --stacktrace --output=\"{1}\"", Process.GetCurrentProcess().Id, ravenDebugOutput),
+							FileName = ravenDebugExe,
+							WindowStyle = ProcessWindowStyle.Normal,
+							LoadUserProfile = true,
+							RedirectStandardError = true,
+							RedirectStandardOutput = true,
+							UseShellExecute = false
+						},
+						EnableRaisingEvents = true
+					};
+
+					var output = string.Empty;
+
+					process.OutputDataReceived += (sender, args) => output += args.Data;
+					process.ErrorDataReceived += (sender, args) => output += args.Data;
 
 					process.Start();
+
+					process.BeginErrorReadLine();
+					process.BeginOutputReadLine();
 
 					process.WaitForExit();
 
 					if (process.ExitCode != 0)
-						throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode);
+						throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode + Environment.NewLine + "Message: " + output);
 
 					using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
 					{
@@ -1051,6 +1072,29 @@ namespace Raven.Database.Server.Controllers.Admin
 			MemoryStatistics.SimulateLowMemoryNotification();
 
 			return GetEmptyMessage();
+		}
+
+		[HttpGet]
+		[RavenRoute("admin/low-memory-handlers-statistics")]
+		public HttpResponseMessage GetLowMemoryStatistics()
+		{
+			if (EnsureSystemDatabase() == false)
+				return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
+
+			return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x=>x.DatabaseName).Select(x=> new
+			{
+				DatabaseName = x.Key,
+				Types = x.GroupBy(y=>y.Name).Select(y=> new
+				{
+					MemoryHandlerName = y.Key,
+					MemoryHandlers = y.Select(z=> new {
+					z.EstimatedUsedMemory,
+					z.Metadata
+					})
+				})
+			}));
+
+			
 		}
 	}
 }

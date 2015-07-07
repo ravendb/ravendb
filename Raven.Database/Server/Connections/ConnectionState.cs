@@ -1,10 +1,11 @@
 using System;
 using System.Linq;
 using System.Threading;
+
 using Raven.Abstractions.Data;
-using Raven.Database.Util;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+
 using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
@@ -28,7 +29,6 @@ namespace Raven.Database.Server.Connections
 		private int watchAllIndexes;
 	    private int watchAllTransformers;
 		private int watchAllReplicationConflicts;
-		private int watchCancellations;
 		private int watchConfig;
 		private int watchConflicts;
 		private int watchSync;
@@ -54,7 +54,6 @@ namespace Raven.Database.Server.Connections
 					WatchConfig = watchConfig > 0,
 					WatchConflicts = watchConflicts > 0,
 					WatchSync = watchSync > 0,
-					WatchCancellations = watchCancellations > 0,
 					WatchDocumentPrefixes = matchingDocumentPrefixes.ToArray(),
 					WatchDocumentsInCollection = matchingDocumentsInCollection.ToArray(),
 					WatchIndexes = matchingIndexes.ToArray(),
@@ -132,16 +131,6 @@ namespace Raven.Database.Server.Connections
 		public void UnwatchFolder(string folder)
 		{
 			matchingFolders.TryRemove(folder);
-		}
-
-		public void WatchCancellations()
-		{
-			Interlocked.Increment(ref watchCancellations);
-		}
-
-		public void UnwatchCancellations()
-		{
-			Interlocked.Decrement(ref watchCancellations);
 		}
 
 		public void WatchConfig()

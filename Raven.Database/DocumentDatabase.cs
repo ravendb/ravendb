@@ -15,6 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
 using Raven.Abstractions;
@@ -42,6 +43,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
+using Raven.Json.Linq;
 
 namespace Raven.Database
 {
@@ -77,6 +79,8 @@ namespace Raven.Database
 
 		private volatile bool backgroundWorkersSpun;
 
+		private volatile bool indexingWorkersStoppedManually;
+
 		private volatile bool disposed;
 
 		private Task indexingBackgroundTask;
@@ -108,6 +112,7 @@ namespace Raven.Database
 				initializer.ValidateLicense();
 
 				initializer.SubscribeToDomainUnloadOrProcessExit();
+				initializer.SubscribeToDiskSpaceChanges();
 				initializer.ExecuteAlterConfiguration();
 				initializer.SatisfyImportsOnce();
 
@@ -171,7 +176,9 @@ namespace Raven.Database
 					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
                     Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
-					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
+					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, 
+						(key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation), 
+						(key, etag, transactionInformation) => Documents.Delete(key, etag, transactionInformation));
 
 					InitializeTriggersExceptIndexCodecs();
 					// Second stage initializing before index storage for determining the hash algotihm for encrypted databases that were upgraded from 2.5
@@ -223,6 +230,8 @@ namespace Raven.Database
 		public event Action OnIndexingWiringComplete;
 
 		public event Action<DocumentDatabase> OnBackupComplete;
+
+		public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
 
 		public static string BuildVersion
 		{
@@ -940,8 +949,11 @@ namespace Raven.Database
 			}
 		}
 
-		public void SpinBackgroundWorkers()
+		public void SpinBackgroundWorkers(bool manualStart = false)
 		{
+			if (manualStart == false && indexingWorkersStoppedManually)
+				return;
+
 			if (backgroundWorkersSpun)
 				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
 			var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
@@ -952,6 +964,7 @@ namespace Raven.Database
 				if (res && disableIndexingStatus) return; //indexing were set to disable 
 			}
 			backgroundWorkersSpun = true;
+			indexingWorkersStoppedManually = false;
 
 			workContext.StartWork();
 			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
@@ -973,8 +986,16 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
-		public void StopIndexingWorkers()
+		public void StartIndexingWorkers()
 		{
+			workContext.StartIndexing();
+		}
+
+		public void StopIndexingWorkers(bool manualStop)
+		{
+			if (manualStop == false && indexingWorkersStoppedManually)
+				return;
+
 			workContext.StopIndexing();
 			try
 			{
@@ -995,6 +1016,7 @@ namespace Raven.Database
 			}
 
 			backgroundWorkersSpun = false;
+			indexingWorkersStoppedManually = manualStop;
 		}
 
 		public void ForceLicenseUpdate()
@@ -1127,8 +1149,8 @@ namespace Raven.Database
 			{
 				token.ThrowIfCancellationRequested();
 
-				ICommandData command = commands[index];
-				results[index] = command.ExecuteBatch(this);
+				var participatingIds = commands.Select(x => x.Key).ToArray();
+				results[index] = commands[index].ExecuteBatch(this, participatingIds);
 			}
 
 			return results;
@@ -1259,7 +1281,51 @@ namespace Raven.Database
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 
+			public void SubscribeToDiskSpaceChanges()
+			{
+				database.OnDiskSpaceChanged = notification =>
+				{
+					if (notification.PathType != PathType.Index)
+						return;
 
+					if (configuration.Indexing.DisableIndexingFreeSpaceThreshold < 0)
+						return;
+
+					var thresholdInMb = configuration.Indexing.DisableIndexingFreeSpaceThreshold;
+					var warningThresholdInMb = Math.Max(thresholdInMb * 2, 1024);
+					var freeSpaceInMb = (int)(notification.FreeSpaceInBytes / 1024 / 1024);
+
+					if (freeSpaceInMb <= thresholdInMb)
+					{
+						if (database.backgroundWorkersSpun)
+							database.StopIndexingWorkers(false);
+
+						database.AddAlert(new Alert
+						{
+							AlertLevel = AlertLevel.Error,
+							CreatedAt = SystemTime.UtcNow,
+							Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
+							UniqueKey = "Free space (index)"
+						});
+		}
+					else
+					{
+						if (freeSpaceInMb <= warningThresholdInMb)
+						{
+							database.AddAlert(new Alert
+							{
+								AlertLevel = AlertLevel.Warning,
+								CreatedAt = SystemTime.UtcNow,
+								Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space. Indexing will be disabled when it reaches {3}MB.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
+								UniqueKey = "Free space warning (index)"
+							});
+						}
+
+						if (database.backgroundWorkersSpun == false)
+							database.SpinBackgroundWorkers(false);
+					}
+				};
+			}
 		}
 
 		public void RaiseBackupComplete()

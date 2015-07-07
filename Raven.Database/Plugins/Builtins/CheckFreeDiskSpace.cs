@@ -8,11 +8,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Server;
+using Raven.Database.Server;
 
 namespace Raven.Database.Plugins.Builtins
 {
@@ -25,74 +27,112 @@ namespace Raven.Database.Plugins.Builtins
 		   out ulong lpTotalNumberOfBytes,
 		   out ulong lpTotalNumberOfFreeBytes);
 
-		private RavenDbServer server;
+		private RavenDBOptions options;
 
 		const double FreeThreshold = 0.15;
 
-		public void Execute(RavenDbServer ravenDbServer)
+		public void Execute(RavenDBOptions serverOptions)
 		{
-			server = ravenDbServer;
-			server.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(30));
+			options = serverOptions;
+			options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
 		}
 
 		private void ExecuteCheck(object state)
 		{
-			if (server.Disposed)
+			if (options.Disposed)
 			{
 				Dispose();
 				return;
 			}
 
-			var pathsToCheck = new HashSet<string>();
+			var pathsToCheck = new HashSet<PathToCheck>();
 
-			server.Options.DatabaseLandlord.ForAllDatabases(database =>
+			options.DatabaseLandlord.ForAllDatabases(database =>
 			{
-				pathsToCheck.Add(database.Configuration.IndexStoragePath);
-				pathsToCheck.Add(database.Configuration.Storage.Esent.JournalsStoragePath);
-				pathsToCheck.Add(database.Configuration.Storage.Voron.JournalsStoragePath);
-				pathsToCheck.Add(database.Configuration.DataDirectory);
+				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.IndexStoragePath, PathType = PathType.Index, ResourceName = database.Name, ResourceType = ResourceType.Database });
+				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Storage.Esent.JournalsStoragePath, PathType = PathType.Journal, ResourceName = database.Name, ResourceType = ResourceType.Database });
+				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = database.Name, ResourceType = ResourceType.Database });
+				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.DataDirectory, PathType = PathType.Data, ResourceName = database.Name, ResourceType = ResourceType.Database });
 			});
 
-			server.Options.FileSystemLandlord.ForAllFileSystems(filesystem =>
+			options.FileSystemLandlord.ForAllFileSystems(filesystem =>
 			{
-				pathsToCheck.Add(filesystem.Configuration.FileSystem.DataDirectory);
-				pathsToCheck.Add(filesystem.Configuration.FileSystem.IndexStoragePath);
-				pathsToCheck.Add(filesystem.Configuration.Storage.Esent.JournalsStoragePath);
-				pathsToCheck.Add(filesystem.Configuration.Storage.Voron.JournalsStoragePath);
+				pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.FileSystem.DataDirectory, PathType = PathType.Data, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
+				pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.FileSystem.IndexStoragePath, PathType = PathType.Index, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
+				pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.Storage.Esent.JournalsStoragePath, PathType = PathType.Journal, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
+				pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
 			});
 
-			var roots = pathsToCheck.Where(path => path != null && Path.IsPathRooted(path) && path.StartsWith("\\\\") == false).Select(Path.GetPathRoot).ToList();
-			var uniqueRoots = new HashSet<string>(roots);
+			var roots = new List<PathToCheck>();
+			var unc = new List<PathToCheck>();
+			foreach (var pathToCheck in pathsToCheck.Where(pathToCheck => pathToCheck.Path != null && Path.IsPathRooted(pathToCheck.Path) && pathToCheck.Path.StartsWith("\\\\") == false))
+			{
+				if (Path.IsPathRooted(pathToCheck.Path) && pathToCheck.Path.StartsWith("\\\\") == false)
+				{
+					pathToCheck.Path = Path.GetPathRoot(pathToCheck.Path);
+					roots.Add(pathToCheck);
+					continue;
+				}
 
-			var unc = pathsToCheck.Where(path => path != null && path.StartsWith("\\\\")).ToList();
-			var uniqueUncRoots = new HashSet<string>(unc.Select(Path.GetPathRoot));
+				if (pathToCheck.Path.StartsWith("\\\\"))
+				{
+					pathToCheck.Path = Path.GetPathRoot(pathToCheck.Path);
+					unc.Add(pathToCheck);
+				}
+			}
+
+			var groupedRoots = roots
+				.GroupBy(x => x.Path)
+				.ToList();
+
+			var groupedUncRoots = unc
+				.GroupBy(x => x.Path)
+				.ToList();
 
 			var lacksFreeSpace = new List<string>();
 
 			foreach (var drive in DriveInfo.GetDrives())
 			{
-				if (uniqueRoots.Contains(drive.Name) == false)
+				var group = groupedRoots.FirstOrDefault(x => string.Equals(x.Key, drive.Name, StringComparison.OrdinalIgnoreCase));
+				if (group == null)
 					continue;
 
-				if (drive.TotalFreeSpace * 1.0 / drive.TotalSize < FreeThreshold)
+				var freeSpaceInPercentage = drive.TotalFreeSpace * 1.0 / drive.TotalSize;
+				if (freeSpaceInPercentage < FreeThreshold)
 					lacksFreeSpace.Add(drive.Name);
+
+				group.ForEach(x =>
+				{
+					x.FreeSpaceInPercentage = freeSpaceInPercentage;
+					x.FreeSpaceInBytes = drive.TotalFreeSpace;
+				});
 			}
 
-			foreach (var uncRoot in uniqueUncRoots)
+			foreach (var group in groupedUncRoots)
 			{
 				ulong freeBytesAvailable;
 				ulong totalNumberOfBytes;
 				ulong totalNumberOfFreeBytes;
 
-				var success = GetDiskFreeSpaceEx(uncRoot, out freeBytesAvailable, out totalNumberOfBytes, out totalNumberOfFreeBytes);
+				var success = GetDiskFreeSpaceEx(group.Key, out freeBytesAvailable, out totalNumberOfBytes, out totalNumberOfFreeBytes);
 
-				if (success && freeBytesAvailable * 1.0 / totalNumberOfBytes < FreeThreshold)
-					lacksFreeSpace.Add(uncRoot);
+				if (success == false)
+					continue;
+
+				var freeSpaceInPercentage = freeBytesAvailable * 1.0 / totalNumberOfBytes;
+				if (freeSpaceInPercentage < FreeThreshold)
+					lacksFreeSpace.Add(group.Key);
+
+				group.ForEach(x =>
+				{
+					x.FreeSpaceInPercentage = freeSpaceInPercentage;
+					x.FreeSpaceInBytes = freeBytesAvailable;
+				});
 			}
 
 			if (lacksFreeSpace.Any())
 			{
-				server.SystemDatabase.AddAlert(new Alert
+				options.SystemDatabase.AddAlert(new Alert
 				{
 					AlertLevel = AlertLevel.Warning,
 					CreatedAt = SystemTime.UtcNow,
@@ -100,10 +140,39 @@ namespace Raven.Database.Plugins.Builtins
 					UniqueKey = "Free space"
 				});
 			}
+
+			options.DatabaseLandlord.ForAllDatabases(database =>
+			{
+				foreach (var path in pathsToCheck.Where(x => x.FreeSpaceInPercentage.HasValue && x.FreeSpaceInBytes.HasValue && x.ResourceType == ResourceType.Database && x.ResourceName == database.Name))
+				{
+					database.OnDiskSpaceChanged(new DiskSpaceNotification(path.Path, path.PathType, path.FreeSpaceInBytes.Value, path.FreeSpaceInPercentage.Value));
+				}
+			});
 		}
 
 		public void Dispose()
 		{
+		}
+
+		private class PathToCheck
+		{
+			public string Path { get; set; }
+
+			public PathType PathType { get; set; }
+
+			public string ResourceName { get; set; }
+
+			public ResourceType ResourceType { get; set; }
+
+			public double? FreeSpaceInBytes { get; set; }
+
+			public double? FreeSpaceInPercentage { get; set; }
+		}
+
+		private enum ResourceType
+		{
+			Database,
+			FileSystem
 		}
 	}
 }

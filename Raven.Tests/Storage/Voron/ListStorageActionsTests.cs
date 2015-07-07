@@ -343,6 +343,43 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
+		[Theory]
+		[PropertyData("Storages")]
+		public void ShouldUpdate(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
+				{
+					{
+						"test", "data1"
+					}
+				}, UuidType.Indexing));
+
+				storage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
+				{
+					{
+						"test", "data2"
+					}
+				}, UuidType.Indexing));
+
+				storage.Batch(actions =>
+				{
+					var item = actions.Lists.Read("items", "1");
+
+					Assert.Equal("data2", item.Data.Value<string>("test"));
+				});
+
+				storage.Batch(actions =>
+				{
+					var items = actions.Lists.Read("items", 0, 10).ToList();
+
+					Assert.Equal(1, items.Count);
+					Assert.Equal("data2", items[0].Data.Value<string>("test"));
+				});
+			}
+		}
+
 		private void CompareListItems(ListItem expected, ListItem actual)
 		{
 			Assert.Equal(expected.Key, actual.Key);
