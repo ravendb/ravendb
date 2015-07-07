@@ -27,12 +27,12 @@ namespace Raven.Tests.TimeSeries
 			foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueTimeSeriesName*"))
 				IOExtensions.DeleteDirectory(folder);
 
-			DefaultTimeSeriesName += Guid.NewGuid();
+			// DefaultTimeSeriesName += Guid.NewGuid();
 		}
 
 		protected ITimeSeriesStore NewRemoteTimeSeriesStore(RavenDbServer ravenDbServer = null, bool createDefaultTimeSeries = true, OperationCredentials credentials = null)
 		{
-			ravenDbServer = GetNewServer(requestedStorage: "voron");
+			ravenDbServer = GetNewServer(requestedStorage: "voron", databaseName: DefaultTimeSeriesName + "Database");
 
 			var timeSeriesStore = new TimeSeriesStore
 			{
