@@ -267,6 +267,10 @@ class appUrl {
         return "#admin/settings/trafficWatch";
     }
 
+	static forLicenseInformation(): string {
+		return "#admin/settings/licenseInformation";
+	}
+
     static forDebugInfo(): string {
         return "#admin/settings/debugInfo";
     }
@@ -313,14 +317,20 @@ class appUrl {
         return "#databases/edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
     }
 
-    static forEditItem(itemId: string, res: resource, itemIndex: number, collectionName?: string): string {
-        var urlPart = appUrl.getEncodedResourcePart(res);
+    static forEditItem(itemId: string, rs: resource, itemIndex: number, collectionName?: string): string {
+        var urlPart = appUrl.getEncodedResourcePart(rs);
         var itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
 
         var pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
-        var resourceTag = res instanceof filesystem ? "#filesystems" : res instanceof counterStorage ? "#counterstorages" : "#databases";       
-        return resourceTag+"/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
-    } 
+        var resourceTag = rs instanceof filesystem ? "#filesystems" : rs instanceof counterStorage ? "#counterstorages" : "#databases";       
+        return resourceTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
+    }
+
+	static forEditCounterStorage(rs: resource, groupName: string, counterName: string) {
+		var urlPart = appUrl.getEncodedResourcePart(rs);
+        var itemIdUrlPart = "&groupName=" + encodeURIComponent(groupName) + "&counterName=" + encodeURIComponent(counterName);    
+        return "#counterstorages/edit?" + itemIdUrlPart + urlPart;
+	}
 
     static forEditQueryItem(itemNumber: number, res: resource, index: string, query?: string, sort?:string): string {
         var databaseUrlPart = appUrl.getEncodedResourcePart(res);

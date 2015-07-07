@@ -307,6 +307,12 @@ namespace Voron.Trees
 			get { return (_header->Flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed; }
 		}
 
+		public bool IsFixedSize
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return (_header->Flags & PageFlags.FixedSize) == PageFlags.FixedSize; }
+		}
+
 		public bool HasPrefixes
 		{
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]

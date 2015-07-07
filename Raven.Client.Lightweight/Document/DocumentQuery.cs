@@ -798,7 +798,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat, lng));
+            OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
             return this;
         }
 
@@ -807,7 +807,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng, string sortedFieldName)
         {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat, lng, sortedFieldName));
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
             return this;
         }
         

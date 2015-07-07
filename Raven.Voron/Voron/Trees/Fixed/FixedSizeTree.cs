@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 using Sparrow;
@@ -19,7 +20,7 @@ namespace Voron.Trees.Fixed
 {
     public unsafe partial class FixedSizeTree
     {
-        private const int BranchEntrySize = sizeof(long) + sizeof(long);
+        internal const int BranchEntrySize = sizeof(long) + sizeof(long);
         private readonly Transaction _tx;
         private readonly Tree _parent;
         private readonly Slice _treeName;
@@ -206,7 +207,7 @@ namespace Voron.Trees.Fixed
 
             if (parentPage == null) //root
             {
-                var newRootPage = _tx.AllocatePage(1, PageFlags.Branch | PageFlags.FixedSize);
+                var newRootPage = _parent.NewPage(PageFlags.Branch | PageFlags.FixedSize, 1);
                 newRootPage.FixedSize_ValueSize = _valSize;
                 newRootPage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
 
@@ -239,7 +240,7 @@ namespace Voron.Trees.Fixed
 
         private void ActuallySplitPage(Page page, long key, out long splitKey, out long splitPageNumber)
         {
-            var rightPage = _tx.AllocatePage(1, PageFlags.Leaf | PageFlags.FixedSize);
+            var rightPage = _parent.NewPage(PageFlags.Leaf | PageFlags.FixedSize, 1);
             rightPage.FixedSize_ValueSize = _valSize;
             rightPage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
             splitPageNumber = rightPage.PageNumber;
@@ -292,7 +293,8 @@ namespace Voron.Trees.Fixed
                 {
                     // convert to large database
                     _flags = FixedSizeTreeHeader.OptionFlags.Large;
-                    var allocatePage = _tx.AllocatePage(1, PageFlags.Leaf);
+                    var allocatePage = _parent.NewPage(PageFlags.Leaf, 1);
+
                     var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                     largeHeader->NumberOfEntries = newEntriesCount;
                     largeHeader->ValueSize = _valSize;
@@ -382,6 +384,45 @@ namespace Voron.Trees.Fixed
             return lp[0];
         }
 
+	    public List<long> AllPages()
+	    {
+			var results = new List<long>();
+			switch (_flags)
+			{
+				case null:
+					break;
+				case FixedSizeTreeHeader.OptionFlags.Embedded:
+					break;
+				case FixedSizeTreeHeader.OptionFlags.Large:
+					var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
+                    var root = _tx.GetReadOnlyPage(largePtr->RootPageNumber);
+
+					var stack = new Stack<Page>();
+					stack.Push(root);
+
+					while (stack.Count > 0)
+					{
+						var p = stack.Pop();
+						results.Add(p.PageNumber);
+
+						if (p.IsBranch)
+						{
+							for (int j = 0; j < p.FixedSize_NumberOfEntries; j++)
+							{
+								var chhildNumber = PageValueFor(p.Base + p.FixedSize_StartPosition, j);
+								stack.Push(_tx.GetReadOnlyPage(chhildNumber));
+							}
+						}
+					}
+
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+
+		    return results;
+	    } 
+
         public bool Contains(long key)
         {
             byte* dataStart;
@@ -465,7 +506,7 @@ namespace Voron.Trees.Fixed
                         (_entrySize * (page.FixedSize_NumberOfEntries - page.LastSearchPosition)));
 
 
-                    _tx.FreePage(page.PageNumber);
+                    _parent.FreePage(page);
                     return;
                 }
             }
@@ -487,7 +528,7 @@ namespace Voron.Trees.Fixed
             }
 
             // now we need to remove from parent
-            _tx.FreePage(page.PageNumber);
+            _parent.FreePage(page);
 
             var parentPage = _cursor.Pop();
             var parentPageNumber = parentPage.PageNumber;
@@ -515,7 +556,7 @@ namespace Voron.Trees.Fixed
             var childPage = _tx.GetReadOnlyPage(lastChildNumber);
             Memory.Copy(parentPage.Base, childPage.Base, parentPage.PageSize);
             parentPage.PageNumber = parentPageNumber;// overwritten in copy
-            _tx.FreePage(lastChildNumber);
+			_parent.FreePage(childPage);
         }
 
         private void RemoveEmbeddedEntry(long key)

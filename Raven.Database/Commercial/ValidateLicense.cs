@@ -67,6 +67,11 @@ namespace Raven.Database.Commercial
 			ExecuteInternal(config);
 		}
 
+		public void ForceExecute(InMemoryRavenConfiguration config)
+		{
+			ExecuteInternal(config);
+		}
+
 		private void ExecuteInternal(InMemoryRavenConfiguration config)
 		{
 			var licensePath = GetLicensePath(config);

@@ -22,10 +22,10 @@ namespace Raven.Database.Counters.Controllers
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly object waitForCounterUpdate = new object();
-        private int actualWorkCounter = 0;
-        private int replicatedWorkCounter = 0; // represents the last actualWorkCounter value that was checked in the last replication iteration
-        private bool shouldPause = false;
-        private readonly ConcurrentDictionary<string, CounterDestinationStats> destinationsStats =
+        private int actualWorkCounter;
+        private int replicatedWorkCounter; // represents the last actualWorkCounter value that was checked in the last replication iteration
+
+		private readonly ConcurrentDictionary<string, CounterDestinationStats> destinationsStats =
             new ConcurrentDictionary<string, CounterDestinationStats>(StringComparer.OrdinalIgnoreCase);
         private int replicationAttempts;
         private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
@@ -99,11 +99,6 @@ namespace Raven.Database.Counters.Controllers
 				Log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.CounterStorageUrl);
 				return Monitor.Wait(waitForCounterUpdate, timeout);
 			}
-		}
-
-		public void Continue()
-		{
-			shouldPause = false;
 		}
 
 		public void HandleHeartbeat(string src)

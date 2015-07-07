@@ -1,9 +1,20 @@
+interface counterStorageStatisticsDto {
+    Name: string;
+    Url: string;
+    CountersCount: number;
+    GroupsCount: number;
+    LastCounterEtag:string;
+    ReplicationTasksCount: number;
+    CounterStorageSize: string;
+    RequestsPerSecond: number;
+}
+
 interface counterStorageDto {
     Name: string;
     Path?: string;
 }
 
-interface counterDto {
+interface counterTotalDto {
     CurrentValue: number;
     Group: string;
     CounterName: string;
@@ -13,8 +24,6 @@ interface counterDto {
 interface counterSummaryDto {
     Group: string;
     CounterName: string;
-    Increments: number;
-    Decrements: number;
     Total: number;
 }
 
@@ -23,10 +32,18 @@ interface counterGroupDto {
     Count: number;
 }
 
-interface counterServerValueDto {
-    Name: string;
-    Positive: number;
-    Negative: number;
+interface counterDto {
+	ServerValues: serverValueDto[];
+	LocalServerId: string;
+	LastUpdateByServer: string;
+	Total: number;
+	NumOfServers: number;
+}
+
+interface serverValueDto {
+    ServerId: string;
+    Value: number;
+    Etag: number;
 }
 
 interface counterStorageReplicationDto {

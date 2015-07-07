@@ -379,16 +379,16 @@ namespace Raven.Database.Counters.Controllers
 			}
         }
 
-		[RavenRoute("cs/{counterStorageName}/getCounterServersValues")]
+		[RavenRoute("cs/{counterStorageName}/getCounter")]
         [HttpGet]
-        public HttpResponseMessage GetCounterServersValues(string groupName, string counterName)
+        public HttpResponseMessage GetCounter(string groupName, string counterName)
 		{
 			AssertName(groupName);
 			AssertName(counterName);
 
 			using (var reader = Storage.CreateReader())
 			{
-				var result = reader.GetCounterValuesByPrefix(groupName, counterName);
+				var result = reader.GetCounter(groupName, counterName);
 				return GetMessageWithObject(result);
             }
 		}

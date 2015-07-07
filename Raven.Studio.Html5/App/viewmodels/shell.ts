@@ -54,7 +54,7 @@ import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
-import environmentColor = require("models/environmentColor");
+import environmentColor = require("models/resources/environmentColor");
 
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import topology = require("models/database/replication/topology");
@@ -248,6 +248,7 @@ class shell extends viewModelBase {
             { route: "counterstorages/tasks*details", title: "Stats", moduleId: "viewmodels/counter/tasks/tasks", nav: true, hash: this.appUrls.counterStorageStats },
             { route: "counterstorages/stats", title: "Stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
             { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration },
+			{ route: "counterstorages/edit", title: "Edit Counter", moduleId: "viewmodels/counter/editCounter", nav: false },
             { route: "timeseries/series", title: "Series", moduleId: "viewmodels/timeSeries/timeSeries", nav: true, hash: this.appUrls.timeSeries },
             { route: "timeseries/stats", title: "Stats", moduleId: "viewmodels/timeSeries/timeSeriesStats", nav: true, hash: this.appUrls.timeSeriesStats },
             { route: "timeseries/configuration", title: "Configuration", moduleId: "viewmodels/timeSeries/timeSeriesConfiguration", nav: true, hash: this.appUrls.timeSeriesConfiguration }
