@@ -1132,26 +1132,15 @@ namespace Raven.Database
 		private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
 		{
 			var results = new BatchResult[commands.Count];
-			var participatingIds = RavenJToken.FromObject(commands.Select(x => x.Key));
 			for (int index = 0; index < commands.Count; index++)
 			{
 				token.ThrowIfCancellationRequested();
-				
-				var command = AddParticipatingIds(commands[index], participatingIds);
-				results[index] = command.ExecuteBatch(this);
+
+				var participatingIds = commands.Select(x => x.Key).ToArray();
+				results[index] = commands[index].ExecuteBatch(this, participatingIds);
 			}
 
 			return results;
-		}
-
-		private ICommandData AddParticipatingIds(ICommandData command, RavenJToken participatingIDs)
-		{
-			if (command.AdditionalData == null)
-				command.AdditionalData = new RavenJObject();
-
-			command.AdditionalData.Add(Constants.ParticipatingIDsPropertyName,participatingIDs);
-
-			return command;
 		}
 
 		private void SecondStageInitialization()
