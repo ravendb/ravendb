@@ -60,8 +60,8 @@ namespace Voron.Trees.Fixed
         {
             private readonly FixedSizeTree _fst;
             private int _pos;
-            private readonly FixedSizeTreeHeader.Embedded* _header;
-            private readonly byte* _dataStart;
+            private FixedSizeTreeHeader.Embedded* _header;
+            private byte* _dataStart;
 
             public EmbeddedIterator(FixedSizeTree fst)
             {
@@ -73,7 +73,9 @@ namespace Voron.Trees.Fixed
 
             public bool Seek(long key)
             {
-                _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
+	            if (_header == null)
+		            return false;
+	            _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
 				if (_fst._lastMatch > 0)
 					_pos++; // We didn't find the key.
                 return _pos != _header->NumberOfEntries;
@@ -108,7 +110,10 @@ namespace Voron.Trees.Fixed
 	        public bool DeleteCurrentAndMoveNext()
 	        {
 				var currentKey = CurrentKey;
-				_fst.RemoveEmbeddedEntry(currentKey);
+		        _fst.RemoveEmbeddedEntry(currentKey);
+				var ptr = _fst._parent.DirectRead(_fst._treeName);
+				_header = (FixedSizeTreeHeader.Embedded*)ptr;
+				_dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
 				return Seek(currentKey);    
 	        }
 

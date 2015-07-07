@@ -567,7 +567,7 @@ namespace Voron.Trees.Fixed
             var pos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, key, _entrySize);
             if (_lastMatch != 0)
             {
-                return; // not here, nothing to do
+				return; // not here, nothing to do
             }
             if (startingEntryCount == 1)
             {
@@ -575,7 +575,7 @@ namespace Voron.Trees.Fixed
                 _flags = null;
                 _parent.Delete(_treeName);
 				header->NumberOfEntries--;
-                return;
+				return;
             }
 
             byte* newData = _parent.DirectAdd(_treeName,

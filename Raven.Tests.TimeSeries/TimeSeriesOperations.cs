@@ -116,7 +116,7 @@ namespace Raven.Tests.TimeSeries
 			{
 				await store.CreatePrefixConfigurationAsync("-Simple", 1);
 				
-				var start = DateTime.Now;
+				var start = new DateTime(2015, 1, 1);
 				for (int i = 0; i < 12; i++)
 				{
 					await store.AppendAsync("-Simple", "Time", start.AddHours(i), i + 3D);
