@@ -432,7 +432,7 @@ class extensions {
 				
 			    var src = checked ? "content/images/checked.png" : "content/images/unchecked.png";
 			    $(element)/*.children()*/.attr("src", src);
-				var needOpacity: boolean = allBindings().needOpacity;
+				var needOpacity = ko.utils.unwrapObservable(allBindings().needOpacity);
 			    var opactity = !!needOpacity ? 0.25 : 1;
 				$(element)/*.children()*/.css("opacity", opactity);
 		    }
@@ -458,7 +458,7 @@ class extensions {
 			    }
 
 			    $(element)/*.children()*/.attr("src", src);
-				var needOpacity: boolean = allBindings().needOpacity;
+				var needOpacity = ko.utils.unwrapObservable(allBindings().needOpacity);
 			    var opactity = !!needOpacity ? 0.25 : 1;
 				$(element)/*.children()*/.css("opacity", opactity);
 		    }
