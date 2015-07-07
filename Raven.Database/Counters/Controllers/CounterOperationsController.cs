@@ -65,6 +65,7 @@ namespace Raven.Database.Counters.Controllers
 		{
 			using (var reader = Storage.CreateReader())
 			{
+				Storage.MetricsCounters.ClientRequests.Mark();
 				return Request.CreateResponse(HttpStatusCode.OK, reader.GetCounterGroups().ToList());
 			}
 		}
@@ -95,6 +96,7 @@ namespace Raven.Database.Counters.Controllers
 				});
 			}
 
+			Storage.MetricsCounters.ClientRequests.Mark();
 			if (HttpContext.Current != null)
 				HttpContext.Current.Server.ScriptTimeout = 60 * 60 * 6; // six hours should do it, I think.
 
@@ -274,6 +276,7 @@ namespace Raven.Database.Counters.Controllers
 				{
 					writer.Commit();
 
+					Storage.MetricsCounters.ClientRequests.Mark();
 					Storage.MetricsCounters.Resets.Mark();
 					Storage.Publisher.RaiseNotification(new ChangeNotification
 					{
@@ -301,6 +304,7 @@ namespace Raven.Database.Counters.Controllers
 				writer.Delete(groupName, counterName);
 				writer.Commit();
 
+				Storage.MetricsCounters.ClientRequests.Mark();
 				Storage.MetricsCounters.Deletes.Mark();
 				Storage.Publisher.RaiseNotification(new ChangeNotification
 				{
@@ -319,33 +323,43 @@ namespace Raven.Database.Counters.Controllers
 		[HttpDelete]
 		public HttpResponseMessage DeleteByGroup(string groupName)
 		{
-			using (var writer = Storage.CreateWriter())
-			{
-				var changeNotifications = new List<ChangeNotification>();
-				groupName = groupName ?? string.Empty;
-				var countersDetails = writer.GetCountersDetails(groupName).ToList();
-				foreach (var c in countersDetails)
+			groupName = groupName ?? string.Empty;
+			var deletedCount = 0;
+
+			while (true) {
+				using (var writer = Storage.CreateWriter())
 				{
-					writer.DeleteCounterInternal(c.Group, c.Name);
-					changeNotifications.Add(new ChangeNotification
+					var changeNotifications = new List<ChangeNotification>();
+					var countersDetails = writer.GetCountersDetails(groupName).Take(1024).ToList();
+					if (countersDetails.Count == 0)
+						break;
+
+					foreach (var c in countersDetails)
 					{
-						GroupName = c.Group,
-						CounterName = c.Name,
-						Action = CounterChangeAction.Delete,
-						Delta = 0,
-						Total = 0
+						writer.DeleteCounterInternal(c.Group, c.Name);
+						changeNotifications.Add(new ChangeNotification
+						{
+							GroupName = c.Group,
+							CounterName = c.Name,
+							Action = CounterChangeAction.Delete,
+							Delta = 0,
+							Total = 0
+						});
+					}
+					writer.Commit();
+
+					Storage.MetricsCounters.ClientRequests.Mark();
+					changeNotifications.ForEach(change =>
+					{
+						Storage.Publisher.RaiseNotification(change);
+						Storage.MetricsCounters.Deletes.Mark();
 					});
+
+					deletedCount += changeNotifications.Count;
 				}
-				writer.Commit();
-
-				changeNotifications.ForEach(change =>
-				{
-					Storage.Publisher.RaiseNotification(change);
-					Storage.MetricsCounters.Deletes.Mark();
-				});
-
-				return GetMessageWithObject(changeNotifications.Count);
 			}
+
+			return GetMessageWithObject(deletedCount);
 		}
 
 		[RavenRoute("cs/{counterStorageName}/counters")]
@@ -357,6 +371,7 @@ namespace Raven.Database.Counters.Controllers
 			if (take <= 0)
 				throw new ArgumentException("Bad argument", "take");
 
+			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
 				group = group ?? string.Empty;
@@ -372,6 +387,7 @@ namespace Raven.Database.Counters.Controllers
 			AssertName(groupName);
 			AssertName(counterName);
 
+			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
 				var overallTotal = reader.GetCounterTotal(groupName, counterName);
@@ -386,6 +402,7 @@ namespace Raven.Database.Counters.Controllers
 			AssertName(groupName);
 			AssertName(counterName);
 
+			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
 				var result = reader.GetCounter(groupName, counterName);

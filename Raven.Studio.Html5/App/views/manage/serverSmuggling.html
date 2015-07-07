@@ -1,7 +1,7 @@
 ﻿<form class="form-horizontal" role="form" data-bind="submit: performMigration">
 	<div class="panel panel-default">
 		<div class="panel-heading panel-info">
-			Server smuggling
+			Server Smuggling
 		</div>
 		<div class="panel-body">
 
@@ -70,9 +70,7 @@
 							<thead> 
 							<tr>
 								<th class="text-center">
-									<button type="button" class="btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
-										<img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : hasAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
-									</button>
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress(), checkboxChecked: resourcesSelection" title="Select all or none"></button>
 								</th>
 								<th>Name</th>
 								<th class="text-center">

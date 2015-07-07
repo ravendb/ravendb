@@ -8,18 +8,18 @@ class extensions {
         extensions.installObservableExtensions();
         extensions.installStringExtension();
         extensions.installStorageExtension();
-        
         extensions.installBindingHandlers();
+	    extensions.installJqueryExtensions();
 
-        // Want Intellisense for your extensions?
-        // Go to extensionInterfaces.ts and add the function signature there.
+	    // Want Intellisense for your extensions?
+	    // Go to extensionInterfaces.ts and add the function signature there.
     }
 
     private static installDateExtensions() {
         var datePrototype: any = Date.prototype;
 
         var formatNumber = (num) => {
-            return num < 10 ? '0' + num : num;
+            return num < 10 ? "0" + num : num;
         }
 
         datePrototype.getUTCDateFormatted = function () {
@@ -404,7 +404,68 @@ class extensions {
                 ko.bindingHandlers.event.init(element, newValueAccessor, allBindingsAccessor, viewModel, bindingContext);
             }
         };
+
+		var key = "_my_init_key_";
+	    ko.bindingHandlers["updateHighlighting"] = {
+			init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+                ko.utils.domData.set(element, key, true);
+            },
+		    update(element, valueAccessor, allBindings, viewModel, bindingContext) {
+				var value = valueAccessor();
+				var isInit = ko.utils.domData.get(element, key);
+			    var data = ko.dataFor(element);
+			    var skip = !!data.isAllDocuments || !!data.isSystemDocuments || !!data.isAllGroupsGroup;
+			    if (skip === false && isInit === false) {
+					$($(element).parents("li")).highlight();
+			    } else {
+			        ko.utils.domData.set(element, key, false);
+			    }
+		    }
+	    };
+
+		ko.bindingHandlers["checkboxChecked"] = {
+			init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+				var x = 3;
+				//ko.utils.domData.set(element, key, true);
+				$(element).append("<img/>");
+			},
+		    update(element, valueAccessor, allBindings, viewModel, bindingContext) {
+			    var checkboxValue: checkbox = ko.unwrap(valueAccessor());
+			    var src;
+			    switch (checkboxValue) {
+					case checkbox.Checked:
+						src = "content/images/checked.png";
+						break;
+					case checkbox.SomeChecked:
+						src = "content/images/some-checked.png";
+						break;
+					case checkbox.UnChecked:
+					default:
+						src = "content/images/unchecked.png";
+			    }
+
+			    $(element).children().attr("src", src);
+		    }
+	    };
     }
+
+	static installJqueryExtensions() {
+		jQuery.fn.highlight = function() {
+			$(this).each(function() {
+				var el = $(this);
+				el.before("<div/>");
+				el.prev()
+					.width(el.width())
+					.height(el.height())
+					.css({
+						"position": "absolute",
+						"background-color": "#ffff99",
+						"opacity": ".9"
+					})
+					.fadeOut(1500);
+			});
+		}
+	}
 }
 
 export = extensions;
