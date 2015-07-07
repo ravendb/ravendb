@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.TimeSeries.Notifications;
+using Raven.Client.TimeSeries.Changes;
 using Xunit;
 using Xunit.Extensions;
 
@@ -21,14 +22,15 @@ namespace Raven.Tests.TimeSeries
 				await store.CreatePrefixConfigurationAsync("-Simple", 1);
 
 				var changes = store.Changes();
-				var notificationTask = changes.Task.Result
+				var changesTask = await changes.Task;
+				var notificationTask = changesTask
 					.ForKey("-Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(300))
 					.Take(1)
 					.ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				var at = DateTime.Now;
+				var at = new DateTime(2015, 1, 1);
 				await store.AppendAsync("-Simple", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
@@ -38,7 +40,8 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
 				Assert.Equal(3d, timeSeriesChange.Values.Single());
 
-				notificationTask = changes.Task.Result
+				var changesTask2 = changes.Task;
+				notificationTask = changesTask2.Result
 					.ForKey("-Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(300))
 					.Take(1)
