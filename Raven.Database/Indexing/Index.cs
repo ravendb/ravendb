@@ -1871,7 +1871,7 @@ namespace Raven.Database.Indexing
 
 		public void IncrementWriteErrors(Exception e)
 		{
-			if (e is SystemException) // Don't count transient errors
+			if (e.GetType() == typeof(SystemException)) // Don't count transient errors
 				return;
 
 			writeErrors = Interlocked.Increment(ref writeErrors);
