@@ -16,8 +16,6 @@ using Raven.Abstractions.Data;
 using Raven.Database.Indexing.LuceneIntegration;
 using Version = Lucene.Net.Util.Version;
 using System.Linq;
-using NLog;
-//using LogManager = NLog.LogManager;
 
 namespace Raven.Database.Indexing
 {
@@ -34,7 +32,6 @@ namespace Raven.Database.Indexing
 		static readonly Regex rightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
 		static readonly Regex leftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
 		static readonly Regex commentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
-		//private static Logger QueryLogger = LogManager.GetCurrentClassLogger();
 		/* The reason that we use @emptyIn<PermittedUsers>:(no-results)
 		 * instead of using @in<PermittedUsers>:()
 		 * is that lucene does not access an empty () as a valid syntax.
@@ -65,10 +62,9 @@ namespace Raven.Database.Indexing
 					});
 		        if (res != null) return res;
 		    }
-		    catch (Exception e)
+			//if we fail to parse or failed to generate a lucene query we fail over to the old code
+		    catch (Exception)
 		    {
-			    //QueryLogger.Error(e);
-			    throw;
 		    }
 			var originalQuery = query;
 			try
