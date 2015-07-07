@@ -40,7 +40,9 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(548, time.Length);
 					for (int i = 0; i < 548; i++)
 					{
+#if DEBUG
 						Assert.Equal("Time", time[i].DebugKey);
+#endif
 						Assert.Equal(PeriodDuration.Days(2), time[i].Duration);
 
 						var daysInMonth = DateTime.DaysInMonth(time[i].StartAt.Year, time[i].StartAt.Month) +
@@ -124,7 +126,9 @@ namespace Raven.Tests.TimeSeries
 
 					for (int i = 0; i < 18; i++)
 					{
+#if DEBUG
 						Assert.Equal("Time", time[i].DebugKey);
+#endif
 						Assert.Equal(PeriodDuration.Months(2), time[i].Duration);
 
 						var daysInMonth = DateTime.DaysInMonth(time[i].StartAt.Year, time[i].StartAt.Month) +
