@@ -6,11 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Principal;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Http.Controllers;
-using System.Web.Http.Routing;
+using JetBrains.Annotations;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -250,6 +246,8 @@ namespace Raven.Database.Server.Controllers
 				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
 			};
 		}
+
+	
 
 		protected virtual IndexQuery GetIndexQuery(int maxPageSize)
 		{
