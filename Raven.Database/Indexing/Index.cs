@@ -308,10 +308,18 @@ namespace Raven.Database.Indexing
 				if (indexWriter == null)
 					return;
 
+				waitReason = "Flush";
 				try
 				{
-					waitReason = "Flush";
-					indexWriter.Commit(highestETag);
+					try
+					{
+						indexWriter.Commit(highestETag);
+					}
+					catch (Exception e)
+					{
+						HandleWriteError(e);
+						throw;
+					}
 
 					ResetWriteErrors();
 				}
@@ -334,15 +342,19 @@ namespace Raven.Database.Indexing
 					
 					EnsureIndexWriter();
 
-					indexWriter.Optimize();
+					try
+					{
+						indexWriter.Optimize();
+					}
+					catch (Exception e)
+					{
+						HandleWriteError(e);
+						throw;
+					}
+
 					logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
 
 					ResetWriteErrors();
-				}
-				catch (Exception e)
-				{
-					IncrementWriteErrors(e);
-					throw;
 				}
 				finally
 				{
@@ -560,8 +572,6 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
-					IncrementWriteErrors(e);
-
 					throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
 				}
 				finally
@@ -673,11 +683,19 @@ namespace Raven.Database.Indexing
 
 		private void CreateIndexWriter()
 		{
-			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
-																  ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
-																  : null;
-			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+			try
+			{
+				snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+				IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
+					? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
+					: null;
+				indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+			}
+			catch (Exception e)
+			{
+				HandleWriteError(e);
+				throw;
+			}
 		}
 
 		internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
@@ -1869,16 +1887,33 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		public void IncrementWriteErrors(Exception e)
+		public void HandleWriteError(Exception e)
 		{
-			if (e.GetType() == typeof(SystemException)) // Don't count transient errors
+			if (e.GetType() == typeof (SystemException)) // ignore transient errors
 				return;
 
-			writeErrors = Interlocked.Increment(ref writeErrors);
+			bool indexCorrupted = false;
+			string errorMessage = null;
+			
+			if (e is IOException)
+			{
+				errorMessage = string.Format("Index '{0}' got corrupted because of failed write to a disk. The index priority was set to Error.", PublicName);
+				indexCorrupted = true;
+			}
+			else
+			{
+				writeErrors = Interlocked.Increment(ref writeErrors);
 
-			if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error)
+				if (Interlocked.Read(ref writeErrors) >= WriteErrorsLimit && Priority != IndexingPriority.Error)
+				{
+					errorMessage = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
+					indexCorrupted = true;
+				}
+			}
+
+			if (indexCorrupted == false)
 				return;
-
+			
 			context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
 			Priority = IndexingPriority.Error;
 
@@ -1888,18 +1923,18 @@ namespace Raven.Database.Indexing
 				Type = IndexChangeTypes.IndexMarkedAsErrored
 			});
 
-			var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
+			if (string.IsNullOrEmpty(errorMessage))
+				throw new ArgumentException("Error message has to be set");
 
-			logIndexing.Warn(msg);
-
-			context.AddError(indexId, PublicName, null, msg);
+			logIndexing.Warn(errorMessage);
+			context.AddError(indexId, PublicName, null, errorMessage);
 
 			context.Database.AddAlert(new Alert
 			{
 				AlertLevel = AlertLevel.Error,
 				CreatedAt = SystemTime.UtcNow,
-				Message = msg,
-				Title = string.Format("Index '{0}' marked as errored due to write errors", PublicName),
+				Message = errorMessage,
+				Title = string.Format("Index '{0}' marked as errored due to corruption", PublicName),
 				UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
 			});
 		}
