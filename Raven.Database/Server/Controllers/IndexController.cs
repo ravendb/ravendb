@@ -254,6 +254,7 @@ namespace Raven.Database.Server.Controllers
 
 			var instance = Database.IndexStorage.GetIndexInstance(index);
 			Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
+			instance.Priority = indexingPriority;
 
 			return GetEmptyMessage();
 		}
