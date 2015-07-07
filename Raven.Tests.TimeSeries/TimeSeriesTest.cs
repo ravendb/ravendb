@@ -7,7 +7,9 @@ namespace Raven.Tests.TimeSeries
 	{
 		public static TimeSeriesStorage GetStorage()
 		{
-			return new TimeSeriesStorage("http://localhost:8080", "TimeSeriesTest", new RavenConfiguration { RunInMemory = true });
+			var storage = new TimeSeriesStorage("http://localhost:8080", "TimeSeriesTest", new RavenConfiguration { RunInMemory = true });
+			storage.CreatePrefixConfiguration("-Simple", 1);
+			return storage;
 		}
 	}
 }

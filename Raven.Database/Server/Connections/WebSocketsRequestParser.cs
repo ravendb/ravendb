@@ -17,22 +17,23 @@ namespace Raven.Database.Server.Connections
 	public class WebSocketsRequestParser
 	{
 		private const string CountersUrlPrefix = Constants.Counter.UrlPrefix;
+		private const string TimeSeriesUrlPrefix = Constants.TimeSeries.UrlPrefix;
 		private const string DatabasesUrlPrefix = Constants.Database.UrlPrefix;
 		private const string FileSystemsUrlPrefix = Constants.FileSystem.UrlPrefix;
 
 		protected DatabasesLandlord DatabasesLandlord { get; private set; }
 
+		private readonly TimeSeriesLandlord timeSeriesLandlord;
 		private readonly CountersLandlord countersLandlord;
-
 		private readonly FileSystemsLandlord fileSystemsLandlord;
-
 		private readonly MixedModeRequestAuthorizer authorizer;
 
 		private readonly string expectedRequestSuffix;
 
-		public WebSocketsRequestParser(DatabasesLandlord databasesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
+		public WebSocketsRequestParser(DatabasesLandlord databasesLandlord, TimeSeriesLandlord timeSeriesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
 		{
 			DatabasesLandlord = databasesLandlord;
+			this.timeSeriesLandlord = timeSeriesLandlord;
 			this.countersLandlord = countersLandlord;
 			this.fileSystemsLandlord = fileSystemsLandlord;
 			this.authorizer = authorizer;
@@ -116,14 +117,17 @@ namespace Raven.Database.Server.Connections
 				IResourceStore activeResource;
 				switch (resourcePartsPathParts[1])
 				{
-					case CountersUrlPrefix:
-						activeResource = await countersLandlord.GetCounterInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2));
-						break;
 					case DatabasesUrlPrefix:
 						activeResource = await DatabasesLandlord.GetDatabaseInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2));
 						break;
 					case FileSystemsUrlPrefix:
 						activeResource = await fileSystemsLandlord.GetFileSystemInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2));
+						break;
+					case CountersUrlPrefix:
+						activeResource = await countersLandlord.GetCounterInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2));
+						break;
+					case TimeSeriesUrlPrefix:
+						activeResource = await timeSeriesLandlord.GetTimeSeriesInternal(resourcePath.Substring(TimeSeriesUrlPrefix.Length + 2));
 						break;
 					default:
 						throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Illegal websocket path.");
@@ -179,8 +183,8 @@ namespace Raven.Database.Server.Connections
 
 	public class WatchTrafficWebSocketsRequestParser : WebSocketsRequestParser
 	{
-		public WatchTrafficWebSocketsRequestParser(DatabasesLandlord databasesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
-			: base(databasesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
+		public WatchTrafficWebSocketsRequestParser(DatabasesLandlord databasesLandlord, TimeSeriesLandlord timeSeriesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
+			: base(databasesLandlord, timeSeriesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
 		{
 		}
 
@@ -203,8 +207,8 @@ namespace Raven.Database.Server.Connections
 
 	public class AdminLogsWebSocketsRequestParser : WebSocketsRequestParser
 	{
-		public AdminLogsWebSocketsRequestParser(DatabasesLandlord databasesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
-			: base(databasesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
+		public AdminLogsWebSocketsRequestParser(DatabasesLandlord databasesLandlord, TimeSeriesLandlord timeSeriesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
+			: base(databasesLandlord, timeSeriesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
 		{
 		}
 

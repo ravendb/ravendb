@@ -17,6 +17,13 @@ namespace Voron.Trees.Fixed
             long CurrentKey { get; }
             Slice Value { get; }
             bool MoveNext();
+
+			/// <summary>
+			/// Deletes the current key/value pair and returns true if there is 
+			/// another key after it
+			/// </summary>
+			bool DeleteCurrentAndMoveNext();
+
             ValueReader CreateReaderForCurrent();
         }
 
@@ -34,7 +41,12 @@ namespace Voron.Trees.Fixed
                 return false;
             }
 
-            public void Dispose()
+	        public bool DeleteCurrentAndMoveNext()
+	        {
+		        throw new InvalidOperationException("Invalid position, cannot read past end of tree");
+	        }
+
+	        public void Dispose()
             {
             }
 
@@ -93,7 +105,14 @@ namespace Voron.Trees.Fixed
                 return ++_pos < _header->NumberOfEntries;
             }
 
-            public ValueReader CreateReaderForCurrent()
+	        public bool DeleteCurrentAndMoveNext()
+	        {
+				var currentKey = CurrentKey;
+				_fst.RemoveEmbeddedEntry(currentKey);
+				return Seek(currentKey);    
+	        }
+
+	        public ValueReader CreateReaderForCurrent()
             {
                 return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
             }
@@ -182,7 +201,17 @@ namespace Voron.Trees.Fixed
                 return false;
             }
 
-            public ValueReader CreateReaderForCurrent()
+			/// <summary>
+			/// Deletes the current key/value pair and returns true if there is 
+			/// another key after it
+			/// </summary>
+	        public bool DeleteCurrentAndMoveNext()
+	        {
+				var currentKey = CurrentKey;
+				_parent.RemoveLargeEntry(currentKey);
+				return Seek(currentKey);
+			}
+	        public ValueReader CreateReaderForCurrent()
             {
                 if (_currentPage == null)
                     throw new InvalidOperationException("No current page was set");

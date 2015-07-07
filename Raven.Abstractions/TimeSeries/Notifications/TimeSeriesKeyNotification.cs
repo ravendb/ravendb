@@ -4,6 +4,8 @@ namespace Raven.Abstractions.TimeSeries.Notifications
 {
 	public class TimeSeriesKeyNotification : TimeSeriesNotification
 	{
+		public string Prefix { get; set; }
+
 		public string Key { get; set; }
 
 		public TimeSeriesChangeAction Action { get; set; }
@@ -12,9 +14,9 @@ namespace Raven.Abstractions.TimeSeries.Notifications
 		
 		public double[] Values { get; set; }
 
-		public DateTime Start { get; set; }
+		public long Start { get; set; }
 
-		public DateTime End { get; set; }
+		public long End { get; set; }
 	}
 
 	public class TimeSeriesRangeKeyNotification : TimeSeriesKeyNotification
