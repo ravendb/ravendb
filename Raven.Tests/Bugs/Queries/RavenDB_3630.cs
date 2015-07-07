@@ -17,7 +17,6 @@ namespace Raven.Tests.Bugs.Queries
 			using (
 			   var store = NewDocumentStore())
 			{
-				store.ExecuteIndex(new Issue3630Index());
 				using (var session = store.OpenSession())
 				{
 					
@@ -42,13 +41,5 @@ namespace Raven.Tests.Bugs.Queries
 		}
 		public string Name { get; set; }
 		public IEnumerable<MyEnum> Enums { get; set; }
-	}
-
-	public class Issue3630Index : AbstractIndexCreationTask<Issue3630>
-	{
-		public Issue3630Index()
-		{
-			Map = items => from item in items where (!item.Enums.Contains(Issue3630.MyEnum.IsBad)) select new { Name = item.Name };
-		}
 	}
 }
