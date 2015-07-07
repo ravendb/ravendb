@@ -662,9 +662,6 @@ namespace Raven.Database.Actions
 	                        Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
                         });
 
-                        if (addDocumentResult.Updated)
-                            Database.Prefetcher.AfterUpdate(key, addDocumentResult.PrevEtag);
-
                         Database.PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
                         TransactionalStorage

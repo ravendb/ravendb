@@ -299,9 +299,8 @@ namespace Raven.Database.Actions
 		[MethodImpl(MethodImplOptions.Synchronized)]
 		public string[] PutIndexes(string[] names, IndexDefinition[] definitions, IndexingPriority[] priorities)
 		{
-			var error = false;
-			var CreatedIndexes = new List<string>();
-			var PrioritiesList = new List<IndexingPriority>();
+			var createdIndexes = new List<string>();
+			var prioritiesList = new List<IndexingPriority>();
 			try
 			{
 				for (int i = 0; i < names.Length; i++)
@@ -310,7 +309,7 @@ namespace Raven.Database.Actions
 					var definition = definitions[i];
 					var priority = priorities[i];
 					if (name == null)
-						throw new ArgumentNullException("name");
+						throw new ArgumentNullException("names","Names cannot contain null values");
 
 					IsIndexNameValid(name);
 
@@ -374,30 +373,23 @@ namespace Raven.Database.Actions
 						Type = IndexChangeTypes.IndexAdded,
 					}));
 
-					CreatedIndexes.Add(name);
-					PrioritiesList.Add(priority);
+					createdIndexes.Add(name);
+					prioritiesList.Add(priority);
 				}
-				return CreatedIndexes.ToArray();
+
+                var indexesIds = createdIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x).indexId).ToArray();
+                Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, prioritiesList.ToArray()));
+			
+				return createdIndexes.ToArray();
 			}
-			catch (Exception)
+			catch (Exception e)
 			{
-				error = true;
+			    Log.WarnException("Could not create index batch", e);
+                foreach (var index in createdIndexes)
+                {
+                    DeleteIndex(index);
+                }
 				throw;
-			}
-			finally
-			{
-				if (error)
-				{
-					foreach (var index in CreatedIndexes)
-					{
-						DeleteIndex(index);
-					}
-				}
-				else
-				{
-					var indexesIds = CreatedIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x).indexId).ToArray();
-					Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, PrioritiesList.ToArray()));
-				}
 			}
 		}
         private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
