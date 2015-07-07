@@ -5,30 +5,54 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Abstractions.Logging
 {
 	public static class LogContext
 	{
-		public static readonly Raven.Abstractions.Threading.ThreadLocal<string> DatabaseName = new Raven.Abstractions.Threading.ThreadLocal<string>();
+		private static readonly Raven.Abstractions.Threading.ThreadLocal<string> databaseName = new Raven.Abstractions.Threading.ThreadLocal<string>();
 
 		public static IDisposable WithDatabase(string database)
 		{
-			var old = DatabaseName.Value;
+			var old = databaseName.Value;
 			var db = database ?? Constants.SystemDatabase;
 			var disposable = LogManager.OpenMappedContext("database", db);
-			DatabaseName.Value = db;
+			databaseName.Value = db;
 
 			return new DisposableAction(()=>
 			{
-				DatabaseName.Value = old;
+				databaseName.Value = old;
 				disposable.Dispose();
 			});
+		}
+
+		public static string DatabaseName
+		{
+			get
+			{
+				try
+				{
+					return databaseName.Value;
+				}
+				catch (ObjectDisposedException)
+				{
+					// can happen when logging from finalizers under crash scenario
+					return "unknown";
+				}
+			}
+			set
+			{
+				try
+				{
+					databaseName.Value = value;
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			}
 		}
 	}
 }
