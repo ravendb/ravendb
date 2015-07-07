@@ -33,7 +33,6 @@ namespace Raven.Database.TimeSeries
 		private volatile bool disposed;
 
 		private readonly StorageEnvironment storageEnvironment;
-		private readonly TransportState transportState;
 		private readonly NotificationPublisher notificationPublisher;
 		private readonly TimeSeriesMetricsManager metricsTimeSeries;
 
@@ -66,8 +65,8 @@ namespace Raven.Database.TimeSeries
 				: CreateStorageOptionsFromConfiguration(configuration.TimeSeries.DataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
-			transportState = receivedTransportState ?? new TransportState();
-			notificationPublisher = new NotificationPublisher(transportState);
+			TransportState = receivedTransportState ?? new TransportState();
+			notificationPublisher = new NotificationPublisher(TransportState);
 			ExtensionsState = new AtomicDictionary<object>();
 
 			Configuration = configuration;

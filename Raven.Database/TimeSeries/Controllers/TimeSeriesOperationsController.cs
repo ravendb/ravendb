@@ -74,7 +74,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
-				Storage.Publisher.RaiseNotification(new TimeSeriesKeyNotification
+				Storage.Publisher.RaiseNotification(new KeyChangeNotification
 				{
 					Prefix = prefix,
 					Key = key,
@@ -134,7 +134,7 @@ namespace Raven.Database.TimeSeries.Controllers
 		            {
 						using (var writer = Storage.CreateWriter())
 						{
-							Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
+							Storage.Publisher.RaiseNotification(new BulkOperationNotification
 							{
 								Type = BatchType.Started,
 								OperationId = operationId
@@ -146,7 +146,7 @@ namespace Raven.Database.TimeSeries.Controllers
 							}
 							writer.Commit();
 
-							Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
+							Storage.Publisher.RaiseNotification(new BulkOperationNotification
 							{
 								Type = BatchType.Ended,
 								OperationId = operationId
@@ -157,7 +157,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	            catch (OperationCanceledException)
 	            {
 					// happens on timeout
-		            Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
+		            Storage.Publisher.RaiseNotification(new BulkOperationNotification
 		            {
 			            Type = BatchType.Error,
 			            OperationId = operationId,
@@ -171,7 +171,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	            catch (Exception e)
 	            {
 		            var errorMessage = e.SimplifyException().Message;
-					Storage.Publisher.RaiseNotification(new TimeSeriesBulkOperationNotification
+					Storage.Publisher.RaiseNotification(new BulkOperationNotification
 					{
 						Type = BatchType.Error,
 						OperationId = operationId,
@@ -297,7 +297,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();
-				Storage.Publisher.RaiseNotification(new TimeSeriesKeyNotification
+				Storage.Publisher.RaiseNotification(new KeyChangeNotification
 				{
 					Prefix = prefix,
 					Key = key,
@@ -332,7 +332,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();
-				Storage.Publisher.RaiseNotification(new TimeSeriesKeyNotification
+				Storage.Publisher.RaiseNotification(new KeyChangeNotification
 				{
 					Prefix = prefix,
 					Key = key,

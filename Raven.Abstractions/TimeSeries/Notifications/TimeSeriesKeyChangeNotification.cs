@@ -2,7 +2,7 @@
 
 namespace Raven.Abstractions.TimeSeries.Notifications
 {
-	public class TimeSeriesKeyNotification : TimeSeriesNotification
+	public class KeyChangeNotification : TimeSeriesNotification
 	{
 		public string Prefix { get; set; }
 
@@ -19,7 +19,7 @@ namespace Raven.Abstractions.TimeSeries.Notifications
 		public long End { get; set; }
 	}
 
-	public class TimeSeriesRangeKeyNotification : TimeSeriesKeyNotification
+	public class RangeKeyNotification : KeyChangeNotification
 	{
 		
 	}

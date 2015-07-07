@@ -12,12 +12,12 @@ namespace Raven.Database.TimeSeries.Notifications
 			this.transportState = transportState;
 		}
 
-		public void RaiseNotification(TimeSeriesKeyNotification notification)
+		public void RaiseNotification(KeyChangeNotification notification)
 		{
 			transportState.Send(notification);
 		}
 
-		public void RaiseNotification(TimeSeriesBulkOperationNotification change)
+		public void RaiseNotification(BulkOperationNotification change)
 		{
 			transportState.Send(change);
 		}

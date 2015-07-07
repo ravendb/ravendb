@@ -487,6 +487,7 @@
     <Compile Include="TimeSeries\Backup\BackupOperation.cs" />
     <Compile Include="TimeSeries\Backup\RestoreOperation.cs" />
     <Compile Include="TimeSeries\Controllers\AdminTimeSeriesController.cs" />
+    <Compile Include="TimeSeries\Controllers\TimeSeriesChangesController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesOperationsController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesStatsController.cs" />
     <Compile Include="TimeSeries\Controllers\RavenTimeSeriesApiController.cs" />
