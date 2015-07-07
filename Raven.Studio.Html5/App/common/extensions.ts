@@ -423,11 +423,24 @@ class extensions {
 		    }
 	    };
 
-		ko.bindingHandlers["checkboxChecked"] = {
+		ko.bindingHandlers["checkbox"] = {
 			init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
-				var x = 3;
-				//ko.utils.domData.set(element, key, true);
-				$(element).append("<img/>");
+				//$(element).append("<img/>");
+			},
+		    update(element, valueAccessor, allBindings, viewModel, bindingContext) {
+			    var checked: boolean = ko.unwrap(valueAccessor());
+				
+			    var src = checked ? "content/images/checked.png" : "content/images/unchecked.png";
+			    $(element)/*.children()*/.attr("src", src);
+				var needOpacity: boolean = allBindings().needOpacity;
+			    var opactity = !!needOpacity ? 0.25 : 1;
+				$(element)/*.children()*/.css("opacity", opactity);
+		    }
+	    };
+
+		ko.bindingHandlers["checkboxTriple"] = {
+			init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+				//$(element).append("<img/>");
 			},
 		    update(element, valueAccessor, allBindings, viewModel, bindingContext) {
 			    var checkboxValue: checkbox = ko.unwrap(valueAccessor());
@@ -444,7 +457,10 @@ class extensions {
 						src = "content/images/unchecked.png";
 			    }
 
-			    $(element).children().attr("src", src);
+			    $(element)/*.children()*/.attr("src", src);
+				var needOpacity: boolean = allBindings().needOpacity;
+			    var opactity = !!needOpacity ? 0.25 : 1;
+				$(element)/*.children()*/.css("opacity", opactity);
 		    }
 	    };
     }
