@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using ICSharpCode.NRefactory.CSharp;
+using System.Web.Http.Results;
 using JetBrains.Annotations;
 using Lucene.Net.Search;
 using Mono.CSharp;
@@ -52,6 +53,69 @@ namespace Raven.Database.Server.Controllers
 				indexes = Database.Indexes.GetIndexes(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
 
 			return GetMessageWithObject(indexes);
+		}
+
+		[HttpPut]
+		[RavenRoute("indexes")]
+		[RavenRoute("databases/{databaseName}/indexes")]
+		public async Task<HttpResponseMessage> IndexMultiPut()
+		{
+			MultiplePutIndexParam multiplePutIndexParam;
+			try
+			{
+				multiplePutIndexParam = await ReadJsonObjectAsync<MultiplePutIndexParam>().ConfigureAwait(false);
+			}
+			catch (InvalidOperationException e)
+			{
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				return GetMessageWithObject(new
+				{
+					Message = "Could not understand json, please check its validity.",
+					Error = e.Message
+				}, (HttpStatusCode) 500); 
+
+			}
+			catch (InvalidDataException e)
+			{
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				
+				return GetMessageWithObject(new
+				{
+					Error = e
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+			}
+			var definitions = multiplePutIndexParam.Definitions;
+			var priorities = multiplePutIndexParam.Priorities;
+			var indexes = multiplePutIndexParam.IndexesNames;
+			string[] createdIndexes;
+			for (int i =0; i< indexes.Length; i++)
+			{
+				var data = definitions[i];											
+				if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
+					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
+				// older clients (pre 3.0) might try to create the index without MaxIndexOutputsPerDocument set
+				// in order to ensure that they don't reset the default value for old clients, we force the default
+				// value to maintain the existing behavior
+				if (!data.MaxIndexOutputsPerDocument.HasValue || data.MaxIndexOutputsPerDocument.Value == default (int))
+					data.MaxIndexOutputsPerDocument = 16*1024;
+			}
+			try
+			{
+				createdIndexes = Database.Indexes.PutIndexes(indexes, definitions, priorities);
+			}
+			catch (Exception ex)
+			{
+				var compilationException = ex as IndexCompilationException;
+
+				return GetMessageWithObject(new
+				{
+					ex.Message,
+					IndexDefinitionProperty = compilationException != null ? compilationException.IndexDefinitionProperty : "",
+					ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
+					Error = ex.ToString()
+				}, HttpStatusCode.BadRequest);
+			}
+			return GetMessageWithObject(new { Indexes = createdIndexes }, HttpStatusCode.Created);
 		}
 
 		[HttpGet]
@@ -114,16 +178,17 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize index request. Error: " + e);
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
-					Message = "Could not understand json, please check its validity."
-				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+					Message = "Could not understand json, please check its validity.",
+					Error = e.Message
+				}, (HttpStatusCode)500); 
 
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize index request. Error: " + e);
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
 					e.Message
@@ -149,6 +214,8 @@ namespace Raven.Database.Server.Controllers
 			catch (Exception ex)
 			{
 				var compilationException = ex as IndexCompilationException;
+
+                Log.ErrorException("Cannot create index.", ex);
 
 				return GetMessageWithObject(new
 				{
@@ -245,7 +312,7 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			return GetEmptyMessage(HttpStatusCode.NoContent);
-		}		
+		}
 
 		[HttpPost]
 		[RavenRoute("indexes/set-priority/{*id}")]
@@ -297,6 +364,7 @@ namespace Raven.Database.Server.Controllers
 				Index = indexDefinition,
 			});
 		}
+
 
 		private HttpResponseMessage GetIndexSource(string index)
 		{

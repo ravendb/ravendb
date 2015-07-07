@@ -273,5 +273,10 @@ namespace Raven.Abstractions.Data
 		}
 
 		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";
+
+	    public class Indexing
+	    {
+			public const string DisableIndexingFreeSpaceThreshold = "Raven/Indexing/DisableIndexingFreeSpaceThreshold";
+	    }
 	}
 }
