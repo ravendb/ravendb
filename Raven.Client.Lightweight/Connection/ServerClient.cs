@@ -223,10 +223,11 @@ namespace Raven.Client.Connection
 		{
 			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, definition, false));
 		}
-		public List<string> PutIndexes(List<string> names, IndexDefinition[] definitions)
+		public List<string> PutIndexes(string[] names, IndexDefinition[] definitions, IndexingPriority[] priorities)
 		{
-			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexesAsync(names, definitions));
+			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexesAsync(names, definitions, priorities));
 		}
+
 		public bool IndexHasChanged(string name, IndexDefinition indexDef)
 		{
 			return AsyncHelpers.RunSync(() => asyncServerClient.IndexHasChangedAsync(name, indexDef));
@@ -240,11 +241,6 @@ namespace Raven.Client.Connection
 		public string PutIndex(string name, IndexDefinition definition, bool overwrite)
 		{
 			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, definition, overwrite));
-		}
-
-		public IndexDefinition[] GetspecifiedIndexes(string[] names)
-		{
-			return AsyncHelpers.RunSync(() => asyncServerClient.GetspecifiedIndexesAsync(names));
 		}
 
 		public string PutIndex<TDocument, TReduceResult>(string name,

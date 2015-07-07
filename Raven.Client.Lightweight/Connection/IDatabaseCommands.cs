@@ -256,13 +256,6 @@ namespace Raven.Client.Connection
 		IndexDefinition[] GetIndexes(int start, int pageSize);
 
 		/// <summary>
-		///		Retrieves multiple index definitions from a database
-		/// </summary>
-		/// <param name="names"> The names of the indexes to retrive</param>
-		/// <returns></returns>
-		IndexDefinition[] GetspecifiedIndexes(string[] names);
-
-		/// <summary>
 		///     Gets the license status
 		/// </summary>
 		LicensingStatus GetLicenseStatus();
@@ -470,7 +463,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="names">names of an indexes</param>
 		/// <param name="definitions">definitiosn of the indexes</param>
-		List<string> PutIndexes(List<string> names, IndexDefinition[] definitions);
+		/// <param name="priorities">The priorities of the indexes</param>
+		List<string> PutIndexes(string[] names, IndexDefinition[] definitions, IndexingPriority[] priorities);
+
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition
 		/// </summary>

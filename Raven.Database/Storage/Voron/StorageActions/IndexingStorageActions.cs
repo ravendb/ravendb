@@ -168,6 +168,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.IndexingMetadata.Add(writeBatch.Value, CreateKey(id, "priority"), BitConverter.GetBytes((int)priority));
 		}
 
+		public void SetIndexesPriority(int[] ids, IndexingPriority[] priorities)
+		{
+			for (int i = 0; i < ids.Length; i++)
+			{
+				var id = ids[i];
+				var priority = priorities[i];
+				tableStorage.IndexingMetadata.Add(writeBatch.Value, CreateKey(id, "priority"), BitConverter.GetBytes((int)priority));
+			}
+		}
 		public IndexFailureInformation GetFailureRate(int id)
 		{
             var key = new Slice(CreateKey(id));
