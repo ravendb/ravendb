@@ -611,13 +611,13 @@ namespace Raven.Database.Actions
 
 
 
-        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation, string[] participatingIds = null)
         {
             WorkContext.MetricsCounters.DocsPerSecond.Mark();
             key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
             RemoveReservedProperties(document);
             RemoveMetadataReservedProperties(metadata);
-            Etag newEtag = Etag.Empty;
+            var newEtag = Etag.Empty;
 
             using (Database.DocumentLock.Lock())
             {
@@ -639,7 +639,7 @@ namespace Raven.Database.Actions
                         var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
                         newEtag = addDocumentResult.Etag;
 
-                        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions);
+                        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions, participatingIds);
                         metadata[Constants.LastModified] = addDocumentResult.SavedAt;
                         metadata.EnsureSnapshot(
                             "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
@@ -705,13 +705,13 @@ namespace Raven.Database.Actions
             }
         }
 
-        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation)
+        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, string[] participatingIds = null)
         {
             RavenJObject metadata;
-            return Delete(key, etag, transactionInformation, out metadata);
+            return Delete(key, etag, transactionInformation, out metadata, participatingIds);
         }
 
-        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, out RavenJObject metadata)
+		public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, out RavenJObject metadata, string[] participatingIds = null)
         {
             if (key == null)
                 throw new ArgumentNullException("key");
@@ -737,7 +737,7 @@ namespace Raven.Database.Actions
                             actions.Indexing.RemoveAllDocumentReferencesFrom(key);
                             WorkContext.MarkDeleted(key);
 
-                            Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions);
+                            Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions, participatingIds);
 
 							collection = metadataVar.Value<string>(Constants.RavenEntityName);
 							

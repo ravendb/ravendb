@@ -484,6 +484,8 @@ namespace Raven.Client.Connection.Implementation
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()
 		{
+			await Response.AssertNotFailingResponse();
+
 			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))

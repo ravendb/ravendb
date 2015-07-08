@@ -27,9 +27,10 @@ namespace Raven.Tests.TimeSeries
 
 				changes.WaitForAllPendingSubscriptions();
 				var at = DateTime.Now;
-				await store.AppendAsync("Time", at, 3d);
+				await store.AppendAsync("Type1", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
+				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Time", timeSeriesChange.Key);
 				Assert.Equal(at.Ticks, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
@@ -42,9 +43,10 @@ namespace Raven.Tests.TimeSeries
 					.ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				await store.DeleteAsync("Time");
+				await store.DeleteAsync("Type1", "Time");
 
 				timeSeriesChange = await notificationTask;
+				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Time", timeSeriesChange.Key);
 				Assert.Equal(DateTime.MinValue.Ticks, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Delete, timeSeriesChange.Action);
@@ -70,9 +72,10 @@ namespace Raven.Tests.TimeSeries
 				changesB.WaitForAllPendingSubscriptions();
 
 				var at = DateTime.Now;
-				await storeA.AppendAsync("Time", at, 3d);
+				await storeA.AppendAsync("-Simple", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
+				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Time", timeSeriesChange.Key);
 				Assert.Equal(at.Ticks, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
@@ -87,9 +90,10 @@ namespace Raven.Tests.TimeSeries
 				changesA.WaitForAllPendingSubscriptions();
 
 				var at2 = DateTime.Now.AddMinutes(6);
-				await storeB.AppendAsync("Is", at2, 6d);
+				await storeB.AppendAsync("-Simple", "Is", at2, 6d);
 
 				timeSeriesChange = await notificationTask;
+				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Is", timeSeriesChange.Key);
 				Assert.Equal(at2.Ticks, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
@@ -126,7 +130,7 @@ namespace Raven.Tests.TimeSeries
 
 					for (var i = 0; i < actionsCount; i++)
 					{
-						batchOperation.ScheduleAppend("Time", DateTime.Today.AddMinutes(i));
+						batchOperation.ScheduleAppend("-Simple", "Time", DateTime.Today.AddMinutes(i));
 					}
 				}
 

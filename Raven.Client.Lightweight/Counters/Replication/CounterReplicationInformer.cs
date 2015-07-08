@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -78,6 +79,8 @@ namespace Raven.Client.Counters.Replication
 
 		public async Task<T> ExecuteWithReplicationAsync<T>(string counterStoreUrl, HttpMethod method, Func<string, string, Task<T>> operation, CancellationToken token)
 		{
+			Debug.Assert(typeof(T).FullName.Contains("Task") == false);
+
 			if (currentlyExecuting && CountersConventions.AllowMultipuleAsyncOperations == false)
 				throw new InvalidOperationException("Only a single concurrent async request is allowed per async store instance.");
 
