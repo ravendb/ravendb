@@ -48,6 +48,7 @@ namespace Raven.Tryouts
             using (var defaultAnalyzer = new StandardAnalyzer(Version.LUCENE_29))
             using (var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer))
             {
+	            QueryBuilder.UseLuceneASTParser = false;
                 reader.ReadLine();
                 var luceneSW = new Stopwatch();
                 var talSW = new Stopwatch();
