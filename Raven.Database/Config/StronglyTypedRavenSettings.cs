@@ -264,6 +264,7 @@ namespace Raven.Database.Config
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
 			Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 20);
+			Indexing.UseLuceneASTParser = new BooleanSetting(settings[Constants.UseLuceneASTParser], true);
 
             Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 5);		// 6000ms
             Cluster.HeartbeatTimeout = new IntegerSetting(settings["Raven/Cluster/HeartbeatTimeout"], RaftEngineOptions.DefaultHeartbeatTimeout * 5);	// 1500ms
@@ -484,6 +485,7 @@ namespace Raven.Database.Config
 		{
 			public IntegerSetting MaxNumberOfItemsToProcessInTestIndexes { get; set; }
 			public IntegerSetting MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
+			public BooleanSetting UseLuceneASTParser { get; set; }
 		}
 
 	    public class ClusterConfiguration

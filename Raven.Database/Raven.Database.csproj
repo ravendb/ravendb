@@ -468,8 +468,8 @@
     <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
     <Compile Include="FileSystem\Smuggler\FilesystemDataDumper.cs" />
     <Compile Include="ShiftReduceParserCode.cs" />
-    <Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />
-    <Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />
+    <!--<Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />-->
+    <!--<Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />-->
     <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
     <Compile Include="Smuggler\SmugglerCounterApi.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseApi.cs" />
