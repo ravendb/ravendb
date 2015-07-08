@@ -11,15 +11,17 @@ using Raven.Abstractions.Data;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
 	public class RavenDB_3082 : RavenTest
 	{
-		[Fact]
-		public async Task StronglyTypedDataSubscriptions()
+        [Theory]
+        [PropertyData("Storages")]
+		public async Task StronglyTypedDataSubscriptions(string storage)
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage:storage))
 			{
 				using (var session = store.OpenSession())
 				{
