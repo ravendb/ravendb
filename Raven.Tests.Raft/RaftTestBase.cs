@@ -205,7 +205,7 @@ namespace Raven.Tests.Raft
 			var clusterStore = clusterStores[0];
 			var requestFactory = new HttpRavenRequestFactory();
 			var replicationRequestUrl = string.Format("{0}/admin/cluster/commands/configuration", clusterStore.Url);
-			var replicationRequest = requestFactory.Create(replicationRequestUrl, "PUT", new RavenConnectionStringOptions
+			var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Put, new RavenConnectionStringOptions
 			{
 				Url = clusterStore.Url
 			});

@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
-
+using System.Net.Http;
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -31,8 +31,6 @@ namespace Raven.Tests.Raft.Client
 		[PropertyData("Nodes")]
 		public void PutAndDeleteShouldBePropagated(int numberOfNodes)
 		{
-			throw new NotImplementedException("Waiting for http://issues.hibernatingrhinos.com/issue/RavenDB-3304");
-
 			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
 			SetupClusterConfiguration(clusterStores);
@@ -44,7 +42,7 @@ namespace Raven.Tests.Raft.Client
 			var replicationRequestUrl = string.Format("{0}/replication/replicate-indexes?op=replicate-all", store1.Url.ForDatabase(store1.DefaultDatabase));
 			if (numberOfNodes > 1)
 			{
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions { Url = store1.Url });
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions { Url = store1.Url });
 				replicationRequest.ExecuteRequest();
 			}
 
@@ -54,7 +52,7 @@ namespace Raven.Tests.Raft.Client
 
 			if (numberOfNodes > 1)
 			{
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions { Url = store1.Url });
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions { Url = store1.Url });
 				replicationRequest.ExecuteRequest();
 			}
 
