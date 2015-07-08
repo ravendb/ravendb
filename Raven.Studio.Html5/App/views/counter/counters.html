@@ -18,7 +18,7 @@
             <!--<a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>-->
             <div class="btn-group">
                 <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll, visible: hasCounters" title="Select all or none">
-                    <img data-bind="attr: { src: hasAllCountersSelected() ? 'content/images/checked.png' : hasAnyCountersSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }"/>
+					<img data-bind="checkboxTriple: countersSelection" />
                 </button>
             </div>
 	        <div class="btn-group">

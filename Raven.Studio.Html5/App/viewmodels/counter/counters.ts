@@ -30,6 +30,7 @@ class counters extends viewModelBase {
     hasAllCountersSelected: KnockoutComputed<boolean>;
     isAnyCountersAutoSelected = ko.observable<boolean>(false);
     isAllCountersAutoSelected = ko.observable<boolean>(false);
+	countersSelection: KnockoutComputed<checkbox>;
 
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
@@ -73,6 +74,14 @@ class counters extends viewModelBase {
                 return documentsText;
             }
             return "";
+        });
+		
+		this.countersSelection = ko.computed(() => {
+		    if (this.hasAllCountersSelected())
+			    return checkbox.Checked;
+		    if (this.hasAnyCountersSelected())
+			    return checkbox.SomeChecked;
+		    return checkbox.UnChecked;
         });
     }
 
