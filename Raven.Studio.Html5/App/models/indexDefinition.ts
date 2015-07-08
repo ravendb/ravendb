@@ -63,12 +63,27 @@ class indexDefinition {
     }
 
     isStoreAllFields(): boolean {
-        for (var key in this.stores) {
-            if (key === "__all_fields")
-                return true;
+        if (this.stores.hasOwnProperty("__all_fields")) {
+            return this.stores["__all_fields"] === "Yes";
         }
 
         return false;
+    }
+
+    setOrRemoveStoreAllFields(add: boolean) {
+        if (add) {
+            this.stores["__all_fields"] = "Yes";
+        } else {
+            delete this.stores["__all_fields"];
+        }
+
+        this.storeAllFields(this.isStoreAllFields());
+    }
+
+    setStoreAllFieldsToObject(obj: any): any {
+        if (this.isStoreAllFields())
+            obj["__all_fields"] = "Yes";
+        return obj;
     }
 
     toDto(): indexDefinitionDto {
@@ -88,7 +103,7 @@ class indexDefinition {
             Reduce: this.reduce(),
             SortOptions: this.makeFieldObject(f => f.sort() !== "None", f => f.sort()),
             SpatialIndexes: this.makeSpatialIndexesObject(),
-            Stores: this.makeFieldObject(f => f.stores() === "Yes", f => f.stores()),
+            Stores: this.setStoreAllFieldsToObject(this.makeFieldObject(f => f.stores() === "Yes", f => f.stores())),
             Suggestions: this.makeFieldObject(f => f.suggestionDistance() !== "None", f => f.toSuggestionDto()),
             TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
             Type: this.type,
