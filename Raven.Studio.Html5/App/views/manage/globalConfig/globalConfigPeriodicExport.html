@@ -91,7 +91,7 @@
                                 <input type="text" required class="form-control" data-bind="value: mainValue, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }"/>
                             </div>
                         </div>
-                        <div class="form-group" data-bind="if: isS3Bucket, visible: isS3Bucket">
+                        <div class="form-group" data-bind="visible: isS3Bucket">
                             <label for="awsRemoteFolder" class="col-sm-3 control-label">Folder name:</label>
                             <div class="col-sm-3">
                                 <input id="awsRemoteFolder" type="text" disabled="disabled" value="{databaseName}" class="form-control"/>
@@ -120,7 +120,7 @@
                                 <select required id="awsRegionEndpoint" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
                             </div>
                         </div>
-                        <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
+                        <div class="form-group" data-bind="visible: additionalAzureInfoRequired">
                             <label for="remoteFolder" class="col-sm-3 control-label">Folder name:</label>
                             <div class="col-sm-3">
                                 <input id="remoteFolder" type="text" value="{databaseName}" class="form-control" disabled="disabled"/>
