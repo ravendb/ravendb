@@ -1116,7 +1116,8 @@ namespace Raven.Database.Server.Controllers.Admin
 			var task = Task.Factory.StartNew(() =>
 			{
 				var debugInfo = new List<string>();
-
+				var hasFaulted = false;
+				var errors = new Exception[0];
 				using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, msg =>
 				{
 					debugInfo.Add(msg);
@@ -1125,17 +1126,44 @@ namespace Raven.Database.Server.Controllers.Admin
 				{
 					diskIo.TestDiskIO();
 
-					var diskIoRequestAndResponse = new
-					{
-						Request = ioTestRequest,
-						Result = diskIo.Result,
-						DebugMsgs = debugInfo
-					};
+					RavenJObject diskPerformanceRequestResponseDoc;
 
-					Database.Documents.Put(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
+					if (diskIo.HasFailed == false)
+					{
+						diskPerformanceRequestResponseDoc = RavenJObject.FromObject(new
+						{
+							Request = ioTestRequest,
+// ReSharper disable once RedundantAnonymousTypePropertyName
+							Result = diskIo.Result,
+							DebugMsgs = debugInfo
+						});
+					}
+					else
+					{
+						diskPerformanceRequestResponseDoc = RavenJObject.FromObject(new
+						{
+							Request = ioTestRequest,
+// ReSharper disable once RedundantAnonymousTypePropertyName
+							Result = diskIo.Result,
+							DebugMsgs = debugInfo,
+							diskIo.HasFailed,
+							diskIo.Errors
+						});
+
+						hasFaulted = true;
+						errors = diskIo.Errors.ToArray();
+					}
+
+					Database.Documents.Put(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, diskPerformanceRequestResponseDoc, new RavenJObject(), null);
+
+					if (hasFaulted && errors.Length > 0)
+						throw errors.First();
+
+					if (hasFaulted)
+						throw new Exception("Disk I/O test has failed. See log for more details.");
 				}
 			}, killTaskCts.Token);
-
+			
 			long id;
 			Database.Tasks.AddTask(task, new TaskBasedOperationState(task, operationStatus), new TaskActions.PendingTaskDescription
 			{
