@@ -25,7 +25,6 @@ using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
@@ -250,6 +249,8 @@ namespace Raven.Database.Server.Controllers
 				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
 			};
 		}
+
+	
 
 		protected virtual IndexQuery GetIndexQuery(int maxPageSize)
 		{
