@@ -41,6 +41,8 @@ namespace Raven.Database.TimeSeries.Controllers
 				return GetMessageWithString("Prefix must start with '-' char", HttpStatusCode.BadRequest);
 
 			Storage.CreatePrefixConfiguration(prefix, valueLength);
+			Storage.MetricsTimeSeries.ClientRequests.Mark();
+
 			return new HttpResponseMessage(HttpStatusCode.Created);
 		}
 
@@ -55,6 +57,8 @@ namespace Raven.Database.TimeSeries.Controllers
 				return GetMessageWithString("Prefix must start with '-' char", HttpStatusCode.BadRequest);
 
 			Storage.DeletePrefixConfiguration(prefix);
+			Storage.MetricsTimeSeries.ClientRequests.Mark();
+
 			return new HttpResponseMessage(HttpStatusCode.Created);
 		}
 
@@ -345,17 +349,21 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		/*[RavenRoute("ts/{timeSeriesName}/timeSeries")]
+		[RavenRoute("ts/{timeSeriesName}/timeSeries")]
 		[HttpGet]
 		public HttpResponseMessage GetTimeSeries(int skip = 0, int take = 20, string key = null)
 		{
+			if (skip < 0)
+				throw new ArgumentException("Bad argument", "skip");
+			if (take <= 0)
+				throw new ArgumentException("Bad argument", "take");
+
+			Storage.MetricsTimeSeries.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
-				var groupsPrefix = (group == null) ? string.Empty : (group + Constants.TimeSeries.Separator);
-				var timeSeriesByPrefixes = reader.GetTimeSeriesByPrefixes(groupsPrefix, skip, take);
-				var timeSeries = timeSeriesByPrefixes.Select(groupWithTimeSeriesName => reader.GetTimeSeriesSummary(groupWithTimeSeriesName)).ToList();
+				var timeSeries = reader.GetSummary(skip, take);
 				return GetMessageWithObject(timeSeries);
 			}
-		}*/
+		}
 	}
 }
