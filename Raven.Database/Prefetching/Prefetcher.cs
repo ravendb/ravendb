@@ -60,14 +60,6 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		public void AfterUpdate(string key, Etag etagBeforeUpdate)
-		{
-			foreach (var behavior in prefetchingBehaviors)
-			{
-				behavior.AfterUpdate(key, etagBeforeUpdate);
-			}
-		}
-
 		public int[] GetInMemoryIndexingQueueSizes(PrefetchingUser user)
 		{
 			return prefetchingBehaviors.Where(x => x.PrefetchingUser == user).Select(value => value.InMemoryIndexingQueueSize).ToArray();
