@@ -460,12 +460,14 @@ namespace Raven.Database.Actions
 
         public Etag GetDocumentsWithIdStartingWith(string idPrefix, int pageSize, Etag etag, CancellationToken token, Action<JsonDocument> addDocument)
         {
+            Etag onFailureEtag = null;
+
             TransactionalStorage.Batch(actions =>
             {
                 bool returnedDocs = false;
                 while (true)
                 {
-                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2));
+                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => onFailureEtag = x );
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     
                     int docCount = 0;
@@ -491,16 +493,23 @@ namespace Raven.Database.Actions
                         Database.WorkContext.UpdateFoundWork();
                     }
 
-                    if (returnedDocs || docCount == 0)
+                    if (returnedDocs)
                         break;
+
+                    // No document was found that matches the requested criteria
+                    if ( docCount == 0 )
+                    {
+                        // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
+                        if (onFailureEtag != null)
+                            etag = onFailureEtag;
+
+                        break;
+                    }
                 }
             });
 
             return etag;
         }
-
-
-
 
         public JsonDocument Get(string key, TransactionInformation transactionInformation)
         {

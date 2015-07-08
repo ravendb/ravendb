@@ -84,7 +84,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var document = DocumentByKey(key);
 					if (document == null) //precaution - should never be true
 					{
-						throw new InvalidDataException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found.", key));
+						throw new InvalidDataException(string.Format("Possible data corruption - the key = '{0}' was found in the documents index, but matching document was not found.", key));
 					}
 
 					yield return document;
@@ -94,11 +94,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null)
         {
             if (take < 0)
                 throw new ArgumentException("must have zero or positive value", "take");
-            if (take == 0) yield break;
+
+            if (take == 0) 
+                yield break;
 
             if (string.IsNullOrEmpty(etag))
                 throw new ArgumentNullException("etag");
@@ -107,8 +109,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (timeout != null)
                 duration = Stopwatch.StartNew();
 
+
+            Etag lastDocEtag;
             using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-                                            .Iterate(Snapshot, writeBatch.Value))
+                                              .Iterate(Snapshot, writeBatch.Value))
             {
                 var slice = (Slice)etag.ToString();
                 if (iterator.Seek(slice) == false)
@@ -123,23 +127,27 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 long fetchedDocumentTotalSize = 0;
                 int fetchedDocumentCount = 0;
 
+                Etag docEtag = etag;
+
                 do
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+
+                    lastDocEtag = docEtag;
+                    docEtag = Etag.Parse(iterator.CurrentKey.ToString());
 
                     // We can skip many documents so the timeout should be at the start of the process to be executed.
                     if (timeout != null)
                     {
                         if (duration.Elapsed > timeout.Value)
-                            yield break;
-                    }
-
-                    var docEtag = Etag.Parse(iterator.CurrentKey.ToString());
+                            break;
+                    }     
 
                     if (untilEtag != null)
                     {
+                        // This is not a failure, we are just ahead of when we expected to. 
                         if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
-                            yield break;
+                            break;
                     }
 
                     var key = GetKeyFromCurrent(iterator);
@@ -167,15 +175,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     yield return document;
 
                     if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
-                        yield break;
+                        break;
 
                 } while (iterator.MoveNext() && fetchedDocumentCount < take);
             }
+
+            // We notify the last that we considered.
+            if (lastProcessedDocument != null)
+                lastProcessedDocument(lastDocEtag);
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null)
         {
-            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout);
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure);
         }
 
 		private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iterator)

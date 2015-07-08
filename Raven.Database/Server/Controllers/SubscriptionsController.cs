@@ -229,10 +229,12 @@ namespace Raven.Database.Server.Controllers
                         batchDocCount++;
                     };
 
-					var retries = 0;
+					int retries = 0;
+                    Etag lastDocumentReadEtag = null;
 					do
 					{
-						var lastIndex = processedDocuments;
+						int lastIndex = processedDocuments;
+
 						Database.TransactionalStorage.Batch(accessor =>
 						{
 							// we may be sending a LOT of documents to the user, and most 
@@ -242,7 +244,11 @@ namespace Raven.Database.Server.Controllers
 							{    
                                 if (!string.IsNullOrWhiteSpace(criteria.KeyStartsWith))
                                 {
-                                    Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                    lastDocumentReadEtag = Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+
+                                    // We ensure that we are not going to process documents we have already seen.
+                                    if (EtagUtil.IsGreaterThan(lastDocumentReadEtag, lastProcessedDocEtag))
+                                        lastProcessedDocEtag = lastDocumentReadEtag;
                                 }
                                 else
                                 {
@@ -251,17 +257,23 @@ namespace Raven.Database.Server.Controllers
 							}
 
 							if (lastProcessedDocEtag == null)
-								hasMoreDocs = false;
+                            {
+                                if (lastDocumentReadEtag != null)
+                                    startEtag = lastDocumentReadEtag;
+
+                                hasMoreDocs = false;
+                            }								
 							else
 							{
 								var lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-								hasMoreDocs = EtagUtil.IsGreaterThan(lastDocEtag, lastProcessedDocEtag);
+                                hasMoreDocs = EtagUtil.IsGreaterThan(lastDocEtag, lastProcessedDocEtag);
 
 								startEtag = lastProcessedDocEtag;
 							}
 
 							retries = lastIndex == batchDocCount ? retries : 0;
 						});
+
 						if (lastIndex == processedDocuments)
 						{
 							if (retries == 3)
@@ -274,7 +286,8 @@ namespace Raven.Database.Server.Controllers
 							}
 							retries++;
 						}
-					} while (retries< 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
+					} 
+                    while (retries< 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
 
 					writer.WriteEndArray();
 
