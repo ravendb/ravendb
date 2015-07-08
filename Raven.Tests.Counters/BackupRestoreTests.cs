@@ -51,7 +51,7 @@ namespace Raven.Tests.Counters
 			config.PostInit();
 
 			storage = new CounterStorage("http://localhost:8080","TestCounter",config);
-			storage.CounterStorageEnvironment.Options.IncrementalBackupEnabled = true;
+			storage.Environment.Options.IncrementalBackupEnabled = true;
 			documentDatabase = new DocumentDatabase(config,null);
 		}
 
@@ -167,7 +167,7 @@ namespace Raven.Tests.Counters
 			return new BackupOperation(documentDatabase,
 				config.Counter.DataDirectory,
 				BackupDestinationDirectory,
-				storage.CounterStorageEnvironment,
+				storage.Environment,
 				isIncremental,
 				new CounterStorageDocument
 				{

@@ -22,6 +22,7 @@ namespace Raven.Database.FileSystem.Storage
         string FriendlyName { get; }
 
         void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument fileSystemDocument);
+
         void Restore(FilesystemRestoreRequest restoreRequest, Action<string> output);
 
         void Compact(InMemoryRavenConfiguration configuration, Action<string> output);

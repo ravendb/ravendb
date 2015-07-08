@@ -238,6 +238,7 @@ namespace Raven.Database.FileSystem.Storage
                 var backupStatus = GetBackupStatus();
                 if (backupStatus == null)
                     return;
+
                 backupStatus.Messages.Add(new BackupStatus.BackupMessage
                 {
                     Message = newMsg,

@@ -3,15 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
+using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Counters.Backup;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
@@ -22,6 +28,44 @@ namespace Raven.Database.Counters.Controllers
 {
     public class AdminCounterStorageController : BaseAdminController
     {
+	    private string CounterStorageName { get; set; }
+
+		protected override void InnerInitialization(HttpControllerContext controllerContext)
+		{
+			base.InnerInitialization(controllerContext);
+			var values = controllerContext.Request.GetRouteData().Values;
+			if (values.ContainsKey("MS_SubRoutes"))
+			{
+				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
+				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("counterStorageName"));
+
+				if (selectedData != null)
+					CounterStorageName = selectedData.Values["counterStorageName"] as string;
+			}
+			else
+			{
+				if (values.ContainsKey("counterStorageName"))
+					CounterStorageName = values["counterStorageName"] as string;
+			}
+		}
+
+	    private CounterStorage Storage
+		{
+			get
+			{
+				if (string.IsNullOrWhiteSpace(CounterStorageName))
+					throw new InvalidOperationException("Could not find counter storage name in path.. maybe it is missing or the request URL is malformed?");
+
+				var counterStorage = CountersLandlord.GetCounterInternal(CounterStorageName);
+				if (counterStorage == null)
+				{
+					throw new InvalidOperationException("Could not find a counter storage named: " + CounterStorageName);
+				}
+
+				return counterStorage.Result;
+			}
+		}
+
         [HttpPut]
 		[RavenRoute("admin/cs/{*id}")]
 		public async Task<HttpResponseMessage> Put(string id)
@@ -219,6 +263,57 @@ namespace Raven.Database.Counters.Controllers
 			Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
 
 			return new MessageWithStatusCode();
+		}
+
+		[HttpPost]
+		[RavenRoute("cs/{counterStorageName}/admin/backup")]
+		public async Task<HttpResponseMessage> Backup()
+		{
+			var backupRequest = await ReadJsonObjectAsync<CounterStorageBackupRequest>();
+			var incrementalBackup = ParseBoolQueryString("incremental");
+
+			if (backupRequest.CounterStorageDocument == null && Storage.Name != null)
+			{
+				var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Counter.Prefix + Storage.Name, null);
+				if (jsonDocument != null)
+				{
+					backupRequest.CounterStorageDocument = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
+					CountersLandlord.Unprotect(backupRequest.CounterStorageDocument);
+					backupRequest.CounterStorageDocument.Id = Storage.Name;
+				}
+			}
+
+			using (var reader = Storage.CreateReader())
+			{
+				var backupStatus = reader.GetBackupStatus();
+				if (backupStatus != null && backupStatus.IsRunning)
+					throw new InvalidOperationException("Backup is already running");
+			}
+
+			if (incrementalBackup &&
+				Database.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+			{
+				throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
+			}
+
+			using (var writer = Storage.CreateWriter())
+			{
+				writer.SaveBackupStatus(new BackupStatus
+				{
+					Started = SystemTime.UtcNow,
+					IsRunning = true,
+				});
+			}
+
+			var backupOperation = new BackupOperation(Storage, DatabasesLandlord.SystemDatabase.Configuration.DataDirectory,
+				backupRequest.BackupLocation, Storage.Environment, incrementalBackup, backupRequest.CounterStorageDocument);
+
+			Task.Factory.StartNew(() =>
+			{
+				backupOperation.Execute();
+			});
+
+			return GetEmptyMessage(HttpStatusCode.Created);
 		}
     }
 }
