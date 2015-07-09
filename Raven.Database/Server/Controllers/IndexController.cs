@@ -203,7 +203,7 @@ namespace Raven.Database.Server.Controllers
 			// older clients (pre 3.0) might try to create the index without MaxIndexOutputsPerDocument set
 			// in order to ensure that they don't reset the default value for old clients, we force the default
 			// value to maintain the existing behavior
-			if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
+            if (!data.MaxIndexOutputsPerDocument.HasValue || data.MaxIndexOutputsPerDocument.Value == default(int))
 				data.MaxIndexOutputsPerDocument = 16*1024;
 
 			try
