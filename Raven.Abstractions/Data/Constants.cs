@@ -121,7 +121,7 @@ namespace Raven.Abstractions.Data
 
 		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
 		public const string MaxNumberOfStoredIndexingBatchInfoElements = "Raven/Indexing/MaxNumberOfStoredIndexingBatchInfoElements";
-
+		public const string UseLuceneASTParser = "Raven/Indexing/UseLuceneASTParser";
 		public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
 
 		//Paths

@@ -332,7 +332,7 @@ namespace Raven.Database.Config
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
 			Indexing.MaxNumberOfStoredIndexingBatchInfoElements = ravenSettings.Indexing.MaxNumberOfStoredIndexingBatchInfoElements.Value;
-
+			Indexing.UseLuceneASTParser = ravenSettings.Indexing.UseLuceneASTParser.Value;
 
 		    Cluster.ElectionTimeout = ravenSettings.Cluster.ElectionTimeout.Value;
 		    Cluster.HeartbeatTimeout = ravenSettings.Cluster.HeartbeatTimeout.Value;
@@ -1522,6 +1522,17 @@ namespace Raven.Database.Config
 		{
 			public int MaxNumberOfItemsToProcessInTestIndexes { get; set; }
 			public int MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
+			public bool UseLuceneASTParser
+			{
+				get { return useLuceneASTParser; }
+				set
+				{
+					if (value == useLuceneASTParser)
+						return;
+					QueryBuilder.UseLuceneASTParser = useLuceneASTParser = value;
+				}
+			}
+			private bool useLuceneASTParser = true;
 		}
 
 	    public class ClusterConfiguration
