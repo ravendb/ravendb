@@ -12,7 +12,7 @@ class timeSeries extends resource {
         this.fullTypeName = "Time Series";
         this.disabled(isDisabled);
         this.activeBundles(bundles);
-        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().timeSeriesCountText() : "");
+        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().keysCountText() : "");
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var timeSeriesValue = license.licenseStatus().Attributes.timeSeries;

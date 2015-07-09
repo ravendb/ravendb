@@ -76,6 +76,8 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesKeysCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesPointsCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStorageStatsCommand.ts" />
@@ -141,6 +143,9 @@
     <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
     <TypeScriptCompile Include="App\models\filesystem\uploadItem.ts" />
     <TypeScriptCompile Include="App\models\filesystem\versioningEntry.ts" />
+    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesPoint.ts" />
+    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesDto.ts" />
+    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesKey.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatisticsDto.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatistics.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeries.ts" />
@@ -388,6 +393,7 @@
     <Content Include="App\views\resources\filesystemSettingsDialog.html" />
     <Content Include="App\views\resources\resources.html" />
     <Content Include="App\views\shell.html" />
+    <Content Include="App\views\timeseries\timeseries.html" />
     <Content Include="App\widgets\virtualTable\view.html" />
     <Content Include="Content\app.css">
       <DependentUpon>app.less</DependentUpon>
@@ -1078,6 +1084,7 @@
     <TypeScriptCompile Include="App\viewmodels\resources\filesystemSettingsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\resources.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeseries\timeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />

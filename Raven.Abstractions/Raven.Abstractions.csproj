@@ -429,6 +429,7 @@
     <Compile Include="TimeSeries\TimeSeriesAppendRequest.cs" />
     <Compile Include="TimeSeries\TimeSeriesBackupRequest.cs" />
     <Compile Include="TimeSeries\TimeSeriesChange.cs" />
+    <Compile Include="TimeSeries\TimeSeriesKey.cs" />
     <Compile Include="TimeSeries\TimeSeriesReplicationDestination.cs" />
     <Compile Include="TimeSeries\TimeSeriesRestoreRequest.cs" />
     <Compile Include="TimeSeries\TimeSeriesBatchOptions.cs" />

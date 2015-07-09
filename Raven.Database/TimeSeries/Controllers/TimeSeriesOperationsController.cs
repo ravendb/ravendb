@@ -349,9 +349,21 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
+		[RavenRoute("ts/{timeSeriesName}/keys")]
+		[HttpGet]
+		public HttpResponseMessage GetKeys()
+		{
+			using (var reader = Storage.CreateReader())
+			{
+				Storage.MetricsTimeSeries.ClientRequests.Mark();
+				var keys = reader.GetKeys().ToArray();
+				return Request.CreateResponse(HttpStatusCode.OK, keys);
+			}
+		}
+
 		[RavenRoute("ts/{timeSeriesName}/timeSeries")]
 		[HttpGet]
-		public HttpResponseMessage GetTimeSeries(int skip = 0, int take = 20, string key = null)
+		public HttpResponseMessage GetTimeSeries(string prefix, string key, int skip = 0, int take = 20)
 		{
 			if (skip < 0)
 				throw new ArgumentException("Bad argument", "skip");

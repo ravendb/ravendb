@@ -182,6 +182,12 @@ class appUrl {
         return "#timeseries/series?" + part + timeSeriesPart;
     }
 
+    static forTimeSeriesKey(prefix: string, key: string, ts: timeSeries) {
+        var url = "prefix=" + encodeURIComponent(prefix) + "&key=" + encodeURIComponent(key);
+        var timeSeriesPart = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/series?" + url + timeSeriesPart;
+    }
+
     static forTimeSeriesStats(ts: timeSeries) {
         var part = appUrl.getEncodedTimeSeriesPart(ts);
         return "#timeseries/stats?" + part;

@@ -502,6 +502,7 @@
     <Compile Include="TimeSeries\TimeSeriesQuery.cs" />
     <Compile Include="TimeSeries\TimeSeriesServer.cs" />
     <Compile Include="TimeSeries\TimeSeriesStorage.cs" />
+    <Compile Include="TimeSeries\TimeSeriesSummary.cs" />
     <Compile Include="Util\DatabaseHelper.cs" />
     <Compile Include="Util\DevelopmentHelper.cs" />
     <Compile Include="Util\CultureHelper.cs" />

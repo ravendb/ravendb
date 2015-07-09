@@ -1,6 +1,10 @@
 class timeSeriesStatistics {
-    timeSeriesCount = ko.observable<number>();
-    timeSeriesCountText = ko.observable<string>("");
+    prefixesCount = ko.observable<number>();
+    keysCount = ko.observable<number>();
+    valuesCount = ko.observable<number>();
+    prefixesCountText = ko.observable<string>("");
+    keysCountText = ko.observable<string>("");
+    valuesCountText = ko.observable<string>("");
     requestsPerSecondText = ko.observable<string>("");
 
     private getItemCountText(itemCount: number, singularText: string, suffix: string): string {
@@ -12,8 +16,12 @@ class timeSeriesStatistics {
     }
 
     public fromDto(dto: timeSeriesStatisticsDto) {
-        this.timeSeriesCount(dto.TimeSeriesCount);
-        this.timeSeriesCountText(this.getItemCountText(dto.TimeSeriesCount, "time series", "es"));
+        this.prefixesCount(dto.PrefixesCount);
+        this.keysCount(dto.KeysCount);
+        this.valuesCount(dto.ValuesCount);
+        this.prefixesCountText(this.getItemCountText(dto.PrefixesCount, "prefix", "es"));
+        this.keysCountText(this.getItemCountText(dto.KeysCount, "key", "s"));
+        this.valuesCountText(this.getItemCountText(dto.ValuesCount, "value", "s"));
         this.requestsPerSecondText(dto.RequestsPerSecond + " requests per second");
     }
 }

@@ -159,5 +159,34 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(1888 * 3, stats.ValuesCount);
 			}
 		}
+
+		[Fact]
+		public async Task GetKeys()
+		{
+			using (var store = NewRemoteTimeSeriesStore())
+			{
+				await store.CreatePrefixConfigurationAsync("-Simple", 1);
+				await store.CreatePrefixConfigurationAsync("-ForValues", 4);
+
+				await store.AppendAsync("-ForValues", "Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D });
+				await store.AppendAsync("-Simple", "Is", DateTime.Now, 3D);
+				await store.AppendAsync("-Simple", "Money", DateTime.Now, 3D);
+
+				var cancellationToken = new CancellationToken();
+				await store.AppendAsync("-Simple", "Is", DateTime.Now.AddHours(1), 3456D, cancellationToken);
+				await store.AppendAsync("-ForValues", "Time", DateTime.Now.AddHours(1), new[] { 23D, 4D, 5D, 6D }, cancellationToken);
+				await store.AppendAsync("-ForValues", "Time", DateTime.Now.AddHours(2), cancellationToken, 33D, 4D, 5D, 6D);
+				await store.AppendAsync("-ForValues", "Time", DateTime.Now.AddHours(3), cancellationToken, 33D, 4D, 5D, 6D);
+
+				var keys = await store.Advanced.GetKeys(cancellationToken);
+				Assert.Equal(3, keys.Length);
+				Assert.Equal("-ForValues", keys[0].Prefix);
+				Assert.Equal("Time", keys[0].Key);
+				Assert.Equal("-Simple", keys[1].Prefix);
+				Assert.Equal("Is", keys[1].Key);
+				Assert.Equal("-Simple", keys[2].Prefix);
+				Assert.Equal("Money", keys[2].Key);
+			}
+		}
 	}
 }

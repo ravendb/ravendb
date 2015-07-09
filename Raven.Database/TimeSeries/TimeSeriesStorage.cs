@@ -474,6 +474,41 @@ namespace Raven.Database.TimeSeries
 				if (tx != null)
 					tx.Dispose();
 			}
+
+			public TimeSeriesSummary GetSummary(int skip, int take)
+			{
+				throw new NotImplementedException();
+			}
+
+			public IEnumerable<TimeSeriesKey> GetKeys()
+			{
+				using (var rootIt = tx.State.Root.Iterate())
+				{
+					rootIt.RequiredPrefix = SeriesTreePrefix;
+					if (rootIt.Seek(rootIt.RequiredPrefix))
+					{
+						do
+						{
+							var prefixedTreeName = rootIt.CurrentKey.ToString();
+							var tree = tx.ReadTree(prefixedTreeName);
+							using (var it = tree.Iterate())
+							{
+								if (it.Seek(Slice.BeforeAllKeys))
+								{
+									do
+									{
+										yield return new TimeSeriesKey
+										{
+											Prefix = prefixedTreeName.Replace(SeriesTreePrefix, ""),
+											Key = it.CurrentKey.ToString(),
+										};
+									} while (it.MoveNext());
+								}
+							}
+						} while (rootIt.MoveNext());
+					}
+				}
+			}
 		}
 
 		public class Writer : IDisposable
