@@ -75,7 +75,7 @@ namespace Voron
 			return new Slice(_buffer, (ushort)(_pos));
         }
 
-	    public void ResetSliceWriter()
+	    public void Reset()
 	    {
 		    _pos = 0;
 	    }

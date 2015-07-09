@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -86,7 +87,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 				dataDir = dataDir.ToFullPath(SystemConfiguration.DataDirectory);
 
-				if (System.IO.Directory.Exists(dataDir))
+				if (Directory.Exists(dataDir))
 					return GetMessageWithString(string.Format("Failed to create '{0}' database, because data directory '{1}' exists and it is forbidden to create non-empty cluster-wide databases.", id, dataDir), HttpStatusCode.BadRequest);
 
 				await ClusterManager.Client.SendDatabaseUpdateAsync(id, dbDoc).ConfigureAwait(false);
@@ -112,21 +113,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			bool result;
 			var hardDelete = bool.TryParse(GetQueryStringValue("hard-delete"), out result) && result;
 
-			if (ClusterManager.IsActive() && IsSystemDatabase(id) == false)
-			{
-				var documentJson = Database.Documents.Get(DatabaseHelper.GetDatabaseKey(id), null);
-				if (documentJson == null) 
-					return GetEmptyMessage(HttpStatusCode.NotFound);
-
-				var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
-				if (document.IsClusterDatabase())
-				{
-					await ClusterManager.Client.SendDatabaseDeleteAsync(id, hardDelete).ConfigureAwait(false);
-					return GetEmptyMessage();
-				}
-			}
-
-			var message = DeleteDatabase(id, hardDelete);
+			var message = await DeleteDatabase(id, hardDelete);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
@@ -137,7 +124,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpDelete]
 		[RavenRoute("admin/databases/batch-delete")]
-		public HttpResponseMessage BatchDelete()
+		public async Task<HttpResponseMessage> BatchDelete()
 		{
 			string[] databasesToDelete = GetQueryStringValues("ids");
 			if (databasesToDelete == null)
@@ -149,14 +136,12 @@ namespace Raven.Database.Server.Controllers.Admin
 			var isHardDeleteNeeded = bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result;
 			var successfullyDeletedDatabases = new List<string>();
 
-			databasesToDelete.ForEach(databaseId =>
+			foreach (var databaseId in databasesToDelete)
 			{
-				var message = DeleteDatabase(databaseId, isHardDeleteNeeded);
+				var message = await DeleteDatabase(databaseId, isHardDeleteNeeded).ConfigureAwait(false); ;
 				if (message.ErrorCode == HttpStatusCode.OK)
-				{
 					successfullyDeletedDatabases.Add(databaseId);
-				}
-			});
+			}
 
 			return GetMessageWithObject(successfullyDeletedDatabases.ToArray());
 		}
@@ -167,9 +152,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			var message = ToggeleDatabaseDisabled(id, isSettingDisabled);
 			if (message.ErrorCode != HttpStatusCode.OK)
-			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
-			}
 
 			return GetEmptyMessage();
 		}
@@ -193,9 +176,7 @@ namespace Raven.Database.Server.Controllers.Admin
         {
             var message = ToggleRejectClientsEnabled(id, isRejectClientsEnabled);
             if (message.ErrorCode != HttpStatusCode.OK)
-            {
                 return GetMessageWithString(message.Message, message.ErrorCode);
-            }
 
             return GetEmptyMessage();
         }
@@ -206,9 +187,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");
 			if (databasesToToggle == null)
-			{
 				return GetMessageWithString("No databases to toggle!", HttpStatusCode.BadRequest);
-			}
 
 			var successfullyToggledDatabases = new List<string>();
 
@@ -219,16 +198,29 @@ namespace Raven.Database.Server.Controllers.Admin
 				{
 					successfullyToggledDatabases.Add(databaseId);
 				}
-
 			});
 
 			return GetMessageWithObject(successfullyToggledDatabases.ToArray());
 		}
 
-		private MessageWithStatusCode DeleteDatabase(string databaseId, bool isHardDeleteNeeded)
+		private async Task<MessageWithStatusCode> DeleteDatabase(string databaseId, bool isHardDeleteNeeded)
 		{
 			if (IsSystemDatabase(databaseId))
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database document cannot be deleted" };
+
+			if (ClusterManager.IsActive())
+			{
+				var documentJson = Database.Documents.Get(DatabaseHelper.GetDatabaseKey(databaseId), null);
+				if (documentJson == null)
+					return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database wasn't found" };
+
+				var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
+				if (document.IsClusterDatabase())
+				{
+					await ClusterManager.Client.SendDatabaseDeleteAsync(databaseId, isHardDeleteNeeded).ConfigureAwait(false);
+					return new MessageWithStatusCode();
+				}
+			}
 
 			//get configuration even if the database is disabled
 			var configuration = DatabasesLandlord.CreateTenantConfiguration(databaseId, true);

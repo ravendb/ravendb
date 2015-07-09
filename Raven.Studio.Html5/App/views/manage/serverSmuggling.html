@@ -1,7 +1,7 @@
 ﻿<form class="form-horizontal" role="form" data-bind="submit: performMigration">
 	<div class="panel panel-default">
 		<div class="panel-heading panel-info">
-			Server smuggling
+			Server Smuggling
 		</div>
 		<div class="panel-body">
 
@@ -71,25 +71,25 @@
 							<tr>
 								<th class="text-center">
 									<button type="button" class="btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
-										<img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : hasAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+										<img data-bind="checkboxTriple: resourcesSelection">
 									</button>
 								</th>
 								<th>Name</th>
 								<th class="text-center">
-									<button type="button" class="btn-link" data-bind="click: toggleSelectAllIncremental, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
-										<img data-bind="attr: { src: hasAllIncremental() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAllIncremental, visible: hasResources, disable: $root.inProgress() || noIncremental()" title="Select all or none">
+										<img data-bind="checkboxTriple: incrementalSelection, needOpacity: noIncremental">
 									</button>
 									Incremental
 								</th>
 								<th class="text-center">
-									<button type="button" class="btn-link" data-bind="click: toggleSelectAllStripReplication, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
-										<img data-bind="attr: { src: hasAllStripReplication() ? 'content/images/checked.png':'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAllStripReplication, visible: hasResources, disable: $root.inProgress() || noStripReplication()" title="Select all or none">
+										<img data-bind="checkboxTriple: stripReplicationSelection, needOpacity: noStripReplication">
 									</button>
 									Strip replication information
 								</th>
 								<th class="text-center">
-									<button type="button" class="btn-link" data-bind="click: toggleSelectAllDisableVersioning, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
-										<img data-bind="attr: { src: hasAllDisableVersioning() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+									<button type="button" class="btn-link" data-bind="click: toggleSelectAllDisableVersioning, visible: hasResources, disable: $root.inProgress() || noDisableVersioning()" title="Select all or none">
+										<img data-bind="checkboxTriple: disableVersioningSelection, needOpacity: noDisableVersioning">
 									</button>
 									Disable versioning bundle
 								</th>
@@ -98,25 +98,27 @@
 							<tbody data-bind="foreach: resources">
 								<tr>
 									<td class="text-center">
-										<img data-bind="click: $root.toggleSelection.bind($root), attr: { src: $root.selectedResources.indexOf($data) >=0 ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
+										<button type="button" class="btn-link" data-bind="click: $root.toggleSelection.bind($root)">
+											<img data-bind="checkbox: $root.isSelected($data)">
+										</button>
 									</td>
 									<td>
-										<span style="font-weight: normal" data-bind="text:resource.name"></span>
+										<span style="font-weight: normal" data-bind="text: resource.name"></span>
 									</td>
 									<td class="text-center">
-										<div class="btn-group">
-											<img data-bind="click: $root.toggleIncremental.bind($root), style: { opacity:  $root.selectedResources.indexOf($data) >=0 ?1:0.25 }, attr: { src: incremental() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
-										</div>
+										<button type="button" class="btn-link" data-bind="click: $root.toggleIncremental.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
+											<img data-bind="checkbox: incremental, needOpacity: $root.isSelected($data) === false">
+										</button>
 									</td>
 									<td class="text-center">
-										<div class="btn-group" data-bind="visible: hasReplicationBundle()">
-											<img data-bind="click: $root.toggleStripReplicationInformation.bind($root), style: { opacity:  $root.selectedResources.indexOf($data) >=0 ?1:0.25 }, attr: { src: stripReplicationInformation() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
-										</div>
+										<button type="button" class="btn-link" data-bind="visible: hasReplicationBundle, click: $root.toggleStripReplicationInformation.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
+											<img data-bind="checkbox: stripReplicationInformation, needOpacity: $root.isSelected($data) === false">
+										</button>
 									</td>
 									<td class="text-center">
-										<div class="btn-group" data-bind="visible: hasVersioningBundle()">
-											<img data-bind="click: $root.toggleDisableVersioningBundle.bind($root), style: { opacity:  $root.selectedResources.indexOf($data) >=0 ?1:0.25 }, attr: { src: shouldDisableVersioningBundle() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" src="content/images/unchecked.png">
-										</div>
+										<button type="button" class="btn-link" data-bind="visible: hasVersioningBundle, click: $root.toggleDisableVersioningBundle.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
+											<img data-bind="checkbox: shouldDisableVersioningBundle, needOpacity: $root.isSelected($data) === false">
+										</button>
 									</td>
 								</tr>
 							</tbody>
@@ -127,7 +129,7 @@
 				<div class="form-group">
 					<div class="col-sm-offset-4 col-sm-7">
 						<button type="submit" class="btn btn-warning" data-bind="enable: submitEnabled"><span data-bind="visible: $root.inProgress()" class="fa fa-spinner fa-spin"></span> Run migration</button>
-						<button type="button" class="btn btn-default" data-bind="click: toggleJson, text: (showJsonRequest()?'Hide JSON':'Show JSON')"></button>
+						<button type="button" class="btn btn-default" data-bind="click: toggleJson, text: (showJsonRequest() ? 'Hide JSON' : 'Show JSON')"></button>
 					</div>
 				</div>
 

@@ -767,6 +767,10 @@ interface documentBase {
     getDocumentPropertyNames(): Array<string>;
 }
 
+interface ICollectionBase {
+	colorClass: string;
+}
+
 interface smugglerOptionsDto {
     IncludeDocuments: boolean;
     IncludeIndexes: boolean;
@@ -1398,4 +1402,10 @@ interface adminJsScriptDto {
 interface consoleJsSampleDto {
 	Name: string;
 	Code: string;
+}
+
+enum checkbox {
+    UnChecked = 0,
+    SomeChecked = 1,
+	Checked = 2
 }

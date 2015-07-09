@@ -16,7 +16,7 @@ namespace Raven.Database.Counters.Backup
 {
 	public class BackupOperation
 	{
-		private readonly DocumentDatabase database;
+		private readonly CounterStorage storage;
 		private readonly string backupDestinationDirectory;
 		private readonly StorageEnvironment env;
 		private readonly bool incrementalBackup;
@@ -26,10 +26,9 @@ namespace Raven.Database.Counters.Backup
 		private readonly string backupFilename;
 		private readonly string backupSourceDirectory;
 
-
-		public BackupOperation(DocumentDatabase database, string backupSourceDirectory, string backupDestinationDirectory, StorageEnvironment env, bool incrementalBackup, CounterStorageDocument counterDocument)
+		public BackupOperation(CounterStorage storage, string backupSourceDirectory, string backupDestinationDirectory, StorageEnvironment env, bool incrementalBackup, CounterStorageDocument counterDocument)
 		{
-			this.database = database;
+			this.storage = storage;
 			this.backupDestinationDirectory = backupDestinationDirectory;
 			this.env = env;
 			this.incrementalBackup = incrementalBackup;
@@ -82,14 +81,14 @@ namespace Raven.Database.Counters.Backup
 			{
 				var state = RavenJObject.Parse(File.ReadAllText(incrementalBackupState)).JsonDeserialization<IncrementalBackupState>();
 
-				if (state.ResourceId != database.TransactionalStorage.Id)
+				if (state.ResourceId != storage.ServerId)
 					throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different database. Existing incremental data origins from '{0}' database.", state.ResourceName));
 			}
 			else
 			{
 				var state = new IncrementalBackupState()
 				{
-					ResourceId = database.TransactionalStorage.Id,
+					ResourceId = storage.ServerId,
 					ResourceName = counterDocument.Id
 				};
 
@@ -117,28 +116,24 @@ namespace Raven.Database.Counters.Backup
 			try
 			{
 				_log.Info("Backup completed");
-				var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
-				if (jsonDocument == null)
+				var backupStatus = GetBackupStatus();
+				if (backupStatus == null)
 					return;
 
-				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				backupStatus.IsRunning = false;
 				backupStatus.Completed = SystemTime.UtcNow;
-				database.Documents.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
-							 jsonDocument.Metadata,
-							 null);
-				database.RaiseBackupComplete();
+				SetBackupStatus(backupStatus);
 			}
 			catch (Exception e)
 			{
-				_log.WarnException("Failed to update completed backup status, will try deleting document", e);
+				_log.WarnException("Failed to update completed backup status, will try deleting backup status", e);
 				try
 				{
-					database.Documents.Delete(BackupStatus.RavenBackupStatusDocumentKey, null, null);
+					DeleteBackupStatus();
 				}
 				catch (Exception ex)
 				{
-					_log.WarnException("Failed to remove out of date backup status", ex);
+					_log.WarnException("Failed to remove backup status", ex);
 				}
 			}
 		}
@@ -148,10 +143,10 @@ namespace Raven.Database.Counters.Backup
 			try
 			{
 				_log.Info(newMsg);
-				var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
-				if (jsonDocument == null)
+				var backupStatus = GetBackupStatus();
+				if (backupStatus == null)
 					return;
-				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
+
 				backupStatus.Messages.Add(new BackupStatus.BackupMessage
 				{
 					Message = newMsg,
@@ -159,13 +154,35 @@ namespace Raven.Database.Counters.Backup
 					Severity = severity,
 					Details = details
 				});
-				database.Documents.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
-							 jsonDocument.Metadata,
-							 null);
+				SetBackupStatus(backupStatus);
 			}
 			catch (Exception e)
 			{
 				_log.WarnException("Failed to update backup status", e);
+			}
+		}
+
+		private BackupStatus GetBackupStatus()
+		{
+			using (var reader = storage.CreateReader())
+			{
+				return reader.GetBackupStatus();
+			}
+		}
+
+		private void SetBackupStatus(BackupStatus backupStatus)
+		{
+			using (var writer = storage.CreateWriter())
+			{
+				writer.SaveBackupStatus(backupStatus);
+			}
+		}
+
+		private void DeleteBackupStatus()
+		{
+			using (var writer = storage.CreateWriter())
+			{
+				writer.DeleteBackupStatus();
 			}
 		}
 

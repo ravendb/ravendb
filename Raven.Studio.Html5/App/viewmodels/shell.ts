@@ -4,8 +4,8 @@
 import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
-import viewModelBase = require("viewmodels/viewModelBase");
 import viewLocator = require("durandal/viewLocator");
+
 import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
@@ -16,6 +16,8 @@ import collection = require("models/database/documents/collection");
 import uploadItem = require("models/filesystem/uploadItem");
 import changeSubscription = require("common/changeSubscription");
 import license = require("models/auth/license");
+import topology = require("models/database/replication/topology");
+import environmentColor = require("models/resources/environmentColor");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -30,6 +32,9 @@ import changesContext = require("common/changesContext");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
+import extensions = require("common/extensions");
+import serverBuildReminder = require("common/serverBuildReminder");
+import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
@@ -47,18 +52,13 @@ import getTimeSeriesCommand = require("commands/timeSeries/getTimeSeriesCommand"
 import getTimeSeriesStatsCommand = require("commands/timeSeries/getTimeSeriesStatsCommand");
 import getSystemDocumentCommand = require("commands/database/documents/getSystemDocumentCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
+import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 
+import viewModelBase = require("viewmodels/viewModelBase");
+import licensingStatus = require("viewmodels/common/licensingStatus");
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
 import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
-import extensions = require("common/extensions");
-import serverBuildReminder = require("common/serverBuildReminder");
-import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
-import environmentColor = require("models/resources/environmentColor");
-
-import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
-import topology = require("models/database/replication/topology");
-import licensingStatus = require("viewmodels/common/licensingStatus");
 
 class shell extends viewModelBase {
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
@@ -124,12 +124,18 @@ class shell extends viewModelBase {
     });
 
     static resources = ko.computed(() => {
-        var databases: resource[] = shell.databases();
+	    var databases: resource[] = shell.databases();
         var fileSystems: resource[] = shell.fileSystems();
         var counterStorages: resource[] = shell.counterStorages();
         var timeSeries: resource[] = shell.timeSeries();
-        var result = databases.concat(fileSystems, counterStorages, timeSeries);
-        return result.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
+        var result = databases.concat(counterStorages, timeSeries, fileSystems);
+        return result.sort((a, b) => {
+	        if (a.name === "<system>")
+		        return 1;
+	        if (b.name === "<system>")
+		        return -1;
+	        return a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1;
+        });
     });
 
     currentConnectedResource: resource;
@@ -141,7 +147,6 @@ class shell extends viewModelBase {
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
     localLicenseStatus = license.licenseStatus;
     windowHeightObservable: KnockoutObservable<number>;
-    appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
@@ -151,7 +156,6 @@ class shell extends viewModelBase {
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
 
     private globalChangesApi: changesApi;
-    
     private static changeSubscriptionArray: changeSubscription[];
 
     constructor() {
@@ -166,7 +170,10 @@ class shell extends viewModelBase {
             return lsApiKey || contextApiKey;
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
-        oauthContext.enterApiKeyTask.done(() => this.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
+        oauthContext.enterApiKeyTask.done(() => {
+	        this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+			this.notifications = this.createNotifications();
+        });
 
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
@@ -180,7 +187,6 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
         this.currentConnectedResource = appUrl.getSystemDatabase();
-        this.appUrls = appUrl.forCurrentDatabase();
 
         this.goToDocumentSearch = ko.observable<string>();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -216,7 +222,7 @@ class shell extends viewModelBase {
     }
 
     activate(args: any) {
-        super.activate(args);
+        super.activate(args, true);
 
         oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 
@@ -968,7 +974,7 @@ class shell extends viewModelBase {
                 this.serverBuildVersion(serverBuildResult);
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
-                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== 13) {
+                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion != 13) {
                     new getLatestServerBuildVersionCommand(true, 3000, 3999) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {

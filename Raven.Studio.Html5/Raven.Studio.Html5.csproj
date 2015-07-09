@@ -21,21 +21,22 @@
   </PropertyGroup>
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
+    <TypeScriptCompile Include="App\commands\counter\backupCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersByGroupCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
-    <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStoragesCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\resetCounterCommand.ts" />
-    <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
     <TypeScriptCompile Include="App\commands\auth\licenseCheckConnectivityCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteConfigurationKeyCommand.ts" />
@@ -82,15 +83,9 @@
     <TypeScriptCompile Include="App\commands\maintenance\adminJsScriptCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\createTimeSeriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\createCounterStorageCommand.ts" />
-    <TypeScriptCompile Include="App\commands\counter\deleteCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterGroupsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCountersCommand.ts" />
-    <TypeScriptCompile Include="App\commands\counter\getCounterStorageReplicationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\counter\getCounterStoragesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\counter\resetCounterCommand.ts" />
-    <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
@@ -181,11 +176,9 @@
     <TypeScriptCompile Include="App\viewmodels\manage\licenseInformation.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\monitorRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemRevisionsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\common\changesApi.ts" />
     <TypeScriptCompile Include="App\common\changesCallback.ts" />
@@ -1085,6 +1078,7 @@
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
+    <TypeScriptCompile Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.selectpicker\bootstrap.selectpicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.v3.datetimepicker\bootstrap.v3.datetimepicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
@@ -1108,7 +1102,7 @@
     <Content Include="Scripts\d3\models\timelines.js" />
     <Content Include="Scripts\d3\models\timelinesChart.js" />
     <Content Include="Scripts\d3\nv.js" />
-    <TypeScriptCompile Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\highlight\highlight.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\d3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />

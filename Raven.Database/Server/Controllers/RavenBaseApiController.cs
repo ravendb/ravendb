@@ -225,7 +225,7 @@ namespace Raven.Database.Server.Controllers
 			return EtagHeaderToEtag() == etag;
 		}
 
-		internal Etag EtagHeaderToEtag()
+	    private Etag EtagHeaderToEtag()
 		{
 		    try
 		    {
@@ -258,7 +258,7 @@ namespace Raven.Database.Server.Controllers
 			return value;
 		}*/	 
 
-	    public static string GetQueryStringValue(HttpRequestMessage req, string key)
+	    protected static string GetQueryStringValue(HttpRequestMessage req, string key)
         {
             NameValueCollection nvc;
             object value;

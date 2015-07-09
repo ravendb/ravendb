@@ -9,7 +9,7 @@ import dialog = require("plugins/dialog");
 class dialogViewModelBase {
     static dialogSelector = ".messageBox";
     dialogSelectorName = "";
-    width = ko.observable<number>(600);
+    width = ko.observable<number>(500);
     height = ko.observable<number>(500);
     left: KnockoutComputed<number>;
     top: KnockoutComputed<number>;
@@ -27,7 +27,7 @@ class dialogViewModelBase {
         jwerty.key("enter", () => this.enterKeyPressed(), this, dialogViewModelBase.dialogSelector);
 
 		var width = $(".messageBox").width();
-		$(".messageBox").width(width + 5);
+		$(".messageBox").width(width + 2);
     }
 
     deactivate(args) {

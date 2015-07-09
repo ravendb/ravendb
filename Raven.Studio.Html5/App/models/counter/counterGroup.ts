@@ -4,15 +4,15 @@ import getCountersCommand = require("commands/counter/getCountersCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
 
-class counterGroup {
+class counterGroup implements ICollectionBase {
+	colorClass = "";
     static allGroupsGroupName = "All Groups";
     private countersList: pagedList;
     private static groupColorMaps: resourceStyleMap[] = [];
     countersCount = ko.observable<number>(0);
     countersCountWithThousandsSeparator = ko.computed(() => this.countersCount().toLocaleString());
     isAllGroupsGroup = false;
-    colorClass = "";
-
+    
     constructor(public name: string, private ownerCounterStorage: counterStorage, count: number = 0) {
         this.countersCount(count);
         this.isAllGroupsGroup = name === counterGroup.allGroupsGroupName;

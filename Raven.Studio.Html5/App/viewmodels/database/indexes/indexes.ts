@@ -29,7 +29,6 @@ class indexes extends viewModelBase {
     containerSelector = "#indexesContainer";
     recentQueries = ko.observableArray<storedQueryDto>();
     indexMutex = true;
-    appUrls: computedAppUrls;
     btnState = ko.observable<boolean>(false);
     btnStateTooltip = ko.observable<string>("ExpandAll");
     btnTitle = ko.computed(() => this.btnState() === true ? "Expand all" : "Collapse all");
@@ -69,7 +68,6 @@ class indexes extends viewModelBase {
         super.activate(args);
         this.updateHelpLink('AIHAR1');
 
-        this.appUrls = appUrl.forCurrentDatabase();
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
     }
 

@@ -6,7 +6,7 @@ import shell = require("viewmodels/shell");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-import appUrl = require('common/appUrl');
+import appUrl = require("common/appUrl");
 
 class watchTrafficConfigDialog extends dialogViewModelBase {
     public configurationTask = $.Deferred();
@@ -16,24 +16,24 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     lastSearchedwatchedResourceName = ko.observable<string>();
     resourceAutocompletes = ko.observableArray<string>([]);
     maxEntries = ko.observable<number>(1000);
-    allResources = ko.observableArray<resource>([]);
+    allResourcesNames: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
     searchResults: KnockoutComputed<Array<string>>;
-    resourcesNames: KnockoutComputed<string[]>;
+    //resourcesNames: KnockoutComputed<string[]>;
 
     constructor() {
         super();
-        this.resourcesNames = shell.resourcesNamesComputed();
+        this.allResourcesNames = shell.resourcesNamesComputed();
 
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
-            return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
+            return this.allResourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
             var newResourceName = this.resourceName();
-            var foundResource = this.resourcesNames().filter((name: string) => name === newResourceName);
+            var foundResource = this.allResourcesNames().filter((name: string) => name === newResourceName);
             if (!foundResource && newResourceName.length > 0) {
                 errorMessage = "Resource name doesn't exist!";
             }
@@ -41,7 +41,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
         });
     }
 
-    canActivate() {
+    /*canActivate() {
         var loadDialogDeferred = $.Deferred();
         var databasesLoadTask = new getDatabasesCommand()
             .execute();
@@ -50,12 +50,12 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
         $.when(databasesLoadTask, fileSystemsLoadTask)
             .always((databases: resource[], filesystems: resource[]) => {
                 if (!!databases && databases.length > 0) {
-                    databases.forEach((x) => this.allResources.push(x));
+                    databases.forEach((x) => this.allResourcesNames.push(x));
                 }
                 if (!!filesystems && filesystems.length > 0) {
                     filesystems.forEach((x) => {
-                        if (!this.allResources.first(y => y.name == x.name))
-                            this.allResources.push(x);
+                        if (!this.allResourcesNames.first(y => y.name == x.name))
+                            this.allResourcesNames.push(x);
                     });
 
 
@@ -68,7 +68,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     activate(args) {
       
         
-    }
+    }*/
     bindingComplete() {
         document.getElementById("watchedResource").focus();
     }
@@ -79,11 +79,11 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
 
     fetchResourcesAutocompletes(search: string) {
         if (this.resourceName() === search) {
-            if (this.resourceAutocompletes.length == 1 && this.resourceName() == this.resourceAutocompletes()[0]) {
+            if (this.resourceAutocompletes.length === 1 && this.resourceName() === this.resourceAutocompletes()[0]) {
                 this.resourceAutocompletes.removeAll();
                 return;
             }
-            this.resourceAutocompletes(this.allResources().filter(x => x.name.toLowerCase().indexOf(search.toLowerCase()) == 0).map(x => x.name));
+            this.resourceAutocompletes(this.allResourcesNames().filter((name: string) => name.toLowerCase().indexOf(search.toLowerCase()) === 0));
         }
     }
     
@@ -97,21 +97,21 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
 
     confirmConfig() {
         var tracedResource: resource;
-        if ((!this.resourceName() || this.resourceName().trim() == "") && this.watchedResourceMode() == "SingleResourceView") {
+        if ((!this.resourceName() || this.resourceName().trim() === "") && this.watchedResourceMode() === "SingleResourceView") {
             app.showMessage("Resource name should be chosen", "Validation Error");
             return;
         }
-        if (this.watchedResourceMode() == "SingleResourceView" && !this.allResources.first(x=>x.name == this.resourceName())) {
+        if (this.watchedResourceMode() === "SingleResourceView" && !this.allResourcesNames().first((name: string) => name === this.resourceName())) {
             app.showMessage("Resource name is not recognized", "Validation Error");
             return;
         }
-        if (this.watchedResourceMode() == "SingleResourceView")
-            tracedResource = this.allResources.first(x => x.name == this.resourceName());
+        if (this.watchedResourceMode() === "SingleResourceView")
+            tracedResource = shell.resources().first((rs: resource) => rs.name === this.resourceName());
 
         tracedResource = !!tracedResource ? tracedResource : appUrl.getSystemDatabase();
         var resourcePath = appUrl.forResourceQuery(tracedResource);
         
-        var getTokenTask = new getSingleAuthTokenCommand(tracedResource, this.watchedResourceMode() == "AdminView").execute();
+        var getTokenTask = new getSingleAuthTokenCommand(tracedResource, this.watchedResourceMode() === "AdminView").execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
@@ -139,16 +139,16 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     
 
     private alignBoxVertically() {
-        var messageBoxHeight = parseInt($(".messageBox").css('height'), 10);
+        var messageBoxHeight = parseInt($(".messageBox").css("height"), 10);
         var windowHeight = $(window).height();
-        var messageBoxMarginTop = parseInt($(".messageBox").css('margin-top'), 10);
+        var messageBoxMarginTop = parseInt($(".messageBox").css("margin-top"), 10);
         var newTopPercent = Math.floor(((windowHeight - messageBoxHeight) / 2 - messageBoxMarginTop) / windowHeight * 100);
-        var newTopPercentString = newTopPercent.toString() + '%';
-        $(".modalHost").css('top', newTopPercentString);
+        var newTopPercentString = newTopPercent.toString() + "%";
+        $(".modalHost").css("top", newTopPercentString);
     }
 
     generateBindingInputId(index: number) {
-        return 'binding-' + index;
+        return "binding-" + index;
     }
 }
 
