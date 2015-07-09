@@ -24,7 +24,7 @@ namespace Raven.SlowTests.Bugs
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
-			    store.SetRequestsTimeoutFor(TimeSpan.FromMinutes(1));
+			    store.SetRequestsTimeoutFor(TimeSpan.FromMinutes(3));
 				using (var session = store.OpenSession())
 				{
 					for (int i = 0; i < 15000; i++)

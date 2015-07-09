@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,6 +56,7 @@ namespace Raven.Abstractions.Util
 		public static T RunSync<T>(Func<Task<T>> task)
 		{
 			var result = default(T);
+		    Stopwatch sp = Stopwatch.StartNew();
 			var oldContext = SynchronizationContext.Current;
 			try
 			{
@@ -74,6 +76,7 @@ namespace Raven.Abstractions.Util
 					}
 					finally
 					{
+                        sp.Stop();
 						synch.EndMessageLoop();
 					}
 				}, null);
@@ -82,6 +85,8 @@ namespace Raven.Abstractions.Util
 			catch (AggregateException ex)
 			{
 				var exception = ex.ExtractSingleInnerException();
+			    if (exception is OperationCanceledException)
+			        throw new TimeoutException("Operation timed out after: " + sp.Elapsed, ex);
 				ExceptionDispatchInfo.Capture(exception).Throw();
 			}
 			finally
