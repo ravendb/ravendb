@@ -266,14 +266,13 @@ namespace Raven.Database.Storage.Esent.StorageActions
             if (timeout != null)
                 duration = Stopwatch.StartNew();
 
-            Etag lastDocEtag;
+            Etag lastDocEtag = null;
             Etag docEtag = etag;
 
             do
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
-                lastDocEtag = docEtag;
+                           
                 docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 
                 // We can skip many documents so the timeout should be at the start of the process to be executed.
@@ -293,9 +292,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
                 if (!string.IsNullOrEmpty(idPrefix))
                 {
-                    // Check if the ignore case is correct.
                     if (!key.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // We assume that we have processed it because it is not of our interest.
+                        lastDocEtag = docEtag;
                         continue;
+                    }                        
                 }
 
                 var readCurrentDocument = ReadCurrentDocument(key);
@@ -304,11 +306,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 fetchedDocumentCount++;
 
                 yield return readCurrentDocument;
+                lastDocEtag = docEtag;  
 
                 if (maxSize != null && totalSize > maxSize.Value)
-                    break;
-                
-            } while (Api.TryMoveNext(session, Documents) && fetchedDocumentCount < take);
+                    break;  
+            } 
+            while (Api.TryMoveNext(session, Documents) && fetchedDocumentCount < take);
 
             // We notify the last that we considered.
             if (lastProcessedDocument != null)

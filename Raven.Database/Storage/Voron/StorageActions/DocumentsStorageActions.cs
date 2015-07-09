@@ -110,7 +110,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 duration = Stopwatch.StartNew();
 
 
-            Etag lastDocEtag;
+            Etag lastDocEtag = null;
             using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
                                               .Iterate(Snapshot, writeBatch.Value))
             {
@@ -132,8 +132,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 do
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-
-                    lastDocEtag = docEtag;
+                    
                     docEtag = Etag.Parse(iterator.CurrentKey.ToString());
 
                     // We can skip many documents so the timeout should be at the start of the process to be executed.
@@ -152,10 +151,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     var key = GetKeyFromCurrent(iterator);
                     if (!string.IsNullOrEmpty(idPrefix))
-                    {
-                        // Check if the ignore case is correct.
+                    {                        
                         if (!key.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // We assume that we have processed it because it is not of our interest.
+                            lastDocEtag = docEtag;
                             continue;
+                        }                            
                     }                        
 
                     var document = DocumentByKey(key);
@@ -174,10 +176,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     yield return document;
 
+                    lastDocEtag = docEtag;
+
                     if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
                         break;
-
-                } while (iterator.MoveNext() && fetchedDocumentCount < take);
+                } 
+                while (iterator.MoveNext() && fetchedDocumentCount < take);
             }
 
             // We notify the last that we considered.

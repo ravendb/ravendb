@@ -299,8 +299,7 @@ namespace Raven.Tests.Subscriptions
 
 				var batches = new List<List<RavenJObject>>();
 
-				subscription.BeforeBatch +=
-					() => batches.Add(new List<RavenJObject>());
+				subscription.BeforeBatch += () => batches.Add(new List<RavenJObject>());
 
 				subscription.Subscribe(x =>
 				{
@@ -308,7 +307,7 @@ namespace Raven.Tests.Subscriptions
 					list.Add(x);
 				});
 
-				var result = SpinWait.SpinUntil(() => batches.ToList().Sum(x => x.Count) >= 200, TimeSpan.FromSeconds(60));
+				var result = SpinWait.SpinUntil(() => batches.ToList().Sum(x => x.Count) >= 200, TimeSpan.FromSeconds(10));
 
 				Assert.True(result);
 				Assert.True(batches.Count > 1);
@@ -580,6 +579,48 @@ namespace Raven.Tests.Subscriptions
 
                 Assert.Equal(11, allDocs.Count);
                 Assert.Equal(1, usersDocs.Count);
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+
+        public void WillAcknowledgeEmptyBatches(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
+            {
+                var subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
+
+                Assert.Equal(0, subscriptionDocuments.Count);
+
+                long allId = store.Subscriptions.Create(new SubscriptionCriteria());
+                var allSubscription = store.Subscriptions.Open(allId, new SubscriptionConnectionOptions());
+                var allDocs = new List<RavenJObject>();
+                allSubscription.Subscribe(allDocs.Add);
+
+                long usersId = store.Subscriptions.Create(new SubscriptionCriteria { KeyStartsWith = "users/" });
+                var usersSubscription = store.Subscriptions.Open(usersId, new SubscriptionConnectionOptions());
+                var usersDocs = new List<RavenJObject>();
+                usersSubscription.Subscribe(usersDocs.Add);
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 500; i++)
+                        session.Store(new User(), "another/");
+                    session.SaveChanges();
+                }
+
+                Assert.True(SpinWait.SpinUntil(() => allDocs.Count == 500, TimeSpan.FromSeconds(10)));
+                Assert.True(SpinWait.SpinUntil(() =>
+                    {
+                        subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
+
+                        Console.WriteLine(subscriptionDocuments[0].AckEtag + "," + subscriptionDocuments[1].AckEtag);
+                        return subscriptionDocuments[0].AckEtag == subscriptionDocuments[1].AckEtag;
+                    }, TimeSpan.FromSeconds(10)));
+
+                Assert.Equal(500, allDocs.Count);
+                Assert.Equal(0, usersDocs.Count);
             }
         }
 
