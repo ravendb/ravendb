@@ -1,5 +1,4 @@
 ﻿using System.Security.Principal;
-using JetBrains.Annotations;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -261,8 +260,6 @@ namespace Raven.Database.Server.Controllers
 				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
 			};
 		}
-
-	
 
 		protected virtual IndexQuery GetIndexQuery(int maxPageSize)
 		{
