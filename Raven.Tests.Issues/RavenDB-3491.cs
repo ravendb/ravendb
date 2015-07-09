@@ -42,53 +42,55 @@ namespace Raven.Tests.Issues
 
                     var user2Etag = session.Advanced.GetEtagFor(us2);
                     var id = store.Subscriptions.Create(new SubscriptionCriteria
-                        {
-                            StartEtag = user2Etag
-                        });
+                    {
+                        StartEtag = user2Etag
+                    });
 
                     var users = new List<RavenJObject>();
 
-                    var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+                    using (var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()))
+                    {
 
-                    var docs = new BlockingCollection<RavenJObject>();
+                        var docs = new BlockingCollection<RavenJObject>();
+                        var keys = new BlockingCollection<string>();
+                        var ages = new BlockingCollection<int>();
 
-                    subscription.Subscribe(docs.Add);
+                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata].Value<string>("@id")));
+                        subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
 
-                    RavenJObject doc;
-                    Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                    users.Push(doc);
-                    Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                    users.Push(doc);
-                    Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                    users.Push(doc);
-                    var cnt = users.Count;
-                    Assert.Equal(3, cnt);
+                        subscription.Subscribe(docs.Add);
 
-                    var keys = new BlockingCollection<string>();
-                    var ages = new BlockingCollection<int>();
+                        RavenJObject doc;
+                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        users.Push(doc);
+                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        users.Push(doc);
+                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        users.Push(doc);
+                        var cnt = users.Count;
+                        Assert.Equal(3, cnt);
 
-                    subscription.Subscribe(x => keys.Add(x[Constants.Metadata].Value<string>("@id")));
-                    subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
+                     
+                        string key;
+                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.Equal("users/3", key);
 
-                    string key;
-                    Assert.True(keys.TryTake(out key, waitForDocTimeout));
-                    Assert.Equal("users/3", key);
+                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.Equal("users/4", key);
 
-                    Assert.True(keys.TryTake(out key, waitForDocTimeout));
-                    Assert.Equal("users/4", key);
+                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.Equal("users/5", key);
 
-                    Assert.True(keys.TryTake(out key, waitForDocTimeout));
-                    Assert.Equal("users/5", key);
+                        int age;
+                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.Equal(30, age);
 
-                    int age;
-                    Assert.True(ages.TryTake(out age, waitForDocTimeout));
-                    Assert.Equal(30, age);
+                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.Equal(29, age);
 
-                    Assert.True(ages.TryTake(out age, waitForDocTimeout));
-                    Assert.Equal(29, age);
-
-                    Assert.True(ages.TryTake(out age, waitForDocTimeout));
-                    Assert.Equal(34, age);
+                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.Equal(34, age);
+                    }
                 }
             }
         }
@@ -126,6 +128,11 @@ namespace Raven.Tests.Issues
                     {
 
                         var docs = new BlockingCollection<RavenJObject>();
+                        var keys = new BlockingCollection<string>();
+                        var ages = new BlockingCollection<int>();
+
+                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata].Value<string>("@id")));
+                        subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
 
                         subscription.Subscribe(docs.Add);
 
@@ -139,12 +146,7 @@ namespace Raven.Tests.Issues
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
 
-                        var keys = new BlockingCollection<string>();
-                        var ages = new BlockingCollection<int>();
-
-                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata].Value<string>("@id")));
-                        subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
-
+                       
                         string key;
                         Assert.True(keys.TryTake(out key, waitForDocTimeout));
                         Assert.Equal("users/3", key);

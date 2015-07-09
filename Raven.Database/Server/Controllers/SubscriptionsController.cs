@@ -199,7 +199,7 @@ namespace Raven.Database.Server.Controllers
 					var processedDocuments = 0;
 					var hasMoreDocs = false;
 					var config = subscriptions.GetSubscriptionConfig(id);
-					var startEtag =  config.StartEtag ?? config.AckEtag;
+					var startEtag =  config.AckEtag;
 					var criteria = config.Criteria;
 
                     Action<JsonDocument> addDocument = doc =>
