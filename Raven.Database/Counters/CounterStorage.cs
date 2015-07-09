@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
@@ -89,7 +90,7 @@ namespace Raven.Database.Counters
 
 		private void Initialize()
 		{
-			using (var tx = CounterStorageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx = Environment.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				storageEnvironment.CreateTree(tx, TreeNames.ServersLastEtag);
 				storageEnvironment.CreateTree(tx, TreeNames.Counters);
@@ -99,8 +100,8 @@ namespace Raven.Database.Counters
 				storageEnvironment.CreateTree(tx, TreeNames.CounterIdWithNameToGroup);
 				storageEnvironment.CreateTree(tx, TreeNames.CountersToEtag);
 				
-				var etags = CounterStorageEnvironment.CreateTree(tx, TreeNames.EtagsToCounters);
-				var metadata = CounterStorageEnvironment.CreateTree(tx, TreeNames.Metadata);
+				var etags = Environment.CreateTree(tx, TreeNames.EtagsToCounters);
+				var metadata = Environment.CreateTree(tx, TreeNames.Metadata);
 				var id = metadata.Read("id");
 				var lastCounterIdRead = metadata.Read("lastCounterId");
 
@@ -183,7 +184,7 @@ namespace Raven.Database.Counters
 			get { return replicationTask; }
 		}
 
-		public StorageEnvironment CounterStorageEnvironment
+		public StorageEnvironment Environment
 		{
 			get { return storageEnvironment; }
 		}
@@ -209,7 +210,7 @@ namespace Raven.Database.Counters
 					GroupsCount = reader.GetGroupsCount(),
 					LastCounterEtag = lastEtag,
 					ReplicationTasksCount = replicationTask.GetActiveTasksCount(),
-					CounterStorageSize = SizeHelper.Humane(CounterStorageEnvironment.Stats().UsedDataFileSizeInBytes),
+					CounterStorageSize = SizeHelper.Humane(Environment.Stats().UsedDataFileSizeInBytes),
 					ReplicatedServersCount = 0, //TODO: get the correct number
 					RequestsPerSecond = Math.Round(metricsCounters.RequestsPerSecondCounter.CurrentValue, 3),
 				};
@@ -266,13 +267,13 @@ namespace Raven.Database.Counters
 		[CLSCompliant(false)]
 		public Reader CreateReader()
 		{
-			return new Reader(this, CounterStorageEnvironment.NewTransaction(TransactionFlags.Read));
+			return new Reader(this, Environment.NewTransaction(TransactionFlags.Read));
 		}
 
 		[CLSCompliant(false)]
 		public Writer CreateWriter()
 		{
-			return new Writer(this, CounterStorageEnvironment.NewTransaction(TransactionFlags.ReadWrite));
+			return new Writer(this, Environment.NewTransaction(TransactionFlags.ReadWrite));
 		}
 
 		private void Notify()
@@ -672,6 +673,21 @@ namespace Raven.Database.Counters
 				}
 			}
 
+			public BackupStatus GetBackupStatus()
+			{
+				var readResult = metadata.Read(BackupStatus.RavenBackupStatusDocumentKey);
+				if (readResult == null)
+					return null;
+
+				var stream = readResult.Reader.AsStream();
+				stream.Position = 0;
+				using (var streamReader = new StreamReader(stream))
+				using (var jsonTextReader = new JsonTextReader(streamReader))
+				{
+					return new JsonSerializer().Deserialize<BackupStatus>(jsonTextReader);
+				}
+			}
+
 			public void Dispose()
 			{
 				if (transaction != null)
@@ -1038,6 +1054,24 @@ namespace Raven.Database.Counters
 				}
 
 				parent.replicationTask.SignalCounterUpdate();
+			}
+
+			public void SaveBackupStatus(BackupStatus backupStatus)
+			{
+				using (var memoryStream = new MemoryStream())
+				using (var streamWriter = new StreamWriter(memoryStream))
+				using (var jsonTextWriter = new JsonTextWriter(streamWriter))
+				{
+					parent.JsonSerializer.Serialize(jsonTextWriter, backupStatus);
+					streamWriter.Flush();
+					memoryStream.Position = 0;
+					metadata.Add(BackupStatus.RavenBackupStatusDocumentKey, memoryStream);
+				}
+			}
+
+			public void DeleteBackupStatus()
+			{
+				metadata.Delete(BackupStatus.RavenBackupStatusDocumentKey);
 			}
 
 			public bool PurgeOutdatedTombstones()

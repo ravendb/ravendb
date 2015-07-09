@@ -248,6 +248,8 @@ namespace Raven.Database.Server.Controllers
 			};
 		}
 
+	
+
 		protected virtual IndexQuery GetIndexQuery(int maxPageSize)
 		{
 			var query = new IndexQuery
