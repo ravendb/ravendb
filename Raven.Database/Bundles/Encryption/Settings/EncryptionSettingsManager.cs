@@ -173,7 +173,7 @@ namespace Raven.Database.Bundles.Encryption.Settings
 			int index = 0;
 			while (true)
 			{
-				var array = database.Documents.GetDocuments(index, index + pageSize, null, CancellationToken.None);
+				var array = database.Documents.GetDocumentsAsJson(index, index + pageSize, null, CancellationToken.None);
 				if (array.Length == 0)
 				{
 					// We've gone over all the documents in the database, and none of them are encrypted.

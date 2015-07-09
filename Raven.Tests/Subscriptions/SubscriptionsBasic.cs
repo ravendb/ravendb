@@ -18,6 +18,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Subscriptions
 {
@@ -298,8 +299,7 @@ namespace Raven.Tests.Subscriptions
 
 				var batches = new List<List<RavenJObject>>();
 
-				subscription.BeforeBatch +=
-					() => batches.Add(new List<RavenJObject>());
+				subscription.BeforeBatch += () => batches.Add(new List<RavenJObject>());
 
 				subscription.Subscribe(x =>
 				{
@@ -307,7 +307,7 @@ namespace Raven.Tests.Subscriptions
 					list.Add(x);
 				});
 
-				var result = SpinWait.SpinUntil(() => batches.ToList().Sum(x => x.Count) >= 200, TimeSpan.FromSeconds(60));
+				var result = SpinWait.SpinUntil(() => batches.ToList().Sum(x => x.Count) >= 200, TimeSpan.FromSeconds(10));
 
 				Assert.True(result);
 				Assert.True(batches.Count > 1);
@@ -500,39 +500,129 @@ namespace Raven.Tests.Subscriptions
 			}
 		}
 
-		[Fact]
-		public void CanGetSubscriptionsFromDatabase()
-		{
-			using (var store = NewDocumentStore())
-			{
-				var subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
+        [Fact]
+        public void CanGetSubscriptionsFromDatabase()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
 
-				Assert.Equal(0, subscriptionDocuments.Count);
+                Assert.Equal(0, subscriptionDocuments.Count);
 
-				store.Subscriptions.Create(new SubscriptionCriteria
-				{
-					KeyStartsWith = "users/"
-				});
+                store.Subscriptions.Create(new SubscriptionCriteria
+                {
+                    KeyStartsWith = "users/"
+                });
 
-				subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
+                subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
 
-				Assert.Equal(1, subscriptionDocuments.Count);
-				Assert.Equal("users/", subscriptionDocuments[0].Criteria.KeyStartsWith);
+                Assert.Equal(1, subscriptionDocuments.Count);
+                Assert.Equal("users/", subscriptionDocuments[0].Criteria.KeyStartsWith);
 
-				var subscription = store.Subscriptions.Open(subscriptionDocuments[0].SubscriptionId, new SubscriptionConnectionOptions());
+                var subscription = store.Subscriptions.Open(subscriptionDocuments[0].SubscriptionId, new SubscriptionConnectionOptions());
 
-				var docs = new List<RavenJObject>();
-				subscription.Subscribe(docs.Add);
+                var docs = new List<RavenJObject>();
+                subscription.Subscribe(docs.Add);
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User());
-					session.SaveChanges();
-				}
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
 
-				Assert.True(SpinWait.SpinUntil(() => docs.Count >= 1, TimeSpan.FromSeconds(60)));
-			}
-		}
+                Assert.True(SpinWait.SpinUntil(() => docs.Count >= 1, TimeSpan.FromSeconds(10)));
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+
+        public void CanFilterSubscriptionsWithSpecificPrefixes(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage:storage))
+            {
+                var subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
+
+                Assert.Equal(0, subscriptionDocuments.Count);
+
+                long allId = store.Subscriptions.Create(new SubscriptionCriteria());
+                var allSubscription = store.Subscriptions.Open(allId, new SubscriptionConnectionOptions());
+                var allDocs = new List<RavenJObject>();
+                allSubscription.Subscribe(allDocs.Add);
+
+                long usersId = store.Subscriptions.Create(new SubscriptionCriteria { KeyStartsWith = "users/" }); 
+                var usersSubscription = store.Subscriptions.Open(usersId, new SubscriptionConnectionOptions());
+                var usersDocs = new List<RavenJObject>();
+                usersSubscription.Subscribe(usersDocs.Add);
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 5; i++)
+                        session.Store(new User(), "another/");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 5; i++)
+                        session.Store(new User(), "another/");
+                    session.SaveChanges();
+                }
+
+                Assert.True(SpinWait.SpinUntil(() => allDocs.Count == 11, TimeSpan.FromSeconds(10)));
+
+                Assert.Equal(11, allDocs.Count);
+                Assert.Equal(1, usersDocs.Count);
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+
+        public void WillAcknowledgeEmptyBatches(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
+            {
+                var subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
+
+                Assert.Equal(0, subscriptionDocuments.Count);
+
+                long allId = store.Subscriptions.Create(new SubscriptionCriteria());
+                var allSubscription = store.Subscriptions.Open(allId, new SubscriptionConnectionOptions());
+                var allDocs = new List<RavenJObject>();
+                allSubscription.Subscribe(allDocs.Add);
+
+                long usersId = store.Subscriptions.Create(new SubscriptionCriteria { KeyStartsWith = "users/" });
+                var usersSubscription = store.Subscriptions.Open(usersId, new SubscriptionConnectionOptions());
+                var usersDocs = new List<RavenJObject>();
+                usersSubscription.Subscribe(usersDocs.Add);
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 500; i++)
+                        session.Store(new User(), "another/");
+                    session.SaveChanges();
+                }
+
+                Assert.True(SpinWait.SpinUntil(() => allDocs.Count == 500, TimeSpan.FromSeconds(10)));
+                Assert.True(SpinWait.SpinUntil(() =>
+                    {
+                        subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
+
+                        Console.WriteLine(subscriptionDocuments[0].AckEtag + "," + subscriptionDocuments[1].AckEtag);
+                        return subscriptionDocuments[0].AckEtag == subscriptionDocuments[1].AckEtag;
+                    }, TimeSpan.FromSeconds(10)));
+
+                Assert.Equal(500, allDocs.Count);
+                Assert.Equal(0, usersDocs.Count);
+            }
+        }
 
 		[Fact]
 		public void ShouldKeepPullingDocsAfterServerRestart()
