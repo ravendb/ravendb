@@ -26,7 +26,7 @@ namespace Raven.Tests.Core.ChangesApi
                 using (var clientWebSocket = TryCreateClientWebSocket())
                 {
                     string url = store.Url.Replace("http:", "ws:");
-					url = url + "/traffic-watch/events?" + Guid.NewGuid();
+                    url = url + "/changes/websocket?id=" + Guid.NewGuid();
                     await clientWebSocket.ConnectAsync(new Uri(url), CancellationToken.None);
 
                     var buffer = new byte[1024];
