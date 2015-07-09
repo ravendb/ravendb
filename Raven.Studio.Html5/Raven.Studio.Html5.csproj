@@ -393,7 +393,7 @@
     <Content Include="App\views\resources\filesystemSettingsDialog.html" />
     <Content Include="App\views\resources\resources.html" />
     <Content Include="App\views\shell.html" />
-    <Content Include="App\views\timeseries\timeseries.html" />
+    <Content Include="App\views\timeSeries\timeSeriesVM.html" />
     <Content Include="App\widgets\virtualTable\view.html" />
     <Content Include="Content\app.css">
       <DependentUpon>app.less</DependentUpon>
@@ -1084,7 +1084,7 @@
     <TypeScriptCompile Include="App\viewmodels\resources\filesystemSettingsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\resources.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
-    <TypeScriptCompile Include="App\viewmodels\timeseries\timeSeries.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeries1.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />

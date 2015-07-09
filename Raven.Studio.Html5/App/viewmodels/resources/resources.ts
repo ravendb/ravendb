@@ -237,7 +237,7 @@ class resources extends viewModelBase {
     }
 
     getTimeSeriesUrl(ts: timeSeries) {
-        return appUrl.forTimeSeriesSeries(null, ts);
+        return appUrl.forTimeSeriesKey(null, null, ts);
     }
 
     selectResource(rs: resource, activateResource: boolean = true) {

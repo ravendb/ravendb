@@ -125,7 +125,7 @@ class appUrl {
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
 
         timeSeries: ko.computed(() => appUrl.forTimeSeries()),
-        timeSeriesSeries: ko.computed(() => appUrl.forTimeSeriesSeries(null, appUrl.currentTimeSeries())),
+        timeSeriesKey: ko.computed(() => appUrl.forTimeSeriesKey(null, null, appUrl.currentTimeSeries())),
         timeSeriesStats: ko.computed(() => appUrl.forTimeSeriesStats(appUrl.currentTimeSeries())),
         timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries()))
     };
@@ -174,12 +174,6 @@ class appUrl {
     static forCounterStorageConfiguration(counterStorage: counterStorage) {
         var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
         return "#counterstorages/configuration?" + counterStroragePart;
-    }
-
-    static forTimeSeriesSeries(name: string, ts: timeSeries) {
-        var part = name ? "name=" + encodeURIComponent(name) : "";
-        var timeSeriesPart = appUrl.getEncodedTimeSeriesPart(ts);
-        return "#timeseries/series?" + part + timeSeriesPart;
     }
 
     static forTimeSeriesKey(prefix: string, key: string, ts: timeSeries) {
