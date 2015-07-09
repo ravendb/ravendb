@@ -1,5 +1,19 @@
 ﻿<div class="conflicts-page">
     <div class="row">
+        <div class="btn-toolbar">
+            <div class="btn-group">
+                <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom">
+                    Resolve all conflicts <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="#" data-bind="click: resolveToLocal">Resolve to local</a></li>
+                    <li><a href="#" data-bind="click: resolveToNewestRemote">Resolve to newest remote</a></li>
+                    <li><a href="#" data-bind="click: resolveToLatest">Resolve to latest</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="row">
         <div class="col-md-12">
             <div id="conflictsGrid" data-bind="widget: {
                 kind: 'virtualTable', itemsSource: currentConflictsPagedItems,
