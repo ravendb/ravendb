@@ -132,7 +132,7 @@ class editIndex extends viewModelBase {
 
     private initializeDirtyFlag() {
         var indexDef: indexDefinition = this.editedIndex();
-        var checkedFieldsArray = [indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
+        var checkedFieldsArray = [indexDef.storeAllFields, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
 
         indexDef.luceneFields().forEach((lf: luceneField) => {
             checkedFieldsArray.push(lf.name);
@@ -295,6 +295,10 @@ class editIndex extends viewModelBase {
         field.indexFieldNames = this.editedIndex().fields();
         field.calculateFieldNamesAutocomplete();
         this.editedIndex().luceneFields.push(field);
+    }
+
+    removeStoreAllFields() {
+        this.editedIndex().setOrRemoveStoreAllFields(false);
     }
 
     removeMaxIndexOutputs() {
