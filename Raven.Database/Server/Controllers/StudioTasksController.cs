@@ -18,6 +18,10 @@ using System.Web.Http;
 using Jint;
 using Jint.Parser;
 
+using Raven.Abstractions.Replication;
+using Raven.Bundles.Replication.Plugins;
+using Raven.Database.Bundles.Replication.Plugins;
+using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -601,6 +605,123 @@ for(var customFunction in customFunctions) {{
 			});
 
 			return GetMessageWithObjectAsTask(results);
+		}
+
+		[HttpPost]
+		[RavenRoute("studio-tasks/replication/conflicts/resolve")]
+		[RavenRoute("databases/{databaseName}/studio-tasks/replication/conflicts/resolve")]
+		public Task<HttpResponseMessage> ResolveAllConflicts()
+		{
+			var resolutionAsString = GetQueryStringValue("resolution");
+			StraightforwardConflictResolution resolution;
+			if (Enum.TryParse(resolutionAsString, true, out resolution) == false || resolution == StraightforwardConflictResolution.None)
+				return GetMessageWithStringAsTask("Invalid conflict resolution.", HttpStatusCode.BadRequest);
+
+			if (Database.IndexDefinitionStorage.Contains("Raven/ConflictDocuments") == false)
+				return GetMessageWithStringAsTask("Raven/ConflictDocuments index does not exist.", HttpStatusCode.BadRequest);
+
+			var cts = new CancellationTokenSource();
+
+			var task = Task.Factory.StartNew(() => Database.TransactionalStorage.Batch(accessor =>
+			{
+				using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, Database.WorkContext.CancellationToken))
+				{
+					var transactionalStorageId = Database.TransactionalStorage.Id.ToString();
+					bool stale;
+					foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery { PageSize = int.MaxValue }, linked, out stale))
+					{
+						var conflicts = accessor
+							.Documents
+							.GetDocumentsWithIdStartingWith(documentId, 0, Int32.MaxValue, null)
+							.Where(x => x.Key.Contains("/conflicts/"))
+							.ToList();
+
+						KeyValuePair<JsonDocument, DateTime> local;
+						KeyValuePair<JsonDocument, DateTime> remote;
+						GetConflictDocuments(conflicts, accessor, documentId, transactionalStorageId, out local, out remote);
+
+						var documentToSave = GetDocumentToSave(resolution, local, remote);
+						if (documentToSave == null)
+							continue;
+
+						documentToSave.Metadata.Remove(Constants.RavenReplicationConflictDocument);
+
+						if (documentToSave.Metadata.Value<bool>(Constants.RavenDeleteMarker))
+							Database.Documents.Delete(documentId, null, null);
+						else
+							Database.Documents.Put(documentId, null, documentToSave.DataAsJson, documentToSave.Metadata, null);
+					}
+				}
+			}));
+
+			long id;
+			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+																			{
+																				StartTime = SystemTime.UtcNow,
+																				TaskType = TaskActions.PendingTaskType.BulkInsert,
+																			}, out id, cts);
+
+			return GetMessageWithObjectAsTask(new
+			{
+				OperationId = id
+			});
+		}
+
+		private static void GetConflictDocuments(IEnumerable<JsonDocument> conflicts, IStorageActionsAccessor actions, string documentId, string transactionalStorageId, out KeyValuePair<JsonDocument, DateTime> local, out KeyValuePair<JsonDocument, DateTime> remote)
+		{
+			DateTime localModified = DateTime.MinValue, remoteModified = DateTime.MinValue;
+			JsonDocument localDocument = null, newestRemote = null;
+			foreach (var conflict in conflicts)
+			{
+				var lastModified = conflict.LastModified.HasValue ? conflict.LastModified.Value : DateTime.MinValue;
+				var replicationSource = conflict.Metadata.Value<string>(Constants.RavenReplicationSource);
+
+				if (string.Equals(replicationSource, transactionalStorageId, StringComparison.OrdinalIgnoreCase))
+				{
+					localModified = lastModified;
+					localDocument = conflict;
+					continue;
+				}
+
+				if (lastModified <= remoteModified)
+					continue;
+
+				newestRemote = conflict;
+				remoteModified = lastModified;
+			}
+			
+			local = new KeyValuePair<JsonDocument, DateTime>(localDocument, localModified);
+			remote = new KeyValuePair<JsonDocument, DateTime>(newestRemote, remoteModified);
+		}
+
+		private static JsonDocument GetDocumentToSave(StraightforwardConflictResolution resolution, KeyValuePair<JsonDocument, DateTime> local, KeyValuePair<JsonDocument, DateTime> remote)
+		{
+			if (local.Key == null && remote.Key == null) 
+				return null;
+
+			if (local.Key == null) 
+				return remote.Key;
+
+			if (remote.Key == null) 
+				return local.Key;
+
+			JsonDocument documentToSave;
+			switch (resolution)
+			{
+				case StraightforwardConflictResolution.ResolveToLatest:
+					documentToSave = local.Value >= remote.Value ? local.Key : remote.Key;
+					break;
+				case StraightforwardConflictResolution.ResolveToLocal:
+					documentToSave = local.Key;
+					break;
+				case StraightforwardConflictResolution.ResolveToRemote:
+					documentToSave = remote.Key;
+					break;
+				default:
+					throw new NotSupportedException(resolution.ToString());
+			}
+
+			return documentToSave;
 		}
 
 		private static RavenJToken SetValueInDocument(string value)

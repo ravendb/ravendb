@@ -19,6 +19,7 @@ import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDe
 import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
 import changeSubscription = require('common/changeSubscription');
 import shell = require("viewmodels/shell");
+import conflictsResolveCommand = require("commands/database/replication/conflictsResolveCommand");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 
@@ -178,6 +179,35 @@ class conflicts extends viewModelBase {
 
     getServerUrlForVersion(conflictVersion: conflictVersion) {
         return this.sourcesLookup[conflictVersion.sourceId] || "";
+    }
+
+    resolveToLocal() {
+        this.confirmationMessage("Sure?", "You're resolving all conflicts to local.", ["No", "Yes"])
+            .done(() => {
+                this.performResolve("ResolveToLocal");
+            });
+    }
+
+    resolveToNewestRemote() {
+        this.confirmationMessage("Sure?", "You're resolving all conflicts to newest remote.", ["No", "Yes"])
+            .done(() => {
+            this.performResolve("ResolveToRemote");
+        });
+    }
+
+    resolveToLatest() {
+        this.confirmationMessage("Sure?", "You're resolving all conflicts to latest.", ["No", "Yes"])
+            .done(() => {
+            this.performResolve("ResolveToLatest");
+        });
+    }
+    
+    private performResolve(resolution: string) {
+        new conflictsResolveCommand(this.activeDatabase(), resolution)
+            .execute()
+            .done(() => {
+                this.fetchConflicts(this.activeDatabase());
+            });
     }
 
 }
