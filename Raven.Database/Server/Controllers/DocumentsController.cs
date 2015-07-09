@@ -64,7 +64,7 @@ namespace Raven.Database.Server.Controllers
 		        int nextPageStart = GetNextPageStart();
 			    if (string.IsNullOrEmpty(startsWith))
 			    {
-				    var results = Database.Documents.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), 
+				    var results = Database.Documents.GetDocumentsAsJson(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), 
 						GetEtagFromQueryString(), cts.Token);
 				    msg = GetMessageWithObject(results);
 			    }

@@ -252,7 +252,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return ReadCurrentDocument(key);
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null)
         {
             Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -260,55 +260,67 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 yield break;
 
             long totalSize = 0;
-            int count = 0;
+            int fetchedDocumentCount = 0;
 
             Stopwatch duration = null;
             if (timeout != null)
                 duration = Stopwatch.StartNew();
 
+            Etag lastDocEtag = null;
+            Etag docEtag = etag;
+
             do
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                           
+                docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 
                 // We can skip many documents so the timeout should be at the start of the process to be executed.
                 if (timeout != null)
                 {
                     if (duration.Elapsed > timeout.Value)
-                        yield break;
-                }
+                        break;
+                }                
 
-                if (untilEtag != null && count > 0)
+                if (untilEtag != null && fetchedDocumentCount > 0)
                 {
-                    var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+                    // This is not a failure, we are just ahead of when we expected to. 
                     if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
-                        yield break;
+                        break;
                 }
 
                 var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
                 if (!string.IsNullOrEmpty(idPrefix))
                 {
-                    // Check if the ignore case is correct.
                     if (!key.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // We assume that we have processed it because it is not of our interest.
+                        lastDocEtag = docEtag;
                         continue;
+                    }                        
                 }
 
                 var readCurrentDocument = ReadCurrentDocument(key);
 
                 totalSize += readCurrentDocument.SerializedSizeOnDisk;
+                fetchedDocumentCount++;
 
                 yield return readCurrentDocument;
+                lastDocEtag = docEtag;  
 
                 if (maxSize != null && totalSize > maxSize.Value)
-                    yield break;
+                    break;  
+            } 
+            while (Api.TryMoveNext(session, Documents) && fetchedDocumentCount < take);
 
-                count++;
-
-            } while (Api.TryMoveNext(session, Documents) && count < take);
+            // We notify the last that we considered.
+            if (lastProcessedDocument != null)
+                lastProcessedDocument(lastDocEtag);
         }
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null)
 		{
-            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout);
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure);
 		}
 
 		public Etag GetBestNextDocumentEtag(Etag etag)
