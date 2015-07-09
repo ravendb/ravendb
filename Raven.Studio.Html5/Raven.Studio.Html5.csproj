@@ -1084,7 +1084,7 @@
     <TypeScriptCompile Include="App\viewmodels\resources\filesystemSettingsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\resources.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
-    <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeries1.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
