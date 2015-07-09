@@ -323,6 +323,21 @@ namespace Raven.Database.Server.Connections
 	        }
             finally
             {
+                if (EnvironmentUtils.RunningOnPosix == true)
+                {
+                    var closeAsync = (WebSocketCloseAsync)websocketContext["websocket.CloseAsync"];
+                    WebSocketCloseStatus status = WebSocketCloseStatus.EndpointUnavailable;
+                    var token = 
+                        CancellationTokenSource.CreateLinkedTokenSource((CancellationToken)websocketContext["websocket.CallCancelled"], 
+                        disconnectBecauseOfGcToken).Token;
+                    try {
+                        await closeAsync((int)status, "Heartbeat bad response", token);
+                    }
+                    catch
+                    {
+                        ///
+                    }
+                }
                 OnDisconnection();
             }
         }
