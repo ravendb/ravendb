@@ -271,7 +271,6 @@
     <Content Include="App\views\database\settings\sqlReplications.html" />
     <Content Include="App\views\database\settings\versioning.html" />
     <Content Include="App\views\database\status\alerts.html" />
-    <Content Include="App\views\database\status\alerts.html" />
     <Content Include="App\views\database\status\debug\statusDebug.html" />
     <Content Include="App\views\database\status\debug\statusDebugChanges.html" />
     <Content Include="App\views\database\status\debug\statusDebugConfig.html" />
