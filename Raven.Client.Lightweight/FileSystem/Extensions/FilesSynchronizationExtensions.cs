@@ -17,7 +17,7 @@ namespace Raven.Client.FileSystem.Extensions
 
             var result = new SynchronizationDestination()
             {
-                FileSystem = self.FileSystem,
+                FileSystem = self.FileSystemName,
                 ServerUrl = selfImpl.ServerUrl,               
             };
 

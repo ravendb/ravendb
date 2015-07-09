@@ -4,28 +4,25 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-    using Raven.Abstractions.Connection;
-
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
@@ -88,7 +85,7 @@ namespace Raven.Client.Connection
 
 		protected abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
 
-		protected readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
+		protected readonly ConcurrentDictionary<string, FailureCounter> failureCounts = new ConcurrentDictionary<string, FailureCounter>();
 
 		protected Task refreshReplicationInformationTask;
 

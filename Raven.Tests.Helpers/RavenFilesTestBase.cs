@@ -188,7 +188,7 @@ namespace Raven.Tests.Helpers
 				dataDirectory: dataDirectory, runInMemory: runInMemory);
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
-            var store = new FilesStore()
+            var store = new FilesStore
             {
                 Url = server.Url,
                 DefaultFileSystem = fileSystemName,

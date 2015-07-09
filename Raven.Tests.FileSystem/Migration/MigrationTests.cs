@@ -60,10 +60,10 @@ namespace Raven.Tests.FileSystem.Migration
 			await ValidateSource(source);
 			await ValidateDestination(destination);
 
-			await source.Admin.StartBackup(string.Format("source-{0}-{1}", build, storage), null, false, source.FileSystem);
+			await source.Admin.StartBackup(string.Format("source-{0}-{1}", build, storage), null, false, source.FileSystemName);
 			WaitForBackup(source, true);
 
-			await destination.Admin.StartBackup(string.Format("destination-{0}-{1}", build, storage), null, false, destination.FileSystem);
+			await destination.Admin.StartBackup(string.Format("destination-{0}-{1}", build, storage), null, false, destination.FileSystemName);
 			WaitForBackup(destination, true);
 		}
 

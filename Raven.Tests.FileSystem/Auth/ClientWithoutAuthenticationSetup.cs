@@ -25,10 +25,10 @@ namespace Raven.Tests.FileSystem.Auth
             {
                 await client.Admin.CreateFileSystemAsync(new FileSystemDocument()
                 {
-                    Id = "Raven/FileSystem/" + client.FileSystem,
+                    Id = "Raven/FileSystem/" + client.FileSystemName,
                     Settings =
                     {
-                        {Constants.FileSystem.DataDirectory, Path.Combine("FileSystems", client.FileSystem)}
+                        {Constants.FileSystem.DataDirectory, Path.Combine("FileSystems", client.FileSystemName)}
                     }
                 });
 

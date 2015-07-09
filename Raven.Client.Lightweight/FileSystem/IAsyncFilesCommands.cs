@@ -52,11 +52,11 @@ namespace Raven.Client.FileSystem
 
         FilesConvention Conventions { get; }
 
-        string FileSystem { get; }
+        string FileSystemName { get; }
 
         string UrlFor(string fileSystem = null);
 
-        IAsyncFilesCommands ForFileSystem(string fileSystem);
+        IAsyncFilesCommands ForFileSystem(string fileSystemName);
         IAsyncFilesCommands With(ICredentials credentials);
         IAsyncFilesCommands With(OperationCredentials credentials);
 
