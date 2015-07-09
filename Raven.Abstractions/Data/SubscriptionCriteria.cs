@@ -14,6 +14,7 @@ namespace Raven.Abstractions.Data
 	public class SubscriptionCriteria
 	{
 		public string KeyStartsWith { get; set; }
+		public Etag StartEtag { get; set; }
 
 		public string[] BelongsToAnyCollection { get; set; }
 
@@ -31,6 +32,7 @@ namespace Raven.Abstractions.Data
 		}
 
 		public string KeyStartsWith { get; set; }
+		public Etag StartEtag { get; set; }
 
 		public IDictionary<Expression<Func<T, object>>, RavenJToken> PropertiesMatch { get; set; }
 

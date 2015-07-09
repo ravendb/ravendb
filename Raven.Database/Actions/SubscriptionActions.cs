@@ -42,7 +42,8 @@ namespace Raven.Database.Actions
 				{
 					SubscriptionId = id,
 					Criteria = criteria,
-					AckEtag = Etag.Empty
+					AckEtag = Etag.Empty,
+					StartEtag = criteria.StartEtag
 				};
 
 				SaveSubscriptionConfig(id, config);
