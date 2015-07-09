@@ -101,6 +101,8 @@ namespace Raven.Client.Document
 			{
 				try
 				{
+                    Etag lastProcessedEtagOnClient = null;
+
 					while (true)
 					{
 						anySubscriber.WaitOne();
@@ -108,6 +110,7 @@ namespace Raven.Client.Document
 						cts.Token.ThrowIfCancellationRequested();
 
 						var pulledDocs = false;
+
 						Etag lastProcessedEtagOnServer = null;
 						int processedDocs = 0;
 
@@ -213,16 +216,23 @@ namespace Raven.Client.Document
                                 }
 
                                 AfterBatch(processedDocs);
+
+                                continue; // try to pull more documents from subscription
                             }
                             else
                             {
-                                // This is a silent acknowledge, this can happen because there was no documents in range
-                                // to be accessible in the time available. This condition can happen when documents must match
-                                // a set of conditions to be eligible.
-                                AcknowledgeBatchToServer(lastProcessedEtagOnServer);
-                            }
+                                if (lastProcessedEtagOnClient != lastProcessedEtagOnServer)
+                                {
+                                    // This is a silent acknowledge, this can happen because there was no documents in range
+                                    // to be accessible in the time available. This condition can happen when documents must match
+                                    // a set of conditions to be eligible.
+                                    AcknowledgeBatchToServer(lastProcessedEtagOnServer);
 
-							continue; // try to pull more documents from subscription
+                                    lastProcessedEtagOnClient = lastProcessedEtagOnServer;
+                                    
+                                    continue; // try to pull more documents from subscription
+                                }
+                            }							
 						}
 
 						while (newDocuments.WaitOne(options.ClientAliveNotificationInterval) == false)
