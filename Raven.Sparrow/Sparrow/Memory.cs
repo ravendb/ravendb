@@ -196,5 +196,41 @@ namespace Sparrow
 
             BulkCopy(dest, src, n);
         }
+
+        public unsafe static void Set(byte* dest, byte value, int n)
+        {
+            SetInline(dest, value, n);
+        }
+
+        /// <summary>
+        /// Set is optimized to handle copy operations where n is statistically small.       
+        /// </summary>
+        /// <remarks>This is a forced inline version, use with care.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static void SetInline(byte* dest, byte value, int n)
+        {
+            if (n == 0) 
+                return;
+
+            if (n < 512)
+            {
+
+                int block = 32, index = 0;
+                int length = Math.Min(block, n);
+
+                //Fill the initial array
+                while (index < length)
+                    dest[index++] = value;
+
+                length = n;
+                while (index < length)
+                {
+                    CopyInline(dest + index, dest, Math.Min(block, length - index));
+                    index += block;
+                    block *= 2;
+                }
+            }
+            else UnmanagedMemory.Set(dest, value, n);
+        }
     }
 }

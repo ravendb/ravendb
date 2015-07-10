@@ -40,9 +40,10 @@ namespace Voron.Trees.Compact
         public static PrefixTree Create(Transaction tx, TreeFlags flags = TreeFlags.None)
         {
             var newRootPage = tx.AllocatePage(1, PageFlags.Leaf);
+            
             var tree = new PrefixTree(tx, newRootPage.PageNumber);
-
             tree.State.RecordNewPage(newRootPage, 1);
+
             return tree;
         }
 
@@ -62,6 +63,16 @@ namespace Voron.Trees.Compact
         }
 
         public void Delete(Slice key, ushort? version = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Slice Successor( Slice key )
+        {
+            throw new NotImplementedException();
+        }
+
+        public Slice Predecessor( Slice key )
         {
             throw new NotImplementedException();
         }
