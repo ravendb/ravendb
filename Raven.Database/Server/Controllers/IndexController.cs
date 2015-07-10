@@ -253,6 +253,13 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			var instance = Database.IndexStorage.GetIndexInstance(index);
+
+			if (instance.Priority == IndexingPriority.Error && indexingPriority == IndexingPriority.Normal)
+			{
+				// recover the index from corruption by reopening it - is going to reset it if necessary
+				instance = Database.IndexStorage.ReopenErroredIndex(instance);	
+			}
+
 			Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
 			instance.Priority = indexingPriority;
 

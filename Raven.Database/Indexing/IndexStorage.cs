@@ -121,8 +121,14 @@ namespace Raven.Database.Indexing
 					// a power outage while the server was running.
 					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
-				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,indexDefinitionStorage.IndexNames, 
-					OpenIndexOnStartup);
+				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,indexDefinitionStorage.IndexNames,
+					name =>
+					{
+						var index = OpenIndex(name, onStartup: true, forceFullIndexCheck: false);
+
+						if(index != null)
+							indexes.TryAdd(index.IndexId, index);
+					});
 			}
 			catch (Exception e)
 			{
@@ -139,7 +145,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void OpenIndexOnStartup(string indexName)
+		private Index OpenIndex(string indexName, bool onStartup, bool forceFullIndexCheck)
 		{
 			if (indexName == null)
 				throw new ArgumentNullException("indexName");
@@ -148,9 +154,9 @@ namespace Raven.Database.Indexing
 
 			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
-				return;
+				return null;
 
-			Index indexImplementation;
+			Index indexImplementation = null;
 			bool resetTried = false;
 			bool recoveryTried = false;
 			string[] keysToDeleteAfterRecovery = null;
@@ -159,10 +165,17 @@ namespace Raven.Database.Indexing
 				Lucene.Net.Store.Directory luceneDirectory = null;
 				try
 				{
-					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
+					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried, forceFullIndexCheck: forceFullIndexCheck);
 					indexImplementation = CreateIndexImplementation(indexDefinition, luceneDirectory);
 
 					CheckIndexState(luceneDirectory, indexDefinition, indexImplementation, resetTried);
+
+					if (forceFullIndexCheck)
+					{
+						// the above index check might pass however an index writer creation can still throw an exception
+						// so we need to check it here to avoid crashing in runtime
+						new IndexWriter(luceneDirectory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
+					}
 
 					var simpleIndex = indexImplementation as SimpleIndex; // no need to do this on m/r indexes, since we rebuild them from saved data anyway
 					if (simpleIndex != null && keysToDeleteAfterRecovery != null)
@@ -217,11 +230,12 @@ namespace Raven.Database.Indexing
 					{
 						resetTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, forcibly resetting index", e);
-						TryResettingIndex(indexName, indexDefinition);
+						TryResettingIndex(indexName, indexDefinition, onStartup);
 					}
 				}
 			}
-			indexes.TryAdd(indexDefinition.IndexId, indexImplementation);
+
+			return indexImplementation;
 		}
 
 		private void CheckIndexState(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, Index index, bool resetTried)
@@ -281,12 +295,11 @@ namespace Raven.Database.Indexing
 			return index.PublicName.StartsWith("Auto/") && index.Priority == IndexingPriority.Idle;
 		}
 
-		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition)
+		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition, bool onStartup)
 		{
 			try
 			{
-				// we have to defer the work here until the database is actually ready for work
-				documentDatabase.OnIndexingWiringComplete += () =>
+				Action reset = () =>
 				{
 					try
 					{
@@ -305,6 +318,16 @@ namespace Raven.Database.Indexing
 						throw new InvalidOperationException("Could not finalize reseting of index: " + indexName, e);
 					}
 				};
+
+				if (onStartup)
+				{
+					// we have to defer the work here until the database is actually ready for work
+					documentDatabase.OnIndexingWiringComplete += reset;
+				}
+				else
+				{
+					reset();
+				}
 
 				var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString(CultureInfo.InvariantCulture));
 				IOExtensions.DeleteDirectory(indexFullPath);
@@ -429,7 +452,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, bool createIfMissing = true)
+		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, bool createIfMissing = true, bool forceFullIndexCheck = false)
 		{
 			Lucene.Net.Store.Directory directory;
 			if (configuration.RunInMemory ||
@@ -460,19 +483,35 @@ namespace Raven.Database.Indexing
 				else
 				{
 					EnsureIndexVersionMatches(directory, indexDefinition);
-					if (directory.FileExists("write.lock"))// force lock release, because it was still open when we shut down
+
+					if (forceFullIndexCheck == false)
+					{
+						if (directory.FileExists("write.lock")) // force lock release, because it was still open when we shut down
+						{
+							IndexWriter.Unlock(directory);
+							// for some reason, just calling unlock doesn't remove this file
+							directory.DeleteFile("write.lock");
+						}
+						if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
+						{
+							if (configuration.ResetIndexOnUncleanShutdown)
+								throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", indexDefinition.Name, indexFullPath));
+
+							CheckIndexAndTryToFix(directory, indexDefinition);
+							directory.DeleteFile("writing-to-index.lock");
+						}
+					}
+					else
 					{
 						IndexWriter.Unlock(directory);
-						// for some reason, just calling unlock doesn't remove this file
-						directory.DeleteFile("write.lock");
-					}
-					if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
-					{
-						if (configuration.ResetIndexOnUncleanShutdown)
-							throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", indexDefinition.Name, indexFullPath));
+
+						if (directory.FileExists("write.lock"))
+							directory.DeleteFile("write.lock");
 
 						CheckIndexAndTryToFix(directory, indexDefinition);
-						directory.DeleteFile("writing-to-index.lock");
+
+						if (directory.FileExists("writing-to-index.lock"))
+							directory.DeleteFile("writing-to-index.lock");
 					}
 				}
 			}
@@ -933,6 +972,29 @@ namespace Raven.Database.Indexing
 		{
 			var dirOnDisk = Path.Combine(path, id.ToString(CultureInfo.InvariantCulture));
 			IOExtensions.DeleteDirectory(dirOnDisk);
+		}
+
+		public Index ReopenErroredIndex(Index index)
+		{
+			if(index.Priority != IndexingPriority.Error)
+				throw new InvalidOperationException(string.Format("Index {0} isn't errored", index.PublicName));
+
+			index.Dispose();
+
+			try
+			{
+				var reopened = OpenIndex(index.PublicName, onStartup: false, forceFullIndexCheck: true);
+
+				if (reopened == null)
+					throw new InvalidOperationException("Reopened index cannot be null instance. Index name:" + index.PublicName);
+
+				return indexes.AddOrUpdate(reopened.IndexId, n => reopened, (s, existigIndex) => reopened);
+			}
+			catch (Exception e)
+			{
+				// TODO arek - need to handle a failure in reopening an index
+				throw;
+			}
 		}
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)

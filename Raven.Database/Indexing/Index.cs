@@ -1887,7 +1887,7 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		public void HandleWriteError(Exception e)
+		private void HandleWriteError(Exception e)
 		{
 			if (e.GetType() == typeof (SystemException)) // ignore transient errors
 				return;
@@ -1897,21 +1897,22 @@ namespace Raven.Database.Indexing
 			
 			if (e is IOException)
 			{
-				errorMessage = string.Format("Index '{0}' got corrupted because of failed write to a disk. The index priority was set to Error.", PublicName);
+				errorMessage = string.Format("Index '{0}' got corrupted because it failed in writing to a disk with the following exception message: {1}." +
+				                             " The index priority was set to Error.", PublicName, e.Message);
 				indexCorrupted = true;
 			}
 			else
 			{
-				writeErrors = Interlocked.Increment(ref writeErrors);
+				var errorCount = Interlocked.Increment(ref writeErrors);
 
-				if (Interlocked.Read(ref writeErrors) >= WriteErrorsLimit && Priority != IndexingPriority.Error)
+				if (errorCount >= WriteErrorsLimit)
 				{
-					errorMessage = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
+					errorMessage = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, errorCount);
 					indexCorrupted = true;
 				}
 			}
 
-			if (indexCorrupted == false)
+			if (indexCorrupted == false || (Priority & IndexingPriority.Error) == IndexingPriority.Error)
 				return;
 			
 			context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
@@ -1926,7 +1927,7 @@ namespace Raven.Database.Indexing
 			if (string.IsNullOrEmpty(errorMessage))
 				throw new ArgumentException("Error message has to be set");
 
-			logIndexing.Warn(errorMessage);
+			logIndexing.WarnException(errorMessage, e);
 			context.AddError(indexId, PublicName, null, errorMessage);
 
 			context.Database.AddAlert(new Alert
