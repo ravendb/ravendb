@@ -400,7 +400,7 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			//because the string can be encoded multiple times, try to decode with loop
-			while (Regex.IsMatch(str,"%[0-9A-Za-z]{1,2}"))
+			while (!String.IsNullOrWhiteSpace(str) && Regex.IsMatch(str,"%[0-9A-Za-z]{1,2}"))
 				str = HttpUtility.UrlDecode(str);
 
 			return str;
