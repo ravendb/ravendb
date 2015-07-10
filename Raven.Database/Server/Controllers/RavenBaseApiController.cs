@@ -400,14 +400,10 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			//because the string can be encoded multiple times, try to decode with loop
-			var tmp = String.Empty;
-			while (tmp.Equals(str) == false)
-			{
-				tmp = str;
+			while (Regex.IsMatch(str,"%[0-9A-Za-z]{1,2}"))
 				str = HttpUtility.UrlDecode(str);
-			}
-			
-			return HttpUtility.UrlDecode(str);
+
+			return str;
 		}
 
 		public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)

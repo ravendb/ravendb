@@ -27,6 +27,7 @@ namespace Raven.Tests.Issues
 					GetResults(url).Values().Should().NotBeEmpty();
 				}
 			}
+
 			[Fact]
 			public void DoubleEncodingInHttpQueryShouldWork()
 			{
