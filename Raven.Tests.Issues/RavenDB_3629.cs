@@ -82,8 +82,23 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				WaitForReplication(storeB, "foo/1");
-				WaitForReplication(storeB, "bar/1");
+				WaitForReplication(storeB, session =>
+				{
+					var foo = session.Load<Foo>("foo/1");
+					if (foo == null)
+						return false;
+
+					return foo.Data == "ChangedFooData";
+				});
+
+				WaitForReplication(storeB, session =>
+				{
+					var bar = session.Load<Bar>("bar/1");
+					if (bar == null)
+						return false;
+
+					return bar.Data == "ChangedBarData";
+				});
 
 				using (var session = storeB.OpenSession())
 				{
@@ -140,8 +155,23 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				WaitForReplication(storeB, "foo/1");
-				WaitForReplication(storeB, "bar/1");
+				WaitForReplication(storeB, session =>
+				{
+					var foo = session.Load<Foo>("foo/1");
+					if (foo == null)
+						return false;
+
+					return foo.Data == "ChangedFooData";
+				});
+
+				WaitForReplication(storeB, session =>
+				{
+					var bar = session.Load<Bar>("bar/1");
+					if (bar == null)
+						return false;
+
+					return bar.Data == "ChangedBarData";
+				});
 
 				using (var session = storeB.OpenSession())
 				{
