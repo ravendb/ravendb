@@ -1,5 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
-import timeSeries = require("models/timeSeries/timeSeries");
+import timeSeries = require("models/timeSeries/timeSeriesDocument");
 import pagedResultSet = require("common/pagedResultSet");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 

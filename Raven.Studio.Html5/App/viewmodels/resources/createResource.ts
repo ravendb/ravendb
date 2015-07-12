@@ -7,7 +7,7 @@ import createTimeSeries = require("viewmodels/resources/createTimeSeries");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import timeSeries = require("models/timeSeries/timeSeries");
+import timeSeries = require("models/timeSeries/timeSeriesDocument");
 
 class createResource extends dialogViewModelBase {
     databaseType = database.type;

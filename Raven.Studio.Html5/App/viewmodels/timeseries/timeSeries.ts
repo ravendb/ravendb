@@ -4,7 +4,7 @@ import virtualTable = require("widgets/virtualTable/viewModel");
 import changeSubscription = require("common/changeSubscription");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import timeSeries = require("models/timeSeries/timeSeries");
+import timeSeriesDocument = require("models/timeSeries/timeSeriesDocument");
 import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
 import getTimeSeriesKeysCommand = require("commands/timeSeries/getTimeSeriesKeysCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -106,12 +106,12 @@ class timeSeries extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
             ko.postbox.subscribe("ChangeTimeSeriesPointValue", () => this.changePoint()),
-            ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeries) => this.reloadTimeSeriesData(ts)),
+            ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeriesDocument) => this.reloadTimeSeriesData(ts)),
             ko.postbox.subscribe("SortKeys", () => this.sortKeys())
         ];
     }
 
-    private fetchKeys(ts: timeSeries): JQueryPromise<any> {
+    private fetchKeys(ts: timeSeriesDocument): JQueryPromise<any> {
         var deferred = $.Deferred();
 
         var getKeysCommand = new getTimeSeriesKeysCommand(ts);
@@ -119,7 +119,7 @@ class timeSeries extends viewModelBase {
         return deferred;
     }
 
-    keysLoaded(keys: Array<timeSeriesKey>, ts: timeSeries) {
+    keysLoaded(keys: Array<timeSeriesKey>, ts: timeSeriesDocument) {
         this.keys(keys);
 
         var keyToSelect = this.keys.first(g => g.name === this.keyToSelectName);
@@ -283,7 +283,7 @@ class timeSeries extends viewModelBase {
         return deferred;
     }
 
-    private reloadTimeSeriesData(ts: timeSeries) {
+    private reloadTimeSeriesData(ts: timeSeriesDocument) {
         if (ts.name === this.activeTimeSeries().name) {
             this.refreshKeys().done(() => this.refreshKeysData());
         }
