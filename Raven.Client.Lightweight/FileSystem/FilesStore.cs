@@ -133,26 +133,10 @@ namespace Raven.Client.FileSystem
 			fsName = fsName ?? DefaultFileSystem;
 			if (string.IsNullOrEmpty(fsName) == false)
 			{
-				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/fs/" + fsName;
+				key = MultiDatabase.GetRootFileSystemUrl(Url) + "/fs/" + fsName;
 			}
 
 			var result = replicationInformers.GetOrAdd(key, replicationUrl => Conventions.ReplicationInformerFactory(replicationUrl, jsonRequestFactory));
-
-			//TODO: do we need this?
-			/*if (FailoverServers == null)
-				return result;
-
-			if (dbName == DefaultDatabase)
-			{
-				if (FailoverServers.IsSetForDefaultDatabase && result.FailoverServers == null)
-					result.FailoverServers = FailoverServers.ForDefaultDatabase;
-			}
-			else
-			{
-				if (FailoverServers.IsSetForDatabase(dbName) && result.FailoverServers == null)
-					result.FailoverServers = FailoverServers.GetForDatabase(dbName);
-			}*/
-
 			return result;
 		}
 

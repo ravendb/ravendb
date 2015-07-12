@@ -54,7 +54,8 @@ namespace Raven.Client.FileSystem
                 FileSystemName = fileSystemName;
                 ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
-
+				if (replicationInformerGetter.Equals(DefaultReplicationInformerGetter) == false)
+					ReplicationInformer.UpdateReplicationInformationIfNeeded(this);
                 InitializeSecurity();
             }
             catch (Exception)

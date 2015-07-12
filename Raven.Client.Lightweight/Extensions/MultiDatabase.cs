@@ -69,6 +69,17 @@ namespace Raven.Client.Extensions
             return databaseUrl;
         }
 
+		public static string GetRootFileSystemUrl(string url)
+		{
+			var fileSystemUrl = url;
+			var indexOfDatabases = fileSystemUrl.IndexOf("/fs/", StringComparison.OrdinalIgnoreCase);
+			if (indexOfDatabases != -1)
+				fileSystemUrl = fileSystemUrl.Substring(0, indexOfDatabases);
+			if (fileSystemUrl.EndsWith("/"))
+				return fileSystemUrl.Substring(0, fileSystemUrl.Length - 1);
+			return fileSystemUrl;
+		}
+
         public static string GetDatabaseName(string url)
         {
             if (url == null)
