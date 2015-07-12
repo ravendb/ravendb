@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -23,6 +24,8 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public static class IndexCreation
 	{
+	    private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
 		/// <summary>
 		/// Creates the indexes found in the specified assembly.
 		/// </summary>
@@ -145,8 +148,9 @@ namespace Raven.Client.Indexes
 				documentStore.DatabaseCommands.PutIndexes(indexesNames, definitions, priorities);
 			}
 				// For old servers that don't have the new entrypoint for executing multiple indexes
-			catch (Exception)
+			catch (Exception ex)
 			{
+			    Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
 				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 				{
 					try

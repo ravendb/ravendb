@@ -1258,6 +1258,9 @@ namespace NDesk.Options
 
 		[Description("Import Database/FileSystem")]
 		SmugglerImportDatabaseFileSystem = 1 << 13,
+
+		[Description("Record/Replay Options")]
+		TrafficRecordReplay = 1 << 14,
 	}
 }
 

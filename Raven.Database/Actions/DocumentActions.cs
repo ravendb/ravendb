@@ -414,15 +414,22 @@ namespace Raven.Database.Actions
             return info;
         }
 
-        public RavenJArray GetDocuments(int start, int pageSize, Etag etag, CancellationToken token)
+        public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag, CancellationToken token)
         {
             var list = new RavenJArray();
-            GetDocuments(start, pageSize, etag, token, doc => list.Add(doc.ToJson()));
+            GetDocuments(start, pageSize, etag, token, doc => { list.Add(doc.ToJson()); return true; });
             return list;
         }
 
-        public void GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<JsonDocument> addDocument)
+        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<JsonDocument> addDocument)
         {
+            return GetDocuments(start, pageSize, etag, token, x => { addDocument(x); return true; });
+        }
+
+        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument)
+        {
+            Etag lastDocumentReadEtag = null;
+
             TransactionalStorage.Batch(actions =>
             {
                 bool returnedDocs = false;
@@ -431,47 +438,63 @@ namespace Raven.Database.Actions
                     var documents = etag == null
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
                                         : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
+
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     int docCount = 0;
                     foreach (var doc in documents)
                     {
                         docCount++;
+
                         token.ThrowIfCancellationRequested();
+
                         if (etag != null)
                             etag = doc.Etag;
+
                         JsonDocument.EnsureIdInMetadata(doc);
+
                         var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
-                        document = documentRetriever
-                            .ExecuteReadTriggers(document, null, ReadOperation.Load);
+                        
+                        document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
                         if (document == null)
                             continue;
-
-                        addDocument(document);
+                        
                         returnedDocs = true;
                         Database.WorkContext.UpdateFoundWork();
+                        
+                        bool canContinue = addDocument(document);
+                        if (!canContinue)
+                            break;
+
+                        lastDocumentReadEtag = etag;
                     }
+
                     if (returnedDocs || docCount == 0)
                         break;
+
                     start += docCount;
                 }
             });
+
+            return lastDocumentReadEtag;
         }
 
-        public Etag GetDocumentsWithIdStartingWith(string idPrefix, int pageSize, Etag etag, CancellationToken token, Action<JsonDocument> addDocument)
+        public Etag GetDocumentsWithIdStartingWith(string idPrefix, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument)
         {
+            Etag lastDocumentReadEtag = null;
+
             TransactionalStorage.Batch(actions =>
             {
                 bool returnedDocs = false;
                 while (true)
                 {
-                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2));
+                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => lastDocumentReadEtag = x );
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     
                     int docCount = 0;
                     foreach (var doc in documents)
                     {
-                        docCount++;
+                        docCount++;                        
                         token.ThrowIfCancellationRequested();
                         
                         etag = doc.Etag;
@@ -485,22 +508,31 @@ namespace Raven.Database.Actions
                         if (document == null)
                             continue;
 
-                        addDocument(document);
-                        
                         returnedDocs = true;
                         Database.WorkContext.UpdateFoundWork();
+
+                        bool canContinue = addDocument(document);                                                                          
+                        if (!canContinue)
+                            break;
                     }
 
-                    if (returnedDocs || docCount == 0)
+                    if (returnedDocs)
                         break;
+
+                    // No document was found that matches the requested criteria
+                    if ( docCount == 0 )
+                    {
+                        // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
+                        if (lastDocumentReadEtag != null)
+                            etag = lastDocumentReadEtag;
+
+                        break;
+                    }
                 }
             });
 
             return etag;
         }
-
-
-
 
         public JsonDocument Get(string key, TransactionInformation transactionInformation)
         {
