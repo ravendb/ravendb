@@ -123,7 +123,9 @@ class timeSeries extends viewModelBase {
         this.keys(keys);
 
         var keyToSelect = this.keys.first(g => g.name === this.keyToSelectName);
-        keyToSelect.activate();
+        if (keyToSelect) {
+            keyToSelect.activate();
+        }
     }
 
     newPoint() {/*
