@@ -21,10 +21,11 @@ namespace Raven.Client.Connection.Async
             CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             RequestFactory = jsonRequestFactory;
             SessionId = sessionId;
-            
-            OperationsHeaders = operationsHeaders ?? new NameValueCollection();
-	        this.ReplicationInformerGetter = replicationInformerGetter;
+
+			OperationsHeaders = operationsHeaders ?? DefaultNameValueCollection;
+	        ReplicationInformerGetter = replicationInformerGetter;
 			replicationInformer = new Lazy<TReplicationInformer>(() => replicationInformerGetter(resourceName), true);
+			//this.replicationInformer.Value.UpdateReplicationInformationIfNeeded
             readStrippingBase = new Lazy<int>(() => ReplicationInformer.GetReadStripingBase(true), true);
 
             MaxQuerySizeForGetRequest = 8 * 1024;
@@ -64,17 +65,12 @@ namespace Raven.Client.Connection.Async
         /// Allow access to the replication informer used to determine how we replicate requests
         /// </summary>
         public TReplicationInformer ReplicationInformer { get { return replicationInformer.Value; } }
+		protected readonly Func<string, TReplicationInformer> ReplicationInformerGetter;
 
         private readonly Lazy<int> readStrippingBase;
         private int requestCount;
         private volatile bool currentlyExecuting;
-
-
-
-		protected readonly Func<string, TReplicationInformer> ReplicationInformerGetter;
-
-
-
+		private static readonly NameValueCollection DefaultNameValueCollection = new NameValueCollection();
 
 	    internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation)
         {

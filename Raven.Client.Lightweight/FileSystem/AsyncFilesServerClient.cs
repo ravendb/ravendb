@@ -1,25 +1,4 @@
-﻿using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.FileSystem.Notifications;
-using Raven.Abstractions.OAuth;
-using Raven.Abstractions.Util;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
-using Raven.Client.Connection.Implementation;
-using Raven.Client.Connection.Profiling;
-using Raven.Client.Extensions;
-using Raven.Client.FileSystem.Changes;
-using Raven.Client.FileSystem.Connection;
-using Raven.Client.FileSystem.Extensions;
-using Raven.Client.FileSystem.Listeners;
-using Raven.Client.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -28,8 +7,25 @@ using System.Net;
 using System.Net.Http;
 using System.Security;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.OAuth;
+using Raven.Abstractions.Util;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Implementation;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.Extensions;
+using Raven.Client.FileSystem.Connection;
+using Raven.Client.FileSystem.Extensions;
+using Raven.Client.FileSystem.Listeners;
+using Raven.Client.Util;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Client.FileSystem
@@ -41,11 +37,6 @@ namespace Raven.Client.FileSystem
         private bool resolvingConflict = false;
         private const int DefaultNumberOfCachedRequests = 2048;
 
-        private static HttpJsonRequestFactory GetHttpJsonRequestFactory()
-        {
-              return new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-        }
-
         /// <summary>
         /// Notify when the failover status changed
         /// </summary>
@@ -55,7 +46,7 @@ namespace Raven.Client.FileSystem
             remove { ReplicationInformer.FailoverStatusChanged -= value; }
         }
 
-        public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, Func<string, IFilesReplicationInformer> replicationInformerGetter, IFilesConflictListener[] conflictListeners, NameValueCollection operationsHeaders = null)
+		public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, Func<string, IFilesReplicationInformer> replicationInformerGetter, IFilesConflictListener[] conflictListeners, NameValueCollection operationsHeaders = null)
 			: base(serverUrl, conventions, credentials, requestFactory, sessionId, operationsHeaders, replicationInformerGetter, fileSystemName)
         {
             try
@@ -73,20 +64,14 @@ namespace Raven.Client.FileSystem
             }
         }
 
+		private static readonly FilesConvention DefaultFilesConvention = new FilesConvention();
+		private static readonly HttpJsonRequestFactory JsonRequestFactory = new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+		private static readonly Func<string, IFilesReplicationInformer> DefaultReplicationInformerGetter = (x) => new FilesReplicationInformer(new FilesConvention(), JsonRequestFactory);
+
         public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
-			: this(serverUrl, fileSystemName, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), GetHttpJsonRequestFactory(), null, (x) => new FilesReplicationInformer(new FilesConvention(), GetHttpJsonRequestFactory()), null, new NameValueCollection())
+			: this(serverUrl, fileSystemName, DefaultFilesConvention, new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), JsonRequestFactory, null, DefaultReplicationInformerGetter, null)
         {
         }
-
-        /*protected override IFilesReplicationInformer GetReplicationInformer()
-        {
-			return Conventions.ReplicationInformerFactory(FileSystemName, RequestFactory);
-        }*/
-
-	    /*private Func<object, FilesReplicationInformer> ReplicationInformerGetter()
-        {
-			return (x) => new FilesReplicationInformer(Conventions, RequestFactory);
-        }*/
 
         protected override string BaseUrl
         {
