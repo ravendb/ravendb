@@ -60,7 +60,7 @@ namespace Raven.Tests.Storage
 		{
 			db.Documents.Put(" ", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
-			var doc = db.Documents.GetDocuments(0, 10, null, CancellationToken.None)
+			var doc = db.Documents.GetDocumentsAsJson(0, 10, null, CancellationToken.None)
 				.OfType<RavenJObject>()
 				.Single();
 			var id = doc["@metadata"].Value<string>("@id");
