@@ -399,8 +399,8 @@ namespace Raven.Database.Server.Controllers
 				return Uri.EscapeDataString(str);
 			}
 
-			//because the string can be encoded multiple times, try to decode with loop
-			while (!String.IsNullOrWhiteSpace(str) && Regex.IsMatch(str,"%[0-9A-Za-z]{1,2}"))
+			str = HttpUtility.UrlDecode(str);
+			if (Regex.IsMatch(str, "%[0-9A-Za-z]{1,2}"))
 				str = HttpUtility.UrlDecode(str);
 
 			return str;
