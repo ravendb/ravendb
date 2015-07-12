@@ -7118,7 +7118,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   text-overflow: ellipsis;
   max-width: 90%;
 }
-.document-collections li:not(:first-child) {
+.document-collections.has-show-all-items li:not(:first-child) {
   padding-left: 15px;
 }
 #index-merge-suggestions .index-name {
@@ -8126,7 +8126,12 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   background-color: #ffffcc;
   margin-top: 5px;
   border: 1px solid;
-  border-radius: 25px;
+  padding: 5px;
+  border: 1px solid #999999;
+}
+#fileSystemFilesPage .files-select .select-link {
+  text-decoration: underline;
+  cursor: pointer;
 }
 #editFileContainer:focus {
   outline: 0;

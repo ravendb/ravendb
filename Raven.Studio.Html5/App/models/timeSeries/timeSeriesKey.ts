@@ -9,11 +9,10 @@ class timeSeriesKey implements ICollectionBase {
 	name = "";
     private timeSeriesList: pagedList;
     private static prefixColorMaps: resourceStyleMap[] = [];
-    timeSeriesCount = ko.observable<number>(0);
-    timeSeriesCountWithThousandsSeparator = ko.computed(() => this.timeSeriesCount().toLocaleString());
+    pointsCount = ko.observable<number>(0);
+    timeSeriesCountWithThousandsSeparator = ko.computed(() => this.pointsCount().toLocaleString());
     
-    constructor(public prefix: string, public key: string, private ownerTimeSeries: timeSeries, count: number = 0) {
-        this.timeSeriesCount(count);
+    constructor(public prefix: string, public key: string, public valueLength: number, private ownerTimeSeries: timeSeries) {
         this.name = prefix + "/" + key;
         this.colorClass = timeSeriesKey.getPrefixCssClass(this.prefix, ownerTimeSeries);
     }
@@ -36,7 +35,9 @@ class timeSeriesKey implements ICollectionBase {
 	}
 
     static fromDto(dto: timeSeriesKeyDto, ts: timeSeries): timeSeriesKey {
-        return new timeSeriesKey(dto.Prefix, dto.Key, ts, dto.Count);
+        var _new = new timeSeriesKey(dto.Prefix, dto.Key, dto.ValueLength, ts);
+        _new.pointsCount(dto.PointsCount);
+        return _new;
     }
 
     static getPrefixCssClass(prefix: string, ts: timeSeries): string {

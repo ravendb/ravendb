@@ -8,6 +8,7 @@ import timeSeriesDocument = require("models/timeSeries/timeSeriesDocument");
 import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
 import getTimeSeriesKeysCommand = require("commands/timeSeries/getTimeSeriesKeysCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+// import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
 
 class timeSeries extends viewModelBase {
 
@@ -38,7 +39,7 @@ class timeSeries extends viewModelBase {
         this.hasTimeSeries = ko.computed(() => {
             var selectedKey: timeSeriesKey = this.selectedKey();
             if (!!selectedKey) {
-                return this.selectedKey().timeSeriesCount() > 0;
+                return this.selectedKey().pointsCount() > 0;
             }
             return false;
         });
@@ -48,7 +49,7 @@ class timeSeries extends viewModelBase {
         this.hasAllTimeSeriesSelected = ko.computed(() => {
             var numOfSelectedTimeSeries = this.selectedTimeSeriesIndices().length;
             if (!!this.selectedKey() && numOfSelectedTimeSeries !== 0) {
-                return numOfSelectedTimeSeries === this.selectedKey().timeSeriesCount();
+                return numOfSelectedTimeSeries === this.selectedKey().pointsCount();
             }
             return false;
         });
@@ -68,7 +69,7 @@ class timeSeries extends viewModelBase {
         //TODO: update this in documentation
         //this.updateHelpLink('G8CDCP');
 
-        // We can optionally pass in a key name to view's URL, e.g. #timeSeriestorages/timeSeries?key=Foo&timeSeriestorage=test
+        // We can optionally pass in a key name to view's URL, e.g. #timeSeries/timeSeries?key=Foo&timeSeriestorage=test
         this.keyToSelectName = args ? args.key : null;
 
         var ts = this.activeTimeSeries();
@@ -128,14 +129,14 @@ class timeSeries extends viewModelBase {
         }
     }
 
-    newPoint() {/*
-        var timeSeriesChangeVm = new editTimeSeriesDialog();
-        timeSeriesChangeVm.updateTask.done((change: timeSeriesChange) => {
+    newPoint() {
+        /*var changeVm = new editPointDialog();
+        changeVm.updateTask.done((change: timeSeriesChange) => {
             var timeSeriesCommand = new updateTimeSeriesCommand(this.activeTimeSeries(), change.key(), change.timeSeriesName(), change.delta(), change.isNew());
             var execute = timeSeriesCommand.execute();
 			execute.done(() => this.refreshGridAndGroup(change.key()));
         });
-        app.showDialog(timeSeriesChangeVm);*/
+        app.showDialog(changeVm);*/
     }
 
 	refresh() {
@@ -197,7 +198,7 @@ class timeSeries extends viewModelBase {
         var timeSeriesGrid = this.getTimeSeriesGrid();
         var key: timeSeriesKey = this.selectedKey();
         if (!!timeSeriesGrid && !!key) {
-            timeSeriesGrid.selectAll(key.timeSeriesCount());
+            timeSeriesGrid.selectAll(key.pointsCount());
         }
     }
 
@@ -251,7 +252,7 @@ class timeSeries extends viewModelBase {
             if (!foundGroup) {
                 this.keys.push(receivedGroup);
             } else {
-                foundGroup.timeSeriesCount(receivedGroup.timeSeriesCount());
+                foundGroup.pointsCount(receivedGroup.pointsCount());
             }
         });
     }

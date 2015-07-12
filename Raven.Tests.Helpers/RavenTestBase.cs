@@ -817,7 +817,7 @@ namespace Raven.Tests.Helpers
 
 	    }*/
 
-		protected void WaitForUserToContinueTheTest(bool debug = true, string url = null)
+		protected void WaitForUserToContinueTheTest(bool debug = true, string url = null, string startPage = null)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
@@ -829,7 +829,7 @@ namespace Raven.Tests.Helpers
 			}.Initialize())
 			{
                 var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
-                var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+                var documentsPage = documentStore.Url + (startPage ?? "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true");
 				var request = WebRequest.Create(documentsPage);
 
 				try

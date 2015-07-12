@@ -1,7 +1,8 @@
 interface timeSeriesKeyDto {
     Prefix: string;
+    ValueLength: number;
     Key: string;
-    Count: number;
+    PointsCount: number;
 }
 
 interface timeSeriesPointDto {

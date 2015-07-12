@@ -1,6 +1,6 @@
 ﻿<div class="documents-page no-outline" tabindex="0">
     <div id="documents-page-container" class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
-		<ul class="nav nav-pills nav-stacked document-collections" data-bind="template: { foreach: groups, afterAdd: showGroupElement, beforeRemove: hideGroupElement }">
+		<ul class="nav nav-pills nav-stacked document-collections has-show-all-items" data-bind="template: { foreach: groups, afterAdd: showGroupElement, beforeRemove: hideGroupElement }">
 			<li data-bind="event: { mousedown: $parent.selectGroup.bind($parent) }, css: { active: $data === $parent.selectedGroup() }, visible: countersCount() > 0 || isAllGroupsGroup">
 				<a href="javascript: void(0)">
 					<div class="collection-name">

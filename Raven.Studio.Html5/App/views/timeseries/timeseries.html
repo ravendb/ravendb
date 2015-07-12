@@ -1,12 +1,12 @@
 ﻿<div class="documents-page no-outline" tabindex="0">
     <div id="documents-page-container" class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
-		<ul class="nav nav-pills nav-stacked document-collections" data-bind="template: { foreach: keys, afterAdd: showKeyElement, beforeRemove: hideKeyElement }">
-			<li data-bind="event: { mousedown: $parent.selectKey.bind($parent) }, css: { active: $data === $parent.selectedKey() }, visible: timeSeriesCount() > 0">
+		<ul class="nav nav-pills nav-stacked document-collections time-series-keys-collection" data-bind="template: { foreach: keys, afterAdd: showKeyElement, beforeRemove: hideKeyElement }">
+			<li data-bind="event: { mousedown: $parent.selectKey.bind($parent) }, css: { active: $data === $parent.selectedKey() }">
 				<a href="javascript: void(0)">
 					<div class="collection-name">
 						<div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
 						<span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: { title: name }"></span>
-						<span class="collection-text pull-left text-muted" data-bind="css: { 'text-muted': $data !== $parent.selectedKey() }, text:  '&nbsp;(' + timeSeriesCountWithThousandsSeparator() + ')', updateHighlighting: timeSeriesCount()"></span>
+						<span class="collection-text pull-left text-muted" data-bind="css: { 'text-muted': $data !== $parent.selectedKey() }, text:  '&nbsp;(' + timeSeriesCountWithThousandsSeparator() + ')', updateHighlighting: pointsCount()"></span>
 					</div>
 				</a>
 			</li>

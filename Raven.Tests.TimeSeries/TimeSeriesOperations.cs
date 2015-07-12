@@ -157,6 +157,8 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(2, stats.PrefixesCount);
 				Assert.Equal(3, stats.KeysCount);
 				Assert.Equal(1888 * 3, stats.ValuesCount);
+
+				WaitForUserToContinueTheTest(startPage: "/studio/index.html#timeseries/series?prefix=-Simple&key=Money&timeseries=SeriesName-1");
 			}
 		}
 
@@ -180,12 +182,24 @@ namespace Raven.Tests.TimeSeries
 
 				var keys = await store.Advanced.GetKeys(cancellationToken);
 				Assert.Equal(3, keys.Length);
-				Assert.Equal("-ForValues", keys[0].Prefix);
-				Assert.Equal("Time", keys[0].Key);
-				Assert.Equal("-Simple", keys[1].Prefix);
-				Assert.Equal("Is", keys[1].Key);
-				Assert.Equal("-Simple", keys[2].Prefix);
-				Assert.Equal("Money", keys[2].Key);
+				
+				var time = keys[0];
+				Assert.Equal("-ForValues", time.Prefix);
+				Assert.Equal(4, time.ValueLength);
+				Assert.Equal("Time", time.Key);
+				Assert.Equal(4, time.PointsCount);
+
+				var _is = keys[1];
+				Assert.Equal("-Simple", _is.Prefix);
+				Assert.Equal(1, _is.ValueLength);
+				Assert.Equal("Is", _is.Key);
+				Assert.Equal(2, _is.PointsCount);
+
+				var money = keys[2];
+				Assert.Equal("-Simple", money.Prefix);
+				Assert.Equal(1, money.ValueLength);
+				Assert.Equal("Money", money.Key);
+				Assert.Equal(1, money.PointsCount);
 			}
 		}
 	}

@@ -490,6 +490,8 @@ namespace Raven.Database.TimeSeries
 						do
 						{
 							var prefixedTreeName = rootIt.CurrentKey.ToString();
+							var prefix = prefixedTreeName.Replace(SeriesTreePrefix, "");
+							var valueLength = storage.GetPrefixConfiguration(prefix);
 							var tree = tx.ReadTree(prefixedTreeName);
 							using (var it = tree.Iterate())
 							{
@@ -497,10 +499,26 @@ namespace Raven.Database.TimeSeries
 								{
 									do
 									{
+										var key = it.CurrentKey.ToString();
+										var fixedTree = tree.FixedTreeFor(key, (byte) (valueLength * sizeof(double)));
+										long pointsCount = 0;
+										using (var fixedIt = fixedTree.Iterate())
+										{
+											if (fixedIt.Seek(DateTime.MinValue.Ticks))
+											{
+												do
+												{
+													pointsCount++;
+												} while (fixedIt.MoveNext());
+											}
+										}
+
 										yield return new TimeSeriesKey
 										{
-											Prefix = prefixedTreeName.Replace(SeriesTreePrefix, ""),
-											Key = it.CurrentKey.ToString(),
+											Prefix = prefix,
+											ValueLength = valueLength,
+											Key = key,
+											PointsCount = pointsCount,
 										};
 									} while (it.MoveNext());
 								}
