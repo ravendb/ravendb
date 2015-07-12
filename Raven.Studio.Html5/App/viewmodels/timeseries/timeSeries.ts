@@ -106,15 +106,15 @@ class timeSeries extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
             ko.postbox.subscribe("ChangeTimeSeriesPointValue", () => this.changePoint()),
-            ko.postbox.subscribe("ChangesApiReconnected", (cs: timeSeriesModel) => this.reloadTimeSeriesData(cs)),
+            ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeriesModel) => this.reloadTimeSeriesData(ts)),
             ko.postbox.subscribe("SortKeys", () => this.sortKeys())
         ];
     }
 
-    private fetchKeys(cs: timeSeriesModel): JQueryPromise<any> {
+    private fetchKeys(ts: timeSeriesModel): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var getKeysCommand = new getTimeSeriesKeysCommand(cs);
+        var getKeysCommand = new getTimeSeriesKeysCommand(ts);
         getKeysCommand.execute().done((results: timeSeriesKey[]) => deferred.resolve(results));
         return deferred;
     }
@@ -272,9 +272,9 @@ class timeSeries extends viewModelBase {
 
     private refreshKeys(): JQueryPromise<any> {
         var deferred = $.Deferred();
-        var cs = this.activeTimeSeries();
+        var ts = this.activeTimeSeries();
 
-        this.fetchKeys(cs).done(results => {
+        this.fetchKeys(ts).done(results => {
             this.updateKeys(results);
 	        this.refreshKeysData();
             deferred.resolve();
@@ -283,8 +283,8 @@ class timeSeries extends viewModelBase {
         return deferred;
     }
 
-    private reloadTimeSeriesData(cs: timeSeriesModel) {
-        if (cs.name === this.activeTimeSeries().name) {
+    private reloadTimeSeriesData(ts: timeSeriesModel) {
+        if (ts.name === this.activeTimeSeries().name) {
             this.refreshKeys().done(() => this.refreshKeysData());
         }
     }

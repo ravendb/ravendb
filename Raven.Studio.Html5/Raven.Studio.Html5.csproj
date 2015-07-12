@@ -386,7 +386,8 @@
     <Content Include="App\views\resources\filesystemSettingsDialog.html" />
     <Content Include="App\views\resources\resources.html" />
     <Content Include="App\views\shell.html" />
-    <Content Include="App\views\timeSeries\timeSeriesVM.html" />
+    <Content Include="App\views\timeSeries\timeSeriesStats.html" />
+    <Content Include="App\views\timeSeries\timeSeries.html" />
     <Content Include="App\widgets\virtualTable\view.html" />
     <Content Include="Content\app.css">
       <DependentUpon>app.less</DependentUpon>
