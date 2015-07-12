@@ -886,13 +886,6 @@ interface statusDebugChangesFileSystemDto {
     WatchedFolders: Array<string>;
 }
 
-interface statusDebugChangesTimeSeriesDto {
-    WatchedChanges: Array<string>;
-    WatchedLocalChanges: Array<string>;
-    WatchedReplicationChanges: Array<string>;
-    WatchedBulkOperationsChanges: Array<string>;
-}
-
 interface statusDebugMetricsDto {
     DocsWritesPerSecond: number;
     IndexedPerSecond: number;

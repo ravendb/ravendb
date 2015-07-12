@@ -415,7 +415,8 @@ class shell extends viewModelBase {
 
     private activateTimeSeries(ts: timeSeries) {
         var changesSubscriptionArray = () => [
-            //TODO: enable changes api for counter storages, server side
+            changesContext.currentResourceChangesApi().watchAllTimeSeries(() => this.fetchTimeSeriesStats(ts)),
+            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.fetchTimeSeriesStats(ts))
         ];
         var isNotATimeSeries = this.currentConnectedResource instanceof timeSeries === false;
         this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTimeSeriesStats(ts), changesSubscriptionArray);

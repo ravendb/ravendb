@@ -72,7 +72,7 @@ class viewModelBase {
                 return { redirect: appUrl.forResources() };
             }
         } else if (resource instanceof timeSeries) {
-            var ts = this.activeCounterStorage();
+            var ts = this.activeTimeSeries();
 
             if (!!ts && ts.disabled()) {
                 messagePublisher.reportError("Time Series '" + ts.name + "' is disabled!", "You can't access any section of the time series while it's disabled.");
