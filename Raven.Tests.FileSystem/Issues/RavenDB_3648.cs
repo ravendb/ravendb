@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Tests.FileSystem.Synchronization.IO;
@@ -27,14 +29,12 @@ namespace Raven.Tests.FileSystem.Issues
 				var sourceClient = (IAsyncFilesCommandsImpl)store1.AsyncFilesCommands;
 				var destinationClient = store2.AsyncFilesCommands;
 
-				
-
 				var destination = destinationClient.ToSynchronizationDestination();
 				await sourceClient.Synchronization.SetDestinationsAsync(destination);
 				sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
 				await sourceClient.Synchronization.StartAsync();
 
-				var source1Content = new RandomStream(10000);
+				var source1Content = new RandomStream(1000);
 				await sourceClient.UploadAsync("test1.bin", source1Content);
 
 				var sourceFiles = await sourceClient.DownloadAsync("test1.bin");

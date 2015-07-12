@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 
 namespace Raven.Client.FileSystem.Connection
