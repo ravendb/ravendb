@@ -161,6 +161,7 @@ namespace Raven.Tests.Helpers
                 ApiKey = apiKey
             };
 
+			ModifyStore(store);
             store.Initialize(ensureFileSystemExists: true, failIfCannotCreate: true);
 
             this.filesStores.Add(store);
@@ -194,6 +195,7 @@ namespace Raven.Tests.Helpers
                 ApiKey = apiKey,
             };
 
+			ModifyStore(store);
             store.Initialize(true);
 
             filesStores.Add(store);
@@ -489,6 +491,10 @@ namespace Raven.Tests.Helpers
 				return exception;
 			}
 			return null;
+		}
+
+		protected virtual void ModifyStore(FilesStore store)
+		{
 		}
     }
 }

@@ -3,29 +3,108 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.IO;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
-using Raven.Tests.FileSystem.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization;
 using Xunit;
 using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Issues
 {
-	public class RavenDB_3648 : RavenFilesTestWithLogs
+	public class RavenDB_3648 : RavenSynchronizationTestBase
 	{
 		[Theory]
 		[InlineData("voron")]
-		//[InlineData("esent")]
-		public async Task DownloadingWithZeroSize(string storage)
+		[InlineData("esent")]
+		public async Task failover_with_two_servers(string storage)
+		{
+			using(var store0 = NewStore(0, fiddler: true, fileSystemName: "fs1"))
+			using(var store1 = NewStore(1, fiddler: true, fileSystemName: "fs2"))
+			{
+				var sourceClient = (IAsyncFilesCommandsImpl)store0.AsyncFilesCommands;
+				var destinationClient = store1.AsyncFilesCommands;
+
+				var destination = destinationClient.ToSynchronizationDestination();
+				await sourceClient.Synchronization.SetDestinationsAsync(destination);
+				sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
+				await sourceClient.Synchronization.StartAsync();
+
+				await sourceClient.UploadAsync(FileName, StringToStream(FileText));
+				var test1 = StreamToString(await sourceClient.DownloadAsync(FileName));
+				Assert.Equal(FileText, test1);
+
+				await WaitForSynchronization(store1);
+
+				var server = GetServer(0);
+				server.Dispose();
+				using (var session = store0.OpenAsyncSession())
+				{
+					var test2 = StreamToString(await session.DownloadAsync(FileName));
+					Assert.Equal(FileText, test2);
+				}
+			}
+		}
+
+		[Theory]
+		[InlineData("voron")]
+		[InlineData("esent")]
+		public async Task failover_with_three_servers(string storage)
 		{
 			using(var store1 = NewStore(0, fiddler: true, fileSystemName: "fs1"))
 			using (var store2 = NewStore(1, fiddler: true, fileSystemName: "fs2"))
+			using (var store3 = NewStore(2, fiddler: true, fileSystemName: "fs3"))
 			{
+				var sourceClient1 = (IAsyncFilesCommandsImpl)store1.AsyncFilesCommands;
+				var destinationClient1 = store2.AsyncFilesCommands;
+				var destinationClient2 = store3.AsyncFilesCommands;
+
+				var destination1 = destinationClient1.ToSynchronizationDestination();
+				var destination2 = destinationClient2.ToSynchronizationDestination();
+				await sourceClient1.Synchronization.SetDestinationsAsync(destination1, destination2);
+				sourceClient1.ReplicationInformer.RefreshReplicationInformation(sourceClient1);
+				await sourceClient1.Synchronization.StartAsync();
+
+				await sourceClient1.UploadAsync(FileName, StringToStream(FileText));
+				var test1 = StreamToString(await sourceClient1.DownloadAsync(FileName));
+				Assert.Equal(FileText, test1);
+
+				await WaitForSynchronization(store2);
+
+				var server = GetServer(0);
+				server.Dispose();
+				using (var session = store1.OpenAsyncSession())
+				{
+					var test2 = StreamToString(await session.DownloadAsync(FileName));
+					Assert.Equal(FileText, test2);
+				}
+
+				await WaitForSynchronization(store3);
+				server = GetServer(1);
+				server.Dispose();
+
+				using (var session = store1.OpenAsyncSession())
+				{
+					var test2 = StreamToString(await session.DownloadAsync(FileName));
+					Assert.Equal(FileText, test2);
+				}
+			}
+		}
+
+		[Theory]
+		[InlineData("voron")]
+		[InlineData("esent")]
+		public async Task load_balancing_with_two_master_master_servers(string storage)
+		{
+			using (var store1 = NewStore(0, fiddler: true, fileSystemName: "fs1"))
+			using (var store2 = NewStore(1, fiddler: true, fileSystemName: "fs2"))
+			{
+				store1.Conventions.FailoverBehavior = FailoverBehavior.ReadFromAllServers;
+
 				var sourceClient = (IAsyncFilesCommandsImpl)store1.AsyncFilesCommands;
 				var destinationClient = store2.AsyncFilesCommands;
 
@@ -34,68 +113,38 @@ namespace Raven.Tests.FileSystem.Issues
 				sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
 				await sourceClient.Synchronization.StartAsync();
 
-				var source1Content = new RandomStream(1000);
-				await sourceClient.UploadAsync("test1.bin", source1Content);
+				await sourceClient.UploadAsync(FileName, StringToStream(FileText));
+				var test = StreamToString(await sourceClient.DownloadAsync(FileName));
+				Assert.Equal(FileText, test);
 
-				var sourceFiles = await sourceClient.DownloadAsync("test1.bin");
-				/*Assert.Equal(1, sourceFiles.FileCount);
-				Assert.Equal(1, sourceFiles.Files.Count);*/
+				await WaitForSynchronization(store2);
+				var stats1 = await store1.AsyncFilesCommands.GetStatisticsAsync();
+				var currentRequesteCount1 = stats1.Metrics.Requests.Count;
+				var stats2 = await store2.AsyncFilesCommands.GetStatisticsAsync();
+				var cuttentRequestsCount2 = stats2.Metrics.Requests.Count;
 
-				var server = GetServer(0);
-				server.Dispose();
-				using (var session = store1.OpenAsyncSession())
+				for (var i = 0; i < 6; i++)
 				{
-					var f = await session.DownloadAsync("test1.bin");
+					using (var session = store1.OpenAsyncSession())
+					{
+						var test2 = StreamToString(await session.DownloadAsync(FileName));
+						Assert.Equal(FileText, test2);
+
+						var store = i % 2 == 0 ? store1 : store2;
+						var currentRequestsCount = i % 2 == 0 ? currentRequesteCount1 : cuttentRequestsCount2;
+						var stats = await store.AsyncFilesCommands.GetStatisticsAsync();
+						Assert.True(stats.Metrics.Requests.Count > currentRequestsCount);
+					}
 				}
-				var fileFromSync = await sourceClient.DownloadAsync("/");
-				var t = 0;
+
+				/*var server = GetServer(0);
+				server.Dispose();
+				using (var session = store0.OpenAsyncSession())
+				{
+					var test2 = StreamToString(await session.DownloadAsync(FileName));
+					Assert.Equal(FileText, test2);
+				}*/
 			}
-			/*var sourceClient = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
-			var destinationClient = NewAsyncClient(1);
-			var source1Content = new RandomStream(10000);
-
-			await sourceClient.UploadAsync("test1.bin", source1Content);
-
-			var destination = destinationClient.ToSynchronizationDestination();
-
-			await sourceClient.Synchronization.SetDestinationsAsync(destination);
-
-			sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
-			await sourceClient.Synchronization.StartAsync();
-
-			var destinationFiles = await destinationClient.SearchOnDirectoryAsync("/");
-			Assert.Equal(1, destinationFiles.FileCount);
-			Assert.Equal(1, destinationFiles.Files.Count);
-
-			var server = GetServer(0);
-			server.Dispose();
-			var store = GetStore(0);
-			using (var session = store.OpenAsyncSession())
-			{
-				var f = await session.DownloadAsync("test1.bin");
-			}
-
-			var fileFromSync = await sourceClient.SearchOnDirectoryAsync("/");
-			fileFromSync = await destinationClient.SearchOnDirectoryAsync("/");
-			Assert.Equal(1, fileFromSync.FileCount);
-			Assert.Equal(1, fileFromSync.Files.Count);*/
-
-			/*var client = NewAsyncClient(requestedStorage: storage);
-
-			await client.UploadAsync("file", new RandomStream(512 * 1024, 1));
-			await client.UploadAsync("file", new RandomStream(512 * 1024, 1));
-
-			await client.Storage.CleanUpAsync();
-
-			var fileHeader = await client.GetMetadataForAsync("file");
-
-			using (var stream = await client.DownloadAsync("file"))
-			{
-				var downloadData = new MemoryStream();
-				stream.CopyTo(downloadData);
-
-				Assert.Equal(fileHeader.Value<long>(Constants.FileSystem.RavenFsSize), downloadData.Length);
-			}*/
 		}
 	}
 }
