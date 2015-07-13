@@ -143,7 +143,7 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				WaitForIndexing(storeB);
+				WaitForIndexing(storeA);
 
 				WaitForReplication(storeB, "foo/1");
 				WaitForReplication(storeB, "bar/1");
