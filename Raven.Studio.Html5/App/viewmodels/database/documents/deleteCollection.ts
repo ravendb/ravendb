@@ -8,13 +8,15 @@ class deleteCollection extends dialogViewModelBase {
 
     public deletionTask = $.Deferred();
     private deletionStarted = false;
+	isAllDocuments: boolean;
 
     constructor(private collection: collection) {
         super();
+	    this.isAllDocuments = collection.isAllDocuments;
     }
 
     deleteCollection() {
-        var collectionName = this.collection.isAllDocuments ? "*" : this.collection.name;
+        var collectionName = this.isAllDocuments ? "*" : this.collection.name;
         var deleteCommand = new deleteCollectionCommand(collectionName, appUrl.getDatabase());
         var deleteCommandTask = deleteCommand.execute();
         deleteCommandTask.done((result) => this.deletionTask.resolve(result));

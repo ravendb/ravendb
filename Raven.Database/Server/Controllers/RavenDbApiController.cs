@@ -212,7 +212,6 @@ namespace Raven.Database.Server.Controllers
 	        get { return Database.Configuration; }
 	    }
 
-
 	    protected bool EnsureSystemDatabase()
 		{
 			return DatabasesLandlord.SystemDatabase == Database;
@@ -230,7 +229,6 @@ namespace Raven.Database.Server.Controllers
             }
             return false;
         }
-
 
 		protected TransactionInformation GetRequestTransaction()
 		{
@@ -674,14 +672,19 @@ namespace Raven.Database.Server.Controllers
 	        }
 	    }
 
-		protected RavenJArray GetResourcesDocuments(string resourcePrefix)
+		protected Etag GetLastDocEtag()
 		{
-			var start = GetStart();
-			var nextPageStart = start; // will trigger rapid pagination
-			var resourcesDocuments = Database.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
-				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+			var lastDocEtag = Etag.Empty;
+			long documentsCount = 0;
+			Database.TransactionalStorage.Batch(
+				accessor =>
+				{
+					lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+					documentsCount = accessor.Documents.GetDocumentsCount();
+				});
 
-			return resourcesDocuments;
+			lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
+			return lastDocEtag;
 		}
 
 		protected class TenantData
@@ -690,6 +693,88 @@ namespace Raven.Database.Server.Controllers
 			public bool Disabled { get; set; }
 			public string[] Bundles { get; set; }
 			public bool IsAdminCurrentTenant { get; set; }
+		}
+
+		protected HttpResponseMessage Resources<T>(string prefix, Func<RavenJArray, List<T>> getResourcesData, bool getAdditionalData = false)
+			where T : TenantData
+		{
+			if (EnsureSystemDatabase() == false)
+				return
+					GetMessageWithString(
+						"The request '" + InnerRequest.RequestUri.AbsoluteUri + "' can only be issued on the system database",
+						HttpStatusCode.BadRequest);
+
+			// This method is NOT secured, and anyone can access it.
+			// Because of that, we need to provide explicit security here.
+
+			// Anonymous Access - All / Get / Admin
+			// Show all resources
+
+			// Anonymous Access - None
+			// Show only the resource that you have access to (read / read-write / admin)
+
+			// If admin, show all resources
+
+			var resourcesDocuments = GetResourcesDocuments(prefix);
+			var resourcesData = getResourcesData(resourcesDocuments);
+			var resourcesNames = resourcesData.Select(resourceObject => resourceObject.Name).ToArray();
+
+			List<string> approvedResources = null;
+			if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
+			{
+				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+
+				HttpResponseMessage authMsg;
+				if (authorizer.TryAuthorize(this, out authMsg) == false)
+					return authMsg;
+
+				var user = authorizer.GetUser(this);
+				if (user == null)
+					return authMsg;
+
+				if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
+				{
+					approvedResources = authorizer.GetApprovedResources(user, this, resourcesNames);
+				}
+
+				resourcesData.ForEach(x =>
+				{
+					var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
+					if (principalWithDatabaseAccess != null)
+					{
+						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode);
+						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+					}
+					else
+					{
+						x.IsAdminCurrentTenant = user.IsAdministrator(x.Name);
+					}
+				});
+			}
+
+			var lastDocEtag = GetLastDocEtag();
+			if (MatchEtag(lastDocEtag))
+				return GetEmptyMessage(HttpStatusCode.NotModified);
+
+			if (approvedResources != null)
+			{
+				resourcesData = resourcesData.Where(data => approvedResources.Contains(data.Name)).ToList();
+				resourcesNames = resourcesNames.Where(name => approvedResources.Contains(name)).ToArray();
+			}
+
+			var responseMessage = getAdditionalData ? GetMessageWithObject(resourcesData) : GetMessageWithObject(resourcesNames);
+			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
+			return responseMessage.WithNoCache();
+		}
+
+		protected RavenJArray GetResourcesDocuments(string resourcePrefix)
+		{
+			var start = GetStart();
+			var nextPageStart = start; // will trigger rapid pagination
+			var resourcesDocuments = Database.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
+				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+
+			return resourcesDocuments;
 		}
 
 		protected UserInfo GetUserInfo()

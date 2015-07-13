@@ -1,11 +1,10 @@
 ﻿using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Counters;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
-
 using Sparrow.Collections;
-
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -119,7 +118,7 @@ namespace Raven.Client.Counters.Changes
 			if (string.IsNullOrWhiteSpace(counterName))
 				throw new ArgumentException("Counter name cannot be empty");
 
-			var fullCounterName = FullCounterName(groupName, counterName);
+			var fullCounterName = CounterUtils.GetFullCounterName(groupName, counterName);
 			var key = "counter-change/" + fullCounterName;
 			var counter = GetOrAddConnectionState(key, "watch-counter-change", "unwatch-counter-change",
 				() => watchedChanges.TryAdd(fullCounterName),
@@ -136,11 +135,6 @@ namespace Raven.Client.Counters.Changes
 			return taskedObservable;
 	    }
 
-	    private static string FullCounterName(string groupName, string counterName)
-	    {
-			return string.Concat(groupName, "/", counterName);
-	    }
-
 		public IObservableWithTask<StartingWithNotification> ForCountersStartingWith(string groupName, string prefixForName)
 	    {
 			if (string.IsNullOrWhiteSpace(groupName))
@@ -149,7 +143,7 @@ namespace Raven.Client.Counters.Changes
 			if (string.IsNullOrWhiteSpace(prefixForName))
 				throw new ArgumentException("Prefix for counter name cannot be empty");
 
-			var counterPrefix = FullCounterName(groupName, prefixForName);
+			var counterPrefix = CounterUtils.GetFullCounterName(groupName, prefixForName);
 			var key = string.Concat("counters-starting-with/", counterPrefix);
 			var counter = GetOrAddConnectionState(key, "watch-counters-prefix", "unwatch-counters-prefix",
 				() => watchedPrefixes.TryAdd(counterPrefix),

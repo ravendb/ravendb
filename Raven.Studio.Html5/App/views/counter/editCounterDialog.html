@@ -1,4 +1,4 @@
-﻿<div class="messageBox" tabindex="-1" style="width:60%">
+﻿<div class="messageBox" tabindex="-1" style="width: 52%">
     <form data-bind="submit: nextOrCreate">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
@@ -6,16 +6,16 @@
         </div>
         <div class="modal-body">
             <div class="row">
-                <div class="col-md-12" data-bind="with: editedCounter">
+                <div data-bind="with: editedCounter">
                     <div class="col-md-12" data-bind="visible: isNew() == false">
-                        <label class="col-md-6" for="total">Current Value:</label>
-                        <div class="col-md-6">
+                        <label class="col-md-4" for="total">Current Value:</label>
+                        <div class="col-md-7">
 							<span id="total" data-bind="text: getValue()"></span>
                         </div>
                     </div>
                     <div class="col-md-12">
-                        <label class="col-md-6" for="group">Group:</label>
-                        <div class="col-md-6">
+                        <label class="col-md-4" for="group">Group:</label>
+                        <div class="col-md-7">
                             <!-- ko if: isNew() -->
                             <input required type="text" class="form-control" id="group" placeholder="Group Name" data-bind="value: group, customValidity: groupCustomValidityError, valueUpdate: 'afterkeydown'">
                             <!-- /ko -->
@@ -25,8 +25,8 @@
                         </div>
                     </div>
                     <div class="col-md-12">
-                        <label class="col-md-6" for="counterName">Counter Name:</label>
-                        <div class="col-md-6">
+                        <label class="col-md-4" for="counterName">Counter Name:</label>
+                        <div class="col-md-7">
                             <!-- ko if: isNew() -->
                             <input required type="text" class="form-control" id="counterName" placeholder="Counter Name" data-bind="value: counterName, customValidity: counterNameCustomValidityError, valueUpdate: 'afterkeydown'">
                             <!-- /ko -->
@@ -36,9 +36,9 @@
                         </div>
                     </div>
                     <div class="col-md-12">
-                        <label class="col-md-6" for="counterDelta" data-bind="text: isNew() ? 'Initial Value' : 'Change'"></label>
-                        <div class="col-md-6" style="display: inline-block">
-                            <input required class="form-control" id="counterDelta" placeholder="Counter Delta" data-bind="value: delta, customValidity: deltaCustomValidityError, valueUpdate: 'afterkeydown'">
+                        <label class="col-md-4" for="counterDelta" data-bind="text: isNew() ? 'Initial Value' : 'Change'"></label>
+                        <div class="col-md-7" style="display: inline-block">
+							<input required type="number" class="form-control" id="counterDelta" placeholder="Counter Delta" data-bind="value: delta, customValidity: deltaCustomValidityError, valueUpdate: 'afterkeydown'">
                         </div>
                     </div>
                     <div class="col-md-12" data-bind="visible: isNew()">

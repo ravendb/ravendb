@@ -5,7 +5,7 @@ import pagedResultSet = require("common/pagedResultSet");
 
 class getSystemDocumentsCommand extends commandBase {
 
-    constructor(private db: database, private skip: number, private take: number) {
+    constructor(private db: database, private skip: number, private take: number, private totalResultCount) {
         super();
     }
 
@@ -25,8 +25,8 @@ class getSystemDocumentsCommand extends commandBase {
         var docsQuery = this.query("/docs", args, this.db, (dtos: documentDto[]) => dtos.map(dto => new document(dto)));
         docsQuery.done((results: documentDto[]) => {
             var documents = results.map(dto => new document(dto));
-            var totalResultCount = documents.length; 
-            var resultSet = new pagedResultSet(documents, totalResultCount);
+            //var totalResultCount = documents.length; 
+            var resultSet = new pagedResultSet(documents, this.totalResultCount);
             deferred.resolve(resultSet);
         });
         docsQuery.fail(response => deferred.reject(response));

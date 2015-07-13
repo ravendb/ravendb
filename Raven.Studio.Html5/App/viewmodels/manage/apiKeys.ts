@@ -2,14 +2,12 @@ import getApiKeysCommand = require("commands/auth/getApiKeysCommand");
 import saveApiKeysCommand = require("commands/auth/saveApiKeysCommand");
 import apiKey = require("models/auth/apiKey");
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require('viewmodels/shell');
 
 class apiKeys extends viewModelBase {
 
     apiKeys = ko.observableArray<apiKey>().extend({ required: true });
     static globalApiKeys: KnockoutObservableArray<apiKey>;
     loadedApiKeys = ko.observableArray<apiKey>().extend({ required: true });
-    allDatabases = ko.observableArray<string>();
     searchText = ko.observable<string>();
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -18,11 +16,6 @@ class apiKeys extends viewModelBase {
 
         apiKeys.globalApiKeys = this.apiKeys;
         this.searchText.throttle(200).subscribe(value => this.filterKeys(value));
-
-        var resourceNames = shell.databases()
-            .filter(db => db.name !== "<system>").map(db => db.name)
-            .concat(shell.fileSystems().map(fs => fs.name));
-        this.allDatabases(resourceNames);
     }
 
     canActivate(args) {
@@ -116,7 +109,7 @@ class apiKeys extends viewModelBase {
             var serverKey = serverKeys.first(k => k.Key === key.getId());
             if (serverKey) {
                 key.__metadata.etag = serverKey.Etag;
-                key.__metadata.lastModified = serverKey.Metadata['Last-Modified'];
+                key.__metadata.lastModified = serverKey.Metadata["Last-Modified"];
             }
         });
     }

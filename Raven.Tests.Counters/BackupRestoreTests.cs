@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Counters;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Counters;
 using Raven.Database.Counters.Backup;
@@ -23,7 +22,6 @@ namespace Raven.Tests.Counters
 		private const string CounterStorageId = "FooBar";
 
 		private readonly CounterStorage storage;
-		private readonly DocumentDatabase documentDatabase;
 		private readonly RavenConfiguration config;
 
 		public BackupRestoreTests()
@@ -51,8 +49,7 @@ namespace Raven.Tests.Counters
 			config.PostInit();
 
 			storage = new CounterStorage("http://localhost:8080","TestCounter",config);
-			storage.CounterStorageEnvironment.Options.IncrementalBackupEnabled = true;
-			documentDatabase = new DocumentDatabase(config,null);
+			storage.Environment.Options.IncrementalBackupEnabled = true;
 		}
 
 		private static void DeleteTempFolders()
@@ -75,7 +72,6 @@ namespace Raven.Tests.Counters
 		public void Dispose()
 		{			
 			storage.Dispose();
-			documentDatabase.Dispose();
 		}
 
 		[Fact]
@@ -164,10 +160,10 @@ namespace Raven.Tests.Counters
 
 		protected BackupOperation NewBackupOperation(bool isIncremental)
 		{
-			return new BackupOperation(documentDatabase,
+			return new BackupOperation(storage,
 				config.Counter.DataDirectory,
 				BackupDestinationDirectory,
-				storage.CounterStorageEnvironment,
+				storage.Environment,
 				isIncremental,
 				new CounterStorageDocument
 				{

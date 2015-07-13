@@ -326,7 +326,7 @@ class appUrl {
         return resourceTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
-	static forEditCounterStorage(rs: resource, groupName: string, counterName: string) {
+	static forEditCounter(rs: resource, groupName: string, counterName: string) {
 		var urlPart = appUrl.getEncodedResourcePart(rs);
         var itemIdUrlPart = "&groupName=" + encodeURIComponent(groupName) + "&counterName=" + encodeURIComponent(counterName);    
         return "#counterstorages/edit?" + itemIdUrlPart + urlPart;
@@ -697,6 +697,10 @@ class appUrl {
     static forCounterStorage(cs: counterStorage): string {
         var counterStoragePart = appUrl.getEncodedCounterPart(cs);
         return "#counterstorages?" + counterStoragePart;
+    }
+
+    static serverUrl(): string {
+        return window.location.protocol + "//" + window.location.host;
     }
 
     static forIndexesRawData(db: database): string {

@@ -19,6 +19,14 @@ class serverConnectionInfo {
         }
     });
 
+    guessCredentialsType() {
+        if (this.apiKey()) {
+            this.useApiKeyCredentials();
+        } else if (this.username()) {
+            this.useUserCredentials();
+        }
+    }
+
     useUserCredentials() {
         this.isUserCredentials(true);
         this.isApiKeyCredentials(false);

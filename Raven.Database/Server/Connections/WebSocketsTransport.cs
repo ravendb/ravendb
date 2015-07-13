@@ -264,66 +264,102 @@ namespace Raven.Database.Server.Connections
 
         public virtual async Task Run(IDictionary<string, object> websocketContext)
         {
-	        try
-	        {
-		        var sendAsync = (WebSocketSendAsync) websocketContext["websocket.SendAsync"];
-	            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken)websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken);
+            Exception captured = null;
+            try
+            {
+                await RunInternal(websocketContext);
+            }
+            catch (Exception e)
+            {
+                captured = e;
+            }
+            await CloseConnection(websocketContext);
+            if (captured != null)
+                throw new InvalidOperationException("Failure when running web sockets", captured);
+        }
 
-		        var memoryStream = new MemoryStream();
-		        var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+        private async Task RunInternal(IDictionary<string, object> websocketContext)
+        {
+            try
+            {
+                var sendAsync = (WebSocketSendAsync) websocketContext["websocket.SendAsync"];
+                cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken) websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken);
 
-		        CreateWaitForClientCloseTask(websocketContext);
+                var memoryStream = new MemoryStream();
+                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+
+                CreateWaitForClientCloseTask(websocketContext);
 
                 while (cancellationTokenSource.IsCancellationRequested == false)
-		        {
+                {
                     var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token);
                     if (cancellationTokenSource.IsCancellationRequested)
-				        break;
+                        break;
 
-			        if (result == false)
-			        {
-				        await SendMessage(memoryStream, serializer,
-					        new {Type = "Heartbeat", Time = SystemTime.UtcNow},
+                    if (result == false)
+                    {
+                        await SendMessage(memoryStream, serializer,
+                            new {Type = "Heartbeat", Time = SystemTime.UtcNow},
                             sendAsync, cancellationTokenSource.Token);
 
-				        if (lastMessageEnqueuedAndNotSent != null)
-				        {
-					        await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, cancellationTokenSource.Token);
-					        lastMessageEnqueuedAndNotSent = null;
-					        lastMessageSentTick = Environment.TickCount;
-				        }
-				        continue;
-			        }
+                        if (lastMessageEnqueuedAndNotSent != null)
+                        {
+                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, cancellationTokenSource.Token);
+                            lastMessageEnqueuedAndNotSent = null;
+                            lastMessageSentTick = Environment.TickCount;
+                        }
+                        continue;
+                    }
 
-			        manualResetEvent.Reset();
+                    manualResetEvent.Reset();
 
-			        object message;
-			        while (msgs.TryDequeue(out message))
-			        {
+                    object message;
+                    while (msgs.TryDequeue(out message))
+                    {
                         if (cancellationTokenSource.IsCancellationRequested)
-					        break;
+                            break;
 
-				        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
-				        {
-					        lastMessageEnqueuedAndNotSent = message;
-					        continue;
-				        }
+                        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
+                        {
+                            lastMessageEnqueuedAndNotSent = message;
+                            continue;
+                        }
 
                         await SendMessage(memoryStream, serializer, message, sendAsync, cancellationTokenSource.Token);
-				        lastMessageEnqueuedAndNotSent = null;
-				        lastMessageSentTick = Environment.TickCount;
-			        }
-		        }
-	        }
-	        catch (Exception e)
-	        {
-		        Log.Info("Error when handling web socket connection", e);
-		        if (cancellationTokenSource != null)
-			        cancellationTokenSource.Cancel();
-	        }
+                        lastMessageEnqueuedAndNotSent = null;
+                        lastMessageSentTick = Environment.TickCount;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Info("Error when handling web socket connection", e);
+                if (cancellationTokenSource != null)
+                    cancellationTokenSource.Cancel();
+            }
             finally
             {
                 OnDisconnection();
+            }
+        }
+
+        private async Task CloseConnection(IDictionary<string, object> websocketContext)
+        {
+            if (EnvironmentUtils.RunningOnPosix)
+            {
+                var closeAsync = (WebSocketCloseAsync) websocketContext["websocket.CloseAsync"];
+                WebSocketCloseStatus status = WebSocketCloseStatus.EndpointUnavailable;
+                var token =
+                    CancellationTokenSource.CreateLinkedTokenSource((CancellationToken) websocketContext["websocket.CallCancelled"],
+                        disconnectBecauseOfGcToken).Token;
+                try
+                {
+                    await closeAsync((int) status, "Heartbeat bad response", token);
+                }
+                catch
+                {
+                    // nothing to do if we can't catch the error
+                }
             }
         }
 

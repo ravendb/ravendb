@@ -6,7 +6,7 @@ import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/resources/database");
 import cssGenerator = require("common/cssGenerator");
 
-class collection {
+class collection implements ICollectionBase {
     colorClass = ""; 
     documentCount: any = ko.observable(0);
     documentsCountWithThousandsSeparator = ko.computed(() => this.documentCount().toLocaleString());
@@ -14,7 +14,6 @@ class collection {
     isSystemDocuments = false;
 
     public collectionName : string;
-
     private documentsList: pagedList;
     public static allDocsCollectionName = "All Documents";
     private static systemDocsCollectionName = "System Documents";
@@ -42,6 +41,11 @@ class collection {
         return this.documentsList;
     }
 
+	invalidateCache() {
+		var documentsList = this.getDocuments();
+		documentsList.invalidateCache();
+	}
+
     clearCollection() {
         if (this.isAllDocuments && !!this.documentsList) {
             this.documentsList.clear();
@@ -51,9 +55,7 @@ class collection {
     fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet> {
         if (this.isSystemDocuments) {
             // System documents don't follow the normal paging rules. See getSystemDocumentsCommand.execute() for more info.
-            var task = new getSystemDocumentsCommand(this.ownerDatabase, skip, take).execute();
-            task.done((results: pagedResultSet) => this.documentCount(results.totalResultCount));
-            return task;
+            return new getSystemDocumentsCommand(this.ownerDatabase, skip, take, this.documentCount()).execute();
         } if (this.isAllDocuments) {
             return new getAllDocumentsCommand(this.ownerDatabase, skip, take).execute();
         } else {
