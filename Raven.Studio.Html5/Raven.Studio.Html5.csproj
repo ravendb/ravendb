@@ -94,6 +94,7 @@
     <TypeScriptCompile Include="App\commands\counter\getCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCountersCommand.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
+    <TypeScriptCompile Include="App\common\serverSmugglingLocalStorage.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
