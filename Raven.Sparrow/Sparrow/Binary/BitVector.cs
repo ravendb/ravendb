@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
@@ -7,21 +8,96 @@ using System.Threading.Tasks;
 
 namespace Sparrow.Binary
 {
-    public class BitVector
-    {
-        public const uint Log2BitsPerWord = 6; // Math.Log( sizeof(long), 2 )
-	    public const uint BitsPerWord = sizeof(ulong);
-	    public const uint WordMask = BitsPerWord - 1;
-        public const uint LastBit = BitsPerWord - 1;
-	    public const ulong Ones = 0xFFFFFFFFFFFFFFFFL;
-	    public const ulong LastBitMask = 1UL << (int)LastBit;
 
-        private ulong[] bits;
+    /// <summary>
+    /// Differently from the numeric representation a BitVector operation is left-aligned.
+    /// </summary>
+    [DebuggerDisplay("{ToDebugString()}")]
+    public class BitVector : IComparable<BitVector>
+    {
+        public const int BitsPerByte = 8;
+        public const int BitsPerWord = sizeof(ulong) * BitsPerByte;        
+        public const uint Log2BitsPerWord = 6; // Math.Log( BitsPerWord, 2 )
+        
+	    public const uint WordMask = BitsPerWord - 1;
+        public const ulong Ones = 0xFFFFFFFFFFFFFFFFL;
+
+        public const uint FirstBitPosition = BitsPerWord - 1;
+        public const ulong FirstBitMask = 1UL << (int)FirstBitPosition;
+
+        public const ulong LastBitMask = 1UL;
+        public const uint LastBitPosition = 1;
+        
+        private readonly ulong[] bits;
+
+        protected string ToDebugString()
+        {
+            unchecked
+            {
+                var builder = new StringBuilder();
+                if (this.Count <= BitsPerWord)
+                {
+                    for (int i = 0; i < this.Count; i++)
+                        builder.Append(this[i] ? 1 : 0);
+                }
+                else
+                {
+                    int words = NumberOfWordsForBits(this.Count);
+                    for (int i = 0; i < words; i++)
+                    {
+                        ulong v = this.GetWord(i);
+
+                        //int s = BitsPerWord; // bit size; must be power of 2 
+                        //ulong mask = (ulong)~0;
+                        //while ((s >>= 1) > 0)
+                        //{
+                        //    mask ^= (mask << s);
+                        //    v = ((v >> s) & mask) | ((v << s) & ~mask);
+                        //}
+
+                        builder.Append(v.ToString("X16"));
+                        builder.Append(" ");
+                    }
+                }
+
+                return builder.ToString();
+            }            
+        }
+
+        private static ulong Reverse(ulong v)
+        {
+            int s = BitsPerWord; // bit size; must be power of 2 
+
+            unchecked
+            {
+                ulong mask = (ulong)~0;
+                while ((s >>= 1) > 0)
+                {
+                    mask ^= (mask << s);
+                    v = ((v >> s) & mask) | ((v << s) & ~mask);
+                }
+            }
+
+            return v;
+        }
 
         public BitVector(int size)
         {
             this.Count = size;
-            this.bits = new ulong[size % sizeof(ulong) == 0 ? size * sizeof(ulong) : size * sizeof(ulong) + 1];            
+            this.bits = new ulong[size % BitVector.BitsPerWord == 0 ? size / BitVector.BitsPerWord : size / BitVector.BitsPerWord + 1];            
+        }
+
+        protected BitVector(int size, params ulong[] values)
+        {
+            if (size / BitVector.BitsPerWord > values.Length)
+                throw new ArgumentException("The values passed as parameters does not have enough bits to fill the vector size.", "values");
+
+            this.Count = size;    
+        
+            this.bits = values;
+            //for (int i = 0; i < this.bits.Length; i++)
+            //    this.bits[i] = Reverse(this.bits[i]);
+
         }
 
         public int Count
@@ -38,16 +114,16 @@ namespace Sparrow.Binary
 
         public void Set(int idx)
         {
-            int word = Word(idx);
-            ulong mask = Mask(idx);
+            uint word = WordForBit(idx);
+            ulong mask = BitInWord(idx);
 
             bits[word] |= mask;                
         }
 
         public void Set(int idx, bool value)
         {
-            int word = Word(idx);
-            ulong mask = Mask(idx);
+            uint word = WordForBit(idx);
+            ulong mask = BitInWord(idx);
 
             bool currentValue = (bits[word] & mask) != 0;
             if (currentValue != value)
@@ -56,8 +132,8 @@ namespace Sparrow.Binary
 
         public bool Get(int idx)
         {
-            int word = Word(idx);
-            ulong mask = Mask(idx);
+            uint word = WordForBit(idx);
+            ulong mask = BitInWord(idx);
             return (bits[word] & mask) != 0;
         }
 
@@ -72,7 +148,7 @@ namespace Sparrow.Binary
             {
                 byte x = value ? (byte)0xFF : (byte)0x00;
                 fixed (ulong* array = this.bits)
-                    Memory.SetInline((byte*)array, x, this.bits.Length);
+                    Memory.SetInline((byte*)array, x, this.bits.Length * sizeof(ulong));
             }
         }
 
@@ -80,8 +156,8 @@ namespace Sparrow.Binary
         {
             unchecked
             {
-                int bFrom = from / sizeof(long);
-                int bTo = to / sizeof(long);
+                int bFrom = from / BitVector.BitsPerWord;
+                int bTo = to / BitVector.BitsPerWord;
 
                 if (bFrom == bTo)
                 {
@@ -100,20 +176,20 @@ namespace Sparrow.Binary
                             Memory.SetInline((byte*)(array + bFrom + 1), x, bTo);
                     }
 
-                    if (from % sizeof(long) != 0)
+                    if (from % BitVector.BitsPerWord != 0)
                     {
                         if (value)
-                            bits[bFrom] |= (ulong)(-1L) << from % sizeof(long);
+                            bits[bFrom] |= (ulong)(-1L) << from % BitVector.BitsPerWord;
                         else
-                            bits[bFrom] &= (1UL << from % sizeof(long)) - 1;
+                            bits[bFrom] &= (1UL << from % BitVector.BitsPerWord) - 1;
                     }
 
-                    if (to % sizeof(long) != 0)
+                    if (to % BitVector.BitsPerWord != 0)
                     {
                         if (value)
-                            bits[bTo] |= 1UL << to % sizeof(long) - 1;
+                            bits[bTo] |= 1UL << to % BitVector.BitsPerWord - 1;
                         else
-                            bits[bTo] &= (ulong)(-1L) << to % sizeof(long);
+                            bits[bTo] &= (ulong)(-1L) << to % BitVector.BitsPerWord;
                     }
                 }
             }
@@ -121,17 +197,53 @@ namespace Sparrow.Binary
 
         public void Flip()
         {
-            throw new NotImplementedException();
+            ulong mask = 0xFFFFFFFFFFFFFFFFUL;
+            for (int i = 0; i < bits.Length; i++)
+                bits[i] ^= mask;
         }
 
         public void Flip(int idx)
         {
-            throw new NotImplementedException();
+            unchecked
+            {
+                uint wPos = WordForBit(idx);
+                bits[wPos] ^= BitInWord((int)idx);
+            }
         }
 
         public void Flip(int from, int to)
         {
-            throw new NotImplementedException();
+            unchecked
+            {
+                int bTo = to / BitVector.BitsPerWord;
+                int bFrom = from / BitVector.BitsPerWord;
+                if (bTo == bFrom)
+                {
+                    if (from == to)
+                    {
+                        bits[bFrom] ^= BitInWord((int)from);
+                    }
+                    else
+                    {
+                        ulong mask = Ones << BitVector.BitsPerWord - (to - from);
+                        bits[bFrom] ^= mask >> from;
+                    }
+                        
+                }
+                else
+                {
+                    int start = (from + BitVector.BitsPerWord - 1) / BitVector.BitsPerWord;
+
+                    ulong mask = BitVector.Ones;
+                    for (int i = bTo; i-- != start; )
+                        bits[i] ^= mask;
+
+                    if (from % BitVector.BitsPerWord != 0)
+                        bits[bFrom] ^= (1UL << (BitVector.BitsPerWord - from) % BitVector.BitsPerWord) - 1;
+                    if (to % BitVector.BitsPerWord != 0)
+                        bits[bTo] ^= Ones << BitVector.BitsPerWord - (to % BitVector.BitsPerWord);
+                }
+            }
         }
 
         public void Clear()
@@ -141,27 +253,111 @@ namespace Sparrow.Binary
 
         public BitVector And(BitVector v)
         {
-            throw new NotImplementedException();
+            int words = Math.Min(bits.Length, v.bits.Length) - 1;
+            while (words >= 0)
+            {
+                bits[words] &= v.bits[words];
+
+                words--;
+            }
+
+            return this;
         }
 
         public BitVector Or(BitVector v)
         {
-            throw new NotImplementedException();
+            int words = Math.Min(bits.Length, v.bits.Length) - 1;
+            while (words >= 0)
+            {
+                bits[words] |= v.bits[words];
+
+                words--;
+            }
+
+            return this;
         }
 
         public BitVector Xor(BitVector v)
         {
-            throw new NotImplementedException();
+            int words = Math.Min(bits.Length, v.bits.Length) - 1;
+            while (words >= 0)
+            {
+                bits[words] ^= v.bits[words];
+
+                words--;
+            }
+
+            return this;
         }
+
+        public static BitVector And(BitVector x, BitVector y)
+        {
+            if (x.Count < y.Count)
+            {
+                var t = new BitVector(x.Count);
+                x.CopyTo(t);
+                return t.And(y);
+            }
+            else
+            {
+                var t = new BitVector(y.Count);
+                y.CopyTo(t);
+                return t.And(x);
+            }
+        }
+
+        public static BitVector Or(BitVector x, BitVector y)
+        {
+            if (x.Count < y.Count)
+            {
+                var t = new BitVector(x.Count);
+                x.CopyTo(t);
+                return t.Or(y);
+            }
+            else
+            {
+                var t = new BitVector(y.Count);
+                y.CopyTo(t);
+                return t.Or(x);
+            }
+        }
+
+        public static BitVector Xor(BitVector x, BitVector y)
+        {
+            if (x.Count < y.Count)
+            {
+                var t = new BitVector(x.Count);
+                x.CopyTo(t);
+                return t.Xor(y);
+            }
+            else
+            {
+                var t = new BitVector(y.Count);
+                y.CopyTo(t);
+                return t.Xor(x);
+            }
+        }
+
 
         public void CopyTo(BitVector dest)
         {
-            throw new NotImplementedException();
+            Copy(this, dest);
         }
 
         public static void Copy(BitVector src, BitVector dest)
         {
-            throw new NotImplementedException();
+            Contract.Requires(src.Count <= dest.Count);
+
+            dest.Count = src.Count;
+
+            unsafe
+            {
+                fixed (ulong* destPtr = dest.bits)
+                fixed (ulong* srcPtr = src.bits)
+                {
+                    Memory.CopyInline((byte*)destPtr, (byte*)srcPtr, src.bits.Length * sizeof(ulong));
+                }
+            }
         }
 
         public static BitVector OfLength(int size)
@@ -169,24 +365,118 @@ namespace Sparrow.Binary
             return new BitVector(size);
         }
 
-        protected static ulong Mask(int idx)
+        public static BitVector Of(params ulong[] values)
         {
-            throw new NotImplementedException();
+            return new BitVector(values.Length * BitVector.BitsPerWord, values);
         }
 
-        protected static int Bit (int idx)
+        public static BitVector Of(params long[] values)
         {
-            throw new NotImplementedException();
+            ulong[] newValue = new ulong[values.Length];
+            for( int i = 0; i < values.Length; i++ )
+                newValue[i] = (ulong) values[i];
+
+            return new BitVector(values.Length * BitVector.BitsPerWord, newValue);
         }
 
-        protected static int Word (int idx)
+        public static BitVector Of(params uint[] values)
         {
-            throw new NotImplementedException();
+            int lastLong = values.Length / 2;
+
+            int size = lastLong;
+            if (values.Length % 2 == 1)
+                size += 1;
+
+            ulong[] newValue = new ulong[size];
+            for (int i = 0; i < lastLong; i++)
+                newValue[i] = (ulong)values[2 * i] << 32 | (ulong)values[2 * i + 1];
+
+            if (values.Length % 2 == 1)
+                newValue[newValue.Length - 1] = (ulong)values[values.Length - 1] << 32;
+
+            return new BitVector(values.Length * BitVector.BitsPerWord / 2, newValue);
         }
 
-        protected static int NumberOfWords(int size)
+        public static BitVector From(string value)
         {
-            throw new NotImplementedException();
+            var vector = new BitVector(value.Length);
+
+            for (int i = 0; i < value.Length; i++ )
+            {
+                if (value[i] != '0')
+                    vector[i] = true;
+            }
+
+            return vector;
         }
+
+        public static ulong BitInWord(int idx)
+        {
+            return 0x8000000000000000UL >> (idx % (int)BitVector.BitsPerWord);
+        }
+
+        public static uint Bit(int idx)
+        {
+            Contract.Requires(idx < BitVector.BitsPerWord);
+
+            return WordMask & (uint)idx;
+        }
+
+        public static uint WordForBit(int idx)
+        {
+            return (uint)(idx >> (int)Log2BitsPerWord);
+        }
+
+        public static int NumberOfWordsForBits(int size)
+        {
+            return (int)((size + WordMask) >> (int)Log2BitsPerWord);
+        }
+
+        public int CompareTo(BitVector other)
+        {
+            var srcKey = this.Count;
+            var otherKey = other.Count;
+            var length = srcKey <= otherKey ? srcKey : otherKey;
+
+            unsafe
+            {
+                fixed (ulong* srcPtr = this.bits)
+                fixed (ulong* destPtr = other.bits)
+                {
+                    int wholeBytes = length / BitsPerWord;
+                    int index;
+
+                    ulong* bpx = srcPtr;
+                    ulong* bpy = destPtr;
+                    int last = 0;
+                    for (int i = 0; i < wholeBytes; i++, bpx += 1, bpy += 1)
+                    {
+                        if (*((long*)bpx) != *((long*)bpy))
+                        {
+                            break;
+                            goto TAIL;
+                        }                            
+                    }
+
+                TAIL:
+                    // We always finish the last extent with a bit-wise comparison (bit vector is stored in big endian).
+                    int from = (int)(bpx - srcPtr) * BitsPerWord;
+                    int leftover = this.Count - from;
+                    while ( leftover > 0 )
+                    {
+                        bool thisBit = this[from];
+                        bool otherBit = other[from];
+
+                        if ( thisBit != otherBit )
+                            return thisBit ? 1 : -1;
+
+                        from++;
+                        leftover--;
+                    }
+                }
+            }
+
+            return srcKey - otherKey;
+        }        
     }
 }
