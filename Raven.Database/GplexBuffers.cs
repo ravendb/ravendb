@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using System.Globalization;
+using System.Runtime.CompilerServices; 
 
 namespace QUT.GplexBuffers
 {
@@ -280,6 +281,7 @@ namespace QUT.GplexBuffers
 
             internal char this[int index]
             {
+				[MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get
                 {
                     if (index < minIx || index >= maxIx)
@@ -484,16 +486,17 @@ namespace QUT.GplexBuffers
     //
     public static class BlockReaderFactory
     {
+		[ThreadStatic]
+		private static byte[] buffer = new byte[4096];
         public static BlockReader Raw(Stream stream)
         {
             return delegate(char[] block, int index, int number)
             {
-                byte[] b = new byte[number];
-                int count = stream.Read(b, 0, number);
+                int count = stream.Read(buffer, 0, Math.Min(number, buffer.Length));
                 int i = 0;
                 int j = index;
                 for (; i < count; i++, j++)
-                    block[j] = (char)b[i];
+                    block[j] = (char)buffer[i];
                 return count;
             };
         }
