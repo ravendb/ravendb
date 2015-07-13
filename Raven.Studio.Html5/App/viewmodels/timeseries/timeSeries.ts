@@ -15,19 +15,20 @@ class timeSeries extends viewModelBase {
     keys = ko.observableArray<timeSeriesKey>();
     selectedKey = ko.observable<timeSeriesKey>().subscribeTo("ActivateKey").distinctUntilChanged();
     currentKey = ko.observable<timeSeriesKey>();
-    keyToSelectName: string;
+    keyAndPrefixToSelect: string;
     currentKeyPagedItems = ko.observable<pagedList>();
-    selectedTimeSeriesIndices = ko.observableArray<number>();
-    selectedTimeSeriesText: KnockoutComputed<string>;
-    hasTimeSeries: KnockoutComputed<boolean>;
-    hasAnyTimeSeriesSelected: KnockoutComputed<boolean>;
-    hasAllTimeSeriesSelected: KnockoutComputed<boolean>;
-    isAnyTimeSeriesAutoSelected = ko.observable<boolean>(false);
-    isAllTimeSeriesAutoSelected = ko.observable<boolean>(false);
+    selectedPointsIndices = ko.observableArray<number>();
+    selectedPointsText: KnockoutComputed<string>;
+    hasPoints: KnockoutComputed<boolean>;
+    hasAnyPointsSelected: KnockoutComputed<boolean>;
+    hasAllPointsSelected: KnockoutComputed<boolean>;
+    isAnyPointsAutoSelected = ko.observable<boolean>(false);
+    isAllPointsAutoSelected = ko.observable<boolean>(false);
+	pointsSelection: KnockoutComputed<checkbox>;
 
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
-    static gridSelector = "#timeSeriesGrid";
+    static gridSelector = "#pointsGrid";
 	static isInitialized = ko.observable<boolean>(false);
 	isInitialized = timeSeries.isInitialized;
 
@@ -36,7 +37,7 @@ class timeSeries extends viewModelBase {
 
         this.selectedKey.subscribe(c => this.selectedKeyChanged(c));
 
-        this.hasTimeSeries = ko.computed(() => {
+        this.hasPoints = ko.computed(() => {
             var selectedKey: timeSeriesKey = this.selectedKey();
             if (!!selectedKey) {
                 return this.selectedKey().pointsCount() > 0;
@@ -44,22 +45,30 @@ class timeSeries extends viewModelBase {
             return false;
         });
 
-        this.hasAnyTimeSeriesSelected = ko.computed(() => this.selectedTimeSeriesIndices().length > 0);
+        this.hasAnyPointsSelected = ko.computed(() => this.selectedPointsIndices().length > 0);
 
-        this.hasAllTimeSeriesSelected = ko.computed(() => {
-            var numOfSelectedTimeSeries = this.selectedTimeSeriesIndices().length;
-            if (!!this.selectedKey() && numOfSelectedTimeSeries !== 0) {
-                return numOfSelectedTimeSeries === this.selectedKey().pointsCount();
+        this.hasAllPointsSelected = ko.computed(() => {
+            var numOfSelectedPoints = this.selectedPointsIndices().length;
+            if (!!this.selectedKey() && numOfSelectedPoints !== 0) {
+                return numOfSelectedPoints === this.selectedKey().pointsCount();
             }
             return false;
         });
 
-        this.selectedTimeSeriesText = ko.computed(() => {
-            if (!!this.selectedTimeSeriesIndices()) {
+        this.selectedPointsText = ko.computed(() => {
+            if (!!this.selectedPointsIndices()) {
                 var documentsText = "time series";
                 return documentsText;
             }
             return "";
+        });
+
+        this.pointsSelection = ko.computed(() => {
+            if (this.hasAllPointsSelected())
+                return checkbox.Checked;
+            if (this.hasAnyPointsSelected())
+                return checkbox.SomeChecked;
+            return checkbox.UnChecked;
         });
     }
 
@@ -70,7 +79,9 @@ class timeSeries extends viewModelBase {
         //this.updateHelpLink('G8CDCP');
 
         // We can optionally pass in a key name to view's URL, e.g. #timeSeries/timeSeries?key=Foo&timeSeriestorage=test
-        this.keyToSelectName = args ? args.key : null;
+        if (args && args.prefix && args.key) {
+            this.keyAndPrefixToSelect = args.prefix + "/" + args.key;
+        }
 
         var ts = this.activeTimeSeries();
         this.fetchKeys(ts).done(results => {
@@ -106,7 +117,7 @@ class timeSeries extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            ko.postbox.subscribe("ChangeTimeSeriesPointValue", () => this.changePoint()),
+            ko.postbox.subscribe("ChangePointValue", () => this.changePoint()),
             ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeriesDocument) => this.reloadTimeSeriesData(ts)),
             ko.postbox.subscribe("SortKeys", () => this.sortKeys())
         ];
@@ -123,10 +134,8 @@ class timeSeries extends viewModelBase {
     keysLoaded(keys: Array<timeSeriesKey>, ts: timeSeriesDocument) {
         this.keys(keys);
 
-        var keyToSelect = this.keys.first(g => g.name === this.keyToSelectName);
-        if (keyToSelect) {
-            keyToSelect.activate();
-        }
+        var keyToSelect = this.keyAndPrefixToSelect ? this.keys.first(g => g.name === this.keyAndPrefixToSelect) : this.keys()[0];
+        keyToSelect.activate();
     }
 
     newPoint() {
@@ -145,7 +154,7 @@ class timeSeries extends viewModelBase {
 	}
 
     changePoint() {
-        /*var grid = this.getTimeSeriesGrid();
+        /*var grid = this.getPointsGrid();
         if (grid) {
             var timeSeriesData = grid.getSelectedItems(1).first();
             var dto = {
@@ -168,7 +177,7 @@ class timeSeries extends viewModelBase {
 	refreshGridAndKey(changedKeyName: string) {
 		var key = this.selectedKey();
 		if (key.name === changedKeyName) {
-			this.getTimeSeriesGrid().refreshCollectionData();
+			this.getPointsGrid().refreshCollectionData();
 		}
 		key.invalidateCache();
 		this.selectNone();
@@ -183,37 +192,37 @@ class timeSeries extends viewModelBase {
     }
 
     toggleSelectAll() {
-        var timeSeriesGrid = this.getTimeSeriesGrid();
-        if (!!timeSeriesGrid) {
-            if (this.hasAnyTimeSeriesSelected()) {
-                timeSeriesGrid.selectNone();
+        var pointsGrid = this.getPointsGrid();
+        if (!!pointsGrid) {
+            if (this.hasAnyPointsSelected()) {
+                pointsGrid.selectNone();
             } else {
-                timeSeriesGrid.selectSome();
-                this.isAnyTimeSeriesAutoSelected(this.hasAllTimeSeriesSelected() === false);
+                pointsGrid.selectSome();
+                this.isAnyPointsAutoSelected(this.hasAllPointsSelected() === false);
             }
         }
     }
 
     selectAll() {
-        var timeSeriesGrid = this.getTimeSeriesGrid();
+        var pointsGrid = this.getPointsGrid();
         var key: timeSeriesKey = this.selectedKey();
-        if (!!timeSeriesGrid && !!key) {
-            timeSeriesGrid.selectAll(key.pointsCount());
+        if (!!pointsGrid && !!key) {
+            pointsGrid.selectAll(key.pointsCount());
         }
     }
 
     selectNone() {
-        var timeSeriesGrid = this.getTimeSeriesGrid();
-        if (!!timeSeriesGrid) {
-            timeSeriesGrid.selectNone();
+        var pointsGrid = this.getPointsGrid();
+        if (!!pointsGrid) {
+            pointsGrid.selectNone();
         }
     }
 
-    deleteSelectedTimeSeries() {
-        if (this.hasAllTimeSeriesSelected()) {
+    deleteSelectedPoints() {
+        if (this.hasAllPointsSelected()) {
             this.deleteGroupInternal(this.selectedKey());
         } else {
-            var grid = this.getTimeSeriesGrid();
+            var grid = this.getPointsGrid();
             if (grid) {
                 grid.deleteSelectedItems();
             }
@@ -262,7 +271,7 @@ class timeSeries extends viewModelBase {
 
         this.keys().forEach((key: timeSeriesKey) => {
             if (key.name === selectedGroup.name) {
-                var docsGrid = this.getTimeSeriesGrid();
+                var docsGrid = this.getPointsGrid();
                 if (!!docsGrid) {
                     docsGrid.refreshCollectionData();
                 }
@@ -300,7 +309,7 @@ class timeSeries extends viewModelBase {
         }
     }
 
-    private getTimeSeriesGrid(): virtualTable {
+    private getPointsGrid(): virtualTable {
         var gridContents = $(timeSeries.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);

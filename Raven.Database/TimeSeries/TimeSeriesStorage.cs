@@ -475,9 +475,16 @@ namespace Raven.Database.TimeSeries
 					tx.Dispose();
 			}
 
-			public TimeSeriesSummary GetSummary(int skip, int take)
+			public IEnumerable<TimeSeriesPoint> GetPoints(string prefix, string key, int skip)
 			{
-				throw new NotImplementedException();
+				for (int i = 0; i < 10; i++)
+				{
+					yield return new TimeSeriesPoint
+					{
+						At = DateTime.Now.AddYears(-2).Ticks,
+						Values = new[] {4d,5d,56d },
+					};
+				}
 			}
 
 			public IEnumerable<TimeSeriesKey> GetKeys()

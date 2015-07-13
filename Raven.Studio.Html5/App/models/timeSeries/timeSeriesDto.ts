@@ -5,9 +5,7 @@ interface timeSeriesKeyDto {
     PointsCount: number;
 }
 
-interface timeSeriesPointDto {
-    Prefix: string;
-    Key: string;
+interface pointDto {
     At: number;
     Values: number[];
 }

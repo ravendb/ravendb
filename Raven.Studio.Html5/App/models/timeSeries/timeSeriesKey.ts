@@ -2,7 +2,7 @@
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
-import timeSeriesPointsCommand = require("commands/timeSeries/getTimeSeriesPointsCommand");
+import getPointsCommand = require("commands/timeSeries/getPointsCommand");
 
 class timeSeriesKey implements ICollectionBase {
 	colorClass = "";
@@ -52,7 +52,7 @@ class timeSeriesKey implements ICollectionBase {
     }
 
     private fetchTimeSeries(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        return new timeSeriesPointsCommand(this.ownerTimeSeries, skip, take, this.key, this.prefix).execute();
+        return new getPointsCommand(this.ownerTimeSeries, skip, take, this.key, this.prefix).execute();
     }
 } 
 

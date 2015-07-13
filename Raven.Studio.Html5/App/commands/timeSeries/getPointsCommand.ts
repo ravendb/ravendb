@@ -3,7 +3,7 @@ import timeSeries = require("models/timeSeries/timeSeriesDocument");
 import pagedResultSet = require("common/pagedResultSet");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 
-class getTimeSeriesPointsCommand extends commandBase {
+class getPointsCommand extends commandBase {
 
     /**
     * @param timeSeriesStorage - the timeSeries storage that is being used
@@ -16,21 +16,17 @@ class getTimeSeriesPointsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultSet> {
-        var args = {
-            skip: this.skip,
-            take: this.take,
-            prefix: this.prefix,
-            key: this.key
-        };
-
-        var url = "/timeSeries";
+        var url = "/" + this.prefix + "/" + this.key + "/points";
         var doneTask = $.Deferred();
-        var selector = (dtos: timeSeriesPointDto[]) => dtos.map(d => new timeSeriesPoint(d));
-        var task = this.query(url, args, this.ts, selector);
-        task.done((summaries: timeSeriesPointDto[]) => doneTask.resolve(new pagedResultSet(summaries, summaries.length)));
+        var selector = (dtos: pointDto[]) => dtos.map(d => new timeSeriesPoint(this.prefix, this.key, d));
+        var task = this.query(url, {
+            skip: this.skip,
+            take: this.take
+        }, this.ts, selector);
+        task.done((summaries: pointDto[]) => doneTask.resolve(new pagedResultSet(summaries, summaries.length)));
         task.fail(xhr => doneTask.reject(xhr));
         return doneTask;
     }
 }
 
-export = getTimeSeriesPointsCommand;  
+export = getPointsCommand;  
