@@ -143,12 +143,14 @@
     <Compile Include="RavenDB-3314.cs" />
     <Compile Include="RavenDB-3326.cs" />
     <Compile Include="RavenDB-3420.cs" />
+    <Compile Include="RavenDB-3460.cs" />
     <Compile Include="RavenDB-3465.cs" />
     <Compile Include="RavenDB-3472.cs" />
     <Compile Include="RavenDB-3383.cs" />
     <Compile Include="RavenDB-3393.cs" />
     <Compile Include="RavenDB-3401.cs" />
     <Compile Include="RavenDB-3451.cs" />
+    <Compile Include="RavenDB-3491.cs" />
     <Compile Include="RavenDB-3509.cs" />
     <Compile Include="RavenDB-3530.cs" />
     <Compile Include="RavenDB-3632.cs" />

@@ -750,7 +750,7 @@ namespace Raven.Database.Config
 		/// <summary>
 		/// The directory for the RavenDB database. 
 		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-		/// Default: ~\Data
+		/// Default: ~\Databases\System
 		/// </summary>
 		public string DataDirectory
 		{

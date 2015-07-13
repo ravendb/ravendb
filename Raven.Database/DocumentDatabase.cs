@@ -1145,11 +1145,12 @@ namespace Raven.Database
 		private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
 		{
 			var results = new BatchResult[commands.Count];
+			var participatingIds = commands.Select(x => x.Key).ToArray();
+
 			for (int index = 0; index < commands.Count; index++)
 			{
 				token.ThrowIfCancellationRequested();
 
-				var participatingIds = commands.Select(x => x.Key).ToArray();
 				results[index] = commands[index].ExecuteBatch(this, participatingIds);
 			}
 

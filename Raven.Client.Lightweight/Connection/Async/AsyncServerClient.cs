@@ -302,7 +302,7 @@ namespace Raven.Client.Connection.Async
 				{
 					await request.WriteAsync(serializeObject).ConfigureAwait(false);
 					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return result.Value<List<string>>("Indexes");
+                    return result.Value<RavenJArray>("Indexes").Select(x=>x.Value<string>()).ToList();
 				}
 				catch (ErrorResponseException e)
 				{

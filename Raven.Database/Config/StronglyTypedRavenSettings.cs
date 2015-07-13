@@ -134,7 +134,7 @@ namespace Raven.Database.Config
 			WorkingDir =
 				new StringSetting(settings["Raven/WorkingDir"], @"~\");
 			DataDir =
-				new StringSetting(settings["Raven/DataDir"], @"~\Data");
+				new StringSetting(settings["Raven/DataDir"], @"~\Databases\System");
 			IndexStoragePath =
 				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
 			CountersDataDir =

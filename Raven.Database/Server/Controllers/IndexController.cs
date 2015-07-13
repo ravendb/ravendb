@@ -93,11 +93,6 @@ namespace Raven.Database.Server.Controllers
 				var data = definitions[i];											
 				if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
 					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
-				// older clients (pre 3.0) might try to create the index without MaxIndexOutputsPerDocument set
-				// in order to ensure that they don't reset the default value for old clients, we force the default
-				// value to maintain the existing behavior
-				if (!data.MaxIndexOutputsPerDocument.HasValue || data.MaxIndexOutputsPerDocument.Value == default (int))
-					data.MaxIndexOutputsPerDocument = 16*1024;
 			}
 			try
 			{
@@ -200,11 +195,11 @@ namespace Raven.Database.Server.Controllers
 			if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
 				return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
 
-			// older clients (pre 3.0) might try to create the index without MaxIndexOutputsPerDocument set
-			// in order to ensure that they don't reset the default value for old clients, we force the default
-			// value to maintain the existing behavior
-			if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
-				data.MaxIndexOutputsPerDocument = 16*1024;
+            // older clients (pre 3.0) might try to create the index without MaxIndexOutputsPerDocument set
+            // in order to ensure that they don't reset the default value for old clients, we force the default
+            // value to maintain the existing behavior
+            if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
+                data.MaxIndexOutputsPerDocument = 16 * 1024;
 
 			try
 			{
