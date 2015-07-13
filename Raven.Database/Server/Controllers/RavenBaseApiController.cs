@@ -407,14 +407,6 @@ namespace Raven.Database.Server.Controllers
 				return Uri.EscapeDataString(str);
 			}
 
-			//because the string can be encoded multiple times, try to decode with loop
-			var tmp = String.Empty;
-			while (tmp.Equals(str) == false)
-			{
-				tmp = str;
-				str = HttpUtility.UrlDecode(str);
-			}
-			
 			return HttpUtility.UrlDecode(str);
 		}
 
