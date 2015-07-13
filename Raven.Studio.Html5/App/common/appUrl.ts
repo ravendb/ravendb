@@ -699,6 +699,10 @@ class appUrl {
         return "#counterstorages?" + counterStoragePart;
     }
 
+    static serverUrl(): string {
+        return window.location.protocol + "//" + window.location.host;
+    }
+
     static forIndexesRawData(db: database): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
