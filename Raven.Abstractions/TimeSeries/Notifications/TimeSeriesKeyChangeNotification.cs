@@ -10,7 +10,7 @@ namespace Raven.Abstractions.TimeSeries.Notifications
 
 		public TimeSeriesChangeAction Action { get; set; }
 
-		public long At { get; set; }
+		public DateTime At { get; set; }
 		
 		public double[] Values { get; set; }
 

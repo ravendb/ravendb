@@ -54,16 +54,16 @@ namespace Raven.Client.TimeSeries
 			}, token);
 		}
 
-		public Task AppendAsync(string prefix, string key, DateTime time, double value, CancellationToken token = new CancellationToken())
+		public Task AppendAsync(string prefix, string key, DateTime at, double value, CancellationToken token = new CancellationToken())
 		{
-			return AppendAsync(prefix, key, time, token, value);
+			return AppendAsync(prefix, key, at, token, value);
 		}
 
-		public async Task AppendAsync(string prefix, string key, DateTime time, CancellationToken token, params double[] values)
+		public async Task AppendAsync(string prefix, string key, DateTime at, CancellationToken token, params double[] values)
 		{
 			AssertInitialized();
 
-			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key) || time < DateTime.MinValue || values == null || values.Length == 0)
+			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key) || at < DateTime.MinValue || values == null || values.Length == 0)
 				throw new InvalidOperationException("Append data is invalid");
 
 			if (prefix.StartsWith("-") == false) 
@@ -72,19 +72,19 @@ namespace Raven.Client.TimeSeries
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, async (url, timeSeriesName) =>
 			{
-				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/append/{4}/{2}?time={3}",
-					url, timeSeriesName, key, time.Ticks, prefix);
+				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/append/{2}/{3}",
+					url, timeSeriesName, prefix, key);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 				{
-					await request.WriteWithObjectAsync(new TimeSeriesAppendRequest {Values = values, Time = time.Ticks});
+					await request.WriteWithObjectAsync(new TimeSeriesPoint{At = at, Values = values});
 					return await request.ReadResponseJsonAsync().WithCancellation(token);
 				}
 			}, token);
 		}
 
-		public Task AppendAsync(string prefix, string key, DateTime time, double[] values, CancellationToken token = new CancellationToken())
+		public Task AppendAsync(string prefix, string key, DateTime at, double[] values, CancellationToken token = new CancellationToken())
 		{
-			return AppendAsync(prefix, key, time, token, values);
+			return AppendAsync(prefix, key, at, token, values);
 		}
 
 		public async Task DeleteAsync(string prefix, string key, CancellationToken token = new CancellationToken())

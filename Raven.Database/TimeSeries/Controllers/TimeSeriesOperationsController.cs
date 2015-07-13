@@ -64,9 +64,9 @@ namespace Raven.Database.TimeSeries.Controllers
 
 		[RavenRoute("ts/{timeSeriesName}/append/{prefix}/{key}")]
 		[HttpPost]
-		public HttpResponseMessage Append(string prefix, string key, TimeSeriesAppendRequest input)
+		public HttpResponseMessage Append(string prefix, string key, TimeSeriesPoint input)
 		{
-			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key) || input.Time < DateTime.MinValue.Ticks || input.Values == null || input.Values.Length == 0)
+			if (string.IsNullOrEmpty(prefix) || string.IsNullOrEmpty(key) || input.Values == null || input.Values.Length == 0)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			if (prefix.StartsWith("-") == false)
@@ -74,7 +74,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.Append(prefix, key, new DateTime(input.Time), input.Values);
+				writer.Append(prefix, key, input.At, input.Values);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
@@ -83,7 +83,7 @@ namespace Raven.Database.TimeSeries.Controllers
 					Prefix = prefix,
 					Key = key,
 					Action = TimeSeriesChangeAction.Append,
-					At = input.Time,
+					At = input.At,
 					Values = input.Values,
 				});
 

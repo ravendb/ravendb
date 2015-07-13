@@ -1,8 +1,11 @@
+using System;
+
 namespace Raven.Abstractions.TimeSeries
 {
 	public class TimeSeriesPoint
 	{
-		public long At { get; set; }
+		public DateTime At { get; set; }
+
 		public double[] Values { get; set; }
 	}
 }

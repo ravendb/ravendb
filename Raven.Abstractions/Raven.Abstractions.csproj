@@ -427,7 +427,6 @@
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />
     <Compile Include="Spatial\WktSanitizer.cs" />
     <Compile Include="SystemTime.cs" />
-    <Compile Include="TimeSeries\TimeSeriesAppendRequest.cs" />
     <Compile Include="TimeSeries\TimeSeriesBackupRequest.cs" />
     <Compile Include="TimeSeries\TimeSeriesChange.cs" />
     <Compile Include="TimeSeries\TimeSeriesKey.cs" />

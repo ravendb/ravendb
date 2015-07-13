@@ -36,7 +36,7 @@ namespace Raven.Tests.TimeSeries
 				var timeSeriesChange = await notificationTask;
 				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Time", timeSeriesChange.Key);
-				Assert.Equal(at.Ticks, timeSeriesChange.At);
+				Assert.Equal(at, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
 				Assert.Equal(3d, timeSeriesChange.Values.Single());
 
@@ -53,7 +53,7 @@ namespace Raven.Tests.TimeSeries
 				timeSeriesChange = await notificationTask;
 				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Time", timeSeriesChange.Key);
-				Assert.Equal(DateTime.MinValue.Ticks, timeSeriesChange.At);
+				Assert.Equal(DateTime.MinValue, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Delete, timeSeriesChange.Action);
 				Assert.Equal(null, timeSeriesChange.Values);
 			}
@@ -82,7 +82,7 @@ namespace Raven.Tests.TimeSeries
 				var timeSeriesChange = await notificationTask;
 				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Time", timeSeriesChange.Key);
-				Assert.Equal(at.Ticks, timeSeriesChange.At);
+				Assert.Equal(at, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
 
 				//now connecting to changes in storeA
@@ -100,7 +100,7 @@ namespace Raven.Tests.TimeSeries
 				timeSeriesChange = await notificationTask;
 				Assert.Equal("-Simple", timeSeriesChange.Prefix);
 				Assert.Equal("Is", timeSeriesChange.Key);
-				Assert.Equal(at2.Ticks, timeSeriesChange.At);
+				Assert.Equal(at2, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
 			}
 		}

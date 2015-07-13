@@ -481,7 +481,7 @@ namespace Raven.Database.TimeSeries
 				{
 					yield return new TimeSeriesPoint
 					{
-						At = DateTime.Now.AddYears(-2).Ticks,
+						At = DateTime.Now.AddYears(-2),
 						Values = new[] {4d,5d,56d },
 					};
 				}

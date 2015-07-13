@@ -1,13 +1,13 @@
 ﻿class timeSeriesPoint implements documentBase {
     Prefix: string;
     Key: string;
-    At; 
+    At: string; 
     Values: number[]; 
 
     constructor(prefix: string, key: string, dto: pointDto) {
         this.Prefix = prefix;
         this.Key = key;
-        this.At = new Date(dto.At);
+        this.At = dto.At;
         this.Values = dto.Values;
 
         if (this.Values.length === 1) {

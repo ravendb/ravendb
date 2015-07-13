@@ -6,7 +6,7 @@ interface timeSeriesKeyDto {
 }
 
 interface pointDto {
-    At: number;
+    At: string;
     Values: number[];
 }
 
@@ -19,7 +19,7 @@ interface timeSeriesKeyChangeNotification {
     Prefix: string;
     Key: string;
     Action: string;
-    At: number;
+    At: string;
     Values: number[];
     Start: number;
     End: number;

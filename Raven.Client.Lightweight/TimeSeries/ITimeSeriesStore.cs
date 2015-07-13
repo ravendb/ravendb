@@ -32,11 +32,11 @@ namespace Raven.Client.TimeSeries
 
 		Task DeletePrefixConfigurationAsync(string prefix, CancellationToken token = default(CancellationToken));
 
-		Task AppendAsync(string prefix, string key, DateTime time, double value, CancellationToken token = default(CancellationToken));
+		Task AppendAsync(string prefix, string key, DateTime at, double value, CancellationToken token = default(CancellationToken));
 
-		Task AppendAsync(string prefix, string key, DateTime time, CancellationToken token, params double[] values);
+		Task AppendAsync(string prefix, string key, DateTime at, CancellationToken token, params double[] values);
 
-		Task AppendAsync(string prefix, string key, DateTime time, double[] values, CancellationToken token = default(CancellationToken));
+		Task AppendAsync(string prefix, string key, DateTime at, double[] values, CancellationToken token = default(CancellationToken));
 
 		Task DeleteAsync(string prefix, string key, CancellationToken token = default(CancellationToken));
 
