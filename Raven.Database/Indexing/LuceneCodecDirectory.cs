@@ -186,10 +186,22 @@ namespace Raven.Database.Indexing
 
 			protected override void Dispose(bool disposing)
 			{
-				base.Dispose(disposing);
-			    if (stream != null)
-			        stream.Close();
-				GC.SuppressFinalize(this);
+				try
+				{
+					base.Dispose(disposing);
+				}
+				finally
+				{
+					try
+					{
+						stream.Dispose();
+					}
+					finally
+					{
+						if (disposing)
+							GC.SuppressFinalize(this);
+					}
+				}
 			}
 
 			public override void Seek(long pos)
