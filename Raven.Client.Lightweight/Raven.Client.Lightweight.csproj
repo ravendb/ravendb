@@ -128,6 +128,7 @@
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
     <Compile Include="Document\ShardedBulkInsertOperation.cs" />
+    <Compile Include="Document\SortOptionsEqualityProvider.cs" />
     <Compile Include="Document\Subscription.cs" />
     <Compile Include="Document\DocumentSubscriptions.cs" />
     <Compile Include="Extensions\Internal\HttpJsonRequestExtensions.cs" />
