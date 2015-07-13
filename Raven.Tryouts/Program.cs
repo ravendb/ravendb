@@ -23,7 +23,7 @@ namespace Raven.Tryouts
 			{
 				using (var test = new RavenDB_3629())
 				{
-					test.Referenced_files_should_be_replicatedA();
+					test.Referenced_files_should_be_replicatedB();
 				}			
 				Console.WriteLine(i);
 				Thread.Sleep(100);
