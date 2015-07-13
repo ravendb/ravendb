@@ -139,7 +139,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   The types to sort the fields by (NULL if not specified)
 		/// </summary>
-		protected HashSet<KeyValuePair<string, SortOptions?>> sortByHints = new HashSet<KeyValuePair<string, SortOptions?>>();
+		protected HashSet<KeyValuePair<string, SortOptions?>> sortByHints = new HashSet<KeyValuePair<string, SortOptions?>>(SortOptionsEqualityProvider.Instance);
 
 		/// <summary>
 		///   The page size to use when querying the index
@@ -1921,7 +1921,7 @@ If you really want to do in memory filtering on the data returned from the query
 					ExplainScores = shouldExplainScores
 				};
 			}
-
+		
 			var indexQuery = new IndexQuery
 			{
 				IsDistinct = isDistinct,
@@ -2344,5 +2344,8 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			isDistinct = true;
 		}
+
 	}
+
+
 }
