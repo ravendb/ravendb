@@ -114,19 +114,28 @@ namespace Raven.Client.Document
 
 		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, CancellationToken cancellationToken)
 		{
-		    while (true)
-		    {
-		        cancellationToken.ThrowIfCancellationRequested();
+			while (true)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
 
-				var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId);
+				try
+				{
+					var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId);
 
-		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
+					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
 
-		        if (replicated)
-		            return;
-				
-                await Task.Delay(100, cancellationToken);
-		    }
+					if (replicated)
+						return;
+				}
+				catch (Exception e)
+				{
+					log.DebugException(string.Format("Failed to get replicated etags for '{0}'.", sourceUrl), e);
+
+					throw;
+				}
+
+				await Task.Delay(100, cancellationToken);
+			}
 		}
 
 	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId)
