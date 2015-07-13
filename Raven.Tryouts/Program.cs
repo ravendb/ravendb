@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Raven.Abstractions.Commands;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Shard;
-using Raven.Json.Linq;
-using Raven.Tests.MailingList;
+using System.Threading;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
@@ -26,7 +19,15 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			
+			for (int i = 0; i < 1000; i++)
+			{
+				using (var test = new RavenDB_3629())
+				{
+					test.Referenced_files_should_be_replicatedA();
+				}			
+				Console.WriteLine(i);
+				Thread.Sleep(100);
+			}
 		}
 
 	}
