@@ -52,7 +52,7 @@ class timeSeriesKey implements ICollectionBase {
     }
 
     private fetchTimeSeries(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        return new getPointsCommand(this.ownerTimeSeries, skip, take, this.prefix, this.key).execute();
+        return new getPointsCommand(this.ownerTimeSeries, skip, take, this.prefix, this.key, this.pointsCount()).execute();
     }
 } 
 

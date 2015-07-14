@@ -11,7 +11,8 @@ class getPointsCommand extends commandBase {
     * @param take - number of entries to take
     * @param timeSeriesGroupName - the timeSeries group to take the entries from
     */
-    constructor(private ts: timeSeries, private skip: number, private take: number, private prefix: string, private key: string) {
+    constructor(private ts: timeSeries, private skip: number, private take: number, private prefix: string,
+        private key: string, private pointsCount: number) {
         super();
     }
 
@@ -23,7 +24,7 @@ class getPointsCommand extends commandBase {
             skip: this.skip,
             take: this.take
         }, this.ts, selector);
-        task.done((summaries: pointDto[]) => doneTask.resolve(new pagedResultSet(summaries, summaries.length)));
+        task.done((points: pointDto[]) => doneTask.resolve(new pagedResultSet(points, this.pointsCount)));
         task.fail(xhr => doneTask.reject(xhr));
         return doneTask;
     }
