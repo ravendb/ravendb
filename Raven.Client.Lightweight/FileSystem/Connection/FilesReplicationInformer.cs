@@ -81,10 +81,8 @@ namespace Raven.Client.FileSystem.Connection
             lock (this)
             {
                 var serverClient = (IAsyncFilesCommandsImpl)commands;
-
-                string urlForFilename = serverClient.UrlFor();
+				var urlForFilename = serverClient.UrlFor();
                 var serverHash = ServerHash.GetServerHash(urlForFilename);
-
                 JsonDocument document = null;
 
                 try

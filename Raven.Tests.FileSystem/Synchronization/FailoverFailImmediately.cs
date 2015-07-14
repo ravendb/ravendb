@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Replication;
 using Raven.Client.FileSystem;
@@ -18,38 +19,51 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 		[Theory]
 		[InlineData("voron")]
-		//[InlineData("esent")]
+		[InlineData("esent")]
 		public async Task failover_throws(string storage)
 		{
-			using (var store0 = NewStore(0, fiddler: true, fileSystemName: "fs1"))
-			using (var store1 = NewStore(1, fiddler: true, fileSystemName: "fs2"))
+			IAsyncFilesCommandsImpl sourceClient = null;
+			try
 			{
-				var sourceClient = (IAsyncFilesCommandsImpl)store0.AsyncFilesCommands;
-				var destinationClient = store1.AsyncFilesCommands;
-
-				var destination = destinationClient.ToSynchronizationDestination();
-				await sourceClient.Synchronization.SetDestinationsAsync(destination);
-				sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
-				await sourceClient.Synchronization.StartAsync();
-
-				await sourceClient.UploadAsync(FileName, StringToStream(FileText));
-				var test1 = StreamToString(await sourceClient.DownloadAsync(FileName));
-				Assert.Equal(FileText, test1);
-
-				await WaitForSynchronization(store1);
-
-				var server = GetServer(0);
-				server.Dispose();
-
-				/*using (var session = store0.OpenAsyncSession())
+				using (var store0 = NewStore(0, fiddler: true, fileSystemName: "fs1"))
+				using (var store1 = NewStore(1, fiddler: true, fileSystemName: "fs2"))
 				{
-					await session.DownloadAsync(FileName);
-				}*/
+					sourceClient = (IAsyncFilesCommandsImpl)store0.AsyncFilesCommands;
+					var destinationClient = store1.AsyncFilesCommands;
 
-				var f = await sourceClient.DownloadAsync(FileName);
-				var t = 0;
-				//Assert.Throws<HttpRequestException>(async () => );
+					var destination = destinationClient.ToSynchronizationDestination();
+					await sourceClient.Synchronization.SetDestinationsAsync(destination);
+					sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
+					await sourceClient.Synchronization.StartAsync();
+
+					await sourceClient.UploadAsync(FileName, StringToStream(FileText));
+					var test1 = StreamToString(await sourceClient.DownloadAsync(FileName));
+					Assert.Equal(FileText, test1);
+
+					await WaitForSynchronization(store1);
+
+					var server = GetServer(0);
+					server.Dispose();
+
+					var expected = typeof(HttpRequestException);
+					Type actual = null;
+					try
+					{
+						await sourceClient.DownloadAsync(FileName);
+					}
+					catch (Exception e)
+					{
+						actual = e.GetType();
+					}
+					Assert.Equal(expected, actual);
+				}
 			}
+			finally
+			{
+				if (sourceClient != null)
+					sourceClient.ReplicationInformer.ClearReplicationInformationLocalCache(sourceClient);
+			}
+			
 		}
 	}
 }

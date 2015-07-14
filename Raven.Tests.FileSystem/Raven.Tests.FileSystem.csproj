@@ -138,6 +138,7 @@
     <Compile Include="Issues\RavenDB_3268_ConcurrencyChecks.cs" />
     <Compile Include="Issues\RavenDB_3499.cs" />
     <Compile Include="Migration\MigrationTests.cs" />
+    <Compile Include="Synchronization\FailoverReadFromAllServers.cs" />
     <Compile Include="Synchronization\RavenSynchronizationTestBase.cs" />
     <Compile Include="Search\SearchIndexes.cs" />
     <Compile Include="RavenFilesTestWithLogs.cs" />
