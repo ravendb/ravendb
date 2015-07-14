@@ -182,10 +182,10 @@
     <Compile Include="Replication\StoreIndex.cs" />
     <Compile Include="Replication\WritesDuringFailover.cs" />
     <Compile Include="Replication\WritesDuringFailover2.cs" />
+    <Compile Include="ScriptedIndexResults\Animals_Stats_With_Scripts.cs" />
     <Compile Include="ScriptedIndexResults\Animal.cs" />
     <Compile Include="ScriptedIndexResults\Animals_Stats.cs" />
     <Compile Include="ScriptedIndexResults\AnimalType.cs" />
-    <Compile Include="ScriptedIndexResults\Animal_Stats_Scripts.cs" />
     <Compile Include="ScriptedIndexResults\ScriptedIndexResultsTest.cs" />
     <Compile Include="SqlReplication\CanReplicate.cs" />
     <Compile Include="UniqueConstraints\Bugs\CaseInsensitive.cs" />

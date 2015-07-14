@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
 using System.Threading.Tasks;
@@ -316,10 +317,20 @@ namespace Raven.Client.Embedded
             Inner.ExecuteIndex(indexCreationTask);
         }
 
-        public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
+	    public void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+	    {
+		    Inner.ExecuteIndexes(indexCreationTasks);
+	    }
+
+	    public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
         {
             return Inner.ExecuteIndexAsync(indexCreationTask);
         }
+
+	    public Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+	    {
+		    return Inner.ExecuteIndexesAsync(indexCreationTasks);
+	    }
 
 	    public void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 	    {
