@@ -13,7 +13,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using System.Globalization;
-using System.Runtime.CompilerServices; 
+using System.Runtime.CompilerServices;
+using Raven.Abstractions.Threading;
 
 namespace QUT.GplexBuffers
 {
@@ -486,17 +487,17 @@ namespace QUT.GplexBuffers
     //
     public static class BlockReaderFactory
     {
-		[ThreadStatic]
-		private static byte[] buffer = new byte[4096];
+
+		private static readonly ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>(() => new byte[4096]);
         public static BlockReader Raw(Stream stream)
         {
             return delegate(char[] block, int index, int number)
             {
-                int count = stream.Read(buffer, 0, Math.Min(number, buffer.Length));
+                int count = stream.Read(buffer.Value, 0, Math.Min(number, buffer.Value.Length));
                 int i = 0;
                 int j = index;
                 for (; i < count; i++, j++)
-                    block[j] = (char)buffer[i];
+					block[j] = (char)buffer.Value[i];
                 return count;
             };
         }
