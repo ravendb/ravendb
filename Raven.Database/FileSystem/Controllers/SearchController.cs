@@ -74,7 +74,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 					DeleteFiles(keys, totalResults, progress);
 
-					FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+					SynchronizationTask.Context.NotifyAboutWork();
 				}
 				catch (Exception e)
 				{
