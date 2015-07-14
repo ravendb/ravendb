@@ -11,8 +11,8 @@ namespace Raven.Client.Connection.Async
         where TConvention : Convention
         where TReplicationInformer : IReplicationInformerBase
     {
-        protected AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory, 
-                                     Guid? sessionId, NameValueCollection operationsHeaders)
+        protected AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory,
+									 Guid? sessionId, NameValueCollection operationsHeaders, Func<string, TReplicationInformer> replicationInformerGetter, string resourceName)
         {
             WasDisposed = false;
 
@@ -21,70 +21,42 @@ namespace Raven.Client.Connection.Async
             CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             RequestFactory = jsonRequestFactory;
             SessionId = sessionId;
-            
-            OperationsHeaders = operationsHeaders ?? new NameValueCollection();
 
-	        replicationInformer = new Lazy<TReplicationInformer>(GetReplicationInformer, true);
+			OperationsHeaders = operationsHeaders ?? DefaultNameValueCollection;
+	        ReplicationInformerGetter = replicationInformerGetter;
+			replicationInformer = new Lazy<TReplicationInformer>(() => replicationInformerGetter(resourceName), true);
+			//this.replicationInformer.Value.UpdateReplicationInformationIfNeeded
             readStrippingBase = new Lazy<int>(() => ReplicationInformer.GetReadStripingBase(true), true);
 
             MaxQuerySizeForGetRequest = 8 * 1024;
         }
 
-        public int MaxQuerySizeForGetRequest
-        {
-            get;
-            set;
-        }
+	    public int MaxQuerySizeForGetRequest { get; set; }
 
-        public string ServerUrl
-        {
-            get; protected set;
-        }
+	    public string ServerUrl { get; private set; }
 
-        public TConvention Conventions
-        {
-            get;
-            private set;
-        }
+	    public TConvention Conventions { get; private set; }
 
-        protected Guid? SessionId
-        {
-            get;
-            private set;
-        }
+	    protected Guid? SessionId { get; private set; }
 
-        public HttpJsonRequestFactory RequestFactory
-        {
-            get;
-            private set;
-        }
+	    public HttpJsonRequestFactory RequestFactory { get; private set; }
 
-        protected OperationCredentials CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication
-        {
-            get; set;
-        }
+	    protected OperationCredentials CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication { get; set; }
 
-        public virtual OperationCredentials PrimaryCredentials
-        {
-            get { return CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication; }
-        }
+	    public virtual OperationCredentials PrimaryCredentials
+	    {
+		    get { return CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication; }
+	    }
 
-        public NameValueCollection OperationsHeaders
-        {
-            get;
-            set;
-        }
+	    public NameValueCollection OperationsHeaders { get; set; }
 
-        protected abstract string BaseUrl
-        {
-            get;
-        }
+	    protected abstract string BaseUrl { get; }
 
-        public abstract string UrlFor(string fileSystem);
+	    public abstract string UrlFor(string fileSystem);
 
         #region Execute with replication
 
-        protected abstract TReplicationInformer GetReplicationInformer();
+        //protected abstract TReplicationInformer GetReplicationInformer();
 
 
         private readonly Lazy<TReplicationInformer> replicationInformer;
@@ -93,12 +65,14 @@ namespace Raven.Client.Connection.Async
         /// Allow access to the replication informer used to determine how we replicate requests
         /// </summary>
         public TReplicationInformer ReplicationInformer { get { return replicationInformer.Value; } }
+		protected readonly Func<string, TReplicationInformer> ReplicationInformerGetter;
 
         private readonly Lazy<int> readStrippingBase;
         private int requestCount;
         private volatile bool currentlyExecuting;
+		private static readonly NameValueCollection DefaultNameValueCollection = new NameValueCollection();
 
-        internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation)
+	    internal async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation)
         {
             var currentRequest = Interlocked.Increment(ref requestCount);
             if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)

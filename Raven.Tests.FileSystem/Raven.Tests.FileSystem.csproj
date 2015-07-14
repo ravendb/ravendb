@@ -133,10 +133,13 @@
     <Compile Include="FileHandling.cs" />
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />
+    <Compile Include="Issues\RavenDB_3648.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />
     <Compile Include="Issues\RavenDB_3268_ConcurrencyChecks.cs" />
     <Compile Include="Issues\RavenDB_3499.cs" />
     <Compile Include="Migration\MigrationTests.cs" />
+    <Compile Include="Synchronization\FailoverReadFromAllServers.cs" />
+    <Compile Include="Synchronization\RavenSynchronizationTestBase.cs" />
     <Compile Include="Search\SearchIndexes.cs" />
     <Compile Include="RavenFilesTestWithLogs.cs" />
     <Compile Include="RavenFilesWebApiTest.cs" />
@@ -160,6 +163,7 @@
     <Compile Include="StreamingTests.cs" />
     <Compile Include="Synchronization\AutomaticConflictResolutions.cs" />
     <Compile Include="Synchronization\ConflictNotificationTests.cs" />
+    <Compile Include="Synchronization\FailoverFailImmediately.cs" />
     <Compile Include="Synchronization\FailoverTests.cs" />
     <Compile Include="Synchronization\NeedListParserTest.cs" />
     <Compile Include="Synchronization\RdcVersionCheckerTest.cs" />

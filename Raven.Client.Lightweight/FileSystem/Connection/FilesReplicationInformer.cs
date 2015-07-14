@@ -1,4 +1,8 @@
-﻿using Raven.Abstractions;
+﻿using System;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
@@ -6,15 +10,8 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Connection
 {
@@ -28,6 +25,52 @@ namespace Raven.Client.FileSystem.Connection
         {
         }
 
+		public Task UpdateReplicationInformationIfNeeded(IAsyncFilesCommands commands)
+		{
+			return UpdateReplicationInformationIfNeededInternal(commands);
+		}
+
+		private Task UpdateReplicationInformationIfNeededInternal(IAsyncFilesCommands commands)
+		{
+			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				return new CompletedTask();
+
+			if (LastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+				return new CompletedTask();
+
+			var serverClient = (IAsyncFilesCommandsImpl)commands;
+			lock (ReplicationLock)
+			{
+				if (FirstTime)
+				{
+					var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
+					var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+					if (IsInvalidDestinationsDocument(document) == false)
+					{
+						UpdateReplicationInformationFromDocument(document);
+					}
+				}
+
+				FirstTime = false;
+
+				if (LastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+					return new CompletedTask();
+
+				var taskCopy = RefreshReplicationInformationTask;
+				if (taskCopy != null)
+					return taskCopy;
+
+				return RefreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(commands))
+					.ContinueWith(task =>
+					{
+						if (task.Exception != null)
+						{
+							log.ErrorException("Failed to refresh replication information", task.Exception);
+						}
+						RefreshReplicationInformationTask = null;
+					});
+			}
+		}
 
         /// <summary>
         /// Refreshes the replication information.
@@ -38,10 +81,8 @@ namespace Raven.Client.FileSystem.Connection
             lock (this)
             {
                 var serverClient = (IAsyncFilesCommandsImpl)commands;
-
-                string urlForFilename = serverClient.UrlFor();
+				var urlForFilename = serverClient.UrlFor();
                 var serverHash = ServerHash.GetServerHash(urlForFilename);
-
                 JsonDocument document = null;
 
                 try
@@ -55,8 +96,7 @@ namespace Raven.Client.FileSystem.Connection
                         var destinationsArray = config.Value<RavenJArray>("Destinations");
                         if (destinationsArray != null)
                         {
-                            document = new JsonDocument();
-                            document.DataAsJson = new RavenJObject() { { "Destinations", destinationsArray } };
+	                        document = new JsonDocument {DataAsJson = new RavenJObject() {{"Destinations", destinationsArray}}};
                         }
                     }
                 }
@@ -69,7 +109,7 @@ namespace Raven.Client.FileSystem.Connection
 
                 if (document == null)
                 {
-                    lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
+                    LastReplicationUpdate = SystemTime.UtcNow; // checked and not found
                     return;
                 }
 
@@ -77,17 +117,15 @@ namespace Raven.Client.FileSystem.Connection
 
                 UpdateReplicationInformationFromDocument(document);
 
-                lastReplicationUpdate = SystemTime.UtcNow;
+                LastReplicationUpdate = SystemTime.UtcNow;
             }
         }
 
 	    public override void ClearReplicationInformationLocalCache(IAsyncFilesCommands client)
 	    {
 			var serverClient = (IAsyncFilesCommandsImpl)client;
-
-			string urlForFilename = serverClient.UrlFor();
+			var urlForFilename = serverClient.UrlFor();
 			var serverHash = ServerHash.GetServerHash(urlForFilename);
-
 			ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
 	    }
 

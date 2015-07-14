@@ -1,25 +1,4 @@
-﻿using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.FileSystem.Notifications;
-using Raven.Abstractions.OAuth;
-using Raven.Abstractions.Util;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
-using Raven.Client.Connection.Implementation;
-using Raven.Client.Connection.Profiling;
-using Raven.Client.Extensions;
-using Raven.Client.FileSystem.Changes;
-using Raven.Client.FileSystem.Connection;
-using Raven.Client.FileSystem.Extensions;
-using Raven.Client.FileSystem.Listeners;
-using Raven.Client.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -28,8 +7,25 @@ using System.Net;
 using System.Net.Http;
 using System.Security;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.OAuth;
+using Raven.Abstractions.Util;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Implementation;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.Extensions;
+using Raven.Client.FileSystem.Connection;
+using Raven.Client.FileSystem.Extensions;
+using Raven.Client.FileSystem.Listeners;
+using Raven.Client.Util;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Client.FileSystem
@@ -38,34 +34,28 @@ namespace Raven.Client.FileSystem
     public class AsyncFilesServerClient : AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>, IAsyncFilesCommandsImpl
     {
         private readonly IFilesConflictListener[] conflictListeners;
-
-
         private bool resolvingConflict = false;
-
         private const int DefaultNumberOfCachedRequests = 2048;
-        private static HttpJsonRequestFactory GetHttpJsonRequestFactory ()
-        {
-              return new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-        }
 
         /// <summary>
         /// Notify when the failover status changed
         /// </summary>
         public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
         {
-            add { this.ReplicationInformer.FailoverStatusChanged += value; }
-            remove { this.ReplicationInformer.FailoverStatusChanged -= value; }
+            add { ReplicationInformer.FailoverStatusChanged += value; }
+            remove { ReplicationInformer.FailoverStatusChanged -= value; }
         }
 
-        public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, IFilesConflictListener[] conflictListeners, NameValueCollection operationsHeaders = null)
-            : base(serverUrl, conventions, credentials, requestFactory, sessionId, operationsHeaders)
+		public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, Func<string, IFilesReplicationInformer> replicationInformerGetter, IFilesConflictListener[] conflictListeners, NameValueCollection operationsHeaders = null)
+			: base(serverUrl, conventions, credentials, requestFactory, sessionId, operationsHeaders, replicationInformerGetter, fileSystemName)
         {
             try
             {                
-                this.FileSystem = fileSystemName;
-                this.ApiKey = credentials.ApiKey;
+                FileSystemName = fileSystemName;
+                ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
-
+				if (replicationInformerGetter.Equals(DefaultReplicationInformerGetter) == false)
+					ReplicationInformer.UpdateReplicationInformationIfNeeded(this);
                 InitializeSecurity();
             }
             catch (Exception)
@@ -75,14 +65,13 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
-            : this(serverUrl, fileSystemName, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), GetHttpJsonRequestFactory(), null, null, new NameValueCollection())
-        {
-        }
+		private static readonly FilesConvention DefaultFilesConvention = new FilesConvention();
+		private static readonly HttpJsonRequestFactory JsonRequestFactory = new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+		private static readonly Func<string, IFilesReplicationInformer> DefaultReplicationInformerGetter = (x) => new FilesReplicationInformer(new FilesConvention(), JsonRequestFactory);
 
-        protected override IFilesReplicationInformer GetReplicationInformer()
+        public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
+			: this(serverUrl, fileSystemName, DefaultFilesConvention, new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), JsonRequestFactory, null, DefaultReplicationInformerGetter, null)
         {
-            return new FilesReplicationInformer(this.Conventions, this.RequestFactory);
         }
 
         protected override string BaseUrl
@@ -93,26 +82,27 @@ namespace Raven.Client.FileSystem
         public override string UrlFor(string fileSystem = null)
         {
             if (string.IsNullOrWhiteSpace(fileSystem))
-                fileSystem = this.FileSystem;
+                fileSystem = FileSystemName;
 
-            return this.ServerUrl + "/fs/" + Uri.EscapeDataString(fileSystem);
+            return ServerUrl + "/fs/" + Uri.EscapeDataString(fileSystem);
         }
 
-        public string FileSystem { get; private set; }
+        public string FileSystemName { get; private set; }
 
-        public IAsyncFilesCommands ForFileSystem(string fileSystem)
+        public IAsyncFilesCommands ForFileSystem(string fileSystemName)
         {
-            return new AsyncFilesServerClient(this.ServerUrl, fileSystem, Conventions, PrimaryCredentials, RequestFactory, SessionId, this.conflictListeners, OperationsHeaders);
+			return new AsyncFilesServerClient(ServerUrl, fileSystemName, Conventions, PrimaryCredentials, RequestFactory, SessionId, ReplicationInformerGetter, conflictListeners, OperationsHeaders);
         }
 
         public IAsyncFilesCommands With(ICredentials credentials)
         {
-            var primaryCredentials = new OperationCredentials(this.ApiKey, credentials);
-            return new AsyncFilesServerClient(this.ServerUrl, this.FileSystem, Conventions, primaryCredentials, RequestFactory, SessionId, this.conflictListeners, OperationsHeaders);
+            var primaryCredentials = new OperationCredentials(ApiKey, credentials);
+			return new AsyncFilesServerClient(ServerUrl, FileSystemName, Conventions, primaryCredentials, RequestFactory, SessionId, ReplicationInformerGetter, conflictListeners, OperationsHeaders);
         }
+
         public IAsyncFilesCommands With(OperationCredentials credentials)
         {
-            return new AsyncFilesServerClient(this.ServerUrl, this.FileSystem, Conventions, credentials, RequestFactory, SessionId, this.conflictListeners, OperationsHeaders);
+			return new AsyncFilesServerClient(ServerUrl, FileSystemName, Conventions, credentials, RequestFactory, SessionId, ReplicationInformerGetter, conflictListeners, OperationsHeaders);
         }
 
         public string ApiKey { get; private set; }
@@ -1745,7 +1735,7 @@ namespace Raven.Client.FileSystem
             public async Task CreateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null)
             {
 				var requestUriString = string.Format("{0}/admin/fs/{1}", client.ServerUrl,
-                                                     newFileSystemName ?? client.FileSystem);
+                                                     newFileSystemName ?? client.FileSystemName);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", client.PrimaryCredentials, convention)))
 	            {
@@ -1770,7 +1760,7 @@ namespace Raven.Client.FileSystem
             public async Task CreateOrUpdateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null)
             {
 				var requestUriString = string.Format("{0}/admin/fs/{1}?update=true", client.ServerUrl,
-                                                     newFileSystemName ?? client.FileSystem);
+                                                     newFileSystemName ?? client.FileSystemName);
 
 	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", client.PrimaryCredentials, convention)))
 	            {
@@ -1787,7 +1777,7 @@ namespace Raven.Client.FileSystem
 
 			public async Task DeleteFileSystemAsync(string fileSystemName = null, bool hardDelete = false)
 			{
-				var requestUriString = string.Format("{0}/admin/fs/{1}?hard-delete={2}", client.ServerUrl, fileSystemName ?? client.FileSystem, hardDelete);
+				var requestUriString = string.Format("{0}/admin/fs/{1}?hard-delete={2}", client.ServerUrl, fileSystemName ?? client.FileSystemName, hardDelete);
 
 				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "DELETE", client.PrimaryCredentials, convention)))
 				{

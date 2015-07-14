@@ -1,11 +1,7 @@
-﻿using Raven.Abstractions.FileSystem;
-using Raven.Client.FileSystem.Connection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 
 namespace Raven.Client.FileSystem.Extensions
 {
@@ -15,9 +11,9 @@ namespace Raven.Client.FileSystem.Extensions
         {
             var selfImpl = (IAsyncFilesCommandsImpl)self;
 
-            var result = new SynchronizationDestination()
+            var result = new SynchronizationDestination
             {
-                FileSystem = self.FileSystem,
+                FileSystem = self.FileSystemName,
                 ServerUrl = selfImpl.ServerUrl,               
             };
 
