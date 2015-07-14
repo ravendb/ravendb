@@ -627,7 +627,7 @@ namespace Raven.Database.Server.Controllers
 
 		private void RewriteDateQueriesFromOldClients(IndexQuery indexQuery)
 		{
-			var clientVersion = GetQueryStringValue("Raven-Client-Version");
+			var clientVersion = GetHeader("Raven-Client-Version");
 			if (string.IsNullOrEmpty(clientVersion) == false) // new client
 				return;
 
