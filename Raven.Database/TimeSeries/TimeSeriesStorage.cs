@@ -477,13 +477,41 @@ namespace Raven.Database.TimeSeries
 
 			public IEnumerable<TimeSeriesPoint> GetPoints(string prefix, string key, int skip)
 			{
-				for (int i = 0; i < 10; i++)
+				var tree = tx.ReadTree(SeriesTreePrefix + prefix);
+				if (tree == null)
+					yield break;
+
+				var valueLength = storage.GetPrefixConfiguration(prefix);
+				if (valueLength == 0)
+					throw new InvalidOperationException("Prefix not exist");
+				var buffer = new byte[valueLength * sizeof(double)];
+
+				var fixedTree = tree.FixedTreeFor(key, (byte) (valueLength*sizeof (double)));
+				using (var fixedIt = fixedTree.Iterate())
 				{
-					yield return new TimeSeriesPoint
+					if (fixedIt.Seek(DateTime.MinValue.Ticks))
 					{
-						At = DateTime.Now.AddYears(-2),
-						Values = new[] {4d,5d,56d },
-					};
+						do
+						{
+							if (skip-- > 0)
+								continue;
+
+							var point = new TimeSeriesPoint
+							{
+								At = new DateTime(fixedIt.CurrentKey),
+								Values = new double[valueLength],
+							};
+
+							var reader = fixedIt.CreateReaderForCurrent();
+							reader.Read(buffer, 0, valueLength * sizeof(double));
+							for (int i = 0; i < valueLength; i++)
+							{
+								point.Values[i] = EndianBitConverter.Big.ToDouble(buffer, i * sizeof(double));
+							}
+
+							yield return point;
+						} while (fixedIt.MoveNext());
+					}
 				}
 			}
 
@@ -615,8 +643,11 @@ namespace Raven.Database.TimeSeries
 						storage.UpdateKeysCount(tx, 1);
 					}
 				}
-				storage.UpdateValuesCount(tx, 1);
-				fixedTree.Add(time.Ticks, valBuffer);
+				var isNew = fixedTree.Add(time.Ticks, valBuffer);
+				if (isNew)
+				{
+					storage.UpdateValuesCount(tx, 1);
+				}
 			}
 
 			public void Dispose()

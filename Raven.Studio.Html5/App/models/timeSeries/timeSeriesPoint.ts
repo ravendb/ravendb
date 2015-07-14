@@ -14,7 +14,7 @@
             this["Value"] = this.Values[0];
         } else {
             for (var i = 0; i < this.Values.length; i++) {
-                this["Value " + (i + 1)] = this.Values[0];
+                this["Value " + (i + 1)] = this.Values[i];
             }
         }
         

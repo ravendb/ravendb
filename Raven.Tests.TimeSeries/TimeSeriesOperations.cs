@@ -137,6 +137,8 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task AdvancedAppend()
 		{
+			var start = DateTime.Now;
+
 			using (var store = NewRemoteTimeSeriesStore())
 			{
 				await store.CreatePrefixConfigurationAsync("-Simple", 1);
@@ -144,19 +146,40 @@ namespace Raven.Tests.TimeSeries
 
 				using (var batch = store.Advanced.NewBatch(new TimeSeriesBatchOptions { }))
 				{
-					for (int i = 0; i < 1888; i++)
+					for (int i = 0; i < 18888; i++)
 					{
-						batch.ScheduleAppend("-Simple", "Is", DateTime.Now, 3D);
-						batch.ScheduleAppend("-Simple", "Money", DateTime.Now, 13D);
-						batch.ScheduleAppend("-ForValues", "Time", DateTime.Now, 3D, 4D, 5D, 6D);
+						batch.ScheduleAppend("-Simple", "Is", start.AddSeconds(i + 1), 3D);
+						batch.ScheduleAppend("-Simple", "Money", start.AddSeconds(i + 18), 13D);
+						batch.ScheduleAppend("-ForValues", "Time", start.AddSeconds(i + 13), 3D, 4D, 5D, 6D);
 					}
 					await batch.FlushAsync();
 				}
 
+				var keys = await store.Advanced.GetKeys();
+				Assert.Equal(3, keys.Length);
+
+				var time = keys[0];
+				Assert.Equal("-ForValues", time.Prefix);
+				Assert.Equal(4, time.ValueLength);
+				Assert.Equal("Time", time.Key);
+				Assert.Equal(18888, time.PointsCount);
+
+				var _is = keys[1];
+				Assert.Equal("-Simple", _is.Prefix);
+				Assert.Equal(1, _is.ValueLength);
+				Assert.Equal("Is", _is.Key);
+				Assert.Equal(18888, _is.PointsCount);
+
+				var money = keys[2];
+				Assert.Equal("-Simple", money.Prefix);
+				Assert.Equal(1, money.ValueLength);
+				Assert.Equal("Money", money.Key);
+				Assert.Equal(18888, money.PointsCount);
+
 				var stats = await store.GetTimeSeriesStatsAsync();
 				Assert.Equal(2, stats.PrefixesCount);
 				Assert.Equal(3, stats.KeysCount);
-				Assert.Equal(1888 * 3, stats.ValuesCount);
+				Assert.Equal(18888 * 3, stats.ValuesCount);
 
 				WaitForUserToContinueTheTest(startPage: "/studio/index.html#timeseries/series?prefix=-Simple&key=Money&timeseries=SeriesName-1");
 			}
@@ -165,20 +188,22 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task GetKeys()
 		{
+			var start = DateTime.Now;
+
 			using (var store = NewRemoteTimeSeriesStore())
 			{
 				await store.CreatePrefixConfigurationAsync("-Simple", 1);
 				await store.CreatePrefixConfigurationAsync("-ForValues", 4);
 
-				await store.AppendAsync("-ForValues", "Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D });
-				await store.AppendAsync("-Simple", "Is", DateTime.Now, 3D);
-				await store.AppendAsync("-Simple", "Money", DateTime.Now, 3D);
+				await store.AppendAsync("-ForValues", "Time", start, new[] { 3D, 4D, 5D, 6D });
+				await store.AppendAsync("-Simple", "Is", start, 3D);
+				await store.AppendAsync("-Simple", "Money", start, 3D);
 
 				var cancellationToken = new CancellationToken();
-				await store.AppendAsync("-Simple", "Is", DateTime.Now.AddHours(1), 3456D, cancellationToken);
-				await store.AppendAsync("-ForValues", "Time", DateTime.Now.AddHours(1), new[] { 23D, 4D, 5D, 6D }, cancellationToken);
-				await store.AppendAsync("-ForValues", "Time", DateTime.Now.AddHours(2), cancellationToken, 33D, 4D, 5D, 6D);
-				await store.AppendAsync("-ForValues", "Time", DateTime.Now.AddHours(3), cancellationToken, 33D, 4D, 5D, 6D);
+				await store.AppendAsync("-Simple", "Is", start.AddHours(1), 3456D, cancellationToken);
+				await store.AppendAsync("-ForValues", "Time", start.AddHours(1), new[] { 23D, 4D, 5D, 6D }, cancellationToken);
+				await store.AppendAsync("-ForValues", "Time", start.AddHours(2), cancellationToken, 33D, 4D, 5D, 6D);
+				await store.AppendAsync("-ForValues", "Time", start.AddHours(3), cancellationToken, 33D, 4D, 5D, 6D);
 
 				var keys = await store.Advanced.GetKeys(cancellationToken);
 				Assert.Equal(3, keys.Length);
@@ -200,6 +225,74 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(1, money.ValueLength);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
+
+				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
+				Assert.Equal(2, stats.PrefixesCount);
+				Assert.Equal(3, stats.KeysCount);
+				Assert.Equal(7, stats.ValuesCount);
+			}
+		}
+
+		[Fact]
+		public async Task CanOverrideExistingPoints()
+		{
+			var start = DateTime.Now;
+
+			using (var store = NewRemoteTimeSeriesStore())
+			{
+				await store.CreatePrefixConfigurationAsync("-Simple", 1);
+				await store.CreatePrefixConfigurationAsync("-ForValues", 4);
+
+				await store.AppendAsync("-ForValues", "Time", start, new[] { 3D, 4D, 5D, 6D });
+				await store.AppendAsync("-Simple", "Is", start, 3D);
+				await store.AppendAsync("-Simple", "Money", start, 3D);
+
+				using (var batch = store.Advanced.NewBatch(new TimeSeriesBatchOptions { }))
+				{
+					for (int i = 0; i < 1888; i++)
+					{
+						await store.AppendAsync("-ForValues", "Time", start, new[] { 3D, 4D, 5D, 6D });
+						await store.AppendAsync("-Simple", "Is", start, 3D);
+						await store.AppendAsync("-Simple", "Money", start, 3D);
+
+						batch.ScheduleAppend("-Simple", "Is", start, 3D);
+						batch.ScheduleAppend("-Simple", "Money", start, 13D);
+						batch.ScheduleAppend("-ForValues", "Time", start, 3D, 4D, 5D, 6D);
+					}
+					await batch.FlushAsync();
+				}
+
+				var cancellationToken = new CancellationToken();
+				await store.AppendAsync("-Simple", "Is", start.AddYears(10), 3456D, cancellationToken);
+				await store.AppendAsync("-ForValues", "Time", start.AddYears(1), new[] { 23D, 4D, 5D, 6D }, cancellationToken);
+				await store.AppendAsync("-ForValues", "Time", start.AddYears(2), cancellationToken, 33D, 4D, 5D, 6D);
+				await store.AppendAsync("-ForValues", "Time", start.AddYears(3), cancellationToken, 33D, 4D, 5D, 6D);
+
+				var keys = await store.Advanced.GetKeys(cancellationToken);
+				Assert.Equal(3, keys.Length);
+
+				var time = keys[0];
+				Assert.Equal("-ForValues", time.Prefix);
+				Assert.Equal(4, time.ValueLength);
+				Assert.Equal("Time", time.Key);
+				Assert.Equal(4, time.PointsCount);
+
+				var _is = keys[1];
+				Assert.Equal("-Simple", _is.Prefix);
+				Assert.Equal(1, _is.ValueLength);
+				Assert.Equal("Is", _is.Key);
+				Assert.Equal(2, _is.PointsCount);
+
+				var money = keys[2];
+				Assert.Equal("-Simple", money.Prefix);
+				Assert.Equal(1, money.ValueLength);
+				Assert.Equal("Money", money.Key);
+				Assert.Equal(1, money.PointsCount);
+
+				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
+				Assert.Equal(2, stats.PrefixesCount);
+				Assert.Equal(3, stats.KeysCount);
+				Assert.Equal(7, stats.ValuesCount);
 			}
 		}
 	}

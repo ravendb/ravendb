@@ -31,7 +31,7 @@ namespace Raven.Client.TimeSeries
 				return new TimeSeriesBatchOperation(parent, parent.Name, options);
 			}
 
-			public async Task<TimeSeriesKey[]> GetKeys(CancellationToken token)
+			public async Task<TimeSeriesKey[]> GetKeys(CancellationToken token =  default(CancellationToken))
 			{
 				parent.AssertInitialized();
 
