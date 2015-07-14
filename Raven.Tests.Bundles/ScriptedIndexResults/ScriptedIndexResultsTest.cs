@@ -22,7 +22,7 @@ namespace Raven.Tests.Bundles.ScriptedIndexResults
 		{
 			using (var store = NewDocumentStore())
 			{
-                new Animal_Stats_Scripts().Execute(store);
+				new Animals_Stats_With_Scripts().Execute(store);
 				using (var s = store.OpenSession())
 				{
 					s.Store(new Animal
@@ -45,8 +45,6 @@ namespace Raven.Tests.Bundles.ScriptedIndexResults
 					s.SaveChanges();
 				}
 
-				new Animals_Stats().Execute(store);
-
 				WaitForIndexing(store);
 
 				using (var s = store.OpenSession())
@@ -62,7 +60,7 @@ namespace Raven.Tests.Bundles.ScriptedIndexResults
 		{
 			using (var store = NewDocumentStore())
 			{
-                new Animal_Stats_Scripts().Execute(store);
+                new Animals_Stats_With_Scripts().Execute(store);
                 using (var s = store.OpenSession())
 				{
 					s.Store(new Animal
@@ -84,8 +82,6 @@ namespace Raven.Tests.Bundles.ScriptedIndexResults
 
 					s.SaveChanges();
 				}
-
-				new Animals_Stats().Execute(store);
 
 				WaitForIndexing(store);
 
