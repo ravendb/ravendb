@@ -87,7 +87,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 		{
 			dataPath = NewDataPath("CanRestoreBackupOfEncryptedFileSystem", false);
 
-			using (var server = CreateServer(0, requestedStorage: requestedStorage, runInMemory: false, dataDirectory: dataPath))
+			using (var server = CreateServer(8079, requestedStorage: requestedStorage, runInMemory: false, dataDirectory: dataPath))
 			{
 				var store = server.FilesStore;
 				var fs1Doc = new FileSystemDocument()

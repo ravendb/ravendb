@@ -68,7 +68,7 @@ namespace Raven.Tests.Helpers
             this.SynchronizationInterval = TimeSpan.FromMinutes(10);
         }
 
-        protected RavenDbServer CreateServer(int index,
+        protected RavenDbServer CreateServer(int port,
                                                     string dataDirectory = null,
                                                     bool runInMemory = true,
                                                     string requestedStorage = null,
@@ -77,7 +77,6 @@ namespace Raven.Tests.Helpers
 													string activeBundles = null,
                                                     Action<RavenConfiguration> customConfig = null)
         {
-	        var port = Ports[index];
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
@@ -143,7 +142,7 @@ namespace Raven.Tests.Helpers
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateServer(index, 
+            var server = CreateServer(Ports[index], 
                 fileSystemName: fileSystemName,
                 enableAuthentication: enableAuthentication, 
                 customConfig: customConfig,
@@ -183,7 +182,7 @@ namespace Raven.Tests.Helpers
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-	        var server = CreateServer(index, fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
+			var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
 				dataDirectory: dataDirectory, runInMemory: runInMemory);
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
