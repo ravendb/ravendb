@@ -68,6 +68,7 @@
     <Compile Include="Collections\ZFastTrieSortedSet.cs" />
     <Compile Include="Comparers.cs" />
     <Compile Include="Hashing.cs" />
+    <Compile Include="Hashing.Iterative.cs" />
     <Compile Include="Memory.cs" />
     <Compile Include="ObjectPool.cs" />
     <Compile Include="Platform\Posix\PosixUnmanagedMemory.cs" />

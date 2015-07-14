@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Sparrow
 {
-    public unsafe static class Hashing
+    public unsafe static partial class Hashing
     {
         /// <summary>
         /// A port of the original XXHash algorithm from Google in 32bits 

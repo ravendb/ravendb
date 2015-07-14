@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Sparrow.Tests
 {
@@ -55,6 +56,7 @@ namespace Sparrow.Tests
             Assert.Equal(expected, result);
         }
 
+
         [Fact]
         public void NotEquivalenceOfBytesWithString()
         {
@@ -72,6 +74,43 @@ namespace Sparrow.Tests
             result = Hashing.XXHash32.CalculateRaw(value, seed: 10);
             expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.NotEqual(expected, result);
+        }
+
+        public static IEnumerable<object[]> BufferSize
+        {
+            get
+            {
+                return new[]
+				{
+                    new object[] {1},
+                    new object[] {4},
+                    new object[] {15},                  
+                    new object[] {65},
+                    new object[] {90},
+                    new object[] {128},
+                    new object[] {129},
+				};
+            }
+        }
+
+        [Theory]
+        [PropertyData("BufferSize")]
+        public void IterativeHashingEquivalence(int bufferSize)
+        {
+            var rnd = new Random(1000);
+
+            byte[] values = new byte[bufferSize];
+            rnd.NextBytes(values);
+
+            uint seed = 233;
+            var context = Hashing.Iterative.XXHash32.Preprocess(values, values.Length, seed);
+
+            for ( int i = 1; i < values.Length; i++ )
+            {
+                var expected = Hashing.XXHash32.Calculate(values, i, seed);
+                var result = Hashing.Iterative.XXHash32.Calculate(values, i, context);
+                Assert.Equal(expected, result);
+            }
         }
 
     }

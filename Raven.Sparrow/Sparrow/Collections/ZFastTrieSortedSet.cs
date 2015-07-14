@@ -16,7 +16,7 @@ namespace Sparrow.Collections
     /// As described in "Dynamic Z-Fast Tries" by Belazzougui, Boldi and Vigna in String Processing and Information
     /// Retrieval. Lecture notes on Computer Science. Volume 6393, 2010, pp 159-172 [1]
     /// </summary>
-    public sealed class ZFastTrieSortedSet<TKey, TValue> 
+    public sealed class ZFastTrieSortedSet<TKey, TValue> where TKey : IEquatable<TKey>
     {
         protected abstract class Node
         {
@@ -24,6 +24,11 @@ namespace Sparrow.Collections
 
             public abstract bool IsLeaf { get; }
             public abstract bool IsInternal { get; }
+
+            public Node( int nameLength )
+            {
+                this.nameLength = nameLength;
+            }
 
 
             /// <summary>
@@ -52,6 +57,9 @@ namespace Sparrow.Collections
             public override bool IsLeaf { get { return true; } }
             public override bool IsInternal { get { return false; } }
 
+            public Leaf() : base(0)
+            { }
+
             /// <summary>
             /// The previous leaf in the double linked list referred in page 163 of [1].
             /// </summary>
@@ -62,6 +70,8 @@ namespace Sparrow.Collections
             /// </summary>
 
             public Leaf Next;
+
+            public Node Reference;
 
             public TKey Key;
 
@@ -93,6 +103,10 @@ namespace Sparrow.Collections
         {
             public override bool IsLeaf { get { return false; } }
             public override bool IsInternal { get { return true; } }
+
+            public Internal(int nameLength)
+                : base(nameLength)
+            {}
 
             /// <summary>
             /// The right subtrie.
@@ -168,10 +182,24 @@ namespace Sparrow.Collections
         {
             if ( size == 0 )
             {
-                // We create a single leaf
+                // We set the root of the current key to the new leaf.
+                Leaf leaf = new Leaf
+                {
+                    Key = key,
+                };                
+
                 // We add the leaf after the head.
-                // We set the root of the current key to the leaf.
+                AddAfter(this.head, leaf);
+                this.root = leaf;
+
+                size++;
+
+                return;
             }
+
+            // We prepare the signature to compute incrementally. 
+            BitVector v = binarizeFunc(key);
+            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits); 
 
             // We look for the parent of the exit node for the key.
             
@@ -204,7 +232,6 @@ namespace Sparrow.Collections
             throw new NotImplementedException();
         }
 
-
         /// <summary>
         /// Deletion mostly follow the insertion steps uneventfully. [...] To fix the jump pointers, we need to know
         /// the 2-fat ancestors of the parent of parex(x), not of parex(x). Page 171 of [1].
@@ -215,12 +242,26 @@ namespace Sparrow.Collections
                 return false;
 
             if ( size == 1 )
-            {
-                // We remove the root 
+            {                
+                // Is the root key (which has to be a Leaf) equal to the one we are looking for?
+                var leaf = (Leaf)this.root;
+                if (leaf.Key.Equals(key))
+                    return false;
+
+                RemoveLeaf(leaf);
+
+                // We remove the root.                
+                this.root = null;
+                size = 0;
+                
+                return true;
             }
 
-            // We look for the parent of the exit node for the key.
+            // We prepare the signature to compute incrementally.
+            BitVector v = binarizeFunc(key);
+            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits); 
 
+            // We look for the parent of the exit node for the key.            
             // If the exit node is not a leaf or the key is not equal to the LCP 
             // Then we are done (The key does not exist).
 
@@ -252,11 +293,21 @@ namespace Sparrow.Collections
 
         public bool TryGet( TKey key, out TValue value )
         {
+            // We prepare the signature to compute incrementally. After preprocessing using O(|x|/w) times and O(|x|/B) IOs, 
+            // computing a signature for a prefix x takes constant time. Page 167 of [1]
+            BitVector v = binarizeFunc(key);
+            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits); 
+
             throw new NotImplementedException();
         }
 
         public bool Contains(TKey key)
         {
+            // We prepare the signature to compute incrementally. After preprocessing using O(|x|/w) times and O(|x|/B) IOs, 
+            // computing a signature for a prefix x takes constant time. Page 167 of [1]
+            BitVector v = binarizeFunc(key);
+            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
+
             throw new NotImplementedException();
 
             // We look for the exit node for the key
@@ -349,6 +400,10 @@ namespace Sparrow.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private TKey PredecessorInternal(TKey key)
         {
+            // We prepare the signature to compute incrementally. 
+            BitVector v = binarizeFunc(key);
+            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
+
             throw new NotImplementedException();
 
             // We look for the exit node for the key
@@ -361,6 +416,10 @@ namespace Sparrow.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private TKey SuccessorInternal(TKey key)
         {
+            // We prepare the signature to compute incrementally. 
+            BitVector v = binarizeFunc(key);
+            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
+
             throw new NotImplementedException();
 
             // We look for the exit node for the key
@@ -368,6 +427,20 @@ namespace Sparrow.Collections
             // We compare the key with the exit node extent.
             // If the key is smaller than the extent, we exit to the left leaf.
             // If the key is greater than the extent, we exit to the right leaf and get the next.
+        }
+
+        private void AddAfter(Leaf predecessor, Leaf newNode)
+        {
+            newNode.Next = predecessor.Next;
+            newNode.Previous = predecessor;
+            predecessor.Next.Previous = newNode;
+            predecessor.Next = newNode;
+        }
+
+        private void RemoveLeaf(Leaf node)
+        {
+            node.Next.Previous = node.Previous;
+            node.Previous.Next = node.Next;
         }
     }
 }

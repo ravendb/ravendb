@@ -28,7 +28,7 @@ namespace Sparrow.Binary
         public const ulong LastBitMask = 1UL;
         public const uint LastBitPosition = 1;
         
-        private readonly ulong[] bits;
+        public readonly ulong[] Bits;        
 
         protected string ToDebugString()
         {
@@ -76,7 +76,7 @@ namespace Sparrow.Binary
         public BitVector(int size)
         {
             this.Count = size;
-            this.bits = new ulong[size % BitVector.BitsPerWord == 0 ? size / BitVector.BitsPerWord : size / BitVector.BitsPerWord + 1];            
+            this.Bits = new ulong[size % BitVector.BitsPerWord == 0 ? size / BitVector.BitsPerWord : size / BitVector.BitsPerWord + 1];            
         }
 
         protected BitVector(int size, params ulong[] values)
@@ -85,7 +85,7 @@ namespace Sparrow.Binary
                 throw new ArgumentException("The values passed as parameters does not have enough bits to fill the vector size.", "values");
 
             this.Count = size;    
-            this.bits = values;
+            this.Bits = values;
         }
 
         public int Count
@@ -105,7 +105,7 @@ namespace Sparrow.Binary
             uint word = WordForBit(idx);
             ulong mask = BitInWord(idx);
 
-            bits[word] |= mask;                
+            Bits[word] |= mask;                
         }
 
         public void Set(int idx, bool value)
@@ -113,21 +113,21 @@ namespace Sparrow.Binary
             uint word = WordForBit(idx);
             ulong mask = BitInWord(idx);
 
-            bool currentValue = (bits[word] & mask) != 0;
+            bool currentValue = (Bits[word] & mask) != 0;
             if (currentValue != value)
-                bits[word] ^= mask;
+                Bits[word] ^= mask;
         }
 
         public bool Get(int idx)
         {
             uint word = WordForBit(idx);
             ulong mask = BitInWord(idx);
-            return (bits[word] & mask) != 0;
+            return (Bits[word] & mask) != 0;
         }
 
         public ulong GetWord(int wordIdx)
         {
-            return bits[wordIdx];
+            return Bits[wordIdx];
         }
 
         public void Fill(bool value)
@@ -135,8 +135,8 @@ namespace Sparrow.Binary
             unsafe
             {
                 byte x = value ? (byte)0xFF : (byte)0x00;
-                fixed (ulong* array = this.bits)
-                    Memory.SetInline((byte*)array, x, this.bits.Length * sizeof(ulong));
+                fixed (ulong* array = this.Bits)
+                    Memory.SetInline((byte*)array, x, this.Bits.Length * sizeof(ulong));
             }
         }
 
@@ -151,33 +151,33 @@ namespace Sparrow.Binary
                 {
                     ulong fill = (1UL << (to - from) - 1 << from);
                     if (value)
-                        bits[bFrom] |= fill;
+                        Bits[bFrom] |= fill;
                     else
-                        bits[bFrom] &= ~fill;
+                        Bits[bFrom] &= ~fill;
                 }
                 else
                 {
                     byte x = value ? (byte)0xFF : (byte)0x00;
                     unsafe
                     {
-                        fixed (ulong* array = this.bits)
+                        fixed (ulong* array = this.Bits)
                             Memory.SetInline((byte*)(array + bFrom + 1), x, bTo);
                     }
 
                     if (from % BitVector.BitsPerWord != 0)
                     {
                         if (value)
-                            bits[bFrom] |= (ulong)(-1L) << from % BitVector.BitsPerWord;
+                            Bits[bFrom] |= (ulong)(-1L) << from % BitVector.BitsPerWord;
                         else
-                            bits[bFrom] &= (1UL << from % BitVector.BitsPerWord) - 1;
+                            Bits[bFrom] &= (1UL << from % BitVector.BitsPerWord) - 1;
                     }
 
                     if (to % BitVector.BitsPerWord != 0)
                     {
                         if (value)
-                            bits[bTo] |= 1UL << to % BitVector.BitsPerWord - 1;
+                            Bits[bTo] |= 1UL << to % BitVector.BitsPerWord - 1;
                         else
-                            bits[bTo] &= (ulong)(-1L) << to % BitVector.BitsPerWord;
+                            Bits[bTo] &= (ulong)(-1L) << to % BitVector.BitsPerWord;
                     }
                 }
             }
@@ -185,8 +185,8 @@ namespace Sparrow.Binary
 
         public void Flip()
         {
-            for (int i = 0; i < bits.Length; i++)
-                bits[i] ^= BitVector.Ones;
+            for (int i = 0; i < Bits.Length; i++)
+                Bits[i] ^= BitVector.Ones;
         }
 
         public void Flip(int idx)
@@ -194,7 +194,7 @@ namespace Sparrow.Binary
             unchecked
             {
                 uint wPos = WordForBit(idx);
-                bits[wPos] ^= BitInWord((int)idx);
+                Bits[wPos] ^= BitInWord((int)idx);
             }
         }
 
@@ -208,12 +208,12 @@ namespace Sparrow.Binary
                 {
                     if (from == to)
                     {
-                        bits[bFrom] ^= BitInWord((int)from);
+                        Bits[bFrom] ^= BitInWord((int)from);
                     }
                     else
                     {
                         ulong mask = Ones << BitVector.BitsPerWord - (to - from);
-                        bits[bFrom] ^= mask >> from;
+                        Bits[bFrom] ^= mask >> from;
                     }
                         
                 }
@@ -223,27 +223,27 @@ namespace Sparrow.Binary
 
                     ulong mask = BitVector.Ones;
                     for (int i = bTo; i-- != start; )
-                        bits[i] ^= mask;
+                        Bits[i] ^= mask;
 
                     if (from % BitVector.BitsPerWord != 0)
-                        bits[bFrom] ^= (1UL << (BitVector.BitsPerWord - from) % BitVector.BitsPerWord) - 1;
+                        Bits[bFrom] ^= (1UL << (BitVector.BitsPerWord - from) % BitVector.BitsPerWord) - 1;
                     if (to % BitVector.BitsPerWord != 0)
-                        bits[bTo] ^= Ones << BitVector.BitsPerWord - (to % BitVector.BitsPerWord);
+                        Bits[bTo] ^= Ones << BitVector.BitsPerWord - (to % BitVector.BitsPerWord);
                 }
             }
         }
 
         public void Clear()
         {
-            Array.Clear(this.bits, 0, this.bits.Length);
+            Array.Clear(this.Bits, 0, this.Bits.Length);
         }
 
         public BitVector And(BitVector v)
         {
-            int words = Math.Min(bits.Length, v.bits.Length) - 1;
+            int words = Math.Min(Bits.Length, v.Bits.Length) - 1;
             while (words >= 0)
             {
-                bits[words] &= v.bits[words];
+                Bits[words] &= v.Bits[words];
 
                 words--;
             }
@@ -253,10 +253,10 @@ namespace Sparrow.Binary
 
         public BitVector Or(BitVector v)
         {
-            int words = Math.Min(bits.Length, v.bits.Length) - 1;
+            int words = Math.Min(Bits.Length, v.Bits.Length) - 1;
             while (words >= 0)
             {
-                bits[words] |= v.bits[words];
+                Bits[words] |= v.Bits[words];
 
                 words--;
             }
@@ -266,10 +266,10 @@ namespace Sparrow.Binary
 
         public BitVector Xor(BitVector v)
         {
-            int words = Math.Min(bits.Length, v.bits.Length) - 1;
+            int words = Math.Min(Bits.Length, v.Bits.Length) - 1;
             while (words >= 0)
             {
-                bits[words] ^= v.bits[words];
+                Bits[words] ^= v.Bits[words];
 
                 words--;
             }
@@ -339,10 +339,10 @@ namespace Sparrow.Binary
 
             unsafe
             {
-                fixed (ulong* destPtr = dest.bits)
-                fixed (ulong* srcPtr = src.bits)
+                fixed (ulong* destPtr = dest.Bits)
+                fixed (ulong* srcPtr = src.Bits)
                 {
-                    Memory.CopyInline((byte*)destPtr, (byte*)srcPtr, src.bits.Length * sizeof(ulong));
+                    Memory.CopyInline((byte*)destPtr, (byte*)srcPtr, src.Bits.Length * sizeof(ulong));
                 }
             }
         }
@@ -427,8 +427,8 @@ namespace Sparrow.Binary
 
             unsafe
             {
-                fixed (ulong* srcPtr = this.bits)
-                fixed (ulong* destPtr = other.bits)
+                fixed (ulong* srcPtr = this.Bits)
+                fixed (ulong* destPtr = other.Bits)
                 {
                     int wholeBytes = length / BitsPerWord;
                     int index;
