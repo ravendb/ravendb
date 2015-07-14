@@ -47,14 +47,6 @@ namespace Sparrow.Binary
                     {
                         ulong v = this.GetWord(i);
 
-                        //int s = BitsPerWord; // bit size; must be power of 2 
-                        //ulong mask = (ulong)~0;
-                        //while ((s >>= 1) > 0)
-                        //{
-                        //    mask ^= (mask << s);
-                        //    v = ((v >> s) & mask) | ((v << s) & ~mask);
-                        //}
-
                         builder.Append(v.ToString("X16"));
                         builder.Append(" ");
                     }
@@ -93,11 +85,7 @@ namespace Sparrow.Binary
                 throw new ArgumentException("The values passed as parameters does not have enough bits to fill the vector size.", "values");
 
             this.Count = size;    
-        
             this.bits = values;
-            //for (int i = 0; i < this.bits.Length; i++)
-            //    this.bits[i] = Reverse(this.bits[i]);
-
         }
 
         public int Count
@@ -197,9 +185,8 @@ namespace Sparrow.Binary
 
         public void Flip()
         {
-            ulong mask = 0xFFFFFFFFFFFFFFFFUL;
             for (int i = 0; i < bits.Length; i++)
-                bits[i] ^= mask;
+                bits[i] ^= BitVector.Ones;
         }
 
         public void Flip(int idx)
