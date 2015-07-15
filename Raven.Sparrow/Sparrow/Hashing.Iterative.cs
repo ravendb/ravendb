@@ -259,6 +259,17 @@ namespace Sparrow
                     }
                 }
 
+                public static XXHash32Block Preprocess(ulong[] buf, int len = -1, uint seed = 0)
+                {
+                    if (len == -1)
+                        len = buf.Length;
+
+                    fixed (ulong* buffer = buf)
+                    {
+                        return PreprocessInline((byte*)buffer, len * sizeof(ulong), seed);
+                    }
+                }
+
                 private static uint PRIME32_1 = 2654435761U;
                 private static uint PRIME32_2 = 2246822519U;
                 private static uint PRIME32_3 = 3266489917U;

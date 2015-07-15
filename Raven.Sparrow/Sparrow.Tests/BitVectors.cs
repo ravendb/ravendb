@@ -333,49 +333,49 @@ namespace Sparrow.Tests
         [Fact]
         public void Operations_Compare()
         {
-            var v1 = BitVector.From("1");
-            var v2 = BitVector.From("0");
+            var v1 = BitVector.Parse("1");
+            var v2 = BitVector.Parse("0");
 
             Assert.Equal(1, v1.CompareTo(v2));
 
-            v1 = BitVector.From("10");
-            v2 = BitVector.From("01");
-
-            Assert.Equal(1, v1.CompareTo(v2));
-            Assert.Equal(-1, v2.CompareTo(v1));
-
-            v1 = BitVector.From("10000000");
-            v2 = BitVector.From("01000000");
+            v1 = BitVector.Parse("10");
+            v2 = BitVector.Parse("01");
 
             Assert.Equal(1, v1.CompareTo(v2));
             Assert.Equal(-1, v2.CompareTo(v1));
 
-            v1 = BitVector.From("11000000");
-            v2 = BitVector.From("01000000");
+            v1 = BitVector.Parse("10000000");
+            v2 = BitVector.Parse("01000000");
 
             Assert.Equal(1, v1.CompareTo(v2));
             Assert.Equal(-1, v2.CompareTo(v1));
 
-            v1 = BitVector.From("11000000");
-            v2 = BitVector.From("10000000");
+            v1 = BitVector.Parse("11000000");
+            v2 = BitVector.Parse("01000000");
 
             Assert.Equal(1, v1.CompareTo(v2));
             Assert.Equal(-1, v2.CompareTo(v1));
 
-            v1 = BitVector.From("11000000111");
-            v2 = BitVector.From("11000000111");
+            v1 = BitVector.Parse("11000000");
+            v2 = BitVector.Parse("10000000");
+
+            Assert.Equal(1, v1.CompareTo(v2));
+            Assert.Equal(-1, v2.CompareTo(v1));
+
+            v1 = BitVector.Parse("11000000111");
+            v2 = BitVector.Parse("11000000111");
 
             Assert.Equal(0, v1.CompareTo(v2));
             Assert.Equal(0, v2.CompareTo(v1));
 
-            v1 = BitVector.From("01000000111");
-            v2 = BitVector.From("01000000111");
+            v1 = BitVector.Parse("01000000111");
+            v2 = BitVector.Parse("01000000111");
 
             Assert.Equal(0, v1.CompareTo(v2));
             Assert.Equal(0, v2.CompareTo(v1));
 
-            v1 = BitVector.From("01000000111");
-            v2 = BitVector.From("01000000111");
+            v1 = BitVector.Parse("01000000111");
+            v2 = BitVector.Parse("01000000111");
 
             Assert.Equal(0, v1.CompareTo(v2));
             Assert.Equal(0, v2.CompareTo(v1));
@@ -385,6 +385,57 @@ namespace Sparrow.Tests
         
             Assert.Equal(1, v1.CompareTo(v2));
             Assert.Equal(-1, v2.CompareTo(v1));
+        }
+
+        [Fact]
+        public void Operations_Compare_Lexicographic()
+        {
+            var v1 = BitVector.Of("1");
+            var v2 = BitVector.Of("0");
+
+            Assert.Equal(1, v1.CompareTo(v2));
+
+            v1 = BitVector.Of("10");
+            v2 = BitVector.Of("01");
+
+            Assert.Equal(1, v1.CompareTo(v2));
+            Assert.Equal(-1, v2.CompareTo(v1));
+
+            v1 = BitVector.Of("10000000");
+            v2 = BitVector.Of("01000000");
+
+            Assert.Equal(1, v1.CompareTo(v2));
+            Assert.Equal(-1, v2.CompareTo(v1));
+
+            v1 = BitVector.Of("11000000");
+            v2 = BitVector.Of("01000000");
+
+            Assert.Equal(1, v1.CompareTo(v2));
+            Assert.Equal(-1, v2.CompareTo(v1));
+
+            v1 = BitVector.Of("11000000");
+            v2 = BitVector.Of("10000000");
+
+            Assert.Equal(1, v1.CompareTo(v2));
+            Assert.Equal(-1, v2.CompareTo(v1));
+
+            v1 = BitVector.Of("11000000111");
+            v2 = BitVector.Of("11000000111");
+
+            Assert.Equal(0, v1.CompareTo(v2));
+            Assert.Equal(0, v2.CompareTo(v1));
+
+            v1 = BitVector.Of("01000000111");
+            v2 = BitVector.Of("01000000111");
+
+            Assert.Equal(0, v1.CompareTo(v2));
+            Assert.Equal(0, v2.CompareTo(v1));
+
+            v1 = BitVector.Of("01000000111");
+            v2 = BitVector.Of("01000000111");
+
+            Assert.Equal(0, v1.CompareTo(v2));
+            Assert.Equal(0, v2.CompareTo(v1));
         }
 
         private static ulong[] GenerateRandomArray(int vectorSize, Random rnd = null)

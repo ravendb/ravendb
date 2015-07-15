@@ -199,9 +199,11 @@ namespace Sparrow.Collections
 
             // We prepare the signature to compute incrementally. 
             BitVector v = binarizeFunc(key);
-            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits); 
-
+            var hashState = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
+            
             // We look for the parent of the exit node for the key.
+            Stack<Node> stack = new Stack<Node>();
+            //var parentExitNode = FindParentExitNode(v, stack, hashState);
             
             // If the exit node is a leaf and the key is equal to the LCP 
             // Then we are done (we found the key already).

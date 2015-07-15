@@ -369,10 +369,7 @@ namespace Sparrow.Binary
         public static BitVector Of(params uint[] values)
         {
             int lastLong = values.Length / 2;
-
-            int size = lastLong;
-            if (values.Length % 2 == 1)
-                size += 1;
+            int size = lastLong + values.Length % 2 ;
 
             ulong[] newValue = new ulong[size];
             for (int i = 0; i < lastLong; i++)
@@ -384,7 +381,35 @@ namespace Sparrow.Binary
             return new BitVector(values.Length * BitVector.BitsPerWord / 2, newValue);
         }
 
-        public static BitVector From(string value)
+        public static BitVector Of(string value)
+        {
+            int lastLong = value.Length / 4;
+            int size = lastLong;
+            if (value.Length % 4 != 0)
+                size++;
+
+            int position;
+            ulong[] newValue = new ulong[size];
+            for ( int i = 0; i < lastLong; i++ )
+            {
+                position = i * 4;
+                newValue[i] = (ulong)value[position] << 48 | (ulong)value[position + 1] << 32 | (ulong)value[position + 2] << 16 | (ulong)value[position + 3];
+            }
+
+            position = (newValue.Length - 1) * 4;
+            switch( value.Length % 4)
+            {
+                case 3: newValue[newValue.Length - 1] = (ulong)value[position] << 48 | (ulong)value[position + 1] << 32 | (ulong)value[position + 2] << 16; break;
+                case 2: newValue[newValue.Length - 1] = (ulong)value[position] << 48 | (ulong)value[position + 1] << 32; break;
+                case 1: newValue[newValue.Length - 1] = (ulong)value[position] << 48; break;
+                default: break;
+            }
+
+            return new BitVector(value.Length * BitVector.BitsPerWord / 4, newValue);
+                
+        }
+
+        public static BitVector Parse(string value)
         {
             var vector = new BitVector(value.Length);
 
