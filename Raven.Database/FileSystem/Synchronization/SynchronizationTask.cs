@@ -354,7 +354,7 @@ namespace Raven.Database.FileSystem.Synchronization
             var commands = (IAsyncFilesCommandsImpl)destination.Commands;
 
             var filesToSynchronization = new HashSet<FileHeader>(GetFilesToSynchronization(lastEtag, 100),
-																 new FileHeaderNameEqualityComparer());
+																 FileHeaderNameEqualityComparer.Instance);
 
 			LogFilesInfo("There were {0} file(s) that needed synchronization because of greater ETag value: {1}",
 						 filesToSynchronization);

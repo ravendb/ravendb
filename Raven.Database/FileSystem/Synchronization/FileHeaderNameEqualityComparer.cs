@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
-using Raven.Database.FileSystem.Storage;
 using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
     internal class FileHeaderNameEqualityComparer : IEqualityComparer<FileHeader>
 	{
+		public static  FileHeaderNameEqualityComparer Instance = new FileHeaderNameEqualityComparer();
+
         public bool Equals(FileHeader x, FileHeader y)
 		{
             return x.FullPath == y.FullPath;
