@@ -46,7 +46,7 @@ namespace Raven.Client.FileSystem
             remove { ReplicationInformer.FailoverStatusChanged -= value; }
         }
 
-		public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, Func<string, IFilesReplicationInformer> replicationInformerGetter, IFilesConflictListener[] conflictListeners, NameValueCollection operationsHeaders = null)
+		public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, Func<string, IFilesReplicationInformer> replicationInformerGetter, IFilesConflictListener[] conflictListeners, NameValueCollection operationsHeaders = null, bool isFileSystemServer = false)
 			: base(serverUrl, conventions, credentials, requestFactory, sessionId, operationsHeaders, replicationInformerGetter, fileSystemName)
         {
             try
@@ -54,7 +54,7 @@ namespace Raven.Client.FileSystem
                 FileSystemName = fileSystemName;
                 ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
-				if (replicationInformerGetter.Equals(DefaultReplicationInformerGetter) == false)
+				if (isFileSystemServer == false)
 					ReplicationInformer.UpdateReplicationInformationIfNeeded(this);
                 InitializeSecurity();
             }
@@ -65,12 +65,8 @@ namespace Raven.Client.FileSystem
             }
         }
 
-		private static readonly FilesConvention DefaultFilesConvention = new FilesConvention();
-		private static readonly HttpJsonRequestFactory JsonRequestFactory = new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-		private static readonly Func<string, IFilesReplicationInformer> DefaultReplicationInformerGetter = (x) => new FilesReplicationInformer(new FilesConvention(), JsonRequestFactory);
-
         public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
-			: this(serverUrl, fileSystemName, DefaultFilesConvention, new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), JsonRequestFactory, null, DefaultReplicationInformerGetter, null)
+			: this(serverUrl, fileSystemName, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), new HttpJsonRequestFactory(DefaultNumberOfCachedRequests), null, (x) => new FilesReplicationInformer(new FilesConvention(), new HttpJsonRequestFactory(DefaultNumberOfCachedRequests)), null, isFileSystemServer: true)
         {
         }
 
@@ -374,7 +370,7 @@ namespace Raven.Client.FileSystem
 
         public Task<RavenJObject> GetMetadataForAsync(string filename)
         {
-            return ExecuteWithReplication("HEAD", operation => GetMetadataForAsyncImpl(filename, operation));
+            return ExecuteWithReplication("HEAD", operation => GetMetadataForAsyncImpl(filename, operation.Url, operation.Credentials));
         }
 
         public Task<FileHeader[]> GetAsync(string[] filename)
@@ -683,9 +679,9 @@ namespace Raven.Client.FileSystem
 	        }
         }
 
-        private async Task<RavenJObject> GetMetadataForAsyncImpl(string filename, OperationMetadata operation)
+        private async Task<RavenJObject> GetMetadataForAsyncImpl(string filename, string baseUrl, OperationCredentials operationCredentials)
         {
-	        using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + "/files?name=" + Uri.EscapeDataString(filename), "HEAD", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/files?name=" + Uri.EscapeDataString(filename), "HEAD", operationCredentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	        {
 				try
 				{
@@ -1044,11 +1040,10 @@ namespace Raven.Client.FileSystem
             return sortFields;
         }
 
-        public class ConfigurationClient : IAsyncFilesConfigurationCommands, IHoldProfilingInformation
+	    private class ConfigurationClient : IAsyncFilesConfigurationCommands, IHoldProfilingInformation
         {
             private readonly AsyncFilesServerClient client;
             private readonly FilesConvention convention;
-            private readonly JsonSerializer jsonSerializer;
 
             public IAsyncFilesCommands Commands
             {
@@ -1057,7 +1052,6 @@ namespace Raven.Client.FileSystem
 
             public ConfigurationClient(AsyncFilesServerClient client, FilesConvention convention)
             {
-                this.jsonSerializer = new JsonSerializer();
                 this.client = client;
                 this.convention = convention;
             }
@@ -1182,7 +1176,7 @@ namespace Raven.Client.FileSystem
             public ProfilingInformation ProfilingInformation { get; private set; }
         }
 
-        public class SynchronizationClient : IAsyncFilesSynchronizationCommands, IHoldProfilingInformation
+	    private class SynchronizationClient : IAsyncFilesSynchronizationCommands, IHoldProfilingInformation
         {
             private readonly OperationCredentials credentials;
             private readonly FilesConvention convention;
@@ -1195,7 +1189,7 @@ namespace Raven.Client.FileSystem
 
             public SynchronizationClient(AsyncFilesServerClient client, FilesConvention convention)
             {
-                this.credentials = client.PrimaryCredentials;
+                credentials = client.PrimaryCredentials;
                 this.convention = convention;
                 this.client = client;
             }
@@ -1609,7 +1603,12 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public void Dispose()
+	        public Task<RavenJObject> GetMetadataForAsync(string fileName)
+	        {
+		        return client.GetMetadataForAsyncImpl(fileName, client.BaseUrl, credentials);
+	        }
+
+	        public void Dispose()
             {
             }
 

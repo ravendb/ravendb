@@ -438,6 +438,11 @@ namespace Raven.Client.FileSystem
                     remoteFileSystemCommand.Dispose();
             }
 
+			foreach (var replicationInformer in replicationInformers)
+			{
+				replicationInformer.Value.Dispose();
+			}
+
             // try to wait until all the async disposables are completed
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(5));
 
