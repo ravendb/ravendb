@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
+using Raven.Database.Config;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.FileSystem.Util;
 using Raven.Tests.FileSystem.Synchronization.IO;
@@ -120,7 +122,9 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 		private static ISignatureRepository CreateSignatureRepositoryFor(string fileName)
 		{
-			return new VolatileSignatureRepository(fileName);
+			var configuration = new InMemoryRavenConfiguration();
+			configuration.Initialize();
+			return new VolatileSignatureRepository(fileName, configuration);
 		}
 
         [MtaFact]

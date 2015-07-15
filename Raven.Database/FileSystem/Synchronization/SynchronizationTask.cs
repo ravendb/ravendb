@@ -53,7 +53,7 @@ namespace Raven.Database.FileSystem.Synchronization
             this.timer = Observable.Interval(systemConfiguration.FileSystem.MaximumSynchronizationInterval);
 
 			synchronizationQueue = new SynchronizationQueue();
-			synchronizationStrategy = new SynchronizationStrategy(storage, sigGenerator);
+			synchronizationStrategy = new SynchronizationStrategy(storage, sigGenerator, systemConfiguration);
 
 		    LastSuccessfulSynchronizationTime = DateTime.MinValue;            
 

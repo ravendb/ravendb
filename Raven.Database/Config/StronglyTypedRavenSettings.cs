@@ -285,6 +285,8 @@ namespace Raven.Database.Config
 
 			WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
 
+			TempPath = new StringSetting(settings[Constants.TempPath], Path.GetTempPath());
+
 			FillMonitoringSettings();
 		}
 
@@ -458,6 +460,8 @@ namespace Raven.Database.Config
 		public TimeSpanSetting TombstoneRetentionTime { get; private set; }
 
         public EnumSetting<ImplicitFetchFieldsMode> ImplicitFetchFieldsFromDocumentMode { get; private set; }
+
+		public StringSetting TempPath { get; private set; }
 
 		public class VoronConfiguration
 		{

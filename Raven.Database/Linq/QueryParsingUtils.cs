@@ -425,7 +425,7 @@ namespace Raven.Database.Linq
 		{
 			var indexCacheDir = configuration.CompiledIndexCacheDirectory;
 			if (string.IsNullOrWhiteSpace(indexCacheDir))
-				indexCacheDir = Path.Combine(Path.GetTempPath(), "Raven", "CompiledIndexCache");
+				indexCacheDir = Path.Combine(configuration.TempPath, "Raven", "CompiledIndexCache");
 
 			if (configuration.RunInMemory == false)
 			{

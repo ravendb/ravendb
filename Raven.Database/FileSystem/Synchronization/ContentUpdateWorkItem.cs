@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Logging;
+using Raven.Database.Config;
 using Raven.Database.FileSystem.Storage;
-using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Database.FileSystem.Synchronization.Multipart;
 using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
@@ -22,12 +22,16 @@ namespace Raven.Database.FileSystem.Synchronization
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private readonly SigGenerator sigGenerator;
+
+		private readonly InMemoryRavenConfiguration configuration;
+
 		private DataInfo fileDataInfo;
 		private SynchronizationMultipartRequest multipartRequest;
 
-		public ContentUpdateWorkItem(string file, string sourceServerUrl, ITransactionalStorage storage, SigGenerator sigGenerator) : base(file, sourceServerUrl, storage)
+		public ContentUpdateWorkItem(string file, string sourceServerUrl, ITransactionalStorage storage, SigGenerator sigGenerator, InMemoryRavenConfiguration configuration) : base(file, sourceServerUrl, storage)
 		{
 			this.sigGenerator = sigGenerator;
+			this.configuration = configuration;
 		}
 
 		public override SynchronizationType SynchronizationType
@@ -69,8 +73,8 @@ namespace Raven.Database.FileSystem.Synchronization
 			        return report;
 	        }
 
-            using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName))
-            using (var remoteSignatureCache = new VolatileSignatureRepository(FileName))
+            using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName, configuration))
+            using (var remoteSignatureCache = new VolatileSignatureRepository(FileName, configuration))
             {
                 var localRdcManager = new LocalRdcManager(localSignatureRepository, Storage, sigGenerator);
                 var destinationRdcManager = new RemoteRdcManager(destination, localSignatureRepository, remoteSignatureCache);
