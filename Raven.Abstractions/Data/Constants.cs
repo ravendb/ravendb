@@ -465,5 +465,7 @@ namespace Raven.Abstractions.Data
 		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";
 
 		public const string RequestFailedExceptionMarker = "ExceptionRequestFailed";
+
+		public const string TempPath = "Raven/TempPath";
 	}
 }

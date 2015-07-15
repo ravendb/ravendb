@@ -47,7 +47,7 @@ namespace Raven.Database.Server.Tenancy
 
 	        FrequencyToCheckForIdleDatabasesInSec = val;
 
-			string tempPath = Path.GetTempPath();
+			string tempPath = SystemConfiguration.TempPath;
 			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
 	        if (File.Exists(fullTempPath))
 	        {
@@ -224,7 +224,10 @@ namespace Raven.Database.Server.Tenancy
 				config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
 	        }
 
-            SetupTenantConfiguration(config);
+			if (config.Settings[Constants.TempPath] == null)
+				config.Settings[Constants.TempPath] = parentConfiguration.TempPath;  
+
+	        SetupTenantConfiguration(config);
 
             config.CustomizeValuesForDatabaseTenant(tenantId);
 

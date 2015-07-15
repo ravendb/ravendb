@@ -152,17 +152,6 @@ namespace Raven.Database.Extensions
 			return Path.IsPathRooted(path) ? path : Path.Combine(basePath ?? AppDomain.CurrentDomain.BaseDirectory, path);
 		}
 
-		public static string ToFullTempPath(this string path)
-		{
-			if (string.IsNullOrWhiteSpace(path))
-				return string.Empty;
-			path = Environment.ExpandEnvironmentVariables(path);
-			if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-				path = Path.Combine(Path.GetTempPath(), path.Substring(2));
-
-			return Path.IsPathRooted(path) ? path : Path.Combine(Path.GetTempPath(), path);
-		}
-
 		public static void CopyDirectory(string from, string to)
 		{
 			try

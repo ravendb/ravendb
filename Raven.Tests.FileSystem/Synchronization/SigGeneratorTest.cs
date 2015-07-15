@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Tests.FileSystem.Synchronization.IO;
@@ -13,8 +15,13 @@ namespace Raven.Tests.FileSystem.Synchronization
 	{
 		private readonly Stream _stream = new MemoryStream();
 
+		private InMemoryRavenConfiguration configuration;
+
 		public SigGeneratorTest()
 		{
+			configuration = new InMemoryRavenConfiguration();
+			configuration.Initialize();
+
 			TestDataGenerators.WriteNumbers(_stream, 10000);
 			_stream.Position = 0;
 		}
@@ -35,7 +42,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[MtaFact]
 		public void Generate_check()
 		{
-			using (var signatureRepository = new VolatileSignatureRepository("test"))
+			using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
 			using (var rested = new SigGenerator())
 			{
 				var result = rested.GenerateSignatures(_stream, "test", signatureRepository);
@@ -62,7 +69,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var firstSigContentHashes = new List<string>();
 
-            using (var signatureRepository = new VolatileSignatureRepository("test"))
+			using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
             using (var rested = new SigGenerator())
             {
                 var result = rested.GenerateSignatures(stream, "test", signatureRepository);
@@ -80,7 +87,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var secondSigContentHashes = new List<string>();
 
-            using (var signatureRepository = new VolatileSignatureRepository("test"))
+			using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
             using (var rested = new SigGenerator())
             {
                 var result = rested.GenerateSignatures(stream, "test", signatureRepository);
@@ -112,7 +119,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             randomStream.Read(buffer, 0, size);
             var stream = new MemoryStream(buffer);
 
-            using (var signatureRepository = new VolatileSignatureRepository("test"))
+			using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
             using (var rested = new SigGenerator())
             {
                 var signatures = signatureRepository.GetByFileName();
