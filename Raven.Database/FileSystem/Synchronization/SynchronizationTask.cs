@@ -339,7 +339,10 @@ namespace Raven.Database.FileSystem.Synchronization
 				}
 			}
 
-			await EnqueueMissingUpdatesAsync(destinationClient, lastETag, needSyncingAgain);
+			if (synchronizationQueue.NumberOfPendingSynchronizationsFor(destination.Url) < AvailableSynchronizationRequestsTo(destination.Url))
+			{
+				await EnqueueMissingUpdatesAsync(destinationClient, lastETag, needSyncingAgain);
+			}
 
 			return SynchronizePendingFilesAsync(destinationClient, forceSyncingAll);
 		}

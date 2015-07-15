@@ -70,6 +70,12 @@ namespace Raven.Database.FileSystem.Synchronization
                                          .Count;
 		}
 
+		public int NumberOfPendingSynchronizationsFor(string destinationFileSystemUrl)
+		{
+			return pendingSynchronizations.GetOrAdd(destinationFileSystemUrl, new ConcurrentQueue<SynchronizationWorkItem>())
+										 .Count;
+		}
+
         public bool EnqueueSynchronization(string destinationFileSystemUrl, SynchronizationWorkItem workItem)
 		{
 			pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim())
