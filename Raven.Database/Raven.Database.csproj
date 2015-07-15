@@ -239,6 +239,8 @@
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
     <Compile Include="GplexBuffers.cs" />
+    <Compile Include="Indexing\Analyzers\RavenStandardAnalyzer.cs" />
+    <Compile Include="Indexing\Analyzers\RavenStandardFilter.cs" />
     <Compile Include="Indexing\LuceneAST.cs" />
     <Compile Include="JsConsole\AdminJsConsole.cs" />
     <Compile Include="JsConsole\AdminJsScript.cs" />

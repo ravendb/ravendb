@@ -22,7 +22,9 @@ namespace Raven.Database.Indexing
 
 		public override TokenStream TokenStream(string fieldName, TextReader reader)
 		{
-			return new LowerCaseKeywordTokenizer(reader);
+			var res = new LowerCaseKeywordTokenizer(reader);
+			PreviousTokenStream = res;
+			return res;
 		}
 	}
 }

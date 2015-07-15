@@ -16,6 +16,7 @@ using Raven.Client.FileSystem;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Database.Indexing;
+using Raven.Database.Indexing.Analyzers;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.MailingList;
@@ -44,13 +45,16 @@ namespace Raven.Tryouts
             // var query = @"( -Title:(RavenDB) AND Title:(*))";
             // parser.Parse(query);
 			using (var reader = File.OpenText(@"c:\work\queries.txt"))
-            using (var writer = File.CreateText(@"c:\work\error_queries.txt"))
-            using (var defaultAnalyzer = new StandardAnalyzer(Version.LUCENE_29))
+            //using (var writer = File.CreateText(@"c:\work\error_queries.txt"))
+            //using (var defaultAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29))
+			using (var defaultAnalyzer = new LowerCaseKeywordAnalyzer())
             using (var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer))
             {
+	            var sw = new Stopwatch();
+				sw.Start();
 	            QueryBuilder.UseLuceneASTParser = false;
                 reader.ReadLine();
-                var luceneSW = new Stopwatch();
+                //var luceneSW = new Stopwatch();
                 var talSW = new Stopwatch();
                 int queryCount = 0;
                 var count = 0;
@@ -69,27 +73,29 @@ namespace Raven.Tryouts
                     }
                     queryCount++;
                     if (queryCount % 100 == 0) Console.WriteLine("Parsed {0} queries so far.", queryCount);
-                    luceneSW.Start();
-                    QueryBuilder.BuildQuery(query, perFieldAnalyzerWrapper);
-                    luceneSW.Stop();
+                    //luceneSW.Start();
+                    //QueryBuilder.BuildQuery(query, perFieldAnalyzerWrapper);
+                    //luceneSW.Stop();
                     talSW.Start();
                     parser.Parse(query);
 	                parser.LuceneAST.ToQuery(new LuceneASTQueryConfiguration() {Analayzer = perFieldAnalyzerWrapper, DefaultOperator = QueryOperator.Or, FieldName = string.Empty});
                     talSW.Stop();
-                    if (parser.LuceneAST == null)
+                    /*if (parser.LuceneAST == null)
                     {
                         count++;
                         writer.WriteLine(seperator);
                         writer.WriteLine(query);
-                    }
+                    }*/
                 } while (!reader.EndOfStream);
-                writer.WriteLine(seperator);
+				sw.Stop();
+				Console.WriteLine("Total time to parse: {0}(ms).", sw.ElapsedMilliseconds);
+                /*writer.WriteLine(seperator);
                 writer.WriteLine("Total of syntax error queries: {0}.", count);
                 writer.WriteLine(seperator);
                 Console.WriteLine("It took QueryBuilder {0}ms to parse through {1} queries.", luceneSW.ElapsedMilliseconds, queryCount);
                 Console.WriteLine("It took GPPG  parser {0}ms to parse through {1} queries.", talSW.ElapsedMilliseconds, queryCount);
                 Console.WriteLine("Total of syntax error queries: {0}.", count);
-                Console.Read();	            
+                Console.Read();	  */          
             }
         }
 
