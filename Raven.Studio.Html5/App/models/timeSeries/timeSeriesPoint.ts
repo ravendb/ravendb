@@ -1,11 +1,11 @@
 ﻿class timeSeriesPoint implements documentBase {
-    Prefix: string;
+    Type: string;
     Key: string;
     At: string; 
     Values: number[]; 
 
-    constructor(prefix: string, key: string, dto: pointDto) {
-        this.Prefix = prefix;
+    constructor(type: string, key: string, dto: pointDto) {
+        this.Type = type;
         this.Key = key;
         this.At = dto.At;
         this.Values = dto.Values;
@@ -37,7 +37,7 @@
     }
 
     getId() {
-        return this.Prefix + "/" + this.Key;
+        return this.Type + "/" + this.Key;
     }
 
     getUrl() {

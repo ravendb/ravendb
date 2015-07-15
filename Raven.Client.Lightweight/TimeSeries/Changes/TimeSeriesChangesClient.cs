@@ -82,23 +82,23 @@ namespace Raven.Client.TimeSeries.Changes
 			return taskedObservable;
 		}
 
-		public IObservableWithTask<KeyChangeNotification> ForKey(string prefix, string key)
+		public IObservableWithTask<KeyChangeNotification> ForKey(string type, string key)
 		{
-			if (string.IsNullOrWhiteSpace(prefix))
-				throw new ArgumentException("Prefix cannot be empty!");
+			if (string.IsNullOrWhiteSpace(type))
+				throw new ArgumentException("Type cannot be empty!");
 
 			if (string.IsNullOrWhiteSpace(key))
 				throw new ArgumentException("Key cannot be empty!");
 
-			var keyWithPrefix = prefix + "/" + key;
-			var timeSeries = GetOrAddConnectionState("time-series-key-change/" + keyWithPrefix, "watch-time-series-key-change", "unwatch-time-series-key-change",
-				() => watchedKeysChanges.TryAdd(keyWithPrefix),
-				() => watchedKeysChanges.TryRemove(keyWithPrefix),
-				keyWithPrefix);
+			var keyWithType = type + "/" + key;
+			var timeSeries = GetOrAddConnectionState("time-series-key-change/" + keyWithType, "watch-time-series-key-change", "unwatch-time-series-key-change",
+				() => watchedKeysChanges.TryAdd(keyWithType),
+				() => watchedKeysChanges.TryRemove(keyWithType),
+				keyWithType);
 
 			var taskedObservable = new TaskedObservable<KeyChangeNotification, TimeSeriesConnectionState>(
 				timeSeries,
-				notification => string.Equals(notification.Prefix, prefix, StringComparison.InvariantCulture) &&
+				notification => string.Equals(notification.Type, type, StringComparison.InvariantCulture) &&
 				                string.Equals(notification.Key, key, StringComparison.InvariantCulture));
 			timeSeries.OnChangeNotification += taskedObservable.Send;
 			timeSeries.OnError += taskedObservable.Error;

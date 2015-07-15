@@ -4,7 +4,7 @@ import timeSeries = require("models/timeSeries/timeSeriesDocument");
 
 class addPointCommand extends commandBase {
 
-    constructor(private ts: timeSeries, private prefix: string, private key: string, private at: number, private values: number[]) {
+    constructor(private ts: timeSeries, private type: string, private key: string, private at: number, private values: number[]) {
         super();
     }
 

@@ -1,6 +1,6 @@
 interface timeSeriesKeyDto {
-    Prefix: string;
-    ValueLength: number;
+    Type: string;
+    NumberOfValues: number;
     Key: string;
     PointsCount: number;
 }
@@ -16,7 +16,7 @@ interface statusDebugChangesTimeSeriesDto {
 }
 
 interface timeSeriesKeyChangeNotification {
-    Prefix: string;
+    Type: string;
     Key: string;
     Action: string;
     At: string;

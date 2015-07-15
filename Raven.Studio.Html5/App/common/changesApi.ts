@@ -540,8 +540,8 @@ class changesApi {
         });
     }
 
-    watchTimeSeriesChange(prefix: string, key: string, onChange: (e: timeSeriesKeyChangeNotification) => void): changeSubscription {
-        var fullId = prefix + "/" + key;
+    watchTimeSeriesChange(type: string, key: string, onChange: (e: timeSeriesKeyChangeNotification) => void): changeSubscription {
+        var fullId = type + "/" + key;
         var callback = new changesCallback<timeSeriesKeyChangeNotification>(onChange);
         if (typeof (this.watchedTimeSeries[fullId]) === "undefined") {
             this.send("watch-time-series-key-change", fullId);

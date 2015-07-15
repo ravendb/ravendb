@@ -19,22 +19,22 @@ namespace Raven.Tests.TimeSeries
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
 
 				var changes = store.Changes();
 				var changesTask = await changes.Task;
 				var notificationTask = changesTask
-					.ForKey("-Simple", "Time")
+					.ForKey("Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(300))
 					.Take(1)
 					.ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
 				var at = new DateTime(2015, 1, 1);
-				await store.AppendAsync("-Simple", "Time", at, 3d);
+				await store.AppendAsync("Simple", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
-				Assert.Equal("-Simple", timeSeriesChange.Prefix);
+				Assert.Equal("Simple", timeSeriesChange.Type);
 				Assert.Equal("Time", timeSeriesChange.Key);
 				Assert.Equal(at, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
@@ -42,16 +42,16 @@ namespace Raven.Tests.TimeSeries
 
 				var changesTask2 = changes.Task;
 				notificationTask = changesTask2.Result
-					.ForKey("-Simple", "Time")
+					.ForKey("Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(300))
 					.Take(1)
 					.ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				await store.DeleteAsync("-Simple", "Time");
+				await store.DeleteAsync("Simple", "Time");
 
 				timeSeriesChange = await notificationTask;
-				Assert.Equal("-Simple", timeSeriesChange.Prefix);
+				Assert.Equal("Simple", timeSeriesChange.Type);
 				Assert.Equal("Time", timeSeriesChange.Key);
 				Assert.Equal(DateTime.MinValue, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Delete, timeSeriesChange.Action);
@@ -70,17 +70,17 @@ namespace Raven.Tests.TimeSeries
 
 				var changesB = storeB.Changes();
 				var notificationTask = changesB.Task.Result
-					.ForKey("-Simple", "Time")
+					.ForKey("Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(10))
 					.Take(1).ToTask();
 
 				changesB.WaitForAllPendingSubscriptions();
 
 				var at = DateTime.Now;
-				await storeA.AppendAsync("-Simple", "Time", at, 3d);
+				await storeA.AppendAsync("Simple", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
-				Assert.Equal("-Simple", timeSeriesChange.Prefix);
+				Assert.Equal("Simple", timeSeriesChange.Type);
 				Assert.Equal("Time", timeSeriesChange.Key);
 				Assert.Equal(at, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
@@ -88,17 +88,17 @@ namespace Raven.Tests.TimeSeries
 				//now connecting to changes in storeA
 				var changesA = storeA.Changes();
 				notificationTask = changesA.Task.Result
-					.ForKey("-Simple", "Time")
+					.ForKey("Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(10))
 					.Take(1).ToTask();
 
 				changesA.WaitForAllPendingSubscriptions();
 
 				var at2 = DateTime.Now.AddMinutes(6);
-				await storeB.AppendAsync("-Simple", "Is", at2, 6d);
+				await storeB.AppendAsync("Simple", "Is", at2, 6d);
 
 				timeSeriesChange = await notificationTask;
-				Assert.Equal("-Simple", timeSeriesChange.Prefix);
+				Assert.Equal("Simple", timeSeriesChange.Type);
 				Assert.Equal("Is", timeSeriesChange.Key);
 				Assert.Equal(at2, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
@@ -116,7 +116,7 @@ namespace Raven.Tests.TimeSeries
 			int startCount = 0, endCount = 0;
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
 
 				using (var batchOperation = store.Advanced.NewBatch(new TimeSeriesBatchOptions { BatchSizeLimit = batchSizeLimit }))
 				{
@@ -137,7 +137,7 @@ namespace Raven.Tests.TimeSeries
 
 					for (var i = 0; i < actionsCount; i++)
 					{
-						batchOperation.ScheduleAppend("-Simple", "Time", DateTime.Today.AddMinutes(i));
+						batchOperation.ScheduleAppend("Simple", "Time", DateTime.Today.AddMinutes(i));
 					}
 				}
 

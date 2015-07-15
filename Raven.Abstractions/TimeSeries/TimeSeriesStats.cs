@@ -10,7 +10,7 @@
 
 		public double RequestsPerSecond { get; set; }
 
-	    public long PrefixesCount { get; set; }
+	    public long TypesCount { get; set; }
 	    
 		public long KeysCount { get; set; }
 

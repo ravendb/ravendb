@@ -20,36 +20,37 @@ namespace Raven.Tests.TimeSeries
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
-				await store.CreatePrefixConfigurationAsync("-ForValues", 4);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				await store.CreateTypeAsync("FourValues", new[] { "Value 1", "Value Two", "Value Three", "Value 4" });
 
-				await store.AppendAsync("-ForValues", "Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D });
-				await store.AppendAsync("-Simple", "Is", DateTime.Now, 3D);
-				await store.AppendAsync("-Simple", "Money", DateTime.Now, 3D);
+				await store.AppendAsync("FourValues", "Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D });
+				await store.AppendAsync("Simple", "Is", DateTime.Now, 3D);
+				await store.AppendAsync("Simple", "Money", DateTime.Now, 3D);
 				
 				var cancellationToken = new CancellationToken();
-				await store.AppendAsync("-Simple", "Is", DateTime.Now, 3456D, cancellationToken);
-				await store.AppendAsync("-ForValues", "Time", DateTime.Now, new[] { 23D, 4D, 5D, 6D }, cancellationToken);
-				await store.AppendAsync("-ForValues", "Time", DateTime.Now, cancellationToken, 33D, 4D, 5D, 6D);
+				await store.AppendAsync("Simple", "Is", DateTime.Now, 3456D, cancellationToken);
+				await store.AppendAsync("FourValues", "Time", DateTime.Now, new[] { 23D, 4D, 5D, 6D }, cancellationToken);
+				await store.AppendAsync("FourValues", "Time", DateTime.Now, cancellationToken, 33D, 4D, 5D, 6D);
 
 				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
-				Assert.Equal(2, stats.PrefixesCount);
+				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
 				Assert.Equal(6, stats.ValuesCount);
 			}
 		}
 
 		[Fact]
-		public async Task ShouldNotAllowOverwritePrefix()
+		public async Task ShouldNotAllowOverwriteType()
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
-				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.CreatePrefixConfigurationAsync("-Simple", 2));
-				Assert.Contains("System.InvalidOperationException: Prefix -Simple is already created", exception.Message);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.CreateTypeAsync("Simple", new[] { "Value", "Another value" }));
+				Assert.Contains("System.InvalidOperationException: Type 'Simple' is already created", exception.Message);
 
 				var stats = await store.GetTimeSeriesStatsAsync();
-				Assert.Equal(1, stats.PrefixesCount);
+				Assert.Equal(1, stats.TypesCount);
+				Assert.Equal(0, stats.KeysCount);
 			}
 		}
 
@@ -58,32 +59,32 @@ namespace Raven.Tests.TimeSeries
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
-				await store.AppendAsync("-Simple", "Time", DateTime.Now, 3D);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				await store.AppendAsync("Simple", "Time", DateTime.Now, 3D);
 
-				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.AppendAsync("-Simple", "Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D }));
+				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.AppendAsync("Simple", "Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D }));
 				Assert.Contains("System.ArgumentOutOfRangeException: Appended values should be the same length the series values length which is 1 and not 4", exception.Message);
 
 				var stats = await store.GetTimeSeriesStatsAsync();
-				Assert.Equal(1, stats.PrefixesCount);
+				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(1, stats.ValuesCount);
 			}
 		}
 
 		[Fact]
-		public async Task AddAndDeletePrefix_ShouldThrowIfPrefixHasData()
+		public async Task AddAndDeleteType_ShouldThrowIfTypeHasData()
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
-				await store.AppendAsync("-Simple", "Is", DateTime.Now, 3D);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				await store.AppendAsync("Simple", "Is", DateTime.Now, 3D);
 
-				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.DeletePrefixConfigurationAsync("-Simple"));
-				Assert.Contains("System.InvalidOperationException: Cannot delete prefix since there is associated data to it", exception.Message);
+				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.DeleteTypeAsync("Simple"));
+				Assert.Contains("System.InvalidOperationException: Cannot delete type since there is associated data to it", exception.Message);
 
 				var stats = await store.GetTimeSeriesStatsAsync();
-				Assert.Equal(1, stats.PrefixesCount);
+				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(1, stats.ValuesCount);
 			}
@@ -92,17 +93,17 @@ namespace Raven.Tests.TimeSeries
 
 
 		[Fact]
-		public async Task AddAndDeletePrefix()
+		public async Task AddAndDeleteType()
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
-				await store.AppendAsync("-Simple", "Is", DateTime.Now, 3D);
-				await store.DeleteAsync("-Simple", "Is");
-				await store.DeletePrefixConfigurationAsync("-Simple");
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				await store.AppendAsync("Simple", "Is", DateTime.Now, 3D);
+				await store.DeleteAsync("Simple", "Is");
+				await store.DeleteTypeAsync("Simple");
 
 				var stats = await store.GetTimeSeriesStatsAsync();
-				Assert.Equal(0, stats.PrefixesCount);
+				Assert.Equal(0, stats.TypesCount);
 				Assert.Equal(0, stats.KeysCount);
 				Assert.Equal(0, stats.ValuesCount);
 			}
@@ -114,21 +115,21 @@ namespace Raven.Tests.TimeSeries
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
 				
 				var start = new DateTime(2015, 1, 1);
 				for (int i = 0; i < 12; i++)
 				{
-					await store.AppendAsync("-Simple", "Time", start.AddHours(i), i + 3D);
+					await store.AppendAsync("Simple", "Time", start.AddHours(i), i + 3D);
 				}
 				var stats = await store.GetTimeSeriesStatsAsync();
-				Assert.Equal(1, stats.PrefixesCount);
+				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(12, stats.ValuesCount);
 
-				await store.DeleteRangeAsync("-Simple", "Time", start.AddHours(3), start.AddHours(7));
+				await store.DeleteRangeAsync("Simple", "Time", start.AddHours(3), start.AddHours(7));
 				stats = await store.GetTimeSeriesStatsAsync();
-				Assert.Equal(1, stats.PrefixesCount);
+				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(7, stats.ValuesCount);
 			}
@@ -141,16 +142,16 @@ namespace Raven.Tests.TimeSeries
 
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
-				await store.CreatePrefixConfigurationAsync("-ForValues", 4);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				await store.CreateTypeAsync("FourValues", new[] { "Value 1", "Value Two", "Value Three", "Value 4" });
 
 				using (var batch = store.Advanced.NewBatch(new TimeSeriesBatchOptions { }))
 				{
 					for (int i = 0; i < 18888; i++)
 					{
-						batch.ScheduleAppend("-Simple", "Is", start.AddSeconds(i + 1), 3D);
-						batch.ScheduleAppend("-Simple", "Money", start.AddSeconds(i + 18), 13D);
-						batch.ScheduleAppend("-ForValues", "Time", start.AddSeconds(i + 13), 3D, 4D, 5D, 6D);
+						batch.ScheduleAppend("Simple", "Is", start.AddSeconds(i + 1), 3D);
+						batch.ScheduleAppend("Simple", "Money", start.AddSeconds(i + 18), 13D);
+						batch.ScheduleAppend("FourValues", "Time", start.AddSeconds(i + 13), 3D, 4D, 5D, 6D);
 					}
 					await batch.FlushAsync();
 				}
@@ -159,29 +160,29 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(3, keys.Length);
 
 				var time = keys[0];
-				Assert.Equal("-ForValues", time.Prefix);
-				Assert.Equal(4, time.ValueLength);
+				Assert.Equal("FourValues", time.Type);
+				Assert.Equal(4, time.NumberOfValues);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(18888, time.PointsCount);
 
 				var _is = keys[1];
-				Assert.Equal("-Simple", _is.Prefix);
-				Assert.Equal(1, _is.ValueLength);
+				Assert.Equal("Simple", _is.Type);
+				Assert.Equal(1, _is.NumberOfValues);
 				Assert.Equal("Is", _is.Key);
 				Assert.Equal(18888, _is.PointsCount);
 
 				var money = keys[2];
-				Assert.Equal("-Simple", money.Prefix);
-				Assert.Equal(1, money.ValueLength);
+				Assert.Equal("Simple", money.Type);
+				Assert.Equal(1, money.NumberOfValues);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(18888, money.PointsCount);
 
 				var stats = await store.GetTimeSeriesStatsAsync();
-				Assert.Equal(2, stats.PrefixesCount);
+				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
 				Assert.Equal(18888 * 3, stats.ValuesCount);
 
-				WaitForUserToContinueTheTest(startPage: "/studio/index.html#timeseries/series?prefix=-Simple&key=Money&timeseries=SeriesName-1");
+				WaitForUserToContinueTheTest(startPage: "/studio/index.html#timeseries/series?type=-Simple&key=Money&timeseries=SeriesName-1");
 			}
 		}
 
@@ -192,42 +193,42 @@ namespace Raven.Tests.TimeSeries
 
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
-				await store.CreatePrefixConfigurationAsync("-ForValues", 4);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				await store.CreateTypeAsync("FourValues", new[] { "Value 1", "Value Two", "Value Three", "Value 4" });
 
-				await store.AppendAsync("-ForValues", "Time", start, new[] { 3D, 4D, 5D, 6D });
-				await store.AppendAsync("-Simple", "Is", start, 3D);
-				await store.AppendAsync("-Simple", "Money", start, 3D);
+				await store.AppendAsync("FourValues", "Time", start, new[] { 3D, 4D, 5D, 6D });
+				await store.AppendAsync("Simple", "Is", start, 3D);
+				await store.AppendAsync("Simple", "Money", start, 3D);
 
 				var cancellationToken = new CancellationToken();
-				await store.AppendAsync("-Simple", "Is", start.AddHours(1), 3456D, cancellationToken);
-				await store.AppendAsync("-ForValues", "Time", start.AddHours(1), new[] { 23D, 4D, 5D, 6D }, cancellationToken);
-				await store.AppendAsync("-ForValues", "Time", start.AddHours(2), cancellationToken, 33D, 4D, 5D, 6D);
-				await store.AppendAsync("-ForValues", "Time", start.AddHours(3), cancellationToken, 33D, 4D, 5D, 6D);
+				await store.AppendAsync("Simple", "Is", start.AddHours(1), 3456D, cancellationToken);
+				await store.AppendAsync("FourValues", "Time", start.AddHours(1), new[] { 23D, 4D, 5D, 6D }, cancellationToken);
+				await store.AppendAsync("FourValues", "Time", start.AddHours(2), cancellationToken, 33D, 4D, 5D, 6D);
+				await store.AppendAsync("FourValues", "Time", start.AddHours(3), cancellationToken, 33D, 4D, 5D, 6D);
 
 				var keys = await store.Advanced.GetKeys(cancellationToken);
 				Assert.Equal(3, keys.Length);
 				
 				var time = keys[0];
-				Assert.Equal("-ForValues", time.Prefix);
-				Assert.Equal(4, time.ValueLength);
+				Assert.Equal("FourValues", time.Type);
+				Assert.Equal(4, time.NumberOfValues);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(4, time.PointsCount);
 
 				var _is = keys[1];
-				Assert.Equal("-Simple", _is.Prefix);
-				Assert.Equal(1, _is.ValueLength);
+				Assert.Equal("Simple", _is.Type);
+				Assert.Equal(1, _is.NumberOfValues);
 				Assert.Equal("Is", _is.Key);
 				Assert.Equal(2, _is.PointsCount);
 
 				var money = keys[2];
-				Assert.Equal("-Simple", money.Prefix);
-				Assert.Equal(1, money.ValueLength);
+				Assert.Equal("Simple", money.Type);
+				Assert.Equal(1, money.NumberOfValues);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
 
 				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
-				Assert.Equal(2, stats.PrefixesCount);
+				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
 				Assert.Equal(7, stats.ValuesCount);
 			}
@@ -240,57 +241,57 @@ namespace Raven.Tests.TimeSeries
 
 			using (var store = NewRemoteTimeSeriesStore())
 			{
-				await store.CreatePrefixConfigurationAsync("-Simple", 1);
-				await store.CreatePrefixConfigurationAsync("-ForValues", 4);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				await store.CreateTypeAsync("FourValues", new[] { "Value 1", "Value Two", "Value Three", "Value 4" });
 
-				await store.AppendAsync("-ForValues", "Time", start, new[] { 3D, 4D, 5D, 6D });
-				await store.AppendAsync("-Simple", "Is", start, 3D);
-				await store.AppendAsync("-Simple", "Money", start, 3D);
+				await store.AppendAsync("FourValues", "Time", start, new[] { 3D, 4D, 5D, 6D });
+				await store.AppendAsync("Simple", "Is", start, 3D);
+				await store.AppendAsync("Simple", "Money", start, 3D);
 
 				using (var batch = store.Advanced.NewBatch(new TimeSeriesBatchOptions { }))
 				{
 					for (int i = 0; i < 1888; i++)
 					{
-						await store.AppendAsync("-ForValues", "Time", start, new[] { 3D, 4D, 5D, 6D });
-						await store.AppendAsync("-Simple", "Is", start, 3D);
-						await store.AppendAsync("-Simple", "Money", start, 3D);
+						await store.AppendAsync("FourValues", "Time", start, new[] { 3D, 4D, 5D, 6D });
+						await store.AppendAsync("Simple", "Is", start, 3D);
+						await store.AppendAsync("Simple", "Money", start, 3D);
 
-						batch.ScheduleAppend("-Simple", "Is", start, 3D);
-						batch.ScheduleAppend("-Simple", "Money", start, 13D);
-						batch.ScheduleAppend("-ForValues", "Time", start, 3D, 4D, 5D, 6D);
+						batch.ScheduleAppend("Simple", "Is", start, 3D);
+						batch.ScheduleAppend("Simple", "Money", start, 13D);
+						batch.ScheduleAppend("FourValues", "Time", start, 3D, 4D, 5D, 6D);
 					}
 					await batch.FlushAsync();
 				}
 
 				var cancellationToken = new CancellationToken();
-				await store.AppendAsync("-Simple", "Is", start.AddYears(10), 3456D, cancellationToken);
-				await store.AppendAsync("-ForValues", "Time", start.AddYears(1), new[] { 23D, 4D, 5D, 6D }, cancellationToken);
-				await store.AppendAsync("-ForValues", "Time", start.AddYears(2), cancellationToken, 33D, 4D, 5D, 6D);
-				await store.AppendAsync("-ForValues", "Time", start.AddYears(3), cancellationToken, 33D, 4D, 5D, 6D);
+				await store.AppendAsync("Simple", "Is", start.AddYears(10), 3456D, cancellationToken);
+				await store.AppendAsync("FourValues", "Time", start.AddYears(1), new[] { 23D, 4D, 5D, 6D }, cancellationToken);
+				await store.AppendAsync("FourValues", "Time", start.AddYears(2), cancellationToken, 33D, 4D, 5D, 6D);
+				await store.AppendAsync("FourValues", "Time", start.AddYears(3), cancellationToken, 33D, 4D, 5D, 6D);
 
 				var keys = await store.Advanced.GetKeys(cancellationToken);
 				Assert.Equal(3, keys.Length);
 
 				var time = keys[0];
-				Assert.Equal("-ForValues", time.Prefix);
-				Assert.Equal(4, time.ValueLength);
+				Assert.Equal("FourValues", time.Type);
+				Assert.Equal(4, time.NumberOfValues);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(4, time.PointsCount);
 
 				var _is = keys[1];
-				Assert.Equal("-Simple", _is.Prefix);
-				Assert.Equal(1, _is.ValueLength);
+				Assert.Equal("Simple", _is.Type);
+				Assert.Equal(1, _is.NumberOfValues);
 				Assert.Equal("Is", _is.Key);
 				Assert.Equal(2, _is.PointsCount);
 
 				var money = keys[2];
-				Assert.Equal("-Simple", money.Prefix);
-				Assert.Equal(1, money.ValueLength);
+				Assert.Equal("Simple", money.Type);
+				Assert.Equal(1, money.NumberOfValues);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
 
 				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
-				Assert.Equal(2, stats.PrefixesCount);
+				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
 				Assert.Equal(7, stats.ValuesCount);
 			}

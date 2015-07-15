@@ -435,6 +435,7 @@
     <Compile Include="TimeSeries\TimeSeriesRestoreRequest.cs" />
     <Compile Include="TimeSeries\TimeSeriesBatchOptions.cs" />
     <Compile Include="TimeSeries\TimeSeriesReplicationDocument.cs" />
+    <Compile Include="TimeSeries\TimeSeriesType.cs" />
     <Compile Include="TimeSeries\TimeSeriesView.cs" />
     <Compile Include="TimeSeries\Notifications\BulkOperationNotification.cs" />
     <Compile Include="TimeSeries\Notifications\TimeSeriesKeyChangeNotification.cs" />

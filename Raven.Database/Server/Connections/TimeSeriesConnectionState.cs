@@ -68,7 +68,7 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(KeyChangeNotification notification)
 		{
-			var timeSeriesPrefix = string.Concat(notification.Prefix, "/", notification.Key);
+			var timeSeriesPrefix = string.Concat(notification.Type, "/", notification.Key);
 			if (watchAllTimeSeries > 0 || matchingKeyChanges.Contains(timeSeriesPrefix))
 			{
 				var value = new { Value = notification, Type = keyChangeNotificationType };

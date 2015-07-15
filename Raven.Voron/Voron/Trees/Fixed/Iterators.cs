@@ -25,6 +25,8 @@ namespace Voron.Trees.Fixed
 			bool DeleteCurrentAndMoveNext();
 
             ValueReader CreateReaderForCurrent();
+            
+			long NumberOfEntries();
         }
 
         public class NullIterator : IFixedSizeIterator
@@ -54,6 +56,11 @@ namespace Voron.Trees.Fixed
             {
                 throw new InvalidOperationException("No current page");
             }
+
+	        public long NumberOfEntries()
+	        {
+				throw new InvalidOperationException("No current page");
+	        }
         }
 
         public class EmbeddedIterator : IFixedSizeIterator
@@ -121,6 +128,11 @@ namespace Voron.Trees.Fixed
             {
                 return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
             }
+
+	        public long NumberOfEntries()
+	        {
+		        return _header->NumberOfEntries;
+	        }
 
 	        public void Dispose()
             {
@@ -223,6 +235,31 @@ namespace Voron.Trees.Fixed
 
                 return new ValueReader(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
             }
+
+	        public long NumberOfEntries()
+	        {
+				// TODO: Fix this
+				if (Seek(0) == false)
+					return 0;
+
+		        long count = 0;
+				while (_currentPage != null)
+				{
+					count += _currentPage.FixedSize_NumberOfEntries;
+					while (_currentPage.IsBranch)
+					{
+						var childParentNumber = _parent.PageValueFor(_currentPage.Base + _currentPage.FixedSize_StartPosition, _currentPage.LastSearchPosition);
+						_currentPage = _parent._tx.GetReadOnlyPage(childParentNumber);
+						count += _currentPage.FixedSize_NumberOfEntries;
+					}
+					if (_parent._cursor.Count == 0)
+						break;
+					_currentPage = _parent._cursor.Pop();
+				}
+				_currentPage = null;
+
+		        return count;
+	        }
         }
     }
 }

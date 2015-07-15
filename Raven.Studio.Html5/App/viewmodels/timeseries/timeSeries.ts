@@ -15,7 +15,7 @@ class timeSeries extends viewModelBase {
     keys = ko.observableArray<timeSeriesKey>();
     selectedKey = ko.observable<timeSeriesKey>().subscribeTo("ActivateKey").distinctUntilChanged();
     currentKey = ko.observable<timeSeriesKey>();
-    keyAndPrefixToSelect: string;
+    keyAndTypeToSelect: string;
     currentKeyPagedItems = ko.observable<pagedList>();
     selectedPointsIndices = ko.observableArray<number>();
     selectedPointsText: KnockoutComputed<string>;
@@ -79,8 +79,8 @@ class timeSeries extends viewModelBase {
         //this.updateHelpLink('G8CDCP');
 
         // We can optionally pass in a key name to view's URL, e.g. #timeSeries/timeSeries?key=Foo&timeSeriestorage=test
-        if (args && args.prefix && args.key) {
-            this.keyAndPrefixToSelect = args.prefix + "/" + args.key;
+        if (args && args.type && args.key) {
+            this.keyAndTypeToSelect = args.type + "/" + args.key;
         }
 
         var ts = this.activeTimeSeries();
@@ -134,7 +134,7 @@ class timeSeries extends viewModelBase {
     keysLoaded(keys: Array<timeSeriesKey>, ts: timeSeriesDocument) {
         this.keys(keys);
 
-        var keyToSelect = this.keyAndPrefixToSelect ? this.keys.first(g => g.name === this.keyAndPrefixToSelect) : this.keys()[0];
+        var keyToSelect = this.keyAndTypeToSelect ? this.keys.first(g => g.name === this.keyAndTypeToSelect) : this.keys()[0];
         keyToSelect.activate();
     }
 
@@ -304,7 +304,7 @@ class timeSeries extends viewModelBase {
     selectKey(key: timeSeriesKey, event?: MouseEvent) {
         if (!event || event.which !== 3) {
             key.activate();
-            var timeSeriesKeyUrl = appUrl.forTimeSeriesKey(key.prefix, key.key, this.activeTimeSeries());
+            var timeSeriesKeyUrl = appUrl.forTimeSeriesKey(key.type, key.key, this.activeTimeSeries());
             router.navigate(timeSeriesKeyUrl, false);
         }
     }

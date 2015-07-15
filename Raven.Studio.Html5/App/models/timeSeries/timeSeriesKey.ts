@@ -8,13 +8,13 @@ class timeSeriesKey implements ICollectionBase {
 	colorClass = "";
 	name = "";
     private timeSeriesList: pagedList;
-    private static prefixColorMaps: resourceStyleMap[] = [];
+    private static typeColorMaps: resourceStyleMap[] = [];
     pointsCount = ko.observable<number>(0);
     timeSeriesCountWithThousandsSeparator = ko.computed(() => this.pointsCount().toLocaleString());
     
-    constructor(public prefix: string, public key: string, public valueLength: number, private ownerTimeSeries: timeSeries) {
-        this.name = prefix + "/" + key;
-        this.colorClass = timeSeriesKey.getPrefixCssClass(this.prefix, ownerTimeSeries);
+    constructor(public type: string, public key: string, public valueLength: number, private ownerTimeSeries: timeSeries) {
+        this.name = type + "/" + key;
+        this.colorClass = timeSeriesKey.getTypeCssClass(this.type, ownerTimeSeries);
     }
 
     activate() {
@@ -35,13 +35,13 @@ class timeSeriesKey implements ICollectionBase {
 	}
 
     static fromDto(dto: timeSeriesKeyDto, ts: timeSeries): timeSeriesKey {
-        var _new = new timeSeriesKey(dto.Prefix, dto.Key, dto.ValueLength, ts);
+        var _new = new timeSeriesKey(dto.Type, dto.Key, dto.NumberOfValues, ts);
         _new.pointsCount(dto.PointsCount);
         return _new;
     }
 
-    static getPrefixCssClass(prefix: string, ts: timeSeries): string {
-        return cssGenerator.getCssClass(prefix, timeSeriesKey.prefixColorMaps, ts);
+    static getTypeCssClass(type: string, ts: timeSeries): string {
+        return cssGenerator.getCssClass(type, timeSeriesKey.typeColorMaps, ts);
     }
 
     private createPagedList(): pagedList {
@@ -52,7 +52,7 @@ class timeSeriesKey implements ICollectionBase {
     }
 
     private fetchTimeSeries(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        return new getPointsCommand(this.ownerTimeSeries, skip, take, this.prefix, this.key, this.pointsCount()).execute();
+        return new getPointsCommand(this.ownerTimeSeries, skip, take, this.type, this.key, this.pointsCount()).execute();
     }
 } 
 

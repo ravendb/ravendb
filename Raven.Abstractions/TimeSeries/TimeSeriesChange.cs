@@ -12,7 +12,7 @@ namespace Raven.Abstractions.TimeSeries
 {
 	public class TimeSeriesAppend
 	{
-		public string Prefix { get; set; }
+		public string Type { get; set; }
 		public string Key { get; set; }
 		public DateTime At { get; set; }
 		public double[] Values { get; set; }

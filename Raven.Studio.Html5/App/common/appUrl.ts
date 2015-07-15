@@ -175,10 +175,10 @@ class appUrl {
         return "#counterstorages/configuration?" + counterStroragePart;
     }
 
-    static forTimeSeriesKey(prefix: string, key: string, ts: timeSeries) {
+    static forTimeSeriesKey(type: string, key: string, ts: timeSeries) {
         var url = "";
-        if (prefix && key) {
-            url = "prefix=" + encodeURIComponent(prefix) + "&key=" + encodeURIComponent(key);
+        if (type && key) {
+            url = "type=" + encodeURIComponent(type) + "&key=" + encodeURIComponent(key);
         }
         var timeSeriesPart = appUrl.getEncodedTimeSeriesPart(ts);
         return "#timeseries/series?" + url + timeSeriesPart;

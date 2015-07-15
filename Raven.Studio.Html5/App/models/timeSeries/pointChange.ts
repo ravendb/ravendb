@@ -1,5 +1,5 @@
 ﻿/*class pointChange {
-    prefix = ko.observable<string>("");
+    type = ko.observable<string>("");
     key = ko.observable<string>("");
     at = ko.observable<Moment>();
     values = ko.observableArray<number>();

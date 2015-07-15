@@ -3,7 +3,7 @@ interface timeSeriesStatisticsDto {
     Url: string;
     TimeSeriesSize: string;
     RequestsPerSecond: number;
-    PrefixesCount: number;
+    TypesCount: number;
     KeysCount: number;
     ValuesCount: number;
 }
