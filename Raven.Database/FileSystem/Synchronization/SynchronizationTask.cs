@@ -438,7 +438,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
             var destinationUrl = commands.UrlFor();
 
-	        for (var i = 0; i < AvailableSynchronizationRequestsTo(destinationUrl); i++)
+	        while (AvailableSynchronizationRequestsTo(destinationUrl) > 0)
 	        {
 		        SynchronizationWorkItem work;
 		        if (synchronizationQueue.TryDequePending(destinationUrl, out work) == false)
@@ -464,7 +464,6 @@ namespace Raven.Database.FileSystem.Synchronization
 				        });
 			        }
 
-			        i--;
 			        continue;
 		        }
 
@@ -472,7 +471,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		        if (forceSyncingAll)
 		        {
-			        workTask.ContinueWith(_ => context.NotifyAboutWork()); // synchronization slot released
+			        workTask.ContinueWith(_ => context.NotifyAboutWork()); // synchronization slot released, next file can be synchronized
 		        }
 
 		        yield return workTask;
