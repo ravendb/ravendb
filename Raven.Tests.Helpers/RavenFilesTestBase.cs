@@ -326,8 +326,19 @@ namespace Raven.Tests.Helpers
                     errors.Add(e);
                 }
             }
-
             asyncCommandClients.Clear();
+
+			foreach (var fileStore in filesStores)
+			{
+				try
+				{
+					fileStore.Dispose();
+				}
+				catch (Exception e)
+				{
+					errors.Add(e);
+				}
+			}
             filesStores.Clear();
 
             foreach (var server in servers)
