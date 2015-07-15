@@ -31,7 +31,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			SynchronizationWorkItem work;
 
-			queue.TryDequePendingSynchronization(Destination, out work);
+			queue.TryDequePending(Destination, out work);
 			queue.SynchronizationStarted(work, Destination);
 
 			// attempt to enqueue the same work
@@ -50,7 +50,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 			SynchronizationWorkItem work;
 
-			queue.TryDequePendingSynchronization(Destination, out work);
+			queue.TryDequePending(Destination, out work);
 			queue.SynchronizationStarted(work, Destination);
 
             transactionalStorage.Batch(accessor => accessor.UpdateFileMetadata(FileName, new RavenJObject(), null));			

@@ -177,7 +177,7 @@ namespace Raven.Database.FileSystem.Controllers
 				}
 			});
 
-			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+			SynchronizationTask.Context.NotifyAboutWork();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -223,7 +223,7 @@ namespace Raven.Database.FileSystem.Controllers
 				Historian.Update(name, metadata);
 				Files.UpdateMetadata(name, metadata, etag);
 
-				Synchronizations.StartSynchronizeDestinationsInBackground();
+				SynchronizationTask.Context.NotifyAboutWork();
 			});
 
 			//Hack needed by jquery on the client side. We need to find a better solution for this
@@ -283,7 +283,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
 
-			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+			SynchronizationTask.Context.NotifyAboutWork();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -317,7 +317,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
 
-			Synchronizations.StartSynchronizeDestinationsInBackground();
+			SynchronizationTask.Context.NotifyAboutWork();
 
 			return GetEmptyMessage(HttpStatusCode.Created);
 		}

@@ -147,7 +147,7 @@ namespace Raven.Client.FileSystem
 
             var errorResponseException = exception as ErrorResponseException;
             if (errorResponseException != null)
-                throw errorResponseException.SimplifyException();
+                return errorResponseException.SimplifyException();
 
             return exception;
 		}
