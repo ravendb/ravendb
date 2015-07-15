@@ -49,7 +49,7 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
-            var destinationMetadata = await destination.Commands.GetMetadataForAsync(FileName);
+            var destinationMetadata = await destination.GetMetadataForAsync(FileName);
             if (destinationMetadata == null)
             {
                 // if file doesn't exist on destination server - upload it there

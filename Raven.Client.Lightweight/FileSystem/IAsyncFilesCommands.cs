@@ -159,6 +159,7 @@ namespace Raven.Client.FileSystem
         Task<SynchronizationReport> DeleteAsync(string filename, RavenJObject metadata, FileSystemInfo sourceFileSystem);
         Task<SynchronizationReport> RenameAsync(string filename, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
         Task<SynchronizationReport> UpdateMetadataAsync(string filename, RavenJObject metadata, FileSystemInfo sourceFileSystem);
+	    Task<RavenJObject> GetMetadataForAsync(string fileName);
     }
 
     public interface IAsyncFilesStorageCommands : IDisposable, IHoldProfilingInformation
