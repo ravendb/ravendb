@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Logging;
+using Raven.Database.Config;
 using Raven.Database.FileSystem.Infrastructure;
 
 namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
@@ -14,9 +15,9 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 		private readonly string _fileName;
 		private readonly string _tempDirectory;
 
-		public VolatileSignatureRepository(string fileName)
+		public VolatileSignatureRepository(string fileName, InMemoryRavenConfiguration configuration)
 		{
-			_tempDirectory = TempDirectoryTools.Create();
+			_tempDirectory = TempDirectoryTools.Create(configuration);
 			_fileName = fileName;
 			_createdFiles = new Dictionary<string, FileStream>();
 		}

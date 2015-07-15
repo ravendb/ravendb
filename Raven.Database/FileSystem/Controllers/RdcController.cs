@@ -33,7 +33,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			Log.Debug("Got signatures of a file '{0}' request", id);
 
-            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename))
+            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename, FileSystem.Configuration))
 			{
 				var localRdcManager = new LocalRdcManager(signatureRepository, Storage, SigGenerator);
                 var resultContent = localRdcManager.GetSignatureContentForReading(canonicalFilename);
@@ -72,7 +72,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			long? fileLength = fileAndPages.TotalSize;
 
-            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename))
+            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename, FileSystem.Configuration))
 			{
 				var rdcManager = new LocalRdcManager(signatureRepository, Storage, SigGenerator);
 				var signatureManifest = await rdcManager.GetSignatureManifestAsync(
