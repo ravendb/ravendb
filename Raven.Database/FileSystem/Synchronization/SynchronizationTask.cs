@@ -627,7 +627,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				storage.Batch(
 					accessor =>
 					{
-						configObjects = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncNamePrefix + Uri.EscapeUriString(destination.Url), 0, 100)
+						configObjects = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncNameForFile(string.Empty, destination.Url), 0, 100)
 									            .Select(config => config.JsonDeserialization<SynchronizationDetails>())
                                                 .ToList();
 					});
