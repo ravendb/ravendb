@@ -34,6 +34,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing.Analyzers;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -756,7 +757,8 @@ namespace Raven.Database.Indexing
 							continue;
 						if (standardAnalyzer == null)
 						{
-							standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+							standardAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29);
+							//standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
 							toDispose.Add(standardAnalyzer.Close);
 						}
 						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, standardAnalyzer);

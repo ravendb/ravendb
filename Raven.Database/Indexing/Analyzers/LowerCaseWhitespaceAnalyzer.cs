@@ -7,7 +7,18 @@ namespace Raven.Database.Indexing
 	{
 		public override TokenStream TokenStream(string fieldName, TextReader reader)
 		{
-			return new LowerCaseWhitespaceTokenizer(reader);
+			var res = new LowerCaseWhitespaceTokenizer(reader);
+			PreviousTokenStream = res;
+			return res;
 		}
+		public override TokenStream ReusableTokenStream(string fieldName, TextReader reader)
+		{
+			var previousTokenStream = (LowerCaseWhitespaceTokenizer)PreviousTokenStream;
+			if (previousTokenStream == null)
+				return TokenStream(fieldName, reader);
+			previousTokenStream.Reset(reader);
+			return previousTokenStream;
+		}
+
 	}
 }
