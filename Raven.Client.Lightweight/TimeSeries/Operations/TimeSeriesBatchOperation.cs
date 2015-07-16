@@ -309,6 +309,10 @@ namespace Raven.Client.TimeSeries.Operations
 
 		public void ScheduleAppend(string type, string key, DateTime time, params double[] values)
 		{
+			if (values.Length < 1)
+			{
+				throw new ArgumentOutOfRangeException("values", "Values must have at least 1 value.");
+			}
 			appendQueue.Add(new TimeSeriesAppend
 			{
 				Type = type,

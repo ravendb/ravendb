@@ -137,7 +137,7 @@ namespace Raven.Tests.TimeSeries
 
 					for (var i = 0; i < actionsCount; i++)
 					{
-						batchOperation.ScheduleAppend("Simple", "Time", DateTime.Today.AddMinutes(i));
+						batchOperation.ScheduleAppend("Simple", "Time", DateTime.Today.AddMinutes(i), 234D);
 					}
 				}
 

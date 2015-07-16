@@ -81,7 +81,7 @@ namespace Raven.Tests.TimeSeries
 				await store.AppendAsync("Simple", "Is", DateTime.Now, 3D);
 
 				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.DeleteTypeAsync("Simple"));
-				Assert.Contains("System.InvalidOperationException: Cannot delete type since there is associated data to it", exception.Message);
+				Assert.Contains("System.InvalidOperationException: Cannot delete type 'Simple' since there is associated data to it", exception.Message);
 
 				var stats = await store.GetTimeSeriesStatsAsync();
 				Assert.Equal(1, stats.TypesCount);

@@ -43,7 +43,7 @@ namespace Raven.Client.TimeSeries
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Delete, (url, timeSeriesName) =>
 			{
-				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/prefix-delete/{2}",
+				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/types/{2}",
 					url, timeSeriesName, type);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
