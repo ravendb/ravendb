@@ -250,6 +250,7 @@
     <Compile Include="Issues\IndexationTests.cs" />
     <Compile Include="Issues\RavenDB-3619.cs" />
     <Compile Include="Issues\RavenDB-3136.cs" />
+    <Compile Include="Issues\RavenDB-3646.cs" />
     <Compile Include="Issues\RavenDB2537.cs" />
     <Compile Include="Issues\RavenDB_2486.cs" />
     <Compile Include="Issues\RavenDB2408.cs" />
