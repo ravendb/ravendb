@@ -59,7 +59,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		public abstract SynchronizationType SynchronizationType { get; }
 
-        public abstract Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination);
+		public abstract Task<SynchronizationReport> PerformAsync(ISynchronizationServerClient destination);
 
 		public virtual void Cancel()
 		{
@@ -87,11 +87,9 @@ namespace Raven.Database.FileSystem.Synchronization
             return null;
 		}
 
-        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenJObject remoteMetadata, IAsyncFilesSynchronizationCommands destination, string localServerUrl, ILog log)
+		private async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenJObject remoteMetadata, ISynchronizationServerClient synchronizationServerClient, string localServerUrl, ILog log)
 		{
-            var commands = (IAsyncFilesCommandsImpl)destination.Commands;
-
-            log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, commands.UrlFor());
+			log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, synchronizationServerClient.BaseUrl);
 
 			try
 			{
@@ -100,11 +98,11 @@ namespace Raven.Database.FileSystem.Synchronization
 				var history = new List<HistoryItem>(conflict.RemoteHistory);
 				history.RemoveAt(conflict.RemoteHistory.Count - 1);
 
-                await destination.ApplyConflictAsync(FileName, version, serverId, remoteMetadata, localServerUrl);
+				await synchronizationServerClient.ApplyConflictAsync(FileName, version, serverId, remoteMetadata, localServerUrl);
 			}
 			catch (Exception ex)
 			{
-				log.WarnException(string.Format("Failed to apply conflict on {0} for file '{1}'", destination, FileName), ex);
+				log.WarnException(string.Format("Failed to apply conflict on {0} for file '{1}'", synchronizationServerClient, FileName), ex);
 			}
 
 			return new SynchronizationReport(FileName, FileETag, SynchronizationType)
@@ -113,17 +111,17 @@ namespace Raven.Database.FileSystem.Synchronization
 			};
 		}
 
-		protected async Task<SynchronizationReport> HandleConflict(IAsyncFilesSynchronizationCommands destination, ConflictItem conflict, ILog log)
+		protected async Task<SynchronizationReport> HandleConflict(ISynchronizationServerClient synchronizationServerClient, ConflictItem conflict, ILog log)
 		{
-			var conflictResolutionStrategy = await destination.Commands.Synchronization.GetResolutionStrategyFromDestinationResolvers(conflict, FileMetadata);
+			var conflictResolutionStrategy = await synchronizationServerClient.GetResolutionStrategyFromDestinationResolvers(conflict, FileMetadata);
 
 			switch (conflictResolutionStrategy)
 			{
 				case ConflictResolutionStrategy.NoResolution:
-					return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, FileSystemInfo.Url, log);
+					return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log);
 				case ConflictResolutionStrategy.CurrentVersion:
-					await ApplyConflictOnDestinationAsync(conflict, FileMetadata, destination, FileSystemInfo.Url, log);
-					await destination.Commands.Synchronization.ResolveConflictAsync(FileName, conflictResolutionStrategy);
+					await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log);
+					await synchronizationServerClient.ResolveConflictAsync(FileName, conflictResolutionStrategy);
 					return new SynchronizationReport(FileName, FileETag, SynchronizationType);
 				case ConflictResolutionStrategy.RemoteVersion:
 					// we can push the file even though it conflicted, the conflict will be automatically resolved on the destination side

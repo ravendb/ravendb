@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -13,7 +10,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.OAuth;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -23,10 +19,8 @@ using Raven.Client.Extensions;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Client.FileSystem.Listeners;
-using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Client.FileSystem
 {
@@ -35,7 +29,6 @@ namespace Raven.Client.FileSystem
     {
         private readonly IFilesConflictListener[] conflictListeners;
         private bool resolvingConflict = false;
-        private const int DefaultNumberOfCachedRequests = 2048;
 
         /// <summary>
         /// Notify when the failover status changed
@@ -46,7 +39,7 @@ namespace Raven.Client.FileSystem
             remove { ReplicationInformer.FailoverStatusChanged -= value; }
         }
 
-		public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory, Guid? sessionId, Func<string, IFilesReplicationInformer> replicationInformerGetter, IFilesConflictListener[] conflictListeners, NameValueCollection operationsHeaders = null, bool isFileSystemServer = false)
+		public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory = null, Guid? sessionId = null, Func<string, IFilesReplicationInformer> replicationInformerGetter = null, IFilesConflictListener[] conflictListeners = null, NameValueCollection operationsHeaders = null)
 			: base(serverUrl, conventions, credentials, requestFactory, sessionId, operationsHeaders, replicationInformerGetter, fileSystemName)
         {
             try
@@ -54,9 +47,10 @@ namespace Raven.Client.FileSystem
                 FileSystemName = fileSystemName;
                 ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
-				if (isFileSystemServer == false)
+				if (replicationInformerGetter != null)
 					ReplicationInformer.UpdateReplicationInformationIfNeeded(this);
-                InitializeSecurity();
+
+				SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, ServerUrl, credentials.Credentials);
             }
             catch (Exception)
             {
@@ -66,11 +60,16 @@ namespace Raven.Client.FileSystem
         }
 
         public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
-			: this(serverUrl, fileSystemName, new FilesConvention(), new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials), new HttpJsonRequestFactory(DefaultNumberOfCachedRequests), null, (x) => new FilesReplicationInformer(new FilesConvention(), new HttpJsonRequestFactory(DefaultNumberOfCachedRequests)), null, isFileSystemServer: true)
+			: this(serverUrl, fileSystemName, null, new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials))
         {
         }
 
-        protected override string BaseUrl
+	    protected override Func<string, IFilesReplicationInformer> DefaultReplicationInformerGetter()
+	    {
+		    return name => new FilesReplicationInformer(Conventions, RequestFactory);
+	    }
+
+	    protected override string BaseUrl
         {
             get { return UrlFor(); }
         }
@@ -102,92 +101,6 @@ namespace Raven.Client.FileSystem
         }
 
         public string ApiKey { get; private set; }
-
-        private void InitializeSecurity()
-        {
-            if (Conventions.HandleUnauthorizedResponseAsync != null)
-                return; // already setup by the user
-
-            var basicAuthenticator = new BasicAuthenticator(RequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
-            var securedAuthenticator = new SecuredAuthenticator();
-
-            RequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
-            RequestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
-
-            Conventions.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
-            {
-                if (credentials.ApiKey == null)
-                {
-                    AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse);
-                    return null;
-                }
-
-                return null;
-            };
-
-            Conventions.HandleUnauthorizedResponseAsync = async (unauthorizedResponse, credentials) =>
-            {
-                var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
-
-#if DEBUG && FIDDLER
-                // Make sure to avoid a cross DNS security issue, when running with Fiddler
-				if (string.IsNullOrEmpty(oauthSource) == false)
-					oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
-#endif
-
-                // Legacy support
-                if (string.IsNullOrEmpty(oauthSource) == false &&
-                    oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
-                {
-                    return await basicAuthenticator.HandleOAuthResponseAsync(oauthSource, credentials.ApiKey).ConfigureAwait(false);
-                }
-
-                if (credentials.ApiKey == null)
-                {
-                    AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse, credentials.Credentials);
-                    return null;
-                }
-
-                if (string.IsNullOrEmpty(oauthSource))
-                    oauthSource = ServerUrl + "/OAuth/API-Key";
-
-                return await securedAuthenticator.DoOAuthRequestAsync(ServerUrl, oauthSource, credentials.ApiKey).ConfigureAwait(false);
-            };
-
-        }
-
-        private void AssertForbiddenCredentialSupportWindowsAuth(HttpResponseMessage response)
-        {
-            if (PrimaryCredentials.Credentials == null)
-                return;
-
-            var requiredAuth = response.Headers.GetFirstValue("Raven-Required-Auth");
-            if (requiredAuth == "Windows")
-            {
-                // we are trying to do windows auth, but we didn't get the windows auth headers
-                throw new SecurityException(
-                    "Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
-                    Environment.NewLine +
-                    "If you are running inside IIS, make sure to enable Windows authentication.");
-            }
-        }
-
-        private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, ICredentials credentials)
-        {
-            if (credentials == null)
-                return;
-
-            var authHeaders = response.Headers.WwwAuthenticate.FirstOrDefault();
-            if (authHeaders == null || (authHeaders.ToString().Contains("NTLM") == false && authHeaders.ToString().Contains("Negotiate") == false))
-            {
-                // we are trying to do windows auth, but we didn't get the windows auth headers
-                throw new SecurityException(
-                    "Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
-                    + " but either wrong credentials where entered or the specified server does not support Windows authentication." +
-                    Environment.NewLine +
-                    "If you are running inside IIS, make sure to enable Windows authentication.");
-            }
-        }
 
 		private async Task<RavenJToken> GetOperationStatusAsync(long id)
 		{
@@ -237,7 +150,7 @@ namespace Raven.Client.FileSystem
 
 	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "DELETE", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
-		            AddEtagHeader(request, etag);
+					AsyncFilesServerClientExtension.AddEtagHeader(request, etag);
 					try
 					{
 						await request.ExecuteRequestAsync().ConfigureAwait(false);
@@ -258,7 +171,7 @@ namespace Raven.Client.FileSystem
 
 	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PATCH", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
-					AddEtagHeader(request, etag);
+					AsyncFilesServerClientExtension.AddEtagHeader(request, etag);
 					try
 					{
 						await request.ExecuteRequestAsync().ConfigureAwait(false);
@@ -370,7 +283,7 @@ namespace Raven.Client.FileSystem
 
         public Task<RavenJObject> GetMetadataForAsync(string filename)
         {
-            return ExecuteWithReplication("HEAD", operation => GetMetadataForAsyncImpl(filename, operation.Url, operation.Credentials));
+			return ExecuteWithReplication("HEAD", operation => AsyncFilesServerClientExtension.GetMetadataForAsyncImpl(this, RequestFactory, Conventions, OperationsHeaders, filename, operation.Url, operation.Credentials));
         }
 
         public Task<FileHeader[]> GetAsync(string[] filename)
@@ -679,68 +592,9 @@ namespace Raven.Client.FileSystem
 	        }
         }
 
-        private async Task<RavenJObject> GetMetadataForAsyncImpl(string filename, string baseUrl, OperationCredentials operationCredentials)
-        {
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/files?name=" + Uri.EscapeDataString(filename), "HEAD", operationCredentials, Conventions)).AddOperationHeaders(OperationsHeaders))
-	        {
-				try
-				{
-					await request.ExecuteRequestAsync().ConfigureAwait(false);
-
-					var response = request.Response;
-
-					var metadata = response.HeadersToObject();
-					metadata[Constants.MetadataEtagField] = metadata[Constants.MetadataEtagField].Value<string>().Trim('\"');
-					return metadata;
-				}
-				catch (Exception e)
-				{
-					try
-					{
-						throw e.SimplifyException();
-					}
-					catch (FileNotFoundException)
-					{
-						return null;
-					}
-				}
-	        }
-        }
-
         public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadataRef = null, long? from = null, long? to = null)
         {
-            return ExecuteWithReplication("GET", async operation => await DownloadAsyncImpl("/files/", filename, metadataRef, from, to, operation).ConfigureAwait(false));
-        }
-
-        private async Task<Stream> DownloadAsyncImpl(string path, string filename, Reference<RavenJObject> metadataRef, long? @from, long? to, OperationMetadata operation)
-        {
-	        var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + path + filename, "GET", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders);
-
-			if (@from != null)
-			{
-				if (to != null)
-					request.AddRange(@from.Value, to.Value);
-				else
-					request.AddRange(@from.Value);
-			}
-
-			try
-			{
-				var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
-				if (response.StatusCode == HttpStatusCode.NotFound)
-					throw new FileNotFoundException("The file requested does not exists on the file system.", operation.Url + path + filename);
-
-				await response.AssertNotFailingResponse().ConfigureAwait(false);
-
-				if (metadataRef != null)
-					metadataRef.Value = response.HeadersToObject();
-
-				return new DisposableStream(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), request.Dispose);
-			}
-			catch (Exception e)
-			{
-				throw e.SimplifyException();
-			}
+            return ExecuteWithReplication("GET", async operation => await AsyncFilesServerClientExtension.DownloadAsyncImpl(this, RequestFactory, Conventions, OperationsHeaders, "/files/", filename, metadataRef, from, to, operation.Url, operation.Credentials).ConfigureAwait(false));
         }
 
         public Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null)
@@ -750,7 +604,7 @@ namespace Raven.Client.FileSystem
 	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + "/files/" + filename, "POST", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 	            {
 					AddHeaders(metadata, request);
-					AddEtagHeader(request, etag);
+					AsyncFilesServerClientExtension.AddEtagHeader(request, etag);
 					try
 					{
 						await request.ExecuteRequestAsync().ConfigureAwait(false);
@@ -794,7 +648,7 @@ namespace Raven.Client.FileSystem
 				metadata[Constants.FileSystem.RavenFsSize] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
 
 		        AddHeaders(metadata, request);
-				AddEtagHeader(request, etag);
+				AsyncFilesServerClientExtension.AddEtagHeader(request, etag);
 
 		        try
 		        {
@@ -842,7 +696,7 @@ namespace Raven.Client.FileSystem
                     // We resolve the conflict.
                     try
                     {
-                        var client = new SynchronizationClient(this, this.Conventions);
+                        var client = new SynchronizationClient(this, Conventions);
 						await client.ResolveConflictAsync(filename, resolutionStrategy).ConfigureAwait(false);
 
                         // Refreshing the file information.
@@ -873,10 +727,7 @@ namespace Raven.Client.FileSystem
 
         public IAsyncFilesSynchronizationCommands Synchronization
         {
-            get
-            {
-                return new SynchronizationClient(this, Conventions);
-            }
+            get { return new SynchronizationClient(this, Conventions); }
         }
 
         public IAsyncFilesConfigurationCommands Configuration
@@ -886,27 +737,13 @@ namespace Raven.Client.FileSystem
 
         public IAsyncFilesStorageCommands Storage
         {
-            get
-            {
-                return new StorageClient(this, Conventions);
-            }
+            get { return new StorageClient(this, Conventions); }
         }
 
         public IAsyncFilesAdminCommands Admin
         {
-            get
-            {
-                return new AdminClient(this, Conventions);
-            }
+            get { return new AdminClient(this, Conventions); }
         }
-
-	    private static void AddEtagHeader(HttpJsonRequest request, Etag etag)
-	    {
-		    if (etag != null)
-		    {
-				request.AddHeader("If-None-Match", "\"" + etag + "\"");
-		    }
-	    }
 
         private static void AddHeaders(RavenJObject metadata, HttpJsonRequest request)
         {
@@ -1176,7 +1013,7 @@ namespace Raven.Client.FileSystem
             public ProfilingInformation ProfilingInformation { get; private set; }
         }
 
-	    private class SynchronizationClient : IAsyncFilesSynchronizationCommands, IHoldProfilingInformation
+		private class SynchronizationClient : SynchronizationServerClient, IAsyncFilesSynchronizationCommands
         {
             private readonly OperationCredentials credentials;
             private readonly FilesConvention convention;
@@ -1184,44 +1021,156 @@ namespace Raven.Client.FileSystem
 
             public IAsyncFilesCommands Commands
             {
-                get { return this.client; }
+                get { return client; }
             }
 
             public SynchronizationClient(AsyncFilesServerClient client, FilesConvention convention)
+				: base(client.ServerUrl, client.FileSystemName, client.ApiKey, client.PrimaryCredentials.Credentials,
+					client.Conventions, client.PrimaryCredentials, client.RequestFactory, client.OperationsHeaders)
             {
                 credentials = client.PrimaryCredentials;
                 this.convention = convention;
                 this.client = client;
             }
 
-            public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
-            {
-				var stream = await client.DownloadAsyncImpl("/rdc/signatures/", sigName, null, from, to, new OperationMetadata(client.BaseUrl, credentials)).ConfigureAwait(false);
-                await stream.CopyToAsync(destination).ConfigureAwait(false);
-            }
+			public Task<SynchronizationDestination[]> GetDestinationsAsync()
+			{
+				return client.ExecuteWithReplication("GET", async operation =>
+				{
+					var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
+					using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", operation.Credentials, convention)).AddOperationHeaders(OperationsHeaders))
+					{
+						try
+						{
+							var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+							var rawDestinations = (RavenJArray)response["Destinations"];
+							return rawDestinations.JsonDeserialization<SynchronizationDestination>();
+						}
+						catch (Exception e)
+						{
+							throw e.SimplifyException();
+						}
+					}
+				});
+			}
 
-            public async Task<SignatureManifest> GetRdcManifestAsync(string path)
-            {
-                var requestUriString = client.BaseUrl + "/rdc/manifest/" + Uri.EscapeDataString(path);
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
+			public Task SetDestinationsAsync(params SynchronizationDestination[] destinations)
+			{
+				return client.ExecuteWithReplication("PUT", async operation =>
+				{
+					var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
+					using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", operation.Credentials, convention)).AddOperationHeaders(OperationsHeaders))
+					{
+						var data = new { Destinations = destinations };
+
+						try
+						{
+							await request.WriteWithObjectAsync(data).ConfigureAwait(false);
+						}
+						catch (Exception e)
+						{
+							throw e.SimplifyException();
+						}
+					}
+				});
+			}
+
+			public async Task<ItemsPage<ConflictItem>> GetConflictsAsync(int start = 0, int pageSize = 25)
+			{
+				var requestUriString = string.Format("{0}/synchronization/conflicts?start={1}&pageSize={2}", BaseUrl, start,
+														 pageSize);
+
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(OperationsHeaders))
+				{
 					try
 					{
 						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<SignatureManifest>();
+						return response.JsonDeserialization<ItemsPage<ConflictItem>>();
 					}
 					catch (Exception e)
 					{
 						throw e.SimplifyException();
 					}
-	            }
-            }
+				}
+			}
+
+			public async Task<SynchronizationReport> GetSynchronizationStatusForAsync(string fileName)
+			{
+				var requestUriString = string.Format("{0}/synchronization/status?fileName={1}", BaseUrl, Uri.EscapeDataString(fileName));
+
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(OperationsHeaders))
+				{
+					try
+					{
+						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+						return response.JsonDeserialization<SynchronizationReport>();
+					}
+					catch (Exception e)
+					{
+						throw e.SimplifyException();
+					}
+				}
+			}
+
+			public async Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int start = 0, int pageSize = 25)
+			{
+				var requestUriString = string.Format("{0}/synchronization/finished?start={1}&pageSize={2}", BaseUrl, start, pageSize);
+
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(OperationsHeaders))
+				{
+					try
+					{
+						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+						return response.JsonDeserialization<ItemsPage<SynchronizationReport>>();
+					}
+					catch (Exception e)
+					{
+						throw e.SimplifyException();
+					}
+				}
+			}
+
+			public async Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int start = 0, int pageSize = 25)
+			{
+				var requestUriString = string.Format("{0}/synchronization/active?start={1}&pageSize={2}", BaseUrl, start, pageSize);
+
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(OperationsHeaders))
+				{
+					try
+					{
+						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+						return response.JsonDeserialization<ItemsPage<SynchronizationDetails>>();
+					}
+					catch (Exception e)
+					{
+						throw e.SimplifyException();
+					}
+				}
+			}
+
+			public async Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int start = 0, int pageSize = 25)
+			{
+				var requestUriString = string.Format("{0}/synchronization/pending?start={1}&pageSize={2}", BaseUrl, start, pageSize);
+
+				using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(OperationsHeaders))
+				{
+					try
+					{
+						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+						return response.JsonDeserialization<ItemsPage<SynchronizationDetails>>();
+					}
+					catch (Exception e)
+					{
+						throw e.SimplifyException();
+					}
+				}
+			}
 
             public async Task<DestinationSyncResult[]> StartAsync(bool forceSyncingAll = false)
             {
-                var requestUriString = String.Format("{0}/synchronization/ToDestinations?forceSyncingAll={1}", client.BaseUrl, forceSyncingAll);
+                var requestUriString = string.Format("{0}/synchronization/ToDestinations?forceSyncingAll={1}", BaseUrl, forceSyncingAll);
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)).AddOperationHeaders(OperationsHeaders))
 	            {
 					try
 					{
@@ -1240,53 +1189,11 @@ namespace Raven.Client.FileSystem
                 return StartAsync(fileName, destination.ToSynchronizationDestination());
             }
 
-            public Task<SynchronizationDestination[]> GetDestinationsAsync()
-            {
-                return client.ExecuteWithReplication("GET", async operation =>
-                {
-                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
-	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	                {
-						try
-						{
-							var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-							var rawDestinations = (RavenJArray)response["Destinations"];
-							return rawDestinations.JsonDeserialization<SynchronizationDestination>();
-						}
-						catch (Exception e)
-						{
-							throw e.SimplifyException();
-						}
-	                }
-                });
-            }
-
-            public Task SetDestinationsAsync(params SynchronizationDestination[] destinations)
-            {
-                return client.ExecuteWithReplication("PUT", async operation =>
-                {
-                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
-	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	                {
-						var data = new { Destinations = destinations };
-
-						try
-						{
-							await request.WriteWithObjectAsync(data).ConfigureAwait(false);
-						}
-						catch (Exception e)
-						{
-							throw e.SimplifyException();
-						}
-	                }
-                });
-            }
-
             public async Task<SynchronizationReport> StartAsync(string fileName, SynchronizationDestination destination)
             {
-                var requestUriString = String.Format("{0}/synchronization/start/{1}", client.BaseUrl, Uri.EscapeDataString(fileName));
+                var requestUriString = string.Format("{0}/synchronization/start/{1}", BaseUrl, Uri.EscapeDataString(fileName));
 
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
+	            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)).AddOperationHeaders(OperationsHeaders))
 	            {
 					try
 					{
@@ -1302,320 +1209,12 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
-            public async Task<SynchronizationReport> GetSynchronizationStatusForAsync(string fileName)
-            {
-				var requestUriString = String.Format("{0}/synchronization/status?fileName={1}", client.BaseUrl, Uri.EscapeDataString(fileName));
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<SynchronizationReport>();
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy)
-            {
-                var requestUriString = String.Format("{0}/synchronization/resolveConflict/{1}?strategy={2}",
-                                                        client.BaseUrl, Uri.EscapeDataString(filename),
-                                                        Uri.EscapeDataString(strategy.ToString()));
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PATCH", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						await request.ExecuteRequestAsync().ConfigureAwait(false);
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId,
-                                                   RavenJObject remoteMetadata, string remoteServerUrl)
-            {
-                var requestUriString =
-                    String.Format("{0}/synchronization/applyConflict/{1}?remoteVersion={2}&remoteServerId={3}&remoteServerUrl={4}",
-                                  client.BaseUrl, Uri.EscapeDataString(filename), remoteVersion,
-                                  Uri.EscapeDataString(remoteServerId), Uri.EscapeDataString(remoteServerUrl));
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PATCH", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						await request.WriteAsync(remoteMetadata).ConfigureAwait(false);
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-			public async Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata)
-	        {
-		        var requestUriString = string.Format("{0}/synchronization/ResolutionStrategyFromServerResolvers", client.BaseUrl);
-
-				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-				{
-					request.AddHeaders(localMetadata);
-
-					try
-					{
-						await request.WriteWithObjectAsync(conflict).ConfigureAwait(false);
-						var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<ConflictResolutionStrategy>();
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-				}
-	        }
-
-            public async Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int start = 0, int pageSize = 25)
-            {
-                var requestUriString = String.Format("{0}/synchronization/finished?start={1}&pageSize={2}", client.BaseUrl, start,
-                                                         pageSize);
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<ItemsPage<SynchronizationReport>>();
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int start = 0, int pageSize = 25)
-            {
-                var requestUriString = String.Format("{0}/synchronization/active?start={1}&pageSize={2}",
-                                                        client.BaseUrl, start, pageSize);
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<ItemsPage<SynchronizationDetails>>();
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int start = 0, int pageSize = 25)
-            {
-                var requestUriString = String.Format("{0}/synchronization/pending?start={1}&pageSize={2}",
-                                                     client.BaseUrl, start, pageSize);
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<ItemsPage<SynchronizationDetails>>();
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId)
-            {
-                var requestUriString = String.Format("{0}/synchronization/LastSynchronization?from={1}", client.BaseUrl, serverId);
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<SourceSynchronizationInformation>();
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles)
-            {
-                var requestUriString = String.Format("{0}/synchronization/Confirm", client.BaseUrl);
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						using (var stream = new MemoryStream())
-						{
-							var sb = new StringBuilder();
-							var jw = new JsonTextWriter(new StringWriter(sb));
-							JsonExtensions.CreateDefaultJsonSerializer().Serialize(jw, sentFiles);
-							var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-
-							await stream.WriteAsync(bytes, 0, bytes.Length).ConfigureAwait(false);
-							stream.Position = 0;
-							await request.WriteAsync(stream).ConfigureAwait(false);
-
-							var response = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-							return response.JsonDeserialization<SynchronizationConfirmation>();
-						}
-
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task<ItemsPage<ConflictItem>> GetConflictsAsync(int start = 0, int pageSize = 25)
-            {
-                var requestUriString = String.Format("{0}/synchronization/conflicts?start={1}&pageSize={2}", client.BaseUrl, start,
-                                                         pageSize);
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<ItemsPage<ConflictItem>>();
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag)
-            {
-                var requestUriString =
-                    String.Format("{0}/synchronization/IncrementLastETag?sourceServerId={1}&sourceFileSystemUrl={2}&sourceFileETag={3}",
-                                    client.BaseUrl, sourceServerId, sourceFileSystemUrl, sourceFileETag);
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						await request.ExecuteRequestAsync().ConfigureAwait(false);
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task<RdcStats> GetRdcStatsAsync()
-            {
-                var requestUriString = client.BaseUrl + "/rdc/stats";
-
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<RdcStats>();
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
-            {
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/rename?filename=" + Uri.EscapeDataString(currentName) + "&rename=" + Uri.EscapeDataString(newName), "PATCH", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					request.AddHeaders(metadata);
-					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
-					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
-
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<SynchronizationReport>();
-					}
-					catch (ErrorResponseException exception)
-					{
-						throw exception.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
-            {
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization?fileName=" + Uri.EscapeDataString(fileName), "DELETE", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					request.AddHeaders(metadata);
-					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
-					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
-
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<SynchronizationReport>();
-					}
-					catch (ErrorResponseException exception)
-					{
-						throw exception.SimplifyException();
-					}
-	            }
-            }
-
-            public async Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
-            {
-	            using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, client.BaseUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName), "POST", credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
-	            {
-					request.AddHeaders(metadata);
-					request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
-					AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
-
-					try
-					{
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<SynchronizationReport>();
-					}
-					catch (ErrorResponseException exception)
-					{
-						throw exception.SimplifyException();
-					}
-	            }
-            }
-
-	        public Task<RavenJObject> GetMetadataForAsync(string fileName)
-	        {
-		        return client.GetMetadataForAsyncImpl(fileName, client.BaseUrl, credentials);
-	        }
-
 	        public void Dispose()
             {
             }
-
-            public ProfilingInformation ProfilingInformation { get; private set; }
         }
 
-        public class StorageClient : IAsyncFilesStorageCommands, IHoldProfilingInformation
+	    private class StorageClient : IAsyncFilesStorageCommands, IHoldProfilingInformation
         {
             private readonly AsyncFilesServerClient client;
             private readonly FilesConvention convention;
@@ -1635,7 +1234,7 @@ namespace Raven.Client.FileSystem
             {
                 return client.ExecuteWithReplication("POST", async operation =>
                 {
-                    var requestUriString = String.Format("{0}/storage/cleanup", operation.Url);
+                    var requestUriString = string.Format("{0}/storage/cleanup", operation.Url);
 
 	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
@@ -1655,7 +1254,7 @@ namespace Raven.Client.FileSystem
             {
                 return client.ExecuteWithReplication("POST", async operation =>
                 {
-                    var requestUriString = String.Format("{0}/storage/retryrenaming", operation.Url);
+                    var requestUriString = string.Format("{0}/storage/retryrenaming", operation.Url);
 
 	                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", operation.Credentials, convention)).AddOperationHeaders(client.OperationsHeaders))
 	                {
@@ -1678,7 +1277,7 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public class AdminClient : IAsyncFilesAdminCommands, IHoldProfilingInformation
+	    private class AdminClient : IAsyncFilesAdminCommands, IHoldProfilingInformation
         {
             private readonly AsyncFilesServerClient client;
             private readonly FilesConvention convention;
@@ -1889,8 +1488,6 @@ namespace Raven.Client.FileSystem
             public void Dispose()
             {
             }
-
-
         }
 
         public ProfilingInformation ProfilingInformation { get; private set; }
