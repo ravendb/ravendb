@@ -494,13 +494,10 @@ namespace Raven.Database.TimeSeries
 				var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
 				using (var fixedIt = fixedTree.Iterate())
 				{
-					if (fixedIt.Seek(DateTime.MinValue.Ticks))
+					if (fixedIt.Seek(DateTime.MinValue.Ticks) && (skip == 0 || fixedIt.Skip(skip)))
 					{
 						do
 						{
-							if (skip-- > 0)
-								continue;
-
 							var point = new TimeSeriesPoint
 							{
 								At = new DateTime(fixedIt.CurrentKey),

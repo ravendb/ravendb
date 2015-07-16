@@ -27,6 +27,8 @@ namespace Voron.Trees.Fixed
             ValueReader CreateReaderForCurrent();
             
 			long NumberOfEntries();
+
+			bool Skip(int count);
         }
 
         public class NullIterator : IFixedSizeIterator
@@ -58,6 +60,11 @@ namespace Voron.Trees.Fixed
             }
 
 	        public long NumberOfEntries()
+	        {
+				throw new InvalidOperationException("No current page");
+	        }
+
+			public bool Skip(int count)
 	        {
 				throw new InvalidOperationException("No current page");
 	        }
@@ -132,6 +139,14 @@ namespace Voron.Trees.Fixed
 	        public long NumberOfEntries()
 	        {
 		        return _header->NumberOfEntries;
+	        }
+
+			public bool Skip(int count)
+	        {
+				if (count != 0)
+					_pos += count;
+
+				return _pos < _header->NumberOfEntries;
 	        }
 
 	        public void Dispose()
@@ -259,6 +274,23 @@ namespace Voron.Trees.Fixed
 				_currentPage = null;
 
 		        return count;
+	        }
+
+			public bool Skip(int count)
+	        {
+				if (count != 0)
+				{
+					for (int i = 0; i < Math.Abs(count); i++)
+					{
+						if (!MoveNext())
+							break;
+					}
+				}
+
+				var seek = _currentPage != null && _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
+				if (seek == false)
+					_currentPage = null;
+				return seek;
 	        }
         }
     }
