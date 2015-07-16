@@ -370,7 +370,7 @@ namespace Sparrow.Binary
         public static BitVector Of(params uint[] values)
         {
             int lastLong = values.Length / 2;
-            int size = lastLong + values.Length % 2 ;
+            int size = lastLong + values.Length % 2;
 
             ulong[] newValue = new ulong[size];
             for (int i = 0; i < lastLong; i++)
@@ -382,6 +382,49 @@ namespace Sparrow.Binary
             return new BitVector(values.Length * BitVector.BitsPerWord / 2, newValue);
         }
 
+        public static BitVector Of(params byte[] values)
+        {
+            int extraBytes = values.Length % sizeof(ulong);
+            int lastLong = values.Length / sizeof(ulong);
+
+            int size = lastLong + ((extraBytes == 0) ? 0 : 1);
+
+            int position;
+            ulong[] newValue = new ulong[size];
+            for (int i = 0; i < lastLong; i++)
+            {
+                position = i * sizeof(ulong);
+                newValue[i] = (ulong)values[position] << 64 - 8 | 
+                              (ulong)values[position + 1] << 64 - 16 | 
+                              (ulong)values[position + 2] << 64 - 24 |
+                              (ulong)values[position + 3] << 32 |
+                              (ulong)values[position + 4] << 24 |
+                              (ulong)values[position + 5] << 16 | 
+                              (ulong)values[position + 6] << 8 |
+                              (ulong)values[position + 7];
+            }
+
+            if ( extraBytes != 0 )
+            {
+                position = lastLong * sizeof(ulong);
+
+                int bytesLeft = extraBytes;
+                ulong lastValue = 0;
+                do
+                {
+                    lastValue = lastValue << 8 | values[position];
+
+                    position++;
+                    bytesLeft--;
+                }
+                while (bytesLeft > 0);
+
+                newValue[size - 1] = lastValue << (8 - extraBytes) * BitVector.BitsPerByte;
+            }
+
+            return new BitVector(values.Length * BitVector.BitsPerByte, newValue);
+        }
+
         public static BitVector Of(string value)
         {
             int lastLong = value.Length / 4;
@@ -391,7 +434,7 @@ namespace Sparrow.Binary
 
             int position;
             ulong[] newValue = new ulong[size];
-            for ( int i = 0; i < lastLong; i++ )
+            for (int i = 0; i < lastLong; i++)
             {
                 position = i * 4;
                 newValue[i] = (ulong)value[position] << 48 | (ulong)value[position + 1] << 32 | (ulong)value[position + 2] << 16 | (ulong)value[position + 3];
@@ -513,6 +556,11 @@ namespace Sparrow.Binary
             CompareToInline( other, out differentBit );
 
             return differentBit;
+        }
+
+        public BitVector SubVector(int start, int lenght)
+        {
+            throw new NotImplementedException();
         }
     }
 }

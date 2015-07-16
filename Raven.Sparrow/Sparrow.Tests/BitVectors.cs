@@ -48,12 +48,6 @@ namespace Sparrow.Tests
             Assert.Equal(0x0000000000000004UL, BitVector.BitInWord(61));
             Assert.Equal(0x0000000000000008UL, BitVector.BitInWord(60));
             Assert.Equal(0x8000000000000000UL, BitVector.BitInWord(0));
-            
-            //Assert.Equal(0x0000000000000001UL, BitVector.BitInWord(0));
-            //Assert.Equal(0x0000000000000002UL, BitVector.BitInWord(1));
-            //Assert.Equal(0x0000000000000004UL, BitVector.BitInWord(2));
-            //Assert.Equal(0x0000000000000008UL, BitVector.BitInWord(3));
-            //Assert.Equal(0x8000000000000000UL, BitVector.BitInWord(63));
 
             for ( int i = 0; i < BitVector.BitsPerWord; i++ )
                 Assert.Equal(BitVector.BitInWord(i), BitVector.BitInWord(i + BitVector.BitsPerWord));
@@ -99,6 +93,23 @@ namespace Sparrow.Tests
                 Assert.True(vector[i]);
                 Assert.False(vector[32 + i]);
             }
+
+            var vector2 = BitVector.Of(0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00);
+            Assert.Equal(0, vector.CompareTo(vector2));
+
+            vector = BitVector.Of(0xFFFFFFFF, 0x01010101);
+
+            vector2 = BitVector.Of(0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x01, 0x01);
+            Assert.Equal(vector2.Count, vector.LongestCommonPrefixLength(vector2));
+
+            vector2 = BitVector.Of(0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x01);
+            Assert.Equal(vector2.Count, vector.LongestCommonPrefixLength(vector2));
+
+            vector2 = BitVector.Of(0xFF, 0xFF, 0xFF, 0xFF, 0x01);
+            Assert.Equal(vector2.Count, vector.LongestCommonPrefixLength(vector2));
+
+            vector2 = BitVector.Of(0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01);
+            Assert.Equal(80, vector2.Count);
         }
 
         [Theory]
@@ -494,6 +505,34 @@ namespace Sparrow.Tests
 
             Assert.Equal(128, v1.LongestCommonPrefixLength(v2));
             Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+        }
+
+        [Fact]
+        public void Operations_SubVector()
+        {
+            var v1 = BitVector.Parse("1");
+            var v2 = v1.SubVector(0, 1);
+
+            Assert.Equal(0, v1.CompareTo(v2));
+            Assert.Equal(0, v1.SubVector(0, 0).CompareTo(BitVector.Parse(string.Empty)));
+
+            v1 = BitVector.Parse("10");
+            Assert.Equal(0, v1.SubVector(0, 1).CompareTo(BitVector.Parse("1")));
+            Assert.Equal(0, v1.SubVector(1, 1).CompareTo(BitVector.Parse("0")));
+
+            v1 = BitVector.Parse("10001100");
+            Assert.Equal(0, v1.SubVector(0, 5).CompareTo(BitVector.Parse("10001")));
+            Assert.Equal(0, v1.SubVector(4, 4).CompareTo(BitVector.Parse("1100")));
+
+            v1 = BitVector.Parse("11001000111");
+            Assert.Equal(0, v1.SubVector(0, 9).CompareTo(BitVector.Parse("110010001")));
+            Assert.Equal(0, v1.SubVector(1, 9).CompareTo(BitVector.Parse("100100011")));
+
+            v1 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000100);
+            v2 = BitVector.Of(0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00);
+
+            Assert.Equal(1, v1.CompareTo(v2));
+            Assert.Equal(-1, v2.CompareTo(v1));
         }
 
         private static ulong[] GenerateRandomArray(int vectorSize, Random rnd = null)
