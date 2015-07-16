@@ -18,6 +18,13 @@ namespace Sparrow
             return CompareInline(p1, p2, size);
         }
 
+        [SecurityCritical]
+        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+        public static int Compare(byte* p1, byte* p2, int size, out int position)
+        {
+            return CompareInline(p1, p2, size, out position);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CompareInline(byte* p1, byte* p2, int size)
         {
@@ -74,6 +81,71 @@ namespace Sparrow
                 last--;
             }
 
+            return 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareInline(byte* p1, byte* p2, int size, out int position)
+        {
+            byte* bpx = p1, bpy = p2;
+            int l = size;
+
+            int last = 0;
+            for (int i = 0; i < l / 8; i++, bpx += 8, bpy += 8)
+            {
+                if (*((long*)bpx) != *((long*)bpy))
+                {
+                    last = 8;
+                    goto TAIL;
+                }
+            }
+
+            if ((l & 4) != 0)
+            {
+                if (*((int*)bpx) != *((int*)bpy))
+                {
+                    last = 4;
+                    goto TAIL;
+                }
+                bpx += 4;
+                bpy += 4;
+            }
+            if ((l & 2) != 0)
+            {
+                if (*((short*)bpx) != *((short*)bpy))
+                {
+                    last = 2;
+                    goto TAIL;
+                }
+
+                bpx += 2;
+                bpy += 2;
+            }
+
+            if ((l & 1) != 0)
+            {
+                position = (int)(bpx - p1);
+                return (*((byte*)bpx) - *((byte*)bpy));
+            }
+
+            position = size;
+            return 0;
+
+        TAIL:
+            while (last > 0)
+            {
+                if (*((byte*)bpx) != *((byte*)bpy))
+                {
+                    position = (int)(bpx - p1);
+                    return *bpx - *bpy;
+                }
+                
+                bpx++;
+                bpy++;
+                last--;
+            }
+
+            position = size;
             return 0;
         }
 

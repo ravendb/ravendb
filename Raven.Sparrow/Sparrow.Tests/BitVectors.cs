@@ -438,6 +438,64 @@ namespace Sparrow.Tests
             Assert.Equal(0, v2.CompareTo(v1));
         }
 
+        [Fact]
+        public void Operations_LongestCommonPrefix()
+        {
+            var v1 = BitVector.Parse("1");
+            var v2 = BitVector.Parse("0");
+
+            Assert.Equal(0, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+
+            v1 = BitVector.Parse("10");
+            v2 = BitVector.Parse("11");
+
+            Assert.Equal(1, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+
+            v1 = BitVector.Parse("10000000");
+            v2 = BitVector.Parse("10000000");
+
+            Assert.Equal(8, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+
+            v1 = BitVector.Parse("11000000");
+            v2 = BitVector.Parse("11000001");
+
+            Assert.Equal(7, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+
+            v1 = BitVector.Parse("11000000111");
+            v2 = BitVector.Parse("11000000111");
+
+            Assert.Equal(11, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+
+            v1 = BitVector.Parse("01000000111");
+            v2 = BitVector.Parse("01000000110");
+
+            Assert.Equal(10, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+
+            v1 = BitVector.Parse("");
+            v2 = BitVector.Parse("01000000111");
+
+            Assert.Equal(0, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+
+            v1 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000);
+            v2 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000001);
+
+            Assert.Equal(127, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+
+            v1 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000);
+            v2 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000);
+
+            Assert.Equal(128, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+        }
+
         private static ulong[] GenerateRandomArray(int vectorSize, Random rnd = null)
         {
             if (rnd == null)
