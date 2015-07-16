@@ -8,28 +8,31 @@ using System.Threading.Tasks;
 namespace Raven.Client.Connection.Async
 {
     public abstract class AsyncServerClientBase<TConvention, TReplicationInformer> : IDisposalNotification 
-        where TConvention : Convention
-        where TReplicationInformer : IReplicationInformerBase
+        where TConvention : Convention, new()
+		where TReplicationInformer : IReplicationInformerBase
     {
+		private const int DefaultNumberOfCachedRequests = 2048;
+
         protected AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory,
 									 Guid? sessionId, NameValueCollection operationsHeaders, Func<string, TReplicationInformer> replicationInformerGetter, string resourceName)
         {
             WasDisposed = false;
 
-            ServerUrl = serverUrl.TrimEnd('/'); 
-            Conventions = convention;
+            ServerUrl = serverUrl.TrimEnd('/');
+            Conventions = convention ?? new TConvention();
             CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
-            RequestFactory = jsonRequestFactory;
+			RequestFactory = jsonRequestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
             SessionId = sessionId;
-
 			OperationsHeaders = operationsHeaders ?? DefaultNameValueCollection;
-	        ReplicationInformerGetter = replicationInformerGetter;
-			replicationInformer = new Lazy<TReplicationInformer>(() => replicationInformerGetter(resourceName), true);
-			//this.replicationInformer.Value.UpdateReplicationInformationIfNeeded
+
+			ReplicationInformerGetter = replicationInformerGetter ?? DefaultReplicationInformerGetter();
+			replicationInformer = new Lazy<TReplicationInformer>(() => ReplicationInformerGetter(resourceName), true);
             readStrippingBase = new Lazy<int>(() => ReplicationInformer.GetReadStripingBase(true), true);
 
             MaxQuerySizeForGetRequest = 8 * 1024;
         }
+
+	    protected abstract Func<string, TReplicationInformer> DefaultReplicationInformerGetter();
 
 	    public int MaxQuerySizeForGetRequest { get; set; }
 

@@ -20,12 +20,12 @@ namespace Raven.Database.FileSystem.Synchronization
 			get { return SynchronizationType.Rename; }
 		}
 
-        public override Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
+		public override Task<SynchronizationReport> PerformAsync(ISynchronizationServerClient synchronizationServerClient)
 		{
 			FileAndPagesInformation fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
 
-            return destination.RenameAsync(FileName, rename, fileAndPages.Metadata, FileSystemInfo);
+			return synchronizationServerClient.RenameAsync(FileName, rename, fileAndPages.Metadata, FileSystemInfo);
 		}
 
 		public override bool Equals(object obj)
