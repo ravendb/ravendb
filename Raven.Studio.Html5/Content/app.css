@@ -8126,7 +8126,12 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   background-color: #ffffcc;
   margin-top: 5px;
   border: 1px solid;
-  border-radius: 25px;
+  padding: 5px;
+  border: 1px solid #999999;
+}
+#fileSystemFilesPage .files-select .select-link {
+  text-decoration: underline;
+  cursor: pointer;
 }
 #editFileContainer:focus {
   outline: 0;
@@ -8436,5 +8441,10 @@ a.global_help_link:focus {
 }
 .text-height-fix {
   line-height: 34px;
+}
+.experimental {
+  font-size: 9px;
+  font-weight: bold;
+  color: red;
 }
 /*# sourceMappingURL=app.css.map */
