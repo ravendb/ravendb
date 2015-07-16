@@ -51,6 +51,7 @@ class resources extends viewModelBase {
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
 	clusterMode = ko.computed(() => shell.clusterMode());
+	showCreateCluster = ko.computed(() => shell.has40Features() && !shell.clusterMode());
 
     databaseType = database.type;
     fileSystemType = fileSystem.type;
