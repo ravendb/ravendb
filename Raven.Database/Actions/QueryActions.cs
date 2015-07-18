@@ -142,7 +142,6 @@ namespace Raven.Database.Actions
 			private IEnumerable<RavenJObject> results;
 			private DocumentRetriever docRetriever;
 			private Stopwatch duration;
-			private readonly Stopwatch queryParseDuration = new Stopwatch();
 			private List<string> transformerErrors;
 			private bool nonAuthoritativeInformation;
 			private Etag resultEtag;
@@ -240,14 +239,15 @@ namespace Raven.Database.Actions
 						? Constants.DocumentIdFieldName
 						: Constants.ReduceKeyFieldName);
 				Func<IndexQueryResult, bool> shouldIncludeInResults =
-					result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);				
-				var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, database.IndexQueryTriggers, cancellationToken);
-				queryParseDuration.Start();			
+					result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);
+			    var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults,
+                    fieldsToFetch, database.IndexQueryTriggers, cancellationToken, (query.ShowTimings ? (Action<double>)(time => executionTimes[QueryTimings.Parse] = time) : null));
 				indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
-				executionTimes[QueryTimings.Lucene] = queryParseDuration.ElapsedMilliseconds;
-				queryParseDuration.Reset();
-				if (query.ShowTimings)
-					indexQueryResults = new TimedEnumerable<IndexQueryResult>(indexQueryResults, timeInMilliseconds => executionTimes[QueryTimings.Lucene] += timeInMilliseconds);
+			    if (query.ShowTimings)
+			    {
+
+			        indexQueryResults = new TimedEnumerable<IndexQueryResult>(indexQueryResults, timeInMilliseconds => executionTimes[QueryTimings.Lucene] += timeInMilliseconds);
+			    }
 
 				var docs = from queryResult in indexQueryResults
 						   let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, ShouldSkipDuplicateChecking)

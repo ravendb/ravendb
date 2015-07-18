@@ -963,7 +963,14 @@ namespace Raven.Database.Indexing
 			.FirstOrDefault();
 		}
 
-		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, CancellationToken token)
+		public IEnumerable<IndexQueryResult> Query(string index, 
+            IndexQuery query, 
+            Func<IndexQueryResult, bool> shouldIncludeInResults, 
+            FieldsToFetch fieldsToFetch, 
+            OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, 
+            CancellationToken token,
+            Action<double> parseTiming = null
+            )
 		{
 			Index value = TryIndexByName(index);
 			if (value == null)
@@ -999,10 +1006,13 @@ namespace Raven.Database.Indexing
 			}
 
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
+
+		    if (parseTiming != null)
+		        parseTiming(indexQueryOperation.QueryParseDuration.TotalMilliseconds);
+
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery(token);
-
-
+          
 			return indexQueryOperation.Query(token);
 		}
 
