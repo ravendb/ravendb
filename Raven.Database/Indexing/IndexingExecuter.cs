@@ -252,21 +252,6 @@ namespace Raven.Database.Indexing
 			indexingGroup.ReleaseIndexingGroupFinished();
 		}
 
-		private void ReleasePrefethersAndUpdateStatistics(List<IndexingGroup> groupedIndexes, TimeSpan ellapsedTimeSpan)
-		{
-			foreach (var indexingGroup in groupedIndexes)
-			{
-				if (indexingGroup.JsonDocs != null && indexingGroup.JsonDocs.Count > 0)
-				{
-					indexingGroup.PrefetchingBehavior.CleanupDocuments(indexingGroup.LastIndexedEtag);
-					indexingGroup.PrefetchingBehavior.UpdateAutoThrottler(indexingGroup.JsonDocs, ellapsedTimeSpan);
-					indexingGroup.PrefetchingBehavior.BatchProcessingComplete();
-					context.ReportIndexingBatchCompleted(indexingGroup.BatchInfo);
-				}
-			}
-		}
-
-
 		private bool PerformIndexingOnIndexBatches(ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations)
 			{
 			bool operationWasCancelled = false;
@@ -388,7 +373,6 @@ namespace Raven.Database.Indexing
 
 		private bool GenerateIndexingGroupsByEtagRanges(IList<IndexToWorkOn> indexes, out ConcurrentSet<PrefetchingBehavior> usedPrefetchers, out List<IndexingGroup> indexingGroups)
 						{
-			usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 			indexingGroups = new List<IndexingGroup>();
 			usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 
