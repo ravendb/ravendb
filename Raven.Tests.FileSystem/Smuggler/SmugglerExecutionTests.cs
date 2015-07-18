@@ -13,6 +13,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Smuggler;
