@@ -219,6 +219,9 @@ namespace Raven.Database.Indexing
 					if (resetTried)
 						throw new InvalidOperationException("Could not open / create index" + indexName + ", reset already tried", e);
 
+					if (indexImplementation != null)
+						indexImplementation.Dispose();
+
 					if (recoveryTried == false && luceneDirectory != null)
 					{
 						recoveryTried = true;
@@ -981,20 +984,12 @@ namespace Raven.Database.Indexing
 
 			index.Dispose();
 
-			try
-			{
-				var reopened = OpenIndex(index.PublicName, onStartup: false, forceFullIndexCheck: true);
+			var reopened = OpenIndex(index.PublicName, onStartup: false, forceFullIndexCheck: true);
 
-				if (reopened == null)
-					throw new InvalidOperationException("Reopened index cannot be null instance. Index name:" + index.PublicName);
+			if (reopened == null)
+				throw new InvalidOperationException("Reopened index cannot be null instance. Index name:" + index.PublicName);
 
-				return indexes.AddOrUpdate(reopened.IndexId, n => reopened, (s, existigIndex) => reopened);
-			}
-			catch (Exception e)
-			{
-				// TODO arek - need to handle a failure in reopening an index
-				throw;
-			}
+			return indexes.AddOrUpdate(reopened.IndexId, n => reopened, (s, existigIndex) => reopened);
 		}
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)

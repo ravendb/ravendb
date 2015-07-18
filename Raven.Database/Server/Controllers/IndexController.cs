@@ -254,14 +254,48 @@ namespace Raven.Database.Server.Controllers
 
 			var instance = Database.IndexStorage.GetIndexInstance(index);
 
-			if (instance.Priority == IndexingPriority.Error && indexingPriority == IndexingPriority.Normal)
-			{
-				// recover the index from corruption by reopening it - is going to reset it if necessary
-				instance = Database.IndexStorage.ReopenErroredIndex(instance);	
-			}
-
 			Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
 			instance.Priority = indexingPriority;
+
+			return GetEmptyMessage();
+		}
+
+		[HttpPatch]
+		[RavenRoute("indexes/try-recover-failed-indexes")]
+		[RavenRoute("databases/{databaseName}/indexes/try-recover-failed-indexes")]
+		public HttpResponseMessage TryRecoverFailedIndexes()
+		{
+			var recoveredIndexes = new List<string>();
+
+			foreach (var indexId in Database.IndexStorage.Indexes)
+			{
+				var index = Database.IndexStorage.GetIndexInstance(indexId);
+
+				if(index.Priority != IndexingPriority.Error)
+					continue;
+
+				// try to recover by reopening the index - it will be reset if necessary
+				try
+				{
+					index = Database.IndexStorage.ReopenErroredIndex(index);
+				}
+				catch (Exception e)
+				{
+					Log.WarnException("Failed to recover the failed index '{0}' by reopening it.", e);
+					continue;
+				}
+
+				Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index.IndexId, IndexingPriority.Normal));
+				index.Priority = IndexingPriority.Normal;
+
+				recoveredIndexes.Add(index.PublicName);
+			}
+
+			if (recoveredIndexes.Count > 0)
+			{
+				Database.WorkContext.ShouldNotifyAboutWork(() => "The following indexes have been recovered: " + string.Join(", ", recoveredIndexes));
+				Database.WorkContext.NotifyAboutWork();
+			}
 
 			return GetEmptyMessage();
 		}
