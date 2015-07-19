@@ -61,7 +61,6 @@ namespace Raven.Bundles.Replication.Tasks
 		private bool firstTimeFoundNoReplicationDocument = true;
 		private bool wrongReplicationSourceAlertSent = false;
 		private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
-		private readonly TaskCompletionSource<object> tcsReplicationOnce = new TaskCompletionSource<object>();
 		private TimeSpan _replicationFrequency;
 		private TimeSpan _lastQueriedFrequency;
 		private Timer _indexReplicationTaskTimer;
@@ -232,8 +231,7 @@ namespace Raven.Bundles.Replication.Tasks
 				if (destinations.Length == 0)
 				{
 					WarnIfNoReplicationTargetsWereFound();
-					tcsReplicationOnce.SetResult(null);
-					return tcsReplicationOnce.Task;
+				    return completedTask;
 				}
 				
 				var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
@@ -1808,8 +1806,9 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+	    private readonly Task completedTask = new CompletedTask();
 
-		internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
+	    internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
 		{
 			Debug.Assert(database != null);
 

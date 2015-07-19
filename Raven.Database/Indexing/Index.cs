@@ -1118,11 +1118,12 @@ namespace Raven.Database.Indexing
 
 		#region Nested type: IndexQueryOperation
 
-		internal class IndexQueryOperation
+	    public class IndexQueryOperation
 		{
 			FastVectorHighlighter highlighter;
 			FieldQuery fieldQuery;
 
+            private readonly Stopwatch _queryParseDuration = new Stopwatch();
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
@@ -1133,6 +1134,11 @@ namespace Raven.Database.Indexing
 			private readonly List<string> reduceKeys;
 			private bool hasMultipleIndexOutputs;
 			private int alreadyScannedForDuplicates;
+
+		    public TimeSpan QueryParseDuration
+		    {
+                get { return _queryParseDuration.Elapsed; }
+		    }
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, List<string> reduceKeys = null)
 			{
 				this.parent = parent;
@@ -1535,7 +1541,8 @@ namespace Raven.Database.Indexing
 
 			private Query GetDocumentQuery(string query, IndexQuery indexQuery)
 			{
-				Query documentQuery;
+                _queryParseDuration.Start();
+                Query documentQuery;
 				if (String.IsNullOrEmpty(query))
 				{
 					logQuerying.Debug("Issuing query on index {0} for all documents", parent.indexId);
@@ -1565,7 +1572,9 @@ namespace Raven.Database.Indexing
 						DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
 					}
 				}
-				return ApplyIndexTriggers(documentQuery);
+			    var afterTriggers = ApplyIndexTriggers(documentQuery);
+                _queryParseDuration.Stop();
+			    return afterTriggers;
 			}
 
 			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, RavenPerFieldAnalyzerWrapper analyzer)
