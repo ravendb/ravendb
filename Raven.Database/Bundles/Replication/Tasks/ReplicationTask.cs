@@ -1063,16 +1063,20 @@ namespace Raven.Bundles.Replication.Tasks
 							docDb.TransactionalStorage.Batch(actions =>
 							{
 								foreach (var indexTombstone in replicatedIndexTombstones)
-								{
-									if (indexTombstone.Value != replicationDestinations.Length) 
+								{									
+									if (indexTombstone.Value != replicationDestinations.Length &&
+										docDb.IndexStorage.HasIndex(indexTombstone.Key) == false) 
 										continue;
 									actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
 								}
 
 								foreach (var transformerTombstone in replicatedTransformerTombstones)
 								{
-									if (transformerTombstone.Value != replicationDestinations.Length) 
+									var transfomerExists = docDb.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
+									if (transformerTombstone.Value != replicationDestinations.Length &&
+										transfomerExists == false) 
 										continue;
+
 									actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
 								}
 							});
@@ -1133,7 +1137,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var clonedTransformer = definition.Clone();
 				clonedTransformer.TransfomerId = 0;
 
-				string url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
+				var url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
 				var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
 				replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
 				replicationRequest.ExecuteRequest();
@@ -1175,7 +1179,9 @@ namespace Raven.Bundles.Replication.Tasks
 			return Constants.IsIndexReplicatedUrlParamName + "=true&from=" + Uri.EscapeDataString(docDb.ServerUrl);
 		}
 
-		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, ReplicationStrategy destination, Dictionary<string, int> replicatedIndexTombstones)
+		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, 
+			ReplicationStrategy destination, 
+			Dictionary<string, int> replicatedIndexTombstones)
 		{
 			if (indexTombstones.Count == 0)
 				return;
@@ -1184,12 +1190,20 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				try
 				{
+					int value;
+					if (docDb.IndexStorage.HasIndex(tombstone.Key)) //if in the meantime the index was recreated under the same name
+					{
+						replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
+						replicatedIndexTombstones[tombstone.Key] = value + 1;
+						continue;
+					}
+
 					var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInfomration());
 					var replicationRequest = httpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions, GetRequestBuffering(destination));
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated index deletion (index name = {0})", tombstone.Key);
-				    int value;
+				    
 				    replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
 				    replicatedIndexTombstones[tombstone.Key] = value + 1;
 				}
@@ -1202,7 +1216,8 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private void ReplicateTransformerDeletionIfNeeded(List<JsonDocument> transformerTombstones, ReplicationStrategy destination,
+		private void ReplicateTransformerDeletionIfNeeded(List<JsonDocument> transformerTombstones, 
+			ReplicationStrategy destination,
             Dictionary<string, int> replicatedTransformerTombstones)
 		{
 			if (transformerTombstones.Count == 0)
@@ -1212,12 +1227,19 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				try
 				{
+					int value;
+					if (docDb.Transformers.GetTransformerDefinition(tombstone.Key) != null) //if in the meantime the transformer was recreated under the same name
+					{
+						replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
+						replicatedTransformerTombstones[tombstone.Key] = value + 1;
+						continue;
+					}
+
 					var url = string.Format("{0}/transformers/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInfomration());
 					var replicationRequest = httpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions, GetRequestBuffering(destination));
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated transformer deletion (transformer name = {0})", tombstone.Key);
-                    int value;
                     replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
                     replicatedTransformerTombstones[tombstone.Key] = value + 1;
 				}
