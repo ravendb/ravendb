@@ -1,37 +1,38 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
+using FluentAssertions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Tests.Core.BulkInsert;
-using Raven.Tests.Core.Replication;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.Core.ChangesApi
 {
-    public class WebsocketsTests : RavenReplicationCoreTest
+    public class WebsocketsTests : RavenTestBase
     {
         [Fact]
         public async Task Can_connect_via_websockets_and_receive_heartbeat()
         {
-            using (var store = GetDocumentStore())
+            using (var store = NewRemoteDocumentStore())
             {
                 using (var clientWebSocket = TryCreateClientWebSocket())
                 {
-                    string url = store.Url.Replace("http:", "ws:");
+                    var url = store.Url.Replace("http:", "ws:");
                     url = url + "/changes/websocket?id=" + Guid.NewGuid();
                     await clientWebSocket.ConnectAsync(new Uri(url), CancellationToken.None);
 
                     var buffer = new byte[1024];
-                    WebSocketReceiveResult result =
-                        await clientWebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    var result = await clientWebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                     var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
                     Assert.Contains("Heartbeat", message);
@@ -48,57 +49,95 @@ namespace Raven.Tests.Core.ChangesApi
 	    public void AreWebsocketsDestroyedAfterGC()
 	    {
 		    var counter = new ConcurrentQueue<BulkInsertChangeNotification>();
-			var are = new AutoResetEvent(false);
-		    using (var store = GetDocumentStore())
+		    var mre = new ManualResetEventSlim();
+		    using (var store = NewRemoteDocumentStore())
 		    {
-			    Task[] tasks = new Task[10];
-			    for (int i = 0; i < 10; i++)
+			    DateTime gcRequestTime;
+			    using (var bulkInsert = store.BulkInsert(store.DefaultDatabase))
+				{
+					store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
+					{
+						counter.Enqueue(x);
+						mre.Set();
+					});
+					bulkInsert.Store(new ChunkedBulkInsert.Node
+					{
+						Name = "Parent"
+					});
+		
+					mre.Wait();
+					Thread.Sleep(500); //make sure that if test fails - time span difference is more visible
+					gcRequestTime = DateTime.UtcNow;
+					IssueGCRequest(store);
+
+					bulkInsert.Store(new ChunkedBulkInsert.Node
+					{
+						Name = "Parent"
+					});
+				}
+
+			    const int maxMillisecondsToWaitUntilConnectionRestores = 1000;
+				//wait until connection restores
+			    IEnumerable<RavenJToken> response;
+			    var sw = Stopwatch.StartNew();
+			    do
 			    {
-				    tasks[i] = Task.Factory.StartNew(() =>
-				    {
-						using (var bulkInsert = store.BulkInsert(store.DefaultDatabase))
-					    {
-						    store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
-						    {
-							    counter.Enqueue(x);
-							    are.Set();
-						    });
-						    for (int j = 0; j < 50; j++)
-						    {
-							    bulkInsert.Store(new ChunkedBulkInsert.Node
-							    {
-									Name = "Parent"
-							    });
-						    }
-					    }
-				    });
-			    }
-			    are.WaitOne();
-			    
-
-				var gcRequest = store
-					.JsonRequestFactory
-					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
-						store.Url.ForDatabase(null) + "/admin/gc", 
-						"GET", 
-						store.DatabaseCommands.PrimaryCredentials, 
-						store.Conventions));
-				var gcResponse = gcRequest.ReadResponseBytesAsync();
-			    gcResponse.Wait();
-
-				var getChangesRequest = store
-					.JsonRequestFactory
-					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
-						store.Url.ForDatabase(store.DefaultDatabase) + "/debug/changes",
-						"GET",
-						store.DatabaseCommands.PrimaryCredentials,
-						store.Conventions));
-				var getChangesResponse = (RavenJArray)getChangesRequest.ReadResponseJson();
-
-				Assert.Empty(getChangesResponse);
+				    response = IssueGetChangesRequest(store);
+			    } while (response == null || !response.Any() || sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
 				
+				//sanity check, if the test fails here, then something is wrong
+			    response.Should().NotBeEmpty("if it is null or empty then it means the connection did not restore after 1 second by itself. Should be investigated.");
 
+			    var lastForcedGCTime = GetLastForcedGCDateTimeRequest(store);
+				var connectionAge = TimeSpan.Parse(response.First().Value<string>("Age"));
+
+				var timeBetweenRequestAndGC = lastForcedGCTime - gcRequestTime;
+
+				//time between request to GC and actual GC on server should be more than connection age.
+				//this test essentially verifies that after a GC websocket connection is disconnected and then restored
+			    timeBetweenRequestAndGC.Should().BeGreaterThan(connectionAge);
 		    }
+	    }
+
+	    private static DateTime GetLastForcedGCDateTimeRequest(DocumentStore store)
+	    {
+		    var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(null,
+					store.Url+ "/debug/gc-info",
+					"GET",
+					store.DatabaseCommands.PrimaryCredentials,
+					store.Conventions));
+
+		    var response = request.ReadResponseJson();
+		    return response.Value<DateTime>("LastForcedGCTime");
+
+	    }
+
+	    private static IEnumerable<RavenJToken> IssueGetChangesRequest(DocumentStore store)
+	    {
+		    var getChangesRequest = store
+			    .JsonRequestFactory
+			    .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
+				    store.Url.ForDatabase(store.DefaultDatabase) + "/debug/changes",
+				    "GET",
+				    store.DatabaseCommands.PrimaryCredentials,
+				    store.Conventions));
+
+		    var getChangesResponse = (RavenJArray) getChangesRequest.ReadResponseJson();
+		    return getChangesResponse;
+	    }
+
+	    private static void IssueGCRequest(DocumentStore store)
+	    {
+		    var gcRequest = store
+			    .JsonRequestFactory
+			    .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
+				    store.Url.ForDatabase(null) + "/admin/gc",
+				    "GET",
+				    store.DatabaseCommands.PrimaryCredentials,
+				    store.Conventions));
+		    var gcResponse = gcRequest.ReadResponseBytesAsync();
+		    gcResponse.Wait();
 	    }
 
 	    private static ClientWebSocket TryCreateClientWebSocket()
