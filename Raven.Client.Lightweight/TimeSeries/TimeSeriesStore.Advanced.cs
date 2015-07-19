@@ -31,19 +31,35 @@ namespace Raven.Client.TimeSeries
 				return new TimeSeriesBatchOperation(parent, parent.Name, options);
 			}
 
-			public async Task<TimeSeriesKey[]> GetKeys(CancellationToken token =  default(CancellationToken))
+			public async Task<TimeSeriesKey[]> GetKeys(string type, CancellationToken token =  default(CancellationToken))
 			{
 				parent.AssertInitialized();
 
 				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, timeSeriesName) =>
 				{
-					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/keys",
-						url, timeSeriesName);
+					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/{2}/keys",
+						url, timeSeriesName, type);
 					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 					{
 						var result = await request.ReadResponseJsonAsync().WithCancellation(token);
 						return result.JsonDeserialization<TimeSeriesKey[]>();
+					}
+				}, token);
+			}
+
+			public async Task<TimeSeriesType[]> GetTypes(CancellationToken token = default(CancellationToken))
+			{
+				parent.AssertInitialized();
+
+				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, timeSeriesName) =>
+				{
+					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/types", url, timeSeriesName);
+					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+					{
+						var result = await request.ReadResponseJsonAsync().WithCancellation(token);
+						return result.JsonDeserialization<TimeSeriesType[]>();
 					}
 				}, token);
 			}

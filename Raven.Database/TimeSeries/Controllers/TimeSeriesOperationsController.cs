@@ -338,14 +338,26 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/keys")]
+		[RavenRoute("ts/{timeSeriesName}/types")]
 		[HttpGet]
-		public HttpResponseMessage GetKeys()
+		public HttpResponseMessage GetTypes(int skip = 0, int take = 20)
 		{
 			using (var reader = Storage.CreateReader())
 			{
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
-				var keys = reader.GetKeys().ToArray();
+				var types = reader.GetTypes(skip).Take(take).ToArray();
+				return Request.CreateResponse(HttpStatusCode.OK, types);
+			}
+		}
+
+		[RavenRoute("ts/{timeSeriesName}/{type}/keys")]
+		[HttpGet]
+		public HttpResponseMessage GetKeys(string type, int skip = 0, int take = 20)
+		{
+			using (var reader = Storage.CreateReader())
+			{
+				Storage.MetricsTimeSeries.ClientRequests.Mark();
+				var keys = reader.GetKeys(type, skip).Take(take).ToArray();
 				return Request.CreateResponse(HttpStatusCode.OK, keys);
 			}
 		}

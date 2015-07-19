@@ -156,24 +156,31 @@ namespace Raven.Tests.TimeSeries
 					await batch.FlushAsync();
 				}
 
-				var keys = await store.Advanced.GetKeys();
-				Assert.Equal(3, keys.Length);
+				var types = await store.Advanced.GetTypes();
+				Assert.Equal(2, types.Length);
 
-				var time = keys[0];
+				var fourValues = types[0];
+				Assert.Equal("FourValues", fourValues.Type);
+				Assert.Equal(4, fourValues.Fields.Length);
+				Assert.Equal(1, fourValues.KeysCount);
+				var keys = await store.Advanced.GetKeys(fourValues.Type);
+				Assert.Equal(1, keys.Length); var time = keys[0];
 				Assert.Equal("FourValues", time.Type);
-				Assert.Equal(4, time.NumberOfValues);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(18888, time.PointsCount);
 
-				var _is = keys[1];
+				var simple = types[1];
+				Assert.Equal("Simple", simple.Type);
+				Assert.Equal(1, simple.Fields.Length);
+				Assert.Equal(2, simple.KeysCount);
+				keys = await store.Advanced.GetKeys(simple.Type);
+				Assert.Equal(2, keys.Length);
+				var _is = keys[0];
 				Assert.Equal("Simple", _is.Type);
-				Assert.Equal(1, _is.NumberOfValues);
 				Assert.Equal("Is", _is.Key);
 				Assert.Equal(18888, _is.PointsCount);
-
-				var money = keys[2];
+				var money = keys[1];
 				Assert.Equal("Simple", money.Type);
-				Assert.Equal(1, money.NumberOfValues);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(18888, money.PointsCount);
 
@@ -206,24 +213,31 @@ namespace Raven.Tests.TimeSeries
 				await store.AppendAsync("FourValues", "Time", start.AddHours(2), cancellationToken, 33D, 4D, 5D, 6D);
 				await store.AppendAsync("FourValues", "Time", start.AddHours(3), cancellationToken, 33D, 4D, 5D, 6D);
 
-				var keys = await store.Advanced.GetKeys(cancellationToken);
-				Assert.Equal(3, keys.Length);
-				
-				var time = keys[0];
+				var types = await store.Advanced.GetTypes(cancellationToken);
+				Assert.Equal(2, types.Length);
+
+				var fourValues = types[0];
+				Assert.Equal("FourValues", fourValues.Type);
+				Assert.Equal(4, fourValues.Fields.Length);
+				Assert.Equal(1, fourValues.KeysCount);
+				var keys = await store.Advanced.GetKeys(fourValues.Type);
+				Assert.Equal(1, keys.Length); var time = keys[0];
 				Assert.Equal("FourValues", time.Type);
-				Assert.Equal(4, time.NumberOfValues);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(4, time.PointsCount);
 
-				var _is = keys[1];
+				var simple = types[1];
+				Assert.Equal("Simple", simple.Type);
+				Assert.Equal(1, simple.Fields.Length);
+				Assert.Equal(2, simple.KeysCount);
+				keys = await store.Advanced.GetKeys(simple.Type);
+				Assert.Equal(2, keys.Length);
+				var _is = keys[0];
 				Assert.Equal("Simple", _is.Type);
-				Assert.Equal(1, _is.NumberOfValues);
 				Assert.Equal("Is", _is.Key);
 				Assert.Equal(2, _is.PointsCount);
-
-				var money = keys[2];
+				var money = keys[1];
 				Assert.Equal("Simple", money.Type);
-				Assert.Equal(1, money.NumberOfValues);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
 
@@ -269,24 +283,31 @@ namespace Raven.Tests.TimeSeries
 				await store.AppendAsync("FourValues", "Time", start.AddYears(2), cancellationToken, 33D, 4D, 5D, 6D);
 				await store.AppendAsync("FourValues", "Time", start.AddYears(3), cancellationToken, 33D, 4D, 5D, 6D);
 
-				var keys = await store.Advanced.GetKeys(cancellationToken);
-				Assert.Equal(3, keys.Length);
+				var types = await store.Advanced.GetTypes(cancellationToken);
+				Assert.Equal(2, types.Length);
 
-				var time = keys[0];
+				var fourValues = types[0];
+				Assert.Equal("FourValues", fourValues.Type);
+				Assert.Equal(4, fourValues.Fields.Length);
+				Assert.Equal(1, fourValues.KeysCount);
+				var keys = await store.Advanced.GetKeys(fourValues.Type);
+				Assert.Equal(1, keys.Length); var time = keys[0];
 				Assert.Equal("FourValues", time.Type);
-				Assert.Equal(4, time.NumberOfValues);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(4, time.PointsCount);
 
-				var _is = keys[1];
+				var simple = types[1];
+				Assert.Equal("Simple", simple.Type);
+				Assert.Equal(1, simple.Fields.Length);
+				Assert.Equal(2, simple.KeysCount);
+				keys = await store.Advanced.GetKeys(simple.Type, cancellationToken);
+				Assert.Equal(2, keys.Length);
+				var _is = keys[0];
 				Assert.Equal("Simple", _is.Type);
-				Assert.Equal(1, _is.NumberOfValues);
 				Assert.Equal("Is", _is.Key);
 				Assert.Equal(2, _is.PointsCount);
-
-				var money = keys[2];
+				var money = keys[1];
 				Assert.Equal("Simple", money.Type);
-				Assert.Equal(1, money.NumberOfValues);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
 

@@ -18,12 +18,12 @@ using Raven.Database.TimeSeries.Notifications;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Voron;
-using Voron.Impl;
 using Voron.Trees;
 using Voron.Trees.Fixed;
 using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Raven.Abstractions.Data.Constants;
+using Transaction = Voron.Impl.Transaction;
 
 namespace Raven.Database.TimeSeries
 {
@@ -517,48 +517,69 @@ namespace Raven.Database.TimeSeries
 				}
 			}
 
-			public IEnumerable<TimeSeriesKey> GetKeys()
+			public IEnumerable<TimeSeriesKey> GetKeys(string typeName, int skip)
+			{
+				var type = storage.GetType(typeName);
+				if (type == null)
+					yield break;
+
+				var tree = tx.ReadTree(SeriesTreePrefix + typeName);
+				using (var it = tree.Iterate())
+				{
+					if (it.Seek(Slice.BeforeAllKeys) && (skip == 0 || it.Skip(skip)))
+					{
+						do
+						{
+							var key = it.CurrentKey.ToString();
+							var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
+							long pointsCount = 0;
+							using (var fixedIt = fixedTree.Iterate())
+							{
+								if (fixedIt.Seek(DateTime.MinValue.Ticks))
+								{
+									do
+									{
+										pointsCount++;
+									} while (fixedIt.MoveNext());
+								}
+							}
+
+							yield return new TimeSeriesKey
+							{
+								Type = type.Type,
+								Key = key,
+								PointsCount = pointsCount,
+							};
+						} while (it.MoveNext());
+					}
+				}
+			}
+
+			public IEnumerable<TimeSeriesType> GetTypes(int skip)
 			{
 				using (var rootIt = tx.State.Root.Iterate())
 				{
 					rootIt.RequiredPrefix = SeriesTreePrefix;
-					if (rootIt.Seek(rootIt.RequiredPrefix))
+					if (rootIt.Seek(rootIt.RequiredPrefix) && (skip == 0 || rootIt.Skip(skip)))
 					{
 						do
 						{
 							var typeTreeName = rootIt.CurrentKey.ToString();
 							var type = storage.GetType(typeTreeName.Replace(SeriesTreePrefix, ""));
 							var tree = tx.ReadTree(typeTreeName);
+							long keysCount = 0;
 							using (var it = tree.Iterate())
 							{
 								if (it.Seek(Slice.BeforeAllKeys))
 								{
 									do
 									{
-										var key = it.CurrentKey.ToString();
-										var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length * sizeof(double)));
-										long pointsCount = 0;
-										using (var fixedIt = fixedTree.Iterate())
-										{
-											if (fixedIt.Seek(DateTime.MinValue.Ticks))
-											{
-												do
-												{
-													pointsCount++;
-												} while (fixedIt.MoveNext());
-											}
-										}
-
-										yield return new TimeSeriesKey
-										{
-											Type = type.Type,
-											NumberOfValues = type.Fields.Length,
-											Key = key,
-											PointsCount = pointsCount,
-										};
+										keysCount++;
 									} while (it.MoveNext());
 								}
 							}
+							type.KeysCount = keysCount;
+							yield return type;
 						} while (rootIt.MoveNext());
 					}
 				}
