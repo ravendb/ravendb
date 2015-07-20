@@ -351,7 +351,7 @@ namespace Raven.Database.Config
                     if (workingMemory < 0) // This is an edge case which wont likely happen but have to take care of it, just in case. Can happen if most of the GC memory is swapped out (we are trashing). 
                         workingMemory = workingSet;
 
-                    var availablePhysicalMemoryInMb = (int)(workingMemory / 1024 / 1024);
+					var availablePhysicalMemoryInMb = (int)((totalAvailableBytes - workingMemory) / 1024 / 1024);
                     if (Environment.Is64BitProcess)
                     {                       
                         return memoryLimitSet ? Math.Min(MemoryLimit, availablePhysicalMemoryInMb) : availablePhysicalMemoryInMb;
