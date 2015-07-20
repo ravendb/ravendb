@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Tests.Core;
 using Raven.Tests.Core.ChangesApi;
 
 namespace Raven.Tryouts

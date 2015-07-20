@@ -49,24 +49,29 @@ namespace Raven.Tests.Core.ChangesApi
 	    public void AreWebsocketsDestroyedAfterGC()
 	    {
 		    var counter = new ConcurrentQueue<BulkInsertChangeNotification>();
-		    var mre = new ManualResetEventSlim();
-		    using (var store = NewRemoteDocumentStore())
+
+			using (var store = NewRemoteDocumentStore())
 		    {
-			    var testTimer = Stopwatch.StartNew();
-			    using (var bulkInsert = store.BulkInsert(store.DefaultDatabase))
+				Stopwatch testTimer;
+			    var mre = new ManualResetEventSlim();
+				using (var bulkInsert = store.BulkInsert(store.DefaultDatabase))
 				{
 					store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
 					{
 						counter.Enqueue(x);
 						mre.Set();
 					});
-					bulkInsert.Store(new ChunkedBulkInsert.Node
+
+					do
 					{
-						Name = "Parent"
-					});
+						bulkInsert.Store(new ChunkedBulkInsert.Node
+						{
+							Name = "Parent"
+						});
+					} while (!mre.IsSet);
+ 
+					testTimer = Stopwatch.StartNew();
 		
-					mre.Wait();
-					Thread.Sleep(500); //make sure that if test fails - time span difference is more visible
 					IssueGCRequest(store);
 
 					bulkInsert.Store(new ChunkedBulkInsert.Node
@@ -82,7 +87,9 @@ namespace Raven.Tests.Core.ChangesApi
 			    do
 			    {
 				    response = IssueGetChangesRequest(store);
-			    } while (response == null || !response.Any() || sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
+			    } while (response == null || 
+						 !response.Any() || 
+						 sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
 				
 				//sanity check, if the test fails here, then something is wrong
 			    response.Should().NotBeEmpty("if it is null or empty then it means the connection did not restore after 1 second by itself. Should be investigated.");
