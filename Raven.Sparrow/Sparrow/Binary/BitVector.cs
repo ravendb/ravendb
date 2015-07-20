@@ -348,6 +348,22 @@ namespace Sparrow.Binary
             }
         }
 
+        private static void BitwiseCopySlow(BitVector src, int srcStart, BitVector dest, int destStart, int length)
+        {
+            unchecked
+            {
+                // Very inefficient. If this is a liability we will make it faster. 
+                while ( length > 0 )
+                {
+                    dest[destStart] = src[srcStart];
+
+                    srcStart++;
+                    destStart++;
+                    length--;
+                }                
+            }
+        }
+
         public static BitVector OfLength(int size)
         {
             return new BitVector(size);
@@ -558,9 +574,11 @@ namespace Sparrow.Binary
             return differentBit;
         }
 
-        public BitVector SubVector(int start, int lenght)
+        public BitVector SubVector(int start, int length)
         {
-            throw new NotImplementedException();
+            var subVector = new BitVector(length);
+            BitVector.BitwiseCopySlow(this, start, subVector, 0, length);
+            return subVector;
         }
     }
 }

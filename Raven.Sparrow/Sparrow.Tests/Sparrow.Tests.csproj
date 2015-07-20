@@ -74,6 +74,7 @@
     <Compile Include="BitVectors.cs" />
     <Compile Include="Hashing.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ZFastTrie.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

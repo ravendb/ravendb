@@ -62,6 +62,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Binary\Bits.cs" />
     <Compile Include="Binary\BitVector.cs" />
     <Compile Include="Collections\ConcurrentLruSet.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />

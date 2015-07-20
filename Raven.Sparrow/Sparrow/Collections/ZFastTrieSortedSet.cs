@@ -1,6 +1,7 @@
 ﻿using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -20,16 +21,24 @@ namespace Sparrow.Collections
     {
         protected abstract class Node
         {
-            protected int nameLength;
+            public readonly int NameLength;
 
             public abstract bool IsLeaf { get; }
             public abstract bool IsInternal { get; }
 
-            public Node( int nameLength )
+            protected Node ()
+            {}
+
+            public Node(int nameLength)
             {
-                this.nameLength = nameLength;
+                this.NameLength = nameLength;
             }
 
+            /// <summary>
+            /// In the leaf it is the pointer to the nearest internal cut node. In the internal node, it is a pointer to any leaf 
+            /// in the subtree, as all leaves will share the same key prefix.
+            /// </summary>
+            public Node ReferencePtr;
 
             /// <summary>
             /// The name of a node, is the string deprived of the string stored at it. Page 163 of [1]
@@ -45,7 +54,37 @@ namespace Sparrow.Collections
             /// <summary>
             /// The extent of a node, is the longest common prefix of the strings represented by the leaves that are descendants of it.
             /// </summary>            
-            public abstract BitVector Extent(Func<TKey, BitVector> binarizeFunc);            
+            public abstract BitVector Extent(Func<TKey, BitVector> binarizeFunc);
+
+            public Leaf GetRightLeaf()
+            {
+                if (this is Leaf)
+                    return (Leaf)this;
+
+                Node node = this;
+                do
+                {
+                    node = ((Internal)node).JumpRightPtr;
+                }
+                while (node is Internal);
+
+                return (Leaf)node;
+            }
+
+            public Leaf GetLeftLeaf()
+            {
+                if (this is Leaf)
+                    return (Leaf)this;
+
+                Node node = this;
+                do
+                {
+                    node = ((Internal)node).JumpLeftPtr;
+                }
+                while (node is Internal);
+
+                return (Leaf)node;
+            }
         }
 
         /// <summary>
@@ -57,8 +96,17 @@ namespace Sparrow.Collections
             public override bool IsLeaf { get { return true; } }
             public override bool IsInternal { get { return false; } }
 
-            public Leaf() : base(0)
-            { }
+
+            public Leaf()
+            {
+            }
+
+            public Leaf(int nameLength, TKey key, TValue value)
+                : base(nameLength)
+            {
+                this.Key = key;
+                this.Value = value;
+            }
 
             /// <summary>
             /// The previous leaf in the double linked list referred in page 163 of [1].
@@ -71,8 +119,6 @@ namespace Sparrow.Collections
 
             public Leaf Next;
 
-            public Node Reference;
-
             public TKey Key;
 
             public TValue Value;
@@ -80,17 +126,17 @@ namespace Sparrow.Collections
 
             public override BitVector Name(Func<TKey, BitVector> binarizeFunc)
             {
-                throw new NotImplementedException();
+                return binarizeFunc(this.Key);
             }
 
             public override BitVector Handle(Func<TKey, BitVector> binarizeFunc)
             {
-                throw new NotImplementedException();
+                return binarizeFunc(this.Key);
             }
 
             public override BitVector Extent(Func<TKey, BitVector> binarizeFunc)
             {
-                throw new NotImplementedException();
+                return Name(binarizeFunc);
             }
         }
 
@@ -101,12 +147,16 @@ namespace Sparrow.Collections
         /// </summary>
         protected sealed class Internal : Node
         {
-            public override bool IsLeaf { get { return false; } }
-            public override bool IsInternal { get { return true; } }
+            public readonly int ExtentLength;
 
-            public Internal(int nameLength)
+            public override bool IsLeaf { get { return false; } }
+            public override bool IsInternal { get { return true; } }            
+
+            public Internal(int nameLength, int extentLength)
                 : base(nameLength)
-            {}
+            {
+                this.ExtentLength = extentLength;
+            }
 
             /// <summary>
             /// The right subtrie.
@@ -117,11 +167,6 @@ namespace Sparrow.Collections
             /// The left subtrie.
             /// </summary>
             public Node Left;
-
-            /// <summary>
-            /// The reference pointer. This is the leaf whose key this node refers to.
-            /// </summary>
-            public Leaf ReferencePtr;
 
             /// <summary>
             /// The downward right jump pointer.
@@ -135,29 +180,90 @@ namespace Sparrow.Collections
 
             public override BitVector Name(Func<TKey, BitVector> binarizeFunc)
             {
-                throw new NotImplementedException();
+                return ReferencePtr.Name(binarizeFunc);
             }
 
             public override BitVector Handle(Func<TKey, BitVector> binarizeFunc)
             {
-                throw new NotImplementedException();
+                int handleLength = ZFastTrieSortedSet<TKey,TValue>.TwoFattest(NameLength - 1, this.ExtentLength);
+
+                return ReferencePtr.Name(binarizeFunc).SubVector(0, handleLength);
             }
 
             public override BitVector Extent(Func<TKey, BitVector> binarizeFunc)
             {
-                throw new NotImplementedException();
+                return ReferencePtr.Name(binarizeFunc).SubVector(0, this.ExtentLength);
+            }
+        }
+
+        private class CutPoint
+        {
+            /// <summary>
+            /// Longest Common Prefix (or LCP) between the Exit(x) and x
+            /// </summary>
+            public readonly int LongestPrefix;
+            /// <summary>
+            /// The parent of the exit node.
+            /// </summary>
+            public readonly Internal Parent;
+            /// <summary>
+            /// The exit node. If parex(x) == root then exit(x) is the root; otherwise, exit(x) is the left or right child of parex(x) 
+            /// depending whether x[|e-parex(x)|] is zero or one, respectively. Page 166 of [1]
+            /// </summary>
+            public readonly Node Exit;
+
+            public CutPoint(int lcp, Internal parent, Node exit)
+            {
+                this.LongestPrefix = lcp;
+                this.Parent = parent;
+                this.Exit = exit;
+            }
+
+            public bool IsCutLow(Func<TKey, BitVector> binarizeFunc)
+            {
+                // Theorem 3: Page 165 of [1]
+                int handleLength = this.Exit.Handle(binarizeFunc).Count;
+                return this.LongestPrefix >= handleLength;
+            }
+
+            public bool IsRightChild
+            {
+                get { return this.Parent != null && this.Parent.Right == this.Exit; }
+            }
+        }
+
+        private class ExitNode
+        {
+            /// <summary>
+            /// Longest Common Prefix (or LCP) between the Exit(x) and x
+            /// </summary>
+            public readonly int LongestPrefix;
+
+            /// <summary>
+            /// The exit node, it will be a leaf when the search key matches the query. 
+            /// </summary>
+            public readonly Node Exit;
+
+            public ExitNode(int lcp, Node exit)
+            {
+                this.LongestPrefix = lcp;
+                this.Exit = exit;
+            }
+
+            public bool IsLeaf
+            {
+                get { return this.Exit is Leaf; }
             }
         }
 
         private readonly Func<TKey, BitVector> binarizeFunc;
 
         private int size;
-        private Leaf head;
-        private Leaf tail;
+        private readonly Leaf head;
+        private readonly Leaf tail;
         private Node root;
 
-
-        public ZFastTrieSortedSet(IEnumerable<KeyValuePair<TKey, TValue>> elements, Func<TKey, BitVector> binarize)
+        public ZFastTrieSortedSet(Func<TKey, BitVector> binarize)
         {
             if (binarize == null)
                 throw new ArgumentException("Cannot continue without knowing how to binarize the key.");
@@ -169,16 +275,23 @@ namespace Sparrow.Collections
 
             // Setup tombstones. 
             this.head = new Leaf();
-            this.tail = new Leaf();            
+            this.tail = new Leaf();
             this.head.Next = tail;
             this.tail.Previous = head;
+        }
 
-            Add(elements);
+        public ZFastTrieSortedSet(IEnumerable<KeyValuePair<TKey, TValue>> elements, Func<TKey, BitVector> binarize) : this ( binarize )
+        {
+            if (elements == null)
+                throw new NullReferenceException();
+
+            foreach ( var element in elements )
+                Add(element.Key, element.Value);
         }
 
         public int Count { get; private set; }
 
-        public void Add(TKey key, TValue value)
+        public bool Add(TKey key, TValue value)
         {
             if ( size == 0 )
             {
@@ -194,7 +307,7 @@ namespace Sparrow.Collections
 
                 size++;
 
-                return;
+                return true;
             }
 
             // We prepare the signature to compute incrementally. 
@@ -203,35 +316,88 @@ namespace Sparrow.Collections
             
             // We look for the parent of the exit node for the key.
             Stack<Node> stack = new Stack<Node>();
-            //var parentExitNode = FindParentExitNode(v, stack, hashState);
-            
+            var cutPoint = FindParentExitNode(v, stack, hashState);                                                       
+
             // If the exit node is a leaf and the key is equal to the LCP 
-            // Then we are done (we found the key already).
+            var exitNodeAsLeaf = cutPoint.Exit as Leaf;
+            if (exitNodeAsLeaf != null && binarizeFunc(exitNodeAsLeaf.Key).Count == cutPoint.LongestPrefix)
+                return false; // Then we are done (we found the key already).
 
-            // Compute the exit direction from the LCP.
+            var exitNodeAsInternal = cutPoint.Exit as Internal; // Is the exit node internal?
+            bool isCutLow = cutPoint.IsCutLow (binarizeFunc);  // Is this cut point low or high? 
+            bool exitDirection = v.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
 
-            // Create a new internal node that will hold the new leaf.
+            // Create a new internal node that will hold the new leaf.            
+            var newLeaf = new Leaf(cutPoint.LongestPrefix + 1, key, value);
+            var newInternal = new Internal(cutPoint.Exit.NameLength, cutPoint.LongestPrefix);
+
+            newInternal.ReferencePtr = newLeaf;
+            newLeaf.ReferencePtr = newInternal;            
+
             // Link the internal and the leaf according to its exit direction.
+            if ( exitDirection )
+            {
+                newInternal.Right = newLeaf;
+                newInternal.JumpRightPtr = newLeaf;                
+
+                newInternal.Left = cutPoint.Exit;                
+                newInternal.JumpLeftPtr = isCutLow && exitNodeAsInternal != null ? exitNodeAsInternal.JumpLeftPtr : cutPoint.Exit;  
+            }
+            else
+            {
+                newInternal.Left = newLeaf;
+                newInternal.JumpLeftPtr = newLeaf;
+                
+                newInternal.Right = cutPoint.Exit;
+                newInternal.JumpRightPtr = isCutLow && exitNodeAsInternal != null ? exitNodeAsInternal.JumpRightPtr : cutPoint.Exit;  
+            }                       
 
             // If the exit node is the root
-            // Then update the root
-            // Else update the parent exit node.
-
+            bool isRightChild = cutPoint.IsRightChild;
+            if ( cutPoint.Exit == this.root)
+            {
+                // Then update the root
+                this.root = newInternal;
+            }
+            else
+            {
+                // Else update the parent exit node.
+                if ( isRightChild )
+                    cutPoint.Parent.Right = newInternal;
+                else
+                    cutPoint.Parent.Left = newInternal;
+            }
+                        
             // Update the jump table after the insertion.
+            if (exitDirection)
+                UpdateRightJumpsAfterInsertion(newInternal, cutPoint.Exit, isRightChild, newLeaf, stack);
+            else
+                UpdateLeftJumpsAfterInsertion(newInternal, cutPoint.Exit, isRightChild, newLeaf, stack);
 
             // If the cut point was low and the exit node internal
-            // Then
-            //  We replace the exit node entry with the new internal node
-            //  We add a new exit node entry
-            //  We update the jumps for the exit node.
-            // Else
-            //  We add the internal node to the jump table.
+            if ( isCutLow && exitNodeAsInternal != null )
+            {
+                //  We replace the exit node entry with the new internal node
+                //  We add a new exit node entry
+                //  We update the jumps for the exit node.                
+                throw new NotImplementedException();
+            }
+            else
+            {
+                //  We add the internal node to the jump table.                
+                throw new NotImplementedException();
+            }
+
 
             // Link the new leaf with it's predecessor and successor.
+            if ( exitDirection )
+                AddAfter ( cutPoint.Exit.GetRightLeaf(), newLeaf );
+            else
+                AddBefore( cutPoint.Exit.GetLeftLeaf(), newLeaf);
 
             size++;
 
-            throw new NotImplementedException();
+            return true;
         }
 
         /// <summary>
@@ -293,29 +459,43 @@ namespace Sparrow.Collections
             throw new NotImplementedException();
         }
 
-        public bool TryGet( TKey key, out TValue value )
+        public bool TryGet(TKey key, out TValue value)
         {
-            // We prepare the signature to compute incrementally. After preprocessing using O(|x|/w) times and O(|x|/B) IOs, 
-            // computing a signature for a prefix x takes constant time. Page 167 of [1]
-            BitVector v = binarizeFunc(key);
-            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits); 
+            if (size == 0)
+            {
+                value = default(TValue);
+                return false;
+            }
 
-            throw new NotImplementedException();
+            // We look for the parent of the exit node for the key.
+            var exitNode = FindExitNode(key);
+
+            // If the exit node is a leaf and the key is equal to the LCP 
+            var exitNodeAsLeaf = exitNode.Exit as Leaf;
+            if (exitNodeAsLeaf != null && binarizeFunc(exitNodeAsLeaf.Key).Count == exitNode.LongestPrefix)
+            {
+                value = exitNodeAsLeaf.Value;
+                return true; // Then we are done (we found the key already).
+            }
+
+            value = default(TValue);
+            return false;
         }
 
         public bool Contains(TKey key)
         {
-            // We prepare the signature to compute incrementally. After preprocessing using O(|x|/w) times and O(|x|/B) IOs, 
-            // computing a signature for a prefix x takes constant time. Page 167 of [1]
-            BitVector v = binarizeFunc(key);
-            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
+            if (size == 0)
+                return false;
 
-            throw new NotImplementedException();
+            // We look for the parent of the exit node for the key.
+            var exitNode = FindExitNode(key);
 
-            // We look for the exit node for the key
+            // If the exit node is a leaf and the key is equal to the LCP 
+            var exitNodeAsLeaf = exitNode.Exit as Leaf;
+            if (exitNodeAsLeaf != null && binarizeFunc(exitNodeAsLeaf.Key).Count == exitNode.LongestPrefix)
+                return true; // Then we are done (we found the key already).
 
-            // If the exit node is a leaf and the LCP matches the exit node key, 
-            // Then returns true (the key exist). False otherwise.
+            return false;
         }
 
         public TKey Successor(TKey key)
@@ -339,21 +519,25 @@ namespace Sparrow.Collections
             if (size == 0)
                 throw new KeyNotFoundException();
 
-            throw new NotImplementedException();
-
             // Returns the head next key
+            return this.head.Next.Key;
         }
 
         public TKey LastKey()
         {
-            throw new NotImplementedException();
+            if (size == 0)
+                throw new KeyNotFoundException();
 
-            // Returns the tail previous key
+            // Returns the head next key
+            return this.tail.Previous.Key;
         }
 
         public void Clear()
         {
-            throw new NotImplementedException();
+            this.size = 0;
+            this.root = null;
+            this.head.Next = this.tail;
+            this.tail.Previous = this.head;
         }
 
         public TKey SuccessorOrDefault(TKey key)
@@ -365,7 +549,6 @@ namespace Sparrow.Collections
             return SuccessorInternal(key);
         }
 
-
         public TKey PredecessorOrDefault(TKey key)
         {
             // The set is empty, there is no predecessor to any key.
@@ -375,15 +558,25 @@ namespace Sparrow.Collections
             return PredecessorInternal(key);
         }
 
-        public TKey LastKeyOrDefault()
-        {
-            throw new NotImplementedException();
-        }
-
         public TKey FirstKeyOrDefault()
         {
-            throw new NotImplementedException();
+            if (size == 0)
+                return default(TKey);
+
+            // Returns the head next key
+            return this.head.Next.Key;
         }
+
+        public TKey LastKeyOrDefault()
+        {
+            if (size == 0)
+                return default(TKey);
+
+            // Returns the head next key
+            return this.tail.Previous.Key;
+        }
+
+
 
         public void Add(IEnumerable<KeyValuePair<TKey, TValue>> elements)
         {
@@ -444,5 +637,56 @@ namespace Sparrow.Collections
             node.Next.Previous = node.Previous;
             node.Previous.Next = node.Next;
         }
+
+        private void AddBefore(Leaf successor, Leaf newNode)
+        {
+            newNode.Previous = successor.Previous;
+            newNode.Next = successor;
+            successor.Previous.Next = newNode;
+            successor.Previous = newNode;
+        }
+
+        private void UpdateRightJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Node> stack)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void UpdateLeftJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Node> stack)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        private CutPoint FindParentExitNode(BitVector v, Stack<Node> stack, Hashing.Iterative.XXHash32Block hashState)
+        {
+            Contract.Requires(size != 0);
+
+            // If there is only a single element, then the exit point is the root.
+            if (size == 1)
+                return new CutPoint(v.LongestCommonPrefixLength(this.root.Extent(this.binarizeFunc)), null, root);
+
+
+            throw new NotImplementedException();
+        }
+
+        private ExitNode FindExitNode(TKey key)
+        {
+            Contract.Requires(size != 0);
+
+            // We prepare the signature to compute incrementally. 
+            BitVector v = binarizeFunc(key);
+            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
+
+            if (size == 1)
+                return new ExitNode(v.LongestCommonPrefixLength(this.root.Extent(binarizeFunc)), this.root );
+
+            throw new NotImplementedException();
+        }
+
+        protected static int TwoFattest( int a, int b)
+        {
+            return -1 << Bits.MostSignificantBit(a ^ b) & b;
+        }
+
     }
 }
