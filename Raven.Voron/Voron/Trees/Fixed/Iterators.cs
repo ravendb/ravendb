@@ -119,7 +119,9 @@ namespace Voron.Trees.Fixed
 				var currentKey = CurrentKey;
 		        _fst.RemoveEmbeddedEntry(currentKey);
 				var ptr = _fst._parent.DirectRead(_fst._treeName);
-				_header = (FixedSizeTreeHeader.Embedded*)ptr;
+		        if (ptr == null)
+			        return false;
+		        _header = (FixedSizeTreeHeader.Embedded*)ptr;
 				_dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
 				return Seek(currentKey);    
 	        }
@@ -160,12 +162,7 @@ namespace Voron.Trees.Fixed
             public bool Seek(long key)
             {
                 _currentPage = _parent.FindPageFor(key);
-	            if (_currentPage.LastMatch > 0)
-		            _currentPage.LastSearchPosition++;
-	            var seek = _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
-                if (seek == false)
-                    _currentPage = null;
-                return seek;
+	            return _currentPage.LastMatch <= 0 || MoveNext();
             }
 
             public long CurrentKey
@@ -228,19 +225,11 @@ namespace Voron.Trees.Fixed
 	        public bool DeleteCurrentAndMoveNext()
 	        {
 				var currentKey = CurrentKey;
-				if (currentKey == 635565780000000000)
-				{
-					
-				}
+				
 				_parent.RemoveLargeEntry(currentKey);
 				if (_parent._flags == FixedSizeTreeHeader.OptionFlags.Large)
 				{
-					var deleteCurrentAndMoveNext = Seek(currentKey);
-					if (deleteCurrentAndMoveNext == false)
-					{
-						
-					}
-					return deleteCurrentAndMoveNext;
+					return Seek(currentKey);
 				}
 				return true;
 	        }

@@ -587,7 +587,7 @@ namespace Voron.Trees.Fixed
             parentPage = _tx.ModifyPage(parentPageNumber, _parent, parentPage);
             parentPage.FixedSize_NumberOfEntries--;
 
-            if (page.LastSearchPosition == 0)
+			if (parentPage.LastSearchPosition == 0)
             {
                 // if this is the very first item in the page, we can just change the start position
                 parentPage.FixedSize_StartPosition += BranchEntrySize;

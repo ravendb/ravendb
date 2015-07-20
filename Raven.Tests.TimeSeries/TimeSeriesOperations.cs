@@ -152,7 +152,7 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(1200, stats.PointsCount);
 
-				await store.DeleteRangeAsync("Simple", "Time", start.AddHours(3), start.AddYears(7));
+				await store.DeleteRangeAsync("Simple", "Time", start.AddHours(3), start.AddYears(2));
 				stats = await store.GetTimeSeriesStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(3, stats.PointsCount);
