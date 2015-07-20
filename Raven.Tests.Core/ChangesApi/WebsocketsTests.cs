@@ -52,7 +52,7 @@ namespace Raven.Tests.Core.ChangesApi
 		    var mre = new ManualResetEventSlim();
 		    using (var store = NewRemoteDocumentStore())
 		    {
-			    DateTime gcRequestTime;
+			    var testTimer = Stopwatch.StartNew();
 			    using (var bulkInsert = store.BulkInsert(store.DefaultDatabase))
 				{
 					store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
@@ -67,7 +67,6 @@ namespace Raven.Tests.Core.ChangesApi
 		
 					mre.Wait();
 					Thread.Sleep(500); //make sure that if test fails - time span difference is more visible
-					gcRequestTime = DateTime.UtcNow;
 					IssueGCRequest(store);
 
 					bulkInsert.Store(new ChunkedBulkInsert.Node
@@ -88,14 +87,9 @@ namespace Raven.Tests.Core.ChangesApi
 				//sanity check, if the test fails here, then something is wrong
 			    response.Should().NotBeEmpty("if it is null or empty then it means the connection did not restore after 1 second by itself. Should be investigated.");
 
-			    var lastForcedGCTime = GetLastForcedGCDateTimeRequest(store);
 				var connectionAge = TimeSpan.Parse(response.First().Value<string>("Age"));
-
-				var timeBetweenRequestAndGC = lastForcedGCTime - gcRequestTime;
-
-				//time between request to GC and actual GC on server should be more than connection age.
-				//this test essentially verifies that after a GC websocket connection is disconnected and then restored
-			    timeBetweenRequestAndGC.Should().BeGreaterThan(connectionAge);
+			    var timeSinceTestStarted = TimeSpan.FromMilliseconds(testTimer.ElapsedMilliseconds);
+				connectionAge.Should().BeLessThan(timeSinceTestStarted);
 		    }
 	    }
 
