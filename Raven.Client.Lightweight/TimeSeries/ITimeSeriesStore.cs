@@ -43,7 +43,7 @@ namespace Raven.Client.TimeSeries
 		Task DeleteRangeAsync(string type, string key, DateTime start, DateTime end, CancellationToken token = default(CancellationToken));
 
 		
-		Task<TimeSeriesStats> GetTimeSeriesStatsAsync(CancellationToken token = default (CancellationToken));
+		Task<TimeSeriesStats> GetStatsAsync(CancellationToken token = default (CancellationToken));
 
 		Task<TimeSeriesMetrics> GetTimeSeriesMetricsAsync(CancellationToken token = default (CancellationToken));
 

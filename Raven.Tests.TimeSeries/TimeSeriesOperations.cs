@@ -32,7 +32,7 @@ namespace Raven.Tests.TimeSeries
 				await store.AppendAsync("FourValues", "Time", DateTime.Now, new[] { 23D, 4D, 5D, 6D }, cancellationToken);
 				await store.AppendAsync("FourValues", "Time", DateTime.Now, cancellationToken, 33D, 4D, 5D, 6D);
 
-				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
+				var stats = await store.GetStatsAsync(cancellationToken);
 				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
 				Assert.Equal(6, stats.PointsCount);
@@ -48,7 +48,7 @@ namespace Raven.Tests.TimeSeries
 				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.CreateTypeAsync("Simple", new[] { "Value", "Another value" }));
 				Assert.Contains("System.InvalidOperationException: Type 'Simple' is already created", exception.Message);
 
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(0, stats.KeysCount);
 			}
@@ -65,7 +65,7 @@ namespace Raven.Tests.TimeSeries
 				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.AppendAsync("Simple", "Time", DateTime.Now, new[] { 3D, 4D, 5D, 6D }));
 				Assert.Contains("System.ArgumentOutOfRangeException: Appended values should be the same length the series values length which is 1 and not 4", exception.Message);
 
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(1, stats.PointsCount);
@@ -83,7 +83,7 @@ namespace Raven.Tests.TimeSeries
 				var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.DeleteTypeAsync("Simple"));
 				Assert.Contains("System.InvalidOperationException: Cannot delete type 'Simple' since there is associated data to it", exception.Message);
 
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(1, stats.PointsCount);
@@ -102,7 +102,7 @@ namespace Raven.Tests.TimeSeries
 				await store.DeleteAsync("Simple", "Is");
 				await store.DeleteTypeAsync("Simple");
 
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 				Assert.Equal(0, stats.TypesCount);
 				Assert.Equal(0, stats.KeysCount);
 				Assert.Equal(0, stats.PointsCount);
@@ -122,13 +122,13 @@ namespace Raven.Tests.TimeSeries
 				{
 					await store.AppendAsync("Simple", "Time", start.AddHours(i), i + 3D);
 				}
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(12, stats.PointsCount);
 
 				await store.DeleteRangeAsync("Simple", "Time", start.AddHours(3), start.AddHours(7));
-				stats = await store.GetTimeSeriesStatsAsync();
+				stats = await store.GetStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(7, stats.PointsCount);
@@ -147,13 +147,13 @@ namespace Raven.Tests.TimeSeries
 				{
 					await store.AppendAsync("Simple", "Time", start.AddHours(i), i + 3D);
 				}
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(1200, stats.PointsCount);
 
 				await store.DeleteRangeAsync("Simple", "Time", start.AddHours(3), start.AddYears(2));
-				stats = await store.GetTimeSeriesStatsAsync();
+				stats = await store.GetStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(3, stats.PointsCount);
 				Assert.Equal(1, stats.KeysCount);
@@ -172,13 +172,13 @@ namespace Raven.Tests.TimeSeries
 				{
 					await store.AppendAsync("Simple", "Time", start.AddHours(i), i + 3D);
 				}
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
 				Assert.Equal(1200, stats.PointsCount);
 
 				await store.DeleteRangeAsync("Simple", "Time", DateTime.MinValue, DateTime.MaxValue);
-				stats = await store.GetTimeSeriesStatsAsync();
+				stats = await store.GetStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(0, stats.KeysCount);
 				Assert.Equal(0, stats.PointsCount);
@@ -234,7 +234,7 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(18888, money.PointsCount);
 
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
 				Assert.Equal(18888 * 3, stats.PointsCount);
@@ -291,7 +291,7 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
 
-				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
+				var stats = await store.GetStatsAsync(cancellationToken);
 				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
 				Assert.Equal(7, stats.PointsCount);
@@ -361,7 +361,7 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
 
-				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
+				var stats = await store.GetStatsAsync(cancellationToken);
 				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
 				Assert.Equal(7, stats.PointsCount);

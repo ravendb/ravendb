@@ -19,7 +19,7 @@ namespace Raven.Tests.TimeSeries
 				await store.AppendAsync("Simple", "Money", DateTime.Now, 7d);
 				await store.AppendAsync("Simple", "Money", DateTime.Now, 8d);
 				
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 			    Assert.Equal(3, stats.KeysCount);
 			    Assert.Equal(6, stats.PointsCount);
 			}
