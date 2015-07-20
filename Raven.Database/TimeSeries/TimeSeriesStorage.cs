@@ -1002,7 +1002,7 @@ namespace Raven.Database.TimeSeries
 				var metadata = tx.ReadTree("$metadata");
 				var val = metadata.Read(StatsPrefix + "keys-count");
 				if (val == null)
-					return CalculateKeysCount();
+					return 0;
 				var count = val.Reader.ReadLittleEndianInt64();
 				return count;
 			}
@@ -1021,11 +1021,11 @@ namespace Raven.Database.TimeSeries
 			}
 		}
 
-		public long CalculateKeysCount()
+		public void CalculateKeysAndPointsCount()
 		{
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				long keys = 0;
+				long keys = 0, points = 0;
 				using (var rootIt = tx.State.Root.Iterate())
 				{
 					rootIt.RequiredPrefix = SeriesTreePrefix;
@@ -1033,7 +1033,9 @@ namespace Raven.Database.TimeSeries
 					{
 						do
 						{
-							var tree = tx.ReadTree(rootIt.CurrentKey.ToString());
+							var typeTreeName = rootIt.CurrentKey.ToString();
+							var type = GetType(typeTreeName.Replace(SeriesTreePrefix, ""));
+							var tree = tx.ReadTree(typeTreeName);
 							using (var it = tree.Iterate())
 							{
 								if (it.Seek(Slice.BeforeAllKeys))
@@ -1041,6 +1043,17 @@ namespace Raven.Database.TimeSeries
 									do
 									{
 										keys++;
+										var fixedTree = tree.FixedTreeFor(it.CurrentKey.ToString(), (byte)(type.Fields.Length * sizeof(double)));
+										using (var fixedIt = fixedTree.Iterate())
+										{
+											if (fixedIt.Seek(DateTime.MinValue.Ticks))
+											{
+												do
+												{
+													points++;
+												} while (fixedIt.MoveNext());
+											}
+										}
 									} while (it.MoveNext());
 								}
 							}
@@ -1052,7 +1065,8 @@ namespace Raven.Database.TimeSeries
 				EndianBitConverter.Little.CopyBytes(keys, val, 0);
 				var metadata = tx.ReadTree("$metadata");
 				metadata.Add(new Slice(StatsPrefix + "keys-count"), new Slice(val));
-				return keys;
+				EndianBitConverter.Little.CopyBytes(points, val, 0);
+				metadata.Add(new Slice(StatsPrefix + "points-count"), new Slice(val));
 			}
 		}
 
@@ -1075,7 +1089,7 @@ namespace Raven.Database.TimeSeries
 		}
 
 		/// <summary>
-		/// This intened to be here for testing and debugging. This code is not reachable in production, since we always cache the stats.
+		/// This intended to be here for testing and debugging. This code is not reachable in production, since we always cache the stats.
 		/// </summary>
 		private long CalculateTypesCount()
 		{
