@@ -286,6 +286,7 @@
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\MultiplePutIndexParam.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
+    <Compile Include="Indexing\TransformerLockMode.cs" />
     <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
     <Compile Include="Json\JsonLinqEnumerableConverter.cs" />

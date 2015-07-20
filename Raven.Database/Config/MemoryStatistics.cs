@@ -341,26 +341,16 @@ namespace Raven.Database.Config
 #else
                 try
                 {
-                    var currentProcess = Process.GetCurrentProcess();
-
-                    // This is the OS available memory
-                    long totalAvailableBytes = (long) new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
-                    long workingSet = currentProcess.WorkingSet64;
-                    
-                    long workingMemory = (workingSet - GC.GetTotalMemory(false));
-                    if (workingMemory < 0) // This is an edge case which wont likely happen but have to take care of it, just in case. Can happen if most of the GC memory is swapped out (we are trashing). 
-                        workingMemory = workingSet;
-
-                    var availablePhysicalMemoryInMb = (int)(workingMemory / 1024 / 1024);
+                    var availablePhysicalMemoryInMb = (int)(new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory / 1024 / 1024);
                     if (Environment.Is64BitProcess)
-                    {                       
+                    {
                         return memoryLimitSet ? Math.Min(MemoryLimit, availablePhysicalMemoryInMb) : availablePhysicalMemoryInMb;
                     }
 
                     // we are in 32 bits mode, but the _system_ may have more than 4 GB available
                     // so we have to check the _address space_ as well as the available memory
                     // 32bit processes are limited to 1.5GB of heap memory
-                    var workingSetMb = (int)(workingSet / 1024 / 1024);
+                    var workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
                     return memoryLimitSet ? Math.Min(MemoryLimit, Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb)) : Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb);
                 }
                 catch

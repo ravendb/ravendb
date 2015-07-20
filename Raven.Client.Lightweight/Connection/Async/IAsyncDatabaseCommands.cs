@@ -328,6 +328,13 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize, CancellationToken token = default(CancellationToken));
 
+		/// <summary>
+		/// Sets the transformer's lock mode
+		/// </summary>
+		/// <param name="name">The name of the transformer</param>
+		/// <param name="lockMode">The lock mode to be set</param>
+		Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken));
+
         /// <summary>
         ///     Retrieves the document metadata for the specified document key.
         ///     <para>Returns:</para>
