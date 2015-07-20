@@ -585,6 +585,17 @@ namespace Raven.Database.Storage
 
             File.WriteAllText(Path.Combine(path, "transformers.txt"), sb.ToString());
         }
+
+		public void UpdateTransformerDefinitionWithoutUpdatingCompiledTransformer(TransformerDefinition definition)
+		{
+			transformDefinitions.AddOrUpdate(definition.TransfomerId, s =>
+			{
+				throw new InvalidOperationException(
+					"Cannot find transformer named: " +
+					definition.TransfomerId);
+			}, (s, transformerDefinition) => definition);
+			WriteTransformerDefinition(definition);
+		}
     }
 
 }

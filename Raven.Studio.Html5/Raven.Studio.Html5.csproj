@@ -102,6 +102,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchConfigurationByPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveTransformerLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\simulateSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
