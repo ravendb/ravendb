@@ -254,9 +254,6 @@ namespace Raven.Database.Indexing
 					if(context.IndexDefinitionStorage.GetViewGenerator(indexesStat.Id) == null)
 						continue; // an index that is in the process of being added, ignoring it, we'll check again on the next run
 
-					if (index.IsMapIndexingInProgress)// precomputed? slow? it is already running, nothing to do with it for now
-						continue;
-
 					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
                     indexToWorkOn.Index = index;
 
@@ -267,10 +264,11 @@ namespace Raven.Database.Indexing
             UpdateStalenessMetrics(indexesToWorkOn.Count);
 
             onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
-            if (indexesToWorkOn.Count == 0)
-                return false;
+	        if (indexesToWorkOn.Count == 0)
+				return false;
+	        
 
-            context.UpdateFoundWork();
+	        context.UpdateFoundWork();
             context.CancellationToken.ThrowIfCancellationRequested();
 
             using (context.IndexDefinitionStorage.CurrentlyIndexing())
