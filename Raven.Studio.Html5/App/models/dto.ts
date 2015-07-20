@@ -500,6 +500,7 @@ interface transformerDto {
     definition: {
         TransformResults: string;
         Name: string;
+		LockMode: string;
     }
 }
 
@@ -524,6 +525,7 @@ interface savedTransformerDto {
     {
         "TransformResults": string;
         "Name": string;
+		"LockMode": string;
     }
 }
 
