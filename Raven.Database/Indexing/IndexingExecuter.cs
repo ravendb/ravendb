@@ -92,7 +92,8 @@ namespace Raven.Database.Indexing
 
 		protected override bool ShouldSkipIndex(Index index)
 		{
-			return index.IsTestIndex;
+			return index.IsTestIndex ||
+			       index.IsMapIndexingInProgress; // precomputed? slow? it is already running, nothing to do with it for now;
 		}
 
 		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
