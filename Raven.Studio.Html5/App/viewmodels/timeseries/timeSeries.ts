@@ -123,11 +123,11 @@ class timeSeries extends viewModelBase {
         ];
     }
 
-    private fetchKeys(ts: timeSeriesDocument): JQueryPromise<any> {
+    private fetchTypes(ts: timeSeriesDocument): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var getKeysCommand = new getTimeSeriesKeysCommand(ts);
-        getKeysCommand.execute().done((results: timeSeriesKey[]) => deferred.resolve(results));
+        var getTypesCommand = new getTypesCommand(ts, 200);
+        getTypesCommand.execute().done((results: timeSeriesKey[]) => deferred.resolve(results));
         return deferred;
     }
 

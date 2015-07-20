@@ -14,6 +14,6 @@
 	    
 		public long KeysCount { get; set; }
 
-	    public long ValuesCount { get; set; }
+	    public long PointsCount { get; set; }
     }
 }

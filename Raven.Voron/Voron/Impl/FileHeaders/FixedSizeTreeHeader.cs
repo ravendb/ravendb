@@ -39,10 +39,10 @@ namespace Voron.Impl.FileHeaders
 			public OptionFlags Flags;
 
 			[FieldOffset(2)]
-			public long RootPageNumber;
+			public long NumberOfEntries;
 
 			[FieldOffset(10)]
-			public long NumberOfEntries;
+			public long RootPageNumber;
 		}
 	}
 }

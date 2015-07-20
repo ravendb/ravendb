@@ -77,7 +77,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesKeysCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\getKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getPointsCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesStatsCommand.ts" />

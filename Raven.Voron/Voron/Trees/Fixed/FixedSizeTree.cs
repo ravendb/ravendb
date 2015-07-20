@@ -27,7 +27,7 @@ namespace Voron.Trees.Fixed
         private readonly byte _valSize;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
-        private FixedSizeTreeHeader.OptionFlags? _flags;
+		private FixedSizeTreeHeader.OptionFlags? _flags;
         private Stack<Page> _cursor;
 
         public FixedSizeTree(Transaction tx, Tree parent, Slice treeName, byte valSize)
@@ -477,12 +477,55 @@ namespace Voron.Trees.Fixed
                     RemoveEmbeddedEntry(key);
                     break;
                 case FixedSizeTreeHeader.OptionFlags.Large:
-                    RemoveLargeEntry(key);
+		            RemoveLargeEntry(key);
                     break;
             }
         }
 
-        private void RemoveLargeEntry(long key)
+		public long DeleteRange(long start, long end, out bool isAllRemoved)
+		{
+			IFixedSizeIterator it = null;
+			try
+			{
+				var flags = _flags;
+				it = Iterate();
+				if (it.Seek(start) == false)
+				{
+					isAllRemoved = false;
+					return 0;
+				}
+
+				long numberOfEntriesRemoved = 0;
+				long key = start;
+				do
+				{
+					if (_flags != flags)
+					{
+						it.Dispose();
+						it = Iterate();
+						if (it.Seek(key) == false)
+							break;
+						flags = _flags;
+					}
+
+					key = it.CurrentKey;
+					if (key > end)
+						break;
+
+					numberOfEntriesRemoved++;
+				} while (it.DeleteCurrentAndMoveNext());
+
+				isAllRemoved = numberOfEntriesRemoved > 0 && it.Seek(DateTime.MinValue.Ticks) == false;
+				return numberOfEntriesRemoved;
+			}
+			finally
+			{
+				if (it != null)
+					it.Dispose();
+			}
+		}
+
+	    private void RemoveLargeEntry(long key)
         {
             var page = FindPageFor(key);
             if (page.LastMatch != 0)
@@ -650,5 +693,15 @@ namespace Voron.Trees.Fixed
 
             return null;
         }
+
+	    public long NumberOfEntries()
+	    {
+			// both large & embedded have same position for number of entries, we can use both
+			// regardless of type
+			var header = (FixedSizeTreeHeader.Embedded*)_parent.DirectRead(_treeName);
+		    if (header == null)
+			    return 0;
+			return header->NumberOfEntries;
+	    }
     }
 }

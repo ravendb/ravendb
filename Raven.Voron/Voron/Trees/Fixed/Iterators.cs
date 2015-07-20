@@ -25,10 +25,8 @@ namespace Voron.Trees.Fixed
 			bool DeleteCurrentAndMoveNext();
 
             ValueReader CreateReaderForCurrent();
-            
-			long NumberOfEntries();
 
-			bool Skip(int count);
+	        bool Skip(int count);
         }
 
         public class NullIterator : IFixedSizeIterator
@@ -59,12 +57,7 @@ namespace Voron.Trees.Fixed
                 throw new InvalidOperationException("No current page");
             }
 
-	        public long NumberOfEntries()
-	        {
-				throw new InvalidOperationException("No current page");
-	        }
-
-			public bool Skip(int count)
+	        public bool Skip(int count)
 	        {
 				throw new InvalidOperationException("No current page");
 	        }
@@ -136,12 +129,7 @@ namespace Voron.Trees.Fixed
                 return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
             }
 
-	        public long NumberOfEntries()
-	        {
-		        return _header->NumberOfEntries;
-	        }
-
-			public bool Skip(int count)
+	        public bool Skip(int count)
 	        {
 				if (count != 0)
 					_pos += count;
@@ -240,9 +228,23 @@ namespace Voron.Trees.Fixed
 	        public bool DeleteCurrentAndMoveNext()
 	        {
 				var currentKey = CurrentKey;
+				if (currentKey == 635565780000000000)
+				{
+					
+				}
 				_parent.RemoveLargeEntry(currentKey);
-				return Seek(currentKey);
-			}
+				if (_parent._flags == FixedSizeTreeHeader.OptionFlags.Large)
+				{
+					var deleteCurrentAndMoveNext = Seek(currentKey);
+					if (deleteCurrentAndMoveNext == false)
+					{
+						
+					}
+					return deleteCurrentAndMoveNext;
+				}
+				return true;
+	        }
+
 	        public ValueReader CreateReaderForCurrent()
             {
                 if (_currentPage == null)
@@ -251,32 +253,7 @@ namespace Voron.Trees.Fixed
                 return new ValueReader(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
             }
 
-	        public long NumberOfEntries()
-	        {
-				// TODO: Fix this
-				if (Seek(0) == false)
-					return 0;
-
-		        long count = 0;
-				while (_currentPage != null)
-				{
-					count += _currentPage.FixedSize_NumberOfEntries;
-					while (_currentPage.IsBranch)
-					{
-						var childParentNumber = _parent.PageValueFor(_currentPage.Base + _currentPage.FixedSize_StartPosition, _currentPage.LastSearchPosition);
-						_currentPage = _parent._tx.GetReadOnlyPage(childParentNumber);
-						count += _currentPage.FixedSize_NumberOfEntries;
-					}
-					if (_parent._cursor.Count == 0)
-						break;
-					_currentPage = _parent._cursor.Pop();
-				}
-				_currentPage = null;
-
-		        return count;
-	        }
-
-			public bool Skip(int count)
+	        public bool Skip(int count)
 	        {
 				if (count != 0)
 				{

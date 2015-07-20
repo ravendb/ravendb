@@ -35,7 +35,7 @@ namespace Raven.Tests.TimeSeries
 				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
 				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
-				Assert.Equal(6, stats.ValuesCount);
+				Assert.Equal(6, stats.PointsCount);
 			}
 		}
 
@@ -68,7 +68,7 @@ namespace Raven.Tests.TimeSeries
 				var stats = await store.GetTimeSeriesStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
-				Assert.Equal(1, stats.ValuesCount);
+				Assert.Equal(1, stats.PointsCount);
 			}
 		}
 
@@ -86,7 +86,7 @@ namespace Raven.Tests.TimeSeries
 				var stats = await store.GetTimeSeriesStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
-				Assert.Equal(1, stats.ValuesCount);
+				Assert.Equal(1, stats.PointsCount);
 			}
 		}
 
@@ -105,7 +105,7 @@ namespace Raven.Tests.TimeSeries
 				var stats = await store.GetTimeSeriesStatsAsync();
 				Assert.Equal(0, stats.TypesCount);
 				Assert.Equal(0, stats.KeysCount);
-				Assert.Equal(0, stats.ValuesCount);
+				Assert.Equal(0, stats.PointsCount);
 			}
 		}
 
@@ -125,13 +125,63 @@ namespace Raven.Tests.TimeSeries
 				var stats = await store.GetTimeSeriesStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
-				Assert.Equal(12, stats.ValuesCount);
+				Assert.Equal(12, stats.PointsCount);
 
 				await store.DeleteRangeAsync("Simple", "Time", start.AddHours(3), start.AddHours(7));
 				stats = await store.GetTimeSeriesStatsAsync();
 				Assert.Equal(1, stats.TypesCount);
 				Assert.Equal(1, stats.KeysCount);
-				Assert.Equal(7, stats.ValuesCount);
+				Assert.Equal(7, stats.PointsCount);
+			}
+		}
+
+		[Fact]
+		public async Task DeleteBigRange()
+		{
+			using (var store = NewRemoteTimeSeriesStore())
+			{
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				
+				var start = new DateTime(2015, 1, 1);
+				for (int i = 0; i < 1200; i++)
+				{
+					await store.AppendAsync("Simple", "Time", start.AddHours(i), i + 3D);
+				}
+				var stats = await store.GetTimeSeriesStatsAsync();
+				Assert.Equal(1, stats.TypesCount);
+				Assert.Equal(1, stats.KeysCount);
+				Assert.Equal(1200, stats.PointsCount);
+
+				await store.DeleteRangeAsync("Simple", "Time", start.AddHours(3), start.AddYears(7));
+				stats = await store.GetTimeSeriesStatsAsync();
+				Assert.Equal(1, stats.TypesCount);
+				Assert.Equal(3, stats.PointsCount);
+				Assert.Equal(1, stats.KeysCount);
+			}
+		}
+
+		[Fact]
+		public async Task DeleteBigRange_DeleteAll()
+		{
+			using (var store = NewRemoteTimeSeriesStore())
+			{
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+
+				var start = new DateTime(2015, 1, 1);
+				for (int i = 0; i < 1200; i++)
+				{
+					await store.AppendAsync("Simple", "Time", start.AddHours(i), i + 3D);
+				}
+				var stats = await store.GetTimeSeriesStatsAsync();
+				Assert.Equal(1, stats.TypesCount);
+				Assert.Equal(1, stats.KeysCount);
+				Assert.Equal(1200, stats.PointsCount);
+
+				await store.DeleteRangeAsync("Simple", "Time", DateTime.MinValue, DateTime.MaxValue);
+				stats = await store.GetTimeSeriesStatsAsync();
+				Assert.Equal(1, stats.TypesCount);
+				Assert.Equal(0, stats.KeysCount);
+				Assert.Equal(0, stats.PointsCount);
 			}
 		}
 
@@ -187,7 +237,7 @@ namespace Raven.Tests.TimeSeries
 				var stats = await store.GetTimeSeriesStatsAsync();
 				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
-				Assert.Equal(18888 * 3, stats.ValuesCount);
+				Assert.Equal(18888 * 3, stats.PointsCount);
 
 				WaitForUserToContinueTheTest(startPage: "/studio/index.html#timeseries/series?type=-Simple&key=Money&timeseries=SeriesName-1");
 			}
@@ -244,7 +294,7 @@ namespace Raven.Tests.TimeSeries
 				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
 				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
-				Assert.Equal(7, stats.ValuesCount);
+				Assert.Equal(7, stats.PointsCount);
 			}
 		}
 
@@ -314,7 +364,7 @@ namespace Raven.Tests.TimeSeries
 				var stats = await store.GetTimeSeriesStatsAsync(cancellationToken);
 				Assert.Equal(2, stats.TypesCount);
 				Assert.Equal(3, stats.KeysCount);
-				Assert.Equal(7, stats.ValuesCount);
+				Assert.Equal(7, stats.PointsCount);
 			}
 		}
 	}

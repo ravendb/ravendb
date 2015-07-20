@@ -662,7 +662,7 @@ namespace Raven.Database.TimeSeries
 				var isNew = fixedTree.Add(time.Ticks, valBuffer);
 				if (isNew)
 				{
-					storage.UpdateValuesCount(tx, 1);
+					storage.UpdatePointsCount(tx, 1);
 				}
 			}
 
@@ -740,23 +740,10 @@ namespace Raven.Database.TimeSeries
 				if (type == null)
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
-				var fixedTree = tree.FixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
-				using (var it = fixedTree.Iterate())
-				{
-					if (it.Seek(DateTime.MinValue.Ticks) == false)
-						return false;
-
-					do
-					{
-						storage.UpdateValuesCount(tx, -1);
-					} while (it.DeleteCurrentAndMoveNext());
+				var numberOfEntriesRemoved = tree.DeleteFixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
+				storage.UpdatePointsCount(tx, -numberOfEntriesRemoved);
+				storage.UpdateKeysCount(tx, -1);
 				
-					if (it.Seek(DateTime.MinValue.Ticks) == false)
-					{
-						storage.UpdateKeysCount(tx, -1);
-					}
-				}
-
 				return true;
 			}
 
@@ -787,24 +774,11 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
 				var fixedTree = tree.FixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
-				using (var it = fixedTree.Iterate())
-				{
-					if (it.Seek(start) == false)
-						return;
-
-					do
-					{
-						if (it.CurrentKey > end)
-							break;
-
-						storage.UpdateValuesCount(tx, -1);
-					} while (it.DeleteCurrentAndMoveNext());
-
-					if (it.Seek(DateTime.MinValue.Ticks) == false)
-					{
-						storage.UpdateKeysCount(tx, -1);
-					}
-				}
+				bool isAllRemoved;
+				var numberOfEntriesRemoved = fixedTree.DeleteRange(start, end, out isAllRemoved);
+				storage.UpdatePointsCount(tx, -numberOfEntriesRemoved);
+				if (isAllRemoved)
+					storage.UpdateKeysCount(tx, -1);
 			}
 		}
 
@@ -907,7 +881,7 @@ namespace Raven.Database.TimeSeries
 				Url = TimeSeriesUrl,
 				TypesCount = GetTypesCount(),
 				KeysCount = GetKeysCount(),
-				ValuesCount = GetValuesCount(),
+				PointsCount = GetPointsCount(),
 				TimeSeriesSize = SizeHelper.Humane(TimeSeriesEnvironment.Stats().UsedDataFileSizeInBytes),
 				RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondCounter.CurrentValue, 3),
 			};
@@ -1034,12 +1008,12 @@ namespace Raven.Database.TimeSeries
 			}
 		}
 
-		public long GetValuesCount()
+		public long GetPointsCount()
 		{
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.Read))
 			{
 				var metadata = tx.ReadTree("$metadata");
-				var val = metadata.Read(StatsPrefix + "values-count");
+				var val = metadata.Read(StatsPrefix + "points-count");
 				if (val == null)
 					return 0;
 				var count = val.Reader.ReadLittleEndianInt64();
@@ -1082,19 +1056,19 @@ namespace Raven.Database.TimeSeries
 			}
 		}
 
-		private void UpdateKeysCount(Transaction tx, int delta)
+		private void UpdateKeysCount(Transaction tx, long delta)
 		{
 			var metadata = tx.ReadTree("$metadata");
 			metadata.Increment(StatsPrefix + "keys-count", delta);
 		}
 
-		private void UpdateValuesCount(Transaction tx, int delta)
+		private void UpdatePointsCount(Transaction tx, long delta)
 		{
 			var metadata = tx.ReadTree("$metadata");
-			metadata.Increment(StatsPrefix + "values-count", delta);
+			metadata.Increment(StatsPrefix + "points-count", delta);
 		}
 
-		private void UpdateTypesCount(Transaction tx, int delta)
+		private void UpdateTypesCount(Transaction tx, long delta)
 		{
 			var metadata = tx.ReadTree("$metadata");
 			metadata.Increment(StatsPrefix + "types-count", delta);

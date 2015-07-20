@@ -2,7 +2,7 @@
 import timeSeries = require("models/timeSeries/timeSeriesDocument");
 import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
 
-class getTimeSeriesKeysCommand extends commandBase {
+class getKeysCommand extends commandBase {
 
     constructor(private ts: timeSeries) {
         super();
@@ -10,8 +10,8 @@ class getTimeSeriesKeysCommand extends commandBase {
 
     execute(): JQueryPromise<timeSeriesKey[]> {
         var selector = (keys: timeSeriesKeyDto[]) => keys.map((key: timeSeriesKeyDto) => timeSeriesKey.fromDto(key, this.ts));
-        return this.query("/keys", null, this.ts, selector);
+        return this.query("/" + this.type + "/keys", null, this.ts, selector);
     }
 }
 
-export = getTimeSeriesKeysCommand; 
+export = getKeysCommand; 
