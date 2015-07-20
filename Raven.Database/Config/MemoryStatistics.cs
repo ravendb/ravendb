@@ -341,16 +341,29 @@ namespace Raven.Database.Config
 #else
                 try
                 {
-                    var availablePhysicalMemoryInMb = (int)(new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory / 1024 / 1024);
+                    // The CLR Memory (CLR) = Live Object (LO) + Dead Objects (DO)
+                    // The Working Set (WS) = CLR + Live Unmanaged (LU) = LO + DO + LU
+                       
+                    // Used Memory (UM) = WS - DO = CLR + LU - DO = (LO + DO) + LU - DO = LO + LU
+                    // Available Memory (AM) = Total Memory (TM) - UM  = TM - ( LO + LU ) = TM - LO - LU
+                                        
+                    long totalMemory = (long) new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
+                    long liveObjectMemory = GC.GetTotalMemory(false);                                                            
+                    
+                    // There is still no way for us to query the amount of unmanaged memory in the working set
+                    // so we will have to live with the over-estimation of the total available memory. 
+                    long availableMemory = totalMemory - liveObjectMemory;
+                    int availablePhysicalMemoryInMb = (int)(availableMemory / 1024 / 1024);       
+
                     if (Environment.Is64BitProcess)
-                    {
+                    {                    
                         return memoryLimitSet ? Math.Min(MemoryLimit, availablePhysicalMemoryInMb) : availablePhysicalMemoryInMb;
                     }
 
                     // we are in 32 bits mode, but the _system_ may have more than 4 GB available
                     // so we have to check the _address space_ as well as the available memory
                     // 32bit processes are limited to 1.5GB of heap memory
-                    var workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
+                    int workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
                     return memoryLimitSet ? Math.Min(MemoryLimit, Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb)) : Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb);
                 }
                 catch
