@@ -306,29 +306,29 @@ namespace Raven.Database.Indexing
 
 
 		private bool GenerateIndexingBatchesAndPrefetchDocuments(List<IndexingGroup> groupedIndexes, ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations)
-					{
+		{
 			bool operationWasCancelled = false;
+
 			context.Database.MappingThreadPool.ExecuteBatch(groupedIndexes,
 				indexingGroup =>
 				{
-						try
-						{
+					bool operationAdded = false;
+					try
+					{
 						indexingGroup.PrefetchDocuments();
 						var curGroupJsonDocs = indexingGroup.JsonDocs;
-							if (Log.IsDebugEnabled)
-							{
-								Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+						if (Log.IsDebugEnabled)
+						{
+							Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
 								curGroupJsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", curGroupJsonDocs.Select(x => x.Key)));
-							}
-
+						}
 
 						indexingGroup.BatchInfo =
 							context.ReportIndexingBatchStarted(curGroupJsonDocs.Count,
 								curGroupJsonDocs.Sum(x => x.SerializedSizeOnDisk),
 								indexingGroup.Indexes.Select(x => x.Index.PublicName).ToList());
 
-
-							context.CancellationToken.ThrowIfCancellationRequested();
+						context.CancellationToken.ThrowIfCancellationRequested();
 						var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(curGroupJsonDocs);
 						var lastModified = lastByEtag.LastModified.Value;
 						var lastEtag = lastByEtag.Etag;
@@ -336,11 +336,10 @@ namespace Raven.Database.Indexing
 						var indexBatches = FilterIndexes(indexingGroup.Indexes, curGroupJsonDocs, lastEtag, out filteredOutIndexes).OrderByDescending(x => x.Index.LastQueryTime).ToList();
 
 						foreach (var filteredOutIndex in filteredOutIndexes)
-							{
+						{
 							indexingGroup.SignalIndexingComplete();
 							filteredOutIndex.Index.IsMapIndexingInProgress = false;
-							}
-
+						}
 
 						foreach (var indexBatch in indexBatches)
 						{
@@ -351,26 +350,38 @@ namespace Raven.Database.Indexing
 								LastModified = lastModified,
 								IndexingBatchInfo = indexingGroup.BatchInfo
 							};
+
 							if (indexBatchOperations.TryAdd(indexingBatchOperation, new object()))
 							{
 								indexingBatchOperation.IndexingBatch.OnIndexingComplete += indexingGroup.SignalIndexingComplete;
-						}
+								operationAdded = true;
+							}
 						}
 					}
 					catch (OperationCanceledException)
 					{
 						operationWasCancelled = true;
 					}
-						catch (InvalidDataException e)
-						{
-							Log.ErrorException("Failed to index because of data corruption. ", e);
+					catch (InvalidDataException e)
+					{
+						Log.ErrorException("Failed to index because of data corruption. ", e);
 						indexingGroup.Indexes.ForEach(index =>
 							Log.ErrorException("Failed to index because of data corruption. ", e));
 					}
-				}, description: string.Format("Prefatching Index Groups for {0} groups", groupedIndexes.Count));
-			return operationWasCancelled;
+					finally
+					{
+						if (operationAdded == false)
+						{
+							indexingGroup.Indexes.ForEach(x =>
+							{
+								indexingGroup.SignalIndexingComplete();
+								x.Index.IsMapIndexingInProgress = false;
+							});
 						}
-
+					}
+				}, description: string.Format("Prefetching Index Groups for {0} groups", groupedIndexes.Count));
+			return operationWasCancelled;
+		}
 
 		private bool GenerateIndexingGroupsByEtagRanges(IList<IndexToWorkOn> indexes, out ConcurrentSet<PrefetchingBehavior> usedPrefetchers, out List<IndexingGroup> indexingGroups)
 						{
