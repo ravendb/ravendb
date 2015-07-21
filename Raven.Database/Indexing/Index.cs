@@ -1917,30 +1917,40 @@ namespace Raven.Database.Indexing
 
 			if (indexCorrupted == false || (Priority & IndexingPriority.Error) == IndexingPriority.Error)
 				return;
-			
-			context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
-			Priority = IndexingPriority.Error;
 
-			context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
+			using (context.TransactionalStorage.DisableBatchNesting())
 			{
-				Name = PublicName,
-				Type = IndexChangeTypes.IndexMarkedAsErrored
-			});
+				try
+				{
+					context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
+					Priority = IndexingPriority.Error;
 
-			if (string.IsNullOrEmpty(errorMessage))
-				throw new ArgumentException("Error message has to be set");
+					context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
+					{
+						Name = PublicName,
+						Type = IndexChangeTypes.IndexMarkedAsErrored
+					});
 
-			logIndexing.WarnException(errorMessage, e);
-			context.AddError(indexId, PublicName, null, errorMessage);
+					if (string.IsNullOrEmpty(errorMessage))
+						throw new ArgumentException("Error message has to be set");
 
-			context.Database.AddAlert(new Alert
-			{
-				AlertLevel = AlertLevel.Error,
-				CreatedAt = SystemTime.UtcNow,
-				Message = errorMessage,
-				Title = string.Format("Index '{0}' marked as errored due to corruption", PublicName),
-				UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
-			});
+					logIndexing.WarnException(errorMessage, e);
+					context.AddError(indexId, PublicName, null, errorMessage);
+
+					context.Database.AddAlert(new Alert
+					{
+						AlertLevel = AlertLevel.Error,
+						CreatedAt = SystemTime.UtcNow,
+						Message = errorMessage,
+						Title = string.Format("Index '{0}' marked as errored due to corruption", PublicName),
+						UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
+					});
+				}
+				catch (Exception ex)
+				{
+					logIndexing.WarnException(string.Format("Failed to handle corrupted {0} index", PublicName), ex);
+				}
+			}
 		}
 
 		private void ResetWriteErrors()
