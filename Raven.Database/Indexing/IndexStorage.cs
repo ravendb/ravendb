@@ -978,7 +978,7 @@ namespace Raven.Database.Indexing
 			IOExtensions.DeleteDirectory(dirOnDisk);
 		}
 
-		public Index ReopenErroredIndex(Index index)
+		public Index ReopenCorruptedIndex(Index index)
 		{
 			if(index.Priority != IndexingPriority.Error)
 				throw new InvalidOperationException(string.Format("Index {0} isn't errored", index.PublicName));

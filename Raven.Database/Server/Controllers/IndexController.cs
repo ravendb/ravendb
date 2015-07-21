@@ -4,6 +4,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Database.Actions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -261,12 +262,10 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPatch]
-		[RavenRoute("indexes/try-recover-failed-indexes")]
-		[RavenRoute("databases/{databaseName}/indexes/try-recover-failed-indexes")]
-		public HttpResponseMessage TryRecoverFailedIndexes()
+		[RavenRoute("indexes/try-recover-corrupted")]
+		[RavenRoute("databases/{databaseName}/indexes/try-recover-corrupted")]
+		public HttpResponseMessage TryRecoverCorruptedIndexes()
 		{
-			var recoveredIndexes = new List<string>();
-
 			foreach (var indexId in Database.IndexStorage.Indexes)
 			{
 				var index = Database.IndexStorage.GetIndexInstance(indexId);
@@ -274,27 +273,32 @@ namespace Raven.Database.Server.Controllers
 				if(index.Priority != IndexingPriority.Error)
 					continue;
 
-				// try to recover by reopening the index - it will be reset if necessary
-				try
+				long taskId;
+				var task = Task.Run(() =>
 				{
-					index = Database.IndexStorage.ReopenErroredIndex(index);
-				}
-				catch (Exception e)
+					// try to recover by reopening the index - it will reset it if necessary
+					try
+					{
+						index = Database.IndexStorage.ReopenCorruptedIndex(index);
+
+						Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index.IndexId, IndexingPriority.Normal));
+						index.Priority = IndexingPriority.Normal;
+
+						Database.WorkContext.ShouldNotifyAboutWork(() => string.Format("Index {0} has been recovered.", index.PublicName));
+						Database.WorkContext.NotifyAboutWork();
+					}
+					catch (Exception e)
+					{
+						Log.WarnException("Failed to recover the corrupted index '{0}' by reopening it.", e);
+					}
+				});
+
+				Database.Tasks.AddTask(task, null, new TaskActions.PendingTaskDescription
 				{
-					Log.WarnException("Failed to recover the failed index '{0}' by reopening it.", e);
-					continue;
-				}
-
-				Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index.IndexId, IndexingPriority.Normal));
-				index.Priority = IndexingPriority.Normal;
-
-				recoveredIndexes.Add(index.PublicName);
-			}
-
-			if (recoveredIndexes.Count > 0)
-			{
-				Database.WorkContext.ShouldNotifyAboutWork(() => "The following indexes have been recovered: " + string.Join(", ", recoveredIndexes));
-				Database.WorkContext.NotifyAboutWork();
+					StartTime = SystemTime.UtcNow,
+					TaskType = TaskActions.PendingTaskType.RecoverCorruptedIndexOperation,
+					Payload = index.PublicName
+				}, out taskId);
 			}
 
 			return GetEmptyMessage();
