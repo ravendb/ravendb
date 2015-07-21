@@ -6,12 +6,13 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-
+using FluentAssertions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
@@ -22,7 +23,7 @@ namespace Raven.Tests.Issues
 {
 	public class RDoc_391 : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults";
 		}
@@ -72,6 +73,25 @@ namespace Raven.Tests.Issues
 				RetryOnConcurrencyExceptions = false;
 			}
 		}
+
+		[Fact]
+		public void GetIndexStatistics_should_not_advance_last_indexed_etag()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				var index = new People_By_Name_With_Scripts();
+				index.Execute(store);
+				WaitForIndexing(store);
+				var statsBefore = store.DatabaseCommands.GetStatistics();
+				var indexStats = statsBefore.Indexes.First(x => x.Name == index.IndexName);
+				var lastIndexedEtag = indexStats.LastIndexedEtag;
+
+				var statsAfter = store.DatabaseCommands.GetStatistics();
+				indexStats = statsAfter.Indexes.First(x => x.Name == index.IndexName);
+				indexStats.LastIndexedEtag.Should().Be(lastIndexedEtag);
+			}
+		}
+
 
 		[Fact]
 		public void AbstractScriptedIndexCreationTaskWillCreateIndexAndDocument1()

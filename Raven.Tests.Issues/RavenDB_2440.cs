@@ -85,7 +85,7 @@ namespace Raven.Tests.Issues
 					.DatabaseCommands
 					.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery { ShowTimings = true });
 
-				Assert.Equal(3, result.TimingsInMilliseconds.Count);
+				Assert.Equal(4, result.TimingsInMilliseconds.Count);
 
 				using (var session = store.OpenSession())
 				{
