@@ -19,7 +19,7 @@ namespace Sparrow.Collections
     /// </summary>
     public sealed class ZFastTrieSortedSet<TKey, TValue> where TKey : IEquatable<TKey>
     {
-        protected abstract class Node
+        private abstract class Node
         {
             public readonly int NameLength;
 
@@ -91,7 +91,7 @@ namespace Sparrow.Collections
         /// Leaves are organized in a double linked list: each leaf, besides a pointer to the corresponding string of S, 
         /// stores two pointers to the next/previous leaf in lexicographic order. Page 163 of [1].
         /// </summary>
-        protected sealed class Leaf : Node
+        private sealed class Leaf : Node
         {
             public override bool IsLeaf { get { return true; } }
             public override bool IsInternal { get { return false; } }
@@ -145,7 +145,7 @@ namespace Sparrow.Collections
         /// Every internal node contains a pointer to its two children, the extremes ia and ja of its skip interval,
         /// its own extent ea and two additional jump pointers J- and J+. Page 163 of [1].
         /// </summary>
-        protected sealed class Internal : Node
+        private sealed class Internal : Node
         {
             public readonly int ExtentLength;
 
@@ -244,10 +244,13 @@ namespace Sparrow.Collections
             /// </summary>
             public readonly Node Exit;
 
-            public ExitNode(int lcp, Node exit)
+            public readonly BitVector SearchKey;
+
+            public ExitNode(int lcp, Node exit, BitVector v)
             {
                 this.LongestPrefix = lcp;
                 this.Exit = exit;
+                this.SearchKey = v;
             }
 
             public bool IsLeaf
@@ -594,34 +597,48 @@ namespace Sparrow.Collections
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private TKey PredecessorInternal(TKey key)
-        {
-            // We prepare the signature to compute incrementally. 
-            BitVector v = binarizeFunc(key);
-            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
-
-            throw new NotImplementedException();
+        {            
+            // x− = max{y ∈ S | y < x} (the predecessor of x in S) - Page 160 of [1]
 
             // We look for the exit node for the key
+            var exitFound = FindExitNode(key);
+            var exitNode = exitFound.Exit;
 
             // We compare the key with the exit node extent.
-            // If the key is smaller than the extent, we exit to the right leaf.
-            // If the key is greater than the extent, we exit to the left leaf and get the previous leaf.
+            int dummy;
+            if (exitNode.Extent(binarizeFunc).CompareToInline(exitFound.SearchKey, out dummy) < 0)
+            {
+                // If the key is greater than the extent, we exit to the right leaf.
+                return exitNode.GetRightLeaf().Key;
+            }
+            else
+            {
+                // If the key is smaller than the extent, we exit to the left leaf and get the previous leaf.
+                return exitNode.GetLeftLeaf().Previous.Key;
+            }            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private TKey SuccessorInternal(TKey key)
         {
-            // We prepare the signature to compute incrementally. 
-            BitVector v = binarizeFunc(key);
-            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
-
-            throw new NotImplementedException();
+            // x+ = min{y ∈ S | y ≥ x} (the successor of x in S) - Page 160 of [1]
 
             // We look for the exit node for the key
+            var exitFound = FindExitNode(key);
+            var exitNode = exitFound.Exit;
 
             // We compare the key with the exit node extent.
-            // If the key is smaller than the extent, we exit to the left leaf.
-            // If the key is greater than the extent, we exit to the right leaf and get the next.
+            int dummy;
+            if (exitFound.SearchKey.CompareToInline(exitNode.Extent(binarizeFunc), out dummy) <= 0)
+            {
+                // If the key is smaller than the extent, we exit to the left leaf.
+                return exitNode.GetLeftLeaf().Key;
+            }
+            else
+            {
+                // If the key is greater than the extent, we exit to the right leaf and get the next.
+                return exitNode.GetRightLeaf().Next.Key;
+            }                        
         }
 
         private void AddAfter(Leaf predecessor, Leaf newNode)
@@ -678,12 +695,13 @@ namespace Sparrow.Collections
             var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
 
             if (size == 1)
-                return new ExitNode(v.LongestCommonPrefixLength(this.root.Extent(binarizeFunc)), this.root );
+                return new ExitNode(v.LongestCommonPrefixLength(this.root.Extent(binarizeFunc)), this.root, v );
 
             throw new NotImplementedException();
         }
 
-        protected static int TwoFattest( int a, int b)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int TwoFattest( int a, int b)
         {
             return -1 << Bits.MostSignificantBit(a ^ b) & b;
         }

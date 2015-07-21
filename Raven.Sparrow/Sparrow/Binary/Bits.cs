@@ -8,7 +8,7 @@ namespace Sparrow.Binary
 {
     public static class Bits
     {
-
+        
         public static uint MostSignificantBit(uint n)
         {
             n |= (n >> 1);

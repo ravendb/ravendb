@@ -34,8 +34,17 @@ namespace Sparrow.Tests
 
             string value;
             Assert.True(tree.TryGet(key, out value));
-            Assert.Null(tree.SuccessorOrDefault(key));
-            Assert.Null(tree.PredecessorOrDefault(key));
+
+            // x+ = min{y ∈ S | y ≥ x} (the successor of x in S) - Page 160 of [1]
+            // Therefore the successor of the key "oren" is greater or equal to "oren"
+            Assert.Equal(key, tree.SuccessorOrDefault(key));
+            Assert.Null(tree.SuccessorOrDefault("qu"));
+            
+            // x− = max{y ∈ S | y < x} (the predecessor of x in S) - Page 160 of [1] 
+            // Therefore the predecessor of the key "oren" is strictly less than "oren".
+            Assert.Null(tree.PredecessorOrDefault(key));            
+            Assert.Null(tree.PredecessorOrDefault("aq"));
+            Assert.Equal(key, tree.PredecessorOrDefault("pq"));
         }
 
         [Fact]
