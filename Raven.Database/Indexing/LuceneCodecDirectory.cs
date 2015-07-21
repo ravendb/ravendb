@@ -157,25 +157,12 @@ namespace Raven.Database.Indexing
 
 			private readonly FileInfo file;
 			private readonly Stream stream;
+			private bool disposed;
 
 			public CodecIndexOutput(FileInfo file, Func<Stream, Stream> applyCodecs)
 			{
 				this.file = file;
 				stream = applyCodecs(file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
-			}
-
-			~CodecIndexOutput()
-			{
-				try
-				{
-					log.Error("~CodecIndexOutput() " + file.FullName + "!");
-					Dispose(false);
-				}
-				catch (Exception e)
-				{
-					// Can't throw exceptions from the finalizer thread
-					log.ErrorException("Cannot dispose of CodecIndexOutput: " + e.Message, e);
-				}
 			}
 
 			public override void FlushBuffer(byte[] b, int offset, int len)
@@ -186,10 +173,15 @@ namespace Raven.Database.Indexing
 
 			protected override void Dispose(bool disposing)
 			{
-				base.Dispose(disposing);
-			    if (stream != null)
-			        stream.Close();
-				GC.SuppressFinalize(this);
+				if (disposed)
+					return;
+
+				using (stream)
+				{
+					base.Dispose(disposing);
+				}
+
+				disposed = true;
 			}
 
 			public override void Seek(long pos)
