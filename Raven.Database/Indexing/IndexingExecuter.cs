@@ -366,7 +366,7 @@ namespace Raven.Database.Indexing
 					{
 						Log.ErrorException("Failed to index because of data corruption. ", e);
 						indexingGroup.Indexes.ForEach(index =>
-							Log.ErrorException("Failed to index because of data corruption. ", e));
+							context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
 					}
 					finally
 					{
