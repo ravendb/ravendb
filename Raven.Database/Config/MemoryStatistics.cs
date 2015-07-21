@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 using Sparrow.Collections;
@@ -336,9 +337,6 @@ namespace Raven.Database.Config
                     failedToGetAvailablePhysicalMemory = true;
                     return -1;
                 }
-#if __MonoCS__
-				throw new PlatformNotSupportedException("This build can only run on Mono");
-#else
                 try
                 {
                     // The CLR Memory (CLR) = Live Object (LO) + Dead Objects (DO)
@@ -352,7 +350,9 @@ namespace Raven.Database.Config
                     
                     // There is still no way for us to query the amount of unmanaged memory in the working set
                     // so we will have to live with the over-estimation of the total available memory. 
-                    long availableMemory = totalMemory - liveObjectMemory;
+					// to compensate for that, we will already remove 20% of the live object used as the size
+					// of unmanaged memory we use
+	                long availableMemory = totalMemory - liveObjectMemory - ((int)(liveObjectMemory * 0.2));
                     int availablePhysicalMemoryInMb = (int)(availableMemory / 1024 / 1024);       
 
                     if (Environment.Is64BitProcess)
@@ -371,7 +371,6 @@ namespace Raven.Database.Config
                     failedToGetAvailablePhysicalMemory = true;
                     return -1;
                 }
-#endif
             }
         }
 
