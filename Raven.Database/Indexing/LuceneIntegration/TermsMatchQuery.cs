@@ -32,7 +32,9 @@ namespace Raven.Database.Indexing.LuceneIntegration
 		{
 			this.field = field;
 			this.matches = matches;
-			this.matches.Sort(StringComparer.Ordinal);
+			if(this.matches.Count > 1)
+				this.matches.Sort(StringComparer.Ordinal);
+			
 			RewriteMethod = SCORING_BOOLEAN_QUERY_REWRITE;
 		}
 

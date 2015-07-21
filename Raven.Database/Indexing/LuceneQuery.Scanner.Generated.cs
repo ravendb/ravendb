@@ -6,9 +6,9 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  TALWEISS-PC
-//  DateTime: 7/7/2015 8:13:59 PM
+//  DateTime: 7/13/2015 7:57:08 PM
 //  UserName: Tal
-//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 7/7/2015 7:49:17 PM>
+//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 7/13/2015 7:56:59 PM>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: verbose, parser, stack, minimize
@@ -1695,7 +1695,7 @@ yylval.s = DiscardEscapeChar(yytext);  return (int)Token.PREFIX_TERM;
 return (int)Token.OR;
             break;
         case 33: // Recognized '{UnanalizedTerm}',	Shortest string "[[]]"
-yylval.s = yytext; return (int)Token.UNANALIZED_TERM;
+yylval.s = DiscardEscapeChar(yytext); return (int)Token.UNANALIZED_TERM;
             break;
         case 34: // Recognized '"TO"',	Shortest string "TO"
 return (int)Token.TO;

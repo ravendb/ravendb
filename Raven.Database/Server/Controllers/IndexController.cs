@@ -4,6 +4,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Database.Actions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -253,7 +254,52 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			var instance = Database.IndexStorage.GetIndexInstance(index);
+
 			Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
+			instance.Priority = indexingPriority;
+
+			return GetEmptyMessage();
+		}
+
+		[HttpPatch]
+		[RavenRoute("indexes/try-recover-corrupted")]
+		[RavenRoute("databases/{databaseName}/indexes/try-recover-corrupted")]
+		public HttpResponseMessage TryRecoverCorruptedIndexes()
+		{
+			foreach (var indexId in Database.IndexStorage.Indexes)
+			{
+				var index = Database.IndexStorage.GetIndexInstance(indexId);
+
+				if(index.Priority != IndexingPriority.Error)
+					continue;
+
+				long taskId;
+				var task = Task.Run(() =>
+				{
+					// try to recover by reopening the index - it will reset it if necessary
+					try
+					{
+						index = Database.IndexStorage.ReopenCorruptedIndex(index);
+
+						Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index.IndexId, IndexingPriority.Normal));
+						index.Priority = IndexingPriority.Normal;
+
+						Database.WorkContext.ShouldNotifyAboutWork(() => string.Format("Index {0} has been recovered.", index.PublicName));
+						Database.WorkContext.NotifyAboutWork();
+					}
+					catch (Exception e)
+					{
+						Log.WarnException("Failed to recover the corrupted index '{0}' by reopening it.", e);
+					}
+				});
+
+				Database.Tasks.AddTask(task, null, new TaskActions.PendingTaskDescription
+				{
+					StartTime = SystemTime.UtcNow,
+					TaskType = TaskActions.PendingTaskType.RecoverCorruptedIndexOperation,
+					Payload = index.PublicName
+				}, out taskId);
+			}
 
 			return GetEmptyMessage();
 		}

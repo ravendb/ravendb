@@ -110,7 +110,7 @@ for(var customFunction in customFunctions) {{
 				throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
 			}
 
-			string tempPath = Path.GetTempPath();
+			string tempPath = Database.Configuration.TempPath;
 			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
 			if (File.Exists(fullTempPath))
 				File.Delete(fullTempPath);

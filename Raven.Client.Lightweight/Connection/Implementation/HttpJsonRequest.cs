@@ -578,7 +578,7 @@ namespace Raven.Client.Connection.Implementation
 
 			foreach (var prop in metadata)
 			{
-				if (prop.Value == null)
+				if (prop.Value == null || prop.Value.Type ==JTokenType.Null)
 					continue;
 
 				if (prop.Value.Type == JTokenType.Object ||

@@ -790,8 +790,11 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("databases/{databaseName}/admin/detailed-storage-breakdown")]
 		public HttpResponseMessage DetailedStorageBreakdown()
 		{
-			var x = Database.TransactionalStorage.ComputeDetailedStorageInformation();
-			return GetMessageWithObject(x);
+			var detailedReport = GetQueryStringValue("DetailedReport");
+			bool isDetailedReport;
+			if (detailedReport != null && bool.TryParse(detailedReport, out isDetailedReport) && isDetailedReport)
+				return GetMessageWithObject(Database.TransactionalStorage.ComputeDetailedStorageInformation(true));
+			return GetMessageWithObject(Database.TransactionalStorage.ComputeDetailedStorageInformation());
 		}
 
 		[HttpPost]
@@ -871,7 +874,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("admin/debug/info-package")]
 		public HttpResponseMessage InfoPackage()
 		{
-			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+			var tempFileName = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
 			try
 			{
 				var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
@@ -922,7 +925,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 		}
 
-		private static void DumpStacktrace(ZipArchive package)
+		private void DumpStacktrace(ZipArchive package)
 		{
 			var stacktrace = package.CreateEntry("stacktraces.txt", CompressionLevel.Optimal);
 
@@ -937,7 +940,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				{
 					if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
 
-					ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+					ravenDebugDir = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
 					var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
 					var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
 

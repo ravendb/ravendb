@@ -777,7 +777,7 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.Forbidden);
 			}
 
-			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+			var tempFileName = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
 			try
 			{
 				using (var file = new FileStream(tempFileName, FileMode.Create))

@@ -1,5 +1,7 @@
 ﻿using System.IO;
 using System.Linq;
+
+using Raven.Database.Config;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Xunit;
 
@@ -7,6 +9,14 @@ namespace Raven.Tests.FileSystem
 {
 	public class StorageSignatureRepositoryTests : StorageTest
     {
+		private InMemoryRavenConfiguration configuration;
+
+		public StorageSignatureRepositoryTests()
+		{
+			configuration = new InMemoryRavenConfiguration();
+			configuration.Initialize();
+		}
+
         [Fact]
         public void Should_read_from_storage()
         {
@@ -15,7 +25,7 @@ namespace Raven.Tests.FileSystem
                 accessor.AddSignature("test", 1, stream => stream.Write(new byte[] { 3 }, 0, 1));
             });
 
-            var tested = new StorageSignatureRepository(transactionalStorage, "test");
+			var tested = new StorageSignatureRepository(transactionalStorage, "test", configuration);
             Assert.Equal(3, tested.GetContentForReading("test.1.sig").ReadByte());
         }
 
@@ -27,7 +37,7 @@ namespace Raven.Tests.FileSystem
                 accessor.AddSignature("test", 1, stream => stream.Write(new byte[] { 3 }, 0, 1));
             });
 
-            var tested = new StorageSignatureRepository(transactionalStorage, "test");
+			var tested = new StorageSignatureRepository(transactionalStorage, "test", configuration);
             Assert.Throws(typeof(FileNotFoundException), () => tested.GetContentForReading("test.0.sig"));
         }
 
@@ -38,7 +48,7 @@ namespace Raven.Tests.FileSystem
             {
                 accessor.AddSignature("test", 1, stream => stream.Write(new byte[] { 3 }, 0, 1));
             });
-            var tested = new StorageSignatureRepository(transactionalStorage, "test");
+			var tested = new StorageSignatureRepository(transactionalStorage, "test", configuration);
             var result = tested.GetByName("test.1.sig");
             Assert.Equal("test.1.sig", result.Name);
             Assert.Equal(1, result.Length);
@@ -47,7 +57,7 @@ namespace Raven.Tests.FileSystem
         [Fact]
         public void Should_assign_signature_to_proper_file()
         {
-            var tested = new StorageSignatureRepository(transactionalStorage, "test.bin");
+			var tested = new StorageSignatureRepository(transactionalStorage, "test.bin", configuration);
             using(var sigContent = tested.CreateContent("test.bin.0.sig"))
             {
                 sigContent.WriteByte(3);
@@ -62,7 +72,7 @@ namespace Raven.Tests.FileSystem
         [Fact]
         public void Should_get_SignaturInfos_by_file_name()
         {
-            var tested = new StorageSignatureRepository(transactionalStorage, "test");
+			var tested = new StorageSignatureRepository(transactionalStorage, "test", configuration);
 
             transactionalStorage.Batch(accessor =>
             {

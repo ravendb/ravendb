@@ -304,7 +304,7 @@ namespace Raven.Database.Server.WebApi
 
 			CurrentOperationContext.User.Value = null;
 
-			LogContext.DatabaseName.Value = databaseName;
+			LogContext.DatabaseName = databaseName;
 			var disposable = LogManager.OpenMappedContext("database", databaseName ?? Constants.SystemDatabase);
 
 			CurrentOperationContext.RequestDisposables.Value.Add(disposable);
@@ -316,7 +316,7 @@ namespace Raven.Database.Server.WebApi
 			{
 				CurrentOperationContext.Headers.Value = null;
 				CurrentOperationContext.User.Value = null;
-				LogContext.DatabaseName.Value = null;
+				LogContext.DatabaseName = null;
 				foreach (var disposable in CurrentOperationContext.RequestDisposables.Value)
 				{
 

@@ -100,6 +100,8 @@ namespace Raven.Database.Config
 
 		public void PostInit()
 		{
+			CheckDirectoryPermissions();
+
 			FilterActiveBundles();
 
 			SetupOAuth();
@@ -348,6 +350,8 @@ namespace Raven.Database.Config
 
 			WebSockets.InitialBufferPoolSize = ravenSettings.WebSockets.InitialBufferPoolSize.Value;
 
+			TempPath = ravenSettings.TempPath.Value;
+
 			FillMonitoringSettings(ravenSettings);
 
 			PostInit();
@@ -422,6 +426,24 @@ namespace Raven.Database.Config
 		public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
 
 		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
+
+		private void CheckDirectoryPermissions()
+		{
+			var tempPath = TempPath;
+			var tempFileName = Guid.NewGuid().ToString("N");
+			var tempFilePath = Path.Combine(tempPath, tempFileName);
+
+			try
+			{
+				IOExtensions.CreateDirectoryIfNotExists(tempPath);
+				File.WriteAllText(tempFilePath, string.Empty);
+				File.Delete(tempFilePath);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(string.Format("Could not access temp path '{0}'. Please check if you have sufficient privileges to access this path or change 'Raven/TempPath' value.", tempPath), e);
+			}
+		}
 
 		private void FilterActiveBundles()
 		{
@@ -1105,6 +1127,11 @@ namespace Raven.Database.Config
         /// </summary>
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
 
+		/// <summary>
+		/// Path to temporary directory used by server.
+		/// Default: Current user's temporary directory
+		/// </summary>
+		public string TempPath { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

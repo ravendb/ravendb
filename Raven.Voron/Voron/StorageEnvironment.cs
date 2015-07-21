@@ -544,7 +544,7 @@ namespace Voron
             return results;
         }
 
-	    public StorageReport GenerateReport(Transaction tx)
+		public StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
 	    {
 			var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
 		    var numberOfFreePages = _freeSpaceHandling.AllPages(tx).Count;
@@ -570,7 +570,8 @@ namespace Voron
 				NumberOfFreePages = numberOfFreePages,
 				NextPageNumber = NextPageNumber,
 				Journals = Journal.Files.ToList(),
-				Trees = trees
+				Trees = trees,
+				IsLightReport = !computeExactSizes
 		    });
 	    }
 
