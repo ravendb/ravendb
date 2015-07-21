@@ -652,7 +652,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			replicatedDocuments = 0;
 			JsonDocumentsToReplicate documentsToReplicate = null;
-			Stopwatch sp = Stopwatch.StartNew();
+			var sp = Stopwatch.StartNew();
 			IDisposable removeBatch = null;
 
 			var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
@@ -1010,7 +1010,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 	
-		public bool ReplicateIndexesAndTransformersTask(object state)
+		public bool ReplicateIndexesAndTransformersTask(object state, Func<ReplicationDestination,bool> shouldSkipDestinationPredicate = null)
 		{
 			if (docDb.Disposed)
 				return false;
@@ -1022,7 +1022,9 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				using (CultureHelper.EnsureInvariantCulture())
 				{
-					var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
+					shouldSkipDestinationPredicate = shouldSkipDestinationPredicate ?? (x => x.SkipIndexReplication == false);
+					var replicationDestinations = GetReplicationDestinations(x => shouldSkipDestinationPredicate(x));
+
 					foreach (var destination in replicationDestinations)
 					{
 						try
