@@ -47,10 +47,8 @@ namespace Raven.Database.Server.Connections
 		public ConnectionState Register(IEventsTransport transport)
 		{
 			timeSensitiveStore.Seen(transport.Id);
-			transport.Disconnected += () =>
-			{
-			    Disconnect(transport.Id);
-			};
+			transport.Disconnected += () => Disconnect(transport.Id);
+
 			return connections.AddOrUpdate(transport.Id, new ConnectionState(transport), (s, state) =>
 			                                                                             	{
 			                                                                             		state.Reconnect(transport);

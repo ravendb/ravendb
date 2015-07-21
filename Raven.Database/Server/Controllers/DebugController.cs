@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
@@ -469,6 +470,7 @@ namespace Raven.Database.Server.Controllers
 				Results = results
 			});
 		}
+
         //DumpAllReferancesToCSV
 		[HttpGet]
 		[RavenRoute("debug/d0crefs-t0ps")]
@@ -755,6 +757,13 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage Subscriptions()
 		{
 			return GetMessageWithObject(Database.Subscriptions.GetDebugInfo());
+		}
+
+		[HttpGet]
+		[RavenRoute("debug/gc-info")]
+		public HttpResponseMessage GCInfo()
+		{
+			return GetMessageWithObject(new GCInfo {LastForcedGCTime = RavenGC.LastForcedGCTime, MemoryBeforeLastForcedGC = RavenGC.MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC = RavenGC.MemoryAfterLastForcedGC});
 		}
 	}
 

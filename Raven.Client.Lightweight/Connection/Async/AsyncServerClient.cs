@@ -157,6 +157,21 @@ namespace Raven.Client.Connection.Async
 			}, token);
 		}
 
+		public Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken))
+		{
+			return ExecuteWithReplication("POST", async operationMetadata =>
+			{
+				var operationUrl = operationMetadata.Url + "/transformers/" + name + "?op=" + "lockModeChange" + "&mode=" + lockMode;
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, "POST", operationMetadata.Credentials, convention)))
+				{
+					request.AddOperationHeaders(OperationsHeaders);
+					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+				}
+			}, token);
+		}
+
 		public Task ResetIndexAsync(string name, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication("RESET", async operationMetadata =>

@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Threading;
-using Raven.Tests.Issues;
+using Raven.Tests.Core.ChangesApi;
 
 namespace Raven.Tryouts
 {
@@ -21,12 +20,11 @@ namespace Raven.Tryouts
 		{
 			for (int i = 0; i < 1000; i++)
 			{
-				using (var test = new RavenDB_3629())
+				using (var test = new WebsocketsTests())
 				{
-					test.Referenced_files_should_be_replicatedB();
+					test.AreWebsocketsDestroyedAfterGC();
 				}			
 				Console.WriteLine(i);
-				Thread.Sleep(100);
 			}
 		}
 

@@ -201,6 +201,11 @@ namespace Raven.Client.Connection
 			AsyncHelpers.RunSync(() => asyncServerClient.DeleteTransformerAsync(name));
 		}
 
+		public void SetTransformerLock(string name, TransformerLockMode lockMode)
+		{
+			AsyncHelpers.RunSync(() => asyncServerClient.SetTransformerLockAsync(name, lockMode));
+		}
+
 		public void ResetIndex(string name)
 		{
 			AsyncHelpers.RunSync(() => asyncServerClient.ResetIndexAsync(name));

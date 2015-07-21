@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 using Sparrow.Collections;
@@ -336,31 +337,33 @@ namespace Raven.Database.Config
                     failedToGetAvailablePhysicalMemory = true;
                     return -1;
                 }
-#if __MonoCS__
-				throw new PlatformNotSupportedException("This build can only run on Mono");
-#else
                 try
                 {
-                    var currentProcess = Process.GetCurrentProcess();
-
-                    // This is the OS available memory
-                    long totalAvailableBytes = (long) new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
-                    long workingSet = currentProcess.WorkingSet64;
+                    // The CLR Memory (CLR) = Live Object (LO) + Dead Objects (DO)
+                    // The Working Set (WS) = CLR + Live Unmanaged (LU) = LO + DO + LU
+                       
+                    // Used Memory (UM) = WS - DO = CLR + LU - DO = (LO + DO) + LU - DO = LO + LU
+                    // Available Memory (AM) = Total Memory (TM) - UM  = TM - ( LO + LU ) = TM - LO - LU
+                                        
+                    long totalMemory = (long) new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
+                    long liveObjectMemory = GC.GetTotalMemory(false);                                                            
                     
-                    long workingMemory = (workingSet - GC.GetTotalMemory(false));
-                    if (workingMemory < 0) // This is an edge case which wont likely happen but have to take care of it, just in case. Can happen if most of the GC memory is swapped out (we are trashing). 
-                        workingMemory = workingSet;
+                    // There is still no way for us to query the amount of unmanaged memory in the working set
+                    // so we will have to live with the over-estimation of the total available memory. 
+					// to compensate for that, we will already remove 20% of the live object used as the size
+					// of unmanaged memory we use
+	                long availableMemory = totalMemory - liveObjectMemory - ((int)(liveObjectMemory * 0.2));
+                    int availablePhysicalMemoryInMb = (int)(availableMemory / 1024 / 1024);       
 
-                    var availablePhysicalMemoryInMb = (int)(workingMemory / 1024 / 1024);
                     if (Environment.Is64BitProcess)
-                    {                       
+                    {                    
                         return memoryLimitSet ? Math.Min(MemoryLimit, availablePhysicalMemoryInMb) : availablePhysicalMemoryInMb;
                     }
 
                     // we are in 32 bits mode, but the _system_ may have more than 4 GB available
                     // so we have to check the _address space_ as well as the available memory
                     // 32bit processes are limited to 1.5GB of heap memory
-                    var workingSetMb = (int)(workingSet / 1024 / 1024);
+                    int workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
                     return memoryLimitSet ? Math.Min(MemoryLimit, Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb)) : Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb);
                 }
                 catch
@@ -368,7 +371,6 @@ namespace Raven.Database.Config
                     failedToGetAvailablePhysicalMemory = true;
                     return -1;
                 }
-#endif
             }
         }
 

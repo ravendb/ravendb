@@ -155,6 +155,7 @@
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
     <Compile Include="Data\FilesystemBackupRequest.cs" />
     <Compile Include="Data\EsentStorageStats.cs" />
+    <Compile Include="Data\GCInfo.cs" />
     <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
     <Compile Include="Data\Alert.cs" />
@@ -285,6 +286,7 @@
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\MultiplePutIndexParam.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
+    <Compile Include="Indexing\TransformerLockMode.cs" />
     <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
     <Compile Include="Json\JsonLinqEnumerableConverter.cs" />

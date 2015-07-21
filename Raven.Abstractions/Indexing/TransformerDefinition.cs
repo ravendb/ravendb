@@ -17,6 +17,8 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
         public string Name { get; set; }
 
+		public TransformerLockMode LockMode { get; set; } 
+
         public bool Equals(TransformerDefinition other)
         {
             return string.Equals(TransformResults, other.TransformResults);
