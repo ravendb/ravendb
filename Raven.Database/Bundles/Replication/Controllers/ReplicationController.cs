@@ -714,12 +714,12 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
 			{
-				var hasSucceeded = replicationTask.ReplicateIndexesAndTransformersTask(null, dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false);
-				return GetEmptyMessage(hasSucceeded ? HttpStatusCode.OK : HttpStatusCode.BadRequest);
+				replicationTask.ReplicateIndexesAndTransformersTask(null, dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false, true, false);
+				return GetEmptyMessage();
 			}
 
-			var succeeded = replicationTask.ReplicateIndexesAndTransformersTask(null);
-			return GetEmptyMessage(succeeded ? HttpStatusCode.OK : HttpStatusCode.BadRequest);
+			replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes:true, replicateTransformers:false);
+			return GetEmptyMessage();
 		}
 
 		[HttpPost]
@@ -727,7 +727,20 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[RavenRoute("databases/{databaseName}/replication/replicate-transformers")]
 		public HttpResponseMessage TransformersReplicate([FromBody] ReplicationDestination replicationDestination)
 		{
-			return IndexReplicate(replicationDestination);
+			var op = GetQueryStringValue("op");
+			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+
+			if (replicationTask == null)
+				return GetMessageWithString("Could not find replication task. Something is wrong here, check logs for more details", HttpStatusCode.BadRequest);
+
+			if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
+			{
+				replicationTask.ReplicateIndexesAndTransformersTask(null, dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false, false);
+				return GetEmptyMessage();
+			}
+
+			replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes: false);
+			return GetEmptyMessage();
 		}
 
 		private HttpResponseMessage ReplicateAllTransformers(Func<ReplicationDestination, bool> destinationPredicate = null)

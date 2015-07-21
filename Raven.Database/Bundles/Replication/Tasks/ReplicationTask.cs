@@ -1010,7 +1010,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 	
-		public bool ReplicateIndexesAndTransformersTask(object state, Func<ReplicationDestination,bool> shouldSkipDestinationPredicate = null)
+		public bool ReplicateIndexesAndTransformersTask(object state, Func<ReplicationDestination,bool> shouldSkipDestinationPredicate = null, bool replicateIndexes = true, bool replicateTransformers = true)
 		{
 			if (docDb.Disposed)
 				return false;
@@ -1032,14 +1032,16 @@ namespace Raven.Bundles.Replication.Tasks
 							var indexTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationIndexesTombstones, 0, 64);
 							var replicatedIndexTombstones = new Dictionary<string, int>();
 
-							ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
+							if(replicateIndexes)
+								ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
 
 							var transformerTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationTransformerTombstones, 0, 64);
 							var replicatedTransformerTombstones = new Dictionary<string, int>();
 
-							ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
+							if(replicateTransformers)
+								ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
 							
-							if (docDb.Indexes.Definitions.Length > 0)
+							if (docDb.Indexes.Definitions.Length > 0 && replicateIndexes)
 							{
 								var sideBySideIndexes = docDb.Indexes.Definitions.Where(x => x.IsSideBySideIndex)
 																				 .ToDictionary(x => x.Name, x=> x);
@@ -1054,7 +1056,7 @@ namespace Raven.Bundles.Replication.Tasks
 								}
 							}
 
-							if (docDb.Transformers.Definitions.Length > 0)
+							if (docDb.Transformers.Definitions.Length > 0 && replicateTransformers)
 							{
 								foreach (var definition in docDb.Transformers.Definitions)
 									ReplicateSingleTransformer(destination, definition);
@@ -1062,22 +1064,28 @@ namespace Raven.Bundles.Replication.Tasks
 
 							docDb.TransactionalStorage.Batch(actions =>
 							{
-								foreach (var indexTombstone in replicatedIndexTombstones)
-								{									
-									if (indexTombstone.Value != replicationDestinations.Length &&
-										docDb.IndexStorage.HasIndex(indexTombstone.Key) == false) 
-										continue;
-									actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
+								if (replicateIndexes)
+								{
+									foreach (var indexTombstone in replicatedIndexTombstones)
+									{
+										if (indexTombstone.Value != replicationDestinations.Length &&
+										    docDb.IndexStorage.HasIndex(indexTombstone.Key) == false)
+											continue;
+										actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
+									}
 								}
 
-								foreach (var transformerTombstone in replicatedTransformerTombstones)
+								if (replicateTransformers)
 								{
-									var transfomerExists = docDb.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
-									if (transformerTombstone.Value != replicationDestinations.Length &&
-										transfomerExists == false) 
-										continue;
+									foreach (var transformerTombstone in replicatedTransformerTombstones)
+									{
+										var transfomerExists = docDb.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
+										if (transformerTombstone.Value != replicationDestinations.Length &&
+										    transfomerExists == false)
+											continue;
 
-									actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
+										actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
+									}
 								}
 							});
 						}
