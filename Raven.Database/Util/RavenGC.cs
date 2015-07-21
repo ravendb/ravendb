@@ -116,7 +116,6 @@ namespace Raven.Database.Util
 
 			log.Info("Finished GC, before was {0:#,#}kb, after is {1:#,#}kb", MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
 
-
 			// -> reset last time, increase delay threshold and disallow GC (too early!)
 			lastForcedGCTime = SystemTime.UtcNow;
 
