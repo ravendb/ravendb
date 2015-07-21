@@ -12,7 +12,7 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/traffic-watch/events")]
         public HttpResponseMessage HttpTrace()
         {
-            var traceTransport = new HttpTracePushContent(this);
+            var traceTransport = new HttpTracePushContent();
             traceTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
 
             RequestManager.RegisterResourceHttpTraceTransport(traceTransport, FileSystemName);

@@ -17,6 +17,7 @@ using Rachis;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
+using Raven.Database.DiskIO;
 using Raven.Database.Raft;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Server;
@@ -124,6 +125,7 @@ namespace Owin
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
 			cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;
+			cfg.Properties[typeof(DiskIoPerformanceMonitor)] = options.DiskIoPerformanceMonitor;
 			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
             cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);

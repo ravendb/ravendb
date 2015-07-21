@@ -13,6 +13,7 @@ using Raven.Database.Server.Controllers;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.TimeSeries.Notifications;
+using Raven.Database.Server.Controllers.Admin;
 
 namespace Raven.Database.Server.Connections
 {
@@ -61,7 +62,7 @@ namespace Raven.Database.Server.Connections
 			                                                                             	});
 		}
 
-		public event Action<object, IndexChangeNotification> OnIndexChangeNotification = delegate { }; 
+		public event Action<object, IndexChangeNotification> OnIndexChangeNotification = delegate { };
 
 		public void Send(IndexChangeNotification indexChangeNotification)
 		{

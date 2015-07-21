@@ -32,6 +32,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Database.Tasks;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.DiskIO;
 using Raven.Database.Plugins;
 using Raven.Database.Raft;
 using Raven.Database.Server.Connections;
@@ -19,9 +20,10 @@ namespace Raven.Database.Server
 		private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
 		private readonly DocumentDatabase systemDatabase;
 		private readonly RequestManager requestManager;
-	    private readonly FileSystemsLandlord fileSystemLandlord;
+		private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
 		private readonly TimeSeriesLandlord timeSeriesLandlord;
+		private readonly DiskIoPerformanceMonitor diskIoPerformanceMonitor;
 
 		private readonly IList<IDisposable> toDispose = new List<IDisposable>();
 		private readonly IEnumerable<IServerStartupTask> serverStartupTasks;
@@ -32,11 +34,11 @@ namespace Raven.Database.Server
 		{
 			if (configuration == null)
 				throw new ArgumentNullException("configuration");
-			
+
 			try
 			{
 				HttpEndpointRegistration.RegisterHttpEndpointTarget();
-			    HttpEndpointRegistration.RegisterAdminLogsTarget();
+				HttpEndpointRegistration.RegisterAdminLogsTarget();
 				if (db == null)
 				{
 					configuration.UpdateDataDirForLegacySystemDb();
@@ -49,11 +51,12 @@ namespace Raven.Database.Server
 				}
 
 				WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
-			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
+				fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				timeSeriesLandlord = new TimeSeriesLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
+				diskIoPerformanceMonitor = new DiskIoPerformanceMonitor(databasesLandlord, fileSystemLandlord);
 				ClusterManager = new Reference<ClusterManager>();
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
@@ -64,7 +67,7 @@ namespace Raven.Database.Server
 				{
 					toDispose.Add(task);
 					task.Execute(this);
-			}
+				}
 			}
 			catch
 			{
@@ -93,10 +96,10 @@ namespace Raven.Database.Server
 		{
 			get { return databasesLandlord; }
 		}
-	    public FileSystemsLandlord FileSystemLandlord
-	    {
-	        get { return fileSystemLandlord; }
-	    }
+		public FileSystemsLandlord FileSystemLandlord
+		{
+			get { return fileSystemLandlord; }
+		}
 
 		public CountersLandlord CountersLandlord
 		{
@@ -108,12 +111,17 @@ namespace Raven.Database.Server
 			get { return timeSeriesLandlord; }
 		}
 
-	    public RequestManager RequestManager
+		public RequestManager RequestManager
 		{
 			get { return requestManager; }
 		}
 
 		public Reference<ClusterManager> ClusterManager { get; private set; }
+
+		public DiskIoPerformanceMonitor DiskIoPerformanceMonitor
+		{
+			get { return diskIoPerformanceMonitor; }
+		}
 
 		public bool Disposed { get; private set; }
 
@@ -130,27 +138,27 @@ namespace Raven.Database.Server
 			toDispose.Add(systemDatabase);
 			toDispose.Add(LogManager.GetTarget<AdminLogsTarget>());
 			toDispose.Add(requestManager);
-                        toDispose.Add(countersLandlord);
+			toDispose.Add(countersLandlord);
+			toDispose.Add(diskIoPerformanceMonitor);
+			toDispose.Add(ClusterManager.Value);
 
-        toDispose.Add(ClusterManager.Value);
+			var errors = new List<Exception>();
 
-            var errors = new List<Exception>();
-
-		    foreach (var disposable in toDispose)
-		    {
-                try
-                {
-                    if (disposable != null)
-                        disposable.Dispose();
-                }
-                catch (Exception e)
-                {
-                    errors.Add(e);
-                }
-		    }
+			foreach (var disposable in toDispose)
+			{
+				try
+				{
+					if (disposable != null)
+						disposable.Dispose();
+				}
+				catch (Exception e)
+				{
+					errors.Add(e);
+				}
+			}
 
 			if (errors.Count != 0)
-                throw new AggregateException(errors);
+				throw new AggregateException(errors);
 		}
 
 		public IDisposable PreventDispose()
