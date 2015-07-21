@@ -19,7 +19,6 @@ namespace Raven.Database.Indexing
 
 		private DateTime lastIncrease;
 		private readonly ConcurrentDictionary<Guid, long> _currentlyUsedBatchSizesInBytes;
-		private readonly long memoryLimitForProcessingInBytes;
 
 	    private readonly int maximumSizeAllowedToFetchFromStorageInMb;
 
@@ -32,9 +31,9 @@ namespace Raven.Database.Indexing
 			NumberOfItemsToProcessInSingleBatch = InitialNumberOfItems;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
 			_currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
-			memoryLimitForProcessingInBytes = context.Configuration.MemoryLimitForProcessingInMb * 1024 * 1024;
 		}
 
+	
 	    public void HandleLowMemory()
 		{
 			ReduceBatchSizeIfCloseToMemoryCeiling(true);
@@ -89,7 +88,7 @@ namespace Raven.Database.Indexing
 		private bool ConsiderIncreasingBatchSize(int amountOfItemsToProcess, long size, TimeSpan processingDuration)
 		{
             //if we are using too much memory for indexing, do not even consider to increase batch size
-			if (amountOfItemsToProcess < NumberOfItemsToProcessInSingleBatch || CurrentlyUsedBatchSizesInBytes.Values.Sum() > memoryLimitForProcessingInBytes)
+			if (amountOfItemsToProcess < NumberOfItemsToProcessInSingleBatch || CurrentlyUsedBatchSizesInBytes.Values.Sum() > context.Configuration.DynamicMemoryLimitForProcessing)
 			{
 				return false;
 			}
@@ -153,7 +152,7 @@ namespace Raven.Database.Indexing
 		{
 			get
 			{
-				return _currentlyUsedBatchSizesInBytes.Values.Sum() * 4 > memoryLimitForProcessingInBytes;
+				return _currentlyUsedBatchSizesInBytes.Values.Sum() * 4 > context.Configuration.DynamicMemoryLimitForProcessing;
 			}
 		}
 
