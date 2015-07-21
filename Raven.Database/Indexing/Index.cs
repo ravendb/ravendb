@@ -1935,7 +1935,7 @@ namespace Raven.Database.Indexing
 						throw new ArgumentException("Error message has to be set");
 
 					logIndexing.WarnException(errorMessage, e);
-					context.AddError(indexId, PublicName, null, errorMessage);
+					context.AddError(indexId, PublicName, null, e,errorMessage);
 
 					context.Database.AddAlert(new Alert
 					{
