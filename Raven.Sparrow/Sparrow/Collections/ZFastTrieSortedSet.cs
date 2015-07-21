@@ -19,9 +19,9 @@ namespace Sparrow.Collections
     /// </summary>
     public sealed class ZFastTrieSortedSet<TKey, TValue> where TKey : IEquatable<TKey>
     {
-        private abstract class Node
+        internal abstract class Node
         {
-            public readonly int NameLength;
+            public int NameLength;
 
             public abstract bool IsLeaf { get; }
             public abstract bool IsInternal { get; }
@@ -91,7 +91,7 @@ namespace Sparrow.Collections
         /// Leaves are organized in a double linked list: each leaf, besides a pointer to the corresponding string of S, 
         /// stores two pointers to the next/previous leaf in lexicographic order. Page 163 of [1].
         /// </summary>
-        private sealed class Leaf : Node
+        internal sealed class Leaf : Node
         {
             public override bool IsLeaf { get { return true; } }
             public override bool IsInternal { get { return false; } }
@@ -145,7 +145,7 @@ namespace Sparrow.Collections
         /// Every internal node contains a pointer to its two children, the extremes ia and ja of its skip interval,
         /// its own extent ea and two additional jump pointers J- and J+. Page 163 of [1].
         /// </summary>
-        private sealed class Internal : Node
+        internal sealed class Internal : Node
         {
             public readonly int ExtentLength;
 
@@ -185,7 +185,7 @@ namespace Sparrow.Collections
 
             public override BitVector Handle(Func<TKey, BitVector> binarizeFunc)
             {
-                int handleLength = ZFastTrieSortedSet<TKey,TValue>.TwoFattest(NameLength - 1, this.ExtentLength);
+                int handleLength = GetHandleLength();
 
                 return ReferencePtr.Name(binarizeFunc).SubVector(0, handleLength);
             }
@@ -194,29 +194,51 @@ namespace Sparrow.Collections
             {
                 return ReferencePtr.Name(binarizeFunc).SubVector(0, this.ExtentLength);
             }
+
+            public int GetHandleLength()
+            {
+                return ZFastTrieSortedSet<TKey, TValue>.TwoFattest(NameLength - 1, this.ExtentLength);
+            }
+
+            public int GetJumpLength()
+            {
+                int handleLength = GetHandleLength();
+                if (handleLength == 0)
+                    return int.MaxValue;
+
+                return handleLength + (handleLength & -handleLength);
+            }
         }
 
-        private class CutPoint
+        internal class CutPoint
         {
             /// <summary>
             /// Longest Common Prefix (or LCP) between the Exit(x) and x
             /// </summary>
             public readonly int LongestPrefix;
+
             /// <summary>
             /// The parent of the exit node.
             /// </summary>
             public readonly Internal Parent;
+
+            /// <summary>
+            /// The binary representation of the search key.
+            /// </summary>
+            public readonly BitVector SearchKey;
+
             /// <summary>
             /// The exit node. If parex(x) == root then exit(x) is the root; otherwise, exit(x) is the left or right child of parex(x) 
             /// depending whether x[|e-parex(x)|] is zero or one, respectively. Page 166 of [1]
             /// </summary>
             public readonly Node Exit;
 
-            public CutPoint(int lcp, Internal parent, Node exit)
+            public CutPoint(int lcp, Internal parent, Node exit, BitVector searchKey)
             {
                 this.LongestPrefix = lcp;
                 this.Parent = parent;
                 this.Exit = exit;
+                this.SearchKey = searchKey;
             }
 
             public bool IsCutLow(Func<TKey, BitVector> binarizeFunc)
@@ -232,7 +254,7 @@ namespace Sparrow.Collections
             }
         }
 
-        private class ExitNode
+        internal class ExitNode
         {
             /// <summary>
             /// Longest Common Prefix (or LCP) between the Exit(x) and x
@@ -260,11 +282,13 @@ namespace Sparrow.Collections
         }
 
         private readonly Func<TKey, BitVector> binarizeFunc;
+        private readonly Dictionary<uint, Internal> nodesTable = new Dictionary<uint, Internal>();
 
         private int size;
-        private readonly Leaf head;
-        private readonly Leaf tail;
-        private Node root;
+
+        internal readonly Leaf Head;
+        internal readonly Leaf Tail;
+        internal Node Root;
 
         public ZFastTrieSortedSet(Func<TKey, BitVector> binarize)
         {
@@ -274,13 +298,13 @@ namespace Sparrow.Collections
             this.binarizeFunc = binarize;
 
             this.size = 0;
-            this.root = null;
+            this.Root = null;
 
             // Setup tombstones. 
-            this.head = new Leaf();
-            this.tail = new Leaf();
-            this.head.Next = tail;
-            this.tail.Previous = head;
+            this.Head = new Leaf();
+            this.Tail = new Leaf();
+            this.Head.Next = Tail;
+            this.Tail.Previous = Head;
         }
 
         public ZFastTrieSortedSet(IEnumerable<KeyValuePair<TKey, TValue>> elements, Func<TKey, BitVector> binarize) : this ( binarize )
@@ -305,8 +329,8 @@ namespace Sparrow.Collections
                 };                
 
                 // We add the leaf after the head.
-                AddAfter(this.head, leaf);
-                this.root = leaf;
+                AddAfter(this.Head, leaf);
+                this.Root = leaf;
 
                 size++;
 
@@ -314,12 +338,12 @@ namespace Sparrow.Collections
             }
 
             // We prepare the signature to compute incrementally. 
-            BitVector v = binarizeFunc(key);
-            var hashState = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
-            
+            BitVector searchKey = binarizeFunc(key);
+            var hashState = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
+           
             // We look for the parent of the exit node for the key.
-            Stack<Node> stack = new Stack<Node>();
-            var cutPoint = FindParentExitNode(v, stack, hashState);                                                       
+            Stack<Internal> stack = new Stack<Internal>();
+            var cutPoint = FindParentExitNode(searchKey, stack);                                                       
 
             // If the exit node is a leaf and the key is equal to the LCP 
             var exitNodeAsLeaf = cutPoint.Exit as Leaf;
@@ -328,7 +352,7 @@ namespace Sparrow.Collections
 
             var exitNodeAsInternal = cutPoint.Exit as Internal; // Is the exit node internal?
             bool isCutLow = cutPoint.IsCutLow (binarizeFunc);  // Is this cut point low or high? 
-            bool exitDirection = v.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
+            bool exitDirection = cutPoint.SearchKey.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
 
             // Create a new internal node that will hold the new leaf.            
             var newLeaf = new Leaf(cutPoint.LongestPrefix + 1, key, value);
@@ -357,10 +381,10 @@ namespace Sparrow.Collections
 
             // If the exit node is the root
             bool isRightChild = cutPoint.IsRightChild;
-            if ( cutPoint.Exit == this.root)
+            if ( cutPoint.Exit == this.Root)
             {
                 // Then update the root
-                this.root = newInternal;
+                this.Root = newInternal;
             }
             else
             {
@@ -377,20 +401,47 @@ namespace Sparrow.Collections
             else
                 UpdateLeftJumpsAfterInsertion(newInternal, cutPoint.Exit, isRightChild, newLeaf, stack);
 
-            // If the cut point was low and the exit node internal
-            if ( isCutLow && exitNodeAsInternal != null )
+            unsafe
             {
-                //  We replace the exit node entry with the new internal node
-                //  We add a new exit node entry
-                //  We update the jumps for the exit node.                
-                throw new NotImplementedException();
-            }
-            else
-            {
-                //  We add the internal node to the jump table.                
-                throw new NotImplementedException();
-            }
+                // If the cut point was low and the exit node internal
+                if (isCutLow && exitNodeAsInternal != null)
+                {
+                    int handleSize = exitNodeAsInternal.GetHandleLength() / BitVector.BitsPerByte;
 
+                    fixed (ulong* bitsPtr = searchKey.Bits)
+                    {
+                        //  We replace the exit node entry with the new internal node       
+                        uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, handleSize, hashState);
+                        nodesTable[hash] = exitNodeAsInternal;
+                        exitNodeAsInternal.NameLength = cutPoint.LongestPrefix + 1;
+                    }
+
+                    var handle = exitNodeAsInternal.Handle(binarizeFunc);                    
+                    fixed ( ulong* bitsPtr = handle.Bits)
+                    {
+                        //  We add a new exit node entry
+                        uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, handleSize, hashState, cutPoint.LongestPrefix);
+                        nodesTable[hash] = exitNodeAsInternal;
+
+                    }                    
+
+                    //  We update the jumps for the exit node.                
+                    UpdateJumps(exitNodeAsInternal);
+                }
+                else
+                {
+                    //  We add the internal node to the jump table.                
+                    exitNodeAsLeaf.NameLength = cutPoint.LongestPrefix + 1;
+
+                    int handleSize = newInternal.GetHandleLength() / BitVector.BitsPerByte;
+
+                    fixed (ulong* bitsPtr = newInternal.Handle(binarizeFunc).Bits)
+                    {
+                        uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, handleSize, hashState);
+                        nodesTable[hash] = newInternal;
+                    }
+                }
+            }
 
             // Link the new leaf with it's predecessor and successor.
             if ( exitDirection )
@@ -401,6 +452,22 @@ namespace Sparrow.Collections
             size++;
 
             return true;
+        }
+
+        private void UpdateJumps(Internal node)
+        {
+            int jumpLength = node.GetJumpLength();
+
+            Node jumpNode;
+            for (jumpNode = node.Left; jumpNode is Internal && jumpLength > ((Internal)jumpNode).ExtentLength; )
+                jumpNode = ((Internal)jumpNode).JumpLeftPtr;
+
+            node.JumpLeftPtr = jumpNode;
+
+            for (jumpNode = node.Right; jumpNode is Internal && jumpLength > ((Internal)jumpNode).ExtentLength; )
+                jumpNode = ((Internal)jumpNode).JumpRightPtr;
+
+            node.JumpRightPtr = jumpNode;
         }
 
         /// <summary>
@@ -415,14 +482,14 @@ namespace Sparrow.Collections
             if ( size == 1 )
             {                
                 // Is the root key (which has to be a Leaf) equal to the one we are looking for?
-                var leaf = (Leaf)this.root;
+                var leaf = (Leaf)this.Root;
                 if (leaf.Key.Equals(key))
                     return false;
 
                 RemoveLeaf(leaf);
 
                 // We remove the root.                
-                this.root = null;
+                this.Root = null;
                 size = 0;
                 
                 return true;
@@ -506,7 +573,7 @@ namespace Sparrow.Collections
             if (size == 0)
                 throw new KeyNotFoundException();
 
-            return SuccessorInternal(key);
+            return SuccessorInternal(key).Key;
         }
 
         public TKey Predecessor(TKey key)
@@ -514,7 +581,7 @@ namespace Sparrow.Collections
             if (size == 0)
                 throw new KeyNotFoundException();
 
-            return PredecessorInternal(key);
+            return PredecessorInternal(key).Key;
         }
 
         public TKey FirstKey()
@@ -523,7 +590,7 @@ namespace Sparrow.Collections
                 throw new KeyNotFoundException();
 
             // Returns the head next key
-            return this.head.Next.Key;
+            return this.Head.Next.Key;
         }
 
         public TKey LastKey()
@@ -532,15 +599,16 @@ namespace Sparrow.Collections
                 throw new KeyNotFoundException();
 
             // Returns the head next key
-            return this.tail.Previous.Key;
+            return this.Tail.Previous.Key;
         }
 
         public void Clear()
         {
             this.size = 0;
-            this.root = null;
-            this.head.Next = this.tail;
-            this.tail.Previous = this.head;
+            this.Root = null;
+            this.nodesTable.Clear();
+            this.Head.Next = this.Tail;
+            this.Tail.Previous = this.Head;
         }
 
         public TKey SuccessorOrDefault(TKey key)
@@ -549,7 +617,7 @@ namespace Sparrow.Collections
             if (size == 0)
                 return default(TKey);
 
-            return SuccessorInternal(key);
+            return SuccessorInternal(key).Key;
         }
 
         public TKey PredecessorOrDefault(TKey key)
@@ -558,7 +626,7 @@ namespace Sparrow.Collections
             if (size == 0)
                 return default(TKey);
 
-            return PredecessorInternal(key);
+            return PredecessorInternal(key).Key;
         }
 
         public TKey FirstKeyOrDefault()
@@ -567,7 +635,7 @@ namespace Sparrow.Collections
                 return default(TKey);
 
             // Returns the head next key
-            return this.head.Next.Key;
+            return this.Head.Next.Key;
         }
 
         public TKey LastKeyOrDefault()
@@ -576,7 +644,7 @@ namespace Sparrow.Collections
                 return default(TKey);
 
             // Returns the head next key
-            return this.tail.Previous.Key;
+            return this.Tail.Previous.Key;
         }
 
 
@@ -596,7 +664,7 @@ namespace Sparrow.Collections
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private TKey PredecessorInternal(TKey key)
+        internal Leaf PredecessorInternal(TKey key)
         {            
             // x− = max{y ∈ S | y < x} (the predecessor of x in S) - Page 160 of [1]
 
@@ -609,17 +677,17 @@ namespace Sparrow.Collections
             if (exitNode.Extent(binarizeFunc).CompareToInline(exitFound.SearchKey, out dummy) < 0)
             {
                 // If the key is greater than the extent, we exit to the right leaf.
-                return exitNode.GetRightLeaf().Key;
+                return exitNode.GetRightLeaf();
             }
             else
             {
                 // If the key is smaller than the extent, we exit to the left leaf and get the previous leaf.
-                return exitNode.GetLeftLeaf().Previous.Key;
+                return exitNode.GetLeftLeaf().Previous;
             }            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private TKey SuccessorInternal(TKey key)
+        internal Leaf SuccessorInternal(TKey key)
         {
             // x+ = min{y ∈ S | y ≥ x} (the successor of x in S) - Page 160 of [1]
 
@@ -632,12 +700,12 @@ namespace Sparrow.Collections
             if (exitFound.SearchKey.CompareToInline(exitNode.Extent(binarizeFunc), out dummy) <= 0)
             {
                 // If the key is smaller than the extent, we exit to the left leaf.
-                return exitNode.GetLeftLeaf().Key;
+                return exitNode.GetLeftLeaf();
             }
             else
             {
                 // If the key is greater than the extent, we exit to the right leaf and get the next.
-                return exitNode.GetRightLeaf().Next.Key;
+                return exitNode.GetRightLeaf().Next;
             }                        
         }
 
@@ -663,40 +731,131 @@ namespace Sparrow.Collections
             successor.Previous = newNode;
         }
 
-        private void UpdateRightJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Node> stack)
-        {
-            throw new NotImplementedException();
+        private void UpdateRightJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Internal> stack)
+        {  
+            if ( ! isRightChild )
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are left descendant of β.
+
+                while ( stack.Count != 0 )
+                {
+                    var toFix = stack.Pop();                    
+                    if (toFix.JumpLeftPtr != exitNode)
+                        break;
+
+                    int jumpLength = toFix.GetJumpLength();
+                    if ( jumpLength < insertedLeaf.NameLength )
+                        toFix.JumpLeftPtr = insertedNode;
+                }
+            }
+            else
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are right descendant of β.
+
+                while( stack.Count != 0 )
+                {
+                    var toFix = stack.Peek();
+                    int jumpLength = toFix.GetJumpLength();
+                    if (toFix.JumpRightPtr != exitNode || jumpLength >= insertedLeaf.NameLength)
+                        break;
+
+                    toFix.JumpRightPtr = insertedNode;
+                    stack.Pop();
+                }
+
+                while( stack.Count != 0 )
+                {
+                    var toFix = stack.Pop();
+                    int jumpLength = toFix.GetJumpLength();
+
+                    while (exitNode is Internal && toFix.JumpRightPtr != exitNode)
+                        exitNode = ((Internal)exitNode).JumpRightPtr;
+
+                    // As soon as we cannot find a matching descendant, we can stop updating
+                    if (toFix.JumpRightPtr != exitNode)
+                        return;
+
+                    toFix.JumpRightPtr = insertedLeaf;
+                }
+            }
         }
 
-        private void UpdateLeftJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Node> stack)
+        private void UpdateLeftJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Internal> stack)
         {
-            throw new NotImplementedException();
+            // See: Algorithm 2 of [1]
+
+            if ( isRightChild )
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are right descendant of β.
+
+                while ( stack.Count != 0 )
+                {
+                    var toFix = stack.Pop();
+                    if (toFix.JumpRightPtr != exitNode)
+                        break;
+
+                    int jumpLength = toFix.GetJumpLength();
+                    if (jumpLength < insertedLeaf.NameLength)
+                        toFix.JumpRightPtr = insertedNode;
+                }
+            }
+            else
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are left descendant of β.
+
+                while ( stack.Count != 0 )
+                {
+                    var toFix = stack.Peek();
+                    int jumpLength = toFix.GetJumpLength();
+                    if (toFix.JumpLeftPtr != exitNode || jumpLength >= insertedLeaf.NameLength)
+                        break;
+
+                    toFix.JumpLeftPtr = insertedNode;
+                    stack.Pop();
+                }
+
+                while ( stack.Count != 0 )
+                {
+                    var toFix = stack.Pop();
+                    while (exitNode is Internal && toFix.JumpLeftPtr != exitNode)
+                        exitNode = ((Internal)exitNode).JumpLeftPtr;
+
+                    // As soon as we cannot find a matching descendant, we can stop updating
+                    if (toFix.JumpLeftPtr != exitNode)
+                        return;
+                    
+                    toFix.JumpLeftPtr = insertedLeaf;
+                }
+            }
         }
 
 
-        private CutPoint FindParentExitNode(BitVector v, Stack<Node> stack, Hashing.Iterative.XXHash32Block hashState)
+        internal CutPoint FindParentExitNode(BitVector searchKey, Stack<Internal> stack)
         {
             Contract.Requires(size != 0);
 
             // If there is only a single element, then the exit point is the root.
             if (size == 1)
-                return new CutPoint(v.LongestCommonPrefixLength(this.root.Extent(this.binarizeFunc)), null, root);
-
+                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Root.Extent(this.binarizeFunc)), null, Root, searchKey);
 
             throw new NotImplementedException();
         }
 
-        private ExitNode FindExitNode(TKey key)
+        internal ExitNode FindExitNode(TKey key)
         {
             Contract.Requires(size != 0);
 
             // We prepare the signature to compute incrementally. 
-            BitVector v = binarizeFunc(key);
-            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits);
+            BitVector searchKey = binarizeFunc(key);          
 
             if (size == 1)
-                return new ExitNode(v.LongestCommonPrefixLength(this.root.Extent(binarizeFunc)), this.root, v );
+                return new ExitNode(searchKey.LongestCommonPrefixLength(this.Root.Extent(binarizeFunc)), this.Root, searchKey);
 
+            var state = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
             throw new NotImplementedException();
         }
 
