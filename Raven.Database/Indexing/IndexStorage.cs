@@ -165,7 +165,7 @@ namespace Raven.Database.Indexing
 				Lucene.Net.Store.Directory luceneDirectory = null;
 				try
 				{
-					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried, forceFullIndexCheck: forceFullIndexCheck);
+					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried, forceFullExistingIndexCheck: forceFullIndexCheck);
 					indexImplementation = CreateIndexImplementation(indexDefinition, luceneDirectory);
 
 					CheckIndexState(luceneDirectory, indexDefinition, indexImplementation, resetTried);
@@ -455,14 +455,15 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, bool createIfMissing = true, bool forceFullIndexCheck = false)
+		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, bool createIfMissing = true, bool forceFullExistingIndexCheck = false)
 		{
 			Lucene.Net.Store.Directory directory;
 			if (configuration.RunInMemory ||
 				(indexDefinition.IsMapReduce == false &&  // there is no point in creating map/reduce indexes in memory, we write the intermediate results to disk anyway
 				 indexDefinitionStorage.IsNewThisSession(indexDefinition) &&
 				 indexDefinition.DisableInMemoryIndexing == false &&
-				 configuration.DisableInMemoryIndexing == false))
+				 configuration.DisableInMemoryIndexing == false &&
+				 forceFullExistingIndexCheck == false))
 			{
 				directory = new RAMDirectory();
 				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
@@ -487,7 +488,7 @@ namespace Raven.Database.Indexing
 				{
 					EnsureIndexVersionMatches(directory, indexDefinition);
 
-					if (forceFullIndexCheck == false)
+					if (forceFullExistingIndexCheck == false)
 					{
 						if (directory.FileExists("write.lock")) // force lock release, because it was still open when we shut down
 						{
