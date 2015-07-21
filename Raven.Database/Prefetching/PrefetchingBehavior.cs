@@ -196,9 +196,13 @@ namespace Raven.Database.Prefetching
 					etag = result[result.Count - 1].Etag;
 
 				prefetchingQueueSizeInBytes = prefetchingQueue.LoadedSize;
-			} while (result.Count < autoTuner.NumberOfItemsToProcessInSingleBatch && (take.HasValue == false || result.Count < take.Value) && docsLoaded &&
-						prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
-						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForProcessingInMb * 1024 * 1024)));
+			} 
+			while (
+				result.Count < autoTuner.NumberOfItemsToProcessInSingleBatch && 
+				(take.HasValue == false || result.Count < take.Value) && 
+				docsLoaded &&
+				prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
+				((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.DynamicMemoryLimitForProcessing)));
 
 			return result;
 		}
@@ -341,7 +345,7 @@ namespace Raven.Database.Prefetching
 			{
 				//limit how much data we load from disk --> better adhere to memory limits
 				var totalSizeAllowedToLoadInBytes =
-					(context.Configuration.MemoryLimitForProcessingInMb * 1024 * 1024) -
+					(context.Configuration.DynamicMemoryLimitForProcessing) -
 					(prefetchingQueue.LoadedSize + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
 
 				// at any rate, we will load a min of 512Kb docs

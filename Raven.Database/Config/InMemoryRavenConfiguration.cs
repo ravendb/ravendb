@@ -969,6 +969,27 @@ namespace Raven.Database.Config
 		/// </summary>
 		public int MemoryLimitForProcessingInMb { get; set; }
 
+		public long DynamicMemoryLimitForProcessing
+		{
+			get
+			{
+				var availableMemory = MemoryStatistics.AvailableMemory;
+				var minFreeMemory = (MemoryLimitForProcessingInMb * 2L * 1024L * 1024L);
+				// we have more memory than the twice the limit, we can use the default limit
+				if (availableMemory > minFreeMemory)
+					return MemoryLimitForProcessingInMb * 1024L * 1024L;
+
+				// we don't have enough room to play with, if two databases will request the max memory limit
+				// at the same time, we'll start paging because we'll run out of free memory. 
+				// Because of that, we'll dynamically adjust the amount
+				// of memory available for processing based on the amount of memory we actually have available,
+				// assuming that we have multiple concurrent users of memory at the same time.
+				// we limit that at 16 MB, if we have less memory than that, we can't really do much anyway
+				return Math.Min(availableMemory / 4, 16 * 1024 * 1024);
+
+			}
+		}
+
 		public string IndexStoragePath
 		{
 			get
