@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -47,19 +48,25 @@ namespace Sparrow
 
             public unsafe static class XXHash32
             {
-                public static unsafe uint CalculateInline(byte* buffer, int len, XXHash32Block context)
+                public static unsafe uint CalculateInline(byte* buffer, int len, XXHash32Block context, int startFrom = int.MaxValue)
                 {
+                    Contract.Requires(buffer != null);
+                    Contract.Requires(context != null);
+                    Contract.Requires(len >= 0);
+                    Contract.Requires(startFrom < len || startFrom == int.MaxValue);
+
                     unchecked
                     {
-                        uint h32;
+                        uint h32;                        
 
                         byte* bEnd = buffer + len;
                         if (len >= 16)
                         {
                             byte* limit = bEnd - 16;
-                            int iterations = (int)((bEnd - buffer) / (4 * sizeof(uint)));
 
-                            int bucketNumber = Math.Min(iterations, context.Values.Length) - 1;
+                            int iterations = Math.Min((int)((bEnd - buffer) / (4 * sizeof(uint))), startFrom / (4 * sizeof(uint)));
+
+                            int bucketNumber = Math.Min(iterations, context.Values.Length);
 
                             // Retrieve the preprocessed context
                             var state = context.Values[bucketNumber];
@@ -124,6 +131,9 @@ namespace Sparrow
 
                 public static unsafe XXHash32Block PreprocessInline(byte* buffer, int len, uint seed = 0)
                 {
+                    Contract.Requires(buffer != null);
+                    Contract.Requires(len >= 0);
+
                     if (len >= 16)
                     {
                         byte* bEnd = buffer + len;
@@ -132,11 +142,16 @@ namespace Sparrow
                         uint v2 = seed + PRIME32_2;
                         uint v3 = seed + 0;
                         uint v4 = seed - PRIME32_1;
-                        
-                        int iterations = (int)((bEnd - buffer) / (4 * sizeof(uint)));
+
+                        int iterations = (int)((bEnd - buffer) / (4 * sizeof(uint))) + 1;  
 
                         var values = new XXHash32Values[iterations];
-                        for ( int i = 0; i < iterations; i++ )
+                        values[0].V1 = v1;
+                        values[0].V2 = v2;
+                        values[0].V3 = v3;
+                        values[0].V4 = v4;
+
+                        for ( int i = 1; i < iterations; i++ )
                         {
                             v1 += *((uint*)buffer) * PRIME32_2;
                             buffer += sizeof(uint);
@@ -162,57 +177,55 @@ namespace Sparrow
                             values[i].V3 = v3;
                             values[i].V4 = v4;
                         }
-
+                        
                         return new XXHash32Block(values, seed);
                     }
                     else return new XXHash32Block (seed); // No preprocess happens.
                 }
 
-                public static unsafe uint Calculate(byte* buffer, int len, XXHash32Block context)
+                public static unsafe uint Calculate(byte* buffer, int len, XXHash32Block context, int startFrom = int.MaxValue)
                 {
-                    return CalculateInline(buffer, len, context);
+                    return CalculateInline(buffer, len, context, startFrom);
                 }
 
-                public static uint Calculate(string value, Encoding encoder, XXHash32Block context)
+                public static uint Calculate(string value, Encoding encoder, XXHash32Block context, int startFrom = int.MaxValue)
                 {
                     var buf = encoder.GetBytes(value);
 
                     fixed (byte* buffer = buf)
                     {
-                        return CalculateInline(buffer, buf.Length, context);
+                        return CalculateInline(buffer, buf.Length, context, startFrom);
                     }
                 }
-                public static uint CalculateRaw(string buf, int len, XXHash32Block context)
+                public static uint CalculateRaw(string buf, int len, XXHash32Block context, int startFrom = int.MaxValue)
                 {
                     fixed (char* buffer = buf)
                     {
-                        return CalculateInline((byte*)buffer, len * sizeof(char), context);
+                        return CalculateInline((byte*)buffer, len * sizeof(char), context, startFrom);
                     }
                 }
 
-                public static uint Calculate(byte[] buf, int len, XXHash32Block context)
+                public static uint Calculate(byte[] buf, int len, XXHash32Block context, int startFrom = int.MaxValue)
                 {
                     if (len == -1)
                         len = buf.Length;
 
                     fixed (byte* buffer = buf)
                     {
-                        return CalculateInline(buffer, len, context);
+                        return CalculateInline(buffer, len, context, startFrom);
                     }
                 }
 
-                public static uint Calculate(int[] buf, int len, XXHash32Block context)
+                public static uint Calculate(int[] buf, int len, XXHash32Block context, int startFrom = int.MaxValue)
                 {
                     if (len == -1)
                         len = buf.Length;
 
                     fixed (int* buffer = buf)
                     {
-                        return CalculateInline((byte*)buffer, len * sizeof(int), context);
+                        return CalculateInline((byte*)buffer, len * sizeof(int), context, startFrom);
                     }
                 }
-
-
 
                 public static unsafe XXHash32Block Preprocess(byte* buffer, int len, uint seed = 0)
                 {

@@ -542,7 +542,7 @@ namespace Sparrow.Tests
 
             ulong[] data = new ulong[vectorSize];
             for (int i = 0; i < data.Length; i++)
-                data[i] = (ulong)rnd.Next() << 32 | (ulong)rnd.Next();
+                data[i] = (ulong)(rnd.Next() << 32 | rnd.Next());
             return data;
         }
     }

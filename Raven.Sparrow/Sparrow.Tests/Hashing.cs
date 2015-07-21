@@ -105,11 +105,35 @@ namespace Sparrow.Tests
             uint seed = 233;
             var context = Hashing.Iterative.XXHash32.Preprocess(values, values.Length, seed);
 
-            for ( int i = 1; i < values.Length; i++ )
+            for (int i = 1; i < values.Length; i++)
             {
                 var expected = Hashing.XXHash32.Calculate(values, i, seed);
                 var result = Hashing.Iterative.XXHash32.Calculate(values, i, context);
                 Assert.Equal(expected, result);
+            }
+        }
+
+        [Theory]
+        [PropertyData("BufferSize")]
+        public void IterativeHashingPrefixing(int bufferSize)
+        {
+            var rnd = new Random(1000);
+
+            byte[] values = new byte[bufferSize];
+            rnd.NextBytes(values);
+
+            uint seed = 233;
+            var context = Hashing.Iterative.XXHash32.Preprocess(values, values.Length, seed);
+
+            for (int i = 1; i < values.Length; i++)
+            {
+                var expected = Hashing.XXHash32.Calculate(values, i, seed);
+
+                for (int j = 0; j < i; j++)
+                {
+                    var result = Hashing.Iterative.XXHash32.Calculate(values, i, context, j);
+                    Assert.Equal(expected, result);
+                }
             }
         }
 
