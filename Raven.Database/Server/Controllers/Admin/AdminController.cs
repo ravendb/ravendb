@@ -790,8 +790,11 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("databases/{databaseName}/admin/detailed-storage-breakdown")]
 		public HttpResponseMessage DetailedStorageBreakdown()
 		{
-			var x = Database.TransactionalStorage.ComputeDetailedStorageInformation();
-			return GetMessageWithObject(x);
+			var detailedReport = GetQueryStringValue("DetailedReport");
+			bool isDetailedReport;
+			if (detailedReport != null && bool.TryParse(detailedReport, out isDetailedReport) && isDetailedReport)
+				return GetMessageWithObject(Database.TransactionalStorage.ComputeDetailedStorageInformation(true));
+			return GetMessageWithObject(Database.TransactionalStorage.ComputeDetailedStorageInformation());
 		}
 
 		[HttpPost]
