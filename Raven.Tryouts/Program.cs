@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Tests.Core.ChangesApi;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
@@ -20,9 +21,9 @@ namespace Raven.Tryouts
 		{
 			for (int i = 0; i < 1000; i++)
 			{
-				using (var test = new WebsocketsTests())
+				using (var test = new RavenDB_3570())
 				{
-					test.AreWebsocketsDestroyedAfterGC();
+					test.RavenFSWithWindowsCredentialsInConnectionStringShouldWork().Wait();
 				}			
 				Console.WriteLine(i);
 			}
