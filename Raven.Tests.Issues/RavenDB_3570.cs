@@ -64,7 +64,7 @@ namespace Raven.Tests.Issues
 					using (NewStore(enableAuthentication: true))
 					{
 					}
-				}).ShouldNotThrow<ErrorResponseException>();
+				}).ShouldNotThrow<Exception>();
 			}
 			finally
 			{
