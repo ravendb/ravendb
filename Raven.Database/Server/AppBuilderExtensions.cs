@@ -17,6 +17,7 @@ using Rachis;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
+using Raven.Database.DiskIO;
 using Raven.Database.Raft;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Server;

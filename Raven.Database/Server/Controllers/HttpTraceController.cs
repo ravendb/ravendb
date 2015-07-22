@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/traffic-watch/events")]
         public HttpResponseMessage HttpTrace()
         {
-            var traceTransport = new HttpTracePushContent(this);
+            var traceTransport = new HttpTracePushContent();
             traceTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
 
             if (DatabaseName != null)

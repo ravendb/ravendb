@@ -33,7 +33,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <Prefer32Bit>false</Prefer32Bit>
     <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>7003453f</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>57786387</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -405,6 +405,7 @@
     <Compile Include="Raft\Storage\Handlers\DatabaseUpdateCommandHandler.cs" />
     <Compile Include="Raft\Util\RaftHelper.cs" />
     <Compile Include="Raft\ClusterManagerFactory.cs" />
+    <Compile Include="Server\Connections\PushContentBase.cs" />
     <Compile Include="Server\Connections\TimeSeriesConnectionState.cs" />
     <Compile Include="Server\Connections\CounterStorageConnectionState.cs" />
     <Compile Include="Server\Connections\DocumentsConnectionState.cs" />
