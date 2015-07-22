@@ -233,7 +233,12 @@ namespace Raven.Client.Shard
 			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters);
 		}
 
-		private T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        {
+            return LoadInternal<T>(ids.ToArray(), null, transformer, transformerParameters);
+        }
+
+	    public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
         {
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
