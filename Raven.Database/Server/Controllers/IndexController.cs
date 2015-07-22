@@ -301,7 +301,7 @@ namespace Raven.Database.Server.Controllers
 				}, out taskId);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpGet]

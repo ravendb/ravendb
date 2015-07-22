@@ -26,6 +26,7 @@
     <TypeScriptCompile Include="App\commands\counter\deleteCountersCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\database\index\tryRecoverCorruptedIndexes.ts" />
     <TypeScriptCompile Include="App\commands\database\replication\enableReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\replication\conflictsResolveCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
