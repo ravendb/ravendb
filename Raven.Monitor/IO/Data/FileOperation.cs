@@ -1,4 +1,4 @@
-namespace Raven.Database.DiskIO.Data
+namespace Raven.Monitor.IO.Data
 {
 	public class FileOperation
 	{
@@ -10,15 +10,12 @@ namespace Raven.Database.DiskIO.Data
 
 		public double DurationInMilliseconds { get; private set; }
 
-		public ResourceInformation ResourceInformation { get; private set; }
-
-		public FileOperation(string fileName, OperationType operationType, int ioSizeInBytes, double durationInMilliseconds, ResourceInformation resourceInformation)
+		public FileOperation(string fileName, OperationType operationType, int ioSizeInBytes, double durationInMilliseconds)
 		{
 			FileName = fileName;
 			OperationType = operationType;
 			IoSizeInBytes = ioSizeInBytes;
 			DurationInMilliseconds = durationInMilliseconds;
-			ResourceInformation = resourceInformation;
 		}
 	}
 }

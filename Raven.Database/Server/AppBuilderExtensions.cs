@@ -125,7 +125,6 @@ namespace Owin
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
 			cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;
-			cfg.Properties[typeof(DiskIoPerformanceMonitor)] = options.DiskIoPerformanceMonitor;
 			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
             cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);

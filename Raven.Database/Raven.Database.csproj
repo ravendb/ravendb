@@ -241,11 +241,6 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
-    <Compile Include="DiskIO\DiskIoPerformanceMonitor.cs" />
-    <Compile Include="DiskIO\Data\FileOperation.cs" />
-    <Compile Include="DiskIO\Data\PathType.cs" />
-    <Compile Include="DiskIO\Data\ResourceInformation.cs" />
-    <Compile Include="DiskIO\Data\ResourceType.cs" />
     <Compile Include="GplexBuffers.cs" />
     <Compile Include="Indexing\Analyzers\RavenStandardAnalyzer.cs" />
     <Compile Include="Indexing\Analyzers\RavenStandardFilter.cs" />
@@ -422,7 +417,6 @@
     <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
-    <Compile Include="Server\Controllers\DiskIoPerformanceController.cs" />
     <Compile Include="Server\Connections\DiskIoPerformancePushContent.cs" />
     <Compile Include="Server\Tenancy\TimeSeriesLandlord.cs" />
     <Compile Include="Server\WebApi\MultiGetSafeStringContent.cs" />

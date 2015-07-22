@@ -23,7 +23,6 @@ namespace Raven.Database.Server
 		private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
 		private readonly TimeSeriesLandlord timeSeriesLandlord;
-		private readonly DiskIoPerformanceMonitor diskIoPerformanceMonitor;
 
 		private readonly IList<IDisposable> toDispose = new List<IDisposable>();
 		private readonly IEnumerable<IServerStartupTask> serverStartupTasks;
@@ -56,7 +55,6 @@ namespace Raven.Database.Server
 				countersLandlord = new CountersLandlord(systemDatabase);
 				timeSeriesLandlord = new TimeSeriesLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
-				diskIoPerformanceMonitor = new DiskIoPerformanceMonitor(databasesLandlord, fileSystemLandlord);
 				ClusterManager = new Reference<ClusterManager>();
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
@@ -118,11 +116,6 @@ namespace Raven.Database.Server
 
 		public Reference<ClusterManager> ClusterManager { get; private set; }
 
-		public DiskIoPerformanceMonitor DiskIoPerformanceMonitor
-		{
-			get { return diskIoPerformanceMonitor; }
-		}
-
 		public bool Disposed { get; private set; }
 
 		public void Dispose()
@@ -139,7 +132,6 @@ namespace Raven.Database.Server
 			toDispose.Add(LogManager.GetTarget<AdminLogsTarget>());
 			toDispose.Add(requestManager);
 			toDispose.Add(countersLandlord);
-			toDispose.Add(diskIoPerformanceMonitor);
 			toDispose.Add(ClusterManager.Value);
 
 			var errors = new List<Exception>();

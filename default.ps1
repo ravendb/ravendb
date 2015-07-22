@@ -199,10 +199,15 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
 	New-Item $build_dir\Output\Backup -Type directory | Out-Null
 	New-Item $build_dir\Output\Migration -Type directory | Out-Null
+	New-Item $build_dir\Output\Monitor -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
 	Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+task CopyMonitor {
+	Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Raven.Monitor.??? $build_dir\Output\Monitor
 }
 
 task CopySmuggler {
@@ -377,6 +382,7 @@ task DoReleasePart1 -depends Compile, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
 	CopySmuggler, `
+	CopyMonitor, `
 	CopyBackup, `
 	CopyMigration, `
 	CopyClient, `
