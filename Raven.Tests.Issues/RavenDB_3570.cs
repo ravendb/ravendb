@@ -45,7 +45,7 @@ namespace Raven.Tests.Issues
 		}
 
 		//requires admin context
-		[Fact]
+		[Fact(Skip = "This test rely on actual Windows Account name/password.")]
 		public void RavenFSWithWindowsCredentialsInConnectionStringShouldWork()
 		{
 			try
