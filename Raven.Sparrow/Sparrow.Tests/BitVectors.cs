@@ -508,6 +508,64 @@ namespace Sparrow.Tests
         }
 
         [Fact]
+        public void Operations_IsPrefix()
+        {
+            var v1 = BitVector.Parse("1");
+            var v2 = BitVector.Parse("0");
+
+            Assert.False(v1.IsPrefix(v2));
+            Assert.False(v2.IsPrefix(v1));            
+
+            v1 = BitVector.Parse("10");
+            v2 = BitVector.Parse("11");
+
+            Assert.False(v1.IsPrefix(v2));
+            Assert.False(v2.IsPrefix(v1));          
+
+            v1 = BitVector.Parse("10000000");
+            v2 = BitVector.Parse("10000000");
+
+            Assert.True(v1.IsPrefix(v2));
+            Assert.True(v2.IsPrefix(v1));          
+
+            v1 = BitVector.Parse("1100000");
+            v2 = BitVector.Parse("11000001");
+
+            Assert.True(v1.IsPrefix(v2));
+            Assert.False(v2.IsPrefix(v1));      
+
+            v1 = BitVector.Parse("1100000011");
+            v2 = BitVector.Parse("11000000111");
+
+            Assert.True(v1.IsPrefix(v2));
+            Assert.False(v2.IsPrefix(v1));     
+
+            v1 = BitVector.Parse("0100000011");
+            v2 = BitVector.Parse("01000000110");
+
+            Assert.True(v1.IsPrefix(v2));
+            Assert.False(v2.IsPrefix(v1));     
+
+            v1 = BitVector.Parse("");
+            v2 = BitVector.Parse("01000000111");
+
+            Assert.True(v1.IsPrefix(v2));
+            Assert.False(v2.IsPrefix(v1));
+
+            v1 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000);
+            v2 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000);
+
+            Assert.True(v1.IsPrefix(v2));
+            Assert.False(v2.IsPrefix(v1));     
+
+            v1 = BitVector.Of(0xFFFFFFFF);
+            v2 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000);
+
+            Assert.True(v1.IsPrefix(v2));
+            Assert.False(v2.IsPrefix(v1));     
+        }
+
+        [Fact]
         public void Operations_SubVector()
         {
             var v1 = BitVector.Parse("1");

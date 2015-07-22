@@ -578,5 +578,16 @@ namespace Sparrow.Binary
             BitVector.BitwiseCopySlow(this, start, subVector, 0, length);
             return subVector;
         }
+
+        public bool IsPrefix(BitVector other)
+        {
+            if (this.Count > other.Count)
+                return false;
+
+            int equalBits;
+            CompareToInline(other, out equalBits);
+
+            return equalBits == this.Count;
+        }
     }
 }
