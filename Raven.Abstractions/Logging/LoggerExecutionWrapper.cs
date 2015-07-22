@@ -66,8 +66,17 @@ namespace Raven.Abstractions.Logging
 		    }
 		    if (shouldLog == false)
 		        return;
-			var formattedMessage = wrappedMessageFunc();
-            string databaseName = LogContext.DatabaseName.Value;
+			string formattedMessage;
+		    try
+		    {
+		        formattedMessage = messageFunc();
+		    }
+		    catch (Exception)
+		    {
+		        // nothing to be done here
+		        return;
+		    }
+		    string databaseName = LogContext.DatabaseName.Value;
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
 
