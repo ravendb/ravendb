@@ -59,9 +59,10 @@ namespace Raven.Database.Server.Controllers
 
 		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter)
 		{
+			var bufferStream = new BufferedStream(stream, 1024*64);
 			using (var cts = new CancellationTokenSource())
 			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
-			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
+			using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
 			{
 				writer.WriteStartObject();
 				writer.WritePropertyName("Results");
@@ -101,6 +102,7 @@ namespace Raven.Database.Server.Controllers
 				writer.WriteValue(nextPageStart);
 				writer.WriteEndObject();
 				writer.Flush();
+				bufferStream.Flush();
 			}
 		}
 
