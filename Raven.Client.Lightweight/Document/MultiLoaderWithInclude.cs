@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Indexes;
 
 namespace Raven.Client.Document
 {
@@ -210,5 +211,27 @@ namespace Raven.Client.Document
 			var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
 			return Load<TResult>(documentKeys);
 		}
+
+        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) 
+            where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var transformer = new TTransformer().TransformerName;
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            return session.LoadInternal<TResult>(new[] { id }, includes.ToArray(), transformer, configuration.TransformerParameters).FirstOrDefault();
+        }
+
+        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) 
+            where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var transformer = new TTransformer().TransformerName;
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            return session.LoadInternal<TResult>(ids.ToArray(), includes.ToArray(), transformer, configuration.TransformerParameters);
+        }
 	}
 }
