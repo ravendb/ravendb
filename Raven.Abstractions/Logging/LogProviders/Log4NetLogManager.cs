@@ -160,6 +160,26 @@ namespace Raven.Abstractions.Logging.LogProviders
 						break;
 				}
 			}
+
+		    public bool ShouldLog(LogLevel logLevel)
+		    {
+                switch (logLevel)
+                {
+                    case LogLevel.Warn:
+                        return logger.IsWarnEnabled;
+                    case LogLevel.Error:
+                        return logger.IsErrorEnabled;
+                    case LogLevel.Fatal:
+                        return logger.IsFatalEnabled;
+                    // ReSharper disable RedundantCaseLabel
+                    case LogLevel.Info:
+                    case LogLevel.Debug:
+                    case LogLevel.Trace:
+                    // ReSharper restore RedundantCaseLabel
+                    default:
+                        return logger.IsDebugEnabled;
+                }
+            }
 		}
 	}
 }
