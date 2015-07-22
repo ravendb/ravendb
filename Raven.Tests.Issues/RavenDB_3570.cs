@@ -2,15 +2,11 @@
 using System.Collections.Generic;
 using System.DirectoryServices.AccountManagement;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Security.Principal;
+using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Document;
-using Raven.Client.FileSystem;
-using Raven.Database.Server;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -50,17 +46,25 @@ namespace Raven.Tests.Issues
 
 		//requires admin context
 		[Fact]
-		public async Task RavenFSWithWindowsCredentialsInConnectionStringShouldWork()
+		public void RavenFSWithWindowsCredentialsInConnectionStringShouldWork()
 		{
 			try
 			{
 				AddWindowsUser(username, password);
 
-				using (var filesStore = NewStore(enableAuthentication: true))
+				this.Invoking(x =>
 				{
-					var ms = new MemoryStream(new byte[] { 1, 2, 4 });
-					await filesStore.AsyncFilesCommands.UploadAsync("/dir/ms.bin", ms);
-				}
+					using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
+					{
+					}
+				}).ShouldThrow<ErrorResponseException>().Where(x => x.StatusCode == HttpStatusCode.Forbidden);
+
+				this.Invoking(x =>
+				{
+					using (NewStore(enableAuthentication: true))
+					{
+					}
+				}).ShouldNotThrow<ErrorResponseException>();
 			}
 			finally
 			{
