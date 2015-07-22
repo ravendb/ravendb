@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Json.Linq;
 using Raven.Database.Storage;
 using Raven.Tests.Common;
@@ -151,7 +152,7 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapReduce.DeleteMappedResultsForView(two);
+				actions.MapReduce.DeleteMappedResultsForView(two, CancellationToken.None);
 			});
 
 			transactionalStorage.Batch(actions =>
