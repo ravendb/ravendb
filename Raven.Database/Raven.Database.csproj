@@ -33,7 +33,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <Prefer32Bit>false</Prefer32Bit>
     <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>7003453f</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>57786387</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -110,9 +110,6 @@
       <HintPath>..\SharedLibs\metrics.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.Diagnostics.Tracing.TraceEvent">
-      <HintPath>..\packages\Microsoft.Diagnostics.Tracing.TraceEvent.1.0.32\lib\net40\Microsoft.Diagnostics.Tracing.TraceEvent.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.Owin">
       <HintPath>..\packages\Microsoft.Owin.3.0.1\lib\net45\Microsoft.Owin.dll</HintPath>
       <Private>True</Private>
@@ -417,7 +414,6 @@
     <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
-    <Compile Include="Server\Connections\DiskIoPerformancePushContent.cs" />
     <Compile Include="Server\Tenancy\TimeSeriesLandlord.cs" />
     <Compile Include="Server\WebApi\MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
@@ -1438,7 +1434,6 @@
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="..\packages\Microsoft.Diagnostics.Tracing.TraceEvent.1.0.32\build\Microsoft.Diagnostics.Tracing.TraceEvent.targets" Condition="Exists('..\packages\Microsoft.Diagnostics.Tracing.TraceEvent.1.0.32\build\Microsoft.Diagnostics.Tracing.TraceEvent.targets')" />
   <Target Name="YltBuildGen" DependsOnTargets="GenerateLuceneQuery-Raven-Database-Indexing" />
   <Target Name="GenerateLuceneQuery-Raven-Database-Indexing" Inputs="$(LuceneQuery-Raven-Database-IndexingParser).Language.analyzer.lex;$(LuceneQuery-Raven-Database-IndexingParser).Language.grammar.y" Outputs="$(LuceneQuery-Raven-Database-IndexingParser).Scanner.Generated.cs;$(LuceneQuery-Raven-Database-IndexingParser).Parser.Generated.cs">
     <Message Text="Generating scanner for $(LuceneQuery-Raven-Database-IndexingParser) ..." />
