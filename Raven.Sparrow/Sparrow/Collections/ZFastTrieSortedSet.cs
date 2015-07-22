@@ -56,6 +56,11 @@ namespace Sparrow.Collections
             /// </summary>            
             public abstract BitVector Extent(Func<TKey, BitVector> binarizeFunc);
 
+            public bool IsExitNodeOf(Func<TKey, BitVector> binarizeFunc, int length, int lcpLength)
+            {
+                return this.NameLength <= lcpLength && lcpLength < Extent(binarizeFunc).Count && lcpLength == length;
+            }
+
             public Leaf GetRightLeaf()
             {
                 if (this is Leaf)
@@ -856,8 +861,54 @@ namespace Sparrow.Collections
                 return new ExitNode(searchKey.LongestCommonPrefixLength(this.Root.Extent(binarizeFunc)), this.Root, searchKey);
 
             var state = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
+
+            // Find parex(key), exit(key) or fail spectacularly (with very low probability). 
+            Internal parexOrExitNode = FatBinarySearch(searchKey, state);
+            
+            // Check if the node is either the parex(key) and/or exit(key). 
+            Node candidateNode;
+            if (parexOrExitNode.ExtentLength < searchKey.Count && searchKey[parexOrExitNode.ExtentLength])
+                candidateNode = parexOrExitNode.Right;
+            else
+                candidateNode = parexOrExitNode.Left;
+
+            int lcpLength = searchKey.LongestCommonPrefixLength(candidateNode.Extent(binarizeFunc));
+
+            // Fat Binary Search just worked with high probability and gave use the parex(key) node. 
+            if (candidateNode.IsExitNodeOf(binarizeFunc, searchKey.Count, lcpLength))
+                return new ExitNode(lcpLength, candidateNode, searchKey);
+
+            lcpLength = Math.Min( parexOrExitNode.ExtentLength, lcpLength );
+            if (parexOrExitNode.IsExitNodeOf(binarizeFunc, searchKey.Count, lcpLength))
+                return new ExitNode(lcpLength, parexOrExitNode, searchKey);
+
+            // With very low priority we screw up and therefore we start again but without skipping anything. 
+            parexOrExitNode = FatBinarySearchExact(searchKey, state);
+            if ( parexOrExitNode.Extent(binarizeFunc).IsPrefix(searchKey) )
+            {
+                if (parexOrExitNode.ExtentLength < searchKey.Count && searchKey[parexOrExitNode.ExtentLength])
+                    candidateNode = parexOrExitNode.Right;
+                else
+                    candidateNode = parexOrExitNode.Left;
+            }
+            else
+            {
+                candidateNode = parexOrExitNode;
+            }
+
+            return new ExitNode(searchKey.LongestCommonPrefixLength(candidateNode.Extent(binarizeFunc)), candidateNode, searchKey);
+        }
+
+        private Internal FatBinarySearch(BitVector searchKey, Hashing.Iterative.XXHash32Block state)
+        {
             throw new NotImplementedException();
         }
+
+        private Internal FatBinarySearchExact(BitVector searchKey, Hashing.Iterative.XXHash32Block state)
+        {
+            throw new NotImplementedException();
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int TwoFattest( int a, int b)
