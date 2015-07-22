@@ -179,12 +179,17 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-			{							
-				using(queryOp)
+			{
+			    var bufferedStream = new BufferedStream(stream, 1024*64);
+                using (queryOp)
 				using(accessor)
 				using(_timeout)
-				using (var writer = GetOutputWriter(req, stream))
-				{
+				using (var writer = GetOutputWriter(req, bufferedStream))
+                // we may be sending a LOT of documents to the user, and most 
+                // of them aren't going to be relevant for other ops, so we are going to skip
+                // the cache for that, to avoid filling it up very quickly
+                using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                {
                     outputContentTypeSetter(writer.ContentType);
 
                     writer.WriteHeader();
@@ -201,8 +206,8 @@ namespace Raven.Database.Server.Controllers
 				        writer.WriteError(e);
 				    }
 				}
-
-				return Task.FromResult(true);
+                bufferedStream.Flush();
+                return Task.FromResult(true);
 			}
 
 			protected override bool TryComputeLength(out long length)
