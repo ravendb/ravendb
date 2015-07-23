@@ -234,7 +234,10 @@ namespace Raven.Database.Impl
                 return iqr.Document;
 
             iqr.DocumentLoaded = true;
-            return iqr.Document = GetDocumentWithCaching(iqr.Key);
+            iqr.Document = GetDocumentWithCaching(iqr.Key);
+            if (iqr.Document != null)
+                iqr.Key = iqr.Document.Key;// to get the actual document id in the right case sensitive manner
+            return iqr.Document;
         }
 
         private JsonDocument GetDocumentWithCaching(string key)
