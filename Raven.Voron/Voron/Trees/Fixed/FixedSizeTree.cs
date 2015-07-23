@@ -579,12 +579,7 @@ namespace Voron.Trees.Fixed
 					continue;
 			    }
 
-			    if (parentPage.LastSearchPosition < parentPage.FixedSize_NumberOfEntries - 1)
-			    {
-					parentPage.LastSearchPosition++;
-					_cursor.Push(parentPage);
-			    }
-			    else
+			    if (parentPage.LastSearchPosition >= parentPage.FixedSize_NumberOfEntries - 1)
 			    {
 				    if (_cursor.Count > 0)
 					    continue;
@@ -592,14 +587,17 @@ namespace Voron.Trees.Fixed
 				    if (parentPage.IsBranch)
 					    return entriesDeleted;
 
-					// TODO: Please test this, this wasn't been tested
-					Debugger.Break();
-					page = parentPage;
-					BinarySearch(page, end, _entrySize);
-					continue;
+				    // TODO: Please test this, this wasn't been tested
+				    Debugger.Break();
+				    page = parentPage;
+				    BinarySearch(page, end, _entrySize);
+				    continue;
 			    }
+			    
+				parentPage.LastSearchPosition++;
+			    _cursor.Push(parentPage);
 
-				var childParentNumber = PageValueFor(parentPage.Base + parentPage.FixedSize_StartPosition, parentPage.LastSearchPosition);
+			    var childParentNumber = PageValueFor(parentPage.Base + parentPage.FixedSize_StartPosition, parentPage.LastSearchPosition);
 				page = _tx.GetReadOnlyPage(childParentNumber);
 				while (page.IsBranch)
 			    {
