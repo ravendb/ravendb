@@ -562,6 +562,7 @@ namespace Voron.Trees.Fixed
 			    i++;
 #endif
 				entriesDeleted += DeleteEntiresInPage(page, startSearchPosition, page.LastSearchPosition + 1, out isAllRemoved);
+				startSearchPosition = 0;
 			    
 				if (page.LastMatch == 0 ||
 			        _cursor.Count == 0 // No more pages
@@ -571,6 +572,13 @@ namespace Voron.Trees.Fixed
 			    }
 
 			    var parentPage = _cursor.Pop();
+			    if (parentPage.IsLeaf)
+			    {
+					page = parentPage;
+					BinarySearch(page, end, _entrySize);
+					continue;
+			    }
+
 			    if (parentPage.LastSearchPosition < parentPage.FixedSize_NumberOfEntries - 1)
 			    {
 					parentPage.LastSearchPosition++;
@@ -584,9 +592,10 @@ namespace Voron.Trees.Fixed
 				    if (parentPage.IsBranch)
 					    return entriesDeleted;
 
-					// TODO: Please test this, this wasn't beed tested
+					// TODO: Please test this, this wasn't been tested
 					Debugger.Break();
 					page = parentPage;
+					BinarySearch(page, end, _entrySize);
 					continue;
 			    }
 
@@ -594,14 +603,13 @@ namespace Voron.Trees.Fixed
 				page = _tx.GetReadOnlyPage(childParentNumber);
 				while (page.IsBranch)
 			    {
-					// TODO: Please test this, this wasn't beed tested
+					// TODO: Please test this, this wasn't been tested
 					Debugger.Break();
 					_cursor.Push(page);
 					childParentNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition);
 					page = _tx.GetReadOnlyPage(childParentNumber);
 			    }
 				BinarySearch(page, end, _entrySize);
-				startSearchPosition = 0;
 		    } while (page.LastMatch >= 0);
 
 			return entriesDeleted;
@@ -719,18 +727,15 @@ namespace Voron.Trees.Fixed
 			}
 
 			// it has only one entry, we can delete it and switch with the last child item
-			if (parentPage.FixedSize_NumberOfEntries > 1)
+			if (parentPage.FixedSize_NumberOfEntries == 1)
 			{
-				_cursor.Push(parentPage);
-			}
-			else
-		    {
 				var lastChildNumber = *(long*)(parentPage.Base + parentPage.FixedSize_StartPosition + sizeof(long));
 				var childPage = _tx.GetReadOnlyPage(lastChildNumber);
 				Memory.Copy(parentPage.Base, childPage.Base, parentPage.PageSize);
 				parentPage.PageNumber = parentPageNumber; // overwritten in copy
 				_parent.FreePage(childPage);
 		    }
+			_cursor.Push(parentPage);
 
 			return false; // This is not the root, the tree has more entires
 	    }
