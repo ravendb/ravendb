@@ -164,8 +164,8 @@ namespace Voron.Tests.FixedSize
 				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
 
 				bool allRemoved;
-				var itemsRemoved = fst.DeleteRange(2, count - 3, out allRemoved);
-				Assert.Equal(count - 4, itemsRemoved);
+				var itemsRemoved = fst.DeleteRange(4, count - 3, out allRemoved);
+				Assert.Equal(count - 6, itemsRemoved);
 				Assert.Equal(false, allRemoved);
 
 				tx.Commit();
@@ -177,7 +177,7 @@ namespace Voron.Tests.FixedSize
 
 				for (int i = 1; i <= count; i++)
 				{
-					if (i >= 2 && i <= count - 3)
+					if (i >= 4 && i <= count - 3)
 					{
 						Assert.False(fst.Contains(i), i.ToString());
 						Assert.Null(fst.Read(i));
@@ -237,6 +237,71 @@ namespace Voron.Tests.FixedSize
 					Assert.Null(fst.Read(i));
 				}
 				tx.Commit();
+			}
+		}
+
+		[Theory]
+		[InlineData(1000000)]
+		public void CanDeleteRange_Branch(int count)
+		{
+			var bytes = new byte[48];
+			var slice = new Slice(bytes);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+				for (int i = 1; i <= count; i++)
+				{
+					EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+					fst.Add(i, slice);
+				}
+
+				tx.Commit();
+			}
+
+			var random = new Random();
+			for (var i = 0; i < count/100; i++)
+			{
+				var start = Math.Floor(random.Next(count)/(decimal) 72)*72;
+				start += 1;
+				var end = Math.Min(count, start + 71);
+
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+					bool allRemoved;
+					var itemsRemoved = fst.DeleteRange((long) start, (long) end, out allRemoved);
+					if (itemsRemoved == -1)
+					{
+						break;
+					}
+					/*Assert.Equal(count - 19999, itemsRemoved);
+					Assert.Equal(false, allRemoved);*/
+
+					tx.Commit();
+				}
+			}
+
+			for (var i = 0; i < count; i++)
+			{
+				var start = random.Next(count);
+				var end = random.Next(start, count);
+
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+					bool allRemoved;
+					var itemsRemoved = fst.DeleteRange((long)start, (long)end, out allRemoved);
+					if (itemsRemoved == -1)
+						break;
+					/*Assert.Equal(count - 19999, itemsRemoved);
+					Assert.Equal(false, allRemoved);*/
+
+					tx.Commit();
+				}
 			}
 		}
 	}
