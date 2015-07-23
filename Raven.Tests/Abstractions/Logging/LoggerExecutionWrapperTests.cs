@@ -80,7 +80,7 @@ namespace Raven.Tests.Abstractions.Logging
 
 		    public bool ShouldLog(LogLevel logLevel)
 		    {
-		        return false;
+		        return true;
 		    }
 		}
 	}
