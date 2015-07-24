@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Net.Http;
 using System.Threading;
 using Raven.Abstractions;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
@@ -120,7 +122,7 @@ namespace Raven.Traffic
 
 			SubscribeToServerEvents(currentRequest,
 				this);
-			
+
 		}
 
 		private string GetAuthToken()
@@ -129,7 +131,7 @@ namespace Raven.Traffic
 			using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(null,
 					store.Url + "//databases//" + databaseName + "/singleAuthToken",
-					"GET", store.DatabaseCommands.PrimaryCredentials,
+					HttpMethods.Get, store.DatabaseCommands.PrimaryCredentials,
 					store.Conventions)))
 			{
 				authToken = request.ReadResponseJson().Value<string>("Token");
@@ -142,7 +144,7 @@ namespace Raven.Traffic
 			return store.JsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(null,
 					store.Url + "//databases//" + databaseName + "/traffic-watch/events?" + "singleUseAuthToken=" + GetAuthToken() + "&id=" + Guid.NewGuid(),
-					"GET",
+					HttpMethod.Get,
 					store.DatabaseCommands.PrimaryCredentials,
 					store.Conventions)
 				{

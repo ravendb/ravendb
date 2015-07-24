@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -105,7 +106,7 @@ namespace Raven.Tests.Core.ChangesApi
 		    var request = store.JsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(null,
 					store.Url+ "/debug/gc-info",
-					"GET",
+					HttpMethod.Get, 
 					store.DatabaseCommands.PrimaryCredentials,
 					store.Conventions));
 
@@ -120,7 +121,7 @@ namespace Raven.Tests.Core.ChangesApi
 			    .JsonRequestFactory
 			    .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 				    store.Url.ForDatabase(store.DefaultDatabase) + "/debug/changes",
-				    "GET",
+					HttpMethod.Get,
 				    store.DatabaseCommands.PrimaryCredentials,
 				    store.Conventions));
 
@@ -134,7 +135,7 @@ namespace Raven.Tests.Core.ChangesApi
 			    .JsonRequestFactory
 			    .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 				    store.Url.ForDatabase(null) + "/admin/gc",
-				    "GET",
+					HttpMethod.Get,
 				    store.DatabaseCommands.PrimaryCredentials,
 				    store.Conventions));
 		    var gcResponse = gcRequest.ReadResponseBytesAsync();

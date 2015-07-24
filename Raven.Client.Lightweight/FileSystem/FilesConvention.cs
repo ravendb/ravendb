@@ -1,4 +1,8 @@
-﻿using Raven.Abstractions.Replication;
+﻿using System;
+
+using Raven.Abstractions.Replication;
+using Raven.Client.Connection;
+using Raven.Client.FileSystem.Connection;
 
 namespace Raven.Client.FileSystem
 {

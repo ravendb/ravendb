@@ -22,6 +22,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Connection;
+
 namespace Raven.Client.Connection
 {
 	/// <summary>
@@ -188,7 +190,7 @@ namespace Raven.Client.Connection
 
 		public virtual int GetReadStripingBase(bool increment)
 		{
-            return increment ? Interlocked.Increment(ref ReadStripingBase) : ReadStripingBase;
+            return increment ? Interlocked.Increment(ref readStripingBase) : readStripingBase;
 		}
 
 		public async Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method,

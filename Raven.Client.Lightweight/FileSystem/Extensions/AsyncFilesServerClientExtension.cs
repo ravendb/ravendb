@@ -2,6 +2,7 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -20,7 +21,7 @@ namespace Raven.Client.FileSystem.Extensions
 		internal static async Task<RavenJObject> GetMetadataForAsyncImpl(IHoldProfilingInformation self, HttpJsonRequestFactory requestFactory, FilesConvention conventions,
 			NameValueCollection operationsHeaders, string filename, string baseUrl, OperationCredentials credentials)
 		{
-			using (var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + "/files?name=" + Uri.EscapeDataString(filename), "HEAD", credentials, conventions)).AddOperationHeaders(operationsHeaders))
+			using (var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + "/files?name=" + Uri.EscapeDataString(filename), HttpMethod.Head, credentials, conventions)).AddOperationHeaders(operationsHeaders))
 			{
 				try
 				{
@@ -46,10 +47,10 @@ namespace Raven.Client.FileSystem.Extensions
 			}
 		}
 
-		internal static async Task<Stream> DownloadAsyncImpl(IHoldProfilingInformation self, HttpJsonRequestFactory requestFactory, FilesConvention conventions, 
+		internal static async Task<Stream> DownloadAsyncImpl(IHoldProfilingInformation self, HttpJsonRequestFactory requestFactory, FilesConvention conventions,
 			NameValueCollection operationsHeaders, string path, string filename, Reference<RavenJObject> metadataRef, long? @from, long? to, string baseUrl, OperationCredentials credentials)
 		{
-			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + path + Uri.EscapeDataString(filename), "GET", credentials, conventions)).AddOperationHeaders(operationsHeaders);
+			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + path + Uri.EscapeDataString(filename), HttpMethod.Get, credentials, conventions)).AddOperationHeaders(operationsHeaders);
 
 			if (@from != null)
 			{

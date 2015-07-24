@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
@@ -49,23 +52,23 @@ namespace Raven.Client.FileSystem
 
 		private const int DefaultNumberOfCachedRequests = 2048; //put this in asyncserverclient
 
-		public SynchronizationServerClient(string serverUrl, string fileSystem, string apiKey, ICredentials credentials, FilesConvention convention = null, 
+		public SynchronizationServerClient(string serverUrl, string fileSystem, string apiKey, ICredentials credentials, FilesConvention convention = null,
 			OperationCredentials operationCredentials = null, HttpJsonRequestFactory requestFactory = null, NameValueCollection operationsHeaders = null)
 		{
 			serverUrl = serverUrl.TrimEnd('/');
 			baseUrl = serverUrl + "/fs/" + Uri.EscapeDataString(fileSystem);
 			credentials = credentials ?? CredentialCache.DefaultNetworkCredentials;
-			this.filesConvention = convention ?? new FilesConvention();
+			filesConvention = convention ?? new FilesConvention();
 			this.operationCredentials = operationCredentials ?? new OperationCredentials(apiKey, credentials);
 			this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-			this.OperationsHeaders = operationsHeaders ?? new NameValueCollection();
+			OperationsHeaders = operationsHeaders ?? new NameValueCollection();
 
 			SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl, credentials);
 		}
 
 		public Task<RavenJObject> GetMetadataForAsync(string fileName)
 		{
-			return AsyncFilesServerClientExtension.GetMetadataForAsyncImpl(this, RequestFactory, Conventions,  OperationsHeaders, fileName, baseUrl, Credentials);
+			return AsyncFilesServerClientExtension.GetMetadataForAsyncImpl(this, RequestFactory, Conventions, OperationsHeaders, fileName, baseUrl, Credentials);
 		}
 
 		public async Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
@@ -78,7 +81,7 @@ namespace Raven.Client.FileSystem
 		{
 			var requestUriString = baseUrl + "/rdc/stats";
 
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				try
 				{
@@ -94,7 +97,7 @@ namespace Raven.Client.FileSystem
 
 		public async Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
 		{
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/rename?filename=" + Uri.EscapeDataString(currentName) + "&rename=" + Uri.EscapeDataString(newName), "PATCH", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/rename?filename=" + Uri.EscapeDataString(currentName) + "&rename=" + Uri.EscapeDataString(newName), HttpMethods.Patch, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				request.AddHeaders(metadata);
 				request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
@@ -114,7 +117,7 @@ namespace Raven.Client.FileSystem
 
 		public async Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
 		{
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization?fileName=" + Uri.EscapeDataString(fileName), "DELETE", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization?fileName=" + Uri.EscapeDataString(fileName), HttpMethod.Delete, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				request.AddHeaders(metadata);
 				request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
@@ -134,7 +137,7 @@ namespace Raven.Client.FileSystem
 
 		public async Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem)
 		{
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName), "POST", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName), HttpMethod.Post, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				request.AddHeaders(metadata);
 				request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
@@ -156,7 +159,7 @@ namespace Raven.Client.FileSystem
 		{
 			var requestUriString = string.Format("{0}/synchronization/LastSynchronization?from={1}", BaseUrl, serverId);
 
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				try
 				{
@@ -176,7 +179,7 @@ namespace Raven.Client.FileSystem
 				baseUrl, Uri.EscapeDataString(filename),
 				Uri.EscapeDataString(strategy.ToString()));
 
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PATCH", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Patch, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				try
 				{
@@ -197,7 +200,7 @@ namespace Raven.Client.FileSystem
 					baseUrl, Uri.EscapeDataString(filename), remoteVersion,
 					Uri.EscapeDataString(remoteServerId), Uri.EscapeDataString(remoteServerUrl));
 
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PATCH", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Patch, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				try
 				{
@@ -214,7 +217,7 @@ namespace Raven.Client.FileSystem
 		{
 			var requestUriString = string.Format("{0}/synchronization/ResolutionStrategyFromServerResolvers", baseUrl);
 
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				request.AddHeaders(localMetadata);
 
@@ -235,7 +238,7 @@ namespace Raven.Client.FileSystem
 		{
 			var requestUriString = string.Format("{0}/synchronization/Confirm", baseUrl);
 
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				try
 				{
@@ -265,7 +268,7 @@ namespace Raven.Client.FileSystem
 		public async Task<SignatureManifest> GetRdcManifestAsync(string path)
 		{
 			var requestUriString = baseUrl + "/rdc/manifest/" + Uri.EscapeDataString(path);
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				try
 				{
@@ -285,7 +288,7 @@ namespace Raven.Client.FileSystem
 				string.Format("{0}/synchronization/IncrementLastETag?sourceServerId={1}&sourceFileSystemUrl={2}&sourceFileETag={3}",
 					baseUrl, sourceServerId, sourceFileSystemUrl, sourceFileETag);
 
-			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
 				try
 				{

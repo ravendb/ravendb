@@ -22,6 +22,8 @@ using Raven.Database.Indexing.Sorting;
 using Raven.Database.Indexing.Sorting.AlphaNumeric;
 using Raven.Database.Indexing.Sorting.Custom;
 using Raven.Database.Linq;
+using Raven.Database.Util;
+
 using Spatial4n.Core.Shapes;
 using Spatial4n.Core.Shapes.Impl;
 using Constants = Raven.Abstractions.Data.Constants;

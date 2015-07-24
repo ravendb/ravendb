@@ -2,14 +2,14 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.FileSystem;
-using Raven.Client.FileSystem.Connection;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,7 +18,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.FileSystem.Extensions;
+
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization.Multipart
@@ -54,11 +54,11 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 			if (sourceStream.CanRead == false)
 				throw new Exception("Stream does not support reading");
 
-            var baseUrl = commands.UrlFor();
-            var credentials = commands.PrimaryCredentials;
-            var conventions = commands.Conventions;
+			var baseUrl = synchronizationServerClient.BaseUrl;
+			var credentials = synchronizationServerClient.Credentials;
+			var conventions = synchronizationServerClient.Conventions;
 
-			using (var request = commands.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethods.Post, credentials, conventions)))
+			using (var request = synchronizationServerClient.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions)))
 			{
 				request.AddHeaders(sourceMetadata);
 				request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);

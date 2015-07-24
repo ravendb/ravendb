@@ -12,7 +12,7 @@ namespace Raven.Client.Extensions
 	internal static class SecurityExtensions
 	{
 		//TODO: this can be used in document store/counter stores/time series store
-		internal static void InitializeSecurity(Convention conventions, HttpJsonRequestFactory requestFactory, string serverUrl, ICredentials primaryCredentials)
+		internal static void InitializeSecurity(ConventionBase conventions, HttpJsonRequestFactory requestFactory, string serverUrl, ICredentials primaryCredentials)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync != null)
 				return; // already setup by the user

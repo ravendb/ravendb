@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -16,7 +13,6 @@ using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Impl;
 using Raven.Database;
-using Raven.Database.Config;
 using Raven.Database.Config.Retriever;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -28,6 +24,7 @@ using Raven.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -36,9 +33,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Bundles.Replication.Tasks
 {
@@ -1151,7 +1148,7 @@ namespace Raven.Bundles.Replication.Tasks
 				IndexReplaceDocument = indexReplaceDocument
 			};
 
-			var replicationRequest = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions, GetRequestBuffering(destination));
+			var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethod.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 			replicationRequest.Write(RavenJObject.FromObject(sideBySideReplicationInfo));
 			replicationRequest.ExecuteRequest();
 		}
@@ -1164,7 +1161,7 @@ namespace Raven.Bundles.Replication.Tasks
 				clonedTransformer.TransfomerId = 0;
 
 				var url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
-				var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
+				var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethod.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 				replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
 				replicationRequest.ExecuteRequest();
 			}
@@ -1182,7 +1179,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(definition.Name), GetDebugInfomration());
 
-				var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
+				var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethod.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 				replicationRequest.Write(RavenJObject.FromObject(definition));
 				replicationRequest.ExecuteRequest();
 			}

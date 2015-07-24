@@ -90,9 +90,9 @@ namespace Raven.Database.Plugins.Builtins
 				.ToList();
 
 			var lacksFreeSpace = new List<string>();
+			var drives = DriveInfo.GetDrives();
 
-			var driveInfos = DriveInfo.GetDrives();
-			foreach (var root in uniqueRoots)
+			foreach (var drive in drives)
 			{
 				var group = groupedRoots.FirstOrDefault(x => string.Equals(x.Key, drive.Name, StringComparison.OrdinalIgnoreCase));
 				if (group == null)
@@ -111,23 +111,18 @@ namespace Raven.Database.Plugins.Builtins
 
 			foreach (var group in groupedUncRoots)
 			{
-				var result = DiskSpaceChecker.GetFreeDiskSpace(uncRoot, null);
+				var result = DiskSpaceChecker.GetFreeDiskSpace(group.Key, drives);
 				if (result == null)
 					continue;
 
-				var success = GetDiskFreeSpaceEx(group.Key, out freeBytesAvailable, out totalNumberOfBytes, out totalNumberOfFreeBytes);
-
-				if (success == false)
-					continue;
-
-				var freeSpaceInPercentage = freeBytesAvailable * 1.0 / totalNumberOfBytes;
+				var freeSpaceInPercentage = result.TotalFreeSpaceInBytes * 1.0 / result.TotalSize;
 				if (freeSpaceInPercentage < FreeThreshold)
 					lacksFreeSpace.Add(group.Key);
 
 				group.ForEach(x =>
 				{
 					x.FreeSpaceInPercentage = freeSpaceInPercentage;
-					x.FreeSpaceInBytes = freeBytesAvailable;
+					x.FreeSpaceInBytes = result.TotalFreeSpaceInBytes;
 				});
 			}
 
@@ -147,7 +142,7 @@ namespace Raven.Database.Plugins.Builtins
 				foreach (var path in pathsToCheck.Where(x => x.FreeSpaceInPercentage.HasValue && x.FreeSpaceInBytes.HasValue && x.ResourceType == ResourceType.Database && x.ResourceName == database.Name))
 				{
 					database.OnDiskSpaceChanged(new DiskSpaceNotification(path.Path, path.PathType, path.FreeSpaceInBytes.Value, path.FreeSpaceInPercentage.Value));
-		}
+				}
 			});
 		}
 
@@ -168,13 +163,64 @@ namespace Raven.Database.Plugins.Builtins
 			public double? FreeSpaceInBytes { get; set; }
 
 			public double? FreeSpaceInPercentage { get; set; }
-	}
+		}
 
 		private enum ResourceType
 		{
 			Database,
 			FileSystem
-}
+		}
+
+		public static class DiskSpaceChecker
+		{
+			public static DiskSpaceResult GetFreeDiskSpace(string pathToCheck, DriveInfo[] driveInfo)
+			{
+				if (string.IsNullOrEmpty(pathToCheck))
+					return null;
+
+				if (Path.IsPathRooted(pathToCheck) && pathToCheck.StartsWith("\\\\") == false)
+				{
+					var root = Path.GetPathRoot(pathToCheck);
+
+					foreach (var drive in driveInfo)
+					{
+						if (root.Contains(drive.Name) == false)
+							continue;
+
+						return new DiskSpaceResult
+						{
+							DriveName = root,
+							TotalFreeSpaceInBytes = drive.TotalFreeSpace,
+							TotalSize = drive.TotalSize
+						};
+					}
+
+					return null;
+				}
+
+				if (pathToCheck.StartsWith("\\\\"))
+				{
+					var uncRoot = Path.GetPathRoot(pathToCheck);
+
+					ulong freeBytesAvailable;
+					ulong totalNumberOfBytes;
+					ulong totalNumberOfFreeBytes;
+					var success = GetDiskFreeSpaceEx(uncRoot, out freeBytesAvailable, out totalNumberOfBytes, out totalNumberOfFreeBytes);
+
+					if (success == false)
+						return null;
+
+					return new DiskSpaceResult
+					{
+						DriveName = uncRoot,
+						TotalFreeSpaceInBytes = (long)freeBytesAvailable,
+						TotalSize = (long)totalNumberOfBytes
+					};
+				}
+
+				return null;
+			}
+
 			public class DiskSpaceResult
 			{
 				public string DriveName { get; set; }

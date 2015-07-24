@@ -811,24 +811,25 @@ namespace Raven.Tests.FileSystem.Synchronization
 			Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
 	}
 
-		[Fact]
-		public async Task Should_resolve_copied_files()
-		{
-			var source = NewAsyncClient(0);
-			var destination = NewAsyncClient(1);
-			await source.UploadAsync("test.bin", new RandomStream(1024));
-			await source.CopyAsync("test.bin", "test-copy.bin");
+	    [Fact]
+	    public async Task Should_resolve_copied_files()
+	    {
+		    var source = NewAsyncClient(0);
+		    var destination = NewAsyncClient(1);
+		    await source.UploadAsync("test.bin", new RandomStream(1024));
+		    await source.CopyAsync("test.bin", "test-copy.bin");
 
-			await destination.UploadAsync("test.bin", new RandomStream(1024));
-			await destination.CopyAsync("test.bin", "test-copy.bin");
+		    await destination.UploadAsync("test.bin", new RandomStream(1024));
+		    await destination.CopyAsync("test.bin", "test-copy.bin");
 
-			var result = SyncTestUtils.ResolveConflictAndSynchronize(source, destination, "test-copy.bin");
+		    var result = SyncTestUtils.ResolveConflictAndSynchronize(source, destination, "test-copy.bin");
 
-			Assert.Null(result.Exception);
+		    Assert.Null(result.Exception);
 
-			var destinationStream = await destination.DownloadAsync("test-copy.bin");
-			var sourceStream = await destination.DownloadAsync("test-copy.bin");
-			Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
+		    var destinationStream = await destination.DownloadAsync("test-copy.bin");
+		    var sourceStream = await destination.DownloadAsync("test-copy.bin");
+		    Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
 
-
-}}
+	    }
+	}
+}

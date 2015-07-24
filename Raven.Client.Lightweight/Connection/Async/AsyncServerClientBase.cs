@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace Raven.Client.Connection.Async
 {
     public abstract class AsyncServerClientBase<TConvention, TReplicationInformer> : IDisposalNotification 
-        where TConvention : ConventionBase
+        where TConvention : ConventionBase, new()
         where TReplicationInformer : IReplicationInformerBase
     {
 		private const int DefaultNumberOfCachedRequests = 2048;

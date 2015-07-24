@@ -88,7 +88,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[RavenRoute("databases/{databaseName}/replication/explain/{*docId}")]
 		public HttpResponseMessage ExplainGet(string docId)
 		{
-			if (string.IsNullOrEmpty(docId)) 
+			if (string.IsNullOrEmpty(docId))
 				return GetMessageWithString("Document key is required.", HttpStatusCode.BadRequest);
 
 			var destinationUrl = GetQueryStringValue("destinationUrl");
@@ -199,7 +199,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						destinationIsLeader = node.Name == currentLeader;
 					else
 						destinationIsLeader = false;
-		}
+				}
 
 				configurationDocumentWithClusterInformation
 					.Destinations
@@ -266,13 +266,13 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var conflictResolvers = DocsReplicationConflictResolvers; 
+				var conflictResolvers = DocsReplicationConflictResolvers;
 
 				string lastEtag = Etag.Empty.ToString();
 
 				var docIndex = 0;
 				var retries = 0;
-				while (retries< 3 && docIndex < array.Length)
+				while (retries < 3 && docIndex < array.Length)
 				{
 					var lastIndex = docIndex;
 					using (Database.DocumentLock.Lock())
@@ -297,14 +297,14 @@ namespace Raven.Database.Bundles.Replication.Controllers
 								ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
 							}
 
-                                                        SaveReplicationSource(src, lastEtag, array.Length, collections);
-							retries = lastIndex == docIndex? retries: 0;
+							SaveReplicationSource(src, lastEtag, array.Length, collections);
+							retries = lastIndex == docIndex ? retries : 0;
 						});
 					}
 
 					if (lastIndex == docIndex)
 					{
-						
+
 						if (retries == 3)
 						{
 							Log.Warn("Replication processing did not end up replicating any documents for 3 times in a row, stopping operation", retries);
@@ -374,7 +374,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var array = await ReadBsonArrayAsync();
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var conflictResolvers = AttachmentReplicationConflictResolvers; 
+				var conflictResolvers = AttachmentReplicationConflictResolvers;
 
 				Database.TransactionalStorage.Batch(actions =>
 				{
@@ -486,7 +486,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							Database.Documents.Put(docKey, Etag.Empty, document.DataAsJson, document.Metadata, null);
 							Database.Documents.Delete(Constants.RavenReplicationSourcesBasePath + "/" + src, document.Etag, null);
 
-							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId) 
+							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId)
 								document = null;
 						}
 					}
@@ -506,8 +506,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					if (sourceReplicationInformation == null)
 						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 
-					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false 
-						&& sourceReplicationInformation.LastModified.HasValue 
+					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false
+						&& sourceReplicationInformation.LastModified.HasValue
 						&& (SystemTime.UtcNow - sourceReplicationInformation.LastModified.Value).TotalMinutes < 10)
 					{
 						log.Info(string.Format("Replication source mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.Source, src));
@@ -524,19 +524,19 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				var lowMemory = availableMemory < 0.2 * MemoryStatistics.TotalPhysicalMemory && availableMemory < Database.Configuration.AvailableMemoryForRaisingBatchSizeLimit * 2;
 				if (lowMemory)
 				{
-				    int size;
+					int size;
 					var lastBatchSize = sourceReplicationInformation.LastBatchSize;
 					if (lastBatchSize.HasValue && maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-                        size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
+						size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
 					else if (lastBatchSize.HasValue)
-                        size = lastBatchSize.Value;
+						size = lastBatchSize.Value;
 					else if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-					    size = maxNumberOfItemsToReceiveInSingleBatch.Value;
+						size = maxNumberOfItemsToReceiveInSingleBatch.Value;
 					else
-					    size = 128;
+						size = 128;
 
-				    sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
-                        Math.Max(size / 2, 64);
+					sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
+						Math.Max(size / 2, 64);
 				}
 				else
 				{
@@ -653,7 +653,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		{
 			var index = Database.Indexes.GetIndexDefinition(sideBySideReplicationInfo.Index.Name);
 			var sideBySideIndex = Database.Indexes.GetIndexDefinition(sideBySideReplicationInfo.SideBySideIndex.Name);
-		
+
 			//handle special cases first
 			if (index == null)
 			{
@@ -760,131 +760,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 		}
-		
-		[HttpPost]
-		[RavenRoute("replication/side-by-side/")]
-		[RavenRoute("databases/{databaseName}/replication/side-by-side/")]
-		public HttpResponseMessage ReplicateSideBySideIndex([FromBody] SideBySideReplicationInfo sideBySideReplicationInfo)
-		{
-			var index = Database.Indexes.GetIndexDefinition(sideBySideReplicationInfo.Index.Name);
-			var sideBySideIndex = Database.Indexes.GetIndexDefinition(sideBySideReplicationInfo.SideBySideIndex.Name);
-
-			if (string.Equals(op, "replicate-all", StringComparison.InvariantCultureIgnoreCase))
-				return ReplicateAllIndexes();
-
-			if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
-				return ReplicateAllIndexes(dest => dest.IsEqualTo(replicationDestination));
-
-			var indexName = GetQueryStringValue("indexName");
-			if (indexName == null)
-				throw new InvalidOperationException("indexName query string must be specified if op=replicate-all or op=replicate-all-to-destination isn't specified");
-
-			//check for replication document before doing work on getting index definitions.
-			//if there is no replication set up --> no point in doing any other work
-			HttpResponseMessage erroResponseMessage;
-			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
-			if (replicationDocument == null)
-				return erroResponseMessage;
-
-			if (indexName.EndsWith("/")) //since id is part of the url, perhaps a trailing forward slash appears there
-				indexName = indexName.Substring(0, indexName.Length - 1);
-			indexName = HttpUtility.UrlDecode(indexName);
-
-			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
-			if (indexDefinition == null)
-			{
-				//if there is no main index we would recreate it with side-by-side index definition,
-				//but if something happened and the old index was deleted and the side-by-side index was not deleted,
-				//then it is not needed anymore and should be deleted
-				if (sideBySideIndex != null)
-				{
-					using (Database.DisableAllTriggersForCurrentThread())//prevent this from being replicated as this change is internal and should not be replicated
-					using (Database.DocumentLock.Lock()) //prevent race condition -> simultaneously with replication to this node, 
-														 //a client creates side-by-side index
-				{
-						Database.Indexes.DeleteIndex(sideBySideIndex.Name);
-						var id = Constants.IndexReplacePrefix + sideBySideReplicationInfo.SideBySideIndex.Name;
-						Database.Documents.Delete(id, null, null);
-					}
-					}
-
-				return InternalPutIndex(sideBySideReplicationInfo.Index.Name,
-					sideBySideReplicationInfo.SideBySideIndex,
-					string.Format("Index with the name {0} wasn't found, so we created it with side-by-side index definition. (Perhaps it was deleted?)", sideBySideReplicationInfo.Index.Name));
-		}
-
-			if (index.Equals(sideBySideReplicationInfo.SideBySideIndex, false))
-				return GetMessageWithObject(new
-		{
-					Message = "It appears that side-by-side index already replaced the old index. Nothing to do..."
-				}, HttpStatusCode.NotModified);
-
-			//if both side-by-side index and the original index are identical, nothing to do here
-			var areIndexesEqual = index.Equals(sideBySideReplicationInfo.Index, false);
-			var areSideBySideIndexesEqual = (sideBySideIndex != null) && sideBySideIndex.Equals(sideBySideReplicationInfo.SideBySideIndex, false);
-
-			if (areIndexesEqual && areSideBySideIndexesEqual)
-			return GetMessageWithObject(new
-			{
-					Message = "It appears that side-by-side index and the old index are the same. Nothing to do..."
-				}, HttpStatusCode.NotModified);
-
-			if (areIndexesEqual == false && areSideBySideIndexesEqual)
-				return InternalPutIndex(sideBySideReplicationInfo.Index, "Side-by-side indexes were equal, updated the old index.");
-
-			{
-				PutSideBySideIndexDocument(sideBySideReplicationInfo);
-				return InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
-			}
-
-			PutSideBySideIndexDocument(sideBySideReplicationInfo);
-			var updateIndexResult = InternalPutIndex(sideBySideReplicationInfo.Index, "Side-by-side indexes were equal, updated the old index.");
-			var updateSideBySideIndexResult = InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
-
-			if (updateIndexResult.IsSuccessStatusCode && updateSideBySideIndexResult.IsSuccessStatusCode)
-			return GetMessageWithObject(new
-			{
-					Indexes = new[] { sideBySideReplicationInfo.Index.Name, sideBySideReplicationInfo.SideBySideIndex.Name },
-					Message = "Both index and side-by-side index were different, so we updated them both"
-				}, HttpStatusCode.Created);
-
-			return updateIndexResult.IsSuccessStatusCode == false ?
-				updateIndexResult : updateSideBySideIndexResult;
-		}
-
-		private void PutSideBySideIndexDocument(SideBySideReplicationInfo sideBySideReplicationInfo)
-		{
-			using (Database.DocumentLock.Lock())
-			{
-				var id = Constants.IndexReplacePrefix + sideBySideReplicationInfo.SideBySideIndex.Name;
-				var indexReplaceDocument = sideBySideReplicationInfo.IndexReplaceDocument;
-
-				if (indexReplaceDocument.MinimumEtagBeforeReplace != null) //TODO : verify that this is OK -> not sure
-					indexReplaceDocument.MinimumEtagBeforeReplace = EtagUtil.Increment(Database.Statistics.LastDocEtag, 1);
-				Database.TransactionalStorage.Batch(accessor => accessor.Documents.AddDocument(id, null, RavenJObject.FromObject(indexReplaceDocument), new RavenJObject()));
-			}
-		}
-
-
-		private HttpResponseMessage InternalPutIndex(string indexName, IndexDefinition indexToUpdate, string message)
-			{
-								try
-								{
-				Database.Indexes.PutIndex(indexName, indexToUpdate);
-				return GetMessageWithObject(new
-								{
-					Index = indexToUpdate.Name,
-					Message = message
-				}, HttpStatusCode.Created);
-								}
-			catch (Exception ex)
-			{
-				var compilationException = ex as IndexCompilationException;
-
-			return GetMessageWithObject(new
-			{
-		}
-		}
 
 		[HttpPost]
 		[RavenRoute("replication/replicate-indexes")]
@@ -895,7 +770,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 
 			if (replicationTask == null)
-				return GetMessageWithString("Could not find replication task. Something is wrong here, check logs for more details",HttpStatusCode.BadRequest);
+				return GetMessageWithString("Could not find replication task. Something is wrong here, check logs for more details", HttpStatusCode.BadRequest);
 
 			if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
 			{
@@ -903,9 +778,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				return GetEmptyMessage();
 			}
 
-			replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes:true, replicateTransformers:false);
+			replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes: true, replicateTransformers: false);
 			return GetEmptyMessage();
-			}
+		}
 
 		[HttpPost]
 		[RavenRoute("replication/replicate-transformers")]
