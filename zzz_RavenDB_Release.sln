@@ -90,6 +90,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.LiveTest", "B
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Web", "Raven.Tests.Web\Raven.Tests.Web.csproj", "{551BAFD7-082C-4ABF-8415-55E178CCA2AD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Monitor", "Raven.Monitor\Raven.Monitor.csproj", "{775CC9C6-BD75-459C-B266-CA1CD389F1A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -376,6 +378,14 @@ Global
 		{551BAFD7-082C-4ABF-8415-55E178CCA2AD}.Release|Any CPU.Build.0 = Release|Any CPU
 		{551BAFD7-082C-4ABF-8415-55E178CCA2AD}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{551BAFD7-082C-4ABF-8415-55E178CCA2AD}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -408,6 +418,7 @@ Global
 		{01CA67F3-1E46-455C-8713-86FCCF2EFBC7} = {3617B75B-4CD6-4420-86B9-CACDC3C00D47}
 		{108260D1-12ED-4EC5-8C6B-1DED1D73271F} = {F2B14D1C-4B20-4DA0-9CE6-C169773B0493}
 		{551BAFD7-082C-4ABF-8415-55E178CCA2AD} = {3617B75B-4CD6-4420-86B9-CACDC3C00D47}
+		{775CC9C6-BD75-459C-B266-CA1CD389F1A4} = {34CAACF8-D3EB-4161-931D-C850F076115C}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 90d6cc9d-ef79-4360-ac7d-a7523ee38ad0
