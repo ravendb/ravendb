@@ -512,7 +512,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			}
 		}
 
-		public void DeleteMappedResultsForView(int indexId)
+		public void DeleteMappedResultsForView(int indexId, CancellationToken token)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_doc_key");
 			Api.MakeKey(session, MappedResults, indexId, MakeKeyGrbit.NewKey);
@@ -532,7 +532,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 				Api.JetDelete(session, MappedResults);
 
-			} while (Api.TryMoveNext(session, MappedResults));
+			} while (Api.TryMoveNext(session, MappedResults) && token.IsCancellationRequested == false);
 
 			foreach (var reduceKey in deletedReduceKeys)
 			{

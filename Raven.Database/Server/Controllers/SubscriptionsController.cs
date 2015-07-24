@@ -198,41 +198,47 @@ namespace Raven.Database.Server.Controllers
 					var batchDocCount = 0;
 					var processedDocuments = 0;
 					var hasMoreDocs = false;
-
 					var config = subscriptions.GetSubscriptionConfig(id);
-					var startEtag = config.AckEtag;
+					var startEtag =  config.AckEtag;
 					var criteria = config.Criteria;
 
-                    Action<JsonDocument> addDocument = doc =>
+                    bool isPrefixCriteria = !string.IsNullOrWhiteSpace(criteria.KeyStartsWith);
+
+                    Func<JsonDocument, bool> addDocument = doc =>
                     {
 	                    processedDocuments++;
                         timeout.Delay();
 
+                        // We cant continue because we have already maxed out the batch bytes size.
                         if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
-                            return;
+                            return false;
 
+                        // We cant continue because we have already maxed out the amount of documents to send.
                         if (batchDocCount >= options.MaxDocCount)
-                            return;
+                            return false;
 
-                        lastProcessedDocEtag = doc.Etag;
-
+                        // We can continue because we are ignoring system documents.
                         if (doc.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
-                            return;
+                            return true;
 
+                        // We can continue because we are ignoring the document as it doesn't fit the criteria.
                         if (MatchCriteria(criteria, doc) == false)
-                            return;
+                            return true;
 
                         doc.ToJson().WriteTo(writer);
                         writer.WriteRaw(Environment.NewLine);
 
                         batchSize += doc.SerializedSizeOnDisk;
                         batchDocCount++;
+
+                        return true; // We get the next document
                     };
 
-					var retries = 0;
+					int retries = 0;
 					do
 					{
-						var lastIndex = processedDocuments;
+						int lastIndex = processedDocuments;
+
 						Database.TransactionalStorage.Batch(accessor =>
 						{
 							// we may be sending a LOT of documents to the user, and most 
@@ -240,28 +246,36 @@ namespace Raven.Database.Server.Controllers
 							// the cache for that, to avoid filling it up very quickly
 							using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 							{    
-                                if (!string.IsNullOrWhiteSpace(criteria.KeyStartsWith))
+                                if (isPrefixCriteria)
                                 {
-                                    Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                    // If we don't get any document from GetDocumentsWithIdStartingWith it could be that we are in presence of a lagoon of uninteresting documents, so we are hitting a timeout.
+                                    lastProcessedDocEtag = Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+
+                                    hasMoreDocs = false;
                                 }
                                 else
                                 {
-                                    Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                    // It doesn't matter if we match the criteria or not, the document has been already processed.
+                                    lastProcessedDocEtag = Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+
+                                    // If we don't get any document from GetDocuments it may be a signal that something is wrong.
+                                    if (lastProcessedDocEtag == null)
+                                    {
+                                        hasMoreDocs = false;
+                                    }
+                                    else
+                                    {
+                                        var lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+                                        hasMoreDocs = EtagUtil.IsGreaterThan(lastDocEtag, lastProcessedDocEtag);
+
+                                        startEtag = lastProcessedDocEtag;
+                                    }
+
+                                    retries = lastIndex == batchDocCount ? retries : 0;
                                 }
-							}
-
-							if (lastProcessedDocEtag == null)
-								hasMoreDocs = false;
-							else
-							{
-								var lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-								hasMoreDocs = EtagUtil.IsGreaterThan(lastDocEtag, lastProcessedDocEtag);
-
-								startEtag = lastProcessedDocEtag;
-							}
-
-							retries = lastIndex == batchDocCount ? retries : 0;
+							}							
 						});
+
 						if (lastIndex == processedDocuments)
 						{
 							if (retries == 3)
@@ -274,11 +288,12 @@ namespace Raven.Database.Server.Controllers
 							}
 							retries++;
 						}
-					} while (retries< 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
+					} 
+                    while (retries < 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
 
 					writer.WriteEndArray();
 
-					if (batchDocCount > 0)
+                    if (batchDocCount > 0 || isPrefixCriteria)
 					{
 						writer.WritePropertyName("LastProcessedEtag");
 						writer.WriteValue(lastProcessedDocEtag.ToString());

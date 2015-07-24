@@ -23,6 +23,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
+using Lucene.Net.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -32,6 +33,7 @@ using Raven.Abstractions.Json.Linq;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing.Analyzers;
@@ -41,6 +43,7 @@ using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Constants = Raven.Abstractions.Data.Constants;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
 using Field = Lucene.Net.Documents.Field;
@@ -51,7 +54,7 @@ namespace Raven.Database.Indexing
 	/// <summary>
 	/// 	This is a thread safe, single instance for a particular index.
 	/// </summary>
-	public abstract class Index : IDisposable
+	public abstract class Index : IDisposable,ILowMemoryHandler
 	{
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
@@ -113,6 +116,8 @@ namespace Raven.Database.Indexing
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
 			_indexCreationTime = SystemTime.UtcNow;
 			RecreateSearcher();
+
+			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
@@ -236,7 +241,7 @@ namespace Raven.Database.Indexing
 
 				if (currentIndexSearcherHolder != null)
 				{
-					var item = currentIndexSearcherHolder.SetIndexSearcher(null, wait: true);
+					var item = currentIndexSearcherHolder.SetIndexSearcher(null, PublicName, wait: true);
 					if (item.WaitOne(TimeSpan.FromSeconds(5)) == false)
 					{
 						logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
@@ -932,12 +937,12 @@ namespace Raven.Database.Indexing
 		{
 			if (indexWriter == null)
 			{
-				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true), wait: false);
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true), PublicName,wait: false);
 			}
 			else
 			{
 				var indexReader = indexWriter.GetReader();
-				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader), wait: false);
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader), PublicName, wait: false);
 			}
 		}
 
@@ -1141,11 +1146,12 @@ namespace Raven.Database.Indexing
 
 		#region Nested type: IndexQueryOperation
 
-		internal class IndexQueryOperation
+	    public class IndexQueryOperation
 		{
 			FastVectorHighlighter highlighter;
 			FieldQuery fieldQuery;
 
+            private readonly Stopwatch _queryParseDuration = new Stopwatch();
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
@@ -1156,6 +1162,11 @@ namespace Raven.Database.Indexing
 			private readonly List<string> reduceKeys;
 			private bool hasMultipleIndexOutputs;
 			private int alreadyScannedForDuplicates;
+
+		    public TimeSpan QueryParseDuration
+		    {
+                get { return _queryParseDuration.Elapsed; }
+		    }
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, List<string> reduceKeys = null)
 			{
 				this.parent = parent;
@@ -1558,7 +1569,8 @@ namespace Raven.Database.Indexing
 
 			private Query GetDocumentQuery(string query, IndexQuery indexQuery)
 			{
-				Query documentQuery;
+                _queryParseDuration.Start();
+                Query documentQuery;
 				if (String.IsNullOrEmpty(query))
 				{
 					logQuerying.Debug("Issuing query on index {0} for all documents", parent.indexId);
@@ -1588,7 +1600,9 @@ namespace Raven.Database.Indexing
 						DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
 					}
 				}
-				return ApplyIndexTriggers(documentQuery);
+			    var afterTriggers = ApplyIndexTriggers(documentQuery);
+                _queryParseDuration.Stop();
+			    return afterTriggers;
 			}
 
 			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, RavenPerFieldAnalyzerWrapper analyzer)
@@ -1969,6 +1983,55 @@ namespace Raven.Database.Indexing
 			{
 				return obj.IndexId.GetHashCode();
 			}
+		}
+
+		public void HandleLowMemory()
+		{
+			bool tryEnter = false;
+			try
+			{
+				tryEnter = Monitor.TryEnter(writeLock);
+
+				if (tryEnter == false)
+					return;
+
+				try
+				{
+					EnsureIndexWriter();
+					ForceWriteToDisk();
+					WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+				}
+				catch (Exception e)
+				{
+					logIndexing.ErrorException("Error while writing in memory index to disk.", e);
+				}
+				RecreateSearcher();
+			}
+			finally
+			{
+				if(tryEnter)
+				Monitor.Exit(writeLock);
+			}
+		}
+
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		public LowMemoryHandlerStatistics GetStats()
+		{
+			var writerEstimator = new RamUsageEstimator(false);
+			return new LowMemoryHandlerStatistics()
+			{
+				Name = "Index",
+				DatabaseName = this.context.DatabaseName,
+				Metadata = new
+				{
+					IndexName = this.PublicName
+				},
+				EstimatedUsedMemory = writerEstimator.EstimateRamUsage(indexWriter)
+			};
 		}
 	}
 }

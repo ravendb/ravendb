@@ -180,7 +180,7 @@ namespace Raven.Client.Connection
 			this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
 			this.httpMessageHandler = httpMessageHandler;
 			this.acceptGzipContent = acceptGzipContent;
-			httpClientCache = new HttpClientCache();
+			httpClientCache = new HttpClientCache(ServicePointManager.MaxServicePointIdleTime);
 
 		    ResetCache();
 		}

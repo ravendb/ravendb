@@ -47,8 +47,7 @@ namespace Raven.Client.Document.SessionOperations
 				documentFound.NonAuthoritativeInformation.HasValue &&
 				documentFound.NonAuthoritativeInformation.Value &&
 				sessionOperations.AllowNonAuthoritativeInformation == false &&
-				sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout
-				;
+				sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout;
 		}
 
 		public virtual T Complete<T>()

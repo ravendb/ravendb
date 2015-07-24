@@ -15,7 +15,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
 using Raven.Abstractions;
@@ -82,6 +81,8 @@ namespace Raven.Database
 
 		private volatile bool backgroundWorkersSpun;
 
+		private volatile bool indexingWorkersStoppedManually;
+
 		private volatile bool disposed;
 
 		private readonly DocumentDatabaseInitializer initializer;
@@ -110,6 +111,7 @@ namespace Raven.Database
 				initializer.ValidateLicense();
 
 				initializer.SubscribeToDomainUnloadOrProcessExit();
+				initializer.SubscribeToDiskSpaceChanges();
 				initializer.ExecuteAlterConfiguration();
 				initializer.SatisfyImportsOnce();
 
@@ -230,6 +232,8 @@ namespace Raven.Database
 		public event Action OnIndexingWiringComplete;
 
 		public event Action<DocumentDatabase> OnBackupComplete;
+
+		public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
 
 		public static string BuildVersion
 		{
@@ -791,22 +795,22 @@ namespace Raven.Database
 			}
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (ExtensionsState == null)
-				return;
+			{
+				if (ExtensionsState == null)
+					return;
 
-			foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
-				exceptionAggregator.Execute(value.Dispose);
-		});
+				foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
+					exceptionAggregator.Execute(value.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (toDispose == null)
-				return;
+			{
+				if (toDispose == null)
+					return;
 
-			foreach (IDisposable shouldDispose in toDispose)
-				exceptionAggregator.Execute(shouldDispose.Dispose);
-		});
+				foreach (IDisposable shouldDispose in toDispose)
+					exceptionAggregator.Execute(shouldDispose.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
 			{
@@ -824,11 +828,11 @@ namespace Raven.Database
 			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			var disposable = backgroundTaskScheduler as IDisposable;
-			if (disposable != null)
-				disposable.Dispose();
-		});
+			{
+				var disposable = backgroundTaskScheduler as IDisposable;
+				if (disposable != null)
+					disposable.Dispose();
+			});
 
 
 			if (IndexStorage != null)
@@ -969,8 +973,11 @@ namespace Raven.Database
 		public RavenThreadPool MappingThreadPool;
 		public RavenThreadPool ReducingThreadPool;
 
-		public void SpinBackgroundWorkers()
+                public void SpinBackgroundWorkers(bool manualStart = false)
 		{
+			if (manualStart == false && indexingWorkersStoppedManually)
+				return;
+
 			if (backgroundWorkersSpun)
 				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
 			var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
@@ -981,6 +988,7 @@ namespace Raven.Database
 				if (res && disableIndexingStatus) return; //indexing were set to disable 
 			}
 			backgroundWorkersSpun = true;
+			indexingWorkersStoppedManually = false;
 
 			workContext.StartWork();
 
@@ -1030,8 +1038,16 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
-		public void StopIndexingWorkers()
+		public void StartIndexingWorkers()
 		{
+			workContext.StartIndexing();
+		}
+
+		public void StopIndexingWorkers(bool manualStop)
+		{
+			if (manualStop == false && indexingWorkersStoppedManually)
+				return;
+
 			workContext.StopIndexing();
 			try
 			{
@@ -1052,6 +1068,7 @@ namespace Raven.Database
 			}
 
 			backgroundWorkersSpun = false;
+			indexingWorkersStoppedManually = manualStop;
 		}
 
 		public void ForceLicenseUpdate()
@@ -1180,11 +1197,12 @@ namespace Raven.Database
 		private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
 		{
 			var results = new BatchResult[commands.Count];
+			var participatingIds = commands.Select(x => x.Key).ToArray();
+
 			for (int index = 0; index < commands.Count; index++)
 			{
 				token.ThrowIfCancellationRequested();
 
-				var participatingIds = commands.Select(x => x.Key).ToArray();
 				results[index] = commands[index].ExecuteBatch(this, participatingIds);
 			}
 
@@ -1316,7 +1334,51 @@ namespace Raven.Database
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 
+			public void SubscribeToDiskSpaceChanges()
+			{
+				database.OnDiskSpaceChanged = notification =>
+				{
+					if (notification.PathType != PathType.Index)
+						return;
 
+					if (configuration.Indexing.DisableIndexingFreeSpaceThreshold < 0)
+						return;
+
+					var thresholdInMb = configuration.Indexing.DisableIndexingFreeSpaceThreshold;
+					var warningThresholdInMb = Math.Max(thresholdInMb * 2, 1024);
+					var freeSpaceInMb = (int)(notification.FreeSpaceInBytes / 1024 / 1024);
+
+					if (freeSpaceInMb <= thresholdInMb)
+					{
+						if (database.backgroundWorkersSpun)
+							database.StopIndexingWorkers(false);
+
+						database.AddAlert(new Alert
+						{
+							AlertLevel = AlertLevel.Error,
+							CreatedAt = SystemTime.UtcNow,
+							Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
+							UniqueKey = "Free space (index)"
+						});
+		}
+					else
+					{
+						if (freeSpaceInMb <= warningThresholdInMb)
+						{
+							database.AddAlert(new Alert
+							{
+								AlertLevel = AlertLevel.Warning,
+								CreatedAt = SystemTime.UtcNow,
+								Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space. Indexing will be disabled when it reaches {3}MB.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
+								UniqueKey = "Free space warning (index)"
+							});
+						}
+
+						if (database.backgroundWorkersSpun == false)
+							database.SpinBackgroundWorkers(false);
+					}
+				};
+			}
 		}
 
 		public void RaiseBackupComplete()

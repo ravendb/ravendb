@@ -65,7 +65,7 @@ namespace Raven.Tests.Triggers
 		{
 			db.Documents.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
 
-            var jsonDocument = db.Documents.GetDocuments(0, 25, null, CancellationToken.None).First();
+            var jsonDocument = db.Documents.GetDocumentsAsJson(0, 25, null, CancellationToken.None).First();
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
 				jsonDocument.Value<RavenJObject>("@metadata").Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
@@ -141,7 +141,7 @@ namespace Raven.Tests.Triggers
 			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
 
 
-            Assert.Empty(db.Documents.GetDocuments(0, 25, null, CancellationToken.None));
+            Assert.Empty(db.Documents.GetDocumentsAsJson(0, 25, null, CancellationToken.None));
 		}
 
 		[Fact]
@@ -262,7 +262,7 @@ namespace Raven.Tests.Triggers
 			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
 
-            Assert.Equal("ABC", db.Documents.GetDocuments(0, 10, null, CancellationToken.None).First().Value<string>("name"));
+            Assert.Equal("ABC", db.Documents.GetDocumentsAsJson(0, 10, null, CancellationToken.None).First().Value<string>("name"));
 		}
 
 		[Fact]

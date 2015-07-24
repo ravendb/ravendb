@@ -73,7 +73,7 @@ namespace Raven.Tests.Helpers
 			CommonInitializationUtil.Initialize();
 
 			// Make sure to delete the Data folder which we be used by tests that do not call the NewDataPath from whatever reason.
-			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Data".ToFullPath());
+			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Databases".ToFullPath());
 			ClearDatabaseDirectory(dataFolder);
 			pathsToDelete.Add(dataFolder);
 		}
@@ -146,7 +146,7 @@ namespace Raven.Tests.Helpers
         /// <param name="runInMemory">Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost.<br/>Default: <b>true</b></param>
         /// <param name="requestedStorage">What storage type to use (see: RavenDB Storage engines).<br/>Allowed values: <b>vornon</b>, <b>esent</b>.<br/>Default: <b>voron</b></param>
         /// <param name="catalog">Custom bundles that are not provided by RavenDb.</param>
-        /// <param name="dataDir">The path for the database directory. Can use ~\ as the root, in which case the path will start from the server base directory. <br/>Default: <b>~\Data</b></param>
+		/// <param name="dataDir">The path for the database directory. Can use ~\ as the root, in which case the path will start from the server base directory. <br/>Default: <b>~\Databases\System</b></param>
         /// <param name="enableAuthentication"></param>
         /// <param name="activeBundles">Semicolon separated list of bundles names, such as: 'Replication;Versioning'.<br/>Default: no bundles turned on.</param>
         /// <param name="port">The port to use when creating the http listener. Allowed: 1 - 65,536 or * (find first available port from 8079 and upward).<br/>Default: <b>8079</b></param>
@@ -285,7 +285,7 @@ namespace Raven.Tests.Helpers
         /// <param name="ravenDbServer">A RavenDb server.</param>
         /// <param name="databaseName">Name of the server that will show up on /admin/stats endpoint.</param>
         /// <param name="runInMemory">Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost.<br/>Default: <b>true</b></param>
-        /// <param name="dataDirectory">The path for the database directory. Can use ~\ as the root, in which case the path will start from the server base directory. <br/>Default: <b>~\Data</b></param>
+		/// <param name="dataDirectory">The path for the database directory. Can use ~\ as the root, in which case the path will start from the server base directory. <br/>Default: <b>~\Databases\System</b></param>
         /// <param name="requestedStorage">What storage type to use (see: RavenDB Storage engines).<br/>Allowed values: <b>vornon</b>, <b>esent</b>.<br/>Default: <b>voron</b></param>
         /// <param name="enableAuthentication"></param>
         /// <param name="ensureDatabaseExists">For a multi-tenant RavenDb server, creates the database if it doesn't already exist.</param>

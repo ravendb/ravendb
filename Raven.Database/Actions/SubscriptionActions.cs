@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Impl;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
@@ -21,9 +22,7 @@ namespace Raven.Database.Actions
 		private readonly ConcurrentDictionary<long, SubscriptionConnectionOptions> openSubscriptions = 
 			new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
 
-		private readonly ConcurrentDictionary<long, ConcurrentQueue<SubscriptionConnectionOptions>> pendingClients =
-			new ConcurrentDictionary<long, ConcurrentQueue<SubscriptionConnectionOptions>>();
-
+		private readonly ConcurrentDictionary<long, PutSerialLock> locks = new ConcurrentDictionary<long, PutSerialLock>();
 
 		public SubscriptionActions(DocumentDatabase database, ILog log)
 			: base(database, null, null, log)
@@ -42,7 +41,7 @@ namespace Raven.Database.Actions
 				{
 					SubscriptionId = id,
 					Criteria = criteria,
-					AckEtag = Etag.Empty
+                    AckEtag = criteria.StartEtag ?? Etag.Empty,
 				};
 
 				SaveSubscriptionConfig(id, config);
@@ -51,9 +50,17 @@ namespace Raven.Database.Actions
 			return id;
 		}
 
+		private IDisposable LockSubscription(long  id)
+		{
+			return locks.GetOrAdd(id, new PutSerialLock()).Lock();
+		}
+
 		public void DeleteSubscription(long id)
 		{
-			Database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenSubscriptionsPrefix, id.ToString("D19")));
+			using (LockSubscription(id))
+			{
+				Database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenSubscriptionsPrefix, id.ToString("D19")));
+			}
 		}
 
 		private void SaveSubscriptionConfig(long id, SubscriptionConfig config)
@@ -180,27 +187,33 @@ namespace Raven.Database.Actions
 
 		public void UpdateBatchSentTime(long id)
 		{
-			TransactionalStorage.Batch(accessor =>
+			using (LockSubscription(id))
 			{
-				var config = GetSubscriptionConfig(id);
+				TransactionalStorage.Batch(accessor =>
+				{
+					var config = GetSubscriptionConfig(id);
 
-				config.TimeOfSendingLastBatch = SystemTime.UtcNow;
-				config.TimeOfLastClientActivity = SystemTime.UtcNow;
+					config.TimeOfSendingLastBatch = SystemTime.UtcNow;
+					config.TimeOfLastClientActivity = SystemTime.UtcNow;
 
-				SaveSubscriptionConfig(id, config);
-			});
+					SaveSubscriptionConfig(id, config);
+				});
+			}
 		}
 
 		public void UpdateClientActivityDate(long id)
 		{
-			TransactionalStorage.Batch(accessor =>
+			using (LockSubscription(id))
 			{
-				var config = GetSubscriptionConfig(id);
+				TransactionalStorage.Batch(accessor =>
+				{
+					var config = GetSubscriptionConfig(id);
 
-				config.TimeOfLastClientActivity = SystemTime.UtcNow;
+					config.TimeOfLastClientActivity = SystemTime.UtcNow;
 
-				SaveSubscriptionConfig(id, config);
-			});
+					SaveSubscriptionConfig(id, config);
+				});
+			}
 		}
 
 		public List<SubscriptionConfig> GetSubscriptions(int start, int take)

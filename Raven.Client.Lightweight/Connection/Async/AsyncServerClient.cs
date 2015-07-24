@@ -186,6 +186,21 @@ namespace Raven.Client.Connection.Async
 			}, token);
 		}
 
+		public Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken))
+		{
+			return ExecuteWithReplication("POST", async operationMetadata =>
+			{
+				var operationUrl = operationMetadata.Url + "/transformers/" + name + "?op=" + "lockModeChange" + "&mode=" + lockMode;
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, "POST", operationMetadata.Credentials, convention)))
+				{
+					request.AddOperationHeaders(OperationsHeaders);
+					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+				}
+			}, token);
+		}
+
 		public Task ResetIndexAsync(string name, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication(HttpMethods.Reset, async operationMetadata =>
@@ -268,7 +283,10 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata, token), token);
 		}
-
+		public Task<List<string>> PutIndexesAsync(string[] names, IndexDefinition[] indexDefs, IndexingPriority[] priorities, CancellationToken token = default(CancellationToken))
+		{
+			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexesAsync(names, indexDefs, priorities, operationMetadata, token), token);
+		}
 		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutTransformerAsync(name, transformerDefinition, operationMetadata, token), token);
@@ -302,6 +320,33 @@ namespace Raven.Client.Connection.Async
 					await request.WriteAsync(serializeObject).ConfigureAwait(false);
 					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return result.Value<string>("Index");
+				}
+				catch (ErrorResponseException e)
+				{
+					if (e.StatusCode != HttpStatusCode.BadRequest) throw;
+					responseException = e;
+				}
+				var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" }).ConfigureAwait(false);
+				if (error == null) throw responseException;
+
+				throw new IndexCompilationException(error.Message) { IndexDefinitionProperty = error.IndexDefinitionProperty, ProblematicText = error.ProblematicText };
+			}
+		}
+
+		public async Task<List<string>> DirectPutIndexesAsync(string[] names, IndexDefinition[] indexDefs, IndexingPriority[] priorities
+			,OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
+		{
+			var requestUri = operationMetadata.Url + "/indexes";
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
+			{
+				var serializeObject = JsonConvert.SerializeObject(new MultiplePutIndexParam { Definitions = indexDefs, IndexesNames = names, Priorities = priorities}, Default.Converters);
+
+				ErrorResponseException responseException;
+				try
+				{
+					await request.WriteAsync(serializeObject).ConfigureAwait(false);
+					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    return result.Value<RavenJArray>("Indexes").Select(x=>x.Value<string>()).ToList();
 				}
 				catch (ErrorResponseException e)
 				{
@@ -1130,7 +1175,7 @@ namespace Raven.Client.Connection.Async
 	        return facetsJson;
 	    }
 
-		public Task<LogItem[]> GetLogsAsync(bool errorsOnly, CancellationToken token = default(CancellationToken))
+	    public Task<LogItem[]> GetLogsAsync(bool errorsOnly, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
 			{

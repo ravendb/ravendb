@@ -568,7 +568,7 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView(303));
+				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView(303, CancellationToken.None));
 
 				storage.Batch(accessor =>
 				{
@@ -635,7 +635,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(1, k1.Count);
 				});
 
-				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView(303));
+				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView(303, CancellationToken.None));
 
 				storage.Batch(accessor =>
 				{
@@ -668,7 +668,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(1, k1.Count);
 				});
 
-				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView(404));
+				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView(404, CancellationToken.None));
 
 				storage.Batch(accessor =>
 				{

@@ -127,6 +127,13 @@ namespace Raven.Client.Document
 
 		        if (replicated)
 		            return;
+				}
+				catch (Exception e)
+				{
+					log.DebugException(string.Format("Failed to get replicated etags for '{0}'.", sourceUrl), e);
+				
+					throw;
+				}
 
                 await Task.Delay(100, cancellationToken);
 		    }
@@ -146,10 +153,10 @@ namespace Raven.Client.Document
 			    var json = await request.ReadResponseJsonAsync();
 			    var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
 				log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
-
+				
 			    return new ReplicatedEtagInfo
 			    {
-				    DestinationUrl = destinationUrl, 
+				    DestinationUrl = destinationUrl,
 					DocumentEtag = etag 
 			    };
 		    }

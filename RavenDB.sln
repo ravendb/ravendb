@@ -120,6 +120,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Raft", "Raven.Tests.Raft\Raven.Tests.Raft.csproj", "{99D596EB-A15D-4407-BD28-DA46D5635773}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Monitor", "Raven.Monitor\Raven.Monitor.csproj", "{775CC9C6-BD75-459C-B266-CA1CD389F1A4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Traffic", "Tools\Raven.Traffic\Raven.Traffic.csproj", "{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -385,6 +386,12 @@ Global
 		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Profiling|Any CPU.Build.0 = Release|Any CPU
 		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{775CC9C6-BD75-459C-B266-CA1CD389F1A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}.Profiling|Any CPU.ActiveCfg = Release|Any CPU
+		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}.Profiling|Any CPU.Build.0 = Release|Any CPU
+		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -426,6 +433,7 @@ Global
 		{551BAFD7-082C-4ABF-8415-55E178CCA2AD} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
 		{99D596EB-A15D-4407-BD28-DA46D5635773} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
 		{775CC9C6-BD75-459C-B266-CA1CD389F1A4} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
+		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57

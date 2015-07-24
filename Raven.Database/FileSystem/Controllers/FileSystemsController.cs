@@ -1,9 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
-using System.Web.Http;
-using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers;
@@ -25,7 +20,7 @@ namespace Raven.Database.FileSystem.Controllers
 		public HttpResponseMessage FileSystems(bool getAdditionalData = false)
 		{
 			return Resources<FileSystemData>(Constants.FileSystem.Prefix, GetFileSystemsData, getAdditionalData);
-		}
+				}
 
 		private static List<FileSystemData> GetFileSystemsData(IEnumerable<RavenJToken> fileSystems)
 		{

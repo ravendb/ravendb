@@ -18,13 +18,14 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.FileSystem.Extensions;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization.Multipart
 {
 	internal class SynchronizationMultipartRequest : IHoldProfilingInformation
 	{
-        private readonly IAsyncFilesSynchronizationCommands destination;
+		private readonly ISynchronizationServerClient synchronizationServerClient;
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly FileSystemInfo fileSystemInfo;
@@ -32,10 +33,10 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
 
-        public SynchronizationMultipartRequest(IAsyncFilesSynchronizationCommands destination, FileSystemInfo fileSystemInfo, string fileName,
+		public SynchronizationMultipartRequest(ISynchronizationServerClient synchronizationServerClient, FileSystemInfo fileSystemInfo, string fileName,
                                                RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
 		{
-			this.destination = destination;
+			this.synchronizationServerClient = synchronizationServerClient;
 			this.fileSystemInfo = fileSystemInfo;
 			this.fileName = fileName;
 			this.sourceMetadata = sourceMetadata;
@@ -52,8 +53,6 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 
 			if (sourceStream.CanRead == false)
 				throw new Exception("Stream does not support reading");
-
-            var commands = (IAsyncFilesCommandsImpl)this.destination.Commands;
 
             var baseUrl = commands.UrlFor();
             var credentials = commands.PrimaryCredentials;

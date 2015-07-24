@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
 using Xunit;
@@ -82,6 +83,8 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
+				WaitForIndexing(storeA);
+
 				WaitForReplication(storeB, "foo/1");
 				WaitForReplication(storeB, "bar/1");
 
@@ -139,6 +142,8 @@ namespace Raven.Tests.Issues
 
 					session.SaveChanges();
 				}
+
+				WaitForIndexing(storeA);
 
 				WaitForReplication(storeB, "foo/1");
 				WaitForReplication(storeB, "bar/1");

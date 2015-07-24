@@ -2,17 +2,11 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Extensions;
 using Raven.Client.FileSystem.Changes;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Client.Util;
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
-
 
 namespace Raven.Client.FileSystem
 {
@@ -22,14 +16,14 @@ namespace Raven.Client.FileSystem
         /// The current session id - only used during construction
         /// </summary>
         [ThreadStatic]
-        protected static Guid? currentSessionId;
+		private static Guid? currentSessionId;
 
         private HttpJsonRequestFactory jsonRequestFactory;
         private FilesConvention conventions;
         private readonly AtomicDictionary<IFilesChanges> fileSystemChanges = new AtomicDictionary<IFilesChanges>(StringComparer.OrdinalIgnoreCase);
         private readonly AtomicDictionary<IAsyncFilesCommandsImpl> fileSystemCommands = new AtomicDictionary<IAsyncFilesCommandsImpl>(StringComparer.OrdinalIgnoreCase);
+		private readonly ConcurrentDictionary<string, IFilesReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IFilesReplicationInformer>(StringComparer.OrdinalIgnoreCase);
         
-
         private bool initialized;
         private FilesSessionListeners listeners = new FilesSessionListeners();
 
@@ -38,8 +32,6 @@ namespace Raven.Client.FileSystem
 
         public FilesStore()
         {
-            Credentials = CredentialCache.DefaultNetworkCredentials;
-
             SharedOperationsHeaders = new NameValueCollection();
             Conventions = new FilesConvention();
         }
@@ -50,8 +42,11 @@ namespace Raven.Client.FileSystem
         /// <value>The credentials.</value>
         public ICredentials Credentials 
         {
-            get { return this.credentials; }
-            set { this.credentials = credentials ?? CredentialCache.DefaultNetworkCredentials; }
+            get { return credentials; }
+	        set
+	        {
+		        credentials = value ?? CredentialCache.DefaultNetworkCredentials;
+        }
         }
         private ICredentials credentials;
 
@@ -66,13 +61,11 @@ namespace Raven.Client.FileSystem
             AssertInitialized();
 
             if (string.IsNullOrWhiteSpace(filesystem))
-                filesystem = this.DefaultFileSystem;
+                filesystem = DefaultFileSystem;
 
             return fileSystemChanges.GetOrAdd(filesystem, CreateFileSystemChanges );
         }
         
-
-
         protected virtual IFilesChanges CreateFileSystemChanges(string filesystem)
         {
             if (string.IsNullOrEmpty(Url))
@@ -80,7 +73,7 @@ namespace Raven.Client.FileSystem
 
             var tenantUrl = Url + "/fs/" + filesystem;
 
-            var commands = fileSystemCommands.GetOrAdd(filesystem, x => (IAsyncFilesCommandsImpl)this.AsyncFilesCommands.ForFileSystem(x));
+            var commands = fileSystemCommands.GetOrAdd(filesystem, x => (IAsyncFilesCommandsImpl)AsyncFilesCommands.ForFileSystem(x));
 
             using (NoSynchronizationContext.Scope())
             {
@@ -89,7 +82,7 @@ namespace Raven.Client.FileSystem
                     Credentials,
                     jsonRequestFactory,
                     Conventions,
-                    ((AsyncFilesServerClient) this.AsyncFilesCommands).TryResolveConflictByUsingRegisteredListenersAsync,
+                    ((AsyncFilesServerClient) AsyncFilesCommands).TryResolveConflictByUsingRegisteredListenersAsync,
                     () =>
                     {
                         fileSystemChanges.Remove(filesystem);
@@ -125,10 +118,20 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public string DefaultFileSystem
+	    public string DefaultFileSystem { get; set; }
+
+	    public IFilesReplicationInformer GetReplicationInformerForFileSystem(string fsName = null)
         {
-            get; set;
+			var key = Url;
+			fsName = fsName ?? DefaultFileSystem;
+			if (string.IsNullOrEmpty(fsName) == false)
+			{
+				key = MultiDatabase.GetRootFileSystemUrl(Url) + "/fs/" + fsName;
         }
+
+			var result = replicationInformers.GetOrAdd(key, replicationUrl => Conventions.ReplicationInformerFactory(replicationUrl, jsonRequestFactory));
+			return result;
+		}
 
         /// <summary>
         /// Gets the conventions.
@@ -244,6 +247,7 @@ namespace Raven.Client.FileSystem
 					new OperationCredentials(ApiKey, Credentials),
 					jsonRequestFactory, 
 					currentSessionId, 
+ 					GetReplicationInformerForFileSystem,
 					Listeners.ConflictListeners);
         }
 
@@ -321,7 +325,6 @@ namespace Raven.Client.FileSystem
             }
         }
 
-
         private static IAsyncFilesCommands SetupCommandsAsync(IAsyncFilesCommands filesCommands, OpenFilesSessionOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.FileSystem))
@@ -334,8 +337,6 @@ namespace Raven.Client.FileSystem
             return filesCommands;
         }
 
-
-
         public FilesSessionListeners Listeners
         {
             get  { return listeners; }
@@ -344,8 +345,6 @@ namespace Raven.Client.FileSystem
         {
             this.listeners = newListeners;         
         }
-
-
 
         private string _connectionStringName;
 
@@ -361,20 +360,22 @@ namespace Raven.Client.FileSystem
 
         private void HandleConnectionStringOptions()
         {
+	        if (!String.IsNullOrWhiteSpace(ConnectionStringName))
+	        {
             var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
             parser.Parse();
 
             var options = parser.ConnectionStringOptions;
             if (options.Credentials != null)
-                this.Credentials = options.Credentials;
+			        Credentials = options.Credentials;
             if (string.IsNullOrEmpty(options.Url) == false)
-                this.Url = options.Url;
+			        Url = options.Url;
             if (string.IsNullOrEmpty(options.DefaultFileSystem) == false)
-                this.DefaultFileSystem = options.DefaultFileSystem;
+			        DefaultFileSystem = options.DefaultFileSystem;
             if (string.IsNullOrEmpty(options.ApiKey) == false)
-                this.ApiKey = options.ApiKey;
+			        ApiKey = options.ApiKey;
         }
-
+        }
 
         protected void EnsureNotClosed()
         {
@@ -397,7 +398,6 @@ namespace Raven.Client.FileSystem
         {
             SessionCreatedInternal(session);
         }
-
 
         public event EventHandler AfterDispose = (obj, sender) => { };
 
@@ -434,6 +434,11 @@ namespace Raven.Client.FileSystem
                     remoteFileSystemCommand.Dispose();
             }
 
+			foreach (var replicationInformer in replicationInformers)
+			{
+				replicationInformer.Value.Dispose();
+			}
+
             // try to wait until all the async disposables are completed
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(5));
 
@@ -444,8 +449,5 @@ namespace Raven.Client.FileSystem
             WasDisposed = true;
             AfterDispose(this, EventArgs.Empty);
         }
-
-
-
     }
 }

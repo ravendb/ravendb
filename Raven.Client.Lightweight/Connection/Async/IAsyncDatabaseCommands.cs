@@ -335,6 +335,13 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize, CancellationToken token = default(CancellationToken));
 
+		/// <summary>
+		/// Sets the transformer's lock mode
+		/// </summary>
+		/// <param name="name">The name of the transformer</param>
+		/// <param name="lockMode">The lock mode to be set</param>
+		Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken));
+
         /// <summary>
         ///     Retrieves the document metadata for the specified document key.
         ///     <para>Returns:</para>
@@ -507,6 +514,16 @@ namespace Raven.Client.Connection.Async
         /// <param name="indexDef">definition of an index</param>
         /// <param name="token">The cancellation token.</param>
         Task<string> PutIndexAsync(string name, IndexDefinition indexDef, CancellationToken token = default(CancellationToken));
+
+		/// <summary>
+		/// Creates multiple indexes 
+		/// </summary>
+		/// <param name="names">Names of the indexes</param>
+		/// <param name="definitions">Indexes definition by order of names</param>
+		/// <param name="token">The cancellation token</param>
+		/// <param name="priorities">The priorities of the indexes</param>
+		/// <returns></returns>
+		Task<List<string>> PutIndexesAsync(string[] names, IndexDefinition[] definitions, IndexingPriority[] priorities, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition

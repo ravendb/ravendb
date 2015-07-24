@@ -150,7 +150,7 @@ namespace Raven.Database.Config
 			WorkingDir =
 				new StringSetting(settings["Raven/WorkingDir"], @"~\");
 			DataDir =
-				new StringSetting(settings["Raven/DataDir"], @"~\Data");
+				new StringSetting(settings["Raven/DataDir"], @"~\Databases\System");
 			IndexStoragePath =
 				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
 
@@ -263,6 +263,7 @@ namespace Raven.Database.Config
 			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
+			Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
 			Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 20);
 			Indexing.UseLuceneASTParser = new BooleanSetting(settings[Constants.UseLuceneASTParser], true);
 
@@ -488,6 +489,8 @@ namespace Raven.Database.Config
 		public class IndexingConfiguration
 		{
 			public IntegerSetting MaxNumberOfItemsToProcessInTestIndexes { get; set; }
+
+			public IntegerSetting DisableIndexingFreeSpaceThreshold { get; set; }
 			public IntegerSetting MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
 			public BooleanSetting UseLuceneASTParser { get; set; }
 		}
@@ -567,7 +570,7 @@ namespace Raven.Database.Config
 			public MonitoringConfiguration()
 			{
 				Snmp = new SnmpConfiguration();
-			}
+	}
 
 			public SnmpConfiguration Snmp { get; private set; }
 

@@ -77,6 +77,11 @@ namespace Raven.Tests.Abstractions.Logging
 					this.exception = exception;
 				}
 			}
+
+		    public bool ShouldLog(LogLevel logLevel)
+		    {
+		        return true;
+		    }
 		}
 	}
 }

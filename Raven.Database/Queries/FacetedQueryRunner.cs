@@ -1,17 +1,24 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
+using Microsoft.Isam.Esent.Interop;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Abstractions;
+using Raven.Database.Config;
+using Raven.Database.Server.Connections;
+using Sparrow;
 using Voron.Util;
 
 namespace Raven.Database.Queries
@@ -215,16 +222,16 @@ namespace Raven.Database.Queries
 		public class QueryForFacets
 		{
 			private readonly IndexDefinition indexDefinition;
-            DocumentDatabase Database { get; set; }
-            string Index { get; set; }
-            Dictionary<string, Facet> Facets { get; set; }
-            Dictionary<string, List<ParsedRange>> Ranges { get; set; }
-            IndexQuery IndexQuery { get; set; }
-            FacetResults Results { get; set; }
-            private int Start { get; set; }
-            private int? PageSize { get; set; }
-            private uint _fieldsCrc;
-            private IndexSearcherHolder.IndexSearcherHoldingState _currentState;
+			DocumentDatabase Database { get; set; }
+			string Index { get; set; }
+			Dictionary<string, Facet> Facets { get; set; }
+			Dictionary<string, List<ParsedRange>> Ranges { get; set; }
+			IndexQuery IndexQuery { get; set; }
+			FacetResults Results { get; set; }
+			private int Start { get; set; }
+			private int? PageSize { get; set; }
+			private uint _fieldsCrc;
+			private IndexSearcherHolder.IndexSearcherHoldingState _currentState;
 
 			public QueryForFacets(
 				DocumentDatabase database,
@@ -247,252 +254,277 @@ namespace Raven.Database.Queries
 				indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(Index);
 			}
 
-		
+
 			public void Execute()
 			{
 				ValidateFacets();
-				
+
 
 				var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
-			    bool isDistinct = IndexQuery.IsDistinct;
-			    if (isDistinct)
-			    {
-                    _fieldsCrc = IndexQuery.FieldsToFetch.Aggregate<string, uint>(0, (current, field) => Crc.Value(field, current));
-			    }
+				bool isDistinct = IndexQuery.IsDistinct;
+				if (isDistinct)
+				{
+					_fieldsCrc = IndexQuery.FieldsToFetch.Aggregate<string, uint>(0, (current, field) => Crc.Value(field, current));
+				}
 
-			    _currentState = Database.IndexStorage.GetCurrentStateHolder(Index);
-			    using (_currentState)
+				_currentState = Database.IndexStorage.GetCurrentStateHolder(Index);
+				using (_currentState)
 				{
 					var currentIndexSearcher = _currentState.IndexSearcher;
 
 					var baseQuery = Database.IndexStorage.GetDocumentQuery(Index, IndexQuery, Database.IndexQueryTriggers);
 					var returnedReaders = GetQueryMatchingDocuments(currentIndexSearcher, baseQuery);
 
-				
-                    foreach (var facet in Facets.Values)
+					foreach (var facet in Facets.Values)
 					{
-						if(facet.Mode != FacetMode.Default)
+						if (facet.Mode != FacetMode.Default)
 							continue;
 
-                        Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
-                        HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
-                        if(isDistinct)
-                            distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
+						Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
+						HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
+						if (isDistinct)
+							distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
 
-					    foreach (var readerFacetInfo in returnedReaders)
-					    {
-                            var termsForField = IndexedTerms.GetTermsAndDocumenstFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name);
+						foreach (var readerFacetInfo in returnedReaders)
+						{
+							var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, Database.Name, Index);
 
-					        Dictionary<string, FacetValue> facetValues;
-                            
-					        if (facetsByName.TryGetValue(facet.DisplayName, out facetValues) == false)
-					        {
-                                facetsByName[facet.DisplayName] = facetValues = new Dictionary<string, FacetValue>();    
-					        }
+							Dictionary<string, FacetValue> facetValues;
 
-                            foreach (var kvp in termsForField)
-                            {
-                                if (isDistinct)
-                                {
-                                    if (distinctItems.TryGetValue(kvp.Key, out alreadySeen) == false)
-                                    {
-                                        alreadySeen = new HashSet<IndexSearcherHolder.StringCollectionValue>();
-                                        distinctItems[kvp.Key] = alreadySeen;
-                                    }
-                                }
+							if (facetsByName.TryGetValue(facet.DisplayName, out facetValues) == false)
+							{
+								facetsByName[facet.DisplayName] = facetValues = new Dictionary<string, FacetValue>();
+							}
 
-	                            var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
-								var intersectedDocuments = GetIntersectedDocuments(kvp.Value, readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
+							foreach (var kvp in termsForField)
+							{
+								if (isDistinct)
+								{
+									if (distinctItems.TryGetValue(kvp.Key, out alreadySeen) == false)
+									{
+										alreadySeen = new HashSet<IndexSearcherHolder.StringCollectionValue>();
+										distinctItems[kvp.Key] = alreadySeen;
+									}
+								}
+
+								var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
+								var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
 								var intersectCount = intersectedDocuments.Count;
-                                if (intersectCount == 0)
-                                    continue;
+								if (intersectCount == 0)
+									continue;
 
-                                FacetValue facetValue;
-                                if (facetValues.TryGetValue(kvp.Key, out facetValue) == false)
-                                {
-                                    facetValue = new FacetValue
-                                    {
-                                        Range = GetRangeName(facet.Name, kvp.Key)
-                                    };
-                                    facetValues.Add(kvp.Key, facetValue);
-                                }
-                                facetValue.Hits += intersectCount;
-                                facetValue.Count = facetValue.Hits;
+								FacetValue facetValue;
+								if (facetValues.TryGetValue(kvp.Key, out facetValue) == false)
+								{
+									facetValue = new FacetValue
+									{
+										Range = GetRangeName(facet.Name, kvp.Key)
+									};
+									facetValues.Add(kvp.Key, facetValue);
+								}
+								facetValue.Hits += intersectCount;
+								facetValue.Count = facetValue.Hits;
 
-	                            if (needToApplyAggregation)
-	                            {
-									ApplyAggregation(facet, facetValue, intersectedDocuments.Documents, readerFacetInfo.Reader, readerFacetInfo.DocBase);
-	                            }
-                            }
-					    }
+								if (needToApplyAggregation)
+								{
+									var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
+									ApplyAggregation(facet, facetValue, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase);
+								}
+							}
+						}
 					}
 
-				    foreach (var range in Ranges)
-				    {
-				        var facet = Facets[range.Key];
+					foreach (var range in Ranges)
+					{
+						var facet = Facets[range.Key];
 						var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
-						
+
 						Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
-                        HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
-                        if (isDistinct)
-                            distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
+						HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
+						if (isDistinct)
+							distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
 
-				        foreach (var readerFacetInfo in returnedReaders)
-				        {
-                            var termsForField = IndexedTerms.GetTermsAndDocumenstFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name);
-                            if (isDistinct)
-                            {
-                                if (distinctItems.TryGetValue(range.Key, out alreadySeen) == false)
-                                {
-                                    alreadySeen = new HashSet<IndexSearcherHolder.StringCollectionValue>();
-                                    distinctItems[range.Key] = alreadySeen;
-                                }
-                            }
+						foreach (var readerFacetInfo in returnedReaders)
+						{
+							var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, Database.Name, Index);
+							if (isDistinct)
+							{
+								if (distinctItems.TryGetValue(range.Key, out alreadySeen) == false)
+								{
+									alreadySeen = new HashSet<IndexSearcherHolder.StringCollectionValue>();
+									distinctItems[range.Key] = alreadySeen;
+								}
+							}
 
-				            var facetResult = Results.Results[range.Key];
-				            var ranges = range.Value;
+							var facetResult = Results.Results[range.Key];
+							var ranges = range.Value;
 							foreach (var kvp in termsForField)
-				            {
-				                for (int i = 0; i < ranges.Count; i++)
-				                {
-				                    var parsedRange = ranges[i];
-				                    if (parsedRange.IsMatch(kvp.Key))
-				                    {
-				                        var facetValue = facetResult.Values[i];
+							{
+								for (int i = 0; i < ranges.Count; i++)
+								{
+									var parsedRange = ranges[i];
+									if (parsedRange.IsMatch(kvp.Key))
+									{
+										var facetValue = facetResult.Values[i];
 
-										var intersectedDocuments = GetIntersectedDocuments(kvp.Value, readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
-					                    var intersectCount = intersectedDocuments.Count;
-				                        if (intersectCount == 0)
-				                            continue;
+										var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
+										var intersectCount = intersectedDocuments.Count;
+										if (intersectCount == 0)
+											continue;
 
-				                        facetValue.Hits += intersectCount;
-				                        facetValue.Count = facetValue.Hits;
+										facetValue.Hits += intersectCount;
+										facetValue.Count = facetValue.Hits;
 
 										if (needToApplyAggregation)
 										{
-											ApplyAggregation(facet, facetValue, intersectedDocuments.Documents, readerFacetInfo.Reader, readerFacetInfo.DocBase);
+											var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
+											ApplyAggregation(facet, facetValue, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase);
+											IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
+											intersectedDocuments.Documents = null;
 										}
-				                    }
-				                }
-				            }
-				        }
-				    }
-				    UpdateFacetResults(facetsByName);
+									}
+								}
+							}
+						}
+					}
+					UpdateFacetResults(facetsByName);
 
 					CompleteFacetCalculationsStage();
+
+					foreach (var readerFacetInfo in returnedReaders)
+					{
+						IntArraysPool.Instance.FreeArray(readerFacetInfo.Results.Array);
+					}
 				}
 			}
 
-		    private List<ReaderFacetInfo> GetQueryMatchingDocuments(IndexSearcher currentIndexSearcher, Query baseQuery)
-            {
-                var gatherAllCollector = new GatherAllCollectorByReader();
-                currentIndexSearcher.Search(baseQuery, gatherAllCollector);
+			private List<ReaderFacetInfo> GetQueryMatchingDocuments(IndexSearcher currentIndexSearcher, Query baseQuery)
+			{
+				var gatherAllCollector = new GatherAllCollectorByReader();
+				currentIndexSearcher.Search(baseQuery, gatherAllCollector);
 
-		        foreach (var readerFacetInfo in gatherAllCollector.Results)
-		        {
-		            var matches = readerFacetInfo.Matches;
-		            matches.Sort();
-		            readerFacetInfo.Results = matches.ToArray();
-		            readerFacetInfo.Matches = null;
-		        }
+				foreach (var readerFacetInfo in gatherAllCollector.Results)
+				{
+					readerFacetInfo.Complete();
+				}
 
-                return gatherAllCollector.Results;
-            }
+				return gatherAllCollector.Results;
+			}
 
 			private class IntersectDocs
 			{
 				public int Count;
-				public List<int> Documents;
+				public int[] Documents;
 
 				[MethodImpl(MethodImplOptions.AggressiveInlining)]
 				public void AddIntersection(int docId)
 				{
-					Count++;
 					if (Documents != null)
-						Documents.Add(docId);
+					{
+						if (Count >= Documents.Length)
+						{
+							IncreaseSize();
+						}
+						Documents[Count] = docId;
+					}
+					Count++;
+				}
+
+				private void IncreaseSize()
+				{
+					var newDocumentsArray = IntArraysPool.Instance.AllocateArray(Count*2);
+					Array.Copy(Documents, newDocumentsArray, Count);
+					IntArraysPool.Instance.FreeArray(Documents);
+					Documents = newDocumentsArray;
 				}
 			}
 
-		    /// <summary>
-            /// This method expects both lists to be sorted
-            /// </summary>
-			private IntersectDocs GetIntersectedDocuments(int[] a, int[] b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, bool needToApplyAggregation)
-		    {
-                int[] n,m;
-                if (a.Length > b.Length)
-                {
-                    n = a;
-                    m = b;
-                }
-                else
-                {
-                    n = b;
-                    m = a;
-                }
+			/// <summary>
+			/// This method expects both lists to be sorted
+			/// </summary>
+			private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, bool needToApplyAggregation)
+			{
+				ArraySegment<int> n, m;
+				if (a.Count > b.Count)
+				{
+					n = a;
+					m = b;
+				}
+				else
+				{
+					n = b;
+					m = a;
+				}
 
-                int nSize = n.Length;
-                int mSize = m.Length;
+				int nSize = n.Count;
+				int mSize = m.Count;
 
-                double o1 = nSize + mSize;
-                double o2 = nSize * Math.Log(mSize, 2);
+				double o1 = nSize + mSize;
+				double o2 = nSize * Math.Log(mSize, 2);
 
-                var isDistinct = IndexQuery.IsDistinct;
-                var result = new IntersectDocs();
+				var isDistinct = IndexQuery.IsDistinct;
+				var result = new IntersectDocs();
 				if (needToApplyAggregation)
-					result.Documents = new List<int>();
+				{
+					result.Documents = IntArraysPool.Instance.AllocateArray();
+				}
 
-                if (o1 < o2)
-                {
-                    int mi = 0, ni = 0;
-                    while (mi < mSize && ni < nSize)
-                    {
-                        if (n[ni] > m[mi])
-                        {
-                            mi++;
-                        }
-                        else if (n[ni] < m[mi])
-                        {
-                            ni++;
-                        }
-                        else
-                        {
-	                        int docId = n[ni];
-	                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
-	                        {
-		                        result.AddIntersection(docId);
-	                        }
+				if (o1 < o2)
+				{
+					int mi = m.Offset, ni = n.Offset;
+					while (mi < mSize && ni < nSize)
+					{
+						var nVal = n.Array[ni];
+						var mVal = m.Array[mi];
 
-	                        ni++;
-                            mi++;
-                        }
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < mSize; i++)
-                    {
-                        if (Array.BinarySearch(n, m[i]) >= 0)
-                        {
-	                        int docId = m[i];
-	                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
-	                        {
-		                        result.AddIntersection(docId);
-	                        }
-                        }
-                    }
-                }
-                return result;
-            }
+						if (nVal > mVal)
+						{
+							mi++;
+						}
+						else if (nVal < mVal)
+						{
+							ni++;
+						}
+						else
+						{
+							int docId = nVal;
+							if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
+							{
+								result.AddIntersection(docId);
+							}
+
+							ni++;
+							mi++;
+						}
+					}
+				}
+				else
+				{
+					for (int i = m.Offset; i < mSize; i++)
+					{
+						int docId = m.Array[i];
+						if (Array.BinarySearch(n.Array,n.Offset, n.Count, docId) >= 0)
+						{
+
+							if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
+							{
+								result.AddIntersection(docId);
+							}
+						}
+					}
+				}
+				return result;
+			}
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
-		    {
-                var fields = _currentState.GetFieldsValues(docId, _fieldsCrc, IndexQuery.FieldsToFetch);
-		        return alreadySeen.Add(fields);
-		    }
+			{
+				var fields = _currentState.GetFieldsValues(docId, _fieldsCrc, IndexQuery.FieldsToFetch);
+				return alreadySeen.Add(fields);
+			}
 
-		    private void ValidateFacets()
+			private void ValidateFacets()
 			{
 				foreach (var facet in Facets.Where(facet => IsAggregationNumerical(facet.Value.Aggregation) && IsAggregationTypeNumerical(facet.Value.AggregationType) && GetSortOptionsForFacet(facet.Value.AggregationField) == SortOptions.None))
 				{
@@ -517,8 +549,8 @@ namespace Raven.Database.Queries
 
 			public static bool IsAggregationTypeNumerical(string aggregationType)
 			{
-			    if (aggregationType == null)
-			        return false;
+				if (aggregationType == null)
+					return false;
 				var type = Type.GetType(aggregationType, false, true);
 				if (type == null)
 					return false;
@@ -597,10 +629,10 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			private void ApplyAggregation(Facet facet, FacetValue value, List<int> docsInQuery, IndexReader indexReader, int docBase)
+			private void ApplyAggregation(Facet facet, FacetValue value, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase)
 			{
-			    var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
-			    switch (sortOptionsForFacet)
+				var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
+				switch (sortOptionsForFacet)
 				{
 					case SortOptions.String:
 					case SortOptions.StringVal:
@@ -610,111 +642,117 @@ namespace Raven.Database.Queries
 					case SortOptions.None:
 						throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", TryTrimRangeSuffix(facet.AggregationField)));
 					case SortOptions.Int:
-                        int[] ints = FieldCache_Fields.DEFAULT.GetInts(indexReader, facet.AggregationField);
-				        foreach (var doc in docsInQuery)
-				        {
-                            var currentVal = ints[doc - docBase];
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Max))
-                            {
-                                value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
-                            }
+						int[] ints = FieldCache_Fields.DEFAULT.GetInts(indexReader, facet.AggregationField);
+						for (int index = 0; index < docsInQuery.Count; index++)
+						{
+							var doc = docsInQuery.Array[index];
+							var currentVal = ints[doc - docBase];
+							if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+							{
+								value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Min))
-                            {
-                                value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
-                            }
+							if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+							{
+								value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
-                            {
-                                value.Sum = currentVal + (value.Sum ?? 0d);
-                            }
+							if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+							{
+								value.Sum = currentVal + (value.Sum ?? 0d);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Average))
-                            {
-                                value.Average = currentVal + (value.Average ?? 0d);
-                            }
-				        }
-				        break;
+							if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+							{
+								value.Average = currentVal + (value.Average ?? 0d);
+							}
+						}
+						break;
 					case SortOptions.Float:
 						var floats = FieldCache_Fields.DEFAULT.GetFloats(indexReader, facet.AggregationField);
-				        foreach (var doc in docsInQuery)
-				        {
-                            var currentVal = floats[doc - docBase];
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Max))
-                            {
-                                value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
-                            }
+						for (int index = 0; index < docsInQuery.Count; index++)
+						{
+							var doc = docsInQuery.Array[index];
+							var currentVal = floats[doc - docBase];
+							if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+							{
+								value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Min))
-                            {
-                                value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
-                            }
+							if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+							{
+								value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
-                            {
-                                value.Sum = currentVal + (value.Sum ?? 0d);
-                            }
+							if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+							{
+								value.Sum = currentVal + (value.Sum ?? 0d);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Average))
-                            {
-                                value.Average = currentVal + (value.Average ?? 0d);
-                            }
-				        }
-				        break;
+							if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+							{
+								value.Average = currentVal + (value.Average ?? 0d);
+							}
+						}
+						break;
 					case SortOptions.Long:
 						var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
-				        foreach (var doc in docsInQuery)
-				        {
-                            var currentVal = longs[doc - docBase];
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Max))
-                            {
-                                value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
-                            }
+						for (int index = 0; index < docsInQuery.Count; index++)
+						{
+							var doc = docsInQuery.Array[index];
+						
+							var currentVal = longs[doc - docBase];
+							if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+							{
+								value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Min))
-                            {
-                                value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
-                            }
+							if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+							{
+								value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
-                            {
-                                value.Sum = currentVal + (value.Sum ?? 0d);
-                            }
+							if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+							{
+								value.Sum = currentVal + (value.Sum ?? 0d);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Average))
-                            {
-                                value.Average = currentVal + (value.Average ?? 0d);
-                            }
-				        }
-				        break;
+							if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+							{
+								value.Average = currentVal + (value.Average ?? 0d);
+							}
+						}
+						break;
 					case SortOptions.Double:
 						var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, facet.AggregationField);
-				        foreach (var doc in docsInQuery)
-				        {
-                            var currentVal = doubles[doc - docBase];
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Max))
-                            {
-                                value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
-                            }
+						for (int index = 0; index < docsInQuery.Count; index++)
+						{
+							var doc = docsInQuery.Array[index];
+						
+							var currentVal = doubles[doc - docBase];
+							if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+							{
+								value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Min))
-                            {
-                                value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
-                            }
+							if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+							{
+								value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
-                            {
-                                value.Sum = currentVal + (value.Sum ?? 0d);
-                            }
+							if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+							{
+								value.Sum = currentVal + (value.Sum ?? 0d);
+							}
 
-                            if (facet.Aggregation.HasFlag(FacetAggregation.Average))
-                            {
-                                value.Average = currentVal + (value.Average ?? 0d);
-                            }
-				        }
-				        break;
+							if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+							{
+								value.Average = currentVal + (value.Average ?? 0d);
+							}
+						}
+						break;
 					default:
-                        throw new ArgumentOutOfRangeException("Cannot understand " + sortOptionsForFacet);
+						throw new ArgumentOutOfRangeException("Cannot understand " + sortOptionsForFacet);
 				}
 			}
 
@@ -811,45 +849,170 @@ namespace Raven.Database.Queries
 			}
 		}
 
-	    public class ReaderFacetInfo
-	    {
-	        public IndexReader Reader;
-	        public int DocBase;
-            // Here we store the _global document id_, if you need the 
-            // reader document id, you must decrement with the DocBase
-            public List<int> Matches = new List<int>();
-	        public int[] Results;
-	    }
+		public class IntArraysPool : ILowMemoryHandler
+		{
+			public static IntArraysPool Instance = new IntArraysPool();
 
-        public class GatherAllCollectorByReader : Collector
-        {
+			private readonly ConcurrentDictionary<int, ObjectPool<int[]>> arraysPoolBySize = new ConcurrentDictionary<int, ObjectPool<int[]>>();
+			private readonly TimeSensitiveStore<ObjectPool<int[]>> timeSensitiveStore = new TimeSensitiveStore<ObjectPool<int[]>>(TimeSpan.FromDays(1));
 
-            private ReaderFacetInfo _current;
-            public List<ReaderFacetInfo> Results = new List<ReaderFacetInfo>(); 
+			private IntArraysPool()
+			{
 
-            public override void SetScorer(Scorer scorer)
-            {
-            }
+			}
 
-            public override void Collect(int doc)
-            {
-                _current.Matches.Add(doc + _current.DocBase);
-            }
+			public int[] AllocateArray(int arraySize = 1024)
+			{
+				var roundedSize = GetRoundedSize(arraySize);
+				var matchingQueue = arraysPoolBySize.GetOrAdd(roundedSize, x => new ObjectPool<int[]>(() => new int[roundedSize]));
 
-            public override void SetNextReader(IndexReader reader, int docBase)
-            {
-                _current = new ReaderFacetInfo
-                {
-                    DocBase = docBase,
-                    Reader = reader
-                };
-                Results.Add(_current);
-            }
+				var allocatedArray = matchingQueue.Allocate();
 
-            public override bool AcceptsDocsOutOfOrder
-            {
-                get { return true; }
-            }
-        }
+				timeSensitiveStore.Seen(matchingQueue);
+
+				return allocatedArray;
+			}
+
+			public void FreeArray(int[] returnedArray)
+			{
+				if (returnedArray.Length != GetRoundedSize(returnedArray.Length))
+				{
+					throw new ArgumentException("Array size does not match current array size constraints");
+				}
+
+
+				var matchingQueue = arraysPoolBySize.GetOrAdd(returnedArray.Length, x => new ObjectPool<int[]>(() => new int[returnedArray.Length]));
+				matchingQueue.Free(returnedArray);
+			}
+
+			private int GetRoundedSize(int size)
+			{
+				const int roundSize = 1024;
+				if (size % roundSize == 0)
+				{
+					return size;
+				}
+
+				return (size / roundSize + 1) * roundSize;
+			}
+
+			public void RunIdleOperations()
+			{
+				timeSensitiveStore.ForAllExpired(x =>
+				{
+					var matchingQueue = arraysPoolBySize.FirstOrDefault(y => y.Value == x).Key;
+					if (matchingQueue != 0)
+					{
+						ObjectPool<int[]> removedQueue;
+						arraysPoolBySize.TryRemove(matchingQueue, out removedQueue);
+					}
+				});
+			}
+
+			public void HandleLowMemory()
+			{
+				RunIdleOperations();
+			}
+
+			public void SoftMemoryRelease()
+			{
+			}
+
+			public LowMemoryHandlerStatistics GetStats()
+			{
+				return new LowMemoryHandlerStatistics
+				{
+					Name = "IntArraysPool",
+					//EstimatedUsedMemory = arraysPoolBySize.Select(x=>x.Value.)
+				};
+			}
+		}
+
+		public class ReaderFacetInfo
+		{
+			public IndexReader Reader;
+			public int DocBase;
+			// Here we store the _global document id_, if you need the 
+			// reader document id, you must decrement with the DocBase
+			public LinkedList<int[]> Matches;
+			private int[] _current;
+			private int _pos;
+			public ArraySegment<int> Results;
+
+			public ReaderFacetInfo()
+			{
+				_current = IntArraysPool.Instance.AllocateArray();
+				Matches = new LinkedList<int[]>();
+			}
+
+			public void AddMatch(int doc)
+			{
+				if (_pos >= _current.Length)
+				{
+					Matches.AddLast(_current);
+					_current = IntArraysPool.Instance.AllocateArray();
+					_pos = 0;
+				}
+				_current[_pos++] = doc +DocBase;
+			}
+
+			public void Complete()
+			{
+				var size = _pos;
+				foreach (var match in Matches)
+				{
+					size += match.Length;
+				}
+
+				var mergedAndSortedArray = IntArraysPool.Instance.AllocateArray(size);
+				var curMergedArrayIndex = 0;
+				foreach (var match in Matches)
+				{
+					Array.Copy(match, 0, mergedAndSortedArray, curMergedArrayIndex, match.Length);
+					curMergedArrayIndex += match.Length;
+					IntArraysPool.Instance.FreeArray(match);
+				}
+
+				Array.Copy(_current, 0, mergedAndSortedArray, curMergedArrayIndex, _pos);
+				IntArraysPool.Instance.FreeArray(_current);
+				curMergedArrayIndex += _pos;
+				_current = null;
+				_pos = 0;
+					
+				Array.Sort(mergedAndSortedArray,0, curMergedArrayIndex);
+				Results = new ArraySegment<int>(mergedAndSortedArray,0, curMergedArrayIndex);
+			}
+		}
+
+		public class GatherAllCollectorByReader : Collector
+		{
+			private ReaderFacetInfo _current;
+			public List<ReaderFacetInfo> Results = new List<ReaderFacetInfo>();
+
+
+			public override void SetScorer(Scorer scorer)
+			{
+			}
+
+			public override void Collect(int doc)
+			{
+				_current.AddMatch(doc);
+			}
+
+			public override void SetNextReader(IndexReader reader, int docBase)
+			{
+				_current = new ReaderFacetInfo
+				{
+					DocBase = docBase,
+					Reader = reader,
+				};
+				Results.Add(_current);
+			}
+
+			public override bool AcceptsDocsOutOfOrder
+			{
+				get { return true; }
+			}
+		}
 	}
 }

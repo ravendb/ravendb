@@ -4,21 +4,18 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-
 using Lucene.Net.Search;
-
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Embedded;
-using Raven.Database.Server;
 using Raven.Database.FileSystem;
+using Raven.Database.Server;
 using Raven.Database.Server.WebApi;
 
 namespace Raven.Server

@@ -24,8 +24,6 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Connection
 {
-    using Raven.Abstractions.Connection;
-
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
@@ -80,15 +78,15 @@ namespace Raven.Client.Connection
 		protected ReplicationInformerBase(QueryConvention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000)
 		{
 			Conventions = conventions;
-			this.requestFactory = requestFactory;
-			ReplicationDestinations = new List<OperationMetadata>();
-			DelayTimeInMiliSec = delayTime;
+		    this.requestFactory = requestFactory;
+		    ReplicationDestinations = new List<OperationMetadata>();
+		    DelayTimeInMiliSec = delayTime;
 			FailureCounters = new FailureCounters();
 		}
 
 		public FailureCounters FailureCounters { get; private set; }
 
-		/// <summary>
+        /// <summary>
         /// Refreshes the replication information.
         /// Expert use only.
         /// </summary>
@@ -98,7 +96,7 @@ namespace Raven.Client.Connection
 
 		protected abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
 
-	    /// <summary>
+		/// <summary>
 	    /// Should execute the operation using the specified operation URL
 	    /// </summary>
 	    private bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, HttpMethod method, bool primary, Exception error, CancellationToken token)
@@ -190,55 +188,55 @@ namespace Raven.Client.Connection
 
 		public virtual int GetReadStripingBase(bool increment)
 		{
-            return increment ? Interlocked.Increment(ref readStripingBase) : readStripingBase;
+            return increment ? Interlocked.Increment(ref ReadStripingBase) : ReadStripingBase;
 		}
 
 		public async Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method,
-			string primaryUrl,
-			OperationCredentials primaryCredentials,
+			string primaryUrl, 
+			OperationCredentials primaryCredentials, 
 			RequestTimeMetric primaryRequestTimeMetric,
-			int currentRequest,
-			int currentReadStripingBase,
-			Func<OperationMetadata, Task<T>> operation,
+			int currentRequest, 
+			int currentReadStripingBase, 
+			Func<OperationMetadata, Task<T>> operation, 
 			CancellationToken token = default (CancellationToken))
-		{
+        {
 			Debug.Assert(typeof(T).FullName.Contains("Task") == false);
 
-			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
+            var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
 			var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials, null);
 
-			var operationResult = new AsyncOperationResult<T>();
+            var operationResult = new AsyncOperationResult<T>();
 			var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 
 			var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
 
 			if (method == HttpMethods.Get && (shouldReadFromAllServers || allowReadFromSecondariesWhenRequestTimeThresholdIsPassed))
-			{
+            {
 				var replicationIndex = -1;
 				if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && primaryRequestTimeMetric != null && primaryRequestTimeMetric.RateSurpassed(Conventions))
 					replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count);
 				else if (shouldReadFromAllServers)
 					replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1);
 
-				// if replicationIndex == destinations count, then we want to use the master
-				// if replicationIndex < 0, then we were explicitly instructed to use the master
-				if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
-				{
-					// if it is failing, ignore that, and move to the master or any of the replicas
+                // if replicationIndex == destinations count, then we want to use the master
+                // if replicationIndex < 0, then we were explicitly instructed to use the master
+                if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
+                {
+                    // if it is failing, ignore that, and move to the master or any of the replicas
 					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, method, false, null, token))
-					{
-						operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
-						if (operationResult.Success)
-							return operationResult.Result;
-					}
-				}
-			}
+                    {
+                        operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
+                        if (operationResult.Success)
+                            return operationResult.Result;
+                    }
+                }
+            }
 
             if (ShouldExecuteUsing(primaryOperation,primaryOperation, method, true, null,token))
             {
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
-												.ConfigureAwait(false);
-				
+                    .ConfigureAwait(false);
+
                 if (operationResult.Success)
                     return operationResult.Result;
 
@@ -330,43 +328,43 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                     }
                 }
 
-				if (shouldTryAgain == false)
-				{
-					if (avoidThrowing == false)
-						throw;
+                if (shouldTryAgain == false)
+                {
+                    if (avoidThrowing == false)
+                        throw;
 
-					bool wasTimeout;
+                    bool wasTimeout;
 					var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
 	                
 					if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
-					{
-						return new AsyncOperationResult<T>
-						{
-							Success = false,
-							WasTimeout = wasTimeout,
-							Error = e
-						};
-					}
+                    {
+                        return new AsyncOperationResult<T>
+                        {
+                            Success = false,
+                            WasTimeout = wasTimeout,
+                            Error = e
+                        };
+                    }
 
                     if (isServerDown)
-                    {
+		{
 						return new AsyncOperationResult<T>
-						{
+			{
 							Success = false,
 							WasTimeout = wasTimeout,
 							Error = e
 						};
-					}
+			}
 					throw;
-				}
-            }
+		    }
+			}
             return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken);
-        }
+		}
 
 	    public virtual void Dispose()
 		{
 		}
-	}
+		}
 
     /// <summary>
 	/// The event arguments for when the failover status changed

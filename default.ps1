@@ -426,6 +426,11 @@ task UpdateLiveTest {
 </html>
 '@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
 
+
+	Remove-Item "C:\Sites\RavenDB $version\Web\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
+	mkdir "C:\Sites\RavenDB $version\Web\Plugins" -ErrorAction SilentlyContinue
+	Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "C:\Sites\RavenDB $version\Web\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
+	
 	Remove-Item "C:\Sites\RavenDB $version\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "C:\Sites\RavenDB $version\Web\bin" -ErrorAction SilentlyContinue
 	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB $version\Web\" -Recurse -ErrorAction SilentlyContinue

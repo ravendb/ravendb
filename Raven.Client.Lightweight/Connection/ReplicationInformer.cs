@@ -51,12 +51,12 @@ namespace Raven.Client.Connection
 			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
-			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+			if (LastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 				return new CompletedTask();
 
-			lock (replicationLock)
+			lock (ReplicationLock)
 			{
-				if (firstTime)
+				if (FirstTime)
 				{
 					var serverHash = ServerHash.GetServerHash(url);
 
@@ -67,23 +67,23 @@ namespace Raven.Client.Connection
 					}
 				}
 
-				firstTime = false;
+				FirstTime = false;
 
-				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+				if (LastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 					return new CompletedTask();
 
-				var taskCopy = refreshReplicationInformationTask;
+				var taskCopy = RefreshReplicationInformationTask;
 				if (taskCopy != null)
 					return taskCopy;
 
-                return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformationInternal(url, getReplicationDestinations))
+                return RefreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformationInternal(url, getReplicationDestinations))
 					.ContinueWith(task =>
 					{
 						if (task.Exception != null)
 						{
 							Log.ErrorException("Failed to refresh replication information", task.Exception);
 						}
-						refreshReplicationInformationTask = null;
+						RefreshReplicationInformationTask = null;
 					});
 			}
 		}
@@ -190,7 +190,7 @@ namespace Raven.Client.Connection
 
 				if (document == null)
 				{
-					lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
+					LastReplicationUpdate = SystemTime.UtcNow; // checked and not found
 					return;
 				}
 
@@ -199,7 +199,7 @@ namespace Raven.Client.Connection
 
 				UpdateReplicationInformationFromDocument(document);
 
-				lastReplicationUpdate = SystemTime.UtcNow;
+				LastReplicationUpdate = SystemTime.UtcNow;
 			}
 		}
 

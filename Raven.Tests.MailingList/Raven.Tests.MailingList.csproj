@@ -161,6 +161,7 @@
     <Compile Include="AsyncSpatialTest.cs" />
     <Compile Include="AttachmentContentType.cs" />
     <Compile Include="AutoGenIndexLinqQuery.cs" />
+    <Compile Include="BadQuery.cs" />
     <Compile Include="BAM.cs" />
     <Compile Include="Bassler.cs" />
     <Compile Include="Benjamin.cs" />

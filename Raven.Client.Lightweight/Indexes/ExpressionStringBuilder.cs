@@ -1709,6 +1709,8 @@ namespace Raven.Client.Indexes
 					case "Min":
 					case "Max":
 					case "Union":
+					case "Concat":
+					case "Intersect":
 						return true;
 				}
 			}
