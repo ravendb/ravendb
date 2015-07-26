@@ -262,9 +262,6 @@ task CopyServer -depends CreateOutpuDirectories {
 }
 
 function SignFile($filePath){
-}
-
-function SignFile2($filePath){
 
 	if($env:buildlabel -eq 13)
 	{
