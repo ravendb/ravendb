@@ -37,16 +37,16 @@ namespace Raven.Database.Config
 
 		private static int nextWriteIndex;
         private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
-	    private static bool dynamicLoadBalancding;
+	    private static bool dynamicLoadBalancing;
 
 		public static double Average { get; private set; }
 
 	    static CpuStatistics()
 		{
-	        if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancding) && 
-                dynamicLoadBalancding == false)
+	        if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancing) && 
+                dynamicLoadBalancing == false)
 		        return; // disabled, so we avoid it
-	        dynamicLoadBalancding = true;
+	        dynamicLoadBalancing = true;
 
 		    AppDomain.CurrentDomain.DomainUnload += (sender, args) => _domainUnload.Set();
 
@@ -107,7 +107,7 @@ namespace Raven.Database.Config
 
 		public static void RegisterCpuUsageHandler(ICpuUsageHandler handler)
 		{
-		    if (dynamicLoadBalancding == false)
+		    if (dynamicLoadBalancing == false)
 		        return;
 			CpuUsageHandlers.Add(new WeakReference<ICpuUsageHandler>(handler));
 		}

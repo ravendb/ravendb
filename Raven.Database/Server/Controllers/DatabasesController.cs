@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
@@ -16,9 +17,9 @@ namespace Raven.Database.Server.Controllers
 	    [HttpGet]
 		[RavenRoute("databases")]
 		public HttpResponseMessage Databases(bool getAdditionalData = false)
-	    {
+		{
 			return Resources<DatabaseData>(Constants.Database.Prefix, GetDatabasesData, getAdditionalData);
-		}
+				}
 
 		private List<DatabaseData> GetDatabasesData(IEnumerable<RavenJToken> databases)
 		{

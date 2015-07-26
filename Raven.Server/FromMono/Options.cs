@@ -1260,6 +1260,9 @@ namespace NDesk.Options
 
 		[Description("Disk IO Monitoring")]
 		DiskIOMonitoring = 1 << 14,
+
+		[Description("Record/Replay Options")]
+                TrafficRecordReplay = 1 << 15,
 	}
 }
 

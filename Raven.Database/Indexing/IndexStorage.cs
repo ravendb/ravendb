@@ -41,6 +41,8 @@ using Raven.Json.Linq;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
 using System.Security.Cryptography;
+using Lucene.Net.Util;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Indexing
 {
@@ -88,6 +90,29 @@ namespace Raven.Database.Indexing
                 FieldCache_Fields.DEFAULT.PurgeAllCaches();
 	            
 	        }
+
+		    public void SoftMemoryRelease()
+		    {
+		    }
+
+		    public LowMemoryHandlerStatistics GetStats()
+		    {
+			    var cacheEntries = FieldCache_Fields.DEFAULT.GetCacheEntries();
+			    var memorySum = cacheEntries.Sum(x =>
+			    {
+				    var curEstimator = new RamUsageEstimator(false);
+				    return curEstimator.EstimateRamUsage(x);
+			    });
+			    return new LowMemoryHandlerStatistics
+			    {
+					Name = "LuceneLowMemoryHandler",
+					EstimatedUsedMemory = memorySum,
+					Metadata = new
+					{
+						CachedEntriesAmount = cacheEntries.Length
+					}
+			    };
+		    }
 	    }
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
@@ -1032,7 +1057,14 @@ namespace Raven.Database.Indexing
 			.FirstOrDefault();
 		}
 
-		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, CancellationToken token)
+		public IEnumerable<IndexQueryResult> Query(string index, 
+            IndexQuery query, 
+            Func<IndexQueryResult, bool> shouldIncludeInResults, 
+            FieldsToFetch fieldsToFetch, 
+            OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, 
+            CancellationToken token,
+            Action<double> parseTiming = null
+            )
 		{
 			Index value = TryIndexByName(index);
 			if (value == null)
@@ -1068,10 +1100,13 @@ namespace Raven.Database.Indexing
 			}
 
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
+
+		    if (parseTiming != null)
+		        parseTiming(indexQueryOperation.QueryParseDuration.TotalMilliseconds);
+
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery(token);
-
-
+          
 			return indexQueryOperation.Query(token);
 		}
 

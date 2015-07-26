@@ -1,4 +1,8 @@
-﻿using Raven.Abstractions.Replication;
+﻿using System;
+
+using Raven.Abstractions.Replication;
+using Raven.Client.Connection;
+using Raven.Client.FileSystem.Connection;
 
 namespace Raven.Client.FileSystem
 {
@@ -18,6 +22,7 @@ namespace Raven.Client.FileSystem
 			IdentityPartsSeparator = "/";
 			ShouldCacheRequest = url => true;
             MaxNumberOfRequestsPerSession = 30;
+			ReplicationInformerFactory = (url, jsonRequestFactory) => new FilesReplicationInformer(this, jsonRequestFactory);
 		}
 
         /// <summary>
@@ -38,5 +43,11 @@ namespace Raven.Client.FileSystem
 		{
             return (FilesConvention)MemberwiseClone();
 		}
+
+		/// <summary>
+		/// This is called to provide replication behavior for the client. You can customize 
+		/// this to inject your own replication / failover logic.
+		/// </summary>
+		public Func<string, HttpJsonRequestFactory, IFilesReplicationInformer> ReplicationInformerFactory { get; set; }
     }
 }

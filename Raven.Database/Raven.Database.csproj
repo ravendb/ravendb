@@ -345,6 +345,7 @@
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
     <Compile Include="Counters\Controllers\CountersChangesController.cs" />
     <Compile Include="Counters\Notifications\NotificationPublisher.cs" />
+    <Compile Include="Data\DiskSpaceNotification.cs" />
     <Compile Include="FileSystem\Actions\ActionsBase.cs" />
     <Compile Include="FileSystem\Actions\FileActions.cs" />
     <Compile Include="FileSystem\Actions\ReadFileToDatabase.cs" />
@@ -382,6 +383,7 @@
     <Compile Include="FileSystem\Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTaskContext.cs" />
     <Compile Include="Indexing\PropertyAccessor.cs" />
     <Compile Include="Indexing\Sorting\AlphaNumeric\AlphaNumericComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\AlphaNumeric\AlphaNumericFieldComparator.cs" />
@@ -413,6 +415,7 @@
     <Compile Include="Server\Controllers\Admin\AdminJsConsoleController.cs" />
     <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
+    <Compile Include="Indexing\Sorting\DocumentIdSet.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
     <Compile Include="Server\Tenancy\TimeSeriesLandlord.cs" />
     <Compile Include="Server\WebApi\MultiGetSafeStringContent.cs" />
@@ -524,6 +527,7 @@
     <Compile Include="Util\DevelopmentHelper.cs" />
     <Compile Include="Util\CultureHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\SortFieldHelper.cs" />
     <Compile Include="Util\StopwatchScope.cs" />

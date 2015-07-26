@@ -1,7 +1,7 @@
 ﻿using System;
 
 using Raven.Abstractions.Util;
-
+using Raven.Database.Util;
 using Xunit;
 
 namespace Raven.Tests.Core

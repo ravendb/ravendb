@@ -250,13 +250,13 @@ namespace Raven.Database.Server.Controllers
 			return GetQueryStringValue(InnerRequest, key);
 		}
 
-	/*	public static string GetQueryStringValue(HttpRequestMessage req, string key)
-		{
-			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
-			if (value != null)
-				value = Uri.UnescapeDataString(value);
-			return value;
-		}*/	 
+//		public static string GetQueryStringValue(HttpRequestMessage req, string key)
+//		{
+//			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
+//			if (value != null)
+//				value = Uri.UnescapeDataString(value);
+//			return value;
+//		}
 
 	    protected static string GetQueryStringValue(HttpRequestMessage req, string key)
         {
@@ -272,7 +272,10 @@ namespace Raven.Database.Server.Controllers
 			foreach (var queryKey in nvc.AllKeys)
 				nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
 
-	        req.Properties["Raven.QueryString"] = nvc;
+		    foreach (var _key in nvc.AllKeys)
+				nvc[_key] = Uri.UnescapeDataString(nvc[_key] ?? String.Empty);
+
+            req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
         }
 

@@ -85,7 +85,12 @@ namespace Raven.Client.Document
 
 		private RemoteBulkInsertOperation CreateBulkInsertOperation(Task<int> disposeAsync)
 		{
-			var operation = new RemoteBulkInsertOperation(options, client, changes, disposeAsync, existingOperationId:OperationId);
+			Guid? existingOperationId;
+			if (OperationId == Guid.Empty)
+				existingOperationId = null;
+			else
+			existingOperationId = OperationId;
+			var operation = new RemoteBulkInsertOperation(options, client, changes, disposeAsync, existingOperationId);
 			if (Report != null)
 				operation.Report += Report;
 

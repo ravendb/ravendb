@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -14,9 +15,18 @@ using Sparrow.Collections;
 
 namespace Raven.Database.Config
 {
+	public class LowMemoryHandlerStatistics
+	{
+		public string Name { get; set; }
+		public long EstimatedUsedMemory { get; set; }
+		public string DatabaseName { get; set; }
+		public object Metadata { get; set; }
+	}
     internal interface ILowMemoryHandler
     {
         void HandleLowMemory();
+	    void SoftMemoryRelease();
+	    LowMemoryHandlerStatistics GetStats();
     }
 
     internal static class MemoryStatistics
@@ -44,8 +54,9 @@ namespace Raven.Database.Config
         private static bool failedToGetTotalPhysicalMemory;
         private static int memoryLimit;
         private static readonly IntPtr lowMemoryNotificationHandle;
-        private static readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> LowMemoryHandlers;
-        private static readonly IntPtr LowMemorySimulationEvent;
+        private static readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> LowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
+        private static readonly IntPtr LowMemorySimulationEvent = CreateEvent(IntPtr.Zero, false, false, null);
+		private static readonly IntPtr SoftMemoryReleaseEvent = CreateEvent(IntPtr.Zero, false, false, null);
 
 		private static ManualResetEvent stopPosixLowMemThreadEvent = new ManualResetEvent (false);
 		private static ManualResetEvent lowPosixMemorySimulationEvent = new ManualResetEvent (false);
@@ -72,12 +83,11 @@ namespace Raven.Database.Config
 			new Thread (() => {
                 const UInt32 WAIT_FAILED = 0xFFFFFFFF;
                 const UInt32 WAIT_TIMEOUT = 0x00000102;
-				while (true) {
-					var waitForResult = WaitForMultipleObjects (3, new[] {
-						lowMemoryNotificationHandle,
-						appDomainUnloadEvent,
-						LowMemorySimulationEvent
-					}, false, 5 * 60 * 1000);
+                while (true)
+                {
+                    var waitForResult = WaitForMultipleObjects(4,
+						new[] { lowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent, SoftMemoryReleaseEvent }, false, 
+						5 * 60 * 1000);
 
 					switch (waitForResult) {
                         case 0: // lowMemoryNotificationHandle
@@ -93,6 +103,10 @@ namespace Raven.Database.Config
 
 						RunLowMemoryHandlers ();
                             break;
+						case 3://SoftMemoryReleaseEvent
+							log.Warn("Releasing memory before Garbage Collection operation");
+							RunLowMemoryHandlers();
+		                    break;
                         case WAIT_TIMEOUT:
 						ClearInactiveHandlers ();
                             break;
@@ -164,6 +178,11 @@ namespace Raven.Database.Config
 				lowPosixMemorySimulationEvent.Set ();
         }
 
+	    public static void InitiateSoftMemoryRelease()
+	    {
+		    SetEvent(SoftMemoryReleaseEvent);
+	    }
+
         private static void RunLowMemoryHandlers()
         {
             var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
@@ -188,6 +207,58 @@ namespace Raven.Database.Config
 
             inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
         }
+
+		private static void RunSoftMemoryReleaseHandlers()
+		{
+			var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+
+			foreach (var lowMemoryHandler in LowMemoryHandlers)
+			{
+				ILowMemoryHandler handler;
+				if (lowMemoryHandler.TryGetTarget(out handler))
+				{
+					try
+					{
+						handler.SoftMemoryRelease();
+					}
+					catch (Exception e)
+					{
+						log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+					}
+				}
+				else
+					inactiveHandlers.Add(lowMemoryHandler);
+			}
+
+			inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
+		}
+
+	    public static List<LowMemoryHandlerStatistics> GetLowMemoryHandlersStatistics()
+	    {
+		    var lowMemoryHandlersStatistics = new List<LowMemoryHandlerStatistics>();
+			var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+
+			foreach (var lowMemoryHandler in LowMemoryHandlers)
+			{
+				ILowMemoryHandler handler;
+				if (lowMemoryHandler.TryGetTarget(out handler))
+				{
+					try
+					{
+						lowMemoryHandlersStatistics.Add(handler.GetStats());
+					}
+					catch (Exception e)
+					{
+						log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+					}
+				}
+				else
+					inactiveHandlers.Add(lowMemoryHandler);
+			}
+
+			inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
+		    return lowMemoryHandlersStatistics;
+	    }
 
         private static void ClearInactiveHandlers()
         {
@@ -325,12 +396,24 @@ namespace Raven.Database.Config
                     failedToGetAvailablePhysicalMemory = true;
                     return -1;
                 }
-#if __MonoCS__
-				throw new PlatformNotSupportedException("This build can only run on Mono");
-#else
                 try
                 {
-                    var availablePhysicalMemoryInMb = (int)(new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory / 1024 / 1024);
+                    // The CLR Memory (CLR) = Live Object (LO) + Dead Objects (DO)
+                    // The Working Set (WS) = CLR + Live Unmanaged (LU) = LO + DO + LU
+                       
+                    // Used Memory (UM) = WS - DO = CLR + LU - DO = (LO + DO) + LU - DO = LO + LU
+                    // Available Memory (AM) = Total Memory (TM) - UM  = TM - ( LO + LU ) = TM - LO - LU
+                                        
+                    long totalMemory = (long) new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
+                    long liveObjectMemory = GC.GetTotalMemory(false);                                                            
+                    
+                    // There is still no way for us to query the amount of unmanaged memory in the working set
+                    // so we will have to live with the over-estimation of the total available memory. 
+					// to compensate for that, we will already remove 20% of the live object used as the size
+					// of unmanaged memory we use
+	                long availableMemory = totalMemory - liveObjectMemory - ((int)(liveObjectMemory * 0.2));
+                    int availablePhysicalMemoryInMb = (int)(availableMemory / 1024 / 1024);       
+
                     if (Environment.Is64BitProcess)
                     {
                         return memoryLimitSet ? Math.Min(MemoryLimit, availablePhysicalMemoryInMb) : availablePhysicalMemoryInMb;
@@ -339,7 +422,7 @@ namespace Raven.Database.Config
                     // we are in 32 bits mode, but the _system_ may have more than 4 GB available
                     // so we have to check the _address space_ as well as the available memory
                     // 32bit processes are limited to 1.5GB of heap memory
-                    var workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
+                    int workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
                     return memoryLimitSet ? Math.Min(MemoryLimit, Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb)) : Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb);
                 }
                 catch
@@ -347,7 +430,6 @@ namespace Raven.Database.Config
                     failedToGetAvailablePhysicalMemory = true;
                     return -1;
                 }
-#endif
             }
         }
 

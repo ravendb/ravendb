@@ -117,6 +117,8 @@ namespace Raven.Database.FileSystem
             search.Initialize(this);
 
 			SecondStageInitialization();
+
+			synchronizationTask.Start();
         }
 
         public static bool IsRemoteDifferentialCompressionInstalled

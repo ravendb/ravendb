@@ -62,9 +62,10 @@ namespace Raven.Database.Server.Controllers
 
 		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter)
 		{
+            var bufferStream = new BufferedStream(stream, 1024 * 64);
 			using (var cts = new CancellationTokenSource())
 			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
-			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
+            using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
 			{
 				writer.WriteStartObject();
 				writer.WritePropertyName("Results");
@@ -104,6 +105,7 @@ namespace Raven.Database.Server.Controllers
 				writer.WriteValue(nextPageStart);
 				writer.WriteEndObject();
 				writer.Flush();
+                bufferStream.Flush();
 			}
 		}
 
@@ -258,8 +260,8 @@ namespace Raven.Database.Server.Controllers
 		    private readonly CancellationTimeout _timeout;
 		    private readonly Action<string> outputContentTypeSetter;
 		    private readonly Func<RavenJObject, RavenJObject> modifyDocument;
-            
-		    [CLSCompliant(false)]
+
+			[CLSCompliant(false)]
 			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor,
                 CancellationTimeout timeout,
                 Action<string> contentTypeSetter,
@@ -275,10 +277,16 @@ namespace Raven.Database.Server.Controllers
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 			{							
-				using(queryOp)
-				using(accessor)
-				using(_timeout)
-				using (var writer = GetOutputWriter(req, stream))
+                var bufferSize = queryOp.Header.TotalResults > 1024 ? 1024 * 64 : 1024 * 8;
+                using (var bufferedStream = new BufferedStream(stream, bufferSize))
+                using (queryOp)
+                using (accessor)
+                using (_timeout)
+                using (var writer = GetOutputWriter(req, bufferedStream))
+                // we may be sending a LOT of documents to the user, and most 
+                // of them aren't going to be relevant for other ops, so we are going to skip
+                // the cache for that, to avoid filling it up very quickly
+                using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 				{
                     outputContentTypeSetter(writer.ContentType);
 
@@ -298,7 +306,6 @@ namespace Raven.Database.Server.Controllers
 				        writer.WriteError(e);
 				    }
 				}
-
 				return Task.FromResult(true);
 			}
 
@@ -355,6 +362,7 @@ namespace Raven.Database.Server.Controllers
 					return;
 
 				writer.Flush();
+                stream.Flush();
 				writer.Close();
 			}
 
@@ -371,7 +379,7 @@ namespace Raven.Database.Server.Controllers
 					Debug.Assert(properties != null);
 				}
 
-                if ( doIncludeId )
+                if (doIncludeId)
                 {
                     RavenJToken token;
                     if (result.TryGetValue("@metadata", out token))
@@ -505,6 +513,7 @@ namespace Raven.Database.Server.Controllers
 				writer.WriteEndObject();
 
 				writer.Flush();
+                stream.Flush();
 				writer.Close();
 			}
 

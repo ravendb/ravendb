@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues.Prefetcher
 
 			var autoTuner = new IndexBatchSizeAutoTuner(workContext);
 
-			var prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, autoTuner);
+			var prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, autoTuner, string.Empty);
 
 			return new PrefetcherWithContext
 				   {

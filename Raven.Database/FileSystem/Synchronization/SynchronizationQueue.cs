@@ -64,10 +64,16 @@ namespace Raven.Database.FileSystem.Synchronization
 			return activeSynchronizations.Sum(queue => queue.Value.Count);
 		}
 
-        public int NumberOfActiveSynchronizationTasksFor(string destinationFileSystemUrl)
+        public int NumberOfActiveSynchronizationsFor(string destinationFileSystemUrl)
 		{
 			return activeSynchronizations.GetOrAdd(destinationFileSystemUrl, new ConcurrentDictionary<string, SynchronizationWorkItem>())
                                          .Count;
+		}
+
+		public int NumberOfPendingSynchronizationsFor(string destinationFileSystemUrl)
+		{
+			return pendingSynchronizations.GetOrAdd(destinationFileSystemUrl, new ConcurrentQueue<SynchronizationWorkItem>())
+										 .Count;
 		}
 
         public bool EnqueueSynchronization(string destinationFileSystemUrl, SynchronizationWorkItem workItem)
@@ -154,7 +160,7 @@ namespace Raven.Database.FileSystem.Synchronization
             return true;
 		}
 
-        public bool TryDequePendingSynchronization(string destinationFileSystemUrl, out SynchronizationWorkItem workItem)
+        public bool TryDequePending(string destinationFileSystemUrl, out SynchronizationWorkItem workItem)
 		{
 			var readerWriterLockSlim = pendingRemoveLocks.GetOrAdd(destinationFileSystemUrl, new ReaderWriterLockSlim());
 			readerWriterLockSlim.EnterReadLock();

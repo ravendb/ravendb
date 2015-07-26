@@ -10,6 +10,11 @@ using Raven.Json.Linq;
 using System;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
+
+using Raven.Abstractions;
+using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 
 namespace Raven.Client.FileSystem.Connection
 {
@@ -18,10 +23,65 @@ namespace Raven.Client.FileSystem.Connection
     /// </summary>
     public class FilesReplicationInformer : ReplicationInformerBase<IAsyncFilesCommands>, IFilesReplicationInformer
     {
+		private readonly object replicationLock = new object();
+
+		private bool firstTime = true;
+
+		private DateTime lastReplicationUpdate = DateTime.MinValue;
+
+		private Task refreshReplicationInformationTask;
+
         public FilesReplicationInformer(FilesConvention conventions, HttpJsonRequestFactory requestFactory)
             : base(conventions, requestFactory)
         {
         }
+
+	    public Task UpdateReplicationInformationIfNeeded(IAsyncFilesCommands commands)
+		{
+			return UpdateReplicationInformationIfNeededInternal(commands);
+		}
+
+		private Task UpdateReplicationInformationIfNeededInternal(IAsyncFilesCommands commands)
+		{
+			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				return new CompletedTask();
+
+			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+				return new CompletedTask();
+
+			var serverClient = (IAsyncFilesCommandsImpl)commands;
+			lock (replicationLock)
+			{
+				if (firstTime)
+				{
+					var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
+					var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+					if (IsInvalidDestinationsDocument(document) == false)
+					{
+						UpdateReplicationInformationFromDocument(document);
+					}
+				}
+
+				firstTime = false;
+
+				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+					return new CompletedTask();
+
+				var taskCopy = refreshReplicationInformationTask;
+				if (taskCopy != null)
+					return taskCopy;
+
+				return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(commands))
+					.ContinueWith(task =>
+					{
+						if (task.Exception != null)
+						{
+							Log.ErrorException("Failed to refresh replication information", task.Exception);
+						}
+						refreshReplicationInformationTask = null;
+					});
+			}
+		}
 
         /// <summary>
         /// Refreshes the replication information.
@@ -32,10 +92,8 @@ namespace Raven.Client.FileSystem.Connection
             lock (this)
             {
                 var serverClient = (IAsyncFilesCommandsImpl)commands;
-
-                string urlForFilename = serverClient.UrlFor();
+				var urlForFilename = serverClient.UrlFor();
                 var serverHash = ServerHash.GetServerHash(urlForFilename);
-
                 JsonDocument document = null;
 
                 try
@@ -43,28 +101,18 @@ namespace Raven.Client.FileSystem.Connection
                     var config = serverClient.Configuration.GetKeyAsync<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
                     FailureCounters.FailureCounts[urlForFilename] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
-                    if (config != null)
-                    {
-
-                        var destinationsArray = config.Value<RavenJArray>("Destinations");
-                        if (destinationsArray != null)
-                        {
-                            document = new JsonDocument
-                                       {
-	                                       DataAsJson = new RavenJObject
-	                                                    {
-		                                                    { "Destinations", destinationsArray }
-	                                                    }
-                                       };
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    Log.ErrorException("Could not contact master for new replication information", e);
-                    document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
-                }
-
+					if (config != null)
+					{
+						var destinationsArray = config.Value<RavenJArray>("Destinations");
+						if (destinationsArray != null)
+							document = new JsonDocument { DataAsJson = new RavenJObject() { { "Destinations", destinationsArray } } };
+					}
+				}
+				catch (Exception e)
+				{
+					Log.ErrorException("Could not contact master for new replication information", e);
+					document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+				}
 
                 if (document == null)
                     return;
@@ -78,12 +126,20 @@ namespace Raven.Client.FileSystem.Connection
 	    public override void ClearReplicationInformationLocalCache(IAsyncFilesCommands client)
 	    {
 			var serverClient = (IAsyncFilesCommandsImpl)client;
-
-			string urlForFilename = serverClient.UrlFor();
+			var urlForFilename = serverClient.UrlFor();
 			var serverHash = ServerHash.GetServerHash(urlForFilename);
-
 			ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
 	    }
+
+
+		public override void Dispose()
+		{
+			base.Dispose();
+
+			var replicationInformationTaskCopy = refreshReplicationInformationTask;
+			if (replicationInformationTaskCopy != null)
+				replicationInformationTaskCopy.Wait();
+		}
 
 	    protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {

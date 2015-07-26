@@ -425,19 +425,23 @@ namespace Raven.Database.Storage
             return value;
         }
 
-        public IndexCreationOptions FindIndexCreationOptions(IndexDefinition indexDef)
+        public IndexCreationOptions FindIndexCreationOptions(IndexDefinition newIndexDef)
         {
-            var indexDefinition = GetIndexDefinition(indexDef.Name);
-            if (indexDefinition != null)
+            var currentIndexDefinition = GetIndexDefinition(newIndexDef.Name);
+            if (currentIndexDefinition != null)
             {
-				if (indexDefinition.IsTestIndex) // always update test indexes
+				if (currentIndexDefinition.IsTestIndex) // always update test indexes
 					return IndexCreationOptions.Update;
 
-                indexDef.IndexId = indexDefinition.IndexId;
-                bool result = indexDefinition.Equals(indexDef);
-                return result
-                           ? IndexCreationOptions.Noop
-                           : IndexCreationOptions.Update;
+                newIndexDef.IndexId = currentIndexDefinition.IndexId;
+                bool result = currentIndexDefinition.Equals(newIndexDef);
+
+				if (result) 
+					return IndexCreationOptions.Noop;
+
+	            // try to compare to find changes which doesn't require removing compixled index
+	            return currentIndexDefinition.Equals(newIndexDef, ignoreFormatting: true, ignoreMaxIndexOutput: true)
+					? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex : IndexCreationOptions.Update;
             }
             return IndexCreationOptions.Create;
         }
@@ -587,6 +591,17 @@ namespace Raven.Database.Storage
 
             File.WriteAllText(Path.Combine(path, "transformers.txt"), sb.ToString());
         }
+
+		public void UpdateTransformerDefinitionWithoutUpdatingCompiledTransformer(TransformerDefinition definition)
+		{
+			transformDefinitions.AddOrUpdate(definition.TransfomerId, s =>
+			{
+				throw new InvalidOperationException(
+					"Cannot find transformer named: " +
+					definition.TransfomerId);
+			}, (s, transformerDefinition) => definition);
+			WriteTransformerDefinition(definition);
+		}
     }
 
 }

@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Data;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -170,6 +171,33 @@ namespace Raven.Tests.Core.BulkInsert
 					Assert.Equal(count, 20);
 				}
 			}
+		}
+
+		[Fact]
+		public void ValidateChunkedBulkInsertOperationsIDsCount()
+		{
+			var bulkInsertStartsCounter = new ConcurrentDictionary<Guid, BulkInsertChangeNotification>();
+			using (var store = GetDocumentStore())
+			{
+				for (var i=0; i<10; i++)
+				{
+					using (var bulkInsert = store.BulkInsert())
+					{
+						store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
+						{
+							if (x.Type == DocumentChangeTypes.BulkInsertStarted)
+								Assert.True(bulkInsertStartsCounter.TryAdd(x.OperationId,x));
+						});
+						
+						bulkInsert.Store(new Node
+						{
+							Name = "Parent",
+							Children = Enumerable.Range(0, 5).Select(x => new Node {Name = "Child" + x}).ToArray()
+						});
+					}
+				}
+			}
+			Assert.Equal(10, bulkInsertStartsCounter.Count);
 
 		}
 	}

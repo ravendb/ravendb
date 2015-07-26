@@ -17,12 +17,12 @@ namespace Raven.Database.FileSystem.Synchronization
 			get { return SynchronizationType.Delete; }
 		}
 
-        public override Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
+		public override Task<SynchronizationReport> PerformAsync(ISynchronizationServerClient synchronizationServerClient)
 		{
 			FileAndPagesInformation fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
 
-            return destination.DeleteAsync(FileName, fileAndPages.Metadata, FileSystemInfo);
+			return synchronizationServerClient.DeleteAsync(FileName, fileAndPages.Metadata, FileSystemInfo);
 		}
 
 		public override bool Equals(object obj)

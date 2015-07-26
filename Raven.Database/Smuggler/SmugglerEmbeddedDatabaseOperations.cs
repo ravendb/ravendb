@@ -50,7 +50,7 @@ namespace Raven.Database.Smuggler
 		public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)
 		{
 			const int dummy = 0;
-			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(Options.BatchSize, take), lastEtag, CancellationToken.None)
+			var enumerator = database.Documents.GetDocumentsAsJson(dummy, Math.Min(Options.BatchSize, take), lastEtag, CancellationToken.None)
 				.ToList()
 				.Cast<RavenJObject>()
 				.GetEnumerator();

@@ -2,14 +2,14 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.FileSystem;
-using Raven.Client.FileSystem.Connection;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,13 +18,14 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization.Multipart
 {
 	internal class SynchronizationMultipartRequest : IHoldProfilingInformation
 	{
-        private readonly IAsyncFilesSynchronizationCommands destination;
+		private readonly ISynchronizationServerClient synchronizationServerClient;
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly FileSystemInfo fileSystemInfo;
@@ -32,10 +33,10 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
 
-        public SynchronizationMultipartRequest(IAsyncFilesSynchronizationCommands destination, FileSystemInfo fileSystemInfo, string fileName,
+		public SynchronizationMultipartRequest(ISynchronizationServerClient synchronizationServerClient, FileSystemInfo fileSystemInfo, string fileName,
                                                RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
 		{
-			this.destination = destination;
+			this.synchronizationServerClient = synchronizationServerClient;
 			this.fileSystemInfo = fileSystemInfo;
 			this.fileName = fileName;
 			this.sourceMetadata = sourceMetadata;
@@ -53,13 +54,11 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 			if (sourceStream.CanRead == false)
 				throw new Exception("Stream does not support reading");
 
-            var commands = (IAsyncFilesCommandsImpl)this.destination.Commands;
+			var baseUrl = synchronizationServerClient.BaseUrl;
+			var credentials = synchronizationServerClient.Credentials;
+			var conventions = synchronizationServerClient.Conventions;
 
-            var baseUrl = commands.UrlFor();
-            var credentials = commands.PrimaryCredentials;
-            var conventions = commands.Conventions;
-
-			using (var request = commands.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethods.Post, credentials, conventions)))
+			using (var request = synchronizationServerClient.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions)))
 			{
 				request.AddHeaders(sourceMetadata);
 				request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);

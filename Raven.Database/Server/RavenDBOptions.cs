@@ -20,7 +20,7 @@ namespace Raven.Database.Server
 		private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
 		private readonly DocumentDatabase systemDatabase;
 		private readonly RequestManager requestManager;
-		private readonly FileSystemsLandlord fileSystemLandlord;
+	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
 		private readonly TimeSeriesLandlord timeSeriesLandlord;
 
@@ -33,16 +33,16 @@ namespace Raven.Database.Server
 		{
 			if (configuration == null)
 				throw new ArgumentNullException("configuration");
-
+			
 			try
 			{
 				HttpEndpointRegistration.RegisterHttpEndpointTarget();
-				HttpEndpointRegistration.RegisterAdminLogsTarget();
+			    HttpEndpointRegistration.RegisterAdminLogsTarget();
 				if (db == null)
 				{
 					configuration.UpdateDataDirForLegacySystemDb();
 					systemDatabase = new DocumentDatabase(configuration, null);
-					systemDatabase.SpinBackgroundWorkers();
+					systemDatabase.SpinBackgroundWorkers(false);
 				}
 				else
 				{
@@ -50,7 +50,7 @@ namespace Raven.Database.Server
 				}
 
 				WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
-				fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
+			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				timeSeriesLandlord = new TimeSeriesLandlord(systemDatabase);
@@ -94,10 +94,10 @@ namespace Raven.Database.Server
 		{
 			get { return databasesLandlord; }
 		}
-		public FileSystemsLandlord FileSystemLandlord
-		{
-			get { return fileSystemLandlord; }
-		}
+	    public FileSystemsLandlord FileSystemLandlord
+	    {
+	        get { return fileSystemLandlord; }
+	    }
 
 		public CountersLandlord CountersLandlord
 		{
@@ -109,7 +109,7 @@ namespace Raven.Database.Server
 			get { return timeSeriesLandlord; }
 		}
 
-		public RequestManager RequestManager
+	    public RequestManager RequestManager
 		{
 			get { return requestManager; }
 		}
@@ -134,23 +134,23 @@ namespace Raven.Database.Server
 			toDispose.Add(countersLandlord);
 			toDispose.Add(ClusterManager.Value);
 
-			var errors = new List<Exception>();
+            var errors = new List<Exception>();
 
-			foreach (var disposable in toDispose)
-			{
-				try
-				{
-					if (disposable != null)
-						disposable.Dispose();
-				}
-				catch (Exception e)
-				{
-					errors.Add(e);
-				}
-			}
+		    foreach (var disposable in toDispose)
+		    {
+                try
+                {
+                    if (disposable != null)
+                        disposable.Dispose();
+                }
+                catch (Exception e)
+                {
+                    errors.Add(e);
+                }
+		    }
 
 			if (errors.Count != 0)
-				throw new AggregateException(errors);
+                throw new AggregateException(errors);
 		}
 
 		public IDisposable PreventDispose()

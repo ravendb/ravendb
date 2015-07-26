@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 class transformer {
     public name = ko.observable<string>().extend({ required: true });
     public transformResults = ko.observable<string>().extend({ required: true });
-
+	public lockMode = ko.observable<string>();
     private originalName = ko.observable<string>();
     public wasNameChanged = ko.computed<boolean>(()=> this.name() != this.originalName());
     
@@ -17,6 +17,7 @@ class transformer {
         this.name(dto.name);
         this.editUrl = appUrl.forCurrentDatabase().editTransformer(this.name());
         this.transformResults(dto.definition.TransformResults);
+		this.lockMode(dto.definition.LockMode);
         return this;
     }
 
@@ -25,6 +26,7 @@ class transformer {
         this.name(dto.Transformer.Name);
         this.editUrl = appUrl.forCurrentDatabase().editTransformer(this.name());
         this.transformResults(dto.Transformer.TransformResults);
+	    this.lockMode(dto.Transformer.LockMode);
         return this;
     }
 
@@ -33,7 +35,8 @@ class transformer {
             'name': this.name(),
             'definition': {
                 'Name': this.name(),
-                'TransformResults': this.transformResults()
+                'TransformResults': this.transformResults(),
+				'LockMode': this.lockMode()
             }
         };
     }
@@ -77,11 +80,15 @@ class transformer {
             'name': "",
             'definition': {
                 'Name': "",
-                'TransformResults': ""
+                'TransformResults': "",
+				'LockMode':"Unlock"
             }
         });
-    }    
+    }
 
+	isLocked(): boolean {
+		return this.lockMode() === "LockedIgnore";
+	}
 }
 
 export = transformer;

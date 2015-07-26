@@ -406,7 +406,14 @@ namespace Raven.Client.Shard
 																return (object)null;
 															});
 		}
-        /// <summary>
+
+		public override void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			foreach (var store in ShardStrategy.Shards.Values)
+				store.ExecuteIndexes(indexCreationTasks);
+		}
+
+		/// <summary>
         /// Executes the index creation against each of the shards Async.
         /// </summary>
         public override Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
@@ -429,6 +436,12 @@ namespace Raven.Client.Shard
                 return tcs.Task;
             });
         }
+
+		public override async Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			foreach (var store in ShardStrategy.Shards.Values)
+				await store.ExecuteIndexesAsync(indexCreationTasks).ConfigureAwait(false);
+		}
 
 		public override void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{

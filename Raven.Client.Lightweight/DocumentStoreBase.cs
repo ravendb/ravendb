@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Collections.Specialized;
 using System.Collections.ObjectModel;
@@ -97,6 +98,18 @@ namespace Raven.Client
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
+		public virtual void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			var indexesNames = indexCreationTasks.Select(x => x.IndexName).ToArray();
+			var definitions = indexCreationTasks.Select(x => x.CreateIndexDefinition()).ToArray();
+			var priorities = indexCreationTasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
+
+			DatabaseCommands.PutIndexes(indexesNames, definitions, priorities);
+
+			foreach (var task in indexCreationTasks)
+				task.AfterExecute(DatabaseCommands, Conventions);
+		}
+
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
@@ -104,6 +117,18 @@ namespace Raven.Client
 	    {
 	        return indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
 	    }
+
+		public virtual async Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			var indexesNames = indexCreationTasks.Select(x => x.IndexName).ToArray();
+			var definitions = indexCreationTasks.Select(x => x.CreateIndexDefinition()).ToArray();
+			var priorities = indexCreationTasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
+
+			await AsyncDatabaseCommands.PutIndexesAsync(indexesNames, definitions, priorities).ConfigureAwait(false);
+
+			foreach (var task in indexCreationTasks)
+				await task.AfterExecuteAsync(AsyncDatabaseCommands, Conventions).ConfigureAwait(false);
+		}
 
 		/// <summary>
 		/// Executes the index creation in side-by-side mode.
