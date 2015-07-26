@@ -100,7 +100,8 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
-    attached(view, parent) {
+    attached() {
+	    super.attached();
         this.collapseUploadQueuePanel();
     }
 

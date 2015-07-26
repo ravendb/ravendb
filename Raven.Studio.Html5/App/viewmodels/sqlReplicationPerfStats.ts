@@ -59,6 +59,7 @@ class sqlReplicationPerfStats extends viewModelBase {
 
 
     attached() {
+		super.attached();
         $("#replicationStatsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#replicationStatsContainer").scroll(() => this.graphScrolled());
         this.refresh();

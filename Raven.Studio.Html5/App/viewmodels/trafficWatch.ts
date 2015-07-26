@@ -57,6 +57,7 @@ class trafficWatch extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.showLogDetails.subscribe(x => {
                 $(".logRecords").toggleClass("logRecords-small");
         });

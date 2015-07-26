@@ -40,6 +40,7 @@ class requestsCount extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.modelPolling();
     }
 

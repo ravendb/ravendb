@@ -71,6 +71,7 @@ class logs extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         var logsRecordsContainerWidth = $("#logRecordsContainer").width();
         var widthUnit = 0.08;
         this.columnWidths[0](100 * widthUnit);

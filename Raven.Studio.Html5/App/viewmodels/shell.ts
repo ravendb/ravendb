@@ -134,6 +134,7 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
+	showSplash = viewModelBase.showSplash;
 
     private globalChangesApi: changesApi;
     private static changeSubscriptionArray: changeSubscription[];
@@ -308,6 +309,7 @@ class shell extends viewModelBase {
     // Called by Durandal when shell.html has been put into the DOM.
     // The view must be attached to the DOM before we can hook up keyboard shortcuts.
     attached() {
+		super.attached();
         jwerty.key("ctrl+alt+n", e => {
             e.preventDefault();
             this.newDocument();

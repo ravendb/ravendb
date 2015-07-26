@@ -6656,6 +6656,18 @@ body {
   text-shadow: rgba(0, 0, 0, 0.5) 0 0 15px;
   text-transform: uppercase;
 }
+.splash-spinner {
+  position: fixed;
+  z-index: 999;
+  height: 2em;
+  width: 2em;
+  overflow: show;
+  margin: auto;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
 .navbar-fixed-top .navbar-inner {
   padding-left: 1em;
   padding-right: 1em;
