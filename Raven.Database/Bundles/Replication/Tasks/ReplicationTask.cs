@@ -1055,6 +1055,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 							if(replicateTransformers)
 							ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
+							var candidatesForReplication = new List<Tuple<IndexDefinition,IndexingPriority>>();
 
 							if (docDb.Indexes.Definitions.Length > 0 && replicateIndexes)
 							{
@@ -1067,9 +1068,11 @@ namespace Raven.Bundles.Replication.Tasks
 									if (sideBySideIndexes.TryGetValue("ReplacementOf/" + indexDefinition.Name, out sideBySideIndexDefinition))
 										ReplicateSingleSideBySideIndex(destination, indexDefinition, sideBySideIndexDefinition);
 									else
-										ReplicateSingleIndex(destination, indexDefinition);
-									}
-									}
+										candidatesForReplication.Add(Tuple.Create(indexDefinition, docDb.IndexStorage.GetIndexInstance(indexDefinition.Name).Priority));
+								}
+
+								ReplicateIndexesMultiPut(destination, candidatesForReplication);
+							}
 
 							if (docDb.Transformers.Definitions.Length > 0 && replicateTransformers)
 							{
@@ -1123,6 +1126,23 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				Monitor.Exit(_indexReplicationTaskLock);
 			}
+		}
+
+		private void ReplicateIndexesMultiPut(ReplicationStrategy destination, List<Tuple<IndexDefinition, IndexingPriority>> candidatesForReplication)
+		{
+			var requestParams = new MultiplePutIndexParam
+			{
+				Definitions = candidatesForReplication.Select(x => x.Item1).ToArray(),
+				IndexesNames = candidatesForReplication.Select(x => x.Item1.Name).ToArray(),
+				Priorities = candidatesForReplication.Select(x => x.Item2).ToArray()
+			};
+
+			var serializedIndexDefinitions = RavenJToken.FromObject(requestParams);
+			var url = string.Format("{0}/indexes?{1}", destination.ConnectionStringOptions.Url, GetDebugInfomration());
+
+			var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+			replicationRequest.Write(serializedIndexDefinitions);
+			replicationRequest.ExecuteRequest();			
 		}
 
 		private void ReplicateSingleSideBySideIndex(ReplicationStrategy destination, IndexDefinition indexDefinition, IndexDefinition sideBySideIndexDefinition)
