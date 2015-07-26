@@ -23,6 +23,7 @@ namespace Raven.Tryouts
 			{
 				using (var test = new RavenDB_3570())
 				{
+					test.RavenFSWithWindowsCredentialsInConnectionStringShouldWork();
 				}			
 				Console.WriteLine(i);
 			}
