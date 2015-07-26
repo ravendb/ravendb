@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Web.Http.Controllers;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Controllers.Admin
@@ -68,36 +69,43 @@ namespace Raven.Database.Server.Controllers.Admin
             return AdditionalSupportedRoles.Any(role => user.IsInRole(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, role));
         }
 
-        protected static MessageWithStatusCode CheckNameFormat(string name, string dataDirectory)
+        protected static bool IsValidName(string name, string dataDirectory,out MessageWithStatusCode errorMessageWithStatusCode)
         {
             string errorMessage = null;
+	        bool isValid = true;
             const HttpStatusCode errorCode = HttpStatusCode.BadRequest;
 
             if (name == null)
             {
                 errorMessage = "An empty name is forbidden for use!";
-            }
+				isValid = false;
+			}
             else if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {
                 errorMessage = string.Format("The name '{0}' contains characters that are forbidden for use!", name);
-            }
+				isValid = false;
+			}
             else if (Array.IndexOf(Constants.WindowsReservedFileNames, name.ToLower()) >= 0)
             {
                 errorMessage = string.Format("The name '{0}' is forbidden for use!", name);
-            }
+				isValid = false;
+			}
             else if ((Environment.OSVersion.Platform == PlatformID.Unix) && (name.Length > Constants.LinuxMaxFileNameLength) && (dataDirectory.Length + name.Length > Constants.LinuxMaxPath))
             {
                 int theoreticalMaxFileNameLength = Constants.LinuxMaxPath - dataDirectory.Length;
                 int maxfileNameLength = (theoreticalMaxFileNameLength > Constants.LinuxMaxFileNameLength) ? Constants.LinuxMaxFileNameLength : theoreticalMaxFileNameLength;
                 errorMessage = string.Format("Invalid name! Name cannot exceed {0} characters", maxfileNameLength);
-            }
+				isValid = false;
+			}
             else if (Path.Combine(dataDirectory, name).Length > Constants.WindowsMaxPath)
             {
                 int maxfileNameLength = Constants.WindowsMaxPath - dataDirectory.Length;
                 errorMessage = string.Format("Invalid name! Name cannot exceed {0} characters", maxfileNameLength);
+	            isValid = false;
             }
 
-            return new MessageWithStatusCode { Message = errorMessage, ErrorCode = errorCode };
+            errorMessageWithStatusCode = new MessageWithStatusCode { Message = errorMessage, ErrorCode = errorCode };
+			return isValid;
         }
 
         protected class MessageWithStatusCode
