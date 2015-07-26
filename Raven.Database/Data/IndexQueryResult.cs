@@ -5,12 +5,16 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Data
 {
 	public class IndexQueryResult : IEquatable<IndexQueryResult>
 	{
+        public JsonDocument Document { get; set; }
+        public bool DocumentLoaded { get; set; }
+
 		public string Key { get; set; }
 		public string ReduceVal { get; set; }
 		public RavenJObject Projection { get; set; }
