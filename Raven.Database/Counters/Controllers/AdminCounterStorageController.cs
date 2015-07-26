@@ -70,13 +70,13 @@ namespace Raven.Database.Counters.Controllers
 		[RavenRoute("admin/cs/{*id}")]
 		public async Task<HttpResponseMessage> Put(string id)
         {
-			var counterNameFormat = CheckNameFormat(id, Database.Configuration.Counter.DataDirectory);
-			if (counterNameFormat.Message != null)
+	        MessageWithStatusCode nameFormatErrorMsg;
+			if (IsValidName(id, Database.Configuration.Counter.DataDirectory, out nameFormatErrorMsg) == false)
 			{
 				return GetMessageWithObject(new
 				{
-					Error = counterNameFormat.Message
-				}, counterNameFormat.ErrorCode);
+					Error = nameFormatErrorMsg.Message
+				}, nameFormatErrorMsg.ErrorCode);
 			}
 
 			if (Authentication.IsLicensedForCounters == false)
@@ -110,13 +110,13 @@ namespace Raven.Database.Counters.Controllers
 	    [RavenRoute("admin/cs/{*id}")]
 	    public async Task<HttpResponseMessage> Get(string id)
 	    {
-		    var counterNameFormat = CheckNameFormat(id, Database.Configuration.Counter.DataDirectory);
-		    if (counterNameFormat.Message != null)
+		    MessageWithStatusCode nameFormateErrorMsg;
+		    if (IsValidName(id, Database.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
 		    {
 			    return GetMessageWithObject(new
 			    {
-				    Error = counterNameFormat.Message
-			    }, counterNameFormat.ErrorCode);
+				    Error = nameFormateErrorMsg.Message
+			    }, nameFormateErrorMsg.ErrorCode);
 		    }
 
 		    if (Authentication.IsLicensedForCounters == false)

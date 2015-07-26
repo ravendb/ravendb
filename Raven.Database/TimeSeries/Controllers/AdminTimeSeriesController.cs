@@ -25,13 +25,13 @@ namespace Raven.Database.TimeSeries.Controllers
 		[RavenRoute("admin/ts/{*id}")]
 		public async Task<HttpResponseMessage> Put(string id)
         {
-			var timeSeriesNameFormat = CheckNameFormat(id, Database.Configuration.TimeSeries.DataDirectory);
-			if (timeSeriesNameFormat.Message != null)
+			MessageWithStatusCode nameFormatErrorMessage;
+			if (IsValidName(id, Database.Configuration.TimeSeries.DataDirectory, out nameFormatErrorMessage) == false)
 			{
 				return GetMessageWithObject(new
 				{
-					Error = timeSeriesNameFormat.Message
-				}, timeSeriesNameFormat.ErrorCode);
+					Error = nameFormatErrorMessage.Message
+				}, nameFormatErrorMessage.ErrorCode);
 			}
 
 			if (Authentication.IsLicensedForTimeSeries == false)

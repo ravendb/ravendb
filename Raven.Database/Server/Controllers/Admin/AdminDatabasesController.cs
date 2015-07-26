@@ -53,10 +53,10 @@ namespace Raven.Database.Server.Controllers.Admin
 				return GetMessageWithString("System database document cannot be changed!", HttpStatusCode.Forbidden);
 			}
 
-			MessageWithStatusCode databaseNameFormat = CheckNameFormat(id, Database.Configuration.DataDirectory);
-			if (databaseNameFormat.Message != null)
+			MessageWithStatusCode nameFormatErrorMessage;
+			if (IsValidName(id, Database.Configuration.DataDirectory, out nameFormatErrorMessage) == false)
 			{
-				return GetMessageWithString(databaseNameFormat.Message, databaseNameFormat.ErrorCode);
+				return GetMessageWithString(nameFormatErrorMessage.Message, nameFormatErrorMessage.ErrorCode);
 			}
 
 			Etag etag = GetEtag();
