@@ -28,15 +28,15 @@ namespace Raven.Database.Bundles.Replication.Tasks.Handlers
 
 		public IEnumerable<JsonDocument> Handle(IEnumerable<JsonDocument> docs)
 		{
-			if (strategy.PatchScripts == null || strategy.PatchScripts.Count == 0)
+			if (strategy.TransformScripts == null || strategy.TransformScripts.Count == 0)
 				return docs;
 
 			return docs.Select(doc =>
 			{
 				var collection = doc.Metadata.Value<string>(Constants.RavenEntityName);
 
-				ScriptedPatchRequest script;
-				if (strategy.PatchScripts.TryGetValue(collection, out script) == false)
+				string script;
+				if (strategy.TransformScripts.TryGetValue(collection, out script) == false)
 					return doc;
 
 				var patcher = new ScriptedJsonPatcher(database);
@@ -44,7 +44,7 @@ namespace Raven.Database.Bundles.Replication.Tasks.Handlers
 				{
 					try
 					{
-						doc.DataAsJson = patcher.Apply(scope, doc.DataAsJson, script, doc.SerializedSizeOnDisk);
+						doc.DataAsJson = patcher.Apply(scope, doc.DataAsJson, new ScriptedPatchRequest { Script = script }, doc.SerializedSizeOnDisk);
 						
 						return doc;
 					}
