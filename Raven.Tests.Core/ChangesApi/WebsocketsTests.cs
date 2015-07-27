@@ -54,22 +54,17 @@ namespace Raven.Tests.Core.ChangesApi
 			using (var store = NewRemoteDocumentStore())
 		    {
 				Stopwatch testTimer;
-			    var mre = new ManualResetEventSlim();
 				using (var bulkInsert = store.BulkInsert(store.DefaultDatabase))
 				{
-					store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
+					store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(x =>
 					{
 						counter.Enqueue(x);
-						mre.Set();
 					});
 
-					do
-					{
-						bulkInsert.Store(new ChunkedBulkInsert.Node
-						{
-							Name = "Parent"
-						});
-					} while (!mre.IsSet);
+				    bulkInsert.Store(new ChunkedBulkInsert.Node
+				    {
+				        Name = "Parent"
+				    });
  
 					testTimer = Stopwatch.StartNew();
 		
@@ -81,15 +76,15 @@ namespace Raven.Tests.Core.ChangesApi
 					});
 				}
 
-			    const int maxMillisecondsToWaitUntilConnectionRestores = 1000;
+			    const int maxMillisecondsToWaitUntilConnectionRestores = 5000;
 				//wait until connection restores
-			    IEnumerable<RavenJToken> response;
+                RavenJArray response;
 			    var sw = Stopwatch.StartNew();
 			    do
 			    {
 				    response = IssueGetChangesRequest(store);
 			    } while (response == null || 
-						 !response.Any() || 
+						 response.Length == 0 || 
 						 sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
 				
 				//sanity check, if the test fails here, then something is wrong
@@ -115,7 +110,7 @@ namespace Raven.Tests.Core.ChangesApi
 
 	    }
 
-	    private static IEnumerable<RavenJToken> IssueGetChangesRequest(DocumentStore store)
+        private static RavenJArray IssueGetChangesRequest(DocumentStore store)
 	    {
 		    var getChangesRequest = store
 			    .JsonRequestFactory
