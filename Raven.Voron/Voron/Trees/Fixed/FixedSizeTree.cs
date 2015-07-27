@@ -868,14 +868,25 @@ namespace Voron.Trees.Fixed
             return null;
         }
 
-	    public long NumberOfEntries()
+	    public long NumberOfEntries
 	    {
-			// both large & embedded have same position for number of entries, we can use both
-			// regardless of type
-			var header = (FixedSizeTreeHeader.Embedded*)_parent.DirectRead(_treeName);
-		    if (header == null)
-			    return 0;
-			return header->NumberOfEntries;
+		    get
+		    {
+			    var header = _parent.DirectRead(_treeName);
+			    if (header == null)
+				    return 0;
+
+				var flags = (FixedSizeTreeHeader.OptionFlags)header[1];
+			    switch (flags)
+			    {
+				    case FixedSizeTreeHeader.OptionFlags.Embedded:
+					    return ((FixedSizeTreeHeader.Embedded*) header)->NumberOfEntries;
+				    case FixedSizeTreeHeader.OptionFlags.Large:
+					    return ((FixedSizeTreeHeader.Large*) header)->NumberOfEntries;
+				    default:
+					    return 0;
+			    }
+		    }
 	    }
     }
 }

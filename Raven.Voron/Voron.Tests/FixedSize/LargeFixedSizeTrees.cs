@@ -153,10 +153,18 @@ namespace Voron.Tests.FixedSize
 				for (int i = 1; i <= count; i++)
 				{
 					EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+					Assert.Equal(i - 1, fst.NumberOfEntries);
 					fst.Add(i, slice);
 				}
 
 				tx.Commit();
+				Assert.Equal(count, fst.NumberOfEntries);
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+				Assert.Equal(count, fst.NumberOfEntries);
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
