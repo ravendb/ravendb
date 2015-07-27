@@ -285,28 +285,34 @@ namespace Raven.Database.Util
 			return tasks;
 		}
 
-		internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database)
+		internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database, bool withRemainingReductions = false)
 		{
 			var indexingWork = database .IndexingExecuter.GetCurrentlyProcessingIndexes();
 			var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
 
 			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
-
+			Dictionary<string,long> remaingingReductions = null;
+			if (withRemainingReductions)
+				remaingingReductions = database.SlowlyGetRemainingScheduledReductions();
+			long remainingReducitons;
 			return new
 			{
 				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
-				Indexes = uniqueIndexesBeingProcessed.Select(x => new
+				Indexes = uniqueIndexesBeingProcessed.Select(x =>				
+				new
 				{
 					IndexName = x.PublicName,
 					IsMapReduce = x.IsMapReduce,
-					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new { p.Operation, NumberOfProcessingItems = p.InputCount }),
+					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new {p.Operation, NumberOfProcessingItems = p.InputCount}),
 					Priority = x.Priority,
+					RemainingReductions = remaingingReductions == null ? 0 : remaingingReductions.TryGetValue(x.PublicName, out remainingReducitons) ? remainingReducitons : 0,
 					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
 					{
 						Operation = g.Key,
-						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds) / g.Sum(z => z.InputCount))
+						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds)/g.Sum(z => z.InputCount))
 					})
-				})
+				}
+				)
 			};
 		}
 

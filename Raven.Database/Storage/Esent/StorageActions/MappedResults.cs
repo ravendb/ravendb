@@ -187,6 +187,32 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			return hasResult ? result : null;
 		}
 
+		public Dictionary<int, long> GetRemainingScheduledReductionPerIndex()
+		{
+			var res = new Dictionary<int, long>();
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
+			if (Api.TryMoveFirst(session, ScheduledReductions) == false)
+				return res;
+			var currentIndex = -1;
+			var count = 0L;
+			do
+			{
+				var indexFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex) ?? -1;
+				if (indexFromDb != currentIndex)
+				{
+					if (count != 0)
+						res[currentIndex] = count;
+					currentIndex = indexFromDb;
+					count = 0;
+				}
+				count++;
+			} while (Api.TryMoveNext(session, ScheduledReductions));
+			if (count != 0)
+				res[currentIndex] = count;
+			
+			return res;
+		}
+
 		public void DeleteScheduledReduction(int view, int level, string reduceKey)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");

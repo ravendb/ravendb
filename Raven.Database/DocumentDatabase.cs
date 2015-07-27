@@ -580,6 +580,22 @@ namespace Raven.Database
 			}
 		}
 
+		public Dictionary<string, long> SlowlyGetRemainingScheduledReductions()
+		{
+			Dictionary<string, long> res = new Dictionary<string, long>();
+			TransactionalStorage.Batch(accessor =>
+			{
+				var remaining = accessor.MapReduce.GetRemainingScheduledReductionPerIndex();
+				foreach (var keyValue in remaining)
+				{
+					var index = IndexStorage.GetIndexInstance(keyValue.Key);
+					if (index == null) continue;
+					res[index.PublicName] = keyValue.Value;
+				}
+			});
+			return res;
+		}
+
 		public TaskActions Tasks { get; private set; }
 
 		[CLSCompliant(false)]

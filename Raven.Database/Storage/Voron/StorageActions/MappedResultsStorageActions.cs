@@ -712,6 +712,37 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
+		public Dictionary<int, long> GetRemainingScheduledReductionPerIndex()
+		{
+			var res = new Dictionary<int, long>();
+			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
+			using (var viewIterator = scheduledReductionsByView.Iterate(Snapshot, writeBatch.Value))
+			{
+				if (!viewIterator.Seek(Slice.BeforeAllKeys))
+					return res;
+				Slice currentIndex = null;
+				var count = 0L;
+				do
+				{
+					using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, viewIterator.CurrentKey))
+					{
+						if (!iterator.Seek(Slice.BeforeAllKeys))
+							continue;
+						while (iterator.MoveNext())
+						{
+							count++;
+						}						
+						if (count != 0)
+						{
+							res[int.Parse(viewIterator.CurrentKey.ToString())] = count;
+							count = 0L;
+						}
+					}
+				} while (viewIterator.MoveNext());
+			}
+			return res;
+		}
+
 		public void PutReducedResult(int view, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data)
 		{
 			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket =
