@@ -122,7 +122,7 @@ define(['durandal/system', 'jquery'], function (system, $) {
 			}
 
 			if (newChild) {
-				if (skippedModuleIds.indexOf(settings.model.__moduleId__) > -1) {
+				if (!!settings.model && !!settings.model.__moduleId__ && skippedModuleIds.indexOf(settings.model.__moduleId__) > -1) {
 					dfd.resolve(true);
 					return;
 				}
