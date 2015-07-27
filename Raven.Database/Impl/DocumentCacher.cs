@@ -91,6 +91,9 @@ namespace Raven.Database.Impl
 
 		public CachedDocument GetCachedDocument(string key, Etag etag)
 		{
+		    if (skipSettingDocumentInCache)
+		        return null;
+
 			CachedDocument cachedDocument;
 			try
 			{

@@ -59,7 +59,7 @@ namespace Raven.Bundles.Expiration
 			database.TimerManager.NewTimer(TimerCallback, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
 		}
 
-		private void TimerCallback(object state)
+		public void TimerCallback(object state)
 		{
 			if (executing)
 				return;
