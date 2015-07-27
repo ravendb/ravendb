@@ -24,7 +24,7 @@ namespace Raven.Database.Storage
 		void IncrementReduceKeyCounter(int indexId, string reduceKey, int val);
 		void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed);
 		void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed);
-		void DeleteMappedResultsForView(int indexId);
+		void DeleteMappedResultsForView(int indexId, CancellationToken token);
 
 		IEnumerable<string> GetKeysForIndexForDebug(int index, string startsWith, string sourceId, int start, int take);
         IEnumerable<string> GetSourcesForIndexForDebug(int index, string startsWith, int take);

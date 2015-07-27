@@ -49,7 +49,7 @@ namespace Raven.Client.FileSystem.Extensions
 		internal static async Task<Stream> DownloadAsyncImpl(IHoldProfilingInformation self, HttpJsonRequestFactory requestFactory, FilesConvention conventions, 
 			NameValueCollection operationsHeaders, string path, string filename, Reference<RavenJObject> metadataRef, long? @from, long? to, string baseUrl, OperationCredentials credentials)
 		{
-			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + path + filename, "GET", credentials, conventions)).AddOperationHeaders(operationsHeaders);
+			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + path + Uri.EscapeDataString(filename), "GET", credentials, conventions)).AddOperationHeaders(operationsHeaders);
 
 			if (@from != null)
 			{

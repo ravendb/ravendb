@@ -26,6 +26,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>618</NoWarn>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -137,6 +138,7 @@
     <Compile Include="Issues\RavenDB_2889.cs" />
     <Compile Include="Issues\RavenDB_3268_ConcurrencyChecks.cs" />
     <Compile Include="Issues\RavenDB_3499.cs" />
+    <Compile Include="Issues\RavenDB_3692.cs" />
     <Compile Include="Migration\MigrationTests.cs" />
     <Compile Include="Synchronization\FailoverReadFromAllServers.cs" />
     <Compile Include="Synchronization\RavenSynchronizationTestBase.cs" />

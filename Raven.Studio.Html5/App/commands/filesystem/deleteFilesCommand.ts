@@ -27,7 +27,7 @@ class deleteFilesCommand extends commandBase {
     }
 
     deleteFile(fileId : string): JQueryPromise<any> {
-        var url = "/files/" + fileId;
+        var url = "/files/" + encodeURIComponent(fileId);
         return this.del(url, null, this.fs, null, 9000 * this.fileIds.length);
     }
 

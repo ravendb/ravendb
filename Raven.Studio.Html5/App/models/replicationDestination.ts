@@ -76,6 +76,8 @@ class replicationDestination {
         } else if (this.apiKey()) {
             this.isApiKeyCredentials(true);
         }
+
+        this.skipIndexReplication.subscribe(() => ko.postbox.publish('skip-index-replication'));
     }
 
     static empty(databaseName: string): replicationDestination {

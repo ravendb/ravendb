@@ -128,7 +128,27 @@ namespace Raven.Abstractions.Logging.LogProviders
 				}
 			}
 
-			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
+            public bool ShouldLog(LogLevel logLevel)
+            {
+                switch (logLevel)
+                {
+                    case LogLevel.Warn:
+                        return logger.IsWarnEnabled;
+                    case LogLevel.Error:
+                        return logger.IsErrorEnabled;
+                    case LogLevel.Fatal:
+                        return logger.IsFatalEnabled;
+                    // ReSharper disable RedundantCaseLabel
+                    case LogLevel.Info:
+                    case LogLevel.Debug:
+                    case LogLevel.Trace:
+                    // ReSharper restore RedundantCaseLabel
+                    default:
+                        return logger.IsDebugEnabled;
+                }
+            }
+
+            public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
 				where TException : Exception
 			{
 				switch (logLevel)

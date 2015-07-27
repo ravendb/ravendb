@@ -7,6 +7,7 @@ using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Raven.Database.Util;
+using Voron.Trees;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -238,7 +239,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public void DeleteMappedResultsForView(int view)
+		public void DeleteMappedResultsForView(int view, CancellationToken token)
 		{
 			var deletedReduceKeys = new List<string>();
 
@@ -282,7 +283,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					deletedReduceKeys.Add(reduceKey);
 					storageActionsAccessor.General.MaybePulseTransaction();
 				}
-				while (iterator.MoveNext());
+				while (iterator.MoveNext() && token.IsCancellationRequested == false);
 			}
 
 			foreach (var g in deletedReduceKeys.GroupBy(x => x, StringComparer.InvariantCultureIgnoreCase))
@@ -804,7 +805,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
 
-                RemoveReduceResult(iterator);
+                RemoveReduceResult(iterator, null, CancellationToken.None);
 			}
 		}
 
@@ -1037,7 +1038,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public void DeleteScheduledReductionForView(int view)
+		public void DeleteScheduledReductionForView(int view, CancellationToken token)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
 
@@ -1062,13 +1063,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					DeleteScheduledReduction(id, v, CreateKey(v), level, reduceKey);
 					storageActionsAccessor.General.MaybePulseTransaction();
 				}
-				while (iterator.MoveNext());
+				while (iterator.MoveNext() && token.IsCancellationRequested == false);
 			}
 		}
 
 
 
-		public void RemoveReduceResultsForView(int view)
+		public void RemoveReduceResultsForView(int view, CancellationToken token)
 		{
 			var reduceResultsByView = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
 
@@ -1077,7 +1078,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
 
-                RemoveReduceResult(iterator, PulseTransaction);
+                RemoveReduceResult(iterator, PulseTransaction, token);
 			}
 		}
 
@@ -1094,7 +1095,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             scheduledReductionsByViewAndLevelAndReduceKey.MultiDelete(writeBatch.Value, (Slice)AppendToKey(viewKey, level, ReduceKeySizeLimited(reduceKey), reduceKeyHash), id);
 		}
 
-        private void RemoveReduceResult(global::Voron.Trees.IIterator iterator, Action afterRecordDeleted = null)
+        private void RemoveReduceResult(IIterator iterator, Action afterRecordDeleted, CancellationToken token)
         {
             var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
             var reduceResultsByViewAndReduceKeyAndLevel = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
@@ -1135,7 +1136,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 if (afterRecordDeleted != null)
                     afterRecordDeleted();
             }
-            while (iterator.MoveNext());
+			while (iterator.MoveNext() && token.IsCancellationRequested == false);
         }
 
         private void PulseTransaction()
