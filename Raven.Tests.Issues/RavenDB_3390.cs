@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.JsConsole;
@@ -136,13 +137,13 @@ namespace Raven.Tests.Issues
 		public void CanPutDocument()
 		{
 			using (var store = NewDocumentStore())
-			{
+			{				 						
 				new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
 				{
 					Script = @"
 								var doc = Raven.Json.Linq.RavenJObject.Parse('{ ""Name"" : ""Raven"" }');
 								var metadata = Raven.Json.Linq.RavenJObject.Parse('{ ""Raven-Entity-Name"" : ""Docs"" }');
-								database.Documents.Put('doc/1', null, doc, metadata, null);
+								database.Documents.Put('doc/1', null, doc, metadata, null, null);
 							 "
 				});
 
