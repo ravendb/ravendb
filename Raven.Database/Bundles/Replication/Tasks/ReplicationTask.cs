@@ -1337,7 +1337,7 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						docDb.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
-						docsToReplicate = GetDocsToReplicate(actions, prefetchingBehavior, result, maxNumberOfItemsToReceiveInSingleBatch);
+						docsToReplicate = GetDocsToReplicate(actions, prefetchingBehavior, result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);
 
 						filteredDocsToReplicate =
 							docsToReplicate
@@ -1440,9 +1440,9 @@ namespace Raven.Bundles.Replication.Tasks
 			return result;
 		}
 
-		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, PrefetchingBehavior prefetchingBehavior, JsonDocumentsToReplicate result, int? maxNumberOfItemsToReceiveInSingleBatch)
+		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, PrefetchingBehavior prefetchingBehavior, Etag from, int? maxNumberOfItemsToReceiveInSingleBatch)
 		{
-			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);
+			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(from, maxNumberOfItemsToReceiveInSingleBatch);
 			Etag lastEtag = null;
 			if (docsToReplicate.Count > 0)
 				lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
@@ -1450,7 +1450,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var maxNumberOfTombstones = Math.Max(1024, docsToReplicate.Count);
 			var tombstones = actions
 				.Lists
-				.Read(Constants.RavenReplicationDocsTombstones, result.LastEtag, lastEtag, maxNumberOfTombstones + 1)
+				.Read(Constants.RavenReplicationDocsTombstones, from, lastEtag, maxNumberOfTombstones + 1)
 				.Select(x => new JsonDocument
 				{
 					Etag = x.Etag,
